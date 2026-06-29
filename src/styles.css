@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: #090d12; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+
+/* react-big-calendar — Hakum dark operations theme */
+.rbc-calendar { color: #cbd5e1; font-size: 13px; }
+.rbc-toolbar { gap: 12px; margin-bottom: 20px; }
+.rbc-toolbar-label { color: #f8fafc; font-size: 17px; font-weight: 650; }
+.rbc-btn-group button { border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.035); color: #94a3b8; padding: 8px 13px; }
+.rbc-btn-group button:hover, .rbc-btn-group button:focus { border-color: rgba(163,230,53,.45); background: rgba(163,230,53,.08); color: #d9f99d; }
+.rbc-btn-group button.rbc-active, .rbc-btn-group button.rbc-active:hover { border-color: #a3e635; background: #a3e635; color: #090d12; box-shadow: none; }
+.rbc-month-view, .rbc-time-view, .rbc-time-header, .rbc-header, .rbc-day-bg, .rbc-timeslot-group, .rbc-time-content { border-color: rgba(255,255,255,.075) !important; }
+.rbc-month-view, .rbc-time-view { border-radius: 12px; overflow: hidden; }
+.rbc-header { padding: 10px 5px; color: #64748b; font-size: 10px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; }
+.rbc-off-range-bg { background: rgba(0,0,0,.16); }
+.rbc-today { background: rgba(163,230,53,.055); }
+.rbc-date-cell { padding: 7px 8px 3px 0; color: #94a3b8; font-size: 11px; }
+.rbc-date-cell.rbc-now { color: #bef264; font-weight: 700; }
+.rbc-event { box-shadow: 0 4px 12px rgba(0,0,0,.14); }
+.rbc-event:focus { outline: 2px solid #f8fafc; outline-offset: 1px; }
+.rbc-show-more { color: #a3e635; background: transparent; font-size: 11px; }
+.rbc-time-gutter, .rbc-label { color: #64748b; font-size: 10px; }
+.rbc-current-time-indicator { height: 2px; background-color: #a3e635; }
+
+@media (max-width: 640px) {
+  .rbc-toolbar { align-items: stretch; flex-direction: column; }
+  .rbc-toolbar-label { order: -1; padding: 4px 0; text-align: left; }
+  .rbc-btn-group { display: flex; }
+  .rbc-btn-group button { flex: 1; padding-inline: 9px; }
+}
