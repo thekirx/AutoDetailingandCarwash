@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; background: #080c0e; }
+  body { margin: 0; min-width: 320px; font-family: Inter, ui-sans-serif, system-ui; }
+  * { box-sizing: border-box; }
+  input, select { width: 100%; border: 1px solid #283237; border-radius: .5rem; background: #080c0e; padding: .9rem 1rem; color: white; font-size: .875rem; font-weight: 500; letter-spacing: normal; outline: none; text-transform: none; color-scheme: dark; }
+  input:focus, select:focus { border-color: #e9ff3f; box-shadow: 0 0 0 1px #e9ff3f; }
+}
+
+@layer components {
+  .eyebrow { @apply mb-4 text-[11px] font-extrabold uppercase tracking-[.3em] text-acid; }
+  .section-title { @apply font-display text-4xl uppercase tracking-tight sm:text-6xl; }
+  .nav-link { @apply text-mist transition hover:text-acid; }
+}
+
+.hero-grid { background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 80px 80px; mask-image: linear-gradient(to bottom, black, transparent); }
+.service-card:nth-child(4n + 1) { border-left-color: #283237; }
+.loyalty-orbit { position: absolute; border: 1px solid rgba(233,255,63,.09); border-radius: 9999px; pointer-events: none; }
+.loyalty-orbit-one { width: 420px; height: 420px; right: -180px; top: -230px; box-shadow: 0 0 100px rgba(233,255,63,.035); }
+.loyalty-orbit-two { width: 260px; height: 260px; left: -160px; bottom: -170px; }
+.stamp-slot { transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease; }
+.stamp-slot:hover { transform: translateY(-3px); }
+.stamp-slot-complete { border-color: rgba(233,255,63,.5); background: radial-gradient(circle, rgba(233,255,63,.13), rgba(0,0,0,.12) 70%); }
+.stamp-logo { animation: stamp-in .5s cubic-bezier(.2,.9,.3,1.25) both; }
+.stamp-milestone { border-color: rgba(233,255,63,.75); box-shadow: 0 0 18px rgba(233,255,63,.18), inset 0 0 18px rgba(233,255,63,.06); }
+.stamp-milestone-15 { box-shadow: 0 0 28px rgba(233,255,63,.34), inset 0 0 22px rgba(233,255,63,.1); }
+@keyframes stamp-in { from { opacity: 0; transform: scale(1.35) rotate(-16deg); } to { opacity: 1; transform: scale(1) rotate(-6deg); } }
+::selection { background: #e9ff3f; color: #080c0e; }
