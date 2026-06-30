@@ -25,4 +25,9 @@ export default [
     files: ['src/auth/AuthProvider.jsx'],
     rules: { 'react-refresh/only-export-components': 'off' },
   },
+  {
+    files: ['src/components/PPFVisualizer.jsx'],
+    // React Three Fiber JSX properties describe Three.js objects, not DOM nodes.
+    rules: { 'react/no-unknown-property': 'off' },
+  },
 ]

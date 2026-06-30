@@ -92,6 +92,7 @@ function KpiCard({ label, value, detail, icon: Icon, tone = 'lime' }) {
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState([])
   const [recentTransactions, setRecentTransactions] = useState([])
+  const [completedBookings, setCompletedBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -103,7 +104,7 @@ export default function DashboardPage() {
     setLoading(true)
     setError('')
 
-    const [analyticsResult, recentResult] = await Promise.all([
+    const [analyticsResult, recentResult, completedBookingsResult] = await Promise.all([
       supabase
         .from('transactions')
         .select(transactionSelect)
@@ -116,18 +117,25 @@ export default function DashboardPage() {
         .eq('is_archived', false)
         .order('occurred_at', { ascending: false })
         .limit(10),
+      supabase
+        .from('bookings')
+        .select('id')
+        .eq('status', 'completed')
+        .eq('is_archived', false)
+        .gte('scheduled_start', monthStart.toISOString()),
     ])
 
-    if (analyticsResult.error || recentResult.error) {
-      setError(analyticsResult.error?.message || recentResult.error?.message || 'Unable to load financial data.')
+    if (analyticsResult.error || recentResult.error || completedBookingsResult.error) {
+      setError(analyticsResult.error?.message || recentResult.error?.message || completedBookingsResult.error?.message || 'Unable to load financial data.')
       setLoading(false)
       return
     }
 
     setTransactions(analyticsResult.data)
     setRecentTransactions(recentResult.data)
+    setCompletedBookings(completedBookingsResult.data)
     setLoading(false)
-  }, [analyticsStart])
+  }, [analyticsStart, monthStart])
 
   useEffect(() => {
     loadFinancials()
@@ -137,7 +145,6 @@ export default function DashboardPage() {
     const mtd = transactions.filter((transaction) => new Date(transaction.occurred_at) >= monthStart)
     const grossMinor = mtd.filter((transaction) => transaction.type === 'sale').reduce((sum, transaction) => sum + transaction.amount_minor, 0)
     const netMinor = mtd.reduce((sum, transaction) => sum + signedAmount(transaction), 0)
-    const completedBookingIds = new Set(mtd.filter((transaction) => transaction.booking?.status === 'completed').map((transaction) => transaction.booking_id).filter(Boolean))
     const ticketIds = new Set(mtd.filter((transaction) => transaction.type === 'sale').map((transaction) => transaction.booking_id || transaction.id))
 
     const serviceTotals = new Map()
@@ -150,14 +157,14 @@ export default function DashboardPage() {
     return {
       grossMinor,
       netMinor,
-      vehiclesServiced: completedBookingIds.size,
+      vehiclesServiced: completedBookings.length,
       averageTicketMinor: ticketIds.size ? Math.round(grossMinor / ticketIds.size) : 0,
       trend: buildTrend(transactions, thirtyDaysAgo),
       serviceRevenue: [...serviceTotals.entries()]
         .map(([service, amount]) => ({ service, revenue: amount / 100 }))
         .sort((a, b) => b.revenue - a.revenue),
     }
-  }, [transactions, monthStart, thirtyDaysAgo])
+  }, [transactions, completedBookings, monthStart, thirtyDaysAgo])
 
   if (error) {
     return <section><p className="text-sm text-red-300">{error}</p><button onClick={loadFinancials} className="mt-4 text-sm font-medium text-lime-400">Try again</button></section>

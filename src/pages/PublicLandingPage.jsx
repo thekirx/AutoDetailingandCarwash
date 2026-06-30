@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, CarFront, ChevronRight, MapPin, Radio, ShieldCheck, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import LoyaltyCard from '../components/LoyaltyCard'
+import PPFVisualizer from '../components/PPFVisualizer'
 
 const stats = [
   { value: 15000, suffix: '+', label: 'Vehicles Rejuvenated' },
@@ -54,7 +55,7 @@ export default function PublicLandingPage() {
           <div className="max-w-4xl">
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-lime-400/20 bg-lime-400/[0.06] px-4 py-2 text-[10px] font-semibold tracking-[0.18em] text-lime-300 uppercase"><Sparkles size={14} />Premium automotive care</div>
             <h1 className="max-w-4xl text-5xl leading-[.95] font-black tracking-[-0.055em] text-white uppercase sm:text-7xl lg:text-[92px]">
-              Give your car <span className="text-lime-400">experience</span> the pampering it deserves
+              Give your car the <span className="text-lime-400">pampering</span> it deserves
             </h1>
             <p className="mt-7 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">Expert detailing. Meticulous protection. A finish that makes every drive feel brand new.</p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -86,6 +87,8 @@ export default function PublicLandingPage() {
           <LoyaltyCard visitCount={8} />
         </div>
       </section>
+
+      <PPFVisualizer />
 
       <section id="live-queue" className="bg-[#080c11] px-5 py-20 sm:px-8 sm:py-24">
         <div className="mx-auto max-w-7xl">

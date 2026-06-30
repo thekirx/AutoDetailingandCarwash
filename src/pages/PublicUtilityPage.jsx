@@ -1,5 +1,7 @@
-import { ArrowLeft, Clock3, MapPin, Radio } from 'lucide-react'
+import { ArrowLeft, MapPin, Radio } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 const branchDetails = {
   bacoor: { name: 'Bacoor Branch', location: 'RFC Mall, Bacoor' },
@@ -15,7 +17,91 @@ export function QueuePage() {
 }
 
 export function BookingPage() {
-  return <PublicMessage eyebrow="Online booking" title="Give your car the Hakum treatment." message="The complete service selection and booking request flow is coming in the next module." icon={Clock3} />
+  const [services, setServices] = useState([])
+  const [status, setStatus] = useState('idle')
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({
+    customer_name: '',
+    customer_phone: '',
+    vehicle_make: '',
+    vehicle_model: '',
+    scheduled_start: '',
+    service_id: '',
+  })
+
+  useEffect(() => {
+    supabase
+      .from('services')
+      .select('id, name, price_minor')
+      .eq('is_active', true)
+      .order('display_order')
+      .then(({ data, error: servicesError }) => {
+        if (servicesError) setError(servicesError.message)
+        else setServices(data ?? [])
+      })
+  }, [])
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setStatus('loading')
+    setError('')
+
+    const { error: insertError } = await supabase
+      .from('bookings')
+      .insert({
+        ...form,
+        scheduled_start: new Date(form.scheduled_start).toISOString(),
+        status: 'pending',
+      })
+
+    if (insertError) {
+      setError(insertError.message)
+      setStatus('idle')
+      return
+    }
+
+    setStatus('success')
+  }
+
+  if (status === 'success') {
+    return (
+      <section className="grid min-h-[620px] place-items-center">
+        <h1 className="text-3xl font-bold">Booking request received.</h1>
+      </section>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="mx-auto grid max-w-2xl gap-5 px-5 py-20">
+      <input required placeholder="Customer name" className="rounded border border-white/10 bg-[#10161e] p-3 text-white outline-none focus:border-lime-400"
+        onChange={(event) => setForm({ ...form, customer_name: event.target.value })} />
+
+      <input required placeholder="Phone" className="rounded border border-white/10 bg-[#10161e] p-3 text-white outline-none focus:border-lime-400"
+        onChange={(event) => setForm({ ...form, customer_phone: event.target.value })} />
+
+      <input required placeholder="Vehicle make" className="rounded border border-white/10 bg-[#10161e] p-3 text-white outline-none focus:border-lime-400"
+        onChange={(event) => setForm({ ...form, vehicle_make: event.target.value })} />
+
+      <input required placeholder="Vehicle model" className="rounded border border-white/10 bg-[#10161e] p-3 text-white outline-none focus:border-lime-400"
+        onChange={(event) => setForm({ ...form, vehicle_model: event.target.value })} />
+
+      <input required type="datetime-local" className="rounded border border-white/10 bg-[#10161e] p-3 text-white outline-none focus:border-lime-400"
+        onChange={(event) => setForm({ ...form, scheduled_start: event.target.value })} />
+
+      <select required className="rounded border border-white/10 bg-[#10161e] p-3 text-white outline-none focus:border-lime-400" onChange={(event) => setForm({ ...form, service_id: event.target.value })}>
+        <option value="">Select service</option>
+        {services.map((service) => (
+          <option key={service.id} value={service.id}>{service.name}</option>
+        ))}
+      </select>
+
+      {error && <p className="text-red-300">{error}</p>}
+
+      <button disabled={status === 'loading'} className="mt-4 rounded-xl bg-lime-400 p-4 font-bold text-[#090d12] transition hover:bg-lime-300 disabled:opacity-50">
+        {status === 'loading' ? 'Submitting…' : 'Book now'}
+      </button>
+    </form>
+  )
 }
 
 function PublicMessage({ eyebrow, title, message, icon: Icon = MapPin }) {

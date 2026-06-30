@@ -74,6 +74,7 @@ create table if not exists public.services (
   currency char(3) not null default 'PHP',
   duration_minutes integer not null check (duration_minutes > 0),
   is_active boolean not null default true,
+  is_archived boolean not null default false,
   display_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -192,6 +193,11 @@ create trigger profiles_soft_delete
 before delete on public.profiles
 for each row execute function public.archive_instead_of_delete();
 
+drop trigger if exists services_soft_delete on public.services;
+create trigger services_soft_delete
+before delete on public.services
+for each row execute function public.archive_instead_of_delete();
+
 drop trigger if exists bookings_soft_delete on public.bookings;
 create trigger bookings_soft_delete
 before delete on public.bookings
@@ -241,7 +247,7 @@ drop policy if exists "Public can view active services" on public.services;
 create policy "Public can view active services"
 on public.services for select
 to anon, authenticated
-using (is_active = true);
+using (is_active = true and is_archived = false);
 
 drop policy if exists "Public can request bookings" on public.bookings;
 create policy "Public can request bookings"
@@ -288,6 +294,11 @@ create policy "Staff can update services"
 on public.services for update to authenticated
 using (public.is_staff()) with check (public.is_staff());
 
+drop policy if exists "Staff can archive services" on public.services;
+create policy "Staff can archive services"
+on public.services for delete to authenticated
+using (public.is_staff());
+
 drop policy if exists "Staff can select bookings" on public.bookings;
 create policy "Staff can select bookings"
 on public.bookings for select to authenticated
@@ -332,7 +343,7 @@ using (public.is_staff());
 grant select on public.services to anon, authenticated;
 grant insert on public.bookings to anon, authenticated;
 grant select, insert, update, delete on public.profiles to authenticated;
-grant select, insert, update on public.services to authenticated;
+grant select, insert, update, delete on public.services to authenticated;
 grant select, insert, update, delete on public.bookings to authenticated;
 grant select, insert, update, delete on public.transactions to authenticated;
 
