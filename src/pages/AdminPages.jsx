@@ -1,5 +1,4 @@
 const pageContent = {
-  dashboard: ['Dashboard', 'A live overview of today’s shop operations.'],
   services: ['Services Management', 'Configure packages, pricing, and availability.'],
 }
 
