@@ -37,13 +37,13 @@ export default function LoginPage() {
       .from('customers')
       .select('role')
       .eq('id', data.user.id)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .eq('is_archived', false)
       .maybeSingle()
 
     if (profileError || !staffProfile) {
       await supabase.auth.signOut()
-      setError('This account does not have staff portal access.')
+      setError('This account does not have staff or admin portal access.')
       setSubmitting(false)
       return
     }

@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
       .from('customers')
       .select('id, full_name, email, role, is_archived')
       .eq('id', user.id)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .eq('is_archived', false)
       .maybeSingle()
 
@@ -67,7 +67,15 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(() => supabase.auth.signOut(), [])
   const value = useMemo(
-    () => ({ session, user: session?.user ?? null, profile, isStaff: profile?.role === 'staff', loading, signOut }),
+    () => ({
+      session,
+      user: session?.user ?? null,
+      profile,
+      isStaff: profile?.role === 'staff' || profile?.role === 'admin',
+      isAdmin: profile?.role === 'admin',
+      loading,
+      signOut,
+    }),
     [session, profile, loading, signOut],
   )
 
