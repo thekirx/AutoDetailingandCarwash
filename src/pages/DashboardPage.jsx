@@ -222,21 +222,19 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3 border-b border-white/8 px-6 py-5"><Banknote className="text-lime-400" size={20} /><div><h2 className="font-semibold">Recent Transactions</h2><p className="mt-0.5 text-xs text-slate-500">Latest entries from the financial audit trail</p></div></div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[850px] text-left">
-            <thead className="bg-white/[0.025] text-[11px] tracking-[0.14em] text-slate-500 uppercase"><tr><th className="px-6 py-4 font-medium">Date</th><th className="px-6 py-4 font-medium">Type</th><th className="px-6 py-4 font-medium">Customer / Description</th><th className="px-6 py-4 font-medium">Service</th><th className="px-6 py-4 font-medium">Reference</th><th className="px-6 py-4 text-right font-medium">Amount</th></tr></thead>
+            <thead className="bg-white/[0.025] text-[11px] tracking-[0.14em] text-slate-500 uppercase"><tr><th className="px-6 py-4 font-medium">Date</th><th className="px-6 py-4 font-medium">Customer</th><th className="px-6 py-4 font-medium">Service</th><th className="px-6 py-4 font-medium">Payment Method</th><th className="px-6 py-4 text-right font-medium">Cost</th></tr></thead>
             <tbody className="divide-y divide-white/6">
               {recentTransactions.length ? recentTransactions.map((transaction) => {
-                const signed = signedAmount(transaction)
                 return (
                   <tr key={transaction.id} className="transition hover:bg-white/[0.025]">
                     <td className="whitespace-nowrap px-6 py-4 text-xs text-slate-400">{format(new Date(transaction.occurred_at), 'MMM d, yyyy · h:mm a')}</td>
-                    <td className="px-6 py-4"><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase ${signed < 0 ? 'bg-red-400/10 text-red-300' : 'bg-lime-400/10 text-lime-300'}`}>{transaction.type}</span></td>
                     <td className="px-6 py-4"><p className="text-sm text-slate-200">{transaction.booking?.customer_name || transaction.description || 'General transaction'}</p>{transaction.booking?.vehicle_model && <p className="mt-0.5 text-xs text-slate-500">{transaction.booking.vehicle_make} {transaction.booking.vehicle_model}</p>}</td>
                     <td className="px-6 py-4 text-sm text-slate-400">{transaction.booking?.service?.name || '—'}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-slate-500">{transaction.reference_number || '—'}</td>
-                    <td className={`px-6 py-4 text-right font-semibold tabular-nums ${signed < 0 ? 'text-red-300' : 'text-slate-100'}`}>{signed < 0 ? '−' : ''}{preciseMoney.format(Math.abs(signed) / 100)}</td>
+                    <td className="px-6 py-4 text-sm text-slate-400 capitalize">{transaction.payment_method || '—'}</td>
+                    <td className="px-6 py-4 text-right font-semibold text-slate-100 tabular-nums">{preciseMoney.format(signedAmount(transaction) / 100)}</td>
                   </tr>
                 )
-              }) : <tr><td colSpan="6" className="px-6 py-14 text-center text-sm text-slate-500">No transactions recorded yet.</td></tr>}
+              }) : <tr><td colSpan="5" className="px-6 py-14 text-center text-sm text-slate-500">No transactions recorded yet.</td></tr>}
             </tbody>
           </table>
         </div>

@@ -27,6 +27,7 @@ export function BookingPage() {
     vehicle_model: '',
     scheduled_start: '',
     service_id: '',
+    branch: '',
   })
 
   useEffect(() => {
@@ -93,6 +94,12 @@ export function BookingPage() {
         {services.map((service) => (
           <option key={service.id} value={service.id}>{service.name}</option>
         ))}
+      </select>
+
+      <select required value={form.branch} className="rounded border border-white/10 bg-[#10161e] p-3 text-white outline-none focus:border-lime-400" onChange={(event) => setForm({ ...form, branch: event.target.value })}>
+        <option value="">Select branch</option>
+        <option value="bacoor">Bacoor</option>
+        <option value="batangas">Batangas</option>
       </select>
 
       {error && <p className="text-red-300">{error}</p>}

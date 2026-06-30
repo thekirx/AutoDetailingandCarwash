@@ -84,7 +84,7 @@ export default function PublicLandingPage() {
             <div><div className="text-xs font-semibold tracking-[0.18em] text-lime-400 uppercase">Loyalty, rewarded</div><h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-5xl">Care that pays you back.</h2></div>
             <p className="max-w-lg leading-7 text-slate-400">Keep your car looking its best and unlock complimentary Hakum services along the way.</p>
           </div>
-          <LoyaltyCard visitCount={8} />
+          <LoyaltyCard currentVisits={8} />
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Papa from 'papaparse'
-import { Archive, Download, RefreshCw, Search, Users } from 'lucide-react'
+import { CarFront, Download, MapPin, RefreshCw, Search, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
@@ -19,7 +19,7 @@ function formatVehicle(booking) {
   return booking.vehicle_plate ? `${vehicle} · ${booking.vehicle_plate}` : vehicle || '—'
 }
 
-function buildRows(profiles, transactions) {
+function buildRows(customers, transactions) {
   const activity = new Map()
 
   for (const transaction of transactions) {
@@ -47,16 +47,17 @@ function buildRows(profiles, transactions) {
     activity.set(transaction.customer_id, current)
   }
 
-  return profiles.map((profile) => {
-    const customerActivity = activity.get(profile.id)
+  return customers.map((customer) => {
+    const customerActivity = activity.get(customer.id)
     return {
-      id: profile.id,
-      name: profile.full_name,
-      contact: formatContact(profile),
+      id: customer.id,
+      name: customer.full_name,
+      contact: formatContact(customer),
       vehicle: formatVehicle(customerActivity?.latestVehicle),
+      branch: customerActivity?.latestVehicle?.branch || '',
+      vehicleType: customerActivity?.latestVehicle?.vehicle_type || '',
       totalVisits: customerActivity?.bookingIds.size || 0,
       lifetimeSpendMinor: customerActivity?.lifetimeSpendMinor || 0,
-      isArchived: profile.is_archived,
     }
   })
 }
@@ -64,7 +65,8 @@ function buildRows(profiles, transactions) {
 export default function MasterlistPage() {
   const [rows, setRows] = useState([])
   const [search, setSearch] = useState('')
-  const [archiveFilter, setArchiveFilter] = useState('active')
+  const [branchFilter, setBranchFilter] = useState('all')
+  const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -72,11 +74,12 @@ export default function MasterlistPage() {
     setLoading(true)
     setError('')
 
-    const [profilesResult, transactionsResult] = await Promise.all([
+    const [customersResult, transactionsResult] = await Promise.all([
       supabase
-        .from('profiles')
-        .select('id, full_name, email, phone, is_archived')
+        .from('customers')
+        .select('id, full_name, email, phone')
         .eq('role', 'customer')
+        .eq('is_archived', false)
         .order('full_name'),
       supabase
         .from('transactions')
@@ -90,7 +93,9 @@ export default function MasterlistPage() {
             vehicle_make,
             vehicle_model,
             vehicle_year,
-            vehicle_plate
+            vehicle_plate,
+            vehicle_type,
+            branch
           )
         `)
         .eq('is_archived', false)
@@ -98,13 +103,13 @@ export default function MasterlistPage() {
         .order('occurred_at', { ascending: false }),
     ])
 
-    if (profilesResult.error || transactionsResult.error) {
-      setError(profilesResult.error?.message || transactionsResult.error?.message || 'Unable to load customer data.')
+    if (customersResult.error || transactionsResult.error) {
+      setError(customersResult.error?.message || transactionsResult.error?.message || 'Unable to load customer data.')
       setLoading(false)
       return
     }
 
-    setRows(buildRows(profilesResult.data, transactionsResult.data))
+    setRows(buildRows(customersResult.data, transactionsResult.data))
     setLoading(false)
   }, [])
 
@@ -116,16 +121,15 @@ export default function MasterlistPage() {
     const query = search.trim().toLocaleLowerCase()
 
     return rows.filter((row) => {
-      const matchesArchive =
-        archiveFilter === 'all' ||
-        (archiveFilter === 'archived' ? row.isArchived : !row.isArchived)
-      const searchableText = [row.name, row.contact, row.vehicle, row.totalVisits, row.lifetimeSpendMinor / 100]
+      const matchesBranch = branchFilter === 'all' || row.branch === branchFilter
+      const matchesVehicleType = vehicleTypeFilter === 'all' || row.vehicleType === vehicleTypeFilter
+      const searchableText = [row.name, row.contact, row.vehicle, row.branch, row.vehicleType, row.totalVisits, row.lifetimeSpendMinor / 100]
         .join(' ')
         .toLocaleLowerCase()
 
-      return matchesArchive && (!query || searchableText.includes(query))
+      return matchesBranch && matchesVehicleType && (!query || searchableText.includes(query))
     })
-  }, [rows, search, archiveFilter])
+  }, [rows, search, branchFilter, vehicleTypeFilter])
 
   const exportCsv = () => {
     const csv = Papa.unparse(
@@ -133,6 +137,8 @@ export default function MasterlistPage() {
         Name: row.name,
         Contact: row.contact,
         Vehicle: row.vehicle,
+        Branch: row.branch || '—',
+        'Vehicle Type': row.vehicleType || '—',
         'Total Visits': row.totalVisits,
         'Lifetime Spend (PHP)': (row.lifetimeSpendMinor / 100).toFixed(2),
       })),
@@ -179,16 +185,34 @@ export default function MasterlistPage() {
           </label>
 
           <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-sm text-slate-300">
-            <Archive size={17} className="text-slate-500" />
-            <span className="sr-only">Customer archive status</span>
+            <MapPin size={17} className="text-slate-500" />
+            <span className="sr-only">Filter by branch</span>
             <select
-              value={archiveFilter}
-              onChange={(event) => setArchiveFilter(event.target.value)}
+              value={branchFilter}
+              onChange={(event) => setBranchFilter(event.target.value)}
               className="min-w-40 bg-transparent py-3 outline-none"
             >
-              <option value="active">Active customers</option>
-              <option value="archived">Archived customers</option>
-              <option value="all">All customers</option>
+              <option value="all">All branches</option>
+              <option value="bacoor">Bacoor</option>
+              <option value="batangas">Batangas</option>
+            </select>
+          </label>
+
+          <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-sm text-slate-300">
+            <CarFront size={17} className="text-slate-500" />
+            <span className="sr-only">Filter by vehicle type</span>
+            <select
+              value={vehicleTypeFilter}
+              onChange={(event) => setVehicleTypeFilter(event.target.value)}
+              className="min-w-40 bg-transparent py-3 outline-none"
+            >
+              <option value="all">All vehicle types</option>
+              <option value="sedan">Sedan</option>
+              <option value="suv">SUV</option>
+              <option value="pickup">Pickup</option>
+              <option value="van">Van</option>
+              <option value="motorcycle">Motorcycle</option>
+              <option value="other">Other</option>
             </select>
           </label>
 
@@ -224,7 +248,7 @@ export default function MasterlistPage() {
                 ) : visibleRows.length > 0 ? (
                   visibleRows.map((row) => (
                     <tr key={row.id} className="transition hover:bg-white/[0.025]">
-                      <td className="px-6 py-5"><div className="flex items-center gap-3"><span className={`size-2 rounded-full ${row.isArchived ? 'bg-slate-600' : 'bg-lime-400 shadow-[0_0_10px_#a3e635]'}`} /><span className="font-medium text-slate-100">{row.name}</span></div></td>
+                      <td className="px-6 py-5"><div className="flex items-center gap-3"><span className="size-2 rounded-full bg-lime-400 shadow-[0_0_10px_#a3e635]" /><span className="font-medium text-slate-100">{row.name}</span></div></td>
                       <td className="px-6 py-5 text-sm text-slate-400">{row.contact}</td>
                       <td className="px-6 py-5 text-sm text-slate-300">{row.vehicle}</td>
                       <td className="px-6 py-5 text-right font-medium tabular-nums">{row.totalVisits}</td>

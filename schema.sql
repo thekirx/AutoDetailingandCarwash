@@ -11,7 +11,7 @@ create extension if not exists pgcrypto;
 
 do $$
 begin
-  create type public.profile_role as enum ('customer', 'staff');
+  create type public.profile_role as enum ('customer', 'staff', 'admin');
 exception
   when duplicate_object then null;
 end
@@ -49,7 +49,7 @@ $$;
 -- Core tables
 -- -----------------------------------------------------------------------------
 
-create table if not exists public.profiles (
+create table if not exists public.customers (
   id uuid primary key references auth.users (id) on delete restrict,
   role public.profile_role not null default 'customer',
   full_name text not null,
@@ -61,8 +61,8 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
-create unique index if not exists profiles_email_unique
-  on public.profiles (lower(email))
+create unique index if not exists customers_email_unique
+  on public.customers (lower(email))
   where email is not null;
 
 create table if not exists public.services (
@@ -82,9 +82,9 @@ create table if not exists public.services (
 
 create table if not exists public.bookings (
   id uuid primary key default gen_random_uuid(),
-  customer_id uuid references public.profiles (id) on delete restrict,
+  customer_id uuid references public.customers (id) on delete restrict,
   service_id uuid not null references public.services (id) on delete restrict,
-  assigned_staff_id uuid references public.profiles (id) on delete restrict,
+  assigned_staff_id uuid references public.customers (id) on delete restrict,
   customer_name text not null,
   customer_email text,
   customer_phone text not null,
@@ -92,8 +92,12 @@ create table if not exists public.bookings (
   vehicle_model text not null,
   vehicle_year smallint check (vehicle_year between 1886 and 2200),
   vehicle_plate text,
+  vehicle_type text
+    check (vehicle_type in ('sedan', 'suv', 'pickup', 'van', 'motorcycle', 'other')),
   scheduled_start timestamptz not null,
   scheduled_end timestamptz,
+  branch text not null default 'bacoor'
+    check (branch in ('bacoor', 'batangas')),
   status public.booking_status not null default 'pending',
   notes text,
   is_archived boolean not null default false,
@@ -114,8 +118,8 @@ create index if not exists bookings_customer_idx
 create table if not exists public.transactions (
   id uuid primary key default gen_random_uuid(),
   booking_id uuid references public.bookings (id) on delete restrict,
-  customer_id uuid references public.profiles (id) on delete restrict,
-  recorded_by uuid not null references public.profiles (id) on delete restrict,
+  customer_id uuid references public.customers (id) on delete restrict,
+  recorded_by uuid not null references public.customers (id) on delete restrict,
   type public.transaction_type not null default 'sale',
   amount_minor integer not null check (amount_minor >= 0),
   currency char(3) not null default 'PHP',
@@ -168,9 +172,9 @@ begin
 end;
 $$;
 
-drop trigger if exists profiles_set_updated_at on public.profiles;
-create trigger profiles_set_updated_at
-before update on public.profiles
+drop trigger if exists customers_set_updated_at on public.customers;
+create trigger customers_set_updated_at
+before update on public.customers
 for each row execute function public.set_updated_at();
 
 drop trigger if exists services_set_updated_at on public.services;
@@ -188,9 +192,9 @@ create trigger transactions_set_updated_at
 before update on public.transactions
 for each row execute function public.set_updated_at();
 
-drop trigger if exists profiles_soft_delete on public.profiles;
-create trigger profiles_soft_delete
-before delete on public.profiles
+drop trigger if exists customers_soft_delete on public.customers;
+create trigger customers_soft_delete
+before delete on public.customers
 for each row execute function public.archive_instead_of_delete();
 
 drop trigger if exists services_soft_delete on public.services;
@@ -210,7 +214,7 @@ for each row execute function public.archive_instead_of_delete();
 
 -- -----------------------------------------------------------------------------
 -- RLS helper
--- SECURITY DEFINER prevents recursive profiles-policy evaluation. Access is
+-- SECURITY DEFINER prevents recursive customers-policy evaluation. Access is
 -- intentionally restricted to API roles.
 -- -----------------------------------------------------------------------------
 
@@ -223,7 +227,7 @@ set search_path = public
 as $$
   select exists (
     select 1
-    from public.profiles
+    from public.customers
     where id = auth.uid()
       and role = 'staff'
       and is_archived = false
@@ -237,7 +241,7 @@ grant execute on function public.is_staff() to authenticated;
 -- Row Level Security
 -- -----------------------------------------------------------------------------
 
-alter table public.profiles enable row level security;
+alter table public.customers enable row level security;
 alter table public.services enable row level security;
 alter table public.bookings enable row level security;
 alter table public.transactions enable row level security;
@@ -259,25 +263,23 @@ with check (
   and assigned_staff_id is null
 );
 
-drop policy if exists "Staff can select profiles" on public.profiles;
-create policy "Staff can select profiles"
-on public.profiles for select to authenticated
+drop policy if exists "Staff can select customers" on public.customers;
+create policy "Staff can select customers"
+on public.customers for select to authenticated
 using (public.is_staff());
 
-drop policy if exists "Staff can insert profiles" on public.profiles;
-create policy "Staff can insert profiles"
-on public.profiles for insert to authenticated
+drop policy if exists "Staff can insert customers" on public.customers;
+create policy "Staff can insert customers"
+on public.customers for insert to authenticated
 with check (public.is_staff());
 
-drop policy if exists "Staff can update profiles" on public.profiles;
-create policy "Staff can update profiles"
-on public.profiles for update to authenticated
+drop policy if exists "Staff can update customers" on public.customers;
+create policy "Staff can update customers"
+on public.customers for update to authenticated
 using (public.is_staff()) with check (public.is_staff());
 
-drop policy if exists "Staff can archive profiles" on public.profiles;
-create policy "Staff can archive profiles"
-on public.profiles for delete to authenticated
-using (public.is_staff());
+drop policy if exists "Staff can archive profiles" on public.customers;
+drop policy if exists "Staff can archive customers" on public.customers;
 
 drop policy if exists "Staff can select services" on public.services;
 create policy "Staff can select services"
@@ -295,9 +297,6 @@ on public.services for update to authenticated
 using (public.is_staff()) with check (public.is_staff());
 
 drop policy if exists "Staff can archive services" on public.services;
-create policy "Staff can archive services"
-on public.services for delete to authenticated
-using (public.is_staff());
 
 drop policy if exists "Staff can select bookings" on public.bookings;
 create policy "Staff can select bookings"
@@ -315,9 +314,6 @@ on public.bookings for update to authenticated
 using (public.is_staff()) with check (public.is_staff());
 
 drop policy if exists "Staff can archive bookings" on public.bookings;
-create policy "Staff can archive bookings"
-on public.bookings for delete to authenticated
-using (public.is_staff());
 
 drop policy if exists "Staff can select transactions" on public.transactions;
 create policy "Staff can select transactions"
@@ -335,16 +331,18 @@ on public.transactions for update to authenticated
 using (public.is_staff()) with check (public.is_staff());
 
 drop policy if exists "Staff can archive transactions" on public.transactions;
-create policy "Staff can archive transactions"
-on public.transactions for delete to authenticated
-using (public.is_staff());
 
 -- Supabase API table privileges; RLS remains the authorization boundary.
 grant select on public.services to anon, authenticated;
 grant insert on public.bookings to anon, authenticated;
-grant select, insert, update, delete on public.profiles to authenticated;
-grant select, insert, update, delete on public.services to authenticated;
-grant select, insert, update, delete on public.bookings to authenticated;
-grant select, insert, update, delete on public.transactions to authenticated;
+grant select, insert, update on public.customers to authenticated;
+grant select, insert, update on public.services to authenticated;
+grant select, insert, update on public.bookings to authenticated;
+grant select, insert, update on public.transactions to authenticated;
+
+revoke delete on public.customers from authenticated;
+revoke delete on public.services from authenticated;
+revoke delete on public.bookings from authenticated;
+revoke delete on public.transactions from authenticated;
 
 commit;

@@ -3,18 +3,17 @@ import { Gift, Sparkles } from 'lucide-react'
 const TOTAL_SLOTS = 15
 const MILESTONES = [10, 15]
 
-function getEncouragement(visitCount) {
-  if (visitCount >= TOTAL_SLOTS) return 'You did it—your premium detail reward is ready!'
-  const nextMilestone = MILESTONES.find((milestone) => visitCount < milestone)
-  const remaining = nextMilestone - visitCount
-  const reward = nextMilestone === 10 ? 'free wash' : 'premium detail reward'
-  return remaining === 1
-    ? `Just 1 more visit until your ${reward}!`
-    : `Only ${remaining} more visits until your ${reward}!`
+function getEncouragement(currentVisits) {
+  if (currentVisits >= TOTAL_SLOTS) return 'Your next freebie is ready!'
+
+  const nextMilestone = currentVisits < MILESTONES[0] ? MILESTONES[0] : MILESTONES[1]
+  const remaining = nextMilestone - currentVisits
+
+  return `You are ${remaining} ${remaining === 1 ? 'wash' : 'washes'} away from your next freebie!`
 }
 
-export default function LoyaltyCard({ visitCount = 0 }) {
-  const completed = Math.min(Math.max(Math.floor(visitCount), 0), TOTAL_SLOTS)
+export default function LoyaltyCard({ currentVisits = 0 }) {
+  const completed = Math.min(Math.max(Math.floor(currentVisits), 0), TOTAL_SLOTS)
   const progress = Math.round((completed / TOTAL_SLOTS) * 100)
 
   return (

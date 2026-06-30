@@ -18,11 +18,6 @@ to anon, authenticated
 using (is_active = true and is_archived = false);
 
 drop policy if exists "Staff can archive services" on public.services;
-create policy "Staff can archive services"
-on public.services for delete
-to authenticated
-using (public.is_staff());
-
-grant delete on public.services to authenticated;
+revoke delete on public.services from authenticated;
 
 commit;

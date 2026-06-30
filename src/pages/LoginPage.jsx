@@ -34,7 +34,7 @@ export default function LoginPage() {
     }
 
     const { data: staffProfile, error: profileError } = await supabase
-      .from('profiles')
+      .from('customers')
       .select('role')
       .eq('id', data.user.id)
       .eq('role', 'staff')

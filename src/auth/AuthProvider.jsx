@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
     }
 
     const { data, error } = await supabase
-      .from('profiles')
+      .from('customers')
       .select('id, full_name, email, role, is_archived')
       .eq('id', user.id)
       .eq('role', 'staff')

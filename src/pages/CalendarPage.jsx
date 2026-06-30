@@ -32,6 +32,10 @@ const statusColors = {
   no_show: { backgroundColor: '#dc2626', color: '#fef2f2', borderColor: '#f87171' },
 }
 
+function formatBranch(branch) {
+  return branch === 'batangas' ? 'Batangas' : 'Bacoor'
+}
+
 function toCalendarEvent(booking) {
   const start = new Date(booking.scheduled_start)
   const fallbackMinutes = booking.service?.duration_minutes || 60
@@ -53,7 +57,7 @@ function CalendarEvent({ event }) {
     <div className="min-w-0 leading-tight">
       <p className="truncate text-xs font-bold">{event.resource.customer_name}</p>
       <p className="mt-0.5 truncate text-[10px] opacity-90">
-        {event.resource.vehicle_model} · {event.resource.service?.name || 'Service'}
+        {event.resource.vehicle_model} · {event.resource.service?.name || 'Service'} · {formatBranch(event.resource.branch)}
       </p>
     </div>
   )
@@ -110,6 +114,7 @@ function BookingModal({ event, onClose, onUpdated }) {
           <div className="flex gap-3"><CalendarDays size={18} className="mt-0.5 shrink-0 text-lime-400" /><div><p className="text-xs text-slate-500">Service</p><p className="mt-1 text-slate-200">{booking.service?.name || 'Not specified'}</p></div></div>
           <div className="flex gap-3"><Clock3 size={18} className="mt-0.5 shrink-0 text-lime-400" /><div><p className="text-xs text-slate-500">Schedule</p><p className="mt-1 text-slate-200">{format(event.start, 'MMM d, yyyy · h:mm a')}–{format(event.end, 'h:mm a')}</p></div></div>
           <div className="flex gap-3"><UserRound size={18} className="mt-0.5 shrink-0 text-lime-400" /><div><p className="text-xs text-slate-500">Contact</p><p className="mt-1 text-slate-200">{booking.customer_phone || booking.customer_email || '—'}</p></div></div>
+          <div className="flex gap-3"><CalendarDays size={18} className="mt-0.5 shrink-0 text-lime-400" /><div><p className="text-xs text-slate-500">Branch</p><p className="mt-1 text-slate-200">{formatBranch(booking.branch)}</p></div></div>
         </div>
 
         <label className="mt-6 block">
@@ -157,6 +162,7 @@ export default function CalendarPage() {
         vehicle_plate,
         scheduled_start,
         scheduled_end,
+        branch,
         status,
         notes,
         service:services!bookings_service_id_fkey (id, name, duration_minutes)
