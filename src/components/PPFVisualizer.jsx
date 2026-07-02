@@ -2,78 +2,32 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls, RoundedBox } from '@react-three/drei'
 import { useState } from 'react'
 
-function Panel({ position, size, tier, basic = false }) {
-  const protectedPanel = tier !== 'Basic' || basic
-
-  return (
-    <group>
-      <RoundedBox position={position} args={size}>
-        <meshStandardMaterial color="#252d31" metalness={0.7} roughness={0.2} />
-      </RoundedBox>
-
-      {protectedPanel && (
-        <RoundedBox
-          position={position}
-          args={size.map((value) =>
-            value * (tier === 'Platinum' ? 1.055 : 1.025)
-          )}
-        >
-          <meshPhysicalMaterial
-            color={tier === 'Platinum' ? '#dfff20' : '#39d6ff'}
-            emissive={tier === 'Platinum' ? '#dfff20' : '#39d6ff'}
-            emissiveIntensity={tier === 'Platinum' ? 1.1 : 0.4}
-            transparent
-            opacity={tier === 'Platinum' ? 0.48 : 0.25}
-            depthWrite={false}
-          />
-        </RoundedBox>
-      )}
-    </group>
-  )
+const packages = {
+  Essential: { panels: 2, label: 'High-impact front', copy: 'Bumper, partial hood, and mirror protection.' },
+  Signature: { panels: 4, label: 'Full front defense', copy: 'Full hood, fenders, bumper, and mirrors.' },
+  Ultimate: { panels: 5, label: 'Complete body coverage', copy: 'Edge-to-edge protection across every painted panel.' },
 }
 
-function SUV({ tier }) {
-  return (
-    <group>
-      <Panel tier={tier} basic position={[1, 1.3, 0]} size={[2, .35, 1.8]} />
-      <Panel tier={tier} basic position={[0, 1.2, 1]} size={[1.2, 1, .1]} />
-      <Panel tier={tier} basic position={[0, 1.2, -1]} size={[1.2, 1, .1]} />
-      <Panel tier={tier} position={[-1, 1.8, 0]} size={[2.4, .3, 1.7]} />
-      <Panel tier={tier} position={[0, .8, 0]} size={[5.4, .8, 2]} />
-    </group>
-  )
+function BodyPanel({ position, size, active }) {
+  return <group><RoundedBox position={position} args={size} radius={.18} smoothness={4}><meshStandardMaterial color="#17213b" metalness={.82} roughness={.18}/></RoundedBox>{active && <RoundedBox position={position} args={size.map(v => v * 1.025)} radius={.18} smoothness={4}><meshPhysicalMaterial color="#3d68ff" emissive="#052699" emissiveIntensity={1.4} transparent opacity={.5} depthWrite={false}/></RoundedBox>}</group>
+}
+
+function Car({ coverage }) {
+  return <group rotation={[0,-.2,0]}>
+    <BodyPanel active={coverage >= 1} position={[1.75,.8,0]} size={[1.35,.55,2]}/>
+    <BodyPanel active={coverage >= 2} position={[.7,1.12,0]} size={[1.15,.3,1.9]}/>
+    <BodyPanel active={coverage >= 3} position={[-.25,1.28,0]} size={[1.05,.8,1.75]}/>
+    <BodyPanel active={coverage >= 4} position={[-1.35,.83,0]} size={[1.35,.65,2]}/>
+    <BodyPanel active={coverage >= 5} position={[0,.45,0]} size={[4.8,.4,1.85]}/>
+    {[[1.4,.22,1],[-1.35,.22,1],[1.4,.22,-1],[-1.35,.22,-1]].map((p,i)=><mesh key={i} position={p} rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[.42,.42,.24,24]}/><meshStandardMaterial color="#05070c"/></mesh>)}
+  </group>
 }
 
 export default function PPFVisualizer() {
-  const [tier, setTier] = useState('Basic')
-
-  return (
-    <section id="visualizer" className="border-b border-white/8 py-20">
-      <div className="mx-auto mb-8 max-w-7xl px-5 text-center">
-        <h2 className="text-3xl font-bold">360° PPF Protection Visualizer</h2>
-        <p className="mt-2 text-slate-400">See how our different tiers cover your vehicle.</p>
-      </div>
-      <div className="mx-auto h-[560px] max-w-5xl cursor-move overflow-hidden rounded-2xl border border-white/10 bg-[#0b1016]">
-        <Canvas camera={{ position: [7, 4, 7] }}>
-          <ambientLight intensity={1} />
-          <directionalLight position={[5, 8, 5]} intensity={3} />
-          <SUV tier={tier} />
-          <OrbitControls enablePan={false} />
-        </Canvas>
-      </div>
-
-      <div className="mt-8 flex justify-center gap-3">
-        {['Basic', 'Premium', 'Platinum'].map((name) => (
-          <button
-            key={name}
-            aria-pressed={tier === name}
-            onClick={() => setTier(name)}
-            className={`rounded-full px-6 py-2 font-semibold transition ${tier === name ? 'bg-lime-400 text-black' : 'border border-white/10 bg-[#10161e] text-slate-300 hover:bg-white/5'}`}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
-    </section>
-  )
+  const [selected, setSelected] = useState('Signature')
+  const data = packages[selected]
+  return <section className="visualizer-section" id="visualizer"><div className="public-shell visualizer-grid">
+    <div className="visualizer-copy"><p className="eyebrow">Paint protection film</p><h2 className="section-title">See your<br/>coverage in 360°.</h2><p>Drag the vehicle to explore every angle. Switch packages to see exactly where our virtually invisible protection goes.</p><div className="package-tabs">{Object.keys(packages).map(name => <button key={name} onClick={() => setSelected(name)} aria-pressed={selected===name}>{name}</button>)}</div><div className="coverage-note"><span>Selected coverage</span><strong>{data.label}</strong><p>{data.copy}</p></div></div>
+    <div className="car-canvas"><span>Drag to rotate · 360°</span><Canvas camera={{position:[6,3.8,6],fov:38}}><ambientLight intensity={1.4}/><directionalLight position={[6,8,5]} intensity={4}/><pointLight position={[-4,3,-4]} color="#315eff" intensity={20}/><Car coverage={data.panels}/><OrbitControls enablePan={false} enableZoom={false} autoRotate autoRotateSpeed={.7}/></Canvas></div>
+  </div></section>
 }

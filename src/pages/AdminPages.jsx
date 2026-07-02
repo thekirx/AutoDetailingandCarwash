@@ -1,5 +1,6 @@
 const pageContent = {
   services: ['Services Management', 'Configure packages, pricing, and availability.'],
+  queue: ['Queue Management', 'Move accepted bookings into the active service queue and update customer-safe status.'],
 }
 
 export function AdminPage({ page }) {

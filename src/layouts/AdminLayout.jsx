@@ -1,13 +1,14 @@
-import { CalendarDays, Gauge, Menu, Settings2, Users, X, LogOut, CarFront } from 'lucide-react'
+import { CalendarDays, ChartNoAxesCombined, Gauge, Menu, ListOrdered, Users, X, LogOut, CarFront } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 
 const navigation = [
-  { label: 'Dashboard', to: '/admin', end: true, icon: Gauge },
-  { label: 'Calendar', to: '/admin/calendar', icon: CalendarDays },
-  { label: 'Masterlist', to: '/admin/masterlist', icon: Users },
-  { label: 'Services Management', to: '/admin/services', icon: Settings2 },
+  { label: 'Dashboard', to: '/admin/dashboard', icon: Gauge },
+  { label: 'Bookings', to: '/admin/bookings', icon: CalendarDays },
+  { label: 'Queue', to: '/admin/queue', icon: ListOrdered },
+  { label: 'Customers', to: '/admin/customers', icon: Users },
+  { label: 'Reports', to: '/admin/reports', icon: ChartNoAxesCombined },
 ]
 
 export default function AdminLayout() {

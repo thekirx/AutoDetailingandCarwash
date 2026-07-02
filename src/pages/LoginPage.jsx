@@ -19,7 +19,7 @@ export default function LoginPage() {
   }, [loading, user, isStaff, signOut])
 
   if (loading) return <LoadingScreen />
-  if (user && isStaff) return <Navigate to={location.state?.from?.pathname || '/admin'} replace />
+  if (user && isStaff) return <Navigate to={location.state?.from?.pathname || '/admin/dashboard'} replace />
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -48,7 +48,7 @@ export default function LoginPage() {
       return
     }
 
-    navigate(location.state?.from?.pathname || '/admin', { replace: true })
+    navigate(location.state?.from?.pathname || '/admin/dashboard', { replace: true })
   }
 
   return (
