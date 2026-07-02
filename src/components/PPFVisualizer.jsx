@@ -6,6 +6,29 @@ import { Link } from 'react-router-dom'
 import * as THREE from 'three'
 import { PPF_PACKAGES } from '../data/ppfPackages'
 
+const PPF_HIGHLIGHT_COLOR = '#CCFF00'
+const PPF_HIGHLIGHT_OPACITY = {
+  basic: .35,
+  premium: .35,
+  platinum: .45,
+}
+const PPF_COLORS = {
+  basic: { color:PPF_HIGHLIGHT_COLOR, emissive:PPF_HIGHLIGHT_COLOR, opacity:PPF_HIGHLIGHT_OPACITY.basic, selectedOpacity:.47, label:'7.5 MIL protected area' },
+  premium: { color:PPF_HIGHLIGHT_COLOR, emissive:PPF_HIGHLIGHT_COLOR, opacity:PPF_HIGHLIGHT_OPACITY.premium, selectedOpacity:.47, label:'7.5 MIL protected area' },
+  platinum: { color:PPF_HIGHLIGHT_COLOR, emissive:PPF_HIGHLIGHT_COLOR, opacity:PPF_HIGHLIGHT_OPACITY.platinum, selectedOpacity:.57, label:'8.5 MIL enhanced defense' },
+}
+const BASIC_HOOD_SURFACE = [.56,.88,-.72, 1.76,.76,-.62, 1.76,.76,.62, .56,.88,.72]
+const BASIC_DOOR_SURFACES = {
+  left: [-.82,.47,.872, .72,.47,.872, .62,.82,.862, -.68,.82,.862],
+  right: [.72,.47,-.872, -.82,.47,-.872, -.68,.82,-.862, .62,.82,-.862],
+}
+const BASIC_LIGHT_SURFACES = {
+  headlightLeft: [1.925,.72,.38, 1.925,.72,.72, 1.9,.88,.68, 1.9,.88,.4],
+  headlightRight: [1.925,.72,-.72, 1.925,.72,-.38, 1.9,.88,-.4, 1.9,.88,-.68],
+  taillightLeft: [-1.925,.7,.38, -1.925,.7,.7, -1.905,.86,.68, -1.905,.86,.4],
+  taillightRight: [-1.925,.7,-.7, -1.925,.7,-.38, -1.905,.86,-.4, -1.905,.86,-.68],
+}
+
 function getCoverageState(packageData) {
   const areas = new Set(packageData.coverageAreas.map(area => area.toLowerCase()))
   const fullBody = areas.has('full exterior')
@@ -18,6 +41,7 @@ function getCoverageState(packageData) {
     mirrors: fullBody || areas.has('side mirrors'), fenders: fullBody || areas.has('fenders'),
     trims: fullBody || areas.has('trims'), quarterPanels: fullBody || areas.has('quarter panels'),
     rockerPanels: areas.has('rocker panels'),
+    packageId: packageData.id,
     emphasis: packageData.id === 'platinum' ? 'heavy' : 'standard',
   }
 }
@@ -29,43 +53,55 @@ function CarModel(props) {
 
 useGLTF.preload('/models/Mazda RX-7.glb')
 
-function FilmPatch({ label, description, position, scale, rotation, emphasis, onInspect, shape='plane' }) {
+function HighlightMaterial({ materialRef, hovered, packageId }) {
+  const palette = PPF_COLORS[packageId]
+  useFrame(({ clock }, delta) => {
+    if (!materialRef.current) return
+    const pulse = Math.sin(clock.elapsedTime * 2.2) * .025
+    const opacity = hovered ? palette.selectedOpacity : palette.opacity
+    materialRef.current.opacity += (opacity - materialRef.current.opacity) * Math.min(delta * 7, 1)
+    const glow = hovered ? .85 : .55 + pulse
+    materialRef.current.emissiveIntensity += (glow - materialRef.current.emissiveIntensity) * Math.min(delta * 7, 1)
+  })
+  return <meshStandardMaterial ref={materialRef} color={palette.color} emissive={palette.emissive} emissiveIntensity={.55} roughness={.18} metalness={.05} side={THREE.DoubleSide} transparent opacity={0} depthWrite={false} polygonOffset polygonOffsetFactor={-2}/>
+}
+
+function SurfaceFilm({ label, description, vertices, packageId, onInspect }) {
   const material = useRef(null)
   const [hovered,setHovered] = useState(false)
-  const isHeavy = emphasis === 'heavy'
-  useFrame(({ clock }, delta) => {
-    if (!material.current) return
-    const pulse = Math.sin(clock.elapsedTime * 2.2) * .035
-    const target = hovered ? .7 : .52 + pulse
-    material.current.opacity += (target - material.current.opacity) * Math.min(delta * 7, 1)
-    const glow = hovered ? 1.35 : (isHeavy ? .95 : .78) + pulse
-    material.current.emissiveIntensity += (glow - material.current.emissiveIntensity) * Math.min(delta * 7, 1)
-  })
+  const geometry = useMemo(() => {
+    const value = new THREE.BufferGeometry()
+    value.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3))
+    value.setIndex([0,1,2,0,2,3])
+    value.computeVertexNormals()
+    return value
+  }, [vertices])
+  useEffect(() => () => geometry.dispose(), [geometry])
   const inspect = (event) => {
     event.stopPropagation()
     setHovered(true)
     onInspect({ label, description })
   }
   const clearInspect = () => { setHovered(false); onInspect(null) }
-  return <mesh position={position} scale={scale} rotation={rotation} renderOrder={3} onPointerOver={inspect} onPointerOut={clearInspect} onClick={inspect}>
-    {shape === 'lens' ? <sphereGeometry args={[1,24,12]}/> : <planeGeometry args={[1,1]}/>} 
-    <meshStandardMaterial ref={material} color="#00d9ff" emissive="#00bfff" emissiveIntensity={.78} roughness={.2} metalness={.05} side={THREE.DoubleSide} transparent opacity={0} depthWrite={false} polygonOffset polygonOffsetFactor={-2}/>
+  return <mesh geometry={geometry} renderOrder={10} onPointerOver={inspect} onPointerOut={clearInspect} onClick={inspect}>
+    <HighlightMaterial materialRef={material} hovered={hovered} packageId={packageId}/>
   </mesh>
 }
 
-function FullBodyFilm({ emphasis, onInspect }) {
+function FullBodyFilm({ packageId, onInspect }) {
   const { scene } = useGLTF('/models/Mazda RX-7.glb')
-  const isHeavy = emphasis === 'heavy'
+  const isHeavy = packageId === 'platinum'
+  const palette = PPF_COLORS[packageId]
   const [hovered,setHovered] = useState(false)
   const material = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: isHeavy ? '#71eaff' : '#00d9ff', emissive: '#00bfff',
-    emissiveIntensity: isHeavy ? .8 : .45, roughness: .2, metalness: .05,
+    color: palette.color, emissive: palette.emissive,
+    emissiveIntensity: .55, roughness: .18, metalness: .05,
     transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2,
-  }), [isHeavy])
+  }), [palette])
   const outlineMaterial = useMemo(() => new THREE.MeshBasicMaterial({
-    color: isHeavy ? '#d8f8ff' : '#00d9ff', transparent: true, opacity: 0,
+    color: palette.color, transparent: true, opacity: 0,
     depthWrite: false, side: THREE.BackSide,
-  }), [isHeavy])
+  }), [palette])
   const filmScene = useMemo(() => {
     const clone = scene.clone(true)
     clone.traverse(child => {
@@ -92,9 +128,9 @@ function FullBodyFilm({ emphasis, onInspect }) {
   useEffect(() => () => { material.dispose(); outlineMaterial.dispose() }, [material, outlineMaterial])
   useFrame(({ clock }, delta) => {
     const pulse = Math.sin(clock.elapsedTime * 1.8) * .025
-    const target = hovered ? (isHeavy ? .58 : .47) : (isHeavy ? .45 : .32) + pulse
+    const target = hovered ? palette.selectedOpacity : palette.opacity
     material.opacity += (target - material.opacity) * Math.min(delta * 5, 1)
-    const glow = hovered ? 1.15 : (isHeavy ? .8 : .45) + pulse
+    const glow = hovered ? .85 : .55 + pulse
     material.emissiveIntensity += (glow - material.emissiveIntensity) * Math.min(delta * 5, 1)
     const outlineTarget = hovered ? .48 : (isHeavy ? .32 : .22) + pulse
     outlineMaterial.opacity += (outlineTarget - outlineMaterial.opacity) * Math.min(delta * 5, 1)
@@ -112,14 +148,16 @@ function FullBodyFilm({ emphasis, onInspect }) {
 }
 
 function Car({ coverage, onInspect }) {
-  const panel = { emphasis: coverage.emphasis, onInspect }
+  const panel = { packageId: coverage.packageId, onInspect }
   return <group rotation={[0,-.2,0]}>
     <CarModel/>
     {coverage.fullBody ? <FullBodyFilm {...panel}/> : <>
-      <FilmPatch {...panel} label="Hood" description="A primary impact zone protected from stone chips, bug acids, and road wear." position={[1.14,1.035,0]} scale={[1.18,1.48,1]} rotation={[-Math.PI/2,0,0]}/>
-      {[1,-1].map(side => <FilmPatch key={`doors-${side}`} {...panel} label="All four doors" description="Door skin coverage helps prevent scratches, chips, and everyday contact marks." position={[-.02,.73,side*.885]} scale={[1.62,.57,1]} rotation={[0,0,0]}/>) }
-      {[1,-1].map(side => <FilmPatch key={`headlight-${side}`} {...panel} shape="lens" label="Headlights" description="Clear film helps protect this lighting surface from chips, staining, and daily road wear." position={[1.91,.83,side*.57]} scale={[.22,.09,.3]}/>) }
-      {[1,-1].map(side => <FilmPatch key={`taillight-${side}`} {...panel} shape="lens" label="Taillights" description="Clear film helps protect this lighting surface from chips, staining, and daily road wear." position={[-1.92,.82,side*.6]} scale={[.16,.08,.27]}/>) }
+      <SurfaceFilm {...panel} label="Hood" description="A primary impact zone protected from stone chips, bug acids, and road wear." vertices={BASIC_HOOD_SURFACE}/>
+      {[1,-1].map(side => <SurfaceFilm key={`doors-${side}`} {...panel} label="All four doors" description="Door skin coverage helps prevent scratches, chips, and everyday contact marks." vertices={side > 0 ? BASIC_DOOR_SURFACES.left : BASIC_DOOR_SURFACES.right}/>) }
+      <SurfaceFilm {...panel} label="Headlights" description="Clear film helps protect this lighting surface from chips, staining, and daily road wear." vertices={BASIC_LIGHT_SURFACES.headlightLeft}/>
+      <SurfaceFilm {...panel} label="Headlights" description="Clear film helps protect this lighting surface from chips, staining, and daily road wear." vertices={BASIC_LIGHT_SURFACES.headlightRight}/>
+      <SurfaceFilm {...panel} label="Taillights" description="Clear film helps protect this lighting surface from chips, staining, and daily road wear." vertices={BASIC_LIGHT_SURFACES.taillightLeft}/>
+      <SurfaceFilm {...panel} label="Taillights" description="Clear film helps protect this lighting surface from chips, staining, and daily road wear." vertices={BASIC_LIGHT_SURFACES.taillightRight}/>
     </>}
   </group>
 }
@@ -144,7 +182,7 @@ export default function PPFVisualizer() {
         <div className="ppf-canvas-stage"><Canvas camera={{position:[6,3.8,6],fov:38}} onPointerMissed={() => setInspected(null)}><ambientLight intensity={1.4}/><directionalLight position={[6,8,5]} intensity={4}/><pointLight position={[-4,3,-4]} color="#315eff" intensity={coverage.emphasis==='heavy'?30:20}/><Car coverage={coverage} onInspect={setInspected}/><OrbitControls enablePan={false} enableZoom={false} autoRotate autoRotateSpeed={.7}/></Canvas></div>
         <div className={`ppf-mobile-diagram ${coverage.fullBody?'is-full':''} ${coverage.emphasis==='heavy'?'is-heavy':''}`} aria-label={`${data.title} coverage diagram`}><div className="ppf-diagram-car"><i className="hood"/><i className="roof"/><i className="doors"/><i className="rear"/><b>360°</b></div><p>{data.coverageType}<small>{data.coverageAreas.join(' · ')}</small></p></div>
         {inspected && <div className="ppf-panel-tooltip" role="status"><span>Coverage area</span><strong>{inspected.label}</strong><p>{inspected.description}</p></div>}
-        <div className={`ppf-coverage-legend ${coverage.emphasis==='heavy'?'is-heavy':''}`}><span><i/> {coverage.emphasis==='heavy'?'8.5 mil enhanced defense':'7.5 mil protected area'}</span><span><i className="ppf-legend-base"/> Vehicle surface</span></div>
+        <div className={`ppf-coverage-legend is-${data.id}`}><span><i/> {PPF_COLORS[data.id].label}</span><span><i className="ppf-legend-base"/> Vehicle surface</span></div>
         <p className="ppf-model-attribution">Mazda RX-7 by IvOfficial [CC-BY] via Poly Pizza</p>
       </div>
       <article className="ppf-package-panel" id="ppf-package-panel" role="tabpanel" aria-labelledby={`ppf-tab-${selected}`}>
