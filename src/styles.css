@@ -166,10 +166,10 @@ button { cursor: pointer; }
 .ppf-coverage-legend { position:absolute; z-index:2; left:26px; right:26px; bottom:38px; display:flex; align-items:center; justify-content:space-between; gap:16px; color:rgba(255,255,255,.62); font-size:8px; letter-spacing:.1em; text-transform:uppercase; }
 .ppf-model-attribution { position:absolute; z-index:2; right:26px; bottom:13px; margin:0; color:#f1f1f1; font-size:.75rem; opacity:.65; text-align:center; }
 .ppf-coverage-legend span { display:flex; align-items:center; gap:9px; }
-.ppf-coverage-legend i { width:9px; height:9px; border-radius:50%; background:#6688ff; box-shadow:0 0 12px #6688ff; }
+.ppf-coverage-legend i { width:9px; height:9px; border-radius:50%; background:#00d9ff; box-shadow:0 0 14px 2px rgba(0,217,255,.72); }
 .ppf-coverage-legend .ppf-legend-base { background:#17213b; box-shadow:none; border:1px solid #59647c; }
 .ppf-coverage-legend.is-heavy { color:#d8e0ff; }
-.ppf-coverage-legend.is-heavy i { background:#a9baff; box-shadow:0 0 18px 4px rgba(139,165,255,.8); }
+.ppf-coverage-legend.is-heavy i { background:#d8f8ff; box-shadow:0 0 18px 4px rgba(0,217,255,.85); }
 .ppf-panel-tooltip { position:absolute; z-index:4; left:50%; bottom:65px; width:min(300px,calc(100% - 40px)); padding:17px 19px; border:1px solid rgba(157,178,255,.55); background:rgba(2,10,49,.9); box-shadow:0 16px 40px rgba(0,0,0,.35); backdrop-filter:blur(12px); transform:translateX(-50%); pointer-events:none; }
 .ppf-panel-tooltip span { color:#8ea7ff; font-size:7px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
 .ppf-panel-tooltip strong { display:block; margin:5px 0; font-family:var(--font-display); font-size:18px; font-style:italic; text-transform:uppercase; }

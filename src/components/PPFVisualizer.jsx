@@ -1,6 +1,6 @@
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
-import { ArrowRight, Check, ChevronDown } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import * as THREE from 'three'
@@ -31,29 +31,40 @@ useGLTF.preload('/models/Mazda RX-7.glb')
 
 function FilmPatch({ label, description, position, scale, rotation, emphasis, onInspect, shape='plane' }) {
   const material = useRef(null)
+  const [hovered,setHovered] = useState(false)
   const isHeavy = emphasis === 'heavy'
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     if (!material.current) return
-    const target = isHeavy ? .42 : .28
+    const pulse = Math.sin(clock.elapsedTime * 2.2) * .035
+    const target = hovered ? .7 : .52 + pulse
     material.current.opacity += (target - material.current.opacity) * Math.min(delta * 7, 1)
+    const glow = hovered ? 1.35 : (isHeavy ? .95 : .78) + pulse
+    material.current.emissiveIntensity += (glow - material.current.emissiveIntensity) * Math.min(delta * 7, 1)
   })
   const inspect = (event) => {
     event.stopPropagation()
+    setHovered(true)
     onInspect({ label, description })
   }
-  return <mesh position={position} scale={scale} rotation={rotation} renderOrder={3} onPointerOver={inspect} onPointerOut={() => onInspect(null)} onClick={inspect}>
+  const clearInspect = () => { setHovered(false); onInspect(null) }
+  return <mesh position={position} scale={scale} rotation={rotation} renderOrder={3} onPointerOver={inspect} onPointerOut={clearInspect} onClick={inspect}>
     {shape === 'lens' ? <sphereGeometry args={[1,24,12]}/> : <planeGeometry args={[1,1]}/>} 
-    <meshPhysicalMaterial ref={material} color={isHeavy ? '#c5d1ff' : '#6f8cff'} emissive={isHeavy ? '#6e8cff' : '#315eff'} emissiveIntensity={isHeavy ? .8 : .42} roughness={.16} metalness={.04} side={THREE.DoubleSide} transparent opacity={0} depthWrite={false} polygonOffset polygonOffsetFactor={-2}/>
+    <meshStandardMaterial ref={material} color="#00d9ff" emissive="#00bfff" emissiveIntensity={.78} roughness={.2} metalness={.05} side={THREE.DoubleSide} transparent opacity={0} depthWrite={false} polygonOffset polygonOffsetFactor={-2}/>
   </mesh>
 }
 
 function FullBodyFilm({ emphasis, onInspect }) {
   const { scene } = useGLTF('/models/Mazda RX-7.glb')
   const isHeavy = emphasis === 'heavy'
+  const [hovered,setHovered] = useState(false)
   const material = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: isHeavy ? '#c5d1ff' : '#6f8cff', emissive: isHeavy ? '#6483ff' : '#315eff',
-    emissiveIntensity: isHeavy ? .72 : .38, roughness: .16, metalness: .04,
+    color: isHeavy ? '#71eaff' : '#00d9ff', emissive: '#00bfff',
+    emissiveIntensity: isHeavy ? .8 : .45, roughness: .2, metalness: .05,
     transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2,
+  }), [isHeavy])
+  const outlineMaterial = useMemo(() => new THREE.MeshBasicMaterial({
+    color: isHeavy ? '#d8f8ff' : '#00d9ff', transparent: true, opacity: 0,
+    depthWrite: false, side: THREE.BackSide,
   }), [isHeavy])
   const filmScene = useMemo(() => {
     const clone = scene.clone(true)
@@ -65,16 +76,39 @@ function FullBodyFilm({ emphasis, onInspect }) {
     })
     return clone
   }, [scene, material])
-  useEffect(() => () => material.dispose(), [material])
-  useFrame((_, delta) => {
-    const target = isHeavy ? .34 : .21
+  const outlineScene = useMemo(() => {
+    const clone = scene.clone(true)
+    clone.traverse(child => {
+      if (!child.isMesh) return
+      const excluded = /wheel|logo|exhaust/i.test(child.name)
+      child.visible = !excluded
+      if (!excluded) {
+        child.material = outlineMaterial
+        child.raycast = () => {}
+      }
+    })
+    return clone
+  }, [scene, outlineMaterial])
+  useEffect(() => () => { material.dispose(); outlineMaterial.dispose() }, [material, outlineMaterial])
+  useFrame(({ clock }, delta) => {
+    const pulse = Math.sin(clock.elapsedTime * 1.8) * .025
+    const target = hovered ? (isHeavy ? .58 : .47) : (isHeavy ? .45 : .32) + pulse
     material.opacity += (target - material.opacity) * Math.min(delta * 5, 1)
+    const glow = hovered ? 1.15 : (isHeavy ? .8 : .45) + pulse
+    material.emissiveIntensity += (glow - material.emissiveIntensity) * Math.min(delta * 5, 1)
+    const outlineTarget = hovered ? .48 : (isHeavy ? .32 : .22) + pulse
+    outlineMaterial.opacity += (outlineTarget - outlineMaterial.opacity) * Math.min(delta * 5, 1)
   })
   const inspect = (event) => {
     event.stopPropagation()
+    setHovered(true)
     onInspect({ label: 'Full exterior', description: 'A thin, virtually invisible film layer follows the vehicle surface for complete exterior protection.' })
   }
-  return <primitive object={filmScene} rotation={[0,Math.PI/2,0]} scale={1.003} renderOrder={2} onPointerOver={inspect} onPointerOut={() => onInspect(null)} onClick={inspect}/>
+  const clearInspect = () => { setHovered(false); onInspect(null) }
+  return <group>
+    <primitive object={outlineScene} rotation={[0,Math.PI/2,0]} scale={1.012} renderOrder={1}/>
+    <primitive object={filmScene} rotation={[0,Math.PI/2,0]} scale={1.003} renderOrder={2} onPointerOver={inspect} onPointerOut={clearInspect} onClick={inspect}/>
+  </group>
 }
 
 function Car({ coverage, onInspect }) {
@@ -88,10 +122,6 @@ function Car({ coverage, onInspect }) {
       {[1,-1].map(side => <FilmPatch key={`taillight-${side}`} {...panel} shape="lens" label="Taillights" description="Clear film helps protect this lighting surface from chips, staining, and daily road wear." position={[-1.92,.82,side*.6]} scale={[.16,.08,.27]}/>) }
     </>}
   </group>
-}
-
-function FeatureList({ items }) {
-  return <ul className="ppf-feature-list">{items.map(item => <li key={item}><Check size={14}/><span>{item}</span></li>)}</ul>
 }
 
 export default function PPFVisualizer() {
@@ -124,6 +154,5 @@ export default function PPFVisualizer() {
         <Link className="ppf-book-button" to="/book" state={{service:'Paint Protection Film',package:data.title,packageId:data.id,coverageType:data.coverageType,filmThickness:data.filmThickness}}>{data.ctaLabel} <ArrowRight size={18}/></Link>
       </article>
     </div>
-    <div className="ppf-policy-row"><details><summary>What’s included <ChevronDown size={16}/></summary><div><FeatureList items={[...data.keyEnhancements,...data.filmBenefits,...data.freeAddOns]}/></div></details><details><summary>Warranty coverage <ChevronDown size={16}/></summary><div><FeatureList items={[...data.warranty,...data.replacementClause]}/><p>Manufacturer defects covered:</p><FeatureList items={data.coveredDefects}/></div></details><details><summary>Important installation notes <ChevronDown size={16}/></summary><div><FeatureList items={[...data.operationalDisclaimers,...data.exclusions]}/></div></details></div>
   </div></section>
 }
