@@ -163,7 +163,8 @@ button { cursor: pointer; }
 .ppf-canvas-label { position:absolute; z-index:2; left:26px; top:24px; display:grid; gap:6px; }
 .ppf-canvas-label span,.ppf-panel-head p { margin:0; color:#8ea7ff; font-size:8px; font-weight:800; letter-spacing:.17em; text-transform:uppercase; }
 .ppf-canvas-label strong { font-family:var(--font-display); font-size:19px; font-style:italic; text-transform:uppercase; }
-.ppf-coverage-legend { position:absolute; z-index:2; left:26px; right:26px; bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; color:rgba(255,255,255,.62); font-size:8px; letter-spacing:.1em; text-transform:uppercase; }
+.ppf-coverage-legend { position:absolute; z-index:2; left:26px; right:26px; bottom:38px; display:flex; align-items:center; justify-content:space-between; gap:16px; color:rgba(255,255,255,.62); font-size:8px; letter-spacing:.1em; text-transform:uppercase; }
+.ppf-model-attribution { position:absolute; z-index:2; right:26px; bottom:13px; margin:0; color:#f1f1f1; font-size:.75rem; opacity:.65; text-align:center; }
 .ppf-coverage-legend span { display:flex; align-items:center; gap:9px; }
 .ppf-coverage-legend i { width:9px; height:9px; border-radius:50%; background:#6688ff; box-shadow:0 0 12px #6688ff; }
 .ppf-coverage-legend .ppf-legend-base { background:#17213b; box-shadow:none; border:1px solid #59647c; }
@@ -307,7 +308,8 @@ button { cursor: pointer; }
   .ppf-mobile-diagram{position:absolute;inset:80px 16px 56px;display:grid;align-content:center}
   .ppf-canvas-label{left:16px;top:16px}
   .ppf-canvas-label strong{font-size:14px}
-  .ppf-coverage-legend{left:16px;right:16px;bottom:16px;font-size:6px}
+  .ppf-coverage-legend{left:16px;right:16px;bottom:34px;font-size:6px}
+  .ppf-model-attribution{right:16px;bottom:12px;font-size:9px}
   .ppf-package-panel{padding:24px 20px}
   .ppf-panel-head{align-items:flex-start;flex-direction:column}
   .ppf-panel-head>strong{text-align:left}
