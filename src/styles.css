@@ -194,6 +194,11 @@ button { cursor: pointer; }
 .ppf-panel-head div>span { color:rgba(255,255,255,.58); font-size:11px; }
 .ppf-panel-head>strong { color:#9db2ff; font-family:var(--font-display); font-size:25px; font-style:italic; text-align:right; white-space:nowrap; }
 .ppf-panel-head>strong small { display:block; margin-top:5px; color:rgba(255,255,255,.4); font:700 7px/1 var(--font-body); letter-spacing:.13em; text-transform:uppercase; }
+.film-thickness-card { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-top:24px; padding:20px; border:1px solid rgba(140,165,255,.48); background:linear-gradient(135deg,rgba(5,38,153,.42),rgba(255,255,255,.035)); }
+.film-thickness-card.is-heavy { border-color:rgba(197,209,255,.72); box-shadow:inset 0 0 28px rgba(100,131,255,.12); }
+.film-thickness-value { color:#afc0ff; font:italic 800 clamp(28px,3vw,42px)/.85 var(--font-display); letter-spacing:.02em; }
+.film-thickness-card.is-heavy .film-thickness-value { color:#d8e0ff; text-shadow:0 0 18px rgba(169,186,255,.48); }
+.film-thickness-label { color:rgba(255,255,255,.5); font-size:7px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
 .ppf-film-comparison { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:20px 0 2px; }
 .ppf-film-comparison>span { position:relative; padding:12px 11px 10px; border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.42); font-size:10px; font-weight:800; text-transform:uppercase; transition:border-color .25s,color .25s,background .25s; }
 .ppf-film-comparison>span.active { border-color:rgba(140,165,255,.55); color:#f1f1f1; background:rgba(5,38,153,.3); }
@@ -213,7 +218,7 @@ button { cursor: pointer; }
 .ppf-addons .ppf-feature-list { grid-template-columns:repeat(3,1fr); }
 .ppf-book-button { min-height:58px; display:flex; align-items:center; justify-content:space-between; margin-top:20px; padding:0 22px; background:#f1f1f1; color:#052699; font-size:10px; font-weight:900; letter-spacing:.13em; text-decoration:none; text-transform:uppercase; transition:transform .2s,box-shadow .2s; }
 .ppf-book-button:hover { transform:translateY(-2px); box-shadow:0 14px 35px rgba(0,0,0,.28); }
-.ppf-policy-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px; }
+.ppf-policy-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:18px; }
 .ppf-policy-row details { border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.035); }
 .ppf-policy-row summary { min-height:58px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; color:rgba(255,255,255,.77); cursor:pointer; font-size:9px; font-weight:800; letter-spacing:.13em; list-style:none; text-transform:uppercase; }
 .ppf-policy-row summary::-webkit-details-marker { display:none; }

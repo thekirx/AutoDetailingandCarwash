@@ -1,8 +1,9 @@
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, RoundedBox, useGLTF } from '@react-three/drei'
-import { ArrowRight, Check, ChevronDown, Gift, ShieldCheck, Sparkles } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { OrbitControls, useGLTF } from '@react-three/drei'
+import { ArrowRight, Check, ChevronDown } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import * as THREE from 'three'
 import { PPF_PACKAGES } from '../data/ppfPackages'
 
 function getCoverageState(packageData) {
@@ -28,58 +29,64 @@ function CarModel(props) {
 
 useGLTF.preload('/models/Mazda RX-7.glb')
 
-function CoveragePanel({ label, description, position, size, active, emphasis, onInspect }) {
+function FilmPatch({ label, description, position, scale, rotation, emphasis, onInspect, shape='plane' }) {
   const material = useRef(null)
   const isHeavy = emphasis === 'heavy'
   useFrame((_, delta) => {
     if (!material.current) return
-    const target = active ? (isHeavy ? .76 : .58) : 0
+    const target = isHeavy ? .42 : .28
     material.current.opacity += (target - material.current.opacity) * Math.min(delta * 7, 1)
   })
   const inspect = (event) => {
-    if (!active) return
     event.stopPropagation()
     onInspect({ label, description })
   }
-  return <RoundedBox position={position} args={size} radius={.1} smoothness={4} onPointerOver={inspect} onPointerOut={() => active && onInspect(null)} onClick={inspect}>
-    <meshPhysicalMaterial ref={material} color={isHeavy ? '#a4b7ff' : '#4c73ff'} emissive={isHeavy ? '#315eff' : '#052699'} emissiveIntensity={isHeavy ? 2.7 : 1.7} transparent opacity={0} depthWrite={false}/>
-  </RoundedBox>
+  return <mesh position={position} scale={scale} rotation={rotation} renderOrder={3} onPointerOver={inspect} onPointerOut={() => onInspect(null)} onClick={inspect}>
+    {shape === 'lens' ? <sphereGeometry args={[1,24,12]}/> : <planeGeometry args={[1,1]}/>} 
+    <meshPhysicalMaterial ref={material} color={isHeavy ? '#c5d1ff' : '#6f8cff'} emissive={isHeavy ? '#6e8cff' : '#315eff'} emissiveIntensity={isHeavy ? .8 : .42} roughness={.16} metalness={.04} side={THREE.DoubleSide} transparent opacity={0} depthWrite={false} polygonOffset polygonOffsetFactor={-2}/>
+  </mesh>
 }
 
-function CoverageLight({ label, position, active, emphasis, onInspect }) {
-  const material = useRef(null)
+function FullBodyFilm({ emphasis, onInspect }) {
+  const { scene } = useGLTF('/models/Mazda RX-7.glb')
   const isHeavy = emphasis === 'heavy'
+  const material = useMemo(() => new THREE.MeshPhysicalMaterial({
+    color: isHeavy ? '#c5d1ff' : '#6f8cff', emissive: isHeavy ? '#6483ff' : '#315eff',
+    emissiveIntensity: isHeavy ? .72 : .38, roughness: .16, metalness: .04,
+    transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2,
+  }), [isHeavy])
+  const filmScene = useMemo(() => {
+    const clone = scene.clone(true)
+    clone.traverse(child => {
+      if (!child.isMesh) return
+      const excluded = /wheel|logo|exhaust/i.test(child.name)
+      child.visible = !excluded
+      if (!excluded) child.material = material
+    })
+    return clone
+  }, [scene, material])
+  useEffect(() => () => material.dispose(), [material])
   useFrame((_, delta) => {
-    if (!material.current) return
-    const target = active ? (isHeavy ? 4.8 : 3.2) : .5
-    material.current.emissiveIntensity += (target - material.current.emissiveIntensity) * Math.min(delta * 7, 1)
+    const target = isHeavy ? .34 : .21
+    material.opacity += (target - material.opacity) * Math.min(delta * 5, 1)
   })
   const inspect = (event) => {
-    if (!active) return
     event.stopPropagation()
-    onInspect({ label, description: 'Clear film helps protect this lighting surface from chips, staining, and daily road wear.' })
+    onInspect({ label: 'Full exterior', description: 'A thin, virtually invisible film layer follows the vehicle surface for complete exterior protection.' })
   }
-  return <mesh position={position} onPointerOver={inspect} onPointerOut={() => active && onInspect(null)} onClick={inspect}>
-    <sphereGeometry args={[.18,18,12]}/><meshStandardMaterial ref={material} color={active ? '#9bb0ff' : '#dfe7ff'} emissive={active ? '#315eff' : '#42506a'} emissiveIntensity={.5}/>
-  </mesh>
+  return <primitive object={filmScene} rotation={[0,Math.PI/2,0]} scale={1.003} renderOrder={2} onPointerOver={inspect} onPointerOut={() => onInspect(null)} onClick={inspect}/>
 }
 
 function Car({ coverage, onInspect }) {
   const panel = { emphasis: coverage.emphasis, onInspect }
   return <group rotation={[0,-.2,0]}>
     <CarModel/>
-    <CoveragePanel {...panel} active={coverage.bumpers} label="Front bumper" description="High-impact protection against road debris and surface abrasions." position={[2.02,.68,0]} size={[.26,.38,1.72]}/>
-    <CoveragePanel {...panel} active={coverage.hood} label="Hood" description="A primary impact zone protected from stone chips, bug acids, and road wear." position={[1.15,1.02,0]} size={[1.18,.07,1.55]}/>
-    <CoveragePanel {...panel} active={coverage.roof} label="Roof" description="Full upper-surface coverage against environmental fallout and light abrasions." position={[-.18,1.43,0]} size={[.88,.07,1.34]}/>
-    <CoveragePanel {...panel} active={coverage.trunk} label="Trunk" description="Rear upper-panel protection with a seamless, clear finish." position={[-1.35,1.02,0]} size={[.82,.07,1.5]}/>
-    <CoveragePanel {...panel} active={coverage.bumpers} label="Rear bumper" description="Film defense for loading marks, parking scuffs, and road impacts." position={[-2.02,.65,0]} size={[.24,.4,1.72]}/>
-    {[.48,-.52].flatMap((x,index) => [1,-1].map(side => <CoveragePanel key={`door-${x}-${side}`} {...panel} active={coverage.doors} label={`${index ? 'Rear' : 'Front'} ${side > 0 ? 'left' : 'right'} door`} description="Door skin coverage helps prevent scratches, chips, and everyday contact marks." position={[x,.72,side*.88]} size={[.86,.68,.06]}/>))}
-    {[1,-1].map(side => <CoveragePanel key={`fender-${side}`} {...panel} active={coverage.fenders} label="Front fender" description="Protection around the wheel arch from stones and tire-thrown debris." position={[1.36,.72,side*.87]} size={[.48,.55,.06]}/>)}
-    {[1,-1].map(side => <CoveragePanel key={`quarter-${side}`} {...panel} active={coverage.quarterPanels} label="Quarter panel" description="Continuous rear-side coverage for a consistent full-body shield." position={[-1.3,.75,side*.87]} size={[.72,.58,.06]}/>)}
-    {[1,-1].map(side => <CoveragePanel key={`rocker-${side}`} {...panel} active={coverage.rockerPanels} label="Rocker panel" description="Platinum-only emphasis for this low, high-impact road-debris zone." position={[-.05,.3,side*.88]} size={[2.8,.12,.07]}/>)}
-    {[1,-1].map(side => <CoveragePanel key={`trim-${side}`} {...panel} active={coverage.trims} label="Exterior trims" description="Clear protection continues across compatible exterior trim surfaces." position={[-.25,1.25,side*.78]} size={[1.1,.08,.05]}/>)}
-    {[1,-1].map(side => <CoveragePanel key={`mirror-${side}`} {...panel} active={coverage.mirrors} label="Side mirror" description="A forward-facing impact point protected from chips and abrasion." position={[.55,1.22,side*1.02]} size={[.3,.16,.2]}/>)}
-    <CoverageLight {...panel} active={coverage.headlights} label="Headlights" position={[1.91,.83,.57]}/><CoverageLight {...panel} active={coverage.headlights} label="Headlights" position={[1.91,.83,-.57]}/><CoverageLight {...panel} active={coverage.taillights} label="Taillights" position={[-1.92,.82,.6]}/><CoverageLight {...panel} active={coverage.taillights} label="Taillights" position={[-1.92,.82,-.6]}/>
+    {coverage.fullBody ? <FullBodyFilm {...panel}/> : <>
+      <FilmPatch {...panel} label="Hood" description="A primary impact zone protected from stone chips, bug acids, and road wear." position={[1.14,1.035,0]} scale={[1.18,1.48,1]} rotation={[-Math.PI/2,0,0]}/>
+      {[1,-1].map(side => <FilmPatch key={`doors-${side}`} {...panel} label="All four doors" description="Door skin coverage helps prevent scratches, chips, and everyday contact marks." position={[-.02,.73,side*.885]} scale={[1.62,.57,1]} rotation={[0,0,0]}/>) }
+      {[1,-1].map(side => <FilmPatch key={`headlight-${side}`} {...panel} shape="lens" label="Headlights" description="Clear film helps protect this lighting surface from chips, staining, and daily road wear." position={[1.91,.83,side*.57]} scale={[.22,.09,.3]}/>) }
+      {[1,-1].map(side => <FilmPatch key={`taillight-${side}`} {...panel} shape="lens" label="Taillights" description="Clear film helps protect this lighting surface from chips, staining, and daily road wear." position={[-1.92,.82,side*.6]} scale={[.16,.08,.27]}/>) }
+    </>}
   </group>
 }
 
@@ -92,6 +99,10 @@ export default function PPFVisualizer() {
   const [inspected,setInspected] = useState(null)
   const data = PPF_PACKAGES.find(item => item.id === selected) ?? PPF_PACKAGES[0]
   const coverage = getCoverageState(data)
+  const filmThicknessValue = data.id === 'platinum' ? '8.5 MIL' : '7.5 MIL'
+  const visibleCoverageAreas = data.id === 'basic'
+    ? data.coverageAreas
+    : data.coverageAreas.filter(area => ['Full exterior','Trims','Headlights','All four doors','Roof','Rocker panels','Additional high-impact areas where applicable'].includes(area))
   const selectPackage = (id) => { setSelected(id); setInspected(null) }
 
   return <section className="visualizer-section" id="visualizer" aria-labelledby="ppf-heading"><div className="public-shell">
@@ -107,14 +118,12 @@ export default function PPFVisualizer() {
         <p className="ppf-model-attribution">Mazda RX-7 by IvOfficial [CC-BY] via Poly Pizza</p>
       </div>
       <article className="ppf-package-panel" id="ppf-package-panel" role="tabpanel" aria-labelledby={`ppf-tab-${selected}`}>
-        <div className="ppf-panel-head"><div><p>Selected package · {data.coverageType}</p><h3>{data.title} Package</h3><span>{data.subtitle}</span></div><strong>{data.filmThickness.split(' premium')[0]}<small>premium-grade film</small></strong></div>
-        <div className="ppf-film-comparison" aria-label="Film thickness comparison"><span className={data.id!=='platinum'?'active':''}><i style={{'--film-width':'75%'}}/>7.5 mil <small>Premium-grade</small></span><span className={data.id==='platinum'?'active':''}><i style={{'--film-width':'100%'}}/>8.5 mil <small>Heavier defense</small></span></div>
-        <div className="ppf-detail-block"><h4>Coverage</h4><p>{data.shortDescription}</p><div className="ppf-tags">{data.coverageAreas.map(area => <span key={area}>{area}</span>)}</div></div>
-        <div className="ppf-panel-columns"><div><h4><Sparkles size={15}/> Enhancements & benefits</h4><FeatureList items={[...data.keyEnhancements,...data.filmBenefits]}/></div><div><h4><ShieldCheck size={15}/> Warranty & replacement</h4><FeatureList items={[...data.warranty,...(data.replacementClause.length?data.replacementClause:['No panel replacement clause'])]}/></div></div>
-        <div className="ppf-addons"><h4><Gift size={16}/> Complimentary with every tier</h4><FeatureList items={data.freeAddOns}/></div>
+        <div className="ppf-panel-head"><div><p>Selected package</p><h3>{data.title} Package</h3><span>{data.subtitle}</span></div></div>
+        <div className={`film-thickness-card ${data.id==='platinum'?'is-heavy':''}`}><span className="film-thickness-value">{filmThicknessValue}</span><span className="film-thickness-label">Premium-grade PPF</span></div>
+        <div className="ppf-detail-block"><h4>Coverage</h4><p>{data.shortDescription}</p><div className="ppf-tags">{visibleCoverageAreas.map(area => <span key={area}>{area}</span>)}</div></div>
         <Link className="ppf-book-button" to="/book" state={{service:'Paint Protection Film',package:data.title,packageId:data.id,coverageType:data.coverageType,filmThickness:data.filmThickness}}>{data.ctaLabel} <ArrowRight size={18}/></Link>
       </article>
     </div>
-    <div className="ppf-policy-row"><details><summary>Factory warranty coverage <ChevronDown size={16}/></summary><div><p>Manufacturer defects covered:</p><FeatureList items={data.coveredDefects}/><p>Coverage exclusions:</p><FeatureList items={data.exclusions}/></div></details><details><summary>Important installation notes <ChevronDown size={16}/></summary><div><FeatureList items={data.operationalDisclaimers}/></div></details></div>
+    <div className="ppf-policy-row"><details><summary>What’s included <ChevronDown size={16}/></summary><div><FeatureList items={[...data.keyEnhancements,...data.filmBenefits,...data.freeAddOns]}/></div></details><details><summary>Warranty coverage <ChevronDown size={16}/></summary><div><FeatureList items={[...data.warranty,...data.replacementClause]}/><p>Manufacturer defects covered:</p><FeatureList items={data.coveredDefects}/></div></details><details><summary>Important installation notes <ChevronDown size={16}/></summary><div><FeatureList items={[...data.operationalDisclaimers,...data.exclusions]}/></div></details></div>
   </div></section>
 }
