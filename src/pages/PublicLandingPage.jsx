@@ -5,9 +5,9 @@ import PPFVisualizer from '../components/PPFVisualizer'
 import { PrimaryButton, SecondaryButton, StatCard } from '../components/ui'
 
 const stats = [
-  { value: 15000, suffix: '+', label: 'Vehicles rejuvenated annually' },
-  { value: 3000, suffix: '+', label: 'Growing satisfied clients' },
   { value: 10, suffix: ' years', label: 'Auto industry experience combined' },
+  { value: 3000, suffix: '+', label: 'Growing satisfied clients' },
+  { value: 15000, suffix: '+', label: 'Vehicles rejuvenated annually' },
   { value: 26, suffix: '', label: 'Team members' },
 ]
 
@@ -70,7 +70,6 @@ export default function PublicLandingPage() {
         <p className="hero-location">Bacoor <span>/</span> Batangas</p>
         <h1 className="display-title">
           <span className="hero-line hero-line-one">Give your car</span>
-          <span className="hero-line hero-line-two">Experience</span>
           <span className="hero-line hero-line-three">The pampering it deserves</span>
         </h1>
         <p className="hero-subheading">Expert detailing, precision car care, and the shine that turns heads — all in one place.</p>
@@ -78,14 +77,14 @@ export default function PublicLandingPage() {
           <PrimaryButton to="/services">Start now</PrimaryButton>
           <SecondaryButton to="/book">Book a service</SecondaryButton>
         </div>
+        <div className="hero-experience" aria-labelledby="experience-heading">
+          <h2 id="experience-heading">Experience</h2>
+          <div className="hero-metrics" aria-label="Hakum milestones">
+            {stats.map((stat) => <StatCard key={stat.label} value={<AnimatedNumber value={stat.value} suffix={stat.suffix}/>} label={stat.label}/>)}
+          </div>
+        </div>
       </div>
       <a className="scroll-note" href="#about">Discover <ArrowDown size={15}/></a>
-    </section>
-
-    <section className="stats-band" aria-label="Hakum milestones">
-      <div className="public-shell stats-grid">
-        {stats.map((stat) => <StatCard key={stat.label} value={<AnimatedNumber value={stat.value} suffix={stat.suffix}/>} label={stat.label}/>)}
-      </div>
     </section>
 
     <section className="editorial-section about-section" id="about">
