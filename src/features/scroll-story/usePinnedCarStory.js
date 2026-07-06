@@ -33,7 +33,7 @@ export function usePinnedCarStory() {
         timeline
           .to(`${carSelector}[data-car-state="${previous.state}"]`, { opacity: 0, duration }, label)
           .to(`${carSelector}[data-car-state="${stage.state}"]`, { opacity: 1, duration }, label)
-          .to(`[data-story-stage="${previous.id}"]`, { opacity: 0.12, y: -22, duration: duration * 0.55 }, label)
+          .to(`[data-story-stage="${previous.id}"]`, { opacity: 0, y: -22, duration: duration * 0.55 }, label)
           .to(`[data-story-stage="${stage.id}"]`, { opacity: 1, y: 0, duration }, label)
           .to(`[data-progress-stage="${previous.id}"]`, { opacity: 0.35, duration: duration * 0.35 }, label)
           .to(`[data-progress-stage="${stage.id}"]`, { opacity: 1, duration: duration * 0.35 }, label)
