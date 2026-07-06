@@ -3,6 +3,7 @@ import { ArrowDown, ArrowRight, Droplets, Gauge, GlassWater, MapPin, Radio, Shie
 import { Link } from 'react-router-dom'
 import PPFVisualizer from '../components/PPFVisualizer'
 import { PrimaryButton, SecondaryButton, StatCard } from '../components/ui'
+import PinnedCarStory from '../features/scroll-story/PinnedCarStory'
 
 const stats = [
   { value: 10, suffix: ' years', label: 'Auto industry experience combined' },
@@ -86,6 +87,8 @@ export default function PublicLandingPage() {
       </div>
       <a className="scroll-note" href="#about">Discover <ArrowDown size={15}/></a>
     </section>
+
+    <PinnedCarStory />
 
     <section className="editorial-section about-section" id="about">
       <div className="public-shell about-heading">

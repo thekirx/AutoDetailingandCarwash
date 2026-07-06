@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import PinnedCarVisual from './PinnedCarVisual'
 import { packageOptions, storyStages } from './scrollStoryData'
 import { usePinnedCarStory } from './usePinnedCarStory'
+import './scrollStory.css'
 
 const ppfPackages = ['Basic', 'Premium', 'Platinum']
 
