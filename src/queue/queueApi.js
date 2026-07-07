@@ -1,5 +1,11 @@
 import { supabase } from '../lib/supabase'
-import { ACTIVE_QUEUE_STATUSES, getBranchScope } from './queueLogic'
+import {
+  ACTIVE_QUEUE_STATUSES,
+  getBranchScope,
+  normalizePlate,
+  normalizeVehicleType,
+  requiresTeamLeadBranchSetup,
+} from './queueLogic'
 
 export const QUEUE_BOARD_SELECT = `
   booking_id,
@@ -33,10 +39,6 @@ export const QUEUE_BOARD_SELECT = `
   notes
 `
 
-export function normalizePlate(value) {
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
-}
-
 export function formatMoney(minor) {
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
@@ -55,6 +57,10 @@ function scopedStaffQuery(query, branchScope) {
 }
 
 export async function fetchOperationsSnapshot(profile) {
+  if (requiresTeamLeadBranchSetup(profile)) {
+    return { queue: [], activeQueue: [], availableStaff: [], busyStaff: [], events: [], handoffs: [] }
+  }
+
   const branchScope = getBranchScope(profile)
   const queueQuery = scopedQuery(supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT), branchScope)
   const busyQuery = branchScope
@@ -85,6 +91,10 @@ export async function fetchOperationsSnapshot(profile) {
 }
 
 export async function fetchTicket(bookingId, profile) {
+  if (requiresTeamLeadBranchSetup(profile)) {
+    return { ticket: null, assignments: [], staff: [] }
+  }
+
   const branchScope = getBranchScope(profile)
   const ticketQuery = supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).eq('booking_id', bookingId)
   const staffQuery = supabase.from('staff_profiles').select('id, full_name, role, branch_slug, is_active').eq('role', 'staff').eq('is_active', true)
@@ -110,16 +120,21 @@ export async function fetchServices() {
   return services.data || []
 }
 
+export async function fetchBranches() {
+  const { data, error } = await supabase.from('branches').select('slug, name').eq('is_active', true).order('name')
+  if (error) throw error
+  return data || []
+}
+
 export async function lookupPlate(plateNumber, profile) {
   const normalizedPlate = normalizePlate(plateNumber || '')
   if (normalizedPlate.length < 2) return null
-  const branchScope = getBranchScope(profile)
-  const query = supabase
+  if (requiresTeamLeadBranchSetup(profile)) return null
+  const { data, error } = await supabase
     .from('customer_vehicle_masterlist')
     .select('vehicle_id, customer_id, plate_number, normalized_plate_number, customer_name, customer_phone, vehicle_make, vehicle_model, vehicle_type, last_branch, total_visits')
     .eq('normalized_plate_number', normalizedPlate)
     .limit(1)
-  const { data, error } = await (branchScope ? query.or(`last_branch.eq.${branchScope},last_branch.is.null`) : query)
 
   if (error) throw error
   return data?.[0] || null
@@ -144,18 +159,20 @@ async function ensureCustomer(form) {
 }
 
 export async function createQueueTicket(form) {
+  if (!form.branch) throw new Error('Your Team Lead account has no assigned branch. Please contact an admin.')
   const customerId = await ensureCustomer(form)
   let vehicleId = form.vehicle_id || null
   const normalizedPlate = normalizePlate(form.vehicle_plate || '')
+  const vehicleType = normalizeVehicleType(form.vehicle_type)
 
-  if (vehicleId && !form.customer_id) {
+  if (vehicleId) {
     const { error: attachError } = await supabase
       .from('vehicles')
       .update({
         customer_id: customerId,
         vehicle_make: form.vehicle_make.trim(),
         vehicle_model: form.vehicle_model.trim(),
-        vehicle_type: form.vehicle_type || null,
+        vehicle_type: vehicleType,
         last_branch: form.branch,
       })
       .eq('id', vehicleId)
@@ -171,7 +188,7 @@ export async function createQueueTicket(form) {
         normalized_plate_number: normalizedPlate,
         vehicle_make: form.vehicle_make.trim(),
         vehicle_model: form.vehicle_model.trim(),
-        vehicle_type: form.vehicle_type || null,
+        vehicle_type: vehicleType,
         last_branch: form.branch,
       }, { onConflict: 'normalized_plate_number' })
       .select('id')
@@ -200,7 +217,7 @@ export async function createQueueTicket(form) {
       vehicle_model: form.vehicle_model.trim(),
       vehicle_year: null,
       vehicle_plate: form.vehicle_plate.trim().toUpperCase() || null,
-      vehicle_type: form.vehicle_type || null,
+      vehicle_type: vehicleType,
       scheduled_start: new Date().toISOString(),
       branch: form.branch,
       status: 'waiting',

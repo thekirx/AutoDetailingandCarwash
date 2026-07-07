@@ -15,6 +15,25 @@ const staffNav = [
   { label: 'My Tasks', to: '/operations/my-tasks', icon: ListChecks },
 ]
 
+const branchLabels = {
+  bacoor: 'Bacoor',
+  batangas: 'Batangas',
+}
+
+function formatRole(role) {
+  if (role === 'team_lead') return 'Team Lead'
+  if (role === 'admin') return 'Admin'
+  if (role === 'staff') return 'Staff'
+  if (role === 'cashier') return 'Cashier'
+  return 'Public'
+}
+
+function formatProfileScope(profile) {
+  if (profile?.role === 'team_lead') return branchLabels[profile.branch_slug] || 'No branch assigned'
+  if (profile?.role === 'admin') return 'All branches'
+  return branchLabels[profile?.branch_slug] || 'Assigned tasks'
+}
+
 export default function OperationsLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { profile, user, canManageQueue, signOut } = useAuth()
@@ -42,7 +61,7 @@ export default function OperationsLayout() {
         <div className="border-t border-white/10 p-4">
           <div className="mb-3 rounded-2xl bg-white/[0.04] px-3 py-3">
             <p className="truncate text-sm font-semibold">{profile?.full_name || 'Operations User'}</p>
-            <p className="truncate text-xs capitalize text-slate-500">{profile?.role?.replace('_', ' ') || 'public'} · {profile?.branch_slug || 'all branches'}</p>
+            <p className="truncate text-xs text-slate-500">{formatRole(profile?.role)} · {formatProfileScope(profile)}</p>
             <p className="truncate text-xs text-slate-500">{profile?.email || user?.email}</p>
           </div>
           <button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"><LogOut size={18} />Sign out</button>

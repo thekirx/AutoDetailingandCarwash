@@ -8,6 +8,9 @@ import {
   normalizeAssignmentStatus,
   getBranchScope,
   getPlateLookupStatus,
+  hasValidTeamLeadBranch,
+  normalizePlate,
+  normalizeVehicleType,
 } from '../src/queue/queueLogic.js'
 
 describe('queue logic', () => {
@@ -67,11 +70,32 @@ describe('queue logic', () => {
   it('uses the logged-in profile branch as the operations scope', () => {
     assert.equal(getBranchScope({ role: 'team_lead', branch_slug: 'bacoor' }), 'bacoor')
     assert.equal(getBranchScope({ role: 'admin', branch_slug: null }), null)
+    assert.equal(getBranchScope({ role: 'team_lead', branch_slug: null }), null)
+    assert.equal(hasValidTeamLeadBranch({ role: 'team_lead', branch_slug: null }), false)
+    assert.equal(hasValidTeamLeadBranch({ role: 'team_lead', branch_slug: 'batangas' }), true)
   })
 
   it('describes plate lookup state without exposing duplicate fields', () => {
     assert.equal(getPlateLookupStatus('', false), '')
     assert.equal(getPlateLookupStatus('ABC123', true), 'Existing customer found')
     assert.equal(getPlateLookupStatus('ABC123', false), 'No record found. This will be added as a new customer/vehicle record.')
+  })
+
+  it('normalizes plate input for lookup and ticket creation', () => {
+    assert.equal(normalizePlate('ABC 1234'), 'ABC1234')
+    assert.equal(normalizePlate('wash 88'), 'WASH88')
+    assert.equal(normalizePlate('WASH-88'), 'WASH88')
+    assert.equal(normalizePlate(' WASH 88 '), 'WASH88')
+  })
+
+  it('normalizes vehicle type values to the booking constraint set', () => {
+    assert.equal(normalizeVehicleType('Sedan'), 'sedan')
+    assert.equal(normalizeVehicleType('SUV'), 'suv')
+    assert.equal(normalizeVehicleType('Van'), 'van')
+    assert.equal(normalizeVehicleType('Pickup'), 'pickup')
+    assert.equal(normalizeVehicleType('pick-up'), 'pickup')
+    assert.equal(normalizeVehicleType('Motorbike'), 'motorcycle')
+    assert.equal(normalizeVehicleType(''), 'sedan')
+    assert.equal(normalizeVehicleType('Coupe'), 'sedan')
   })
 })

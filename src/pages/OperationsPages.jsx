@@ -17,10 +17,20 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
-import { ACTIVE_QUEUE_STATUSES, STATUS_LABELS, formatQueueNumber, getBranchScope, getPlateLookupStatus, getQueueCounts } from '../queue/queueLogic'
+import {
+  ACTIVE_QUEUE_STATUSES,
+  STATUS_LABELS,
+  formatQueueNumber,
+  getBranchScope,
+  getPlateLookupStatus,
+  getQueueCounts,
+  normalizeVehicleType,
+  requiresTeamLeadBranchSetup,
+} from '../queue/queueLogic'
 import {
   assignStaff,
   createQueueTicket,
+  fetchBranches,
   fetchOperationsSnapshot,
   fetchServices,
   fetchTicket,
@@ -38,6 +48,14 @@ const statusTone = {
   for_payment: 'border-violet-300/20 bg-violet-500/10 text-violet-100',
   completed: 'border-slate-300/20 bg-slate-500/10 text-slate-100',
 }
+
+const vehicleTypeOptions = [
+  { label: 'Sedan', value: 'sedan' },
+  { label: 'SUV', value: 'suv' },
+  { label: 'Van', value: 'van' },
+  { label: 'Pickup', value: 'pickup' },
+  { label: 'Motorcycle', value: 'motorcycle' },
+]
 
 function PageHeader({ eyebrow, title, description, action }) {
   return (
@@ -122,10 +140,11 @@ function useOperationsSnapshot() {
 }
 
 export function OperationsDashboardPage() {
-  const { canManageQueue } = useAuth()
+  const { profile, canManageQueue } = useAuth()
   const { activeQueue, availableStaff, busyStaff, events, handoffs, loading, error, reload } = useOperationsSnapshot()
   const counts = useMemo(() => getQueueCounts(activeQueue), [activeQueue])
   if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
 
   if (error) return <ErrorState error={error} onRetry={reload} />
 
@@ -171,10 +190,11 @@ export function OperationsDashboardPage() {
 }
 
 export function OperationsQueuePage() {
-  const { canManageQueue } = useAuth()
+  const { profile, canManageQueue } = useAuth()
   const { activeQueue, loading, error, reload } = useOperationsSnapshot()
   const grouped = useMemo(() => Object.fromEntries(ACTIVE_QUEUE_STATUSES.map((status) => [status, activeQueue.filter((ticket) => ticket.status === status)])), [activeQueue])
   if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
 
   return (
@@ -250,6 +270,7 @@ export function QueueTicketPage() {
   }
 
   if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (loading) return <LoadingPanel />
   if (error) return <ErrorState error={error} onRetry={load} />
   if (!ticket) return <Navigate to="/operations/queue" replace />
@@ -323,9 +344,10 @@ export function QueueTicketPage() {
 
 export function NewQueueTicketPage() {
   const navigate = useNavigate()
-  const { user, profile, canManageQueue } = useAuth()
-  const assignedBranch = getBranchScope(profile) || 'bacoor'
+  const { user, profile, canManageQueue, isAdmin } = useAuth()
+  const assignedBranch = getBranchScope(profile)
   const [services, setServices] = useState([])
+  const [branches, setBranches] = useState([])
   const [plateMatch, setPlateMatch] = useState(null)
   const [plateLookupState, setPlateLookupState] = useState('idle')
   const [form, setForm] = useState({
@@ -338,7 +360,7 @@ export function NewQueueTicketPage() {
     vehicle_model: '',
     vehicle_type: 'sedan',
     service_id: '',
-    branch: assignedBranch,
+    branch: assignedBranch || '',
     final_price: '',
     notes: '',
     services: [],
@@ -348,13 +370,14 @@ export function NewQueueTicketPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchServices()
-      .then((serviceRows) => {
+    Promise.all([fetchServices(), isAdmin ? fetchBranches() : Promise.resolve([])])
+      .then(([serviceRows, branchRows]) => {
         const firstService = serviceRows[0]
         setServices(serviceRows)
+        setBranches(branchRows)
         setForm((current) => ({
           ...current,
-          branch: assignedBranch,
+          branch: assignedBranch || current.branch || branchRows[0]?.slug || '',
           services: serviceRows,
           service_id: firstService?.id || current.service_id,
           final_price: firstService ? String(firstService.price_minor / 100) : current.final_price,
@@ -362,7 +385,7 @@ export function NewQueueTicketPage() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [assignedBranch])
+  }, [assignedBranch, isAdmin])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -393,7 +416,7 @@ export function NewQueueTicketPage() {
             vehicle_plate: match.plate_number || current.vehicle_plate,
             vehicle_make: match.vehicle_make || current.vehicle_make,
             vehicle_model: match.vehicle_model || current.vehicle_model,
-            vehicle_type: match.vehicle_type || current.vehicle_type,
+            vehicle_type: normalizeVehicleType(match.vehicle_type || current.vehicle_type),
           }))
         })
         .catch((err) => setError(err.message))
@@ -402,6 +425,7 @@ export function NewQueueTicketPage() {
   }, [form.vehicle_plate, profile])
 
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+  const updateVehicleType = (event) => setForm((current) => ({ ...current, vehicle_type: normalizeVehicleType(event.target.value) }))
   const updateService = (event) => {
     const serviceId = event.target.value
     const service = services.find((item) => item.id === serviceId)
@@ -417,7 +441,13 @@ export function NewQueueTicketPage() {
     setSubmitting(true)
     setError('')
     try {
-      const ticket = await createQueueTicket({ ...form, branch: assignedBranch, services, created_by: user.id })
+      const ticket = await createQueueTicket({
+        ...form,
+        branch: isAdmin ? form.branch : assignedBranch,
+        vehicle_type: normalizeVehicleType(form.vehicle_type),
+        services,
+        created_by: user.id,
+      })
       navigate(`/operations/queue/${ticket.id}`)
     } catch (err) {
       setError(err.message)
@@ -427,6 +457,7 @@ export function NewQueueTicketPage() {
   }
 
   if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (loading) return <LoadingPanel />
 
   return (
@@ -446,8 +477,9 @@ export function NewQueueTicketPage() {
             <FormField label="Phone number" value={form.customer_phone} onChange={update('customer_phone')} required />
             <FormField label="Vehicle make" value={form.vehicle_make} onChange={update('vehicle_make')} required />
             <FormField label="Vehicle model" value={form.vehicle_model} onChange={update('vehicle_model')} required />
-            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Vehicle type<select value={form.vehicle_type} onChange={update('vehicle_type')} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none"><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="pickup">Pickup</option><option value="van">Van</option><option value="motorcycle">Motorcycle</option><option value="other">Other</option></select></label>
+            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Vehicle type<select value={form.vehicle_type} onChange={updateVehicleType} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Service<select value={form.service_id} onChange={updateService} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{services.map((service) => <option key={service.id} value={service.id}>{service.name} · {formatMoney(service.price_minor)}</option>)}</select></label>
+            {isAdmin && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
             <FormField label="Final Price" value={form.final_price} onChange={update('final_price')} type="number" required />
             <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Notes<textarea value={form.notes} onChange={update('notes')} className="mt-2 min-h-28 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
             <button disabled={submitting} className="sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} /> : <Plus size={18} />}Create Queue Ticket</button>
@@ -459,9 +491,10 @@ export function NewQueueTicketPage() {
 }
 
 export function CrewPage() {
-  const { canManageQueue } = useAuth()
+  const { profile, canManageQueue } = useAuth()
   const { availableStaff, busyStaff, loading, error, reload } = useOperationsSnapshot()
   if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
   return (
     <section>
@@ -481,6 +514,11 @@ export function KpiPage() {
   const [error, setError] = useState('')
   const load = useCallback(async () => {
     setError('')
+    if (requiresTeamLeadBranchSetup(profile)) {
+      setRows([])
+      setLoading(false)
+      return
+    }
     const branchScope = getBranchScope(profile)
     const query = supabase.from('crew_kpi_summary').select('staff_id, staff_name, branch, total_assigned, total_completed, average_service_minutes, active_jobs, completed_today')
     const { data, error } = await (branchScope ? query.eq('branch', branchScope) : query).order('staff_name')
@@ -490,6 +528,7 @@ export function KpiPage() {
   }, [profile])
   useEffect(() => { load() }, [load])
   if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={load} />
   return (
     <section>
@@ -592,6 +631,18 @@ function ErrorState({ error, onRetry }) {
 
 function LoadingPanel() {
   return <div className="grid min-h-72 place-items-center"><LoaderCircle className="animate-spin text-blue-300" /></div>
+}
+
+function BranchSetupError() {
+  return (
+    <section className="grid min-h-[60vh] place-items-center">
+      <div className="max-w-md rounded-3xl border border-amber-300/20 bg-amber-400/10 p-8 text-center">
+        <ShieldAlert className="mx-auto text-amber-200" size={42} />
+        <h1 className="mt-5 text-3xl font-semibold">Branch setup required</h1>
+        <p className="mt-3 text-slate-300">Your Team Lead account has no assigned branch. Please contact an admin.</p>
+      </div>
+    </section>
+  )
 }
 
 function RefreshButton({ loading, onClick }) {

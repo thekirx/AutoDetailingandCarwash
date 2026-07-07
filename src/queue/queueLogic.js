@@ -1,5 +1,7 @@
 export const ACTIVE_QUEUE_STATUSES = ['waiting', 'in_progress', 'final_checking']
 export const WORKFLOW_STATUSES = [...ACTIVE_QUEUE_STATUSES, 'for_payment']
+export const VALID_BRANCH_SLUGS = ['bacoor', 'batangas']
+export const VALID_VEHICLE_TYPES = ['sedan', 'suv', 'pickup', 'van', 'motorcycle', 'other']
 
 export const STATUS_LABELS = {
   waiting: 'Waiting',
@@ -60,9 +62,36 @@ export function isStaffAssignmentBusy(assignment) {
   return normalizeAssignmentStatus(assignment?.status) === 'active' && isActiveQueueStatus(assignment?.booking_status)
 }
 
+export function normalizePlate(value = '') {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+}
+
+export function normalizeVehicleType(value) {
+  if (!value) return 'sedan'
+  const normalized = value.trim().toLowerCase()
+
+  if (normalized === 'suv') return 'suv'
+  if (normalized === 'sedan') return 'sedan'
+  if (normalized === 'van') return 'van'
+  if (normalized === 'pickup' || normalized === 'pick-up') return 'pickup'
+  if (normalized === 'motorcycle' || normalized === 'motorbike') return 'motorcycle'
+  if (normalized === 'other') return 'other'
+
+  return 'sedan'
+}
+
+export function hasValidTeamLeadBranch(profile) {
+  if (profile?.role !== 'team_lead') return true
+  return VALID_BRANCH_SLUGS.includes(profile.branch_slug)
+}
+
+export function requiresTeamLeadBranchSetup(profile) {
+  return profile?.role === 'team_lead' && !hasValidTeamLeadBranch(profile)
+}
+
 export function getBranchScope(profile) {
   if (!profile || profile.role === 'admin') return null
-  return profile.branch_slug || null
+  return VALID_BRANCH_SLUGS.includes(profile.branch_slug) ? profile.branch_slug : null
 }
 
 export function getPlateLookupStatus(plateNumber, hasMatch) {
