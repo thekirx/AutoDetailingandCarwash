@@ -8,7 +8,7 @@ import { AdminPage } from './pages/AdminPages'
 import LoadingScreen from './components/LoadingScreen'
 import PublicLayout from './layouts/PublicLayout'
 import PublicLandingPage from './pages/PublicLandingPage'
-import { BookingPage, QueuePage } from './pages/PublicUtilityPage'
+import { BookingPage } from './pages/PublicUtilityPage'
 import { BranchesPage, PackagesPage, ServicesPage } from './pages/PublicPages'
 import PublicQueuePage from './pages/PublicQueuePage'
 import {
@@ -35,7 +35,7 @@ export default function App() {
         <Route path="/packages" element={<PackagesPage />} />
         <Route path="/book" element={<BookingPage />} />
         <Route path="/booking" element={<Navigate to="/book" replace />} />
-        <Route path="/queue" element={<QueuePage />} />
+        <Route path="/queue" element={<Navigate to="/queue/bacoor" replace />} />
         <Route path="/branches" element={<BranchesPage />} />
       </Route>
       <Route path="/queue/:branch" element={<PublicQueuePage />} />

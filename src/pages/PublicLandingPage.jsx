@@ -132,7 +132,7 @@ export default function PublicLandingPage() {
     <PPFVisualizer />
 
     <section className="queue-teaser">
-      <div className="public-shell queue-grid"><div><p className="eyebrow eyebrow-light"><Radio size={13}/> Live branch status</p><h2 className="section-title light">Know the queue.<br/>Own your time.</h2></div><div><p>See the customer-safe live service queue before you leave home. No internal records, no clutter — just the status you need.</p><Link className="button button-white" to="/queue">View live queue <ArrowRight size={18}/></Link></div></div>
+      <div className="public-shell queue-grid"><div><p className="eyebrow eyebrow-light"><Radio size={13}/> Live branch status</p><h2 className="section-title light">Know the queue.<br/>Own your time.</h2></div><div><p>See the customer-safe live service queue before you leave home. No internal records, no clutter — just the status you need.</p><Link className="button button-white" to="/queue/bacoor">View live queue <ArrowRight size={18}/></Link></div></div>
     </section>
 
     <section className="home-branches">
