@@ -4,6 +4,7 @@ import {
   getBranchScope,
   normalizePlate,
   normalizeVehicleType,
+  parsePesoInputToMinor,
   requiresTeamLeadBranchSetup,
 } from './queueLogic'
 
@@ -202,7 +203,7 @@ export async function createQueueTicket(form) {
   const finalPriceMinor = form.final_price_minor
     ? Number(form.final_price_minor)
     : form.final_price
-      ? Math.round(Number(form.final_price) * 100)
+      ? parsePesoInputToMinor(form.final_price)
       : service?.price_minor || 0
   const { data, error } = await supabase
     .from('bookings')
@@ -235,6 +236,7 @@ export async function createQueueTicket(form) {
 export async function updateTicketStatus(ticket, nextStatus) {
   const patch = { status: nextStatus }
   if (nextStatus === 'in_progress' && !ticket.actual_start) patch.actual_start = new Date().toISOString()
+  if (nextStatus === 'final_checking') patch.final_checking_at = new Date().toISOString()
   const { error } = await supabase.from('bookings').update(patch).eq('id', ticket.booking_id)
   if (error) throw error
 }

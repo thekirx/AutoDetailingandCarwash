@@ -19,12 +19,14 @@ import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 import {
   ACTIVE_QUEUE_STATUSES,
+  QUEUE_PERMISSION_ERROR,
   STATUS_LABELS,
   formatQueueNumber,
   getBranchScope,
   getPlateLookupStatus,
   getQueueCounts,
   normalizeVehicleType,
+  parsePesoInputToMinor,
   requiresTeamLeadBranchSetup,
 } from '../queue/queueLogic'
 import {
@@ -140,10 +142,10 @@ function useOperationsSnapshot() {
 }
 
 export function OperationsDashboardPage() {
-  const { profile, canManageQueue } = useAuth()
+  const { profile, canViewQueueOperations } = useAuth()
   const { activeQueue, availableStaff, busyStaff, events, handoffs, loading, error, reload } = useOperationsSnapshot()
   const counts = useMemo(() => getQueueCounts(activeQueue), [activeQueue])
-  if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
 
   if (error) return <ErrorState error={error} onRetry={reload} />
@@ -190,10 +192,10 @@ export function OperationsDashboardPage() {
 }
 
 export function OperationsQueuePage() {
-  const { profile, canManageQueue } = useAuth()
+  const { profile, canManageQueue, canViewQueueOperations } = useAuth()
   const { activeQueue, loading, error, reload } = useOperationsSnapshot()
   const grouped = useMemo(() => Object.fromEntries(ACTIVE_QUEUE_STATUSES.map((status) => [status, activeQueue.filter((ticket) => ticket.status === status)])), [activeQueue])
-  if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
 
@@ -203,7 +205,7 @@ export function OperationsQueuePage() {
         eyebrow="Queue Board"
         title="Today on the floor"
         description="Manage active tickets until they are sent to payment. For Payment tickets leave this board by design."
-        action={<div className="flex gap-3"><RefreshButton loading={loading} onClick={reload} /><Link to="/operations/queue/new" className="inline-flex items-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white no-underline transition hover:bg-blue-400"><Plus size={18} />New ticket</Link></div>}
+        action={<div className="flex gap-3"><RefreshButton loading={loading} onClick={reload} />{canManageQueue && <Link to="/operations/queue/new" className="inline-flex items-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white no-underline transition hover:bg-blue-400"><Plus size={18} />New ticket</Link>}</div>}
       />
       <div className="mt-8 grid gap-5 xl:grid-cols-3">
         {ACTIVE_QUEUE_STATUSES.map((status) => (
@@ -224,7 +226,7 @@ export function OperationsQueuePage() {
 
 export function QueueTicketPage() {
   const { id } = useParams()
-  const { user, profile, canManageQueue } = useAuth()
+  const { user, profile, canManageQueue, canViewQueueOperations } = useAuth()
   const [ticket, setTicket] = useState(null)
   const [assignments, setAssignments] = useState([])
   const [staff, setStaff] = useState([])
@@ -243,7 +245,7 @@ export function QueueTicketPage() {
       setAssignments(data.assignments)
       setStaff(data.staff)
       setSelectedStaff(data.assignments.filter((assignment) => assignment.status === 'active').map((assignment) => assignment.staff_id))
-      setPrice(String(data.ticket?.final_price_minor ?? data.ticket?.base_price_minor ?? 0))
+      setPrice(String(((data.ticket?.final_price_minor ?? data.ticket?.base_price_minor ?? 0) / 100) || ''))
       setPriceReason('')
     } catch (err) {
       setError(err.message)
@@ -269,7 +271,7 @@ export function QueueTicketPage() {
     }
   }
 
-  if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (loading) return <LoadingPanel />
   if (error) return <ErrorState error={error} onRetry={load} />
@@ -277,11 +279,19 @@ export function QueueTicketPage() {
 
   const staffById = new Map(staff.map((item) => [item.id, item]))
   const canSendToPayment = canManageQueue && ticket.status === 'final_checking'
+  const parsedPrice = Number(String(price).replace(/,/g, '').trim())
+  const showLowPriceWarning = Number.isFinite(parsedPrice) && parsedPrice > 0 && parsedPrice < 50
+  const savePrice = () => {
+    const amountMinor = parsePesoInputToMinor(price)
+    if (amountMinor < 5000 && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) return Promise.resolve()
+    return updateTicketPrice(ticket, amountMinor, priceReason, user.id)
+  }
 
   return (
     <section>
       <PageHeader eyebrow="Queue Ticket" title={`${formatQueueNumber(ticket.queue_number)} · ${ticket.customer_name}`} description={`${ticket.branch} · ${STATUS_LABELS[ticket.status] || ticket.status}`} action={<Link to="/operations/queue" className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 no-underline">Back to queue</Link>} />
       {error && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{error}</p>}
+      {!canManageQueue && <p className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">{QUEUE_PERMISSION_ERROR}</p>}
       <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_380px]">
         <Panel title="Ticket Details" icon={CarFront}>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -307,9 +317,10 @@ export function QueueTicketPage() {
 
           <Panel title="Edit Price" icon={BadgeCheck}>
             <div className="grid gap-3">
-              <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Final price in centavos<input value={price} onChange={(event) => setPrice(event.target.value)} disabled={!canManageQueue} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
+              <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Final Price in Pesos<input type="number" min="0" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} disabled={!canManageQueue} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
+              {showLowPriceWarning && <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
               <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Reason<input value={priceReason} onChange={(event) => setPriceReason(event.target.value)} disabled={!canManageQueue} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
-              <ActionButton disabled={!canManageQueue} loading={saving === 'price'} onClick={() => runAction('price', () => updateTicketPrice(ticket, price, priceReason, user.id))}>Save Price</ActionButton>
+              <ActionButton disabled={!canManageQueue} loading={saving === 'price'} onClick={() => runAction('price', savePrice)}>Save Price</ActionButton>
             </div>
           </Panel>
         </div>
@@ -344,8 +355,9 @@ export function QueueTicketPage() {
 
 export function NewQueueTicketPage() {
   const navigate = useNavigate()
-  const { user, profile, canManageQueue, isAdmin } = useAuth()
+  const { user, profile, canManageQueue } = useAuth()
   const assignedBranch = getBranchScope(profile)
+  const canChooseBranch = profile?.role === 'BossMich'
   const [services, setServices] = useState([])
   const [branches, setBranches] = useState([])
   const [plateMatch, setPlateMatch] = useState(null)
@@ -370,7 +382,7 @@ export function NewQueueTicketPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    Promise.all([fetchServices(), isAdmin ? fetchBranches() : Promise.resolve([])])
+    Promise.all([fetchServices(), canChooseBranch ? fetchBranches() : Promise.resolve([])])
       .then(([serviceRows, branchRows]) => {
         const firstService = serviceRows[0]
         setServices(serviceRows)
@@ -385,7 +397,7 @@ export function NewQueueTicketPage() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [assignedBranch, isAdmin])
+  }, [assignedBranch, canChooseBranch])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -436,14 +448,21 @@ export function NewQueueTicketPage() {
     }))
   }
 
+  const parsedFormPrice = Number(String(form.final_price).replace(/,/g, '').trim())
+  const showFormLowPriceWarning = Number.isFinite(parsedFormPrice) && parsedFormPrice > 0 && parsedFormPrice < 50
+
   const submit = async (event) => {
     event.preventDefault()
     setSubmitting(true)
     setError('')
     try {
+      if (showFormLowPriceWarning && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) {
+        setSubmitting(false)
+        return
+      }
       const ticket = await createQueueTicket({
         ...form,
-        branch: isAdmin ? form.branch : assignedBranch,
+        branch: canChooseBranch ? form.branch : assignedBranch,
         vehicle_type: normalizeVehicleType(form.vehicle_type),
         services,
         created_by: user.id,
@@ -479,8 +498,9 @@ export function NewQueueTicketPage() {
             <FormField label="Vehicle model" value={form.vehicle_model} onChange={update('vehicle_model')} required />
             <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Vehicle type<select value={form.vehicle_type} onChange={updateVehicleType} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Service<select value={form.service_id} onChange={updateService} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{services.map((service) => <option key={service.id} value={service.id}>{service.name} · {formatMoney(service.price_minor)}</option>)}</select></label>
-            {isAdmin && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
-            <FormField label="Final Price" value={form.final_price} onChange={update('final_price')} type="number" required />
+            {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
+            <FormField label="Final Price in Pesos" value={form.final_price} onChange={update('final_price')} type="number" min="0" step="0.01" required />
+            {showFormLowPriceWarning && <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
             <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Notes<textarea value={form.notes} onChange={update('notes')} className="mt-2 min-h-28 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
             <button disabled={submitting} className="sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} /> : <Plus size={18} />}Create Queue Ticket</button>
           </form>
@@ -491,9 +511,9 @@ export function NewQueueTicketPage() {
 }
 
 export function CrewPage() {
-  const { profile, canManageQueue } = useAuth()
+  const { profile, canViewQueueOperations } = useAuth()
   const { availableStaff, busyStaff, loading, error, reload } = useOperationsSnapshot()
-  if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
   return (
@@ -508,7 +528,7 @@ export function CrewPage() {
 }
 
 export function KpiPage() {
-  const { profile, canManageQueue } = useAuth()
+  const { profile, canViewQueueOperations } = useAuth()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -527,7 +547,7 @@ export function KpiPage() {
     setLoading(false)
   }, [profile])
   useEffect(() => { load() }, [load])
-  if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
+  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={load} />
   return (
@@ -657,8 +677,8 @@ function Info({ label, value }) {
   return <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-4"><p className="text-[10px] font-bold tracking-[0.16em] text-slate-500 uppercase">{label}</p><p className="mt-2 text-sm text-slate-100">{value || '-'}</p></div>
 }
 
-function FormField({ label, value, onChange, type = 'text', required = false }) {
-  return <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">{label}<input type={type} value={value} onChange={onChange} required={required} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
+function FormField({ label, value, onChange, type = 'text', required = false, min, step }) {
+  return <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">{label}<input type={type} value={value} onChange={onChange} required={required} min={min} step={step} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
 }
 
 function BarChartIcon(props) {

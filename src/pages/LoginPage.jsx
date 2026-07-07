@@ -45,7 +45,7 @@ export default function LoginPage() {
         .from('customers')
         .select('role')
         .eq('id', data.user.id)
-        .in('role', ['staff', 'admin', 'team_lead', 'cashier'])
+        .in('role', ['staff', 'admin', 'team_lead', 'BossMich', 'cashier'])
         .eq('is_archived', false)
         .maybeSingle()
 

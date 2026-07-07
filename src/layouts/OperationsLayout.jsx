@@ -22,6 +22,7 @@ const branchLabels = {
 
 function formatRole(role) {
   if (role === 'team_lead') return 'Team Lead'
+  if (role === 'BossMich') return 'BossMich'
   if (role === 'admin') return 'Admin'
   if (role === 'staff') return 'Staff'
   if (role === 'cashier') return 'Cashier'
@@ -30,14 +31,14 @@ function formatRole(role) {
 
 function formatProfileScope(profile) {
   if (profile?.role === 'team_lead') return branchLabels[profile.branch_slug] || 'No branch assigned'
-  if (profile?.role === 'admin') return 'All branches'
+  if (profile?.role === 'admin' || profile?.role === 'BossMich') return 'All branches'
   return branchLabels[profile?.branch_slug] || 'Assigned tasks'
 }
 
 export default function OperationsLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { profile, user, canManageQueue, signOut } = useAuth()
-  const navigation = canManageQueue ? managerNav : staffNav
+  const { profile, user, canViewQueueOperations, signOut } = useAuth()
+  const navigation = canViewQueueOperations ? managerNav : staffNav
 
   return (
     <div className="min-h-screen bg-[#070d18] text-slate-100">
@@ -77,7 +78,7 @@ export default function OperationsLayout() {
             <p className="text-xs font-bold tracking-[0.2em] text-blue-300 uppercase">Hakum Auto Care</p>
             <p className="truncate text-sm text-slate-500">Queue command center</p>
           </div>
-          {!canManageQueue && <div className="hidden items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs text-amber-100 sm:flex"><ShieldAlert size={15} />Assigned tasks only</div>}
+          {!canViewQueueOperations && <div className="hidden items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs text-amber-100 sm:flex"><ShieldAlert size={15} />Assigned tasks only</div>}
         </header>
         <main className="p-5 sm:p-8"><Outlet /></main>
       </div>

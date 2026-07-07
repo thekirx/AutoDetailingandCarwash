@@ -43,7 +43,7 @@ export default function App() {
       <Route path="/operations/login" element={<LoginPage />} />
       <Route path="/login" element={<Navigate to="/operations/login" replace />} />
       <Route path="/operations/access-denied" element={<AccessDeniedPage />} />
-      <Route element={<ProtectedRoute allowedRoles={['admin', 'team_lead', 'staff']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['admin', 'team_lead', 'BossMich', 'staff']} />}>
         <Route path="/operations" element={<OperationsLayout />}>
           <Route index element={<Navigate to="/operations/dashboard" replace />} />
           <Route path="dashboard" element={<OperationsDashboardPage />} />
@@ -55,7 +55,7 @@ export default function App() {
           <Route path="my-tasks" element={<MyTasksPage />} />
         </Route>
       </Route>
-      <Route element={<ProtectedRoute allowedRoles={['staff', 'admin']} redirectTo="/admin" />}>
+      <Route element={<ProtectedRoute allowedRoles={['staff', 'admin', 'BossMich']} redirectTo="/admin" />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<Suspense fallback={<LoadingScreen />}><DashboardPage /></Suspense>} />
           <Route path="bookings" element={<Suspense fallback={<LoadingScreen />}><CalendarPage /></Suspense>} />

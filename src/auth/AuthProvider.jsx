@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { canEditQueueOperations, canViewQueueOperations } from '../queue/queueLogic'
 
 const AuthContext = createContext(null)
 
@@ -32,7 +33,7 @@ export function AuthProvider({ children }) {
       .from('customers')
       .select('id, full_name, email, phone, role, is_archived')
       .eq('id', user.id)
-      .in('role', ['staff', 'admin', 'team_lead', 'cashier'])
+      .in('role', ['staff', 'admin', 'team_lead', 'BossMich', 'cashier'])
       .eq('is_archived', false)
       .maybeSingle()
 
@@ -87,11 +88,12 @@ export function AuthProvider({ children }) {
       user: session?.user ?? null,
       profile,
       role: profile?.role ?? 'public',
-      isStaff: ['staff', 'team_lead', 'admin'].includes(profile?.role),
+      isStaff: ['staff', 'team_lead', 'admin', 'BossMich'].includes(profile?.role),
       isAdmin: profile?.role === 'admin',
-      canManageQueue: profile?.role === 'admin' || profile?.role === 'team_lead',
-      canViewAssignedTasks: ['staff', 'team_lead', 'admin'].includes(profile?.role),
-      canUseOperations: ['staff', 'team_lead', 'admin'].includes(profile?.role),
+      canManageQueue: canEditQueueOperations(profile),
+      canViewQueueOperations: canViewQueueOperations(profile),
+      canViewAssignedTasks: ['staff', 'team_lead', 'admin', 'BossMich'].includes(profile?.role),
+      canUseOperations: ['staff', 'team_lead', 'admin', 'BossMich'].includes(profile?.role),
       canUseFuturePOS: profile?.role === 'cashier',
       loading,
       signOut,

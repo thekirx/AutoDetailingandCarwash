@@ -2,6 +2,10 @@ export const ACTIVE_QUEUE_STATUSES = ['waiting', 'in_progress', 'final_checking'
 export const WORKFLOW_STATUSES = [...ACTIVE_QUEUE_STATUSES, 'for_payment']
 export const VALID_BRANCH_SLUGS = ['bacoor', 'batangas']
 export const VALID_VEHICLE_TYPES = ['sedan', 'suv', 'pickup', 'van', 'motorcycle', 'other']
+export const BOSS_MICH_ROLE = 'BossMich'
+export const QUEUE_EDITOR_ROLES = ['team_lead', BOSS_MICH_ROLE]
+export const QUEUE_VIEWER_ROLES = ['admin', ...QUEUE_EDITOR_ROLES]
+export const QUEUE_PERMISSION_ERROR = 'You do not have permission to edit queue operations. Only the assigned Team Lead or BossMich can perform this action.'
 
 export const STATUS_LABELS = {
   waiting: 'Waiting',
@@ -90,8 +94,32 @@ export function requiresTeamLeadBranchSetup(profile) {
 }
 
 export function getBranchScope(profile) {
-  if (!profile || profile.role === 'admin') return null
+  if (!profile || canOverrideQueueBranches(profile) || profile.role === 'admin') return null
   return VALID_BRANCH_SLUGS.includes(profile.branch_slug) ? profile.branch_slug : null
+}
+
+export function canEditQueueOperations(profile) {
+  return QUEUE_EDITOR_ROLES.includes(profile?.role)
+}
+
+export function canViewQueueOperations(profile) {
+  return QUEUE_VIEWER_ROLES.includes(profile?.role)
+}
+
+export function canOverrideQueueBranches(profile) {
+  return profile?.role === BOSS_MICH_ROLE
+}
+
+export function parsePesoInputToMinor(value) {
+  const normalized = String(value ?? '').replace(/,/g, '').trim()
+  if (!normalized) throw new Error('Price is required.')
+
+  const amount = Number(normalized)
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('Price must be a positive number.')
+  }
+
+  return Math.round(amount * 100)
 }
 
 export function getPlateLookupStatus(plateNumber, hasMatch) {

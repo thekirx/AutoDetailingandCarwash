@@ -3,6 +3,9 @@ import { describe, it } from 'node:test'
 import {
   ACTIVE_QUEUE_STATUSES,
   buildPublicQueueModel,
+  canEditQueueOperations,
+  canOverrideQueueBranches,
+  canViewQueueOperations,
   getQueueCounts,
   isStaffAssignmentBusy,
   normalizeAssignmentStatus,
@@ -10,6 +13,7 @@ import {
   getPlateLookupStatus,
   hasValidTeamLeadBranch,
   normalizePlate,
+  parsePesoInputToMinor,
   normalizeVehicleType,
 } from '../src/queue/queueLogic.js'
 
@@ -70,9 +74,27 @@ describe('queue logic', () => {
   it('uses the logged-in profile branch as the operations scope', () => {
     assert.equal(getBranchScope({ role: 'team_lead', branch_slug: 'bacoor' }), 'bacoor')
     assert.equal(getBranchScope({ role: 'admin', branch_slug: null }), null)
+    assert.equal(getBranchScope({ role: 'BossMich', branch_slug: null }), null)
     assert.equal(getBranchScope({ role: 'team_lead', branch_slug: null }), null)
     assert.equal(hasValidTeamLeadBranch({ role: 'team_lead', branch_slug: null }), false)
     assert.equal(hasValidTeamLeadBranch({ role: 'team_lead', branch_slug: 'batangas' }), true)
+  })
+
+  it('allows only team leads and BossMich to edit queue operations', () => {
+    assert.equal(canEditQueueOperations({ role: 'team_lead' }), true)
+    assert.equal(canEditQueueOperations({ role: 'BossMich' }), true)
+    assert.equal(canEditQueueOperations({ role: 'admin' }), false)
+    assert.equal(canEditQueueOperations({ role: 'cashier' }), false)
+    assert.equal(canEditQueueOperations({ role: 'staff' }), false)
+    assert.equal(canOverrideQueueBranches({ role: 'BossMich' }), true)
+    assert.equal(canOverrideQueueBranches({ role: 'team_lead' }), false)
+  })
+
+  it('lets admins view operations data without queue edit permission', () => {
+    assert.equal(canViewQueueOperations({ role: 'admin' }), true)
+    assert.equal(canViewQueueOperations({ role: 'team_lead' }), true)
+    assert.equal(canViewQueueOperations({ role: 'BossMich' }), true)
+    assert.equal(canViewQueueOperations({ role: 'cashier' }), false)
   })
 
   it('describes plate lookup state without exposing duplicate fields', () => {
@@ -97,5 +119,18 @@ describe('queue logic', () => {
     assert.equal(normalizeVehicleType('Motorbike'), 'motorcycle')
     assert.equal(normalizeVehicleType(''), 'sedan')
     assert.equal(normalizeVehicleType('Coupe'), 'sedan')
+  })
+
+  it('converts visible peso inputs to minor units', () => {
+    assert.equal(parsePesoInputToMinor('1200'), 120000)
+    assert.equal(parsePesoInputToMinor('2,500'), 250000)
+    assert.equal(parsePesoInputToMinor('1200.50'), 120050)
+  })
+
+  it('rejects invalid price inputs before saving', () => {
+    assert.throws(() => parsePesoInputToMinor(''), /Price is required/)
+    assert.throws(() => parsePesoInputToMinor('abc'), /positive number/)
+    assert.throws(() => parsePesoInputToMinor('0'), /positive number/)
+    assert.throws(() => parsePesoInputToMinor('-10'), /positive number/)
   })
 })
