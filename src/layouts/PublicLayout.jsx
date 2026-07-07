@@ -7,7 +7,7 @@ const navItems = [
   ['Services', '/services'],
   ['Packages', '/packages'],
   ['Branch', '/branches'],
-  ['Live Queue', '/queue/bacoor'],
+  ['Live Queue', '/queue'],
 ]
 
 export default function PublicLayout() {
