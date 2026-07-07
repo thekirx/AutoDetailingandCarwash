@@ -1,7 +1,10 @@
 import { supabase } from '../lib/supabase'
 import {
   ACTIVE_QUEUE_STATUSES,
+  formatQueueActionError,
   getBranchScope,
+  getCrewAttendanceModel,
+  MISSING_QUEUE_PROFILE_ERROR,
   normalizePlate,
   normalizeVehicleType,
   parsePesoInputToMinor,
@@ -40,6 +43,10 @@ export const QUEUE_BOARD_SELECT = `
   notes
 `
 
+function getTodayDate() {
+  return new Date().toISOString().slice(0, 10)
+}
+
 export function formatMoney(minor) {
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
@@ -57,35 +64,80 @@ function scopedStaffQuery(query, branchScope) {
   return branchScope ? query.eq('branch_slug', branchScope) : query
 }
 
+export async function getCurrentProfile({ required = true } = {}) {
+  const { data: userResult, error: userError } = await supabase.auth.getUser()
+  if (userError) throw formatQueueActionError(userError)
+
+  const user = userResult?.user
+  if (!user) {
+    if (!required) return null
+    throw new Error('You must be logged in to perform this queue action.')
+  }
+
+  const { data, error } = await supabase
+    .from('customers')
+    .select('id, full_name, email, phone, role, is_archived')
+    .eq('id', user.id)
+    .eq('is_archived', false)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Unable to load current queue profile', error)
+    throw formatQueueActionError(error)
+  }
+  if (!data && required) throw new Error(MISSING_QUEUE_PROFILE_ERROR)
+  return data || null
+}
+
 export async function fetchOperationsSnapshot(profile) {
   if (requiresTeamLeadBranchSetup(profile)) {
-    return { queue: [], activeQueue: [], availableStaff: [], busyStaff: [], events: [], handoffs: [] }
+    return { queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [] }
   }
 
   const branchScope = getBranchScope(profile)
   const queueQuery = scopedQuery(supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT), branchScope)
+  const staffPoolQuery = scopedStaffQuery(
+    supabase
+      .from('staff_profiles')
+      .select('id, full_name, role, branch_slug, phone, is_active')
+      .eq('role', 'staff')
+      .eq('is_active', true),
+    branchScope,
+  )
+  const attendanceQuery = branchScope
+    ? supabase.from('staff_attendance').select('id, staff_id, branch_slug, attendance_date, status, checked_in_at, checked_out_at').eq('attendance_date', getTodayDate()).eq('branch_slug', branchScope)
+    : supabase.from('staff_attendance').select('id, staff_id, branch_slug, attendance_date, status, checked_in_at, checked_out_at').eq('attendance_date', getTodayDate())
   const busyQuery = branchScope
     ? supabase.from('busy_staff_view').select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at').eq('branch_slug', branchScope)
     : supabase.from('busy_staff_view').select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at')
   const eventsQuery = scopedQuery(supabase.from('queue_events').select('id, booking_id, branch, old_status, new_status, notes, created_at'), branchScope)
   const handoffsQuery = scopedQuery(supabase.from('pos_handoffs').select('id, booking_id, branch, amount_minor, status, handed_off_at'), branchScope)
 
-  const [queue, availableStaff, busyStaff, events, handoffs] = await Promise.all([
+  const [queue, staffPool, attendance, busyStaff, events, handoffs] = await Promise.all([
     queueQuery.order('created_at', { ascending: false }),
-    scopedStaffQuery(supabase.from('available_staff_view').select('staff_id, full_name, role, branch_slug, phone'), branchScope).order('full_name'),
+    staffPoolQuery.order('full_name'),
+    attendanceQuery,
     busyQuery.order('assigned_at', { ascending: false }),
     eventsQuery.order('created_at', { ascending: false }).limit(8),
     handoffsQuery.order('handed_off_at', { ascending: false }).limit(8),
   ])
 
-  const error = queue.error || availableStaff.error || busyStaff.error || events.error || handoffs.error
+  const attendanceRows = attendance.error ? [] : attendance.data || []
+  if (attendance.error) console.warn('Staff attendance unavailable; apply staff attendance migration to enable daily attendance.', attendance.error)
+  const error = queue.error || staffPool.error || busyStaff.error || events.error || handoffs.error
   if (error) throw error
+  const crewModel = getCrewAttendanceModel({
+    staffPool: staffPool.data || [],
+    attendance: attendanceRows,
+    busyStaff: busyStaff.data || [],
+  })
 
   return {
     queue: queue.data || [],
     activeQueue: (queue.data || []).filter((ticket) => ACTIVE_QUEUE_STATUSES.includes(ticket.status)),
-    availableStaff: availableStaff.data || [],
-    busyStaff: busyStaff.data || [],
+    staffPool: crewModel.staffPool,
+    availableStaff: crewModel.availableStaff,
+    busyStaff: crewModel.busyStaff,
     events: events.data || [],
     handoffs: handoffs.data || [],
   }
@@ -98,6 +150,9 @@ export async function fetchTicket(bookingId, profile) {
 
   const branchScope = getBranchScope(profile)
   const ticketQuery = supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).eq('booking_id', bookingId)
+  const attendanceQuery = branchScope
+    ? supabase.from('staff_attendance').select('staff_id, branch_slug, attendance_date, status').eq('attendance_date', getTodayDate()).eq('branch_slug', branchScope).eq('status', 'present')
+    : supabase.from('staff_attendance').select('staff_id, branch_slug, attendance_date, status').eq('attendance_date', getTodayDate()).eq('status', 'present')
   const staffQuery = supabase.from('staff_profiles').select('id, full_name, role, branch_slug, is_active').eq('role', 'staff').eq('is_active', true)
   const [ticketResult, assignmentsResult, staffResult] = await Promise.all([
     (branchScope ? ticketQuery.eq('branch', branchScope) : ticketQuery).maybeSingle(),
@@ -111,7 +166,17 @@ export async function fetchTicket(bookingId, profile) {
 
   const error = ticketResult.error || assignmentsResult.error || staffResult.error
   if (error) throw error
-  return { ticket: ticketResult.data, assignments: assignmentsResult.data || [], staff: staffResult.data || [] }
+  const attendanceResult = await attendanceQuery
+  if (attendanceResult.error) {
+    console.warn('Staff attendance unavailable for ticket staff picker', attendanceResult.error)
+    return { ticket: ticketResult.data, assignments: assignmentsResult.data || [], staff: [] }
+  }
+  const presentIds = new Set((attendanceResult.data || []).map((row) => row.staff_id))
+  return {
+    ticket: ticketResult.data,
+    assignments: assignmentsResult.data || [],
+    staff: (staffResult.data || []).filter((member) => presentIds.has(member.id)),
+  }
 }
 
 export async function fetchServices() {
@@ -125,6 +190,72 @@ export async function fetchBranches() {
   const { data, error } = await supabase.from('branches').select('slug, name').eq('is_active', true).order('name')
   if (error) throw error
   return data || []
+}
+
+export async function addStaffMember(form, profile) {
+  const currentProfile = await getCurrentProfile({ required: true })
+  const branchSlug = profile?.role === 'BossMich' ? form.branch_slug : getBranchScope(profile)
+  if (!branchSlug) throw new Error('Your Team Lead account has no assigned branch. Please contact BossMich.')
+
+  const { data, error } = await supabase
+    .from('staff_profiles')
+    .insert({
+      full_name: form.full_name.trim(),
+      role: 'staff',
+      branch_slug: branchSlug,
+      phone: form.phone?.trim() || null,
+      is_active: true,
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    console.error('Unable to add staff member', error)
+    throw formatQueueActionError(error)
+  }
+
+  const { error: attendanceError } = await supabase
+    .from('staff_attendance')
+    .upsert({
+      staff_id: data.id,
+      branch_slug: branchSlug,
+      attendance_date: getTodayDate(),
+      status: form.present_today ? 'present' : 'absent',
+      checked_in_at: form.present_today ? new Date().toISOString() : null,
+      checked_out_at: form.present_today ? null : new Date().toISOString(),
+      marked_by: currentProfile.id,
+    }, { onConflict: 'staff_id,attendance_date' })
+
+  if (attendanceError) {
+    console.error('Unable to mark new staff attendance', attendanceError)
+    throw formatQueueActionError(attendanceError)
+  }
+
+  return data
+}
+
+export async function setStaffAttendance(member, status, profile) {
+  const currentProfile = await getCurrentProfile({ required: true })
+  const branchSlug = member.branch_slug || getBranchScope(profile)
+  if (!branchSlug) throw new Error('Staff member has no assigned branch.')
+  const present = status === 'present'
+
+  const { error } = await supabase
+    .from('staff_attendance')
+    .upsert({
+      staff_id: member.id || member.staff_id,
+      branch_slug: branchSlug,
+      attendance_date: getTodayDate(),
+      status: present ? 'present' : 'absent',
+      checked_in_at: present ? new Date().toISOString() : member.attendance?.checked_in_at || null,
+      checked_out_at: present ? null : new Date().toISOString(),
+      marked_by: currentProfile.id,
+    }, { onConflict: 'staff_id,attendance_date' })
+
+  if (error) {
+    console.error('Unable to update staff attendance', error)
+    throw formatQueueActionError(error)
+  }
 }
 
 export async function lookupPlate(plateNumber, profile) {
@@ -161,6 +292,7 @@ async function ensureCustomer(form) {
 
 export async function createQueueTicket(form) {
   if (!form.branch) throw new Error('Your Team Lead account has no assigned branch. Please contact an admin.')
+  const profile = await getCurrentProfile({ required: true })
   const customerId = await ensureCustomer(form)
   let vehicleId = form.vehicle_id || null
   const normalizedPlate = normalizePlate(form.vehicle_plate || '')
@@ -223,44 +355,75 @@ export async function createQueueTicket(form) {
       branch: form.branch,
       status: 'waiting',
       created_by: form.created_by,
+      team_lead_id: profile.id,
+      waiting_at: new Date().toISOString(),
       notes: form.notes?.trim() || null,
       final_price_minor: finalPriceMinor,
+      price_minor: finalPriceMinor,
     })
     .select('id')
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Unable to create queue ticket', error)
+    throw formatQueueActionError(error)
+  }
   return data
 }
 
 export async function updateTicketStatus(ticket, nextStatus) {
+  const profile = await getCurrentProfile({ required: false })
+  const now = new Date().toISOString()
   const patch = { status: nextStatus }
-  if (nextStatus === 'in_progress' && !ticket.actual_start) patch.actual_start = new Date().toISOString()
-  if (nextStatus === 'final_checking') patch.final_checking_at = new Date().toISOString()
+  if (nextStatus === 'waiting') patch.waiting_at = now
+  if (nextStatus === 'in_progress') {
+    patch.in_progress_at = now
+    if (!ticket.actual_start) patch.actual_start = now
+  }
+  if (nextStatus === 'final_checking') {
+    patch.final_checking_at = now
+    if (profile?.id) patch.final_checked_by = profile.id
+  }
+  if (nextStatus === 'for_payment') patch.for_payment_at = now
+  if (nextStatus === 'completed') patch.completed_at = now
+  if (nextStatus === 'cancelled') patch.cancelled_at = now
+
   const { error } = await supabase.from('bookings').update(patch).eq('id', ticket.booking_id)
-  if (error) throw error
+  if (error) {
+    console.error('Unable to update queue ticket status', error)
+    throw formatQueueActionError(error)
+  }
 }
 
 export async function updateTicketPrice(ticket, amountMinor, reason, userId) {
+  await getCurrentProfile({ required: true })
   const { error } = await supabase
     .from('bookings')
     .update({
       final_price_minor: Number(amountMinor),
+      price_minor: Number(amountMinor),
       price_edit_reason: reason?.trim() || null,
       price_edited_by: userId,
     })
     .eq('id', ticket.booking_id)
-  if (error) throw error
+  if (error) {
+    console.error('Unable to update queue ticket price', error)
+    throw formatQueueActionError(error)
+  }
 }
 
 export async function assignStaff(ticket, staffIds, userId) {
+  await getCurrentProfile({ required: true })
   const selected = new Set(staffIds)
   const { data: existing, error: existingError } = await supabase
     .from('queue_assignments')
     .select('id, staff_id, status')
     .eq('booking_id', ticket.booking_id)
 
-  if (existingError) throw existingError
+  if (existingError) {
+    console.error('Unable to load existing queue assignments', existingError)
+    throw formatQueueActionError(existingError)
+  }
 
   const activeExisting = existing || []
   const toRelease = activeExisting.filter((assignment) => assignment.status === 'active' && !selected.has(assignment.staff_id)).map((assignment) => assignment.id)
@@ -269,7 +432,10 @@ export async function assignStaff(ticket, staffIds, userId) {
       .from('queue_assignments')
       .update({ status: 'released', released_at: new Date().toISOString(), completed_at: new Date().toISOString() })
       .in('id', toRelease)
-    if (error) throw error
+    if (error) {
+      console.error('Unable to release queue assignments', error)
+      throw formatQueueActionError(error)
+    }
   }
 
   const activeIds = new Set(activeExisting.filter((assignment) => assignment.status === 'active').map((assignment) => assignment.staff_id))
@@ -286,7 +452,10 @@ export async function assignStaff(ticket, staffIds, userId) {
 
   if (inserts.length) {
     const { error } = await supabase.from('queue_assignments').insert(inserts)
-    if (error) throw error
+    if (error) {
+      console.error('Unable to insert queue assignments', error)
+      throw formatQueueActionError(error)
+    }
   }
 
   const { error: bookingError } = await supabase
@@ -294,11 +463,18 @@ export async function assignStaff(ticket, staffIds, userId) {
     .update({ assigned_staff_id: staffIds[0] || null })
     .eq('id', ticket.booking_id)
 
-  if (bookingError) throw bookingError
+  if (bookingError) {
+    console.error('Unable to update assigned queue staff', bookingError)
+    throw formatQueueActionError(bookingError)
+  }
 }
 
 export async function sendTicketToPayment(bookingId) {
+  await getCurrentProfile({ required: true })
   const { data, error } = await supabase.rpc('send_queue_ticket_to_payment', { input_booking_id: bookingId })
-  if (error) throw error
+  if (error) {
+    console.error('Unable to send queue ticket to payment', error)
+    throw formatQueueActionError(error)
+  }
   return data
 }

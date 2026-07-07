@@ -31,6 +31,7 @@ import {
 } from '../queue/queueLogic'
 import {
   assignStaff,
+  addStaffMember,
   createQueueTicket,
   fetchBranches,
   fetchOperationsSnapshot,
@@ -39,6 +40,7 @@ import {
   formatMoney,
   lookupPlate,
   sendTicketToPayment,
+  setStaffAttendance,
   updateTicketPrice,
   updateTicketStatus,
 } from '../queue/queueApi'
@@ -106,7 +108,7 @@ function TicketCard({ ticket }) {
 
 function useOperationsSnapshot() {
   const { profile } = useAuth()
-  const [snapshot, setSnapshot] = useState({ queue: [], activeQueue: [], availableStaff: [], busyStaff: [], events: [], handoffs: [] })
+  const [snapshot, setSnapshot] = useState({ queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -265,6 +267,7 @@ export function QueueTicketPage() {
       await action()
       await load()
     } catch (err) {
+      console.error('Queue action failed', err)
       setError(err.message)
     } finally {
       setSaving('')
@@ -511,16 +514,77 @@ export function NewQueueTicketPage() {
 }
 
 export function CrewPage() {
-  const { profile, canViewQueueOperations } = useAuth()
-  const { availableStaff, busyStaff, loading, error, reload } = useOperationsSnapshot()
+  const { profile, canManageQueue, canViewQueueOperations } = useAuth()
+  const { staffPool, availableStaff, busyStaff, loading, error, reload } = useOperationsSnapshot()
+  const [form, setForm] = useState({ full_name: '', phone: '', branch_slug: getBranchScope(profile) || '', present_today: true })
+  const [branches, setBranches] = useState([])
+  const [saving, setSaving] = useState('')
+  const [actionError, setActionError] = useState('')
+  const presentCount = staffPool.filter((member) => member.is_present_today).length
+
+  useEffect(() => {
+    if (profile?.role !== 'BossMich') return
+    fetchBranches()
+      .then((rows) => {
+        setBranches(rows)
+        setForm((current) => ({ ...current, branch_slug: current.branch_slug || rows[0]?.slug || '' }))
+      })
+      .catch((err) => setActionError(err.message))
+  }, [profile?.role])
+
+  const runCrewAction = async (label, action) => {
+    setSaving(label)
+    setActionError('')
+    try {
+      await action()
+      await reload()
+    } catch (err) {
+      console.error('Crew action failed', err)
+      setActionError(err.message)
+    } finally {
+      setSaving('')
+    }
+  }
+
+  const submitStaff = (event) => {
+    event.preventDefault()
+    runCrewAction('add-staff', async () => {
+      await addStaffMember(form, profile)
+      setForm((current) => ({ ...current, full_name: '', phone: '' }))
+    })
+  }
+
   if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
   return (
     <section>
-      <PageHeader eyebrow="Crew" title="Staff availability" description="Staff become available once their ticket is sent to payment and their assignment is released." action={<RefreshButton loading={loading} onClick={reload} />} />
-      <div className="mt-8 grid gap-6 xl:grid-cols-2">
-        <Panel title="Available Staff" icon={CheckCircle2}><CrewList rows={availableStaff} empty="No available staff" /></Panel>
+      <PageHeader eyebrow="Crew" title="Staff pool and attendance" description="Add staff once, mark who attended today, then deploy only present staff into queue tickets." action={<RefreshButton loading={loading} onClick={reload} />} />
+      {actionError && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{actionError}</p>}
+      <div className="mt-8 grid gap-6 xl:grid-cols-[.9fr_1.1fr]">
+        <Panel title="Staff Pool" icon={UserPlus}>
+          {canManageQueue && (
+            <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-[1fr_160px_auto]">
+              <input value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} required placeholder="Staff name" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
+              <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Phone" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
+              <button disabled={saving === 'add-staff'} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60">{saving === 'add-staff' ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}Add</button>
+              {profile?.role === 'BossMich' && <select value={form.branch_slug} onChange={(event) => setForm((current) => ({ ...current, branch_slug: event.target.value }))} required className="md:col-span-3 rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select>}
+              <label className="md:col-span-3 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] px-4 py-3 text-sm text-slate-300">
+                <input type="checkbox" checked={form.present_today} onChange={(event) => setForm((current) => ({ ...current, present_today: event.target.checked }))} />
+                Mark as attended today
+              </label>
+            </form>
+          )}
+          <div className="mb-4 grid grid-cols-3 gap-3 text-center text-xs text-slate-400">
+            <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{staffPool.length}</strong>Pool</span>
+            <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{presentCount}</strong>Present</span>
+            <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{availableStaff.length}</strong>Deployable</span>
+          </div>
+          <StaffPoolList rows={staffPool} canManage={canManageQueue} saving={saving} onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))} />
+        </Panel>
+        <Panel title="Available Today" icon={CheckCircle2}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
+      </div>
+      <div className="mt-6 grid gap-6">
         <Panel title="Busy Staff" icon={Users}><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
       </div>
     </section>
@@ -637,6 +701,38 @@ function CrewList({ title, rows, empty, busy = false }) {
       <div className="grid gap-3">
         {rows.length ? rows.map((row) => <div key={`${row.staff_id}-${row.booking_id || 'free'}`} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4"><p className="font-medium">{row.full_name}</p><p className="mt-1 text-xs text-slate-500">{row.branch_slug || 'All branches'}{busy && row.queue_number ? ` · ${formatQueueNumber(row.queue_number)}` : ''}</p></div>) : <EmptyLine text={empty} />}
       </div>
+    </div>
+  )
+}
+
+function StaffPoolList({ rows, canManage, saving, onAttendance }) {
+  if (!rows.length) return <EmptyLine text="No staff in this branch pool yet." />
+
+  return (
+    <div className="grid gap-3">
+      {rows.map((member) => {
+        const present = member.is_present_today
+        const busy = member.is_busy_today
+        return (
+          <div key={member.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">{member.full_name}</p>
+                <p className="mt-1 text-xs text-slate-500">{member.branch_slug || 'No branch'}{member.phone ? ` · ${member.phone}` : ''}</p>
+              </div>
+              <span className={`w-fit rounded-full border px-3 py-1 text-[10px] font-bold uppercase ${present ? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-100' : 'border-slate-300/20 bg-slate-400/10 text-slate-300'}`}>
+                {present ? (busy ? 'Deployed' : 'Present') : 'Not attended'}
+              </span>
+            </div>
+            {canManage && (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <button type="button" disabled={present || saving === `${member.id}-present`} onClick={() => onAttendance(member, 'present')} className="rounded-xl border border-emerald-300/20 px-3 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40">Mark present</button>
+                <button type="button" disabled={!present || saving === `${member.id}-absent`} onClick={() => onAttendance(member, 'absent')} className="rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40">Mark absent</button>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

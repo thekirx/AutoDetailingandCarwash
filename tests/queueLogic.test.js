@@ -6,6 +6,8 @@ import {
   canEditQueueOperations,
   canOverrideQueueBranches,
   canViewQueueOperations,
+  formatQueueActionError,
+  getCrewAttendanceModel,
   getQueueCounts,
   isStaffAssignmentBusy,
   normalizeAssignmentStatus,
@@ -132,5 +134,60 @@ describe('queue logic', () => {
     assert.throws(() => parsePesoInputToMinor('abc'), /positive number/)
     assert.throws(() => parsePesoInputToMinor('0'), /positive number/)
     assert.throws(() => parsePesoInputToMinor('-10'), /positive number/)
+  })
+
+  it('maps missing schema cache columns to an actionable queue migration error', () => {
+    const error = formatQueueActionError({
+      message: "Could not find the 'final_checking_at' column of 'bookings' in the schema cache",
+    })
+
+    assert.match(error.message, /Queue database columns are not fully migrated/)
+    assert.match(error.message, /Supabase migration/)
+  })
+
+  it('maps recorded_by foreign key failures to a missing profile message', () => {
+    const error = formatQueueActionError({
+      message: 'insert or update on table "transactions" violates foreign key constraint "transactions_recorded_by_fkey"',
+    })
+
+    assert.equal(error.message, 'Your user profile is missing. Ask Super Admin to create or sync your profile before sending to payment.')
+  })
+
+  it('maps pre-migration staff pool columns to a staff attendance migration message', () => {
+    const error = formatQueueActionError({
+      message: "Could not find the 'is_archived' column of 'staff_profiles' in the schema cache",
+    })
+
+    assert.match(error.message, /Staff attendance is not fully migrated/)
+  })
+
+  it('maps staff profile RLS failures to a staff attendance migration message', () => {
+    const error = formatQueueActionError({
+      message: 'new row violates row-level security policy for table "staff_profiles"',
+    })
+
+    assert.match(error.message, /Staff attendance is not fully migrated/)
+  })
+
+  it('builds today crew availability from staff pool, attendance, and busy assignments', () => {
+    const model = getCrewAttendanceModel({
+      staffPool: [
+        { id: 'a', full_name: 'Ana', role: 'staff', branch_slug: 'bacoor', is_active: true },
+        { id: 'b', full_name: 'Ben', role: 'staff', branch_slug: 'bacoor', is_active: true },
+        { id: 'c', full_name: 'Cal', role: 'staff', branch_slug: 'bacoor', is_active: false },
+      ],
+      attendance: [
+        { staff_id: 'a', status: 'present' },
+        { staff_id: 'b', status: 'present' },
+      ],
+      busyStaff: [
+        { staff_id: 'b', booking_id: 'booking-1', queue_number: 1, booking_status: 'in_progress' },
+      ],
+    })
+
+    assert.deepEqual(model.staffPool.map((row) => row.id), ['a', 'b'])
+    assert.deepEqual(model.availableStaff.map((row) => row.staff_id), ['a'])
+    assert.deepEqual(model.busyStaff.map((row) => row.staff_id), ['b'])
+    assert.equal(model.presentCount, 2)
   })
 })
