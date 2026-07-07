@@ -131,6 +131,7 @@ export function formatQueueActionError(error) {
   if (
     message.includes('staff_attendance')
     || message.includes('staff_profiles_id_fkey')
+    || message.includes('bookings_assigned_staff_id_fkey')
     || (message.includes('is_archived') && message.includes('staff_profiles'))
     || (message.includes('row-level security') && message.includes('staff_profiles'))
     || message.includes('null value in column "id"')

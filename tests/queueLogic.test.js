@@ -169,6 +169,14 @@ describe('queue logic', () => {
     assert.match(error.message, /Staff attendance is not fully migrated/)
   })
 
+  it('maps stale booking staff foreign key failures to a staff attendance migration message', () => {
+    const error = formatQueueActionError({
+      message: 'insert or update on table "bookings" violates foreign key constraint "bookings_assigned_staff_id_fkey"',
+    })
+
+    assert.match(error.message, /Staff attendance is not fully migrated/)
+  })
+
   it('builds today crew availability from staff pool, attendance, and busy assignments', () => {
     const model = getCrewAttendanceModel({
       staffPool: [
