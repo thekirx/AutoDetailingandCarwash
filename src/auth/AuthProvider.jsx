@@ -14,17 +14,32 @@ export function AuthProvider({ children }) {
       return null
     }
 
+    const { data: staffProfile, error: staffError } = await supabase
+      .from('staff_profiles')
+      .select('id, full_name, role, branch_slug, phone, is_active')
+      .eq('id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (staffError) throw staffError
+    if (staffProfile) {
+      const profile = { ...staffProfile, email: user.email, source: 'staff_profiles' }
+      setProfile(profile)
+      return profile
+    }
+
     const { data, error } = await supabase
       .from('customers')
-      .select('id, full_name, email, role, is_archived')
+      .select('id, full_name, email, phone, role, is_archived')
       .eq('id', user.id)
-      .in('role', ['staff', 'admin'])
+      .in('role', ['staff', 'admin', 'team_lead', 'cashier'])
       .eq('is_archived', false)
       .maybeSingle()
 
     if (error) throw error
-    setProfile(data)
-    return data
+    const profile = data ? { ...data, branch_slug: null, source: 'customers' } : null
+    setProfile(profile)
+    return profile
   }, [])
 
   useEffect(() => {
@@ -71,8 +86,13 @@ export function AuthProvider({ children }) {
       session,
       user: session?.user ?? null,
       profile,
-      isStaff: profile?.role === 'staff' || profile?.role === 'admin',
+      role: profile?.role ?? 'public',
+      isStaff: ['staff', 'team_lead', 'admin'].includes(profile?.role),
       isAdmin: profile?.role === 'admin',
+      canManageQueue: profile?.role === 'admin' || profile?.role === 'team_lead',
+      canViewAssignedTasks: ['staff', 'team_lead', 'admin'].includes(profile?.role),
+      canUseOperations: ['staff', 'team_lead', 'admin'].includes(profile?.role),
+      canUseFuturePOS: profile?.role === 'cashier',
       loading,
       signOut,
     }),
