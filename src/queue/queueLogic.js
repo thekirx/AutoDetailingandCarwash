@@ -59,3 +59,15 @@ export function normalizeAssignmentStatus(status) {
 export function isStaffAssignmentBusy(assignment) {
   return normalizeAssignmentStatus(assignment?.status) === 'active' && isActiveQueueStatus(assignment?.booking_status)
 }
+
+export function getBranchScope(profile) {
+  if (!profile || profile.role === 'admin') return null
+  return profile.branch_slug || null
+}
+
+export function getPlateLookupStatus(plateNumber, hasMatch) {
+  if (!plateNumber?.trim()) return ''
+  return hasMatch
+    ? 'Existing customer found'
+    : 'No record found. This will be added as a new customer/vehicle record.'
+}

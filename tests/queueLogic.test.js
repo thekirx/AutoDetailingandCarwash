@@ -6,6 +6,8 @@ import {
   getQueueCounts,
   isStaffAssignmentBusy,
   normalizeAssignmentStatus,
+  getBranchScope,
+  getPlateLookupStatus,
 } from '../src/queue/queueLogic.js'
 
 describe('queue logic', () => {
@@ -60,5 +62,16 @@ describe('queue logic', () => {
     assert.equal(normalizeAssignmentStatus('completed'), 'released')
     assert.equal(normalizeAssignmentStatus('released'), 'released')
     assert.deepEqual(ACTIVE_QUEUE_STATUSES, ['waiting', 'in_progress', 'final_checking'])
+  })
+
+  it('uses the logged-in profile branch as the operations scope', () => {
+    assert.equal(getBranchScope({ role: 'team_lead', branch_slug: 'bacoor' }), 'bacoor')
+    assert.equal(getBranchScope({ role: 'admin', branch_slug: null }), null)
+  })
+
+  it('describes plate lookup state without exposing duplicate fields', () => {
+    assert.equal(getPlateLookupStatus('', false), '')
+    assert.equal(getPlateLookupStatus('ABC123', true), 'Existing customer found')
+    assert.equal(getPlateLookupStatus('ABC123', false), 'No record found. This will be added as a new customer/vehicle record.')
   })
 })

@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import { ACTIVE_QUEUE_STATUSES } from './queueLogic'
+import { ACTIVE_QUEUE_STATUSES, getBranchScope } from './queueLogic'
 
 export const QUEUE_BOARD_SELECT = `
   booking_id,
@@ -46,13 +46,29 @@ export function formatMoney(minor) {
   }).format((minor || 0) / 100)
 }
 
-export async function fetchOperationsSnapshot() {
+function scopedQuery(query, branchScope) {
+  return branchScope ? query.eq('branch', branchScope) : query
+}
+
+function scopedStaffQuery(query, branchScope) {
+  return branchScope ? query.eq('branch_slug', branchScope) : query
+}
+
+export async function fetchOperationsSnapshot(profile) {
+  const branchScope = getBranchScope(profile)
+  const queueQuery = scopedQuery(supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT), branchScope)
+  const busyQuery = branchScope
+    ? supabase.from('busy_staff_view').select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at').eq('branch_slug', branchScope)
+    : supabase.from('busy_staff_view').select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at')
+  const eventsQuery = scopedQuery(supabase.from('queue_events').select('id, booking_id, branch, old_status, new_status, notes, created_at'), branchScope)
+  const handoffsQuery = scopedQuery(supabase.from('pos_handoffs').select('id, booking_id, branch, amount_minor, status, handed_off_at'), branchScope)
+
   const [queue, availableStaff, busyStaff, events, handoffs] = await Promise.all([
-    supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).order('created_at', { ascending: false }),
-    supabase.from('available_staff_view').select('staff_id, full_name, role, branch_slug, phone').order('full_name'),
-    supabase.from('busy_staff_view').select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at').order('assigned_at', { ascending: false }),
-    supabase.from('queue_events').select('id, booking_id, branch, old_status, new_status, notes, created_at').order('created_at', { ascending: false }).limit(8),
-    supabase.from('pos_handoffs').select('id, booking_id, branch, amount_minor, status, handed_off_at').order('handed_off_at', { ascending: false }).limit(8),
+    queueQuery.order('created_at', { ascending: false }),
+    scopedStaffQuery(supabase.from('available_staff_view').select('staff_id, full_name, role, branch_slug, phone'), branchScope).order('full_name'),
+    busyQuery.order('assigned_at', { ascending: false }),
+    eventsQuery.order('created_at', { ascending: false }).limit(8),
+    handoffsQuery.order('handed_off_at', { ascending: false }).limit(8),
   ])
 
   const error = queue.error || availableStaff.error || busyStaff.error || events.error || handoffs.error
@@ -68,15 +84,18 @@ export async function fetchOperationsSnapshot() {
   }
 }
 
-export async function fetchTicket(bookingId) {
+export async function fetchTicket(bookingId, profile) {
+  const branchScope = getBranchScope(profile)
+  const ticketQuery = supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).eq('booking_id', bookingId)
+  const staffQuery = supabase.from('staff_profiles').select('id, full_name, role, branch_slug, is_active').eq('role', 'staff').eq('is_active', true)
   const [ticketResult, assignmentsResult, staffResult] = await Promise.all([
-    supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).eq('booking_id', bookingId).maybeSingle(),
+    (branchScope ? ticketQuery.eq('branch', branchScope) : ticketQuery).maybeSingle(),
     supabase
       .from('queue_assignments')
       .select('id, booking_id, staff_id, assigned_by, task_name, task_notes, started_at, completed_at, released_at, status, created_at')
       .eq('booking_id', bookingId)
       .order('created_at', { ascending: false }),
-    supabase.from('staff_profiles').select('id, full_name, role, branch_slug, is_active').eq('role', 'staff').eq('is_active', true).order('full_name'),
+    scopedStaffQuery(staffQuery, branchScope).order('full_name'),
   ])
 
   const error = ticketResult.error || assignmentsResult.error || staffResult.error
@@ -84,44 +103,74 @@ export async function fetchTicket(bookingId) {
   return { ticket: ticketResult.data, assignments: assignmentsResult.data || [], staff: staffResult.data || [] }
 }
 
-export async function fetchServicesAndBranches() {
-  const [services, branches] = await Promise.all([
-    supabase.from('services').select('id, name, price_minor, duration_minutes').eq('is_active', true).eq('is_archived', false).order('display_order'),
-    supabase.from('branches').select('slug, name, address').eq('is_active', true).order('name'),
-  ])
-  const error = services.error || branches.error
+export async function fetchServices() {
+  const services = await supabase.from('services').select('id, name, price_minor, duration_minutes').eq('is_active', true).eq('is_archived', false).order('display_order')
+  const error = services.error
   if (error) throw error
-  return { services: services.data || [], branches: branches.data || [] }
+  return services.data || []
 }
 
-export async function searchMasterlist(query) {
-  const value = query.trim()
-  if (value.length < 2) return []
-  const pattern = `%${value}%`
-  const { data, error } = await supabase
+export async function lookupPlate(plateNumber, profile) {
+  const normalizedPlate = normalizePlate(plateNumber || '')
+  if (normalizedPlate.length < 2) return null
+  const branchScope = getBranchScope(profile)
+  const query = supabase
     .from('customer_vehicle_masterlist')
-    .select('vehicle_id, customer_id, plate_number, customer_name, customer_phone, customer_email, vehicle_make, vehicle_model, vehicle_year, vehicle_type, vehicle_color, last_branch, total_visits')
-    .or(`plate_number.ilike.${pattern},customer_phone.ilike.${pattern},customer_name.ilike.${pattern}`)
-    .limit(8)
+    .select('vehicle_id, customer_id, plate_number, normalized_plate_number, customer_name, customer_phone, vehicle_make, vehicle_model, vehicle_type, last_branch, total_visits')
+    .eq('normalized_plate_number', normalizedPlate)
+    .limit(1)
+  const { data, error } = await (branchScope ? query.or(`last_branch.eq.${branchScope},last_branch.is.null`) : query)
 
   if (error) throw error
-  return data || []
+  return data?.[0] || null
+}
+
+async function ensureCustomer(form) {
+  if (form.customer_id) return form.customer_id
+  const { data, error } = await supabase
+    .from('customers')
+    .insert({
+      role: 'customer',
+      full_name: form.customer_name.trim(),
+      phone: form.customer_phone.trim(),
+      email: null,
+      is_archived: false,
+    })
+    .select('id')
+    .single()
+
+  if (error) throw error
+  return data.id
 }
 
 export async function createQueueTicket(form) {
+  const customerId = await ensureCustomer(form)
   let vehicleId = form.vehicle_id || null
   const normalizedPlate = normalizePlate(form.vehicle_plate || '')
+
+  if (vehicleId && !form.customer_id) {
+    const { error: attachError } = await supabase
+      .from('vehicles')
+      .update({
+        customer_id: customerId,
+        vehicle_make: form.vehicle_make.trim(),
+        vehicle_model: form.vehicle_model.trim(),
+        vehicle_type: form.vehicle_type || null,
+        last_branch: form.branch,
+      })
+      .eq('id', vehicleId)
+    if (attachError) throw attachError
+  }
 
   if (!vehicleId && normalizedPlate) {
     const { data: vehicle, error: vehicleError } = await supabase
       .from('vehicles')
       .upsert({
-        customer_id: form.customer_id || null,
+        customer_id: customerId,
         plate_number: form.vehicle_plate.trim().toUpperCase(),
         normalized_plate_number: normalizedPlate,
         vehicle_make: form.vehicle_make.trim(),
         vehicle_model: form.vehicle_model.trim(),
-        vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
         vehicle_type: form.vehicle_type || null,
         last_branch: form.branch,
       }, { onConflict: 'normalized_plate_number' })
@@ -133,25 +182,31 @@ export async function createQueueTicket(form) {
   }
 
   const service = form.services.find((item) => item.id === form.service_id)
+  const finalPriceMinor = form.final_price_minor
+    ? Number(form.final_price_minor)
+    : form.final_price
+      ? Math.round(Number(form.final_price) * 100)
+      : service?.price_minor || 0
   const { data, error } = await supabase
     .from('bookings')
     .insert({
-      customer_id: form.customer_id || null,
+      customer_id: customerId,
       vehicle_id: vehicleId,
       service_id: form.service_id,
       customer_name: form.customer_name.trim(),
-      customer_email: form.customer_email?.trim() || null,
+      customer_email: null,
       customer_phone: form.customer_phone.trim(),
       vehicle_make: form.vehicle_make.trim(),
       vehicle_model: form.vehicle_model.trim(),
-      vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
+      vehicle_year: null,
       vehicle_plate: form.vehicle_plate.trim().toUpperCase() || null,
       vehicle_type: form.vehicle_type || null,
       scheduled_start: new Date().toISOString(),
       branch: form.branch,
       status: 'waiting',
+      created_by: form.created_by,
       notes: form.notes?.trim() || null,
-      final_price_minor: form.final_price_minor ? Number(form.final_price_minor) : service?.price_minor || 0,
+      final_price_minor: finalPriceMinor,
     })
     .select('id')
     .single()

@@ -10,7 +10,6 @@ import {
   LoaderCircle,
   Plus,
   RefreshCw,
-  Search,
   Send,
   ShieldAlert,
   UserPlus,
@@ -18,15 +17,15 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
-import { ACTIVE_QUEUE_STATUSES, STATUS_LABELS, formatQueueNumber, getQueueCounts } from '../queue/queueLogic'
+import { ACTIVE_QUEUE_STATUSES, STATUS_LABELS, formatQueueNumber, getBranchScope, getPlateLookupStatus, getQueueCounts } from '../queue/queueLogic'
 import {
   assignStaff,
   createQueueTicket,
   fetchOperationsSnapshot,
-  fetchServicesAndBranches,
+  fetchServices,
   fetchTicket,
   formatMoney,
-  searchMasterlist,
+  lookupPlate,
   sendTicketToPayment,
   updateTicketPrice,
   updateTicketStatus,
@@ -86,6 +85,7 @@ function TicketCard({ ticket }) {
 }
 
 function useOperationsSnapshot() {
+  const { profile } = useAuth()
   const [snapshot, setSnapshot] = useState({ queue: [], activeQueue: [], availableStaff: [], busyStaff: [], events: [], handoffs: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -93,13 +93,13 @@ function useOperationsSnapshot() {
   const load = useCallback(async () => {
     setError('')
     try {
-      setSnapshot(await fetchOperationsSnapshot())
+      setSnapshot(await fetchOperationsSnapshot(profile))
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [profile])
 
   useEffect(() => {
     load()
@@ -204,7 +204,7 @@ export function OperationsQueuePage() {
 
 export function QueueTicketPage() {
   const { id } = useParams()
-  const { user, canManageQueue } = useAuth()
+  const { user, profile, canManageQueue } = useAuth()
   const [ticket, setTicket] = useState(null)
   const [assignments, setAssignments] = useState([])
   const [staff, setStaff] = useState([])
@@ -218,7 +218,7 @@ export function QueueTicketPage() {
   const load = useCallback(async () => {
     setError('')
     try {
-      const data = await fetchTicket(id)
+      const data = await fetchTicket(id, profile)
       setTicket(data.ticket)
       setAssignments(data.assignments)
       setStaff(data.staff)
@@ -230,7 +230,7 @@ export function QueueTicketPage() {
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }, [id, profile])
 
   useEffect(() => {
     load()
@@ -323,25 +323,23 @@ export function QueueTicketPage() {
 
 export function NewQueueTicketPage() {
   const navigate = useNavigate()
-  const { profile, canManageQueue } = useAuth()
+  const { user, profile, canManageQueue } = useAuth()
+  const assignedBranch = getBranchScope(profile) || 'bacoor'
   const [services, setServices] = useState([])
-  const [branches, setBranches] = useState([])
-  const [query, setQuery] = useState('')
-  const [matches, setMatches] = useState([])
+  const [plateMatch, setPlateMatch] = useState(null)
+  const [plateLookupState, setPlateLookupState] = useState('idle')
   const [form, setForm] = useState({
     customer_id: '',
     vehicle_id: '',
     customer_name: '',
     customer_phone: '',
-    customer_email: '',
     vehicle_plate: '',
     vehicle_make: '',
     vehicle_model: '',
-    vehicle_year: '',
     vehicle_type: 'sedan',
     service_id: '',
-    branch: profile?.branch_slug || 'bacoor',
-    final_price_minor: '',
+    branch: assignedBranch,
+    final_price: '',
     notes: '',
     services: [],
   })
@@ -350,38 +348,67 @@ export function NewQueueTicketPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchServicesAndBranches()
-      .then(({ services: serviceRows, branches: branchRows }) => {
+    fetchServices()
+      .then((serviceRows) => {
+        const firstService = serviceRows[0]
         setServices(serviceRows)
-        setBranches(branchRows)
-        setForm((current) => ({ ...current, services: serviceRows, service_id: serviceRows[0]?.id || current.service_id }))
+        setForm((current) => ({
+          ...current,
+          branch: assignedBranch,
+          services: serviceRows,
+          service_id: firstService?.id || current.service_id,
+          final_price: firstService ? String(firstService.price_minor / 100) : current.final_price,
+        }))
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [assignedBranch])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      searchMasterlist(query).then(setMatches).catch((err) => setError(err.message))
+      const plate = form.vehicle_plate.trim()
+      if (plate.length < 2) {
+        setPlateMatch(null)
+        setPlateLookupState('idle')
+        return
+      }
+
+      setPlateLookupState('loading')
+      lookupPlate(plate, profile)
+        .then((match) => {
+          setPlateMatch(match)
+          if (!match) {
+            setPlateLookupState('not_found')
+            setForm((current) => ({ ...current, customer_id: '', vehicle_id: '' }))
+            return
+          }
+
+          setPlateLookupState('found')
+          setForm((current) => ({
+            ...current,
+            customer_id: match.customer_id || '',
+            vehicle_id: match.vehicle_id || '',
+            customer_name: match.customer_name || current.customer_name,
+            customer_phone: match.customer_phone || current.customer_phone,
+            vehicle_plate: match.plate_number || current.vehicle_plate,
+            vehicle_make: match.vehicle_make || current.vehicle_make,
+            vehicle_model: match.vehicle_model || current.vehicle_model,
+            vehicle_type: match.vehicle_type || current.vehicle_type,
+          }))
+        })
+        .catch((err) => setError(err.message))
     }, 250)
     return () => window.clearTimeout(timeout)
-  }, [query])
+  }, [form.vehicle_plate, profile])
 
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
-  const selectMatch = (match) => {
+  const updateService = (event) => {
+    const serviceId = event.target.value
+    const service = services.find((item) => item.id === serviceId)
     setForm((current) => ({
       ...current,
-      customer_id: match.customer_id || '',
-      vehicle_id: match.vehicle_id || '',
-      customer_name: match.customer_name || '',
-      customer_phone: match.customer_phone || '',
-      customer_email: match.customer_email || '',
-      vehicle_plate: match.plate_number || '',
-      vehicle_make: match.vehicle_make || '',
-      vehicle_model: match.vehicle_model || '',
-      vehicle_year: match.vehicle_year || '',
-      vehicle_type: match.vehicle_type || current.vehicle_type,
-      branch: match.last_branch || current.branch,
+      service_id: serviceId,
+      final_price: service ? String(service.price_minor / 100) : current.final_price,
     }))
   }
 
@@ -390,7 +417,7 @@ export function NewQueueTicketPage() {
     setSubmitting(true)
     setError('')
     try {
-      const ticket = await createQueueTicket({ ...form, services })
+      const ticket = await createQueueTicket({ ...form, branch: assignedBranch, services, created_by: user.id })
       navigate(`/operations/queue/${ticket.id}`)
     } catch (err) {
       setError(err.message)
@@ -406,32 +433,22 @@ export function NewQueueTicketPage() {
     <section>
       <PageHeader eyebrow="Create Queue Ticket" title="Add vehicle to queue" description="Search existing customer and vehicle records, or create a walk-in ticket without building the full CRM yet." />
       {error && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{error}</p>}
-      <div className="mt-8 grid gap-6 xl:grid-cols-[360px_1fr]">
-        <Panel title="Masterlist Search" icon={Search}>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Plate, phone, or name" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-blue-300/60" />
-          <div className="mt-4 grid gap-3">
-            {matches.length ? matches.map((match) => (
-              <button key={match.vehicle_id || match.customer_id} type="button" onClick={() => selectMatch(match)} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:bg-blue-500/10">
-                <p className="font-semibold">{match.plate_number || 'No plate'} · {match.customer_name || 'Customer'}</p>
-                <p className="mt-1 text-xs text-slate-500">{match.customer_phone || 'No phone'} · {match.vehicle_make} {match.vehicle_model}</p>
-              </button>
-            )) : <EmptyLine text="Search for existing records or use the walk-in form." />}
-          </div>
-        </Panel>
-
+      <div className="mt-8">
         <Panel title="Ticket Form" icon={Plus}>
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Plate Number<input value={form.vehicle_plate} onChange={update('vehicle_plate')} required autoFocus placeholder="ABC 1234" className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
+            {form.vehicle_plate.trim().length >= 2 && plateLookupState !== 'idle' && (
+              <p className={`sm:col-span-2 rounded-2xl border px-4 py-3 text-sm ${plateLookupState === 'found' ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100' : 'border-amber-300/20 bg-amber-400/10 text-amber-100'}`}>
+                {plateLookupState === 'loading' ? 'Checking plate number...' : getPlateLookupStatus(form.vehicle_plate, Boolean(plateMatch))}
+              </p>
+            )}
             <FormField label="Customer name" value={form.customer_name} onChange={update('customer_name')} required />
             <FormField label="Phone number" value={form.customer_phone} onChange={update('customer_phone')} required />
-            <FormField label="Email" value={form.customer_email} onChange={update('customer_email')} />
-            <FormField label="Plate number" value={form.vehicle_plate} onChange={update('vehicle_plate')} required />
             <FormField label="Vehicle make" value={form.vehicle_make} onChange={update('vehicle_make')} required />
             <FormField label="Vehicle model" value={form.vehicle_model} onChange={update('vehicle_model')} required />
-            <FormField label="Vehicle year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" />
             <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Vehicle type<select value={form.vehicle_type} onChange={update('vehicle_type')} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none"><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="pickup">Pickup</option><option value="van">Van</option><option value="motorcycle">Motorcycle</option><option value="other">Other</option></select></label>
-            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Service<select value={form.service_id} onChange={update('service_id')} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{services.map((service) => <option key={service.id} value={service.id}>{service.name} · {formatMoney(service.price_minor)}</option>)}</select></label>
-            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>
-            <FormField label="Final price in centavos" value={form.final_price_minor} onChange={update('final_price_minor')} type="number" />
+            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Service<select value={form.service_id} onChange={updateService} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{services.map((service) => <option key={service.id} value={service.id}>{service.name} · {formatMoney(service.price_minor)}</option>)}</select></label>
+            <FormField label="Final Price" value={form.final_price} onChange={update('final_price')} type="number" required />
             <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Notes<textarea value={form.notes} onChange={update('notes')} className="mt-2 min-h-28 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
             <button disabled={submitting} className="sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} /> : <Plus size={18} />}Create Queue Ticket</button>
           </form>
@@ -458,17 +475,19 @@ export function CrewPage() {
 }
 
 export function KpiPage() {
-  const { canManageQueue } = useAuth()
+  const { profile, canManageQueue } = useAuth()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const load = useCallback(async () => {
     setError('')
-    const { data, error } = await supabase.from('crew_kpi_summary').select('staff_id, staff_name, branch, total_assigned, total_completed, average_service_minutes, active_jobs, completed_today').order('staff_name')
+    const branchScope = getBranchScope(profile)
+    const query = supabase.from('crew_kpi_summary').select('staff_id, staff_name, branch, total_assigned, total_completed, average_service_minutes, active_jobs, completed_today')
+    const { data, error } = await (branchScope ? query.eq('branch', branchScope) : query).order('staff_name')
     if (error) setError(error.message)
     else setRows(data || [])
     setLoading(false)
-  }, [])
+  }, [profile])
   useEffect(() => { load() }, [load])
   if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
   if (error) return <ErrorState error={error} onRetry={load} />
