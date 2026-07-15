@@ -113,6 +113,32 @@ begin
   ) then
     raise exception 'VERIFY: a privileged RPC is executable by public or anon';
   end if;
+
+  if has_table_privilege('anon', 'public.bookings', 'insert') then
+    raise exception 'VERIFY: anon must not have table-wide bookings insert access';
+  end if;
+
+  if exists (
+    select 1
+    from unnest(array[
+      'customer_name', 'customer_phone', 'vehicle_make', 'vehicle_model',
+      'scheduled_start', 'service_id', 'branch', 'status'
+    ]) expected(column_name)
+    where not has_column_privilege('anon', 'public.bookings', expected.column_name, 'insert')
+  ) then
+    raise exception 'VERIFY: anon public booking form insert columns are incomplete';
+  end if;
+
+  if exists (
+    select 1
+    from unnest(array[
+      'for_payment_at', 'completed_at', 'sent_to_payment_at',
+      'sent_to_payment_by', 'assigned_staff_id', 'price_minor'
+    ]) sensitive(column_name)
+    where has_column_privilege('anon', 'public.bookings', sensitive.column_name, 'insert')
+  ) then
+    raise exception 'VERIFY: anon can insert protected operational booking columns';
+  end if;
 end
 $verify_catalog$;
 
@@ -125,6 +151,7 @@ create temporary table verify_context (
 ) on commit drop;
 
 grant select, insert, update on verify_context to authenticated;
+grant select on verify_context to anon;
 
 insert into verify_context (key, uuid_value, text_value)
 select 'caller', sp.id, sp.branch_slug
@@ -172,6 +199,29 @@ begin
   end if;
 end
 $verify_service$;
+
+set local role anon;
+insert into public.bookings (
+  customer_name, customer_phone, vehicle_make, vehicle_model,
+  scheduled_start, service_id, branch, status
+)
+select
+  'Rollback Public Booking', '0000000002', 'Test', 'Public',
+  now(),
+  (select uuid_value from verify_context where key = 'service'),
+  (select text_value from verify_context where key = 'caller'),
+  'pending';
+reset role;
+
+do $verify_public_booking_insert$
+begin
+  if not exists (
+    select 1 from public.bookings where customer_name = 'Rollback Public Booking'
+  ) then
+    raise exception 'VERIFY: restricted anon columns no longer support the public booking form';
+  end if;
+end
+$verify_public_booking_insert$;
 
 insert into public.customers (id, role, full_name, phone, is_archived)
 values (
