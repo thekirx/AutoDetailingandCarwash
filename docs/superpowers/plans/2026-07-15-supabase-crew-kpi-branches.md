@@ -34,7 +34,7 @@
 - Create: `supabase/tests/crew_kpi_branches_verification.sql`
 
 **Interfaces:**
-- Consumes: live `bookings`, `services`, `customers`, `staff_profiles`, `queue_assignments`, `branches`, `queue_events`, `pos_handoffs`, `transactions`, and the five new RPCs.
+- Consumes: live `bookings`, `services`, `customers`, `staff_profiles`, `queue_assignments`, `branches`, `queue_events`, `pos_handoffs`, `transactions`, and the ten public business RPCs.
 - Produces: SQL assertions that raise a named exception on failure and end with `rollback`.
 
 - [ ] **Step 1: Create catalog assertions that fail before migration**
@@ -72,6 +72,8 @@ set local role authenticated;
 ```
 
 Switch back with `reset role` before inserting privileged fixtures. Do not insert persistent fake data or commit.
+
+For every simulated identity, assert that `(select auth.uid())`, `public.current_user_role()`, and `public.current_user_branch()` return the fixture UUID, role, and branch before invoking a business RPC.
 
 - [ ] **Step 3: Add assignment lifecycle scenarios**
 
@@ -122,7 +124,7 @@ Expected: failure beginning with `VERIFY:` because the new RPC/schema objects do
 
 **Interfaces:**
 - Consumes: the live catalog audited on 2026-07-15 and the approved design specification.
-- Produces: assignment lifecycle constraints/triggers, authorization helpers, five public business RPCs, dynamic branch relationships, corrected views/RLS/grants, and required indexes.
+- Produces: assignment lifecycle constraints/triggers, authorization helpers, ten public business RPCs (assignment sync, payment handoff, crew KPI, branch throughput, four branch-management functions, payment completion, and the authenticated staff work queue), dynamic branch relationships, corrected views/RLS/grants, and required indexes.
 
 - [ ] **Step 1: Generate the repository migration filename before remote DDL**
 
@@ -176,7 +178,7 @@ Create `sync_queue_assignments(uuid, uuid[])` with a booking `for update` lock, 
 
 - [ ] **Step 7: Implement idempotent payment handoff**
 
-Lock the booking. Permit the initial final-checking transition and for-payment retries. Reuse the unique handoff and its original timestamp; never reset a completed handoff. Preserve `for_payment_at`, release only active assignments with one shared release instant, avoid duplicate queue events, and return `booking_id`, `handoff_id`, `released_assignment_count`, and `handoff_created`.
+Lock the booking. Permit the initial final-checking transition and for-payment retries. Reuse the unique handoff and preserve its original `handed_off_at`; never reset a completed handoff. Preserve the booking's original `for_payment_at` and every assignment's original `released_at`, release only active assignments with one shared release instant, avoid duplicate queue events, and return `booking_id`, `handoff_id`, `released_assignment_count`, and `handoff_created`.
 
 Drop the conflicting `trg_create_pos_handoff`. Repair `complete_payment` so it performs financial completion only, does not mutate queue assignments, enforces branch-aware authorization, and is not executable by anonymous callers.
 
@@ -191,7 +193,7 @@ range_end := (input_end_date + 1)::timestamp at time zone 'Asia/Manila';
 
 Aggregate completed durations per session, count distinct booking IDs per staff, calculate current active time separately, and enforce caller branch scope.
 
-`get_branch_throughput(date,date,text)` filters `coalesce(for_payment_at, completed_at)` against the same half-open instants and counts distinct bookings once, excluding non-operational and cancelled statuses.
+`get_branch_throughput(date,date,text)` filters `coalesce(for_payment_at, completed_at)` against the same half-open instants and counts distinct bookings once. A booking qualifies only when its state is `for_payment` or `completed`; cancelled and all pre-handoff states are excluded.
 
 - [ ] **Step 9: Make branches dynamic**
 
@@ -201,7 +203,7 @@ Implement normalized create/update/archive/reactivate RPCs for BossMich/admin on
 
 - [ ] **Step 10: Replace targeted RLS and grants**
 
-Drop every existing targeted policy by catalog-discovered policy name in a loop, then create non-overlapping policies for admin/BossMich, team leads, staff ownership, and safe anonymous booking/queue access. Set both public queue views to `security_invoker = true`; grant only safe booking columns needed by those views to `anon` and keep customer/plate/crew/payment columns unavailable.
+Drop every existing targeted policy by catalog-discovered policy name in a loop, then create non-overlapping policies for admin/BossMich, team leads, staff ownership, and safe anonymous booking/queue access. Prefer a minimal public reporting RPC or tightly scoped view that does not require anonymous access to the full `bookings` table. If a `security_invoker` queue view requires underlying access, grant only the exact safe columns and rows needed by that view; keep customer, plate, crew, KPI, assignment-history, and payment fields unavailable.
 
 Revoke broad table privileges, delete/truncate access on historical tables, and unintended function execution. Restore only the exact authenticated/anonymous privileges required by policies, safe views, and RPCs.
 
@@ -250,7 +252,7 @@ Expected: successful migration result containing a remote version.
 
 - [ ] **Step 3: Align and verify migration history**
 
-Capture the exact version returned by the migration API as `REMOTE_VERSION`. If the generated local prefix differs, rename with `mv "$MIGRATION_FILE" "supabase/migrations/${REMOTE_VERSION}_crew_kpi_dynamic_branches.sql"` without changing contents. Recompute the checksum and confirm it is identical. Query the live migration list and assert exactly one matching entry.
+Capture the exact version returned by the migration API as `REMOTE_VERSION`. Before renaming, assert that no local migration already uses `${REMOTE_VERSION}_` and abort on conflict. If the generated local prefix differs, rename with `mv "$MIGRATION_FILE" "supabase/migrations/${REMOTE_VERSION}_crew_kpi_dynamic_branches.sql"` without changing contents. Recompute the checksum and confirm it is identical. Query the live migration list and assert exactly one matching entry. Never edit the applied migration afterward.
 
 ### Task 4: Run complete rollback verification
 
@@ -294,7 +296,7 @@ Expected: zero rows.
 ### Task 5: Advisors and final live comparison
 
 **Files:**
-- Modify the migration only if a directly related advisor finding requires a fix; if so, create a new corrective migration rather than rewriting the already-applied migration.
+- Never modify an applied migration. If a directly related advisor finding requires a fix, create and apply a new corrective migration artifact through the same create-first/exact-SQL workflow.
 
 **Interfaces:**
 - Consumes: final live database.
