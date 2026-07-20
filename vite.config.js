@@ -58,6 +58,10 @@ function provisionApiPlugin() {
         const { handleCustomerSignupRequest } = await import('./server/customerSignup.mjs')
         handleCustomerSignupRequest(req, res, apiHelpers(server, req))
       })
+      server.middlewares.use('/api/customer-auth-lookup', async (req, res) => {
+        const { handleCustomerAuthLookupRequest } = await import('./server/customerAuthLookup.mjs')
+        handleCustomerAuthLookupRequest(req, res, apiHelpers(server, req))
+      })
     },
   }
 }

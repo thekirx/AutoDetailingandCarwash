@@ -90,7 +90,7 @@ export default function CustomerSetPasswordPage() {
           </form>
         )}
         <p className="mt-6 text-center text-sm text-slate-500">
-          <Link className="text-blue-300 hover:underline" to="/account/login">Back to sign in</Link>
+          <Link className="text-blue-300 hover:underline" to="/signin">Back to sign in</Link>
         </p>
       </div>
     </div>
