@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { ClipboardList, LockKeyhole } from 'lucide-react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
+import { OPS_LOGIN_ROLES, redirectForRole } from '../auth/permissions'
 import LoadingScreen from '../components/LoadingScreen'
+import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const { user, profile, loading, signOut } = useAuth()
@@ -45,46 +48,92 @@ export default function LoginPage() {
         .from('customers')
         .select('role')
         .eq('id', data.user.id)
-        .in('role', ['staff', 'admin', 'team_lead', 'BossMich', 'cashier'])
+        .in('role', OPS_LOGIN_ROLES)
         .eq('is_archived', false)
         .maybeSingle()
 
       if (legacyError || !legacyProfile) {
         await supabase.auth.signOut()
-        setError('This account does not have queue operations access.')
+        setError('This account does not have team portal access.')
         setSubmitting(false)
         return
       }
 
       navigate(location.state?.from?.pathname || redirectForRole(legacyProfile.role), { replace: true })
+      setSubmitting(false)
       return
     }
 
     navigate(location.state?.from?.pathname || redirectForRole(staffProfile.role), { replace: true })
+    setSubmitting(false)
   }
 
   return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-[#090d12] px-5 py-10 text-slate-100">
-      <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_75%_20%,rgba(163,230,53,.16),transparent_28%),linear-gradient(rgba(255,255,255,.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.025)_1px,transparent_1px)] [background-size:auto,48px_48px,48px_48px]" />
-      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#11171f]/90 p-7 shadow-2xl backdrop-blur-xl sm:p-10">
-        <div className="mb-9 flex items-center gap-4"><div className="grid size-12 place-items-center rounded-2xl bg-blue-500 text-white"><ClipboardList /></div><div><h1 className="text-xl font-semibold tracking-wide">Hakum Auto Care</h1><p className="text-xs tracking-[0.2em] text-slate-500 uppercase">Queue operations</p></div></div>
-        <div className="mb-7"><h2 className="text-3xl font-semibold tracking-tight">Command the queue.</h2><p className="mt-2 text-sm text-slate-400">Sign in with your authorized operations account.</p></div>
+    <HakumAuthShell
+      kicker="Hakum Auto Care — Team portal"
+      title="Command the floor."
+      subtitle="Sign in to run queue, crew, and branch operations. Accounts are issued by Super Admin."
+      bullets={TEAM_AUTH_BULLETS}
+      footerLinks={
+        <>
+          <p>
+            Customer? <Link to="/signin">Sign in to your account</Link>
+          </p>
+          <p className="hakum-auth-team-link">
+            <Link to="/">Back to site</Link>
+          </p>
+        </>
+      }
+    >
+      <h2>Sign in</h2>
+      <p className="hakum-auth-welcome">Welcome back to the Hakum floor</p>
 
-        {location.state?.unauthorized && <p className="mb-5 rounded-xl border border-amber-400/20 bg-amber-400/8 px-4 py-3 text-sm text-amber-200">Queue operations access is required for that page.</p>}
-        {error && <p role="alert" className="mb-5 rounded-xl border border-red-400/20 bg-red-400/8 px-4 py-3 text-sm text-red-200">{error}</p>}
+      {location.state?.unauthorized ? (
+        <p className="hakum-auth-info" role="status">
+          Team portal access is required for that page.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="hakum-auth-alert" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <label className="block"><span className="mb-2 block text-xs font-medium tracking-wide text-slate-300 uppercase">Email address</span><input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 outline-none transition placeholder:text-slate-600 focus:border-lime-400/70 focus:ring-2 focus:ring-lime-400/10" placeholder="staff@hakumautocare.com" /></label>
-          <label className="block"><span className="mb-2 block text-xs font-medium tracking-wide text-slate-300 uppercase">Password</span><input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 outline-none transition focus:border-lime-400/70 focus:ring-2 focus:ring-lime-400/10" /></label>
-          <button disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-3.5 font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60"><LockKeyhole size={18} />{submitting ? 'Verifying...' : 'Secure sign in'}</button>
-        </form>
-      </div>
-    </div>
+      <form onSubmit={handleSubmit} className="hakum-auth-form">
+        <label>
+          <span>Email address</span>
+          <input
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@hakumautocare.com"
+          />
+        </label>
+        <label>
+          <span>Password</span>
+          <div className="hakum-auth-password">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </label>
+        <button type="submit" className="hakum-auth-submit" disabled={submitting}>
+          {submitting ? 'Verifying…' : 'Sign in'}
+        </button>
+      </form>
+    </HakumAuthShell>
   )
-}
-
-function redirectForRole(role) {
-  if (role === 'staff') return '/operations/my-tasks'
-  if (role === 'cashier') return '/operations/access-denied'
-  return '/operations/dashboard'
 }

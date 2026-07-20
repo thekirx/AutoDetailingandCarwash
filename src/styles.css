@@ -1,11 +1,48 @@
 @import "./design-tokens.css";
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 * { box-sizing: border-box; }
@@ -46,7 +83,32 @@ button { cursor: pointer; }
 .desktop-nav a:hover,.desktop-nav a.active { color:#fff; }
 .header-book { display:flex; align-items:center; gap:9px; padding:13px 18px; color:var(--color-brand-primary); background:var(--color-white); text-decoration:none; text-transform:uppercase; font-size:11px; letter-spacing:.12em; font-weight:800; transition:transform var(--transition-fast); }
 .header-book:hover { transform:translateY(-2px); }
+.header-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.header-auth { display:inline-flex; align-items:center; padding:12px 14px; text-decoration:none; text-transform:uppercase; font-size:11px; letter-spacing:.12em; font-weight:800; transition:color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast); }
+.header-signin { color:#fff; border:1px solid rgba(255,255,255,.45); }
+.header-signin:hover { background:rgba(255,255,255,.1); }
+.header-signup { color:#020a31; background:#fff; }
+.header-signup:hover { background:rgba(255,255,255,.9); }
 .menu-button,.mobile-nav{display:none}
+
+/* Portal picker — two doors, Hakum deep blue */
+.portal-gate { min-height:100svh; display:grid; place-items:center; padding:120px 20px 48px; background:
+  radial-gradient(ellipse 80% 50% at 50% -10%, rgba(5,38,153,.55), transparent),
+  linear-gradient(180deg, #020a31 0%, #03156b 45%, #020a31 100%);
+  color:#f1f1f1; }
+.portal-gate-panel { width:min(100%,820px); }
+.portal-gate-kicker { margin:0 0 12px; font-size:10px; font-weight:800; letter-spacing:.24em; text-transform:uppercase; color:rgba(255,255,255,.55); }
+.portal-gate h1 { margin:0; font-family:var(--font-display); font-style:italic; font-size:clamp(2.2rem,5vw,3.6rem); font-weight:900; letter-spacing:.02em; line-height:.95; text-transform:uppercase; }
+.portal-gate-copy { margin:18px 0 0; max-width:42ch; color:rgba(241,241,241,.72); font-size:14px; line-height:1.55; }
+.portal-gate-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:36px; }
+.portal-card { display:flex; flex-direction:column; gap:10px; padding:28px 24px; border:1px solid rgba(255,255,255,.16); background:rgba(2,10,49,.45); text-decoration:none; color:inherit; backdrop-filter:blur(10px); transition:transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast); }
+.portal-card:hover { transform:translateY(-3px); border-color:rgba(255,255,255,.4); background:rgba(5,38,153,.35); }
+.portal-card-icon { display:grid; place-items:center; width:44px; height:44px; border:1px solid rgba(255,255,255,.25); color:#fff; }
+.portal-card strong { font-size:1.15rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.portal-card span { color:rgba(241,241,241,.68); font-size:13px; line-height:1.45; }
+.portal-card em { display:inline-flex; align-items:center; gap:8px; margin-top:auto; padding-top:12px; font-style:normal; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#fff; }
+.portal-gate-foot { margin-top:28px; font-size:13px; color:rgba(241,241,241,.55); }
+.portal-gate-foot a { color:#fff; }
 .hero-stage { position:relative; min-height:max(100svh,900px); overflow:hidden; display:grid; place-items:center; isolation:isolate; background:#020a31; color:#f1f1f1; }
 .hero-stage:after { content:""; position:absolute; z-index:-1; inset:0; background:linear-gradient(180deg,rgba(2,10,49,.46) 0%,rgba(5,38,153,.38) 48%,rgba(2,10,49,.83) 100%),linear-gradient(90deg,rgba(2,10,49,.32),transparent 32%,transparent 72%,rgba(2,10,49,.3)); }
 .hero-media { position:absolute; z-index:-2; inset:0; background:url('./assets/hakum-hero.webp') center 58%/cover no-repeat; filter:saturate(.82) contrast(1.08); transform:scale(1.015); }
@@ -259,7 +321,7 @@ button { cursor: pointer; }
 .booking-page{padding:150px 0 110px;background:#efefeb;min-height:100vh}.booking-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:90px}.booking-grid>div>p:last-child{color:#777;line-height:1.8;max-width:460px}.booking-form{padding:45px;background:#fff;display:grid;grid-template-columns:1fr 1fr;gap:24px}.booking-form label{font-size:9px;text-transform:uppercase;letter-spacing:.14em;font-weight:800}.booking-form input,.booking-form select{display:block;width:100%;margin-top:9px;padding:14px 2px;border:0;border-bottom:1px solid #bbb;background:#fff;color:#333;outline:none}.booking-form label:nth-of-type(5),.booking-form label:nth-of-type(6),.booking-form label:nth-of-type(7),.booking-form .button,.form-error{grid-column:1/-1}.booking-success{max-width:600px;margin:auto;text-align:center}.booking-success>svg{color:#052699;width:50px;height:50px}.booking-success h1,.public-message h1{font-size:52px;text-transform:uppercase;font-style:italic}.booking-success p{color:#777;line-height:1.8}.booking-success .button{margin-top:25px}.queue-choice{display:grid;grid-template-columns:1fr 1fr;gap:15px;max-width:750px;margin-top:55px}.queue-choice a{padding:28px;background:#fff;color:#052699;text-decoration:none;display:grid;grid-template-columns:35px 1fr;gap:4px 14px}.queue-choice svg{grid-row:1/3}.queue-choice strong{text-transform:uppercase;font-size:18px}.queue-choice span{color:#777;font-size:11px}.public-message{min-height:750px;display:grid;place-items:center;background:#efefeb;text-align:center}.public-message>div>svg{color:#052699;width:45px;height:45px}.public-message>div>p{color:#777}.public-message a{display:inline-flex;gap:10px;color:#052699;text-decoration:none;text-transform:uppercase;font-size:10px;letter-spacing:.13em;margin-top:25px}
 
 @media(max-width:1100px){.service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.service-card-visual{height:260px}.service-card h3{font-size:27px}}
-@media(max-width:800px){.public-shell{width:min(100% - 32px,1240px)}.desktop-nav,.header-book{display:none}.menu-button{display:grid;background:transparent;border:0;color:#fff}.mobile-nav{display:flex;flex-direction:column;padding:15px 24px 25px;background:#03156b}.mobile-nav a{padding:13px;color:#fff;text-decoration:none;text-transform:uppercase;font-size:11px}.hero-stage{min-height:780px}.hero-content{width:min(100% - 28px,700px);padding:140px 0 92px}.hero-location{top:102px}.hero-line-one,.hero-line-two,.hero-line-three{transform:none}.display-title .hero-line{white-space:normal}.hero-subheading{max-width:560px}.editorial-grid,.section-heading-row,.visualizer-grid,.queue-grid,.booking-grid,.coating-heading{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}.stats-grid article{min-height:150px;padding:28px 16px}.editorial-section,.services-section,.visualizer-section,.queue-teaser,.coating-section,.home-branches{padding:90px 0}.coating-grid{grid-template-columns:1fr}.coating-card{min-height:330px}.service-row{grid-template-columns:30px 28px 1fr 20px}.service-row p{display:none}.car-canvas{height:420px}.home-branch-grid{grid-template-columns:1fr}.footer-grid{grid-template-columns:1fr 1fr}.numbered-grid{grid-template-columns:1fr}.package-columns,.branch-grid{grid-template-columns:1fr}.booking-form{padding:25px;grid-template-columns:1fr}.booking-form label{grid-column:1/-1}.queue-choice{grid-template-columns:1fr}}
+@media(max-width:800px){.public-shell{width:min(100% - 32px,1240px)}.desktop-nav,.header-actions{display:none}.menu-button{display:grid;background:transparent;border:0;color:#fff}.mobile-nav{display:flex;flex-direction:column;padding:15px 24px 25px;background:#03156b}.mobile-nav a{padding:13px;color:#fff;text-decoration:none;text-transform:uppercase;font-size:11px}.portal-gate{padding-top:100px}.portal-gate-grid{grid-template-columns:1fr}.hero-stage{min-height:780px}.hero-content{width:min(100% - 28px,700px);padding:140px 0 92px}.hero-location{top:102px}.hero-line-one,.hero-line-two,.hero-line-three{transform:none}.display-title .hero-line{white-space:normal}.hero-subheading{max-width:560px}.editorial-grid,.section-heading-row,.visualizer-grid,.queue-grid,.booking-grid,.coating-heading{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}.stats-grid article{min-height:150px;padding:28px 16px}.editorial-section,.services-section,.visualizer-section,.queue-teaser,.coating-section,.home-branches{padding:90px 0}.coating-grid{grid-template-columns:1fr}.coating-card{min-height:330px}.service-row{grid-template-columns:30px 28px 1fr 20px}.service-row p{display:none}.car-canvas{height:420px}.home-branch-grid{grid-template-columns:1fr}.footer-grid{grid-template-columns:1fr 1fr}.numbered-grid{grid-template-columns:1fr}.package-columns,.branch-grid{grid-template-columns:1fr}.booking-form{padding:25px;grid-template-columns:1fr}.booking-form label{grid-column:1/-1}.queue-choice{grid-template-columns:1fr}}
 @media(max-width:800px){.stats-band .public-shell{width:100%}.stats-band .ui-stat-card{min-height:190px;padding:30px 22px 26px;gap:30px;border-bottom:1px solid rgba(241,241,241,.2)}.stats-band .ui-stat-card:first-child{border-left:0}.stats-band .ui-stat-card:nth-child(2n){border-right:0}.stats-band .ui-stat-card:before{top:20px;left:22px}.stats-band .ui-stat-card>strong{font-size:clamp(34px,10vw,52px)}.stats-band .ui-stat-card>div>span{max-width:155px;font-size:8px}}
 @media(max-width:800px){.about-heading{margin-bottom:40px}.about-heading .section-title{font-size:clamp(4rem,17vw,7rem)}.about-layout{grid-template-columns:1fr}.about-visual{min-height:440px;background-position:24% center}.about-copy{padding:clamp(36px,8vw,60px)}}
 @media(max-width:600px){.service-grid{grid-template-columns:1fr;gap:20px;margin-top:52px}.service-card-visual{height:250px}.service-card-body{min-height:220px}.service-card h3{min-height:0;font-size:28px}}
@@ -359,4 +421,143 @@ button { cursor: pointer; }
   .rbc-toolbar-label { order: -1; padding: 4px 0; text-align: left; }
   .rbc-btn-group { display: flex; }
   .rbc-btn-group button { flex: 1; padding-inline: 9px; }
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: 'Geist Variable', sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+.dark {
+  /* Hakum ops shell — brand blue primary on dark surfaces */
+  --background: oklch(0.14 0.02 260);
+  --foreground: oklch(0.96 0.01 260);
+  --card: oklch(0.18 0.025 260);
+  --card-foreground: oklch(0.96 0.01 260);
+  --popover: oklch(0.18 0.025 260);
+  --popover-foreground: oklch(0.96 0.01 260);
+  --primary: oklch(0.42 0.18 265);
+  --primary-foreground: oklch(0.98 0.01 260);
+  --secondary: oklch(0.24 0.03 260);
+  --secondary-foreground: oklch(0.96 0.01 260);
+  --muted: oklch(0.24 0.03 260);
+  --muted-foreground: oklch(0.72 0.02 260);
+  --accent: oklch(0.28 0.05 265);
+  --accent-foreground: oklch(0.96 0.01 260);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.5 0.16 265);
+  --chart-1: oklch(0.55 0.18 265);
+  --chart-2: oklch(0.7 0.12 200);
+  --chart-3: oklch(0.75 0.14 145);
+  --chart-4: oklch(0.7 0.14 80);
+  --chart-5: oklch(0.65 0.16 30);
+  --sidebar: oklch(0.16 0.03 260);
+  --sidebar-foreground: oklch(0.96 0.01 260);
+  --sidebar-primary: oklch(0.42 0.18 265);
+  --sidebar-primary-foreground: oklch(0.98 0.01 260);
+  --sidebar-accent: oklch(0.24 0.04 265);
+  --sidebar-accent-foreground: oklch(0.96 0.01 260);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.5 0.16 265);
+}
+
+.portal-gate-foot a { color:#fff; }
+
+/* Customer auth split — Hakum brand (layout inspired by sister apps; colors are Hakum) */
+.hakum-auth { min-height:100svh; display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,0.95fr); background:#f1f1ed; color:#333; }
+.hakum-auth-brand { position:relative; display:flex; flex-direction:column; justify-content:space-between; padding:clamp(28px,4vw,48px); color:#f1f1f1; background:
+  radial-gradient(ellipse 90% 60% at 20% 0%, rgba(5,38,153,.55), transparent 55%),
+  linear-gradient(165deg, #020a31 0%, #052699 52%, #031d78 100%); }
+.hakum-auth-wordmark { display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none; width:fit-content; }
+.hakum-auth-wordmark b { display:grid; place-items:center; width:42px; height:30px; border:2px solid currentColor; transform:skew(-13deg); font-size:20px; font-style:italic; }
+.hakum-auth-wordmark span { font-weight:900; font-style:italic; letter-spacing:.08em; line-height:.85; }
+.hakum-auth-wordmark small { display:block; margin-top:6px; font-size:7px; letter-spacing:.27em; font-style:normal; font-weight:600; }
+.hakum-auth-brand-body { max-width:28rem; padding:12vh 0 2rem; }
+.hakum-auth-brand-body h1 { margin:0; font-family:var(--font-display); font-size:clamp(2.4rem,4.5vw,3.6rem); font-weight:800; font-style:italic; letter-spacing:-0.02em; line-height:1.02; text-transform:none; }
+.hakum-auth-brand-body p { margin:18px 0 0; color:rgba(241,241,241,.78); font-size:1rem; line-height:1.6; font-weight:300; }
+.hakum-auth-bullets { list-style:none; margin:32px 0 0; padding:0; display:flex; flex-direction:column; gap:14px; }
+.hakum-auth-bullets li { display:flex; align-items:flex-start; gap:12px; color:rgba(241,241,241,.88); font-size:0.95rem; line-height:1.4; }
+.hakum-auth-bullets span { display:grid; place-items:center; width:28px; height:28px; flex-shrink:0; border-radius:999px; background:rgba(255,255,255,.12); color:#fff; }
+.hakum-auth-brand-foot { margin:0; font-size:10px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:rgba(241,241,241,.45); }
+.hakum-auth-panel { display:flex; flex-direction:column; justify-content:center; padding:clamp(28px,5vw,56px); }
+.hakum-auth-panel-inner { width:min(100%,420px); margin:0 auto; }
+.hakum-auth-panel h2 { margin:0; font-size:clamp(1.85rem,3vw,2.35rem); font-weight:700; color:#101219; letter-spacing:-0.02em; }
+.hakum-auth-welcome { margin:8px 0 0; color:#717171; font-size:0.95rem; line-height:1.5; }
+.hakum-auth-alert { margin-top:16px; padding:12px 14px; border:1px solid rgba(185,28,28,.25); background:rgba(254,226,226,.7); color:#991b1b; border-radius:10px; font-size:0.9rem; }
+.hakum-auth-info { margin-top:16px; padding:12px 14px; border:1px solid rgba(5,38,153,.2); background:#e8edff; color:#031d78; border-radius:10px; font-size:0.9rem; }
+.hakum-auth-form { display:flex; flex-direction:column; gap:16px; margin-top:28px; }
+.hakum-auth-form label { display:flex; flex-direction:column; gap:8px; }
+.hakum-auth-form label span { font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#717171; }
+.hakum-auth-form input { width:100%; border:1px solid #e5e7eb; background:#fff; border-radius:10px; padding:13px 14px; font-size:0.95rem; color:#101219; outline:none; }
+.hakum-auth-form input:focus { border-color:#052699; box-shadow:0 0 0 3px rgba(5,38,153,.15); }
+.hakum-auth-password { position:relative; }
+.hakum-auth-password input { padding-right:44px; }
+.hakum-auth-password button { position:absolute; right:10px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:#717171; cursor:pointer; padding:4px; }
+.hakum-auth-row { display:flex; justify-content:flex-end; margin-top:-4px; }
+.hakum-auth-text-btn { border:0; background:transparent; color:#052699; font-size:0.85rem; font-weight:600; cursor:pointer; padding:0; }
+.hakum-auth-text-btn:hover { text-decoration:underline; }
+.hakum-auth-submit { margin-top:8px; width:100%; border:0; border-radius:10px; padding:14px 18px; background:#052699; color:#fff; font-size:0.8rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; }
+.hakum-auth-submit:hover { background:#0a32b8; }
+.hakum-auth-submit:disabled { opacity:.65; cursor:wait; }
+.hakum-auth-panel-foot { width:min(100%,420px); margin:28px auto 0; text-align:center; font-size:0.9rem; color:#717171; display:flex; flex-direction:column; gap:10px; }
+.hakum-auth-panel-foot a { color:#052699; font-weight:600; text-decoration:none; }
+.hakum-auth-panel-foot a:hover { text-decoration:underline; }
+.hakum-auth-team-link a { color:#8b8d96; font-weight:500; font-size:0.85rem; }
+@media (max-width:900px) {
+  .hakum-auth { grid-template-columns:1fr; }
+  .hakum-auth-brand { min-height:auto; padding-bottom:36px; }
+  .hakum-auth-brand-body { padding:36px 0 8px; }
+  .hakum-auth-brand-foot { margin-top:24px; }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

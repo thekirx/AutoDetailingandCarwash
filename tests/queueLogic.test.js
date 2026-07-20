@@ -75,6 +75,7 @@ describe('queue logic', () => {
 
   it('uses the logged-in profile branch as the operations scope', () => {
     assert.equal(getBranchScope({ role: 'team_lead', branch_slug: 'bacoor' }), 'bacoor')
+    assert.equal(getBranchScope({ role: 'admin', branch_slug: 'batangas' }), 'batangas')
     assert.equal(getBranchScope({ role: 'admin', branch_slug: null }), null)
     assert.equal(getBranchScope({ role: 'BossMich', branch_slug: null }), null)
     assert.equal(getBranchScope({ role: 'team_lead', branch_slug: null }), null)

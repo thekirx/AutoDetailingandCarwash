@@ -16,19 +16,19 @@ export default function AdminLayout() {
   const { profile, user, signOut } = useAuth()
 
   return (
-    <div className="min-h-screen bg-[#0b0f14] text-slate-100">
+    <div className="dark min-h-screen bg-background text-foreground">
       <aside className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/8 bg-[#0e131a] transition-transform lg:translate-x-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-20 items-center justify-between border-b border-white/8 px-6">
           <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded-xl bg-lime-400 text-[#0b0f14]"><CarFront size={22} /></div>
-            <div><p className="font-semibold tracking-wide">HAKUM</p><p className="text-[10px] tracking-[0.28em] text-slate-500">AUTO CARE</p></div>
+            <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground"><CarFront size={22} /></div>
+            <div><p className="font-semibold tracking-wide">HAKUM</p><p className="text-[10px] tracking-[0.28em] text-muted-foreground">AUTO CARE</p></div>
           </div>
           <button className="text-slate-400 lg:hidden" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X /></button>
         </div>
 
         <nav className="flex-1 space-y-1 px-4 py-6" aria-label="Staff navigation">
           {navigation.map(({ label, to, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} onClick={() => setMenuOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition ${isActive ? 'bg-lime-400 text-[#0b0f14] shadow-[0_8px_30px_rgba(163,230,53,.12)]' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+            <NavLink key={to} to={to} end={end} onClick={() => setMenuOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition ${isActive ? 'bg-primary text-primary-foreground shadow-[0_8px_30px_rgba(5,38,153,.22)]' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
               <Icon size={19} />{label}
             </NavLink>
           ))}
@@ -45,7 +45,7 @@ export default function AdminLayout() {
       <div className="lg:pl-72">
         <header className="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-white/8 bg-[#0b0f14]/90 px-5 backdrop-blur-xl sm:px-8">
           <button className="text-slate-300 lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu /></button>
-          <div><p className="text-xs font-medium tracking-[0.2em] text-lime-400 uppercase">Staff Operations</p><p className="text-sm text-slate-500">Hakum Auto Care Command Center</p></div>
+          <div><p className="text-xs font-medium tracking-[0.2em] text-primary uppercase">Staff Operations</p><p className="text-sm text-slate-500">Hakum Auto Care Command Center</p></div>
         </header>
         <main className="p-5 sm:p-8"><Outlet /></main>
       </div>

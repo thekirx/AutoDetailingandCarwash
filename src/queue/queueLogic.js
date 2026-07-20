@@ -1,10 +1,18 @@
+import {
+  ROLES,
+  QUEUE_EDITOR_ROLES as PERM_QUEUE_EDITOR_ROLES,
+  QUEUE_VIEWER_ROLES as PERM_QUEUE_VIEWER_ROLES,
+  canEditQueueOperations as permCanEditQueue,
+  canViewQueueOperations as permCanViewQueue,
+} from '../auth/permissions.js'
+
 export const ACTIVE_QUEUE_STATUSES = ['waiting', 'in_progress', 'final_checking']
 export const WORKFLOW_STATUSES = [...ACTIVE_QUEUE_STATUSES, 'for_payment']
 export const VALID_BRANCH_SLUGS = ['bacoor', 'batangas']
 export const VALID_VEHICLE_TYPES = ['sedan', 'suv', 'pickup', 'van', 'motorcycle', 'other']
-export const BOSS_MICH_ROLE = 'BossMich'
-export const QUEUE_EDITOR_ROLES = ['team_lead', BOSS_MICH_ROLE]
-export const QUEUE_VIEWER_ROLES = ['admin', ...QUEUE_EDITOR_ROLES]
+export const BOSS_MICH_ROLE = ROLES.SUPER_ADMIN
+export const QUEUE_EDITOR_ROLES = PERM_QUEUE_EDITOR_ROLES
+export const QUEUE_VIEWER_ROLES = PERM_QUEUE_VIEWER_ROLES
 export const QUEUE_PERMISSION_ERROR = 'You do not have permission to edit queue operations. Only the assigned Team Lead or BossMich can perform this action.'
 export const MISSING_QUEUE_COLUMNS_ERROR = 'Queue database columns are not fully migrated. Ask Super Admin to apply the latest Supabase migration, then reload the app.'
 export const MISSING_QUEUE_PROFILE_ERROR = 'Your user profile is missing. Ask Super Admin to create or sync your profile before sending to payment.'
@@ -89,7 +97,7 @@ export function normalizeVehicleType(value) {
 
 export function hasValidTeamLeadBranch(profile) {
   if (profile?.role !== 'team_lead') return true
-  return VALID_BRANCH_SLUGS.includes(profile.branch_slug)
+  return Boolean(profile.branch_slug)
 }
 
 export function requiresTeamLeadBranchSetup(profile) {
@@ -97,16 +105,17 @@ export function requiresTeamLeadBranchSetup(profile) {
 }
 
 export function getBranchScope(profile) {
-  if (!profile || canOverrideQueueBranches(profile) || profile.role === 'admin') return null
-  return VALID_BRANCH_SLUGS.includes(profile.branch_slug) ? profile.branch_slug : null
+  // Only Super Admin (BossMich) sees all branches. Admin is assigned to one branch.
+  if (!profile || canOverrideQueueBranches(profile)) return null
+  return profile.branch_slug || null
 }
 
 export function canEditQueueOperations(profile) {
-  return QUEUE_EDITOR_ROLES.includes(profile?.role)
+  return permCanEditQueue(profile)
 }
 
 export function canViewQueueOperations(profile) {
-  return QUEUE_VIEWER_ROLES.includes(profile?.role)
+  return permCanViewQueue(profile)
 }
 
 export function canOverrideQueueBranches(profile) {

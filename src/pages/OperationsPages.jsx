@@ -368,11 +368,16 @@ export function NewQueueTicketPage() {
   const [form, setForm] = useState({
     customer_id: '',
     vehicle_id: '',
+    customer_first_name: '',
+    customer_last_name: '',
     customer_name: '',
     customer_phone: '',
+    customer_email: '',
     vehicle_plate: '',
     vehicle_make: '',
     vehicle_model: '',
+    vehicle_year: '',
+    vehicle_color: '',
     vehicle_type: 'sedan',
     service_id: '',
     branch: assignedBranch || '',
@@ -439,7 +444,16 @@ export function NewQueueTicketPage() {
     return () => window.clearTimeout(timeout)
   }, [form.vehicle_plate, profile])
 
-  const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+  const update = (key) => (event) => {
+    const value = event.target.value
+    setForm((current) => {
+      const next = { ...current, [key]: value }
+      if (key === 'customer_first_name' || key === 'customer_last_name') {
+        next.customer_name = `${key === 'customer_first_name' ? value : current.customer_first_name} ${key === 'customer_last_name' ? value : current.customer_last_name}`.trim()
+      }
+      return next
+    })
+  }
   const updateVehicleType = (event) => setForm((current) => ({ ...current, vehicle_type: normalizeVehicleType(event.target.value) }))
   const updateService = (event) => {
     const serviceId = event.target.value
@@ -495,10 +509,14 @@ export function NewQueueTicketPage() {
                 {plateLookupState === 'loading' ? 'Checking plate number...' : getPlateLookupStatus(form.vehicle_plate, Boolean(plateMatch))}
               </p>
             )}
-            <FormField label="Customer name" value={form.customer_name} onChange={update('customer_name')} required />
+            <FormField label="First name" value={form.customer_first_name} onChange={update('customer_first_name')} required />
+            <FormField label="Last name" value={form.customer_last_name} onChange={update('customer_last_name')} required />
             <FormField label="Phone number" value={form.customer_phone} onChange={update('customer_phone')} required />
+            <FormField label="Email (optional)" value={form.customer_email} onChange={update('customer_email')} type="email" />
             <FormField label="Vehicle make" value={form.vehicle_make} onChange={update('vehicle_make')} required />
             <FormField label="Vehicle model" value={form.vehicle_model} onChange={update('vehicle_model')} required />
+            <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
+            <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
             <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Vehicle type<select value={form.vehicle_type} onChange={updateVehicleType} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Service<select value={form.service_id} onChange={updateService} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{services.map((service) => <option key={service.id} value={service.id}>{service.name} · {formatMoney(service.price_minor)}</option>)}</select></label>
             {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}

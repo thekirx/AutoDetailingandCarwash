@@ -1,87 +1,154 @@
-import { BarChart3, ClipboardList, Gauge, ListChecks, LogOut, Menu, ShieldAlert, Users, X } from 'lucide-react'
-import { useState } from 'react'
+import {
+  BarChart3,
+  Building2,
+  ClipboardList,
+  Contact,
+  Crown,
+  Gauge,
+  Kanban,
+  LayoutDashboard,
+  LineChart,
+  ListChecks,
+  LogOut,
+  MessageSquare,
+  ShoppingCart,
+  Sparkles,
+  UserPlus,
+  Users,
+  Wallet,
+} from 'lucide-react'
+import { useMemo } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
+import { getOperationsNav, isAdmin } from '../auth/permissions'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
+import { Separator } from '@/components/ui/separator'
 
-const managerNav = [
-  { label: 'Dashboard', to: '/operations/dashboard', icon: Gauge },
-  { label: 'Queue', to: '/operations/queue', icon: ClipboardList },
-  { label: 'Crew', to: '/operations/crew', icon: Users },
-  { label: 'KPI', to: '/operations/kpi', icon: BarChart3 },
-  { label: 'My Tasks', to: '/operations/my-tasks', icon: ListChecks },
-]
-
-const staffNav = [
-  { label: 'My Tasks', to: '/operations/my-tasks', icon: ListChecks },
-]
-
-const branchLabels = {
-  bacoor: 'Bacoor',
-  batangas: 'Batangas',
+const iconMap = {
+  Gauge,
+  LayoutDashboard,
+  ClipboardList,
+  Users,
+  BarChart3,
+  ListChecks,
+  ShoppingCart,
+  Wallet,
+  Contact,
+  Sparkles,
+  MessageSquare,
+  Kanban,
+  LineChart,
+  Crown,
+  Building2,
+  UserPlus,
 }
 
 function formatRole(role) {
   if (role === 'team_lead') return 'Team Lead'
-  if (role === 'BossMich') return 'BossMich'
+  if (role === 'BossMich') return 'Super Admin'
   if (role === 'admin') return 'Admin'
-  if (role === 'staff') return 'Staff'
-  if (role === 'cashier') return 'Cashier'
-  return 'Public'
+  if (role === 'staff') return 'Crew'
+  return role || 'Ops'
 }
 
-function formatProfileScope(profile) {
-  if (profile?.role === 'team_lead') return branchLabels[profile.branch_slug] || 'No branch assigned'
-  if (profile?.role === 'admin' || profile?.role === 'BossMich') return 'All branches'
-  return branchLabels[profile?.branch_slug] || 'Assigned tasks'
+function formatScope(profile) {
+  if (profile?.role === 'BossMich') return 'All branches'
+  return profile?.branch_slug || 'No branch'
 }
 
 export default function OperationsLayout() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const { profile, user, canViewQueueOperations, signOut } = useAuth()
-  const navigation = canViewQueueOperations ? managerNav : staffNav
+  const { profile, user, signOut } = useAuth()
+  const navigation = useMemo(() => getOperationsNav(profile), [profile])
+  const adminShell = isAdmin(profile)
 
   return (
-    <div className="min-h-screen bg-[#070d18] text-slate-100">
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/10 bg-[#08111f]/95 shadow-2xl shadow-black/30 backdrop-blur-xl transition-transform lg:translate-x-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex h-20 items-center justify-between border-b border-white/10 px-6">
-          <div className="flex items-center gap-3">
-            <div className="grid size-11 place-items-center rounded-2xl bg-blue-500 text-white"><ClipboardList size={22} /></div>
-            <div><p className="font-black tracking-[0.16em]">HAKUM</p><p className="text-[10px] tracking-[0.24em] text-blue-200 uppercase">Queue Ops</p></div>
-          </div>
-          <button className="text-slate-400 lg:hidden" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X /></button>
-        </div>
+    <SidebarProvider>
+      <div className="dark flex min-h-svh w-full bg-background text-foreground">
+        <Sidebar collapsible="icon" variant="inset">
+          <SidebarHeader>
+            <div className="flex items-center gap-3 px-2 py-1">
+              <div className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
+                <ClipboardList size={18} />
+              </div>
+              <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+                <p className="truncate text-sm font-black tracking-[0.14em]">HAKUM</p>
+                <p className="truncate text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                  {adminShell ? 'Admin console' : 'Floor ops'}
+                </p>
+              </div>
+            </div>
+          </SidebarHeader>
+          <SidebarSeparator />
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>{adminShell ? 'Command' : 'Workspace'}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {navigation.map(({ label, to, icon }) => {
+                    const Icon = iconMap[icon] || ClipboardList
+                    return (
+                      <SidebarMenuItem key={to}>
+                        <SidebarMenuButton render={<NavLink to={to} end={to.endsWith('/console') || to.endsWith('/dashboard')} />}>
+                          <Icon />
+                          <span>{label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter>
+            <div className="rounded-xl bg-sidebar-accent/50 px-3 py-3 group-data-[collapsible=icon]:hidden">
+              <p className="truncate text-sm font-semibold">{profile?.full_name || 'Operations'}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {formatRole(profile?.role)} · {formatScope(profile)}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">{profile?.email || user?.email}</p>
+            </div>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={signOut}>
+                  <LogOut />
+                  <span>Sign out</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
 
-        <nav className="flex-1 space-y-1 px-4 py-6" aria-label="Operations navigation">
-          {navigation.map(({ label, to, icon: Icon }) => (
-            <NavLink key={to} to={to} onClick={() => setMenuOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${isActive ? 'bg-blue-500 text-white shadow-[0_12px_32px_rgba(37,99,235,.22)]' : 'text-slate-400 hover:bg-white/7 hover:text-white'}`}>
-              <Icon size={19} />{label}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="border-t border-white/10 p-4">
-          <div className="mb-3 rounded-2xl bg-white/[0.04] px-3 py-3">
-            <p className="truncate text-sm font-semibold">{profile?.full_name || 'Operations User'}</p>
-            <p className="truncate text-xs text-slate-500">{formatRole(profile?.role)} · {formatProfileScope(profile)}</p>
-            <p className="truncate text-xs text-slate-500">{profile?.email || user?.email}</p>
-          </div>
-          <button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"><LogOut size={18} />Sign out</button>
-        </div>
-      </aside>
-
-      {menuOpen && <button className="fixed inset-0 z-30 bg-black/70 lg:hidden" onClick={() => setMenuOpen(false)} aria-label="Close navigation overlay" />}
-
-      <div className="lg:pl-72">
-        <header className="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-white/10 bg-[#070d18]/90 px-5 backdrop-blur-xl sm:px-8">
-          <button className="text-slate-300 lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu /></button>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold tracking-[0.2em] text-blue-300 uppercase">Hakum Auto Care</p>
-            <p className="truncate text-sm text-slate-500">Queue command center</p>
-          </div>
-          {!canViewQueueOperations && <div className="hidden items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs text-amber-100 sm:flex"><ShieldAlert size={15} />Assigned tasks only</div>}
-        </header>
-        <main className="p-5 sm:p-8"><Outlet /></main>
+        <SidebarInset>
+          <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-xl">
+            <SidebarTrigger />
+            <Separator orientation="vertical" className="h-5" />
+            <div className="min-w-0">
+              <p className="text-xs font-bold tracking-[0.18em] text-primary uppercase">Hakum Auto Care</p>
+              <p className="truncate text-sm text-muted-foreground">
+                {adminShell ? 'Operations · cost · profit · stock' : `Branch · ${formatScope(profile)}`}
+              </p>
+            </div>
+          </header>
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            <Outlet />
+          </main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   )
 }

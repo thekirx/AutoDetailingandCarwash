@@ -22,12 +22,24 @@ export default [
     rules: { 'react/prop-types': 'off' },
   },
   {
-    files: ['**/src/auth/AuthProvider.jsx'],
+    // Node/API tooling — not browser
+    files: ['api/**/*.{js,mjs}', 'server/**/*.{js,mjs}', 'scripts/**/*.{js,mjs}', 'vite.config.js'],
+    languageOptions: { globals: { ...globals.node } },
+  },
+  {
+    files: ['**/src/auth/AuthProvider.jsx', '**/src/components/HakumAuthShell.jsx'],
     rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
     files: ['**/src/components/PPFVisualizer.jsx'],
     // React Three Fiber JSX properties describe Three.js objects, not DOM nodes.
     rules: { 'react/no-unknown-property': 'off' },
+  },
+  {
+    files: ['**/src/components/ui/**/*.{js,jsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+      'no-unused-vars': ['error', { varsIgnorePattern: '^React$', argsIgnorePattern: '^_' }],
+    },
   },
 ]

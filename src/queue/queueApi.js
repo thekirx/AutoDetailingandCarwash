@@ -74,6 +74,30 @@ export async function getCurrentProfile({ required = true } = {}) {
     throw new Error('You must be logged in to perform this queue action.')
   }
 
+  // staff_profiles is source of truth for ops users (ponytail: do not require dual customers row)
+  const { data: staffProfile, error: staffError } = await supabase
+    .from('staff_profiles')
+    .select('id, full_name, role, branch_slug, phone, is_active')
+    .eq('id', user.id)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (staffError) {
+    console.error('Unable to load staff profile', staffError)
+    throw formatQueueActionError(staffError)
+  }
+  if (staffProfile) {
+    return {
+      id: staffProfile.id,
+      full_name: staffProfile.full_name,
+      email: user.email,
+      phone: staffProfile.phone,
+      role: staffProfile.role,
+      branch_slug: staffProfile.branch_slug,
+      source: 'staff_profiles',
+    }
+  }
+
   const { data, error } = await supabase
     .from('customers')
     .select('id, full_name, email, phone, role, is_archived')
@@ -86,7 +110,7 @@ export async function getCurrentProfile({ required = true } = {}) {
     throw formatQueueActionError(error)
   }
   if (!data && required) throw new Error(MISSING_QUEUE_PROFILE_ERROR)
-  return data || null
+  return data ? { ...data, branch_slug: null, source: 'customers' } : null
 }
 
 export async function fetchOperationsSnapshot(profile) {
@@ -273,21 +297,38 @@ export async function lookupPlate(plateNumber, profile) {
 }
 
 async function ensureCustomer(form) {
-  if (form.customer_id) return form.customer_id
-  const { data, error } = await supabase
-    .from('customers')
-    .insert({
-      role: 'customer',
-      full_name: form.customer_name.trim(),
-      phone: form.customer_phone.trim(),
-      email: null,
-      is_archived: false,
-    })
-    .select('id')
-    .single()
+  const phone = form.customer_phone?.trim()
+  if (!phone) throw new Error('Phone number is required.')
+  const first = form.customer_first_name?.trim() || ''
+  const last = form.customer_last_name?.trim() || ''
+  const fullName = form.customer_name?.trim() || `${first} ${last}`.trim()
+  if (!fullName) throw new Error('Customer name is required.')
 
-  if (error) throw error
-  return data.id
+  // Provision auth account (set-password invite) via server — creates customers row + notifies
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
+  if (!accessToken) throw new Error('You must be signed in to create a queue ticket.')
+
+  const response = await fetch('/api/provision-customer', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      customer_id: form.customer_id || null,
+      customer_phone: phone,
+      customer_first_name: first,
+      customer_last_name: last,
+      customer_name: fullName,
+      customer_email: form.customer_email?.trim() || null,
+      vehicle_plate: form.vehicle_plate || null,
+      site_origin: window.location.origin,
+    }),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.error || 'Unable to create customer account.')
+  return payload.customer_id
 }
 
 export async function createQueueTicket(form) {
@@ -305,6 +346,8 @@ export async function createQueueTicket(form) {
         customer_id: customerId,
         vehicle_make: form.vehicle_make.trim(),
         vehicle_model: form.vehicle_model.trim(),
+        vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
+        color: form.vehicle_color?.trim() || null,
         vehicle_type: vehicleType,
         last_branch: form.branch,
       })
@@ -321,6 +364,8 @@ export async function createQueueTicket(form) {
         normalized_plate_number: normalizedPlate,
         vehicle_make: form.vehicle_make.trim(),
         vehicle_model: form.vehicle_model.trim(),
+        vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
+        color: form.vehicle_color?.trim() || null,
         vehicle_type: vehicleType,
         last_branch: form.branch,
       }, { onConflict: 'normalized_plate_number' })
@@ -344,11 +389,11 @@ export async function createQueueTicket(form) {
       vehicle_id: vehicleId,
       service_id: form.service_id,
       customer_name: form.customer_name.trim(),
-      customer_email: null,
+      customer_email: form.customer_email?.trim() || null,
       customer_phone: form.customer_phone.trim(),
       vehicle_make: form.vehicle_make.trim(),
       vehicle_model: form.vehicle_model.trim(),
-      vehicle_year: null,
+      vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
       vehicle_plate: form.vehicle_plate.trim().toUpperCase() || null,
       vehicle_type: vehicleType,
       scheduled_start: new Date().toISOString(),
