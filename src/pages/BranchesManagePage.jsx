@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Building2, Plus } from 'lucide-react'
+import { Building2, Pencil, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageBranches } from '@/auth/permissions'
 import { archiveBranch, createBranch, listBranches, updateBranch } from '@/lib/adminApi'
@@ -18,6 +18,7 @@ export default function BranchesManagePage() {
   const { profile } = useAuth()
   const [rows, setRows] = useState([])
   const [form, setForm] = useState(empty)
+  const [editingSlug, setEditingSlug] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -30,12 +31,24 @@ export default function BranchesManagePage() {
 
   if (!canManageBranches(profile)) return <Navigate to="/operations/access-denied" replace />
 
-  async function onCreate(event) {
+  async function onSubmit(event) {
     event.preventDefault()
     setSaving(true)
     try {
-      await createBranch(form)
-      toast.success('Branch created')
+      if (editingSlug) {
+        await updateBranch({
+          slug: editingSlug,
+          name: form.name,
+          code: form.code,
+          address: form.address || '',
+          is_active: form.is_active ?? true,
+        })
+        toast.success('Branch updated')
+        setEditingSlug(null)
+      } else {
+        await createBranch(form)
+        toast.success('Branch created')
+      }
       setForm(empty)
       await load()
     } catch (err) {
@@ -43,6 +56,22 @@ export default function BranchesManagePage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  function startEdit(row) {
+    setEditingSlug(row.slug)
+    setForm({
+      name: row.name,
+      slug: row.slug,
+      code: row.code,
+      address: row.address || '',
+      is_active: row.is_active,
+    })
+  }
+
+  function cancelEdit() {
+    setEditingSlug(null)
+    setForm(empty)
   }
 
   async function toggleActive(row) {
@@ -66,6 +95,7 @@ export default function BranchesManagePage() {
     try {
       await archiveBranch(slug)
       toast.success('Branch archived')
+      if (editingSlug === slug) cancelEdit()
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -77,34 +107,48 @@ export default function BranchesManagePage() {
       <div>
         <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Sites</p>
         <h1 className="text-3xl font-semibold tracking-tight">Branches</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Create and manage locations. Team leads and staff are scoped to one branch.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Create, edit, activate, and archive locations. Team leads and staff are scoped to one branch.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Plus size={18} /> New branch</CardTitle>
-            <CardDescription>Slug must be lowercase URL-safe. Code is 2–5 letters.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              {editingSlug ? <Pencil size={18} /> : <Plus size={18} />}
+              {editingSlug ? 'Edit branch' : 'New branch'}
+            </CardTitle>
+            <CardDescription>
+              {editingSlug ? `Editing ${editingSlug} — slug cannot change.` : 'Slug must be lowercase URL-safe. Code is 2–5 letters.'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={onCreate} className="flex flex-col gap-4">
+            <form onSubmit={onSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="b-name">Name</Label>
                 <Input id="b-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Hakum Auto Care Imus" />
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="b-slug">Slug</Label>
-                <Input id="b-slug" required value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase() }))} placeholder="imus" />
-              </div>
+              {!editingSlug && (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="b-slug">Slug</Label>
+                  <Input id="b-slug" required value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase() }))} placeholder="imus" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" title="Lowercase letters, numbers, and hyphens" />
+                </div>
+              )}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="b-code">Code</Label>
-                <Input id="b-code" required value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="IMS" maxLength={5} />
+                <Input id="b-code" required value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="IMS" maxLength={5} minLength={2} pattern="[A-Z]{2,5}" />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="b-addr">Address</Label>
                 <Input id="b-addr" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="City, province" />
               </div>
-              <Button type="submit" disabled={saving}>{saving ? 'Creating…' : 'Create branch'}</Button>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={saving} className="flex-1">
+                  {saving ? 'Saving…' : editingSlug ? 'Save changes' : 'Create branch'}
+                </Button>
+                {editingSlug && (
+                  <Button type="button" variant="outline" onClick={cancelEdit}>Cancel</Button>
+                )}
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -139,12 +183,13 @@ export default function BranchesManagePage() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {!row.is_archived && (
-                          <Button size="sm" variant="outline" onClick={() => toggleActive(row)}>
-                            {row.is_active ? 'Deactivate' : 'Activate'}
-                          </Button>
-                        )}
-                        {!row.is_archived && (
-                          <Button size="sm" variant="ghost" onClick={() => onArchive(row.slug)}>Archive</Button>
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => startEdit(row)}>Edit</Button>
+                            <Button size="sm" variant="outline" onClick={() => toggleActive(row)}>
+                              {row.is_active ? 'Deactivate' : 'Activate'}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => onArchive(row.slug)}>Archive</Button>
+                          </>
                         )}
                       </div>
                     </TableCell>

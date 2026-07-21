@@ -30,9 +30,10 @@ import {
   requiresTeamLeadBranchSetup,
 } from '../queue/queueLogic'
 import {
-  assignStaff,
   addStaffMember,
+  assignStaff,
   createQueueTicket,
+  deactivateCrewStaffMember,
   fetchBranches,
   fetchOperationsSnapshot,
   fetchServices,
@@ -41,6 +42,7 @@ import {
   lookupPlate,
   sendTicketToPayment,
   setStaffAttendance,
+  updateCrewStaffMember,
   updateTicketPrice,
   updateTicketStatus,
 } from '../queue/queueApi'
@@ -598,7 +600,17 @@ export function CrewPage() {
             <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{presentCount}</strong>Present</span>
             <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{availableStaff.length}</strong>Deployable</span>
           </div>
-          <StaffPoolList rows={staffPool} canManage={canManageQueue} saving={saving} onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))} />
+          <StaffPoolList
+            rows={staffPool}
+            canManage={canManageQueue}
+            saving={saving}
+            onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
+            onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
+            onDeactivate={(member) => {
+              if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
+              return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
+            }}
+          />
         </Panel>
         <Panel title="Available Today" icon={CheckCircle2}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
       </div>
@@ -616,17 +628,51 @@ export function KpiPage() {
   const [error, setError] = useState('')
   const load = useCallback(async () => {
     setError('')
+    setLoading(true)
     if (requiresTeamLeadBranchSetup(profile)) {
       setRows([])
       setLoading(false)
       return
     }
     const branchScope = getBranchScope(profile)
-    const query = supabase.from('crew_kpi_summary').select('staff_id, staff_name, branch, total_assigned, total_completed, average_service_minutes, active_jobs, completed_today')
-    const { data, error } = await (branchScope ? query.eq('branch', branchScope) : query).order('staff_name')
-    if (error) setError(error.message)
-    else setRows(data || [])
-    setLoading(false)
+    try {
+      let query = supabase
+        .from('crew_kpi_summary')
+        .select('staff_id, staff_name, branch, total_assigned, total_completed, average_service_minutes, active_jobs, completed_today')
+      if (branchScope) query = query.eq('branch', branchScope)
+      const { data, error: viewError } = await query.order('staff_name')
+      if (!viewError) {
+        setRows(data || [])
+        setLoading(false)
+        return
+      }
+      // Fallback when view grant is missing — security definer RPC already granted
+      if (!/permission denied|42501/i.test(viewError.message)) throw viewError
+
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+      const { data: rpcRows, error: rpcError } = await supabase.rpc('get_crew_kpi', {
+        input_start_date: '2024-01-01',
+        input_end_date: today,
+        input_branch_slug: branchScope || null,
+      })
+      if (rpcError) throw rpcError
+      setRows(
+        (rpcRows || []).map((row) => ({
+          staff_id: row.staff_id,
+          staff_name: row.staff_name,
+          branch: row.branch_slug || row.branch_name,
+          total_assigned: Number(row.cars_handled || 0) + Number(row.active_jobs || 0),
+          total_completed: Number(row.cars_handled || 0),
+          average_service_minutes: Number(row.average_completed_seconds || 0) / 60,
+          active_jobs: Number(row.active_jobs || 0),
+          completed_today: 0,
+        })),
+      )
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }, [profile])
   useEffect(() => { load() }, [load])
   if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
@@ -723,7 +769,10 @@ function CrewList({ title, rows, empty, busy = false }) {
   )
 }
 
-function StaffPoolList({ rows, canManage, saving, onAttendance }) {
+function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeactivate }) {
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({ full_name: '', phone: '' })
+
   if (!rows.length) return <EmptyLine text="No staff in this branch pool yet." />
 
   return (
@@ -731,6 +780,7 @@ function StaffPoolList({ rows, canManage, saving, onAttendance }) {
       {rows.map((member) => {
         const present = member.is_present_today
         const busy = member.is_busy_today
+        const isEditing = editingId === member.id
         return (
           <div key={member.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -742,10 +792,46 @@ function StaffPoolList({ rows, canManage, saving, onAttendance }) {
                 {present ? (busy ? 'Deployed' : 'Present') : 'Not attended'}
               </span>
             </div>
-            {canManage && (
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {canManage && isEditing && (
+              <form
+                className="mt-4 grid gap-2 sm:grid-cols-[1fr_140px_auto_auto]"
+                onSubmit={async (event) => {
+                  event.preventDefault()
+                  await onEdit(member, editForm)
+                  setEditingId(null)
+                }}
+              >
+                <input
+                  required
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                />
+                <input
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  placeholder="Phone"
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                />
+                <button type="submit" disabled={saving === `${member.id}-edit`} className="rounded-xl bg-blue-500 px-3 py-2 text-sm font-semibold text-white">Save</button>
+                <button type="button" onClick={() => setEditingId(null)} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-200">Cancel</button>
+              </form>
+            )}
+            {canManage && !isEditing && (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <button type="button" disabled={present || saving === `${member.id}-present`} onClick={() => onAttendance(member, 'present')} className="rounded-xl border border-emerald-300/20 px-3 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40">Mark present</button>
                 <button type="button" disabled={!present || saving === `${member.id}-absent`} onClick={() => onAttendance(member, 'absent')} className="rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40">Mark absent</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingId(member.id)
+                    setEditForm({ full_name: member.full_name || '', phone: member.phone || '' })
+                  }}
+                  className="rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5"
+                >
+                  Edit
+                </button>
+                <button type="button" disabled={saving === `${member.id}-off`} onClick={() => onDeactivate(member)} className="rounded-xl border border-red-300/20 px-3 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-400/10 disabled:opacity-40">Remove</button>
               </div>
             )}
           </div>

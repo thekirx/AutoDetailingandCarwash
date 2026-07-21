@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { UserPlus } from 'lucide-react'
+import { Pencil, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canCreateAdminAccounts, canManagePeople, isSuperAdmin } from '@/auth/permissions'
-import { listBranches, listStaffPeople, provisionStaff } from '@/lib/adminApi'
+import {
+  deactivateStaffPerson,
+  listBranches,
+  listStaffPeople,
+  provisionStaff,
+  updateStaffPerson,
+} from '@/lib/adminApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -28,6 +35,7 @@ export default function PeopleManagePage() {
   const [people, setPeople] = useState([])
   const [branches, setBranches] = useState([])
   const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -55,7 +63,7 @@ export default function PeopleManagePage() {
   }, [profile])
 
   const load = useCallback(async () => {
-    const [p, b] = await Promise.all([listStaffPeople(), listBranches()])
+    const [p, b] = await Promise.all([listStaffPeople({ includeInactive: true }), listBranches()])
     setPeople(p)
     setBranches(b)
     const defaultBranch = profile?.branch_slug || b[0]?.slug || ''
@@ -87,6 +95,41 @@ export default function PeopleManagePage() {
     }
   }
 
+  async function saveEdit(event) {
+    event.preventDefault()
+    if (!editing) return
+    setSaving(true)
+    try {
+      await updateStaffPerson({
+        id: editing.id,
+        full_name: editing.full_name,
+        role: editing.role,
+        branch_slug: editing.branch_slug,
+        phone: editing.phone,
+        is_active: editing.is_active,
+      })
+      toast.success('Staff updated')
+      setEditing(null)
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function onDeactivate(row, archive) {
+    if (row.role === 'BossMich') return
+    if (!window.confirm(`${archive ? 'Archive' : 'Deactivate'} ${row.full_name}?`)) return
+    try {
+      await deactivateStaffPerson(row.id, { archive })
+      toast.success(archive ? 'Archived' : 'Deactivated')
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
   return (
     <section className="flex flex-col gap-8">
       <div>
@@ -94,8 +137,8 @@ export default function PeopleManagePage() {
         <h1 className="text-3xl font-semibold tracking-tight">Accounts & branch assignment</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {isSuperAdmin(profile)
-            ? 'Super Admin creates Admins (each assigned to a branch), Team Leads, and staff.'
-            : 'You can create Team Leads, staff, and cashiers for your assigned branch only.'}
+            ? 'Super Admin creates Admins (each assigned to a branch), Team Leads, and staff. Edit or deactivate from the directory.'
+            : 'Create Team Leads, staff, and cashiers for your assigned branch. Edit role, phone, or deactivate as needed.'}
         </p>
       </div>
 
@@ -159,7 +202,7 @@ export default function PeopleManagePage() {
         <Card>
           <CardHeader>
             <CardTitle>Directory</CardTitle>
-            <CardDescription>{people.length} active profiles</CardDescription>
+            <CardDescription>{people.length} profiles (active + inactive)</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -168,16 +211,35 @@ export default function PeopleManagePage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Branch</TableHead>
-                  <TableHead>Phone</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {people.map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.full_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div>{row.full_name}</div>
+                      <div className="text-xs text-muted-foreground">{row.phone || '—'}</div>
+                    </TableCell>
                     <TableCell><Badge variant="secondary">{ROLE_LABELS[row.role] || row.role}</Badge></TableCell>
                     <TableCell>{row.branch_slug || 'All / HQ'}</TableCell>
-                    <TableCell>{row.phone || '—'}</TableCell>
+                    <TableCell>
+                      {row.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {row.role !== 'BossMich' && (
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setEditing({ ...row })}>
+                            <Pencil size={14} className="mr-1" /> Edit
+                          </Button>
+                          {row.is_active && (
+                            <Button size="sm" variant="ghost" onClick={() => onDeactivate(row, false)}>Deactivate</Button>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={() => onDeactivate(row, true)}>Archive</Button>
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -185,6 +247,65 @@ export default function PeopleManagePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit staff</DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <form onSubmit={saveEdit} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>Full name</Label>
+                <Input required value={editing.full_name} onChange={(e) => setEditing((r) => ({ ...r, full_name: e.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Phone</Label>
+                <Input value={editing.phone || ''} onChange={(e) => setEditing((r) => ({ ...r, phone: e.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Role</Label>
+                <Select value={editing.role} onValueChange={(role) => setEditing((r) => ({ ...r, role }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {roleOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Branch</Label>
+                <Select value={editing.branch_slug || ''} onValueChange={(branch_slug) => setEditing((r) => ({ ...r, branch_slug }))}>
+                  <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Status</Label>
+                <Select
+                  value={editing.is_active ? 'active' : 'inactive'}
+                  onValueChange={(v) => setEditing((r) => ({ ...r, is_active: v === 'active' }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+                <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

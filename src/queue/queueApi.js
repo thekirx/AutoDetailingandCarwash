@@ -282,6 +282,44 @@ export async function setStaffAttendance(member, status, profile) {
   }
 }
 
+export async function updateCrewStaffMember(memberId, { full_name, phone }) {
+  const name = String(full_name || '').trim()
+  if (!memberId) throw new Error('Staff id is required.')
+  if (!name) throw new Error('Staff name is required.')
+  const { data, error } = await supabase
+    .from('staff_profiles')
+    .update({
+      full_name: name,
+      phone: phone?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', memberId)
+    .eq('role', 'staff')
+    .select('id')
+    .maybeSingle()
+  if (error) throw formatQueueActionError(error)
+  if (!data) throw new Error('Staff member not found or not editable.')
+  return data
+}
+
+export async function deactivateCrewStaffMember(memberId) {
+  if (!memberId) throw new Error('Staff id is required.')
+  const { data, error } = await supabase
+    .from('staff_profiles')
+    .update({
+      is_active: false,
+      is_archived: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', memberId)
+    .eq('role', 'staff')
+    .select('id')
+    .maybeSingle()
+  if (error) throw formatQueueActionError(error)
+  if (!data) throw new Error('Staff member not found or not editable.')
+  return data
+}
+
 export async function lookupPlate(plateNumber, profile) {
   const normalizedPlate = normalizePlate(plateNumber || '')
   if (normalizedPlate.length < 2) return null

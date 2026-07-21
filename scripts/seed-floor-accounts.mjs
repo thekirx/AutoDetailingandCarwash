@@ -1,13 +1,13 @@
 /**
- * Seed BossMich, ensure Team Lead, create auth-backed staff, mark attendance today.
+ * Seed BossMich, Admin, Team Lead, staff, and demo customer with known passwords.
  * Run: node scripts/seed-floor-accounts.mjs
  *
  * Default passwords (change after first login):
- *   bossmich@hakumautocare.com  → HakumBoss2026!
- *   teamlead@hakumautocare.com  → HakumTL2026!
- *   staff1@hakumautocare.com    → HakumStaff2026!
- *   staff2@hakumautocare.com    → HakumStaff2026!
- *   staff3@hakumautocare.com    → HakumStaff2026!
+ *   bossmich@hakumautocare.com     → HakumBoss2026!
+ *   admin@hakumautocare.com        → HakumAdmin2026!
+ *   teamlead@hakumautocare.com     → HakumTL2026!
+ *   staff1@hakumautocare.com       → HakumStaff2026!
+ *   demo.customer@hakumautocare.com → HakumCustomer2026!
  */
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
@@ -39,24 +39,15 @@ const admin = createClient(url, key, { auth: { autoRefreshToken: false, persistS
 const BRANCH = 'bacoor'
 const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
 
-async function ensureAuthUser({ email, password, full_name }) {
-  const { data: existing } = await admin
-    .from('staff_profiles')
-    .select('id')
-    .limit(0)
-
-  void existing
-
-  // Look up via auth admin list filter — create or update password
+async function ensureAuthUser({ email, password, full_name, user_metadata = {} }) {
   const { data: created, error } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name },
+    user_metadata: { full_name, ...user_metadata },
   })
   if (!error && created?.user) return created.user
 
-  // Already exists: find by paging (small staff set) then reset password
   let page = 1
   let found = null
   for (;;) {
@@ -67,7 +58,11 @@ async function ensureAuthUser({ email, password, full_name }) {
     page += 1
   }
   if (!found) throw error || new Error(`Unable to create or find ${email}`)
-  await admin.auth.admin.updateUserById(found.id, { password, email_confirm: true })
+  await admin.auth.admin.updateUserById(found.id, {
+    password,
+    email_confirm: true,
+    user_metadata: { ...found.user_metadata, full_name, ...user_metadata },
+  })
   return found
 }
 
@@ -135,11 +130,24 @@ async function main() {
   await upsertStaffProfile(boss, { full_name: 'BossMich', role: 'BossMich', branch_slug: null })
   console.log('BossMich', boss.id)
 
-  // Ensure team lead profile (auth already exists)
-  const { data: tlList } = await admin.auth.admin.listUsers({ page: 1, perPage: 100 })
-  const tlUser = tlList.users.find((u) => (u.email || '').toLowerCase() === 'teamlead@hakumautocare.com')
-  if (!tlUser) throw new Error('teamlead@hakumautocare.com missing — create in Auth first')
-  await admin.auth.admin.updateUserById(tlUser.id, { password: 'HakumTL2026!', email_confirm: true })
+  const branchAdmin = await ensureAuthUser({
+    email: 'admin@hakumautocare.com',
+    password: 'HakumAdmin2026!',
+    full_name: 'Branch Admin',
+  })
+  await upsertStaffProfile(branchAdmin, {
+    full_name: 'Branch Admin',
+    role: 'admin',
+    branch_slug: BRANCH,
+    phone: '09170000001',
+  })
+  console.log('Admin', branchAdmin.id)
+
+  const tlUser = await ensureAuthUser({
+    email: 'teamlead@hakumautocare.com',
+    password: 'HakumTL2026!',
+    full_name: 'TL Test Account',
+  })
   await upsertStaffProfile(tlUser, { full_name: 'TL Test Account', role: 'team_lead', branch_slug: BRANCH })
   console.log('Team Lead', tlUser.id)
 
@@ -168,59 +176,46 @@ async function main() {
 
   await archiveOrphanStaff(staffIds)
 
-  // Sample customer with set-password invite queued
-  const samplePhone = '09181239999'
-  const sampleEmail = 'sample.customer@hakumautocare.com'
-  const { data: sampleAuth, error: sampleErr } = await admin.auth.admin.createUser({
-    email: sampleEmail,
-    password: randomTemp(),
-    email_confirm: true,
-    user_metadata: { role: 'customer', full_name: 'Sample Customer', phone: samplePhone, must_set_password: true },
+  const demo = await ensureAuthUser({
+    email: 'demo.customer@hakumautocare.com',
+    password: 'HakumCustomer2026!',
+    full_name: 'Demo Customer',
+    user_metadata: {
+      role: 'customer',
+      phone: '09180000001',
+      must_set_password: false,
+    },
   })
-  let sampleUser = sampleAuth?.user
-  if (sampleErr) {
-    const { data: more } = await admin.auth.admin.listUsers({ page: 1, perPage: 100 })
-    sampleUser = more.users.find((u) => (u.email || '').toLowerCase() === sampleEmail) || null
-  }
-  if (sampleUser) {
-    await admin.from('customers').upsert(
-      {
-        id: sampleUser.id,
-        role: 'customer',
-        full_name: 'Sample Customer',
-        first_name: 'Sample',
-        last_name: 'Customer',
-        phone: samplePhone,
-        email: sampleEmail,
-        is_archived: false,
-      },
-      { onConflict: 'id' },
-    )
-    const { data: link } = await admin.auth.admin.generateLink({
-      type: 'recovery',
-      email: sampleEmail,
-      options: { redirectTo: 'http://localhost:5173/account/set-password' },
-    })
-    await admin.from('sms_events').insert({
-      phone: samplePhone,
-      message: `Hakum sample account ready. Set password: ${link?.properties?.action_link || '(check email invite)'}`,
-      event_type: 'account_invite',
-      status: 'queued',
-    })
-    console.log('Sample customer', sampleUser.id)
-  }
+  await admin.from('customers').upsert(
+    {
+      id: demo.id,
+      role: 'customer',
+      full_name: 'Demo Customer',
+      first_name: 'Demo',
+      last_name: 'Customer',
+      phone: '09180000001',
+      email: 'demo.customer@hakumautocare.com',
+      is_archived: false,
+    },
+    { onConflict: 'id' },
+  )
+  console.log('Demo customer', demo.id)
 
   console.log('Done.')
-  console.log(JSON.stringify({
-    bossmich: 'bossmich@hakumautocare.com / HakumBoss2026!',
-    teamlead: 'teamlead@hakumautocare.com / HakumTL2026!',
-    staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026!',
-    attendance_date: TODAY,
-  }, null, 2))
-}
-
-function randomTemp() {
-  return `Hakum-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}!`
+  console.log(
+    JSON.stringify(
+      {
+        bossmich: 'bossmich@hakumautocare.com / HakumBoss2026!',
+        admin: 'admin@hakumautocare.com / HakumAdmin2026!',
+        teamlead: 'teamlead@hakumautocare.com / HakumTL2026!',
+        staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026!',
+        customer: 'demo.customer@hakumautocare.com / HakumCustomer2026!',
+        attendance_date: TODAY,
+      },
+      null,
+      2,
+    ),
+  )
 }
 
 main().catch((err) => {

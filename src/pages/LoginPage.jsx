@@ -6,6 +6,8 @@ import { useAuth } from '../auth/AuthProvider'
 import { OPS_LOGIN_ROLES, redirectForRole } from '../auth/permissions'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
+import DemoAccountChips from '../components/DemoAccountChips'
+import { OPS_DEMO_ACCOUNTS } from '../lib/demoAccounts'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -134,6 +136,16 @@ export default function LoginPage() {
           {submitting ? 'Verifying…' : 'Sign in'}
         </button>
       </form>
+
+      <DemoAccountChips
+        title="Demo team accounts"
+        accounts={OPS_DEMO_ACCOUNTS}
+        onPick={(a) => {
+          setEmail(a.email)
+          setPassword(a.password)
+          setError('')
+        }}
+      />
     </HakumAuthShell>
   )
 }

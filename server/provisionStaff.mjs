@@ -59,6 +59,12 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
   const fullName = String(body.full_name || '').trim()
   const role = String(body.role || '').trim()
   const phone = String(body.phone || '').trim() || null
+  if (phone) {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 10) {
+      throw Object.assign(new Error('Phone must have at least 10 digits.'), { status: 400 })
+    }
+  }
   let branchSlug = body.branch_slug ? String(body.branch_slug).trim().toLowerCase() : null
   const allowed = creatableRolesFor(caller.role)
 

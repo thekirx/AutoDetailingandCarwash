@@ -36,6 +36,7 @@ import MembershipsPage from './pages/MembershipsPage'
 import AdminConsolePage from './pages/AdminConsolePage'
 import BranchesManagePage from './pages/BranchesManagePage'
 import PeopleManagePage from './pages/PeopleManagePage'
+import AuditLogPage from './pages/AuditLogPage'
 import CustomerSignInPage from './pages/CustomerSignInPage'
 import CustomerSignUpPage from './pages/CustomerSignUpPage'
 import CustomerSetPasswordPage from './pages/CustomerSetPasswordPage'
@@ -86,6 +87,7 @@ export default function App() {
           <Route path="console" element={<AdminConsolePage />} />
           <Route path="people" element={<PeopleManagePage />} />
           <Route path="branches" element={<BranchesManagePage />} />
+          <Route path="audit" element={<AuditLogPage />} />
           <Route path="dashboard" element={<OperationsDashboardPage />} />
           <Route path="queue" element={<OperationsQueuePage />} />
           <Route path="queue/new" element={<NewQueueTicketPage />} />

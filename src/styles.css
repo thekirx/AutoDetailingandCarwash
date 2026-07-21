@@ -533,6 +533,13 @@ button { cursor: pointer; }
 .hakum-auth-setup-btn { align-self:flex-start; border:0; border-radius:8px; padding:10px 14px; background:#052699; color:#fff; font-size:0.75rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; }
 .hakum-auth-setup-btn:hover { background:#0a32b8; }
 .hakum-auth-setup-btn:disabled { opacity:.65; cursor:wait; }
+.hakum-demo { margin-top:22px; padding-top:18px; border-top:1px solid #e8e8e4; }
+.hakum-demo-label { margin:0 0 10px; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:#8b8d96; }
+.hakum-demo-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.hakum-demo-chip { display:flex; flex-direction:column; align-items:flex-start; gap:2px; border:1px solid #e5e7eb; background:#fff; border-radius:10px; padding:8px 12px; cursor:pointer; text-align:left; transition:border-color .15s, box-shadow .15s; }
+.hakum-demo-chip:hover { border-color:#052699; box-shadow:0 0 0 3px rgba(5,38,153,.1); }
+.hakum-demo-chip span { font-size:0.8rem; font-weight:700; color:#101219; }
+.hakum-demo-chip small { font-size:0.7rem; color:#8b8d96; }
 .hakum-auth-form { display:flex; flex-direction:column; gap:16px; margin-top:28px; }
 .hakum-auth-form label { display:flex; flex-direction:column; gap:8px; }
 .hakum-auth-form label span { font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#717171; }

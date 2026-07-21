@@ -11,6 +11,7 @@ import {
   ListChecks,
   LogOut,
   MessageSquare,
+  ScrollText,
   ShoppingCart,
   Sparkles,
   UserPlus,
@@ -56,6 +57,7 @@ const iconMap = {
   Crown,
   Building2,
   UserPlus,
+  ScrollText,
 }
 
 function formatRole(role) {

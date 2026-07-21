@@ -6,6 +6,8 @@ import { useAuth } from '../auth/AuthProvider'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
 import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
+import DemoAccountChips from '../components/DemoAccountChips'
+import { CUSTOMER_DEMO_ACCOUNT } from '../lib/demoAccounts'
 
 async function authLookup(identifier, action = 'lookup') {
   const res = await fetch('/api/customer-auth-lookup', {
@@ -263,6 +265,18 @@ export default function CustomerSignInPage() {
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
+
+      <DemoAccountChips
+        title="Demo customer"
+        accounts={[CUSTOMER_DEMO_ACCOUNT]}
+        onPick={(a) => {
+          setIdentifier(a.email)
+          setPassword(a.password)
+          setError('')
+          setInfo('')
+          setSetupStatus(null)
+        }}
+      />
     </HakumAuthShell>
   )
 }

@@ -120,6 +120,7 @@ export function getOperationsNav(profile) {
       { label: 'Console', to: '/operations/console', icon: 'LayoutDashboard' },
       { label: 'People', to: '/operations/people', icon: 'UserPlus' },
       { label: 'Branches', to: '/operations/branches', icon: 'Building2' },
+      { label: 'Audit', to: '/operations/audit', icon: 'ScrollText' },
     )
   }
 
