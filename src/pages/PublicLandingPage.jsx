@@ -3,6 +3,7 @@ import { ArrowDown, ArrowRight, Droplets, Gauge, GlassWater, MapPin, Radio, Shie
 import { Link } from 'react-router-dom'
 import PPFVisualizer from '../components/PPFVisualizer'
 import { PrimaryButton, SecondaryButton, StatCard } from '../components/ui'
+import { usePublicBranches, branchLabel } from '../lib/branches'
 
 const stats = [
   { value: 10, suffix: ' years', label: 'Auto industry experience combined' },
@@ -63,11 +64,16 @@ function AnimatedNumber({ value, suffix }) {
 }
 
 export default function PublicLandingPage() {
+  const { branches } = usePublicBranches()
+  const locationLine = branches.length
+    ? branches.map((b) => b.name.replace('Hakum Auto Care ', '')).join(' / ')
+    : 'Bacoor / Batangas'
+
   return <>
     <section className="hero-stage">
       <div className="hero-media" aria-hidden="true" />
       <div className="hero-content">
-        <p className="hero-location">Bacoor <span>/</span> Batangas</p>
+        <p className="hero-location">{locationLine}</p>
         <h1 className="display-title">
           <span className="hero-line hero-line-one">Give your car</span>
           <span className="hero-line hero-line-three">The pampering it deserves</span>
@@ -136,7 +142,28 @@ export default function PublicLandingPage() {
     </section>
 
     <section className="home-branches">
-      <div className="public-shell"><div className="section-heading-row"><div><p className="eyebrow eyebrow-light">Branches / Contact</p><h2 className="section-title light">Closer than<br/>you think.</h2></div><p>Premium car care in Bacoor and Batangas. Choose your nearest branch and let us take it from here.</p></div><div className="home-branch-grid"><Link to="/branches"><span>01</span><MapPin/><div><h3>Bacoor</h3><p>RFC Mall, Cavite</p></div><ArrowRight/></Link><Link to="/branches"><span>02</span><MapPin/><div><h3>Batangas</h3><p>Batangas City</p></div><ArrowRight/></Link></div></div>
+      <div className="public-shell">
+        <div className="section-heading-row">
+          <div><p className="eyebrow eyebrow-light">Branches / Contact</p><h2 className="section-title light">Closer than<br />you think.</h2></div>
+          <p>Premium car care across {branchLabel(branches.length)}. Choose your nearest branch and let us take it from here.</p>
+        </div>
+        <div className="home-branch-grid">
+          {branches.map((b, i) => (
+            <Link to={`/queue/${b.slug}`} key={b.slug}>
+              <span>{String(i + 1).padStart(2, '0')}</span>
+              <MapPin />
+              <div><h3>{b.name.replace('Hakum Auto Care ', '')}</h3><p>{b.address || b.slug}</p></div>
+              <ArrowRight />
+            </Link>
+          ))}
+          {!branches.length && (
+            <>
+              <Link to="/branches"><span>01</span><MapPin /><div><h3>Bacoor</h3><p>RFC Mall, Cavite</p></div><ArrowRight /></Link>
+              <Link to="/branches"><span>02</span><MapPin /><div><h3>Batangas</h3><p>Batangas City</p></div><ArrowRight /></Link>
+            </>
+          )}
+        </div>
+      </div>
     </section>
   </>
 }

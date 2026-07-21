@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import {
   ACTIVE_QUEUE_STATUSES,
   buildPublicQueueModel,
+  buildVisitProgress,
   canEditQueueOperations,
   canOverrideQueueBranches,
   canViewQueueOperations,
@@ -36,6 +37,18 @@ describe('queue logic', () => {
       final_checking: 1,
       total: 4,
     })
+  })
+
+  it('builds customer visit progress from booking status', () => {
+    const inProgress = buildVisitProgress('in_progress')
+    assert.equal(inProgress.currentIndex, 1)
+    assert.equal(inProgress.label, 'In Progress')
+    assert.equal(inProgress.isComplete, false)
+    assert.equal(inProgress.steps.length, 4)
+
+    const done = buildVisitProgress('completed')
+    assert.equal(done.isComplete, true)
+    assert.equal(done.currentIndex, 4)
   })
 
   it('builds a public model with queue numbers only', () => {

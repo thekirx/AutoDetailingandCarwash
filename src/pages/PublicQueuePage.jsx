@@ -2,12 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { Activity, Clock3, Radio, Wifi } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { fetchPublicBranches } from '../lib/branches'
 import { ACTIVE_QUEUE_STATUSES, STATUS_LABELS, buildPublicQueueModel } from '../queue/queueLogic'
-
-const branchFallbacks = {
-  bacoor: { name: 'Bacoor', address: 'RFC Mall, Bacoor' },
-  batangas: { name: 'Batangas', address: 'Batangas City' },
-}
 
 const statCards = [
   ['waiting', 'Waiting', 'from-blue-500/25 to-blue-950/35'],
@@ -19,16 +15,15 @@ const statCards = [
 export default function PublicQueuePage() {
   const { branch } = useParams()
   const [branchDetails, setBranchDetails] = useState(null)
+  const [branchValid, setBranchValid] = useState(null)
   const [countsRow, setCountsRow] = useState(null)
   const [numberRows, setNumberRows] = useState([])
   const [now, setNow] = useState(() => new Date())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const validBranch = branchFallbacks[branch]
-
   const loadQueue = useCallback(async () => {
-    if (!validBranch) return
+    if (!branch) return
     setError('')
 
     const [branchResult, countsResult, numbersResult] = await Promise.all([
@@ -37,6 +32,7 @@ export default function PublicQueuePage() {
         .select('slug, name, address')
         .eq('slug', branch)
         .eq('is_active', true)
+        .eq('is_archived', false)
         .maybeSingle(),
       supabase
         .from('public_queue_counts')
@@ -57,11 +53,12 @@ export default function PublicQueuePage() {
       return
     }
 
-    setBranchDetails(branchResult.data || branchFallbacks[branch])
+    setBranchValid(!!branchResult.data)
+    setBranchDetails(branchResult.data)
     setCountsRow(countsResult.data)
     setNumberRows(numbersResult.data || [])
     setLoading(false)
-  }, [branch, validBranch])
+  }, [branch])
 
   useEffect(() => {
     loadQueue()
@@ -73,7 +70,7 @@ export default function PublicQueuePage() {
   }, [])
 
   useEffect(() => {
-    if (!validBranch) return undefined
+    if (!branch || branchValid === false) return undefined
     const channel = supabase
       .channel(`public-queue-${branch}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `branch=eq.${branch}` }, () => {
@@ -84,7 +81,7 @@ export default function PublicQueuePage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [branch, loadQueue, validBranch])
+  }, [branch, loadQueue, branchValid])
 
   const publicModel = useMemo(() => buildPublicQueueModel(numberRows, branch), [numberRows, branch])
   const counts = useMemo(() => ({
@@ -94,8 +91,18 @@ export default function PublicQueuePage() {
     total: countsRow?.total_active_count ?? publicModel.counts.total,
   }), [countsRow, publicModel])
 
-  if (!branch) return <Navigate to="/queue/bacoor" replace />
-  if (!validBranch) return <Navigate to="/queue/bacoor" replace />
+  const [fallbackSlug, setFallbackSlug] = useState(null)
+  useEffect(() => {
+    if (!branch) return
+    fetchPublicBranches().then((rows) => setFallbackSlug(rows[0]?.slug || 'bacoor')).catch(() => setFallbackSlug('bacoor'))
+  }, [branch])
+
+  if (!branch) {
+    return <Navigate to={fallbackSlug ? `/queue/${fallbackSlug}` : '/queue'} replace />
+  }
+  if (!loading && branchValid === false) {
+    return <Navigate to={fallbackSlug ? `/queue/${fallbackSlug}` : '/queue'} replace />
+  }
 
   return (
     <section className="min-h-screen bg-[#020817] px-4 py-24 text-white sm:px-6 lg:px-10">
@@ -108,8 +115,8 @@ export default function PublicQueuePage() {
               <span className="text-sm font-black tracking-[0.18em] uppercase">Hakum Auto Care</span>
             </Link>
             <p className="mb-3 flex items-center gap-2 text-xs font-bold tracking-[0.22em] text-blue-200 uppercase"><Radio size={15} /> Live Queue</p>
-            <h1 className="text-4xl font-black tracking-tight sm:text-6xl">{branchDetails?.name || validBranch.name}</h1>
-            <p className="mt-3 text-sm text-slate-300">{branchDetails?.address || validBranch.address}</p>
+            <h1 className="text-4xl font-black tracking-tight sm:text-6xl">{branchDetails?.name || branch}</h1>
+            <p className="mt-3 text-sm text-slate-300">{branchDetails?.address || '—'}</p>
           </div>
 
           <div className="flex flex-wrap gap-3">

@@ -3,7 +3,8 @@
  * history / active bookings / queue counts / branches.
  */
 import { createClient } from '@supabase/supabase-js'
-import { getQueueCounts } from '../src/queue/queueLogic.js'
+import { getQueueCounts, buildVisitProgress, formatQueueNumber } from '../src/queue/queueLogic.js'
+import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
 
 function adminClient() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -34,7 +35,7 @@ export async function loadCustomerPortal({ accessToken }) {
 
   if (!isCustomer) throw Object.assign(new Error('Customer account required.'), { status: 403 })
 
-  const [branches, history, active, queue] = await Promise.all([
+  const [branches, history, active, queue, loyaltySettings, loyaltyMilestones, customerRow] = await Promise.all([
     admin.from('branches').select('slug, name, address, is_active').eq('is_active', true).eq('is_archived', false).order('name'),
     admin
       .from('bookings')
@@ -44,7 +45,7 @@ export async function loadCustomerPortal({ accessToken }) {
       .limit(40),
     admin
       .from('bookings')
-      .select('id, branch, status, vehicle_plate, scheduled_start, notes, final_price_minor')
+      .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, final_price_minor, queue_number, service_id, services(name)')
       .eq('customer_id', userId)
       .in('status', ['waiting', 'in_progress', 'final_checking', 'for_payment'])
       .order('scheduled_start', { ascending: true }),
@@ -53,6 +54,9 @@ export async function loadCustomerPortal({ accessToken }) {
       .select('id, branch, status')
       .in('status', ['waiting', 'in_progress', 'final_checking'])
       .eq('is_archived', false),
+    admin.from('loyalty_program_settings').select('card_slots').eq('id', 1).maybeSingle(),
+    admin.from('loyalty_milestones').select('id, threshold_points, reward_label, reward_description, sort_order').eq('is_active', true).order('sort_order').order('threshold_points'),
+    admin.from('customers').select('loyalty_stamps, loyalty_points').eq('id', userId).maybeSingle(),
   ])
 
   const queueRows = queue.data || []
@@ -65,6 +69,19 @@ export async function loadCustomerPortal({ accessToken }) {
     Object.entries(queueByBranch).map(([slug, rows]) => [slug, getQueueCounts(rows)]),
   )
 
+  const loyalty = buildLoyaltyProgress(
+    customerRow.data?.loyalty_stamps ?? 0,
+    loyaltyMilestones.data || [],
+    loyaltySettings.data?.card_slots ?? 15,
+  )
+
+  const activeBookings = (active.data || []).map((row) => ({
+    ...row,
+    service_name: row.services?.name || null,
+    queue_label: row.queue_number != null ? formatQueueNumber(row.queue_number) : null,
+    visit: buildVisitProgress(row.status),
+  }))
+
   return {
     profile: customer || {
       id: userId,
@@ -75,8 +92,13 @@ export async function loadCustomerPortal({ accessToken }) {
     },
     branches: branches.data || [],
     history: history.data || [],
-    bookings: active.data || [],
+    bookings: activeBookings,
     queueCounts,
+    loyalty: {
+      ...loyalty,
+      loyaltyPoints: customerRow.data?.loyalty_points ?? 0,
+      milestones: loyaltyMilestones.data || [],
+    },
   }
 }
 

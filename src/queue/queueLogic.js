@@ -8,7 +8,7 @@ import {
 
 export const ACTIVE_QUEUE_STATUSES = ['waiting', 'in_progress', 'final_checking']
 export const WORKFLOW_STATUSES = [...ACTIVE_QUEUE_STATUSES, 'for_payment']
-export const VALID_BRANCH_SLUGS = ['bacoor', 'batangas']
+// Branch slugs are validated against public.branches at runtime — no static list.
 export const VALID_VEHICLE_TYPES = ['sedan', 'suv', 'pickup', 'van', 'motorcycle', 'other']
 export const BOSS_MICH_ROLE = ROLES.SUPER_ADMIN
 export const QUEUE_EDITOR_ROLES = PERM_QUEUE_EDITOR_ROLES
@@ -25,6 +25,22 @@ export const STATUS_LABELS = {
   for_payment: 'For Payment',
   completed: 'Completed',
   cancelled: 'Cancelled',
+  pending: 'Pending',
+}
+
+export const VISIT_PROGRESS_STEPS = ['waiting', 'in_progress', 'final_checking', 'for_payment']
+
+/** Customer-facing visit stepper — public status only, no internal ops data. */
+export function buildVisitProgress(status) {
+  const normalized = String(status || 'waiting').toLowerCase()
+  const idx = VISIT_PROGRESS_STEPS.indexOf(normalized)
+  const currentIndex = idx >= 0 ? idx : normalized === 'completed' ? VISIT_PROGRESS_STEPS.length : 0
+  return {
+    steps: VISIT_PROGRESS_STEPS.map((key) => ({ key, label: STATUS_LABELS[key] || key })),
+    currentIndex,
+    label: STATUS_LABELS[normalized] || normalized,
+    isComplete: normalized === 'completed',
+  }
 }
 
 const ACTIVE_SET = new Set(ACTIVE_QUEUE_STATUSES)

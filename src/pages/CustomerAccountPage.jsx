@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import LoyaltyCard from '@/components/LoyaltyCard'
 
 async function fetchPortal() {
   const { data: sessionData } = await supabase.auth.getSession()
@@ -33,6 +34,7 @@ export default function CustomerAccountPage() {
   const [queueCounts, setQueueCounts] = useState({})
   const [history, setHistory] = useState([])
   const [bookings, setBookings] = useState([])
+  const [loyalty, setLoyalty] = useState(null)
   const [loading, setLoading] = useState(true)
   const [geoNote, setGeoNote] = useState('')
   const [error, setError] = useState('')
@@ -46,6 +48,7 @@ export default function CustomerAccountPage() {
       setHistory(data.history || [])
       setBookings(data.bookings || [])
       setQueueCounts(data.queueCounts || {})
+      setLoyalty(data.loyalty || null)
       setSelectedBranch((current) => current || data.branches?.[0]?.slug || '')
     } catch (err) {
       setError(err.message)
@@ -111,6 +114,17 @@ export default function CustomerAccountPage() {
 
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
         {error ? <p className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">{error}</p> : null}
+
+        {loading ? (
+          <Skeleton className="h-64 w-full rounded-[2rem]" />
+        ) : loyalty ? (
+          <LoyaltyCard
+            completed={loyalty.completed}
+            cardSlots={loyalty.cardSlots}
+            milestones={loyalty.milestones}
+            encouragement={loyalty.encouragement}
+          />
+        ) : null}
 
         <Card className="border-white/10 bg-[#111820]">
           <CardHeader className="gap-3">
@@ -196,31 +210,57 @@ export default function CustomerAccountPage() {
             <Card className="border-white/10 bg-[#111820]">
               <CardHeader>
                 <CardTitle className="text-base">Your bookings in progress</CardTitle>
+                <CardDescription>Queue number and live status for your vehicle</CardDescription>
               </CardHeader>
-              <CardContent className="overflow-x-auto">
+              <CardContent className="space-y-4">
                 {loading ? <Skeleton className="h-24 w-full" /> : bookings.length === 0 ? (
                   <p className="text-sm text-slate-400">No active visits. Walk in or book from the public site.</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Plate</TableHead>
-                        <TableHead>Branch</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Est.</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {bookings.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell className="font-medium">{row.vehicle_plate || '—'}</TableCell>
-                          <TableCell>{row.branch}</TableCell>
-                          <TableCell><Badge variant="secondary">{row.status}</Badge></TableCell>
-                          <TableCell className="text-right">{formatMoney(row.final_price_minor)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  bookings.map((row) => {
+                    const visit = row.visit || { steps: [], currentIndex: 0, label: row.status, isComplete: false }
+                    return (
+                      <div key={row.id} className="rounded-xl border border-white/10 bg-[#0d1218] p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-lg font-semibold tracking-wide text-white">{row.vehicle_plate || '—'}</p>
+                            <p className="text-xs text-slate-400">
+                              {[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ') || row.service_name || 'Service visit'}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">{row.branch}</p>
+                          </div>
+                          <div className="text-right">
+                            {row.queue_label ? (
+                              <p className="text-2xl font-bold text-blue-300">{row.queue_label}</p>
+                            ) : (
+                              <p className="text-sm text-slate-500">Queue pending</p>
+                            )}
+                            <Badge variant="secondary" className="mt-1">{visit.label || row.status}</Badge>
+                          </div>
+                        </div>
+                        <ol className="mt-4 grid gap-2 sm:grid-cols-4">
+                          {visit.steps.map((step, idx) => {
+                            const done = visit.isComplete || idx < visit.currentIndex
+                            const current = !visit.isComplete && idx === visit.currentIndex
+                            return (
+                              <li
+                                key={step.key}
+                                className={`rounded-lg border px-2 py-2 text-center text-[11px] leading-tight ${
+                                  done ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                                    : current ? 'border-blue-400/50 bg-blue-500/15 text-blue-100'
+                                      : 'border-white/5 text-slate-500'
+                                }`}
+                              >
+                                {step.label}
+                              </li>
+                            )
+                          })}
+                        </ol>
+                        {row.final_price_minor != null ? (
+                          <p className="mt-3 text-right text-xs text-slate-400">Est. {formatMoney(row.final_price_minor)}</p>
+                        ) : null}
+                      </div>
+                    )
+                  })
                 )}
               </CardContent>
             </Card>

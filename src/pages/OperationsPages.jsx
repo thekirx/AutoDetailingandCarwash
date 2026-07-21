@@ -534,7 +534,7 @@ export function NewQueueTicketPage() {
 }
 
 export function CrewPage() {
-  const { profile, canManageQueue, canViewQueueOperations } = useAuth()
+  const { profile, canManageCrew, canViewQueueOperations } = useAuth()
   const { staffPool, availableStaff, busyStaff, loading, error, reload } = useOperationsSnapshot()
   const [form, setForm] = useState({ full_name: '', phone: '', branch_slug: getBranchScope(profile) || '', present_today: true })
   const [branches, setBranches] = useState([])
@@ -583,7 +583,7 @@ export function CrewPage() {
       {actionError && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{actionError}</p>}
       <div className="mt-8 grid gap-6 xl:grid-cols-[.9fr_1.1fr]">
         <Panel title="Staff Pool" icon={UserPlus}>
-          {canManageQueue && (
+          {canManageCrew && (
             <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-[1fr_160px_auto]">
               <input value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} required placeholder="Staff name" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
               <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Phone" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
@@ -602,7 +602,7 @@ export function CrewPage() {
           </div>
           <StaffPoolList
             rows={staffPool}
-            canManage={canManageQueue}
+            canManage={canManageCrew}
             saving={saving}
             onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
             onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
@@ -696,46 +696,78 @@ export function KpiPage() {
 }
 
 export function MyTasksPage() {
-  const { user } = useAuth()
+  const { user, profile, canViewAssignedTasks } = useAuth()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
   const load = useCallback(async () => {
+    if (!user?.id) return
     setError('')
-    const { data, error } = await supabase
+    setLoading(true)
+    const { data, error: qError } = await supabase
       .from('queue_assignments')
-      .select('id, booking_id, task_name, task_notes, status, started_at, completed_at, released_at, created_at')
+      .select('id, booking_id, task_name, task_notes, status, started_at, completed_at, released_at, created_at, bookings(vehicle_plate, branch, status, queue_number)')
       .eq('staff_id', user.id)
+      .in('status', ['active', 'pending'])
       .order('created_at', { ascending: false })
-    if (error) setError(error.message)
+    if (qError) setError(qError.message)
     else setRows(data || [])
     setLoading(false)
-  }, [user.id])
+  }, [user?.id])
+
   useEffect(() => { load() }, [load])
 
+  if (!canViewAssignedTasks) return <Navigate to="/operations/access-denied" replace />
+
   const markInProgress = async (assignment) => {
-    const { error } = await supabase.from('queue_assignments').update({ status: 'active', started_at: assignment.started_at || new Date().toISOString() }).eq('id', assignment.id)
-    if (error) setError(error.message)
+    const { error: uError } = await supabase
+      .from('queue_assignments')
+      .update({ status: 'active', started_at: assignment.started_at || new Date().toISOString() })
+      .eq('id', assignment.id)
+    if (uError) setError(uError.message)
     else load()
   }
 
   if (error) return <ErrorState error={error} onRetry={load} />
   return (
-    <section>
-      <PageHeader eyebrow="My Tasks" title="Assigned work" description="Staff task view. Staff can see their own assignments but cannot manage the full queue or send tickets to payment." action={<RefreshButton loading={loading} onClick={load} />} />
-      <div className="mt-8 grid gap-4">
-        {rows.length ? rows.map((row) => (
-          <article key={row.id} className="rounded-3xl border border-white/10 bg-[#0d1726] p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-semibold">{row.task_name || 'Queue service task'}</p>
-                <p className="mt-1 text-xs text-slate-500">Ticket {row.booking_id} · <span className="capitalize">{row.status}</span></p>
+    <section className="px-1 sm:px-0">
+      <PageHeader eyebrow="My Tasks" title="Assigned work" description="Your active vehicle assignments. Tap a ticket to see floor details when available." action={<RefreshButton loading={loading} onClick={load} />} />
+      <div className="mt-6 grid gap-4 sm:mt-8">
+        {rows.length ? rows.map((row) => {
+          const booking = row.bookings
+          return (
+            <article key={row.id} className="rounded-3xl border border-white/10 bg-[#0d1726] p-4 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-lg font-semibold">{row.task_name || 'Queue service task'}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {booking?.vehicle_plate ? `${booking.vehicle_plate} · ` : ''}
+                    {booking?.branch || '—'}
+                    {booking?.queue_number ? ` · #${formatQueueNumber(booking.queue_number)}` : ''}
+                  </p>
+                  <p className="mt-1 text-xs capitalize text-slate-400">{row.status}{booking?.status ? ` · ticket ${booking.status}` : ''}</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  {row.booking_id && (profile?.role !== 'staff') && (
+                    <Link to={`/operations/queue/${row.booking_id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 no-underline">
+                      Open ticket
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    disabled={row.status === 'active'}
+                    onClick={() => markInProgress(row)}
+                    className="min-h-11 rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {row.status === 'active' ? 'In progress' : 'Acknowledge'}
+                  </button>
+                </div>
               </div>
-              <button disabled={row.status !== 'active'} onClick={() => markInProgress(row)} className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40">Acknowledge</button>
-            </div>
-            {row.task_notes && <p className="mt-4 text-sm text-slate-400">{row.task_notes}</p>}
-          </article>
-        )) : <EmptyLine text="No assigned tasks." />}
+              {row.task_notes && <p className="mt-4 text-sm text-slate-400">{row.task_notes}</p>}
+            </article>
+          )
+        }) : <EmptyLine text={loading ? 'Loading tasks…' : 'No assigned tasks right now.'} />}
       </div>
     </section>
   )

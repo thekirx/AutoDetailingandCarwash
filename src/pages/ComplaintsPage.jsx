@@ -1,16 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { usePublicBranches } from '@/lib/branches'
 
 export default function ComplaintsPage() {
+  const { branches, loading: branchesLoading } = usePublicBranches()
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     customer_name: '',
-    branch: 'bacoor',
+    branch: '',
     category: 'Service quality',
     description: '',
   })
+
+  useEffect(() => {
+    if (!form.branch && branches[0]?.slug) {
+      setForm((f) => ({ ...f, branch: branches[0].slug }))
+    }
+  }, [branches, form.branch])
 
   async function submit(event) {
     event.preventDefault()
@@ -57,9 +65,9 @@ export default function ComplaintsPage() {
         <form onSubmit={submit} className="booking-form">
           <label>Customer name<input required value={form.customer_name} onChange={update('customer_name')} /></label>
           <label>Branch
-            <select required value={form.branch} onChange={update('branch')}>
-              <option value="bacoor">Bacoor</option>
-              <option value="batangas">Batangas</option>
+            <select required value={form.branch} onChange={update('branch')} disabled={branchesLoading}>
+              <option value="">Select branch</option>
+              {branches.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
             </select>
           </label>
           <label>Category
@@ -73,7 +81,7 @@ export default function ComplaintsPage() {
           </label>
           <label>Description<textarea required value={form.description} onChange={update('description')} /></label>
           {error && <p className="form-error">{error}</p>}
-          <button disabled={status === 'loading'} className="button button-blue">{status === 'loading' ? 'Submitting…' : 'Submit complaint'}</button>
+          <button disabled={status === 'loading' || branchesLoading || !form.branch} className="button button-blue">{status === 'loading' ? 'Submitting…' : 'Submit complaint'}</button>
         </form>
       </div>
     </section>

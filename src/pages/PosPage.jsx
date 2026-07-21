@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { Search, ShoppingCart, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessPos } from '@/auth/permissions'
+import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { Button } from '@/components/ui/button'
@@ -20,7 +21,8 @@ export default function PosPage() {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [cart, setCart] = useState([])
-  const [branch, setBranch] = useState(profile?.branch_slug || 'bacoor')
+  const [branch, setBranch] = useState(profile?.branch_slug || '')
+  const [branches, setBranches] = useState([])
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [customerId, setCustomerId] = useState('')
   const [customers, setCustomers] = useState([])
@@ -45,6 +47,16 @@ export default function PosPage() {
   }, [branch])
 
   useEffect(() => {
+    listBranches()
+      .then((rows) => {
+        setBranches(rows)
+        setBranch((current) => current || profile?.branch_slug || rows[0]?.slug || '')
+      })
+      .catch((err) => toast.error(err.message))
+  }, [profile?.branch_slug])
+
+  useEffect(() => {
+    if (!branch) return
     load()
     const channel = supabase
       .channel('pos-sales')
@@ -53,7 +65,7 @@ export default function PosPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [load])
+  }, [load, branch])
 
   const catalog = useMemo(() => {
     const serviceItems = (services || []).map((s) => ({
@@ -162,11 +174,10 @@ export default function PosPage() {
             <SelectItem value="general">General</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={branch} onValueChange={setBranch}>
-          <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+        <Select value={branch} onValueChange={setBranch} disabled={!branches.length}>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Branch" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="bacoor">Bacoor</SelectItem>
-            <SelectItem value="batangas">Batangas</SelectItem>
+            {branches.map((b) => <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>

@@ -2,8 +2,12 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   validateBranchInput,
+  validateLoyaltyMilestoneInput,
+  validateLoyaltyProgramSettings,
+  validateMembershipTierInput,
   validateProvisionStaffInput,
   validateServiceInput,
+  validateServiceLoyaltyWeight,
   validateStaffUpdate,
 } from '../src/lib/opsValidation.js'
 
@@ -43,5 +47,32 @@ describe('ops CRUD validation', () => {
       branch_slug: 'bacoor',
     })
     assert.equal(v.email, 'tl@hakum.com')
+  })
+
+  it('validates membership tiers and loyalty milestones', () => {
+    assert.throws(() => validateMembershipTierInput({ name: '', starting_price: '100' }), /name/)
+    const tier = validateMembershipTierInput({
+      name: 'Gold',
+      starting_price: '9999',
+      discount_percent: '10',
+      loyalty_multiplier: '1.5',
+      benefits: 'Priority\nPromos',
+      included_services: 'Premium Car Wash',
+    })
+    assert.equal(tier.starting_price_minor, 999900)
+    assert.deepEqual(tier.benefits, ['Priority', 'Promos'])
+
+    assert.throws(() => validateLoyaltyMilestoneInput({ threshold_points: '0', reward_label: 'X' }), /Threshold/)
+    const milestone = validateLoyaltyMilestoneInput({
+      threshold_points: '10',
+      reward_label: 'Free wash',
+      reward_description: 'Standard wash',
+      sort_order: '1',
+    })
+    assert.equal(milestone.threshold_points, 10)
+
+    assert.throws(() => validateLoyaltyProgramSettings({ card_slots: '3' }), /between 5 and 50/)
+    assert.throws(() => validateServiceLoyaltyWeight('101'), /0 to 100/)
+    assert.equal(validateServiceLoyaltyWeight('3'), 3)
   })
 })

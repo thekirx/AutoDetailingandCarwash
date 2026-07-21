@@ -81,6 +81,87 @@ export function validateStaffUpdate({ id, full_name, role, branch_slug, phone })
   }
 }
 
+export function validateMembershipTierInput({
+  name,
+  starting_price,
+  discount_percent,
+  loyalty_multiplier,
+  benefits,
+  included_services,
+}) {
+  const trimmedName = String(name || '').trim()
+  if (!trimmedName) throw new Error('Tier name is required.')
+
+  const priceNum = Number(starting_price)
+  if (!Number.isFinite(priceNum) || priceNum < 0) throw new Error('Starting price must be 0 or greater.')
+
+  const discount = Number(discount_percent)
+  if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
+    throw new Error('Discount must be between 0 and 100.')
+  }
+
+  const multiplier = Number(loyalty_multiplier)
+  if (!Number.isFinite(multiplier) || multiplier < 0 || multiplier > 10) {
+    throw new Error('Loyalty multiplier must be between 0 and 10.')
+  }
+
+  const benefitList = Array.isArray(benefits)
+    ? benefits.map((b) => String(b).trim()).filter(Boolean)
+    : String(benefits || '')
+        .split(/[\n,]/)
+        .map((b) => b.trim())
+        .filter(Boolean)
+
+  const includedList = Array.isArray(included_services)
+    ? included_services.map((s) => String(s).trim()).filter(Boolean)
+    : String(included_services || '')
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+  return {
+    name: trimmedName,
+    starting_price_minor: Math.round(priceNum * 100),
+    discount_percent: discount,
+    loyalty_multiplier: multiplier,
+    benefits: benefitList,
+    included_services: includedList,
+  }
+}
+
+export function validateLoyaltyMilestoneInput({ threshold_points, reward_label, reward_description, sort_order }) {
+  const threshold = Number(threshold_points)
+  if (!Number.isFinite(threshold) || threshold <= 0 || !Number.isInteger(threshold)) {
+    throw new Error('Threshold must be a whole number greater than 0.')
+  }
+  const label = String(reward_label || '').trim()
+  if (!label) throw new Error('Reward label is required.')
+  const order = sort_order == null || sort_order === '' ? 0 : Number(sort_order)
+  if (!Number.isFinite(order) || order < 0) throw new Error('Sort order must be 0 or greater.')
+  return {
+    threshold_points: threshold,
+    reward_label: label,
+    reward_description: String(reward_description || '').trim() || null,
+    sort_order: order,
+  }
+}
+
+export function validateLoyaltyProgramSettings({ card_slots }) {
+  const slots = Number(card_slots)
+  if (!Number.isFinite(slots) || slots < 5 || slots > 50 || !Number.isInteger(slots)) {
+    throw new Error('Card slots must be a whole number between 5 and 50.')
+  }
+  return { card_slots: slots }
+}
+
+export function validateServiceLoyaltyWeight(weight) {
+  const n = Number(weight)
+  if (!Number.isFinite(n) || n < 0 || n > 100 || !Number.isInteger(n)) {
+    throw new Error('Loyalty score must be a whole number from 0 to 100.')
+  }
+  return n
+}
+
 export function validateProvisionStaffInput({ email, full_name, role, branch_slug, phone }) {
   const trimmedEmail = String(email || '').trim().toLowerCase()
   if (!EMAIL_RE.test(trimmedEmail)) throw new Error('Valid email is required.')

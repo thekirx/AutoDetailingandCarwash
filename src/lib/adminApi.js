@@ -3,8 +3,12 @@ import { getBranchScope } from '../queue/queueLogic'
 import { writeAudit } from './audit'
 import {
   validateBranchInput,
+  validateLoyaltyMilestoneInput,
+  validateLoyaltyProgramSettings,
+  validateMembershipTierInput,
   validateProvisionStaffInput,
   validateServiceInput,
+  validateServiceLoyaltyWeight,
   validateStaffUpdate,
 } from './opsValidation'
 
@@ -149,7 +153,7 @@ export async function provisionStaff(payload) {
 export async function listServices({ includeArchived = false } = {}) {
   let q = supabase
     .from('services')
-    .select('id, name, slug, description, price_minor, duration_minutes, is_active, is_archived, display_order')
+    .select('id, name, slug, description, price_minor, duration_minutes, is_active, is_archived, display_order, loyalty_weight')
     .order('display_order')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
@@ -323,4 +327,199 @@ export async function fetchAdminConsoleSnapshot(profile, branchFilter = 'all') {
 
 export function formatPeso(minor) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(minor || 0) / 100)
+}
+
+export async function listMembershipTiers({ includeInactive = true } = {}) {
+  let q = supabase.from('membership_tiers').select('*').order('starting_price_minor')
+  if (!includeInactive) q = q.eq('is_active', true)
+  const { data, error } = await q
+  if (error) throw mapDbError(error)
+  return data || []
+}
+
+export async function createMembershipTier(input) {
+  const v = validateMembershipTierInput(input)
+  const { data, error } = await supabase
+    .from('membership_tiers')
+    .insert({ ...v, is_active: true })
+    .select()
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'create',
+    entityType: 'membership_tier',
+    entityId: data?.id,
+    summary: `Created membership tier ${data?.name}`,
+  })
+  return data
+}
+
+export async function updateMembershipTier(id, input) {
+  if (!id) throw new Error('Tier id is required.')
+  const v = validateMembershipTierInput(input)
+  const patch = { ...v }
+  if (input.is_active !== undefined) patch.is_active = input.is_active
+  const { data, error } = await supabase.from('membership_tiers').update(patch).eq('id', id).select().maybeSingle()
+  if (error) throw mapDbError(error)
+  if (!data) throw new Error('Membership tier not found.')
+  await writeAudit({
+    action: 'update',
+    entityType: 'membership_tier',
+    entityId: id,
+    summary: `Updated membership tier ${data.name}`,
+    meta: { is_active: data.is_active },
+  })
+  return data
+}
+
+export async function listLoyaltyMilestones({ includeInactive = false } = {}) {
+  let q = supabase.from('loyalty_milestones').select('*').order('sort_order').order('threshold_points')
+  if (!includeInactive) q = q.eq('is_active', true)
+  const { data, error } = await q
+  if (error) throw mapDbError(error)
+  return data || []
+}
+
+export async function createLoyaltyMilestone(input) {
+  const v = validateLoyaltyMilestoneInput(input)
+  const { data, error } = await supabase
+    .from('loyalty_milestones')
+    .insert({ ...v, is_active: true })
+    .select()
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'create',
+    entityType: 'loyalty_milestone',
+    entityId: data?.id,
+    summary: `Created loyalty milestone at ${data?.threshold_points} points`,
+  })
+  return data
+}
+
+export async function updateLoyaltyMilestone(id, input) {
+  if (!id) throw new Error('Milestone id is required.')
+  const v = validateLoyaltyMilestoneInput(input)
+  const patch = { ...v }
+  if (input.is_active !== undefined) patch.is_active = input.is_active
+  const { data, error } = await supabase.from('loyalty_milestones').update(patch).eq('id', id).select().maybeSingle()
+  if (error) throw mapDbError(error)
+  if (!data) throw new Error('Milestone not found.')
+  await writeAudit({
+    action: 'update',
+    entityType: 'loyalty_milestone',
+    entityId: id,
+    summary: `Updated loyalty milestone ${data.reward_label}`,
+  })
+  return data
+}
+
+export async function getLoyaltyProgramSettings() {
+  const { data, error } = await supabase.from('loyalty_program_settings').select('*').eq('id', 1).maybeSingle()
+  if (error) throw mapDbError(error)
+  return data || { id: 1, card_slots: 15 }
+}
+
+export async function updateLoyaltyProgramSettings(input) {
+  const v = validateLoyaltyProgramSettings(input)
+  const { data, error } = await supabase
+    .from('loyalty_program_settings')
+    .upsert({ id: 1, ...v, updated_at: new Date().toISOString() })
+    .select()
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'update',
+    entityType: 'loyalty_program',
+    entityId: '1',
+    summary: `Updated loyalty card slots to ${data?.card_slots}`,
+  })
+  return data
+}
+
+export async function updateServiceLoyaltyWeight(id, weight) {
+  if (!id) throw new Error('Service id is required.')
+  const loyalty_weight = validateServiceLoyaltyWeight(weight)
+  const { data, error } = await supabase
+    .from('services')
+    .update({ loyalty_weight, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id, name, loyalty_weight')
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  if (!data) throw new Error('Service not found.')
+  await writeAudit({
+    action: 'update',
+    entityType: 'service',
+    entityId: id,
+    summary: `Set loyalty score for ${data.name} to ${loyalty_weight}`,
+    meta: { loyalty_weight },
+  })
+  return data
+}
+
+export async function assignCustomerMembership({ customer_id, tier_id, starts_at, ends_at }) {
+  if (!customer_id || !tier_id) throw new Error('Customer and tier are required.')
+  const { data: existing } = await supabase
+    .from('customer_memberships')
+    .select('id')
+    .eq('customer_id', customer_id)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (existing?.id) {
+    const { data, error } = await supabase
+      .from('customer_memberships')
+      .update({
+        tier_id,
+        starts_at: starts_at || new Date().toISOString().slice(0, 10),
+        ends_at: ends_at || null,
+        is_active: true,
+      })
+      .eq('id', existing.id)
+      .select()
+      .maybeSingle()
+    if (error) throw mapDbError(error)
+    await writeAudit({
+      action: 'update',
+      entityType: 'customer_membership',
+      entityId: data?.id,
+      summary: 'Updated customer membership tier',
+      meta: { customer_id, tier_id },
+    })
+    return data
+  }
+
+  const { data, error } = await supabase
+    .from('customer_memberships')
+    .insert({
+      customer_id,
+      tier_id,
+      starts_at: starts_at || new Date().toISOString().slice(0, 10),
+      ends_at: ends_at || null,
+      is_active: true,
+    })
+    .select()
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'create',
+    entityType: 'customer_membership',
+    entityId: data?.id,
+    summary: 'Assigned customer membership tier',
+    meta: { customer_id, tier_id },
+  })
+  return data
+}
+
+export async function listCustomersForMembership(limit = 50) {
+  const { data, error } = await supabase
+    .from('customers')
+    .select('id, full_name, email, phone, loyalty_stamps, loyalty_points')
+    .eq('role', 'customer')
+    .eq('is_archived', false)
+    .order('full_name')
+    .limit(limit)
+  if (error) throw mapDbError(error)
+  return data || []
 }

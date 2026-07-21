@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessFinance } from '@/auth/permissions'
+import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { Button } from '@/components/ui/button'
@@ -19,28 +20,35 @@ export default function FinancePage() {
   const [categories, setCategories] = useState([])
   const [expenses, setExpenses] = useState([])
   const [branchSummary, setBranchSummary] = useState([])
+  const [branches, setBranches] = useState([])
   const [form, setForm] = useState({
     title: '',
     description: '',
     quantity: '1',
     unit_cost: '',
-    branch: 'bacoor',
+    branch: '',
     category_id: '',
   })
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
     const today = new Date().toISOString().slice(0, 10)
-    const [cats, rows, sales] = await Promise.all([
+    const [cats, rows, sales, branchRows] = await Promise.all([
       supabase.from('expense_categories').select('id, name, is_chemical').order('name'),
       supabase.from('expenses').select('id, title, total_minor, branch, status, category_id, created_at').order('created_at', { ascending: false }).limit(40),
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today),
+      listBranches(),
     ])
     setCategories(cats.data || [])
     setExpenses(rows.data || [])
     setBranchSummary(sales.data || [])
-    setForm((f) => (f.category_id || !cats.data?.[0] ? f : { ...f, category_id: cats.data[0].id }))
-  }, [])
+    setBranches(branchRows || [])
+    setForm((f) => ({
+      ...f,
+      category_id: f.category_id || cats.data?.[0]?.id || '',
+      branch: f.branch || branchRows?.[0]?.slug || profile?.branch_slug || '',
+    }))
+  }, [profile?.branch_slug])
 
   useEffect(() => {
     load()
@@ -144,10 +152,9 @@ export default function FinancePage() {
             <div className="flex flex-col gap-2">
               <Label>Branch</Label>
               <Select value={form.branch} onValueChange={(v) => setForm({ ...form, branch: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Branch" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bacoor">Bacoor</SelectItem>
-                  <SelectItem value="batangas">Batangas</SelectItem>
+                  {branches.map((b) => <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
