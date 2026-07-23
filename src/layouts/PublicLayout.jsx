@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowRight, ArrowUpRight, Facebook, Instagram, Mail, MapPin, Menu, Phone, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import PublicPageMeta from '@/components/PublicPageMeta'
+import { usePublicBranches } from '@/lib/branches'
 
 const navItems = [
   ['Main', '/'],
@@ -16,8 +17,11 @@ const navItems = [
 export default function PublicLayout() {
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
+  const { branches } = usePublicBranches({ mode: 'visible' })
 
   useEffect(() => setOpen(false), [pathname])
+
+  const footerCities = branches.map((b) => b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name).join(' · ') || 'Philippines'
 
   return (
     <div className="public-site">
@@ -114,18 +118,21 @@ export default function PublicLayout() {
 
           <div className="footer-branches">
             <h3>Our branches</h3>
-            <Link to="/branches">
-              <span>01</span>
-              <strong>Bacoor</strong>
-              <small>RFC Mall, Cavite</small>
-              <ArrowUpRight />
-            </Link>
-            <Link to="/branches">
-              <span>02</span>
-              <strong>Batangas</strong>
-              <small>Batangas City</small>
-              <ArrowUpRight />
-            </Link>
+            {branches.length ? branches.map((b, i) => (
+              <Link key={b.slug} to={b.coming_soon ? '/branches' : `/queue/${b.slug}`}>
+                <span>{String(i + 1).padStart(2, '0')}</span>
+                <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name}</strong>
+                <small>{b.coming_soon ? 'Coming soon' : (b.address || b.slug)}</small>
+                <ArrowUpRight />
+              </Link>
+            )) : (
+              <Link to="/branches">
+                <span>01</span>
+                <strong>Find a branch</strong>
+                <small>Locations across the Philippines</small>
+                <ArrowUpRight />
+              </Link>
+            )}
           </div>
 
           <div className="footer-contact">
@@ -149,7 +156,7 @@ export default function PublicLayout() {
             <Link to="/complaints">Submit a complaint</Link>
             <span>
               <MapPin />
-              Bacoor · Batangas
+              {footerCities}
             </span>
           </div>
         </div>

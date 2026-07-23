@@ -614,6 +614,8 @@ button { cursor: pointer; }
 .legal-back a { color:#052699; font-weight:600; text-decoration:none; }
 .legal-back a:hover { text-decoration:underline; }
 .not-found-actions { margin-top:2rem; display:flex; flex-wrap:wrap; gap:14px 20px; align-items:center; }
+.branch-location-map { z-index:0; }
+.branch-location-map .leaflet-container { height:100%; width:100%; font: inherit; }
 
 @layer base {
   * {

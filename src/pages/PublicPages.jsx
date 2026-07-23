@@ -18,7 +18,7 @@ export function PackagesPage(){return <><PageHero eyebrow="Protection packages" 
 function Package({title,icon:Icon,plans}){return <article className="package-card"><Icon/><p className="eyebrow">Protection system</p><h2>{title}</h2>{plans.map((p,i)=><div className="plan-row" key={p}><span>0{i+1}</span><strong>{p}</strong><Link to="/book"><ArrowRight/></Link></div>)}</article>}
 
 export function BranchesPage() {
-  const { branches, loading, error } = usePublicBranches()
+  const { branches, loading, error } = usePublicBranches({ mode: 'visible' })
   return (
     <PageHero
       eyebrow="Find Hakum"
@@ -30,14 +30,42 @@ export function BranchesPage() {
           {error && <p className="form-error">{error}</p>}
           {loading && <p className="text-slate-400">Loading branches…</p>}
           {branches.map((b) => (
-            <Branch key={b.slug} city={b.name} address={b.address || '—'} queueTo={`/queue/${b.slug}`} />
+            <Branch
+              key={b.slug}
+              city={b.name}
+              address={b.address || '—'}
+              comingSoon={Boolean(b.coming_soon)}
+              queueTo={`/queue/${b.slug}`}
+              mapsUrl={b.latitude != null ? `https://www.openstreetmap.org/?mlat=${b.latitude}&mlon=${b.longitude}#map=16/${b.latitude}/${b.longitude}` : null}
+            />
           ))}
-          {!loading && !branches.length && <p className="text-slate-400">No active branches listed yet.</p>}
+          {!loading && !branches.length && <p className="text-slate-400">No branches listed yet.</p>}
         </div>
       </section>
     </PageHero>
   )
 }
-function Branch({city,address,queueTo}){return <article><div className="branch-map"><MapPin/></div><p className="eyebrow">Hakum Auto Care</p><h2>{city}</h2><p>{address}</p><span><Clock3/> Open daily · Queue varies</span><div><Link className="button button-blue" to="/book">Book this branch</Link><Link className="dark-link" to={queueTo}>View queue <ArrowRight/></Link></div></article>}
+function Branch({ city, address, queueTo, comingSoon, mapsUrl }) {
+  return (
+    <article>
+      <div className="branch-map"><MapPin /></div>
+      <p className="eyebrow">Hakum Auto Care{comingSoon ? ' · Coming soon' : ''}</p>
+      <h2>{city}</h2>
+      <p>{address}</p>
+      <span><Clock3 /> {comingSoon ? 'Opening soon' : 'Open daily · Queue varies'}</span>
+      <div>
+        {comingSoon ? (
+          <Link className="button button-blue" to="/contact">Ask about opening</Link>
+        ) : (
+          <>
+            <Link className="button button-blue" to="/book">Book this branch</Link>
+            <Link className="dark-link" to={queueTo}>View queue <ArrowRight /></Link>
+          </>
+        )}
+        {mapsUrl ? <a className="dark-link" href={mapsUrl} target="_blank" rel="noreferrer">Map <ArrowRight /></a> : null}
+      </div>
+    </article>
+  )
+}
 
 function PageHero({eyebrow,title,copy,children}){return <><section className="inner-hero"><div className="public-shell"><p className="eyebrow eyebrow-light">{eyebrow}</p><h1 className="display-title">{title}</h1><p className="inner-hero-copy">{copy}</p></div></section>{children}</>}

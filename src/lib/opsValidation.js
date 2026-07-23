@@ -5,7 +5,10 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const BRANCH_CODE_RE = /^[A-Z]{2,5}$/
 const EDITABLE_ROLES = new Set(['admin', 'team_lead', 'staff', 'cashier', 'marketing', 'sales'])
 
-export function validateBranchInput({ name, slug, code, address }, { requireSlug = true } = {}) {
+export function validateBranchInput(
+  { name, slug, code, address, latitude, longitude, coming_soon, is_active, status },
+  { requireSlug = true } = {},
+) {
   const errors = []
   const trimmedName = String(name || '').trim()
   if (!trimmedName) errors.push('Branch name is required.')
@@ -16,12 +19,38 @@ export function validateBranchInput({ name, slug, code, address }, { requireSlug
   }
   const normalizedCode = String(code || '').trim().toUpperCase()
   if (!BRANCH_CODE_RE.test(normalizedCode)) errors.push('Code must be 2–5 uppercase letters.')
+
+  let lat = latitude === '' || latitude == null ? null : Number(latitude)
+  let lng = longitude === '' || longitude == null ? null : Number(longitude)
+  if (lat != null && (!Number.isFinite(lat) || lat < -90 || lat > 90)) errors.push('Latitude must be between -90 and 90.')
+  if (lng != null && (!Number.isFinite(lng) || lng < -180 || lng > 180)) errors.push('Longitude must be between -180 and 180.')
+  if ((lat == null) !== (lng == null)) errors.push('Set both latitude and longitude, or clear both.')
+
+  // status: active | coming_soon | inactive — maps to flags
+  let comingSoon = Boolean(coming_soon)
+  let isActive = is_active == null ? true : Boolean(is_active)
+  if (status === 'coming_soon') {
+    comingSoon = true
+    isActive = false
+  } else if (status === 'inactive') {
+    comingSoon = false
+    isActive = false
+  } else if (status === 'active') {
+    comingSoon = false
+    isActive = true
+  }
+  if (comingSoon) isActive = false
+
   if (errors.length) throw new Error(errors[0])
   return {
     name: trimmedName,
     slug: normalizedSlug,
     code: normalizedCode,
     address: String(address || '').trim(),
+    latitude: lat,
+    longitude: lng,
+    coming_soon: comingSoon,
+    is_active: isActive,
   }
 }
 

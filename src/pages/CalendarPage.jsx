@@ -33,7 +33,11 @@ const statusColors = {
 }
 
 function formatBranch(branch) {
-  return branch === 'batangas' ? 'Batangas' : 'Bacoor'
+  if (!branch) return '—'
+  return String(branch)
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
 }
 
 function toCalendarEvent(booking) {

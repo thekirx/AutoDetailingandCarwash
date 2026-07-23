@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Papa from 'papaparse'
 import { CarFront, Download, MapPin, RefreshCw, Search, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { listBranches } from '../lib/adminApi'
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -69,12 +70,13 @@ export default function MasterlistPage() {
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [branchOptions, setBranchOptions] = useState([])
 
   const loadCustomers = useCallback(async () => {
     setLoading(true)
     setError('')
 
-    const [customersResult, transactionsResult] = await Promise.all([
+    const [customersResult, transactionsResult, branches] = await Promise.all([
       supabase
         .from('customers')
         .select('id, full_name, email, phone')
@@ -101,6 +103,7 @@ export default function MasterlistPage() {
         .eq('is_archived', false)
         .not('customer_id', 'is', null)
         .order('occurred_at', { ascending: false }),
+      listBranches({ includeArchived: false }).catch(() => []),
     ])
 
     if (customersResult.error || transactionsResult.error) {
@@ -109,6 +112,7 @@ export default function MasterlistPage() {
       return
     }
 
+    setBranchOptions(branches || [])
     setRows(buildRows(customersResult.data, transactionsResult.data))
     setLoading(false)
   }, [])
@@ -193,8 +197,15 @@ export default function MasterlistPage() {
               className="min-w-40 bg-transparent py-3 outline-none"
             >
               <option value="all">All branches</option>
-              <option value="bacoor">Bacoor</option>
-              <option value="batangas">Batangas</option>
+              {branchOptions.map((b) => (
+                <option key={b.slug} value={b.slug}>{b.name}</option>
+              ))}
+              {/* Include any historical booking slugs not in current list */}
+              {[...new Set(rows.map((r) => r.branch).filter(Boolean))]
+                .filter((slug) => !branchOptions.some((b) => b.slug === slug))
+                .map((slug) => (
+                  <option key={slug} value={slug}>{slug}</option>
+                ))}
             </select>
           </label>
 

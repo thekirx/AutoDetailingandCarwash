@@ -1,4 +1,4 @@
-/** Fallback coordinates for nearest-branch (PH). Upgrade: store lat/lng on branches. */
+/** Seed coords for legacy rows before DB lat/lng existed. Prefer row.latitude/longitude. */
 export const BRANCH_GEO = {
   bacoor: { lat: 14.459, lng: 120.929, label: 'Bacoor' },
   batangas: { lat: 13.7563, lng: 121.0583, label: 'Batangas' },
@@ -17,15 +17,25 @@ export function haversineKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
-/** @returns {{ slug: string, distanceKm: number } | null} */
+function coordsForBranch(row) {
+  if (row?.latitude != null && row?.longitude != null) {
+    return { lat: Number(row.latitude), lng: Number(row.longitude), label: row.name }
+  }
+  return BRANCH_GEO[row?.slug] || null
+}
+
+/** @returns {{ slug: string, distanceKm: number, name?: string } | null} */
 export function nearestBranchSlug(userCoords, branches = []) {
   if (!userCoords?.lat || !userCoords?.lng) return null
   let best = null
   for (const row of branches) {
-    const geo = BRANCH_GEO[row.slug] || (row.latitude != null ? { lat: Number(row.latitude), lng: Number(row.longitude) } : null)
+    if (row.coming_soon || row.is_active === false) continue
+    const geo = coordsForBranch(row)
     if (!geo) continue
     const distanceKm = haversineKm(userCoords, geo)
-    if (!best || distanceKm < best.distanceKm) best = { slug: row.slug, distanceKm, name: row.name }
+    if (!best || distanceKm < best.distanceKm) {
+      best = { slug: row.slug, distanceKm, name: row.name || geo.label }
+    }
   }
   return best
 }

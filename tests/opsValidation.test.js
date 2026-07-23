@@ -19,6 +19,31 @@ describe('ops CRUD validation', () => {
     assert.equal(v.code, 'IMS')
     assert.equal(v.slug, 'imus')
     assert.equal(v.address, 'Cavite')
+    assert.equal(v.is_active, true)
+    assert.equal(v.coming_soon, false)
+  })
+
+  it('maps coming soon status and validates geo pairs', () => {
+    const soon = validateBranchInput({
+      name: 'Hakum Imus',
+      slug: 'imus',
+      code: 'IMS',
+      status: 'coming_soon',
+      latitude: 14.4,
+      longitude: 120.9,
+    })
+    assert.equal(soon.coming_soon, true)
+    assert.equal(soon.is_active, false)
+    assert.equal(soon.latitude, 14.4)
+
+    assert.throws(
+      () => validateBranchInput({ name: 'X', slug: 'x', code: 'XX', latitude: 14 }),
+      /both latitude and longitude/,
+    )
+    assert.throws(
+      () => validateBranchInput({ name: 'X', slug: 'x', code: 'XX', latitude: 100, longitude: 120 }),
+      /Latitude/,
+    )
   })
 
   it('rejects blank service name and bad price/duration', () => {

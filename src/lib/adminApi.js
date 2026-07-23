@@ -21,7 +21,10 @@ function mapDbError(error, fallback = 'Request failed.') {
 }
 
 export async function listBranches({ includeArchived = false } = {}) {
-  let q = supabase.from('branches').select('id, slug, name, code, address, is_active, is_archived').order('name')
+  let q = supabase
+    .from('branches')
+    .select('id, slug, name, code, address, latitude, longitude, coming_soon, is_active, is_archived')
+    .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
   if (error) throw mapDbError(error)
@@ -35,20 +38,30 @@ export async function createBranch(input) {
     input_slug: v.slug,
     input_code: v.code,
     input_address: v.address || '',
+    input_latitude: v.latitude,
+    input_longitude: v.longitude,
+    input_coming_soon: v.coming_soon,
+    input_is_active: v.is_active,
   })
   if (error) throw mapDbError(error)
   return data
 }
 
-export async function updateBranch({ slug, name, code, address, is_active }) {
-  const v = validateBranchInput({ name, slug, code, address }, { requireSlug: false })
+export async function updateBranch({ slug, name, code, address, is_active, latitude, longitude, coming_soon, status }) {
+  const v = validateBranchInput(
+    { name, slug, code, address, latitude, longitude, coming_soon, is_active, status },
+    { requireSlug: false },
+  )
   if (!slug) throw new Error('Branch slug is required.')
   const { data, error } = await supabase.rpc('update_branch', {
     input_branch_slug: slug,
     input_name: v.name,
     input_code: v.code,
     input_address: v.address || '',
-    input_is_active: is_active,
+    input_is_active: v.is_active,
+    input_latitude: v.latitude,
+    input_longitude: v.longitude,
+    input_coming_soon: v.coming_soon,
   })
   if (error) throw mapDbError(error)
   return data
