@@ -130,7 +130,7 @@ export async function lookupCustomerAuthStatus({ identifier }) {
 }
 
 /** Queue recovery / set-password link to the customer's phone (and note email if present). */
-export async function sendCustomerSetupLink({ identifier, siteOrigin }) {
+export async function sendCustomerSetupLink({ identifier, siteOrigin, mode = 'setup' }) {
   const admin = adminClient()
   const raw = String(identifier || '').trim()
   const { kind, customer } = await findCustomerByIdentifier(admin, raw)
@@ -158,37 +158,45 @@ export async function sendCustomerSetupLink({ identifier, siteOrigin }) {
 
   const actionLink = linkData?.properties?.action_link || null
   const first = (customer.full_name || 'there').split(' ')[0]
+  const isReset = mode === 'reset'
   const message = actionLink
-    ? `Hi ${first}, finish your Hakum Auto Care account — set your password: ${actionLink}`
-    : `Hi ${first}, open Hakum Auto Care and use Forgot password with your phone or plate to finish setup.`
+    ? isReset
+      ? `Hi ${first}, reset your Hakum Auto Care password: ${actionLink}`
+      : `Hi ${first}, finish your Hakum Auto Care account — set your password: ${actionLink}`
+    : `Hi ${first}, open Hakum Auto Care and use Forgot password with your phone or plate.`
 
+  const eventType = isReset ? 'password_reset' : 'account_invite'
   if (customer.phone) {
     const { error } = await admin.from('sms_events').insert({
       phone: customer.phone,
       message,
-      event_type: 'account_invite',
+      event_type: eventType,
       status: 'queued',
     })
     if (error) {
       await admin.from('sms_events').insert({
         to_phone: customer.phone,
         body: message,
-        template_type: 'account_invite',
+        template_type: eventType,
         status: 'queued',
       })
     }
   }
 
-  // Ensure flag stays set until they finish
-  await admin.auth.admin.updateUserById(user.id, {
-    user_metadata: { ...user.user_metadata, must_set_password: true },
-  })
+  // First-time setup only — do not force this flag on normal password resets
+  if (!isReset) {
+    await admin.auth.admin.updateUserById(user.id, {
+      user_metadata: { ...user.user_metadata, must_set_password: true },
+    })
+  }
 
+  const synthetic = String(loginEmail).endsWith('@customers.hakumautocare.com')
   return {
-    status: 'needs_password',
+    status: isReset ? (user.user_metadata?.must_set_password ? 'needs_password' : 'ready') : 'needs_password',
     kind,
     sent: true,
     via: customer.phone ? 'sms' : 'link_only',
+    can_email_reset: !synthetic,
     // ponytail: never return action_link to the browser
   }
 }
@@ -209,11 +217,19 @@ export async function handleCustomerAuthLookupRequest(req, res, { getBody, siteO
 
     const body = await getBody()
     const action = body.action || 'lookup'
+    const origin = siteOrigin || body.site_origin || 'http://localhost:5173'
     let result
     if (action === 'send_setup') {
       result = await sendCustomerSetupLink({
         identifier: body.identifier,
-        siteOrigin: siteOrigin || body.site_origin || 'http://localhost:5173',
+        siteOrigin: origin,
+        mode: 'setup',
+      })
+    } else if (action === 'send_reset') {
+      result = await sendCustomerSetupLink({
+        identifier: body.identifier,
+        siteOrigin: origin,
+        mode: 'reset',
       })
     } else {
       result = await lookupCustomerAuthStatus({ identifier: body.identifier })

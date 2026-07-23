@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './auth/AuthProvider'
+import CookieConsent from '@/components/CookieConsent'
 import { Toaster } from '@/components/ui/sonner'
 import './styles.css'
 
@@ -11,6 +12,7 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <AuthProvider>
         <App />
+        <CookieConsent />
         <Toaster richColors position="top-right" />
       </AuthProvider>
     </BrowserRouter>

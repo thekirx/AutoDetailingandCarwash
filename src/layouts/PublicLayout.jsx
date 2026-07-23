@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, ArrowUpRight, Facebook, Instagram, Mail, MapPin, Menu, Phone, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import PublicPageMeta from '@/components/PublicPageMeta'
 
 const navItems = [
   ['Main', '/'],
@@ -20,6 +21,7 @@ export default function PublicLayout() {
 
   return (
     <div className="public-site">
+      <PublicPageMeta />
       <header className={`public-header ${open ? 'menu-open' : ''}`}>
         <div className="public-shell header-inner">
           <Link className="wordmark" to="/" aria-label="Hakum Auto Care home">
@@ -161,6 +163,8 @@ export default function PublicLayout() {
             ))}
             <Link to="/book">Book a Service</Link>
             <Link to="/signin">Sign in</Link>
+            <Link to="/terms">Terms</Link>
+            <Link to="/privacy">Privacy</Link>
           </nav>
           <div>
             <span>© {new Date().getFullYear()} Hakum Auto Care</span>

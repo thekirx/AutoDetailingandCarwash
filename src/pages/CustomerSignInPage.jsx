@@ -8,6 +8,7 @@ import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthSh
 import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { CUSTOMER_DEMO_ACCOUNT } from '../lib/demoAccounts'
+import { usePageMeta } from '../lib/pageMeta'
 
 async function authLookup(identifier, action = 'lookup') {
   const res = await fetch('/api/customer-auth-lookup', {
@@ -21,6 +22,12 @@ async function authLookup(identifier, action = 'lookup') {
 }
 
 export default function CustomerSignInPage() {
+  usePageMeta({
+    title: 'Sign in',
+    description: 'Sign in to your Hakum Auto Care customer account with email, phone, or plate.',
+    path: '/signin',
+  })
+
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -30,6 +37,7 @@ export default function CustomerSignInPage() {
   const [lookupEmail, setLookupEmail] = useState(null)
   const [checking, setChecking] = useState(false)
   const [sendingSetup, setSendingSetup] = useState(false)
+  const [sendingReset, setSendingReset] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const { user, profile, loading, signOut } = useAuth()
   const navigate = useNavigate()
@@ -160,15 +168,48 @@ export default function CustomerSignInPage() {
   const handleForgot = async () => {
     setError('')
     setInfo('')
+    const raw = identifier.trim()
+    if (raw.length < 3) {
+      setError('Enter your email, phone, or plate first.')
+      return
+    }
+    setSendingReset(true)
     try {
-      const email = await resolveEmail(identifier)
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/account/set-password`,
-      })
-      if (resetError) throw resetError
-      setInfo('Password reset email sent if that account has an email on file. Phone-only accounts: use “Send set-password link”.')
+      const redirectTo = `${window.location.origin}/account/set-password`
+      let viaSms = false
+      let emailed = false
+
+      try {
+        const data = await authLookup(raw, 'send_reset')
+        viaSms = data.via === 'sms'
+        if (data.can_email_reset) {
+          const email = data.login_email || (await resolveEmail(raw))
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+          if (!resetError) emailed = true
+        }
+      } catch (lookupErr) {
+        // Email-only path when lookup misses CRM row but Auth email exists
+        const kind = classifyIdentifier(raw)
+        if (kind !== 'email') throw lookupErr
+        const email = resolveLoginEmail(raw)
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+        if (resetError) throw resetError
+        emailed = true
+      }
+
+      if (viaSms && emailed) {
+        setInfo('Password reset link sent to your phone and email. Open the link, then choose a new password.')
+      } else if (viaSms) {
+        setInfo('Password reset link sent to your phone. Open it to choose a new password.')
+      } else if (emailed) {
+        setInfo('Password reset email sent. Check your inbox (and spam), then choose a new password.')
+      } else {
+        setInfo('If we found your account, a reset link was queued. Check SMS or email, or ask the Team Lead at the shop.')
+      }
     } catch (err) {
       setError(err.message)
+    } finally {
+      setSendingReset(false)
     }
   }
 
@@ -257,8 +298,8 @@ export default function CustomerSignInPage() {
           </div>
         </label>
         <div className="hakum-auth-row">
-          <button type="button" className="hakum-auth-text-btn" onClick={handleForgot}>
-            Forgot password?
+          <button type="button" className="hakum-auth-text-btn" onClick={handleForgot} disabled={sendingReset || !identifier.trim()}>
+            {sendingReset ? 'Sending reset…' : 'Forgot password?'}
           </button>
         </div>
         <button type="submit" className="hakum-auth-submit" disabled={submitting || setupStatus === 'needs_invite'}>

@@ -41,6 +41,8 @@ import CustomerSignInPage from './pages/CustomerSignInPage'
 import CustomerSignUpPage from './pages/CustomerSignUpPage'
 import CustomerSetPasswordPage from './pages/CustomerSetPasswordPage'
 import CustomerAccountPage from './pages/CustomerAccountPage'
+import { PrivacyPage, TermsPage } from './pages/LegalPages'
+import NotFoundPage from './pages/NotFoundPage'
 import OpsIndexRedirect from './pages/OpsIndexRedirect'
 
 const MasterlistPage = lazy(() => import('./pages/MasterlistPage'))
@@ -64,6 +66,9 @@ export default function App() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/complaints" element={<ComplaintsPage />} />
         <Route path="/events" element={<EventsPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       {/* Customer auth — full-bleed (no public chrome); Team portal is a discreet link on sign-in */}
@@ -116,7 +121,7 @@ export default function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

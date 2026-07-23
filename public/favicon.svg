@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hakum Auto Care">
+  <rect width="64" height="64" rx="12" fill="#052699"/>
+  <g transform="translate(32 32) skewX(-12)">
+    <rect x="-16" y="-18" width="32" height="36" fill="none" stroke="#ffffff" stroke-width="3"/>
+    <text x="0" y="8" text-anchor="middle" fill="#ffffff" font-family="Georgia, Times, serif" font-size="28" font-style="italic" font-weight="700">H</text>
+  </g>
+</svg>

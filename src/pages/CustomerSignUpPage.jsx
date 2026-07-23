@@ -3,8 +3,15 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
+import { usePageMeta } from '../lib/pageMeta'
 
 export default function CustomerSignUpPage() {
+  usePageMeta({
+    title: 'Sign up',
+    description: 'Create a Hakum Auto Care customer account to track visits and live queue progress.',
+    path: '/signup',
+  })
+
   const [form, setForm] = useState({
     full_name: '',
     phone: '',
@@ -12,6 +19,7 @@ export default function CustomerSignUpPage() {
     password: '',
     confirm: '',
   })
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -26,6 +34,10 @@ export default function CustomerSignUpPage() {
       setError('Passwords do not match.')
       return
     }
+    if (!acceptedTerms) {
+      setError('Accept the Terms of Service and Privacy Policy to continue.')
+      return
+    }
     setSubmitting(true)
     try {
       const res = await fetch('/api/customer-signup', {
@@ -36,6 +48,7 @@ export default function CustomerSignUpPage() {
           phone: form.phone,
           email: form.email || null,
           password: form.password,
+          accepted_terms: true,
         }),
       })
       const body = await res.json().catch(() => ({}))
@@ -110,7 +123,19 @@ export default function CustomerSignUpPage() {
           <span>Confirm password</span>
           <input required type="password" autoComplete="new-password" value={form.confirm} onChange={update('confirm')} minLength={8} />
         </label>
-        <button type="submit" className="hakum-auth-submit" disabled={submitting}>
+        <label className="hakum-auth-terms">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            required
+          />
+          <span>
+            I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link>
+            {' '}and <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>.
+          </span>
+        </label>
+        <button type="submit" className="hakum-auth-submit" disabled={submitting || !acceptedTerms}>
           {submitting ? 'Creating…' : 'Create account'}
         </button>
       </form>

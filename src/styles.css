@@ -554,6 +554,11 @@ button { cursor: pointer; }
 .hakum-auth-submit { margin-top:8px; width:100%; border:0; border-radius:10px; padding:14px 18px; background:#052699; color:#fff; font-size:0.8rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; }
 .hakum-auth-submit:hover { background:#0a32b8; }
 .hakum-auth-submit:disabled { opacity:.65; cursor:wait; }
+.hakum-auth-terms { flex-direction:row !important; align-items:flex-start; gap:10px !important; margin-top:4px; }
+.hakum-auth-terms input[type="checkbox"] { width:18px; height:18px; margin-top:2px; flex-shrink:0; accent-color:#052699; cursor:pointer; }
+.hakum-auth-terms span { font-size:0.85rem !important; font-weight:400 !important; letter-spacing:0 !important; text-transform:none !important; color:#333 !important; line-height:1.45; }
+.hakum-auth-terms a { color:#052699; font-weight:600; text-decoration:none; }
+.hakum-auth-terms a:hover { text-decoration:underline; }
 .hakum-auth-panel-foot { width:min(100%,420px); margin:28px auto 0; text-align:center; font-size:0.9rem; color:#717171; display:flex; flex-direction:column; gap:10px; }
 .hakum-auth-panel-foot a { color:#052699; font-weight:600; text-decoration:none; }
 .hakum-auth-panel-foot a:hover { text-decoration:underline; }
@@ -564,6 +569,51 @@ button { cursor: pointer; }
   .hakum-auth-brand-body { padding:36px 0 8px; }
   .hakum-auth-brand-foot { margin-top:24px; }
 }
+
+/* Cookie consent — standard bottom bar */
+.cookie-consent {
+  position:fixed; inset:auto 0 0 0; z-index:80; padding:16px;
+  background:rgba(8,11,20,.96); color:#f1f1f1;
+  border-top:1px solid rgba(255,255,255,.08);
+  box-shadow:0 -12px 40px rgba(0,0,0,.35);
+}
+.cookie-consent-inner {
+  width:min(100%,77.5rem); margin:0 auto;
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px;
+}
+.cookie-consent-title { margin:0 0 6px; font-size:0.95rem; font-weight:700; letter-spacing:.02em; }
+.cookie-consent-copy { margin:0; max-width:42rem; font-size:0.875rem; line-height:1.5; color:rgba(241,241,241,.78); }
+.cookie-consent-copy a { color:#9db4ff; font-weight:600; text-decoration:underline; text-underline-offset:2px; }
+.cookie-consent-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.cookie-consent-primary,
+.cookie-consent-secondary {
+  min-height:44px; padding:0 18px; border-radius:999px; font-size:0.75rem; font-weight:800;
+  letter-spacing:.12em; text-transform:uppercase; cursor:pointer; border:1px solid transparent;
+}
+.cookie-consent-primary { background:#052699; color:#fff; }
+.cookie-consent-primary:hover { background:#0a32b8; }
+.cookie-consent-secondary { background:transparent; color:#f1f1f1; border-color:rgba(255,255,255,.28); }
+.cookie-consent-secondary:hover { border-color:rgba(255,255,255,.5); }
+@media (prefers-reduced-motion: reduce) {
+  .cookie-consent { transition:none; }
+}
+
+/* Legal pages */
+.legal-page { padding:clamp(3rem,8vw,5rem) 0 clamp(4rem,10vw,7rem); background:var(--color-surface-page); }
+.legal-inner { max-width:42rem; }
+.legal-updated { margin:8px 0 0; color:var(--color-text-secondary); font-size:0.9rem; }
+.legal-body { margin-top:2rem; color:var(--color-text-primary); font-size:1rem; line-height:1.7; }
+.legal-body h2 { margin:1.75rem 0 0.6rem; font-size:1.15rem; font-weight:700; color:#101219; }
+.legal-body p { margin:0 0 1rem; }
+.legal-body ul { margin:0 0 1rem; padding-left:1.2rem; }
+.legal-body li { margin-bottom:0.45rem; }
+.legal-body a { color:#052699; font-weight:600; }
+.legal-lede { font-size:1.05rem; color:#333; }
+.legal-note { margin-top:1.5rem; padding:12px 14px; border-left:3px solid #052699; background:#e8edff; font-size:0.9rem; color:#031d78; }
+.legal-back { margin-top:2.5rem; font-size:0.9rem; color:var(--color-text-secondary); }
+.legal-back a { color:#052699; font-weight:600; text-decoration:none; }
+.legal-back a:hover { text-decoration:underline; }
+.not-found-actions { margin-top:2rem; display:flex; flex-wrap:wrap; gap:14px 20px; align-items:center; }
 
 @layer base {
   * {

@@ -11,6 +11,12 @@ function adminClient() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
+export function assertAcceptedTerms(body) {
+  if (body?.accepted_terms !== true) {
+    throw Object.assign(new Error('You must accept the Terms of Service and Privacy Policy.'), { status: 400 })
+  }
+}
+
 export async function signupCustomer({ body }) {
   const fullName = String(body.full_name || '').trim()
   const phone = String(body.phone || '').trim()
@@ -22,6 +28,7 @@ export async function signupCustomer({ body }) {
     throw Object.assign(new Error('A valid phone number is required.'), { status: 400 })
   }
   if (password.length < 8) throw Object.assign(new Error('Password must be at least 8 characters.'), { status: 400 })
+  assertAcceptedTerms(body)
 
   const email = emailRaw || phoneLoginEmail(phone)
   if (!email.includes('@')) throw Object.assign(new Error('Valid email is required.'), { status: 400 })
@@ -29,12 +36,19 @@ export async function signupCustomer({ body }) {
   const admin = adminClient()
   const [first, ...rest] = fullName.split(/\s+/)
   const last = rest.join(' ') || null
+  const termsAcceptedAt = new Date().toISOString()
 
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: { role: 'customer', full_name: fullName, phone, must_set_password: false },
+    user_metadata: {
+      role: 'customer',
+      full_name: fullName,
+      phone,
+      must_set_password: false,
+      accepted_terms_at: termsAcceptedAt,
+    },
   })
   if (createError) throw Object.assign(new Error(createError.message), { status: 400 })
 
