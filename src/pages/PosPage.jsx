@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Search, ShoppingCart, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos } from '@/auth/permissions'
+import { canAccessPos, canManageServices } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { buildPosSalePayload } from '@/lib/posSale'
 import { supabase } from '@/lib/supabase'
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 
 export default function PosPage() {
@@ -20,7 +21,7 @@ export default function PosPage() {
   const [services, setServices] = useState([])
   const [products, setProducts] = useState([])
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('all')
+  const [tab, setTab] = useState('services')
   const [cart, setCart] = useState([])
   const [branch, setBranch] = useState(profile?.branch_slug || '')
   const [branches, setBranches] = useState([])
@@ -79,32 +80,33 @@ export default function PosPage() {
     }
   }, [load, branch])
 
-  const catalog = useMemo(() => {
-    const serviceItems = (services || []).map((s) => ({
-      key: `service-${s.id}`,
-      item_type: 'service',
-      id: s.id,
-      name: s.name,
-      price_minor: s.price_minor,
-      category: 'services',
-      meta: null,
-    }))
-    const productItems = (products || []).map((p) => ({
-      key: `product-${p.id}`,
-      item_type: 'product',
-      id: p.id,
-      name: p.name,
-      price_minor: p.price_minor,
-      category: p.category || 'products',
-      meta: `Stock ${p.stock_qty}`,
-    }))
-    return [...serviceItems, ...productItems].filter((item) => {
-      const q = query.trim().toLowerCase()
-      const matchesQuery = !q || item.name.toLowerCase().includes(q)
-      const matchesCat = category === 'all' || item.category === category || (category === 'services' && item.item_type === 'service')
-      return matchesQuery && matchesCat
-    })
-  }, [services, products, query, category])
+  const serviceItems = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return (services || [])
+      .map((s) => ({
+        key: `service-${s.id}`,
+        item_type: 'service',
+        id: s.id,
+        name: s.name,
+        price_minor: s.price_minor,
+        meta: null,
+      }))
+      .filter((item) => !q || item.name.toLowerCase().includes(q))
+  }, [services, query])
+
+  const merchItems = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return (products || [])
+      .map((p) => ({
+        key: `product-${p.id}`,
+        item_type: 'product',
+        id: p.id,
+        name: p.name,
+        price_minor: p.price_minor,
+        meta: `Stock ${p.stock_qty}${p.sku ? ` · ${p.sku}` : ''}`,
+      }))
+      .filter((item) => !q || item.name.toLowerCase().includes(q) || (item.meta || '').toLowerCase().includes(q))
+  }, [products, query])
 
   const cartTotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price_minor, 0)
 
@@ -129,6 +131,7 @@ export default function PosPage() {
     setActiveHandoff(row)
     setBranch(row.branch || branch)
     setCustomerId(booking.customer_id || '')
+    setTab('services')
     setCart([
       {
         key: `handoff-${row.id}`,
@@ -146,13 +149,14 @@ export default function PosPage() {
   async function checkout() {
     if (!cart.length) return
     setSaving(true)
+    const handoff = activeHandoff
     const { data, error } = await supabase.rpc('complete_pos_sale', {
       payload: buildPosSalePayload({
         branch,
         customerId,
         paymentMethod,
         cart,
-        activeHandoff,
+        activeHandoff: handoff,
       }),
     })
     setSaving(false)
@@ -160,8 +164,23 @@ export default function PosPage() {
       toast.error(error.message)
       return
     }
+    if (handoff?.booking_id) {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData.session?.access_token
+        if (token) {
+          await fetch('/api/notify-booking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ booking_id: handoff.booking_id, status: 'completed' }),
+          })
+        }
+      } catch {
+        /* ignore */
+      }
+    }
     toast.success(
-      activeHandoff
+      handoff
         ? `Ticket paid · ${formatMoney(data?.total_minor || cartTotal)}`
         : `Sale complete · ${formatMoney(data?.total_minor || cartTotal)}`,
     )
@@ -173,18 +192,27 @@ export default function PosPage() {
 
   if (!canAccessPos(profile)) return <Navigate to="/operations/access-denied" replace />
 
+  const catalog = tab === 'services' ? serviceItems : merchItems
+
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
           <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Point of sale</p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Fast checkout</h1>
-          <p className="mt-2 text-muted-foreground">Square-style catalog for services and products.</p>
+          <p className="mt-2 text-muted-foreground">Services and merch in separate tabs — tap to add, then complete payment.</p>
         </div>
-        <Button onClick={() => setCartOpen(true)} className="gap-2">
-          <ShoppingCart data-icon="inline-start" />
-          Cart · {cart.length} · {formatMoney(cartTotal)}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {canManageServices(profile) && (
+            <Link to="/operations/products" className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
+              Manage merch
+            </Link>
+          )}
+          <Button onClick={() => setCartOpen(true)} className="gap-2">
+            <ShoppingCart data-icon="inline-start" />
+            Cart · {cart.length} · {formatMoney(cartTotal)}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -228,17 +256,8 @@ export default function PosPage() {
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Search products and services" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Input className="pl-9" placeholder={tab === 'services' ? 'Search services' : 'Search merch / items'} value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Category" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="services">Services</SelectItem>
-            <SelectItem value="products">Products</SelectItem>
-            <SelectItem value="general">General</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={branch} onValueChange={setBranch} disabled={!branches.length}>
           <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Branch" /></SelectTrigger>
           <SelectContent>
@@ -247,24 +266,18 @@ export default function PosPage() {
         </Select>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-        {catalog.map((item) => (
-          <button key={item.key} type="button" onClick={() => addToCart(item)} className="text-left">
-            <Card className="h-full transition hover:border-primary/50 hover:bg-accent/30">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-lg">{item.name}</CardTitle>
-                  <Badge variant="secondary">{item.item_type}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold tabular-nums">{formatMoney(item.price_minor)}</p>
-                {item.meta && <p className="mt-2 text-xs text-muted-foreground">{item.meta}</p>}
-              </CardContent>
-            </Card>
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="services">Services ({serviceItems.length})</TabsTrigger>
+          <TabsTrigger value="merch">Merch / items ({merchItems.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="services" className="mt-4">
+          <CatalogGrid items={catalog} onAdd={addToCart} empty="No services match." />
+        </TabsContent>
+        <TabsContent value="merch" className="mt-4">
+          <CatalogGrid items={catalog} onAdd={addToCart} empty="No merch items. Add stock under Manage merch." />
+        </TabsContent>
+      </Tabs>
 
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
         <SheetContent className="flex w-full flex-col gap-4 sm:max-w-md">
@@ -283,7 +296,7 @@ export default function PosPage() {
                 <div>
                   <p className="font-medium">{line.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {line.quantity} × {formatMoney(line.unit_price_minor)}
+                    {line.quantity} × {formatMoney(line.unit_price_minor)} · {line.item_type}
                   </p>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => setCart((c) => c.filter((x) => x.key !== line.key))} aria-label="Remove">
@@ -320,6 +333,30 @@ export default function PosPage() {
         </SheetContent>
       </Sheet>
     </section>
+  )
+}
+
+function CatalogGrid({ items, onAdd, empty }) {
+  if (!items.length) return <p className="text-sm text-muted-foreground">{empty}</p>
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      {items.map((item) => (
+        <button key={item.key} type="button" onClick={() => onAdd(item)} className="text-left">
+          <Card className="h-full transition hover:border-primary/50 hover:bg-accent/30">
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="text-lg">{item.name}</CardTitle>
+                <Badge variant="secondary">{item.item_type}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold tabular-nums">{formatMoney(item.price_minor)}</p>
+              {item.meta && <p className="mt-2 text-xs text-muted-foreground">{item.meta}</p>}
+            </CardContent>
+          </Card>
+        </button>
+      ))}
+    </div>
   )
 }
 

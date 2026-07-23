@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessMarketing } from '@/auth/permissions'
+import { canAccessMarketing, isAdmin } from '@/auth/permissions'
+import { getSmsNotificationsEnabled, setSmsNotificationsEnabled } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -18,16 +19,20 @@ export default function SmsPage() {
   const { profile } = useAuth()
   const [templates, setTemplates] = useState([])
   const [events, setEvents] = useState([])
+  const [smsEnabled, setSmsEnabled] = useState(true)
+  const [toggling, setToggling] = useState(false)
   const [form, setForm] = useState({ name: '', template_type: 'promo', body: '' })
   const [send, setSend] = useState({ phone: '', body: '', template_type: 'promo' })
 
   const load = useCallback(async () => {
-    const [t, e] = await Promise.all([
+    const [t, e, enabled] = await Promise.all([
       supabase.from('sms_templates').select('*').order('created_at', { ascending: false }),
       supabase.from('sms_events').select('*').order('created_at', { ascending: false }).limit(30),
+      getSmsNotificationsEnabled().catch(() => true),
     ])
     setTemplates(t.data || [])
     setEvents(e.data || [])
+    setSmsEnabled(enabled)
   }, [])
 
   useEffect(() => {
@@ -35,6 +40,24 @@ export default function SmsPage() {
   }, [load])
 
   if (!canAccessMarketing(profile)) return <Navigate to="/operations/access-denied" replace />
+
+  async function toggleSms() {
+    if (!isAdmin(profile)) {
+      toast.error('Only Admin / Super Admin can change this toggle.')
+      return
+    }
+    setToggling(true)
+    try {
+      const next = !smsEnabled
+      await setSmsNotificationsEnabled(next)
+      setSmsEnabled(next)
+      toast.success(next ? 'SMS automation on' : 'SMS automation off')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setToggling(false)
+    }
+  }
 
   async function saveTemplate(event) {
     event.preventDefault()
@@ -93,6 +116,31 @@ export default function SmsPage() {
         <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Marketing</p>
         <h1 className="text-3xl font-semibold tracking-tight">SMS campaigns</h1>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>Status SMS automation</CardTitle>
+            <CardDescription>
+              When on, customers get BusyBee SMS on booking received, queue status, payment ready, and completed.
+            </CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant={smsEnabled ? 'default' : 'outline'}
+            disabled={toggling || !isAdmin(profile)}
+            onClick={toggleSms}
+          >
+            {toggling ? 'Saving…' : smsEnabled ? 'SMS on' : 'SMS off'}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Current: <strong>{smsEnabled ? 'Enabled' : 'Disabled'}</strong>
+            {!isAdmin(profile) ? ' · Only Admin / Super Admin can change this.' : ''}
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>

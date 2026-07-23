@@ -24,6 +24,10 @@ const guest = buildBookingNotifyPayload({ ...booking, customer_id: null }, 'conf
 assert.equal(guest.url, '/book')
 assert.equal(guest.kind, 'booking_confirm')
 
+const checking = buildBookingNotifyPayload(booking, 'final_checking')
+assert.equal(checking.kind, 'booking_status')
+assert.match(checking.sms, /final checking/i)
+
 assert.equal(buildBookingNotifyPayload(booking, 'nope'), null)
 
 console.log('notifyBooking + busybee normalize: ok')

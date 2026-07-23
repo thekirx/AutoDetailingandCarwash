@@ -451,7 +451,28 @@ export async function createQueueTicket(form) {
     console.error('Unable to create queue ticket', error)
     throw formatQueueActionError(error)
   }
+  // Best-effort SMS / push — never fail ticket create
+  try {
+    await notifyBookingClient(data.id, 'waiting')
+  } catch {
+    /* ignore */
+  }
   return data
+}
+
+async function notifyBookingClient(bookingId, status) {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token || !bookingId) return null
+  const res = await fetch('/api/notify-booking', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ booking_id: bookingId, status }),
+  })
+  return res.json().catch(() => ({}))
 }
 
 export async function updateTicketStatus(ticket, nextStatus) {
@@ -475,6 +496,11 @@ export async function updateTicketStatus(ticket, nextStatus) {
   if (error) {
     console.error('Unable to update queue ticket status', error)
     throw formatQueueActionError(error)
+  }
+  try {
+    await notifyBookingClient(ticket.booking_id, nextStatus)
+  } catch {
+    /* ignore */
   }
 }
 
@@ -558,6 +584,11 @@ export async function sendTicketToPayment(bookingId) {
   if (error) {
     console.error('Unable to send queue ticket to payment', error)
     throw formatQueueActionError(error)
+  }
+  try {
+    await notifyBookingClient(bookingId, 'for_payment')
+  } catch {
+    /* ignore */
   }
   return data
 }

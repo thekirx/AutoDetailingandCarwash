@@ -145,7 +145,10 @@ export function getOperationsNav(profile) {
     items.push({ label: 'CRM', to: '/operations/crm', icon: 'Contact' })
   }
   if (canManageServices(profile)) {
-    items.push({ label: 'Services', to: '/operations/services', icon: 'Sparkles' })
+    items.push(
+      { label: 'Services', to: '/operations/services', icon: 'Sparkles' },
+      { label: 'Merch', to: '/operations/products', icon: 'Package' },
+    )
   }
   if (canAccessMarketing(profile)) {
     items.push({ label: 'SMS', to: '/operations/sms', icon: 'MessageSquare' })

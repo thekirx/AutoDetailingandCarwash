@@ -536,3 +536,118 @@ export async function listCustomersForMembership(limit = 50) {
   if (error) throw mapDbError(error)
   return data || []
 }
+
+export async function listProducts({ includeArchived = false } = {}) {
+  let q = supabase
+    .from('products')
+    .select('id, name, sku, category, price_minor, stock_qty, branch_slug, is_active, is_archived, updated_at')
+    .order('name')
+  if (!includeArchived) q = q.eq('is_archived', false)
+  const { data, error } = await q
+  if (error) throw mapDbError(error)
+  return data || []
+}
+
+export async function createProduct(payload) {
+  const name = String(payload.name || '').trim()
+  if (!name) throw new Error('Product name is required.')
+  const price = Number(payload.price)
+  if (!Number.isFinite(price) || price < 0) throw new Error('Price must be a valid number.')
+  const row = {
+    name,
+    sku: String(payload.sku || '').trim() || null,
+    category: String(payload.category || 'merch').trim() || 'merch',
+    price_minor: Math.round(price * 100),
+    stock_qty: Math.max(0, Number(payload.stock_qty) || 0),
+    branch_slug: payload.branch_slug || null,
+    is_active: payload.is_active !== false,
+    is_archived: false,
+  }
+  const { data, error } = await supabase.from('products').insert(row).select().maybeSingle()
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'create',
+    entityType: 'product',
+    entityId: data?.id,
+    summary: `Created product ${data?.name}`,
+    meta: { price_minor: data?.price_minor, stock_qty: data?.stock_qty },
+  })
+  return data
+}
+
+export async function updateProduct(id, payload) {
+  if (!id) throw new Error('Product id is required.')
+  const name = String(payload.name || '').trim()
+  if (!name) throw new Error('Product name is required.')
+  const price = Number(payload.price)
+  if (!Number.isFinite(price) || price < 0) throw new Error('Price must be a valid number.')
+  const patch = {
+    name,
+    sku: String(payload.sku || '').trim() || null,
+    category: String(payload.category || 'merch').trim() || 'merch',
+    price_minor: Math.round(price * 100),
+    stock_qty: Math.max(0, Number(payload.stock_qty) || 0),
+    branch_slug: payload.branch_slug || null,
+    is_active: payload.is_active !== false,
+    updated_at: new Date().toISOString(),
+  }
+  const { data, error } = await supabase.from('products').update(patch).eq('id', id).select().maybeSingle()
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'update',
+    entityType: 'product',
+    entityId: id,
+    summary: `Updated product ${name}`,
+    meta: { price_minor: patch.price_minor, stock_qty: patch.stock_qty },
+  })
+  return data
+}
+
+export async function archiveProduct(id) {
+  if (!id) throw new Error('Product id is required.')
+  const { data, error } = await supabase
+    .from('products')
+    .update({ is_archived: true, is_active: false, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'archive',
+    entityType: 'product',
+    entityId: id,
+    summary: `Archived product ${data?.name || id}`,
+  })
+  return data
+}
+
+export async function getSmsNotificationsEnabled() {
+  const { data, error } = await supabase.from('app_settings').select('value').eq('key', 'sms_notifications').maybeSingle()
+  if (error) throw mapDbError(error)
+  if (!data?.value) return true
+  return data.value.enabled !== false
+}
+
+export async function setSmsNotificationsEnabled(enabled) {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .upsert(
+      {
+        key: 'sms_notifications',
+        value: { enabled: Boolean(enabled) },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' },
+    )
+    .select()
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'update',
+    entityType: 'app_settings',
+    entityId: 'sms_notifications',
+    summary: `SMS notifications ${enabled ? 'enabled' : 'disabled'}`,
+    meta: { enabled: Boolean(enabled) },
+  })
+  return data
+}

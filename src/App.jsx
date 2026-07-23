@@ -29,6 +29,7 @@ import PosPage from './pages/PosPage'
 import FinancePage from './pages/FinancePage'
 import CrmPage from './pages/CrmPage'
 import ServicesManagePage from './pages/ServicesManagePage'
+import ProductsManagePage from './pages/ProductsManagePage'
 import SmsPage from './pages/SmsPage'
 import BookingBoardPage from './pages/BookingBoardPage'
 import ReportsPage from './pages/ReportsPage'
@@ -104,6 +105,7 @@ export default function App() {
           <Route path="finance" element={<FinancePage />} />
           <Route path="crm" element={<CrmPage />} />
           <Route path="services" element={<ServicesManagePage />} />
+          <Route path="products" element={<ProductsManagePage />} />
           <Route path="sms" element={<SmsPage />} />
           <Route path="bookings" element={<BookingBoardPage />} />
           <Route path="reports" element={<ReportsPage />} />

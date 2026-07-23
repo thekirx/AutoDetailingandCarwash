@@ -73,6 +73,10 @@ function provisionApiPlugin() {
       mount('/api/booking-status', (req, res) => handleBookingStatusRequest(req, res))
       mount('/api/push-subscribe', (req, res) => handlePushSubscribeRequest(req, res))
       mount('/api/send-push', (req, res) => handleSendPushRequest(req, res))
+      mount('/api/notify-booking', async (req, res) => {
+        const { handleNotifyBookingRequest } = await import('./server/notifyBookingApi.mjs')
+        return handleNotifyBookingRequest(req, res)
+      })
       mount('/api/busybee', async (req, res) => {
         const mod = await import('./api/busybee.js')
         return mod.default(req, res)

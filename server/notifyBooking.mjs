@@ -40,6 +40,12 @@ const STATUS_COPY = {
     sms: (b) => `Hakum Auto Care: ${b.vehicle_plate || 'Your vehicle'} is waiting in the ${b.branch} queue.`,
     body: (b) => `Waiting at ${b.branch}.`,
   },
+  final_checking: {
+    kind: 'booking_status',
+    title: 'Final checking',
+    sms: (b) => `Hakum Auto Care: ${b.vehicle_plate || 'Your vehicle'} is on final checking.`,
+    body: (b) => `${b.vehicle_plate || 'Your vehicle'} is on final checking.`,
+  },
   for_payment: {
     kind: 'booking_status',
     title: 'Ready for payment',
@@ -102,16 +108,25 @@ async function logSmsEvent(db, { phone, message, eventType, bookingId, customerI
 }
 
 /**
- * After booking create/status change: SMS (always if phone) + inbox/push (if customer_id).
+ * After booking create/status change: SMS (if admin toggle on) + inbox/push (if customer_id).
  */
+export async function isSmsNotificationsEnabled(db = admin()) {
+  const { data } = await db.from('app_settings').select('value').eq('key', 'sms_notifications').maybeSingle()
+  if (!data?.value) return true
+  return data.value.enabled !== false
+}
+
 export async function notifyBookingStatus(booking, status = booking?.status) {
   const payload = buildBookingNotifyPayload(booking, status)
   if (!payload) return { skipped: true }
 
   const db = admin()
-  const result = { sms: null, inbox: null, push: null }
+  const result = { sms: null, inbox: null, push: null, smsEnabled: true }
 
-  if (payload.phone) {
+  const smsOn = await isSmsNotificationsEnabled(db)
+  result.smsEnabled = smsOn
+
+  if (payload.phone && smsOn) {
     const sms = await busybeeSendSms({ phone: payload.phone, message: payload.sms })
     result.sms = sms
     await logSmsEvent(db, {
@@ -122,6 +137,17 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
       customerId: payload.userId,
       status: sms.status,
       providerResponse: sms.providerResponse,
+    })
+  } else if (payload.phone && !smsOn) {
+    result.sms = { ok: false, status: 'disabled', providerResponse: 'SMS notifications toggled off by admin' }
+    await logSmsEvent(db, {
+      phone: payload.phone,
+      message: payload.sms,
+      eventType: payload.kind,
+      bookingId: booking.id,
+      customerId: payload.userId,
+      status: 'disabled',
+      providerResponse: 'sms_notifications.enabled=false',
     })
   }
 
