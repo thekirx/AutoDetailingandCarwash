@@ -78,29 +78,32 @@ export function BookingPage() {
     event.preventDefault()
     setStatus('loading')
     setError('')
-    const customer_name = `${form.customer_first_name} ${form.customer_last_name}`.trim()
-    const plate = String(form.vehicle_plate || '').trim().toUpperCase() || null
-    const { data: sessionData } = await supabase.auth.getSession()
-    const uid = sessionData.session?.user?.id || null
-    const row = {
-      customer_name,
-      customer_phone: form.customer_phone,
-      vehicle_make: form.vehicle_make,
-      vehicle_model: form.vehicle_model,
-      vehicle_plate: plate,
-      scheduled_start: new Date(form.scheduled_start).toISOString(),
-      service_id: form.service_id,
-      branch: form.branch,
-      status: 'pending',
-    }
-    // Logged-in customers: attach identity so portal visits appear
-    if (uid) row.customer_id = uid
-    const { error: e } = await supabase.from('bookings').insert(row)
-    if (e) {
-      setError(e.message)
-      setStatus('idle')
-    } else {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch('/api/public-book', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          customer_first_name: form.customer_first_name,
+          customer_last_name: form.customer_last_name,
+          customer_phone: form.customer_phone,
+          vehicle_plate: form.vehicle_plate,
+          vehicle_make: form.vehicle_make,
+          vehicle_model: form.vehicle_model,
+          scheduled_start: form.scheduled_start,
+          service_id: form.service_id,
+          branch: form.branch,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Unable to submit booking.')
       setStatus('success')
+    } catch (err) {
+      setError(err.message)
+      setStatus('idle')
     }
   }
 
@@ -111,8 +114,11 @@ export function BookingPage() {
           <Sparkles />
           <p className="eyebrow">Booking received</p>
           <h1>We’ll take it from here.</h1>
-          <p>Your request is now with the Hakum team. We’ll confirm your appointment shortly.</p>
-          <Link className="button button-blue" to="/">Back to home</Link>
+          <p>Your request is with Hakum. We’ll text you status updates{/* BusyBee */} and confirm soon.</p>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Link className="button button-blue" to="/account">My account</Link>
+            <Link className="button" to="/">Back to home</Link>
+          </div>
         </div>
       </section>
     )
@@ -126,7 +132,10 @@ export function BookingPage() {
         <div>
           <p className="eyebrow">Book a service</p>
           <h1 className="section-title">Your car’s next<br />chapter starts here.</h1>
-          <p>Tell us what you drive and when you’d like to visit. Our team will review and confirm your request.</p>
+          <p>Tell us what you drive and when you’d like to visit. Works with or without an account — we’ll SMS you updates.</p>
+          <p style={{ marginTop: 12 }}>
+            Have an account? <Link to="/signin">Sign in</Link> so this visit appears under My account.
+          </p>
         </div>
         <form onSubmit={submit} className="booking-form">
           <label>First name<input required placeholder="Juan" onChange={update('customer_first_name')} /></label>

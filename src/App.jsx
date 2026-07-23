@@ -68,6 +68,9 @@ export default function App() {
         <Route path="/events" element={<EventsPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route element={<ProtectedRoute allowedRoles={['customer']} redirectTo="/signin" />}>
+          <Route path="/account" element={<CustomerAccountPage />} />
+        </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
@@ -76,9 +79,6 @@ export default function App() {
       <Route path="/signup" element={<CustomerSignUpPage />} />
       <Route path="/account/login" element={<Navigate to="/signin" replace />} />
       <Route path="/account/set-password" element={<CustomerSetPasswordPage />} />
-      <Route element={<ProtectedRoute allowedRoles={['customer']} redirectTo="/signin" />}>
-        <Route path="/account" element={<CustomerAccountPage />} />
-      </Route>
 
       <Route path="/queue/:branch" element={<PublicQueuePage />} />
       <Route path="/admin" element={<Navigate to="/operations/login" replace />} />

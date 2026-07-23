@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist', '.worktrees'] },
+  { ignores: ['dist', '.worktrees', 'public/push-sw.js', 'dev-dist'] },
   js.configs.recommended,
   react.configs.flat.recommended,
   react.configs.flat['jsx-runtime'],
@@ -23,7 +23,7 @@ export default [
   },
   {
     // Node/API tooling — not browser
-    files: ['api/**/*.{js,mjs}', 'server/**/*.{js,mjs}', 'scripts/**/*.{js,mjs}', 'vite.config.js'],
+    files: ['api/**/*.{js,mjs}', 'server/**/*.{js,mjs}', 'scripts/**/*.{js,mjs}', 'tests/**/*.{js,mjs}', 'vite.config.js'],
     languageOptions: { globals: { ...globals.node } },
   },
   {

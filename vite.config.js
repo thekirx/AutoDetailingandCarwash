@@ -1,11 +1,15 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { handleProvisionRequest } from './server/provisionCustomer.mjs'
 import { handleProvisionStaffRequest } from './server/provisionStaff.mjs'
 import { handleCustomerPortalRequest } from './server/customerPortal.mjs'
+import { handlePublicBookRequest } from './server/publicBook.mjs'
+import { handleBookingStatusRequest } from './server/bookingStatus.mjs'
+import { handlePushSubscribeRequest, handleSendPushRequest } from './server/pushApi.mjs'
 
 const root = path.dirname(fileURLToPath(import.meta.url))
 
@@ -45,29 +49,59 @@ function provisionApiPlugin() {
   return {
     name: 'hakum-provision-apis',
     configureServer(server) {
-      server.middlewares.use('/api/provision-customer', (req, res) => {
-        handleProvisionRequest(req, res, apiHelpers(server, req))
-      })
-      server.middlewares.use('/api/provision-staff', (req, res) => {
-        handleProvisionStaffRequest(req, res, apiHelpers(server, req))
-      })
-      server.middlewares.use('/api/customer-portal', (req, res) => {
-        handleCustomerPortalRequest(req, res, apiHelpers(server, req))
-      })
-      server.middlewares.use('/api/customer-signup', async (req, res) => {
+      const env = loadEnv(server.config.mode, root, '')
+      for (const [k, v] of Object.entries(env)) {
+        if (!process.env[k]) process.env[k] = v
+      }
+
+      const mount = (pathName, handler) => {
+        server.middlewares.use(pathName, (req, res) => handler(req, res, apiHelpers(server, req)))
+      }
+
+      mount('/api/provision-customer', handleProvisionRequest)
+      mount('/api/provision-staff', handleProvisionStaffRequest)
+      mount('/api/customer-portal', handleCustomerPortalRequest)
+      mount('/api/customer-signup', async (req, res, helpers) => {
         const { handleCustomerSignupRequest } = await import('./server/customerSignup.mjs')
-        handleCustomerSignupRequest(req, res, apiHelpers(server, req))
+        return handleCustomerSignupRequest(req, res, helpers)
       })
-      server.middlewares.use('/api/customer-auth-lookup', async (req, res) => {
+      mount('/api/customer-auth-lookup', async (req, res, helpers) => {
         const { handleCustomerAuthLookupRequest } = await import('./server/customerAuthLookup.mjs')
-        handleCustomerAuthLookupRequest(req, res, apiHelpers(server, req))
+        return handleCustomerAuthLookupRequest(req, res, helpers)
+      })
+      mount('/api/public-book', (req, res) => handlePublicBookRequest(req, res))
+      mount('/api/booking-status', (req, res) => handleBookingStatusRequest(req, res))
+      mount('/api/push-subscribe', (req, res) => handlePushSubscribeRequest(req, res))
+      mount('/api/send-push', (req, res) => handleSendPushRequest(req, res))
+      mount('/api/busybee', async (req, res) => {
+        const mod = await import('./api/busybee.js')
+        return mod.default(req, res)
       })
     },
   }
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), provisionApiPlugin()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    provisionApiPlugin(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'favicon.png', 'apple-touch-icon.png', 'og-image.png', 'manifest.webmanifest'],
+      manifest: false,
+      workbox: {
+        importScripts: ['/push-sw.js'],
+        navigateFallback: '/index.html',
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(root, './src'),

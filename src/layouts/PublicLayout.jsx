@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { ArrowRight, ArrowUpRight, Facebook, Instagram, Mail, MapPin, Menu, Phone, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import PublicPageMeta from '@/components/PublicPageMeta'
+import NotificationBell from '@/components/NotificationBell'
+import { useAuth } from '@/auth/AuthProvider'
 import { usePublicBranches } from '@/lib/branches'
 
 const navItems = [
@@ -18,6 +20,9 @@ export default function PublicLayout() {
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
   const { branches } = usePublicBranches({ mode: 'visible' })
+  const { user, profile, loading } = useAuth()
+  const isCustomer =
+    !loading && Boolean(user) && (profile?.role === 'customer' || user?.user_metadata?.role === 'customer')
 
   useEffect(() => setOpen(false), [pathname])
 
@@ -40,14 +45,26 @@ export default function PublicLayout() {
                 {label}
               </NavLink>
             ))}
+            {isCustomer ? <NavLink to="/account">My account</NavLink> : null}
           </nav>
           <div className="header-actions">
-            <Link className="header-auth header-signin" to="/signin">
-              Sign in
-            </Link>
-            <Link className="header-auth header-signup" to="/signup">
-              Sign up
-            </Link>
+            {isCustomer ? (
+              <>
+                <NotificationBell light />
+                <Link className="header-auth header-signin" to="/account">
+                  Account
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link className="header-auth header-signin" to="/signin">
+                  Sign in
+                </Link>
+                <Link className="header-auth header-signup" to="/signup">
+                  Sign up
+                </Link>
+              </>
+            )}
             <Link className="header-book" to="/book">
               Book now <ArrowUpRight size={16} />
             </Link>
@@ -69,8 +86,14 @@ export default function PublicLayout() {
                 {label}
               </NavLink>
             ))}
-            <Link to="/signin">Sign in</Link>
-            <Link to="/signup">Sign up</Link>
+            {isCustomer ? (
+              <NavLink to="/account">My account</NavLink>
+            ) : (
+              <>
+                <Link to="/signin">Sign in</Link>
+                <Link to="/signup">Sign up</Link>
+              </>
+            )}
             <Link className="mobile-book" to="/book">
               Book now <ArrowUpRight size={17} />
             </Link>

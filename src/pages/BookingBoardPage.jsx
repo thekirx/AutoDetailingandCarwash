@@ -46,12 +46,27 @@ export default function BookingBoardPage() {
   }, [bookings])
 
   async function move(booking, status) {
-    const { error } = await supabase.from('bookings').update({ status }).eq('id', booking.id)
-    if (error) toast.error(error.message)
-    else {
-      toast.success(`Moved to ${status}`)
-      load()
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData.session?.access_token
+    if (!token) {
+      toast.error('Sign in required')
+      return
     }
+    const res = await fetch('/api/booking-status', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ booking_id: booking.id, status }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast.error(body.error || 'Unable to update booking')
+      return
+    }
+    toast.success(`Moved to ${status}${body.notify?.sms?.ok ? ' · SMS sent' : ''}`)
+    load()
   }
 
   if (!canAccessBookingBoard(profile)) return <Navigate to="/operations/access-denied" replace />

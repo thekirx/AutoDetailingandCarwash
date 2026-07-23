@@ -53,27 +53,36 @@ export default function SmsPage() {
 
   async function queueSms(event) {
     event.preventDefault()
-    // Edge Function preferred; fall back to sms_events insert for local/dev
-    const { error } = await supabase.from('sms_events').insert({
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData.session?.access_token
+    if (!token) {
+      toast.error('Sign in required')
+      return
+    }
+    const res = await fetch('/api/busybee', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ phone: send.phone.trim(), message: send.body.trim() }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok || !body.ok) {
+      toast.error(body.providerResponse || body.error || 'BusyBee send failed')
+    } else {
+      toast.success('SMS sent via BusyBee')
+    }
+    // Audit row
+    await supabase.from('sms_events').insert({
       phone: send.phone.trim(),
       message: send.body.trim(),
       event_type: send.template_type,
-      status: 'queued',
-      provider: 'edge',
+      status: body.ok ? 'sent' : 'failed',
+      provider: 'busybee',
+      provider_response: body.providerResponse || null,
+      sent_at: body.ok ? new Date().toISOString() : null,
     })
-    if (error) {
-      // schema may vary — try minimal columns
-      const retry = await supabase.from('sms_events').insert({
-        to_phone: send.phone.trim(),
-        body: send.body.trim(),
-        template_type: send.template_type,
-        status: 'queued',
-      })
-      if (retry.error) toast.error(retry.error.message)
-      else toast.success('SMS queued')
-    } else {
-      toast.success('SMS queued for Edge Function delivery')
-    }
     setSend({ phone: '', body: '', template_type: 'promo' })
     load()
   }

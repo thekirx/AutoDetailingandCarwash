@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import LoyaltyCard from '@/components/LoyaltyCard'
+import NotificationBell from '@/components/NotificationBell'
+import PushToggle from '@/components/PushToggle'
 
 async function fetchPortal() {
   const { data: sessionData } = await supabase.auth.getSession()
@@ -97,24 +99,28 @@ export default function CustomerAccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070b12] text-slate-100">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#070b12]/90 px-4 py-4 backdrop-blur-xl sm:px-6">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold tracking-[0.22em] text-blue-300 uppercase">Hakum Auto Care</p>
-            <h1 className="truncate text-lg font-semibold sm:text-xl">
+    <section className="account-page">
+      <div className="public-shell" style={{ paddingTop: 32, paddingBottom: 64 }}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow">My account</p>
+            <h1 className="section-title" style={{ marginBottom: 8 }}>
               Hi{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}
             </h1>
+            <p className="text-sm text-slate-600">Track visits, loyalty, and live queue — same Hakum site you booked from.</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => signOut()} className="text-slate-300">
-            <LogOut data-icon="inline-start" /> Sign out
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <NotificationBell />
+            <PushToggle />
+            <Button variant="outline" size="sm" onClick={() => signOut()}>
+              <LogOut data-icon="inline-start" /> Sign out
+            </Button>
+          </div>
         </div>
-      </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
-        {error ? <p className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">{error}</p> : null}
+        {error ? <p className="form-error mt-4">{error}</p> : null}
 
+        <div className="mt-8 flex flex-col gap-6">
         {loading ? (
           <Skeleton className="h-64 w-full rounded-[2rem]" />
         ) : loyalty ? (
@@ -126,12 +132,12 @@ export default function CustomerAccountPage() {
           />
         ) : null}
 
-        <Card className="border-white/10 bg-[#111820]">
+        <Card>
           <CardHeader className="gap-3">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <MapPin size={18} /> Live queue
             </CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription>
               {geoNote || 'Choose a branch to see how busy the floor is.'}
             </CardDescription>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -163,6 +169,11 @@ export default function CustomerAccountPage() {
               >
                 <Navigation data-icon="inline-start" /> Use nearest
               </Button>
+              {selectedBranch ? (
+                <Link className="inline-flex h-8 items-center text-sm text-primary underline" to={`/queue/${selectedBranch}`}>
+                  Open live queue
+                </Link>
+              ) : null}
             </div>
           </CardHeader>
           <CardContent>
@@ -176,28 +187,13 @@ export default function CustomerAccountPage() {
                   ['Checking', selectedCounts.final_checking],
                   ['Total active', selectedCounts.total],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-4 text-center">
+                  <div key={label} className="rounded-2xl border border-border bg-muted/30 px-3 py-4 text-center">
                     <p className="text-2xl font-semibold tabular-nums">{value}</p>
-                    <p className="mt-1 text-[11px] tracking-wide text-slate-400 uppercase">{label}</p>
+                    <p className="mt-1 text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p>
                   </div>
                 ))}
               </div>
             )}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {branches.map((b) => {
-                const c = queueCounts[b.slug] || getQueueCounts([])
-                return (
-                  <button
-                    key={b.slug}
-                    type="button"
-                    onClick={() => setSelectedBranch(b.slug)}
-                    className={`rounded-full border px-3 py-1.5 text-xs transition ${selectedBranch === b.slug ? 'border-blue-400 bg-blue-500/20 text-blue-100' : 'border-white/10 text-slate-400'}`}
-                  >
-                    {b.name.replace('Hakum Auto Care ', '')} · {c.total}
-                  </button>
-                )
-              })}
-            </div>
           </CardContent>
         </Card>
 
@@ -207,32 +203,34 @@ export default function CustomerAccountPage() {
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
           <TabsContent value="active" className="mt-4">
-            <Card className="border-white/10 bg-[#111820]">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-base">Your bookings in progress</CardTitle>
                 <CardDescription>Queue number and live status for your vehicle</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {loading ? <Skeleton className="h-24 w-full" /> : bookings.length === 0 ? (
-                  <p className="text-sm text-slate-400">No active visits. Walk in or book from the public site.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No active visits. <Link className="text-primary underline" to="/book">Book a service</Link>.
+                  </p>
                 ) : (
                   bookings.map((row) => {
                     const visit = row.visit || { steps: [], currentIndex: 0, label: row.status, isComplete: false }
                     return (
-                      <div key={row.id} className="rounded-xl border border-white/10 bg-[#0d1218] p-4">
+                      <div key={row.id} className="rounded-xl border border-border bg-muted/20 p-4">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="text-lg font-semibold tracking-wide text-white">{row.vehicle_plate || '—'}</p>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-lg font-semibold tracking-wide">{row.vehicle_plate || '—'}</p>
+                            <p className="text-xs text-muted-foreground">
                               {[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ') || row.service_name || 'Service visit'}
                             </p>
-                            <p className="mt-1 text-xs text-slate-500">{row.branch}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{row.branch}</p>
                           </div>
                           <div className="text-right">
                             {row.queue_label ? (
-                              <p className="text-2xl font-bold text-blue-300">{row.queue_label}</p>
+                              <p className="text-2xl font-bold text-primary">{row.queue_label}</p>
                             ) : (
-                              <p className="text-sm text-slate-500">Queue pending</p>
+                              <p className="text-sm text-muted-foreground">Queue pending</p>
                             )}
                             <Badge variant="secondary" className="mt-1">{visit.label || row.status}</Badge>
                           </div>
@@ -245,9 +243,9 @@ export default function CustomerAccountPage() {
                               <li
                                 key={step.key}
                                 className={`rounded-lg border px-2 py-2 text-center text-[11px] leading-tight ${
-                                  done ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                                    : current ? 'border-blue-400/50 bg-blue-500/15 text-blue-100'
-                                      : 'border-white/5 text-slate-500'
+                                  done ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800'
+                                    : current ? 'border-primary/40 bg-primary/10 text-primary'
+                                      : 'border-border text-muted-foreground'
                                 }`}
                               >
                                 {step.label}
@@ -256,7 +254,7 @@ export default function CustomerAccountPage() {
                           })}
                         </ol>
                         {row.final_price_minor != null ? (
-                          <p className="mt-3 text-right text-xs text-slate-400">Est. {formatMoney(row.final_price_minor)}</p>
+                          <p className="mt-3 text-right text-xs text-muted-foreground">Est. {formatMoney(row.final_price_minor)}</p>
                         ) : null}
                       </div>
                     )
@@ -266,13 +264,13 @@ export default function CustomerAccountPage() {
             </Card>
           </TabsContent>
           <TabsContent value="history" className="mt-4">
-            <Card className="border-white/10 bg-[#111820]">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-base">Visit history</CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 {loading ? <Skeleton className="h-24 w-full" /> : history.length === 0 ? (
-                  <p className="text-sm text-slate-400">No history yet — your next check-in will show here.</p>
+                  <p className="text-sm text-muted-foreground">No history yet — your next check-in will show here.</p>
                 ) : (
                   <Table>
                     <TableHeader>
@@ -287,12 +285,12 @@ export default function CustomerAccountPage() {
                     <TableBody>
                       {history.map((row) => (
                         <TableRow key={row.id}>
-                          <TableCell className="whitespace-nowrap text-xs text-slate-400">
+                          <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                             {new Date(row.created_at || row.scheduled_start).toLocaleString('en-PH')}
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">{row.vehicle_plate || '—'}</div>
-                            <div className="text-xs text-slate-500">{[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ')}</div>
+                            <div className="text-xs text-muted-foreground">{[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ')}</div>
                           </TableCell>
                           <TableCell>{row.branch}</TableCell>
                           <TableCell><Badge variant="outline">{row.status}</Badge></TableCell>
@@ -307,15 +305,13 @@ export default function CustomerAccountPage() {
           </TabsContent>
         </Tabs>
 
-        <div className="flex flex-wrap gap-3 pb-8">
-          <Link to="/book" className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground sm:w-auto">
-            Book a service
-          </Link>
-          <Link to="/" className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-white/15 px-4 text-sm font-medium text-slate-200 sm:w-auto">
-            Back to site
-          </Link>
+        <div className="flex flex-wrap gap-3 pb-4">
+          <Link to="/book" className="button button-blue">Book a service</Link>
+          <Link to="/queue" className="button">Live queue</Link>
+          <Link to="/" className="button">Home</Link>
         </div>
-      </main>
-    </div>
+        </div>
+      </div>
+    </section>
   )
 }
