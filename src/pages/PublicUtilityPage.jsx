@@ -79,16 +79,23 @@ export function BookingPage() {
     setStatus('loading')
     setError('')
     const customer_name = `${form.customer_first_name} ${form.customer_last_name}`.trim()
-    const { error: e } = await supabase.from('bookings').insert({
+    const plate = String(form.vehicle_plate || '').trim().toUpperCase() || null
+    const { data: sessionData } = await supabase.auth.getSession()
+    const uid = sessionData.session?.user?.id || null
+    const row = {
       customer_name,
       customer_phone: form.customer_phone,
       vehicle_make: form.vehicle_make,
       vehicle_model: form.vehicle_model,
+      vehicle_plate: plate,
       scheduled_start: new Date(form.scheduled_start).toISOString(),
       service_id: form.service_id,
       branch: form.branch,
       status: 'pending',
-    })
+    }
+    // Logged-in customers: attach identity so portal visits appear
+    if (uid) row.customer_id = uid
+    const { error: e } = await supabase.from('bookings').insert(row)
     if (e) {
       setError(e.message)
       setStatus('idle')
@@ -125,6 +132,7 @@ export function BookingPage() {
           <label>First name<input required placeholder="Juan" onChange={update('customer_first_name')} /></label>
           <label>Last name<input required placeholder="Dela Cruz" onChange={update('customer_last_name')} /></label>
           <label>Mobile number<input required placeholder="09XX XXX XXXX" onChange={update('customer_phone')} /></label>
+          <label>Plate number<input required placeholder="ABC 1234" onChange={update('vehicle_plate')} /></label>
           <label>Vehicle make<input required placeholder="Toyota" onChange={update('vehicle_make')} /></label>
           <label>Vehicle model<input required placeholder="Fortuner" onChange={update('vehicle_model')} /></label>
           <label>Preferred date & time<input required type="datetime-local" onChange={update('scheduled_start')} /></label>

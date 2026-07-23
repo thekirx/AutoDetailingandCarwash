@@ -4,6 +4,7 @@ import { Search, ShoppingCart, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessPos } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
+import { buildPosSalePayload } from '@/lib/posSale'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { Button } from '@/components/ui/button'
@@ -29,21 +30,31 @@ export default function PosPage() {
   const [cartOpen, setCartOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [todayStats, setTodayStats] = useState(null)
+  const [handoffs, setHandoffs] = useState([])
+  const [activeHandoff, setActiveHandoff] = useState(null)
 
   const load = useCallback(async () => {
     const today = new Date().toISOString().slice(0, 10)
-    const [svc, prod, cust, stats] = await Promise.all([
+    const [svc, prod, cust, stats, handoffRes] = await Promise.all([
       supabase.from('services').select('id, name, price_minor').eq('is_active', true).eq('is_archived', false),
       supabase.from('products').select('id, name, price_minor, category, stock_qty, sku').eq('is_active', true).eq('is_archived', false),
       supabase.from('customers').select('id, full_name, phone').eq('is_archived', false).eq('role', 'customer').limit(100),
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
+      supabase
+        .from('pos_handoffs')
+        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, vehicle_plate, service_id, final_price_minor, status, queue_number)')
+        .eq('status', 'pending')
+        .eq('branch', branch)
+        .order('created_at', { ascending: true }),
     ])
     if (svc.error) toast.error(svc.error.message)
     if (prod.error) toast.error(prod.error.message)
+    if (handoffRes.error) toast.error(handoffRes.error.message)
     setServices(svc.data || [])
     setProducts(prod.data || [])
     setCustomers(cust.data || [])
     setTodayStats(stats.data)
+    setHandoffs(handoffRes.data || [])
   }, [branch])
 
   useEffect(() => {
@@ -61,6 +72,7 @@ export default function PosPage() {
     const channel = supabase
       .channel('pos-sales')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs' }, load)
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -97,6 +109,7 @@ export default function PosPage() {
   const cartTotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price_minor, 0)
 
   function addToCart(item) {
+    setActiveHandoff(null)
     setCart((current) => {
       const existing = current.find((line) => line.key === item.key)
       if (existing) {
@@ -107,32 +120,53 @@ export default function PosPage() {
     setCartOpen(true)
   }
 
+  function loadHandoff(row) {
+    const booking = row.bookings || {}
+    const serviceId = booking.service_id
+    const svc = services.find((s) => s.id === serviceId)
+    const amount = row.amount_minor ?? booking.final_price_minor ?? svc?.price_minor ?? 0
+    const name = svc?.name || `Queue · ${booking.vehicle_plate || 'ticket'}`
+    setActiveHandoff(row)
+    setBranch(row.branch || branch)
+    setCustomerId(booking.customer_id || '')
+    setCart([
+      {
+        key: `handoff-${row.id}`,
+        item_type: 'service',
+        id: serviceId || row.id,
+        name,
+        quantity: 1,
+        unit_price_minor: amount,
+        price_minor: amount,
+      },
+    ])
+    setCartOpen(true)
+  }
+
   async function checkout() {
     if (!cart.length) return
     setSaving(true)
     const { data, error } = await supabase.rpc('complete_pos_sale', {
-      payload: {
+      payload: buildPosSalePayload({
         branch,
-        customer_id: customerId || null,
-        payment_method: paymentMethod,
-        status: 'paid',
-        lines: cart.map((line) => ({
-          item_type: line.item_type,
-          service_id: line.item_type === 'service' ? line.id : null,
-          product_id: line.item_type === 'product' ? line.id : null,
-          name: line.name,
-          quantity: line.quantity,
-          unit_price_minor: line.unit_price_minor,
-        })),
-      },
+        customerId,
+        paymentMethod,
+        cart,
+        activeHandoff,
+      }),
     })
     setSaving(false)
     if (error) {
       toast.error(error.message)
       return
     }
-    toast.success(`Sale complete · ${formatMoney(data?.total_minor || cartTotal)}`)
+    toast.success(
+      activeHandoff
+        ? `Ticket paid · ${formatMoney(data?.total_minor || cartTotal)}`
+        : `Sale complete · ${formatMoney(data?.total_minor || cartTotal)}`,
+    )
     setCart([])
+    setActiveHandoff(null)
     setCartOpen(false)
     load()
   }
@@ -156,9 +190,40 @@ export default function PosPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Sales today" value={formatMoney(todayStats?.total_sales_minor || 0)} />
         <Stat label="Paid" value={todayStats?.paid_count ?? 0} />
-        <Stat label="Pending" value={todayStats?.pending_count ?? 0} />
+        <Stat label="Queue to pay" value={handoffs.length} />
         <Stat label="Avg ticket" value={formatMoney(todayStats?.average_ticket_minor || 0)} />
       </div>
+
+      {handoffs.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Waiting for payment</CardTitle>
+            <p className="text-sm text-muted-foreground">Tickets sent from the floor. Open one to complete checkout and close the visit.</p>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {handoffs.map((row) => {
+              const booking = row.bookings || {}
+              return (
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => loadHandoff(row)}
+                  className="rounded-xl border border-border bg-background p-4 text-left transition hover:border-primary/50 hover:bg-accent/30"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium">{booking.customer_name || 'Customer'}</p>
+                    <Badge variant="secondary">
+                      {booking.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{booking.vehicle_plate || '—'}</p>
+                  <p className="mt-3 text-xl font-semibold tabular-nums">{formatMoney(row.amount_minor || booking.final_price_minor || 0)}</p>
+                </button>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
@@ -204,8 +269,13 @@ export default function PosPage() {
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
         <SheetContent className="flex w-full flex-col gap-4 sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Checkout</SheetTitle>
+            <SheetTitle>{activeHandoff ? 'Pay queue ticket' : 'Checkout'}</SheetTitle>
           </SheetHeader>
+          {activeHandoff && (
+            <p className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+              Linked to booking {activeHandoff.booking_id?.slice(0, 8)}… · paying closes the handoff and marks the visit complete.
+            </p>
+          )}
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
             {cart.length === 0 && <p className="text-sm text-muted-foreground">Cart is empty.</p>}
             {cart.map((line) => (

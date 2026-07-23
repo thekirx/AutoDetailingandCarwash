@@ -50,7 +50,7 @@ const CalendarPage = lazy(() => import('./pages/CalendarPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 
 const opsRoles = OPS_LOGIN_ROLES
-const adminRoles = [ROLES.STAFF, ROLES.ADMIN, ROLES.SUPER_ADMIN]
+const adminRoles = [ROLES.ADMIN, ROLES.SUPER_ADMIN]
 
 export default function App() {
   return (

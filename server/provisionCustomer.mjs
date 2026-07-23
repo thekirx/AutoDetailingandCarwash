@@ -4,7 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 
-export const QUEUE_PROVISION_ROLES = new Set(['team_lead', 'BossMich'])
+export const QUEUE_PROVISION_ROLES = new Set(['team_lead', 'BossMich', 'admin', 'marketing', 'sales'])
 
 /** Phone digits → synthetic login email when walk-in has no email. */
 export function phoneLoginEmail(phone) {
@@ -38,7 +38,7 @@ async function assertQueueEditor(admin, accessToken) {
 
   if (staffError) throw staffError
   if (!staff || !QUEUE_PROVISION_ROLES.has(staff.role)) {
-    throw Object.assign(new Error('Only Team Lead or BossMich can provision customer accounts.'), { status: 403 })
+    throw Object.assign(new Error('Only Admin, Team Lead, Super Admin, Marketing, or Sales can provision customer accounts.'), { status: 403 })
   }
   return { user: userData.user, staff }
 }
