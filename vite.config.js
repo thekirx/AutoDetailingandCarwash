@@ -70,6 +70,10 @@ function provisionApiPlugin() {
         return handleCustomerAuthLookupRequest(req, res, helpers)
       })
       mount('/api/public-book', (req, res) => handlePublicBookRequest(req, res))
+      mount('/api/plate-lookup', async (req, res) => {
+        const { handlePublicPlateLookup } = await import('./server/publicPlateLookup.mjs')
+        return handlePublicPlateLookup(req, res)
+      })
       mount('/api/booking-status', (req, res) => handleBookingStatusRequest(req, res))
       mount('/api/push-subscribe', (req, res) => handlePushSubscribeRequest(req, res))
       mount('/api/send-push', (req, res) => handleSendPushRequest(req, res))
@@ -101,8 +105,8 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       devOptions: {
+        // classic SW so /push-sw.js importScripts works in local PWA testing
         enabled: true,
-        type: 'module',
       },
     }),
   ],

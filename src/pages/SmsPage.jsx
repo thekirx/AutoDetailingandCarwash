@@ -21,18 +21,23 @@ export default function SmsPage() {
   const [events, setEvents] = useState([])
   const [smsEnabled, setSmsEnabled] = useState(true)
   const [toggling, setToggling] = useState(false)
+  const [providerHealth, setProviderHealth] = useState(null)
   const [form, setForm] = useState({ name: '', template_type: 'promo', body: '' })
-  const [send, setSend] = useState({ phone: '', body: '', template_type: 'promo' })
+  const [send, setSend] = useState({ phone: '09625294043', body: '', template_type: 'promo' })
 
   const load = useCallback(async () => {
-    const [t, e, enabled] = await Promise.all([
+    const [t, e, enabled, health] = await Promise.all([
       supabase.from('sms_templates').select('*').order('created_at', { ascending: false }),
       supabase.from('sms_events').select('*').order('created_at', { ascending: false }).limit(30),
       getSmsNotificationsEnabled().catch(() => true),
+      fetch('/api/busybee')
+        .then(async (r) => ({ http: r.status, ...(await r.json().catch(() => ({}))) }))
+        .catch((err) => ({ ok: false, error: err.message })),
     ])
     setTemplates(t.data || [])
     setEvents(e.data || [])
     setSmsEnabled(enabled)
+    setProviderHealth(health)
   }, [])
 
   useEffect(() => {
@@ -134,11 +139,22 @@ export default function SmsPage() {
             {toggling ? 'Saving…' : smsEnabled ? 'SMS on' : 'SMS off'}
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
             Current: <strong>{smsEnabled ? 'Enabled' : 'Disabled'}</strong>
             {!isAdmin(profile) ? ' · Only Admin / Super Admin can change this.' : ''}
           </p>
+          {providerHealth && (
+            <p className={`text-sm ${providerHealth.ok ? 'text-emerald-700' : 'text-destructive'}`}>
+              BusyBee:{' '}
+              {providerHealth.ok
+                ? `connected · ${providerHealth.json?.Data?.[0]?.Credits ?? providerHealth.json?.data?.[0]?.credits ?? 'balance ok'}`
+                : providerHealth.json?.ErrorDescription ||
+                  providerHealth.providerResponse ||
+                  providerHealth.error ||
+                  'unreachable — check BUSYBEE_API_BASE_URL'}
+            </p>
+          )}
         </CardContent>
       </Card>
 

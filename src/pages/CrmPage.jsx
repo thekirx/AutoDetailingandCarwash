@@ -6,6 +6,7 @@ import { canAccessCrm, isAdmin } from '@/auth/permissions'
 import { listBranches, listMembershipTiers } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
+import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -234,8 +235,16 @@ export default function CrmPage() {
               <div className="flex flex-col gap-2"><Label>Email (optional)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
               <div className="flex flex-col gap-2"><Label>Plate (optional)</Label><Input value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value.toUpperCase() })} placeholder="ABC 1234" /></div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-2"><Label>Make</Label><Input value={form.vehicle_make} onChange={(e) => setForm({ ...form, vehicle_make: e.target.value })} /></div>
-                <div className="flex flex-col gap-2"><Label>Model</Label><Input value={form.vehicle_model} onChange={(e) => setForm({ ...form, vehicle_model: e.target.value })} /></div>
+                <VehicleMakeModelFields
+                  make={form.vehicle_make}
+                  model={form.vehicle_model}
+                  onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
+                  onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
+                  variant="crm"
+                  required={false}
+                  makeLabel="Brand"
+                  modelLabel="Model"
+                />
               </div>
               <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save customer'}</Button>
             </form>

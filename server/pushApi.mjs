@@ -26,19 +26,38 @@ export async function handleSendPushRequest(req, res) {
 
   try {
     const body = await readJsonBody(req)
-    const targets = Array.isArray(body.targets) ? body.targets : []
     const title = String(body.title || '').trim()
     const message = String(body.body || '').trim()
+    const token = bearer(req)
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const isService = token && serviceKey && token === serviceKey
+
+    // Any signed-in user may ping themselves (device delivery check)
+    if (body.selfTest) {
+      if (!token || isService) return json(res, 401, { error: 'Sign in required for self-test' })
+      const db = admin()
+      const { data: userData } = await db.auth.getUser(token)
+      if (!userData?.user) return json(res, 401, { error: 'Unauthorized' })
+      const result = await sendWebPushToUsers({
+        userIds: [userData.user.id],
+        title: title || 'Hakum alerts ready',
+        body: message || 'Push is working on this device.',
+        url: body.url || '/',
+        tag: body.tag || 'self-test',
+        kind: 'self_test',
+      })
+      return json(res, 200, { ok: true, ...result })
+    }
+
+    const targets = Array.isArray(body.targets) ? body.targets : []
     if (!title || !message || !targets.length) {
       return json(res, 400, { error: 'title, body, and targets[] required' })
     }
 
     const hasUserTarget = targets.some((t) => t.userId)
-    const token = bearer(req)
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const isService = token && serviceKey && token === serviceKey
 
     let staffOk = false
+    let staffRole = null
     if (token && !isService) {
       const db = admin()
       const { data: userData } = await db.auth.getUser(token)
@@ -49,12 +68,17 @@ export async function handleSendPushRequest(req, res) {
           .eq('id', userData.user.id)
           .eq('is_active', true)
           .maybeSingle()
-        staffOk = staff && ['admin', 'BossMich', 'marketing'].includes(staff.role)
+        staffOk = Boolean(staff)
+        staffRole = staff?.role || null
       }
     }
 
-    if (hasUserTarget && !isService && !staffOk) {
-      return json(res, 403, { error: 'userId targets require staff or service auth' })
+    if (!isService && !staffOk) {
+      return json(res, 403, { error: 'Staff or service auth required to send push' })
+    }
+
+    if (hasUserTarget && !isService && !['admin', 'BossMich', 'marketing'].includes(staffRole)) {
+      return json(res, 403, { error: 'userId targets require admin, BossMich, or marketing' })
     }
 
     const userIds = await resolvePushTargets(targets)
@@ -67,7 +91,6 @@ export async function handleSendPushRequest(req, res) {
       kind: body.kind || 'system',
     })
 
-    // Inbox rows for explicit userIds
     const inboxIds = [...new Set(targets.map((t) => t.userId).filter(Boolean))]
     if (inboxIds.length) {
       const db = admin()

@@ -84,7 +84,7 @@ export function canAccessMarketing(profile) {
 }
 
 export function canAccessBookingBoard(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.MARKETING])
+  return has(profile, [...ADMIN_ROLES, ROLES.MARKETING, ROLES.SALES, ROLES.TEAM_LEAD])
 }
 
 export function canUseOperations(profile) {

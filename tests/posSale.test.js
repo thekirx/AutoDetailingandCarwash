@@ -11,11 +11,13 @@ const walkIn = buildPosSalePayload({
 assert.equal(walkIn.booking_id, null)
 assert.equal(walkIn.pos_handoff_id, null)
 assert.equal(walkIn.customer_id, null)
+assert.equal(walkIn.notes, null)
 
 const handoff = buildPosSalePayload({
   branch: 'bacoor',
   customerId: '',
   paymentMethod: 'gcash',
+  notes: 'Walk-in: Ana · Plate ABC123',
   cart: [{ item_type: 'service', id: 'svc-1', name: 'Wash', quantity: 1, unit_price_minor: 35000 }],
   activeHandoff: {
     id: 'hand-1',
@@ -27,5 +29,6 @@ assert.equal(handoff.booking_id, 'book-1')
 assert.equal(handoff.pos_handoff_id, 'hand-1')
 assert.equal(handoff.customer_id, 'cust-1')
 assert.equal(handoff.payment_method, 'gcash')
+assert.equal(handoff.notes, 'Walk-in: Ana · Plate ABC123')
 
 console.log('posSale.buildPosSalePayload: ok')

@@ -35,13 +35,20 @@ export async function loadCustomerPortal({ accessToken }) {
 
   if (!isCustomer) throw Object.assign(new Error('Customer account required.'), { status: 403 })
 
-  const [branches, history, active, queue, loyaltySettings, loyaltyMilestones, customerRow] = await Promise.all([
+  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow] = await Promise.all([
     admin.from('branches').select('slug, name, address, is_active').eq('is_active', true).eq('is_archived', false).order('name'),
     admin
       .from('bookings')
       .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, final_price_minor, scheduled_start, created_at, customer_name')
       .eq('customer_id', userId)
       .order('created_at', { ascending: false })
+      .limit(40),
+    admin
+      .from('sales')
+      .select('id, branch, total_minor, payment_method, occurred_at, status')
+      .eq('customer_id', userId)
+      .eq('status', 'paid')
+      .order('occurred_at', { ascending: false })
       .limit(40),
     admin
       .from('bookings')
@@ -92,6 +99,7 @@ export async function loadCustomerPortal({ accessToken }) {
     },
     branches: branches.data || [],
     history: history.data || [],
+    purchases: purchases.data || [],
     bookings: activeBookings,
     queueCounts,
     loyalty: {

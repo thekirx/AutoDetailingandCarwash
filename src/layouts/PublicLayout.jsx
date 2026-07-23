@@ -5,6 +5,7 @@ import PublicPageMeta from '@/components/PublicPageMeta'
 import NotificationBell from '@/components/NotificationBell'
 import { useAuth } from '@/auth/AuthProvider'
 import { usePublicBranches } from '@/lib/branches'
+import { CustomerInstallPopup } from '@/components/InstallGuide'
 
 const navItems = [
   ['Main', '/'],
@@ -201,6 +202,7 @@ export default function PublicLayout() {
           </div>
         </div>
       </footer>
+      <CustomerInstallPopup enabled={isCustomer} />
     </div>
   )
 }

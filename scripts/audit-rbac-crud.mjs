@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
+  canAccessBookingBoard,
   canAccessCrm,
   canAccessFinance,
   canAccessPos,
@@ -128,6 +129,7 @@ async function main() {
     ['canAccessFinance', canAccessFinance, false],
     ['canAccessPos', canAccessPos, false],
     ['canViewTasks', canViewAssignedTasks, true],
+    ['canAccessBookingBoard', canAccessBookingBoard, true],
   ])
   expectPerms('staff', { role: 'staff', branch_slug: 'bacoor' }, [
     ['canEditQueue', canEditQueueOperations, false],
@@ -152,6 +154,8 @@ async function main() {
     } else ok('tl.nav.denied_admin')
     if (!nav.includes('/operations/queue') || !nav.includes('/operations/crew')) fail('tl.nav.queue_crew', new Error(nav.join(',')))
     else ok('tl.nav.queue_crew')
+    if (!nav.includes('/operations/bookings')) fail('tl.nav.bookings', new Error(nav.join(',')))
+    else ok('tl.nav.bookings')
   }
   {
     const nav = getOperationsNav({ role: 'staff', branch_slug: 'bacoor' }).map((i) => i.to)

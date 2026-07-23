@@ -17,6 +17,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
+import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
+import { splitCustomerName } from '../lib/phVehicles'
 import {
   ACTIVE_QUEUE_STATUSES,
   QUEUE_PERMISSION_ERROR,
@@ -65,13 +67,13 @@ const vehicleTypeOptions = [
 
 function PageHeader({ eyebrow, title, description, action }) {
   return (
-    <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
-      <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-blue-300 uppercase">{eyebrow}</p>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
-        {description && <p className="mt-3 max-w-2xl text-slate-400">{description}</p>}
+    <div className="floor-compact-header flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <div className="min-w-0">
+        <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-blue-300 uppercase">{eyebrow}</p>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+        {description && <p className="floor-desc mt-2 max-w-2xl text-slate-400">{description}</p>}
       </div>
-      {action}
+      {action && <div className="flex shrink-0 flex-wrap gap-2">{action}</div>}
     </div>
   )
 }
@@ -79,30 +81,30 @@ function PageHeader({ eyebrow, title, description, action }) {
 function MetricCard({ label, value, icon: Icon, tone = 'blue' }) {
   const colors = tone === 'green' ? 'text-emerald-200 bg-emerald-400/10' : tone === 'amber' ? 'text-amber-200 bg-amber-400/10' : 'text-blue-200 bg-blue-400/10'
   return (
-    <article className="rounded-3xl border border-white/10 bg-[#0d1726] p-5 shadow-xl shadow-black/10">
+    <article className="rounded-2xl border border-white/10 bg-[#0d1726] p-4 shadow-xl shadow-black/10 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">{label}</p>
-        <span className={`grid size-10 place-items-center rounded-2xl ${colors}`}><Icon size={18} /></span>
+        <p className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">{label}</p>
+        <span className={`grid size-9 place-items-center rounded-xl ${colors}`}><Icon size={16} aria-hidden /></span>
       </div>
-      <p className="mt-5 text-3xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-3 text-2xl font-semibold tabular-nums sm:mt-4 sm:text-3xl">{value}</p>
     </article>
   )
 }
 
 function TicketCard({ ticket }) {
   return (
-    <Link to={`/operations/queue/${ticket.booking_id}`} className="block rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-slate-100 no-underline transition hover:border-blue-300/30 hover:bg-white/[0.07]">
+    <Link to={`/operations/queue/${ticket.booking_id}`} className="floor-ticket">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-2xl font-black tabular-nums">{formatQueueNumber(ticket.queue_number)}</p>
-          <p className="mt-1 text-sm font-medium">{ticket.customer_name}</p>
+        <div className="min-w-0">
+          <p className="text-xl font-black tabular-nums sm:text-2xl">{formatQueueNumber(ticket.queue_number)}</p>
+          <p className="mt-1 truncate text-sm font-medium">{ticket.customer_name}</p>
         </div>
-        <span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase ${statusTone[ticket.status] || statusTone.completed}`}>{STATUS_LABELS[ticket.status] || ticket.status}</span>
+        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusTone[ticket.status] || statusTone.completed}`}>{STATUS_LABELS[ticket.status] || ticket.status}</span>
       </div>
-      <div className="mt-4 grid gap-1 text-xs text-slate-400">
-        <span>{[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'}</span>
-        <span>{ticket.vehicle_plate || 'No plate'} · {ticket.service_name || 'Service'}</span>
-        <span>{ticket.assigned_staff_name || 'No staff assigned'}</span>
+      <div className="mt-3 grid gap-0.5 text-xs text-slate-400">
+        <span className="truncate">{[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'}</span>
+        <span className="truncate">{ticket.vehicle_plate || 'No plate'} · {ticket.service_name || 'Service'}</span>
+        <span className="truncate">{ticket.assigned_staff_name || 'No staff assigned'}</span>
       </div>
     </Link>
   )
@@ -130,17 +132,19 @@ function useOperationsSnapshot() {
   }, [load])
 
   useEffect(() => {
+    const branch = getBranchScope(profile) || 'all'
     const channel = supabase
-      .channel('operations-queue')
+      .channel(`operations-queue-${branch}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs' }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_attendance' }, load)
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [load])
+  }, [load, profile])
 
   return { ...snapshot, loading, error, reload: load }
 }
@@ -157,13 +161,13 @@ export function OperationsDashboardPage() {
   return (
     <section>
       <PageHeader eyebrow="Team Lead Dashboard" title="Active floor control" description="Track queue volume, crew availability, and handoffs ready for the future POS module." action={<RefreshButton loading={loading} onClick={reload} />} />
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-4 grid gap-3 grid-cols-2 xl:grid-cols-4 sm:mt-6 sm:gap-4">
         <MetricCard label="Waiting" value={counts.waiting} icon={Clock3} />
         <MetricCard label="In Progress" value={counts.in_progress} icon={CarFront} tone="green" />
         <MetricCard label="Final Checking" value={counts.final_checking} icon={BadgeCheck} tone="amber" />
         <MetricCard label="Total Active" value={counts.total} icon={ClipboardList} />
       </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr] sm:mt-5 sm:gap-5">
         <Panel title="Crew Availability" icon={Users}>
           <div className="grid gap-4 sm:grid-cols-2">
             <CrewList title="Available" rows={availableStaff} empty="No available staff" />
@@ -181,8 +185,8 @@ export function OperationsDashboardPage() {
           </div>
         </Panel>
       </div>
-      <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-6">
-        <div className="grid gap-3">
+      <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
+        <div className="grid max-h-64 gap-3 overflow-y-auto sm:max-h-80">
           {events.length ? events.map((event) => (
             <div key={event.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
               <p className="text-sm">{event.old_status || 'created'} to {event.new_status}</p>
@@ -204,22 +208,22 @@ export function OperationsQueuePage() {
   if (error) return <ErrorState error={error} onRetry={reload} />
 
   return (
-    <section>
+    <section className="flex min-h-0 flex-col">
       <PageHeader
         eyebrow="Queue Board"
         title="Today on the floor"
         description="Manage active tickets until they are sent to payment. For Payment tickets leave this board by design."
-        action={<div className="flex gap-3"><RefreshButton loading={loading} onClick={reload} />{canManageQueue && <Link to="/operations/queue/new" className="inline-flex items-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white no-underline transition hover:bg-blue-400"><Plus size={18} />New ticket</Link>}</div>}
+        action={<div className="flex gap-2 sm:gap-3"><RefreshButton loading={loading} onClick={reload} />{canManageQueue && <Link to="/operations/queue/new" className="floor-touch-btn inline-flex items-center gap-2 rounded-2xl bg-blue-500 px-4 py-2.5 font-semibold text-white no-underline transition hover:bg-blue-400 sm:px-5"><Plus size={18} aria-hidden />New ticket</Link>}</div>}
       />
-      <div className="mt-8 grid gap-5 xl:grid-cols-3">
+      <div className="floor-lane-board mt-4 sm:mt-5" role="region" aria-label="Active queue lanes">
         {ACTIVE_QUEUE_STATUSES.map((status) => (
-          <section key={status} className="min-h-96 rounded-3xl border border-white/10 bg-[#0d1726] p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-bold tracking-[0.14em] text-slate-300 uppercase">{STATUS_LABELS[status]}</h2>
-              <span className="rounded-full bg-white/8 px-3 py-1 text-xs tabular-nums">{grouped[status].length}</span>
+          <section key={status} className="floor-lane" aria-label={STATUS_LABELS[status]}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-xs font-bold tracking-[0.14em] text-slate-300 uppercase">{STATUS_LABELS[status]}</h2>
+              <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs tabular-nums">{grouped[status].length}</span>
             </div>
-            <div className="grid gap-3">
-              {loading ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-32 animate-pulse rounded-2xl bg-white/5" />) : grouped[status].length ? grouped[status].map((ticket) => <TicketCard key={ticket.booking_id} ticket={ticket} />) : <EmptyLine text="No tickets in this lane." />}
+            <div className="floor-lane-body">
+              {loading ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-white/5" />) : grouped[status].length ? grouped[status].map((ticket) => <TicketCard key={ticket.booking_id} ticket={ticket} />) : <EmptyLine text="No tickets in this lane." />}
             </div>
           </section>
         ))}
@@ -262,6 +266,18 @@ export function QueueTicketPage() {
     load()
   }, [load])
 
+  useEffect(() => {
+    if (!id) return undefined
+    const channel = supabase
+      .channel(`queue-ticket-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `id=eq.${id}` }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments', filter: `booking_id=eq.${id}` }, load)
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [id, load])
+
   const runAction = async (label, action) => {
     setSaving(label)
     setError('')
@@ -294,12 +310,12 @@ export function QueueTicketPage() {
 
   return (
     <section>
-      <PageHeader eyebrow="Queue Ticket" title={`${formatQueueNumber(ticket.queue_number)} · ${ticket.customer_name}`} description={`${ticket.branch} · ${STATUS_LABELS[ticket.status] || ticket.status}`} action={<Link to="/operations/queue" className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 no-underline">Back to queue</Link>} />
-      {error && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{error}</p>}
-      {!canManageQueue && <p className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">{QUEUE_PERMISSION_ERROR}</p>}
-      <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_380px]">
+      <PageHeader eyebrow="Queue Ticket" title={`${formatQueueNumber(ticket.queue_number)} · ${ticket.customer_name}`} description={`${ticket.branch} · ${STATUS_LABELS[ticket.status] || ticket.status}`} action={<Link to="/operations/queue" className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline">Back to queue</Link>} />
+      {error && <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100" role="alert">{error}</p>}
+      {!canManageQueue && <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">{QUEUE_PERMISSION_ERROR}</p>}
+      <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_360px] sm:mt-6 sm:gap-5">
         <Panel title="Ticket Details" icon={CarFront}>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
             <Info label="Customer" value={ticket.customer_name} />
             <Info label="Contact" value={ticket.customer_phone || 'No contact'} />
             <Info label="Plate" value={ticket.vehicle_plate || 'No plate'} />
@@ -311,35 +327,37 @@ export function QueueTicketPage() {
           </div>
         </Panel>
 
-        <div className="grid gap-6">
-          <Panel title="Status Actions" icon={ArrowRight}>
-            <div className="grid gap-3">
-              <ActionButton disabled={!canManageQueue || ticket.status !== 'waiting'} loading={saving === 'start'} onClick={() => runAction('start', () => updateTicketStatus(ticket, 'in_progress'))}>Start Service</ActionButton>
-              <ActionButton disabled={!canManageQueue || ticket.status !== 'in_progress'} loading={saving === 'check'} onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}>Send To Final Checking</ActionButton>
-              <ActionButton disabled={!canSendToPayment} loading={saving === 'payment'} onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}><Send size={17} />Send To Payment</ActionButton>
-            </div>
-          </Panel>
+        <div className="grid gap-4 sm:gap-5">
+          <div className="floor-actions-sticky xl:static xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none">
+            <Panel title="Status Actions" icon={ArrowRight} className="shadow-none xl:shadow-xl">
+              <div className="grid gap-2.5">
+                <ActionButton disabled={!canManageQueue || ticket.status !== 'waiting'} loading={saving === 'start'} onClick={() => runAction('start', () => updateTicketStatus(ticket, 'in_progress'))}>Start Service</ActionButton>
+                <ActionButton disabled={!canManageQueue || ticket.status !== 'in_progress'} loading={saving === 'check'} onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}>Send To Final Checking</ActionButton>
+                <ActionButton disabled={!canSendToPayment} loading={saving === 'payment'} onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}><Send size={17} aria-hidden />Send To Payment</ActionButton>
+              </div>
+            </Panel>
+          </div>
 
           <Panel title="Edit Price" icon={BadgeCheck}>
             <div className="grid gap-3">
-              <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Final Price in Pesos<input type="number" min="0" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} disabled={!canManageQueue} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
+              <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Final Price in Pesos<input type="number" min="0" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} disabled={!canManageQueue} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white outline-none focus:border-blue-300/60" /></label>
               {showLowPriceWarning && <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
-              <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Reason<input value={priceReason} onChange={(event) => setPriceReason(event.target.value)} disabled={!canManageQueue} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
+              <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Reason<input value={priceReason} onChange={(event) => setPriceReason(event.target.value)} disabled={!canManageQueue} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white outline-none focus:border-blue-300/60" /></label>
               <ActionButton disabled={!canManageQueue} loading={saving === 'price'} onClick={() => runAction('price', savePrice)}>Save Price</ActionButton>
             </div>
           </Panel>
         </div>
       </div>
 
-      <Panel title="Staff Assignment" icon={UserPlus} className="mt-6">
+      <Panel title="Staff Assignment" icon={UserPlus} className="mt-4 sm:mt-5">
         <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {staff.map((member) => {
               const active = selectedStaff.includes(member.id)
               return (
-                <label key={member.id} className={`flex items-center justify-between gap-3 rounded-2xl border p-4 transition ${active ? 'border-blue-300/40 bg-blue-500/10' : 'border-white/10 bg-white/[0.035]'}`}>
+                <label key={member.id} className={`flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-2xl border p-4 transition ${active ? 'border-blue-300/40 bg-blue-500/10' : 'border-white/10 bg-white/[0.035]'}`}>
                   <span><span className="block font-medium">{member.full_name}</span><span className="text-xs text-slate-500">{member.branch_slug || 'All branches'}</span></span>
-                  <input type="checkbox" checked={active} disabled={!canManageQueue} onChange={(event) => setSelectedStaff((current) => event.target.checked ? [...current, member.id] : current.filter((idValue) => idValue !== member.id))} />
+                  <input type="checkbox" className="size-5 accent-blue-500" checked={active} disabled={!canManageQueue} onChange={(event) => setSelectedStaff((current) => event.target.checked ? [...current, member.id] : current.filter((idValue) => idValue !== member.id))} />
                 </label>
               )
             })}
@@ -429,15 +447,20 @@ export function NewQueueTicketPage() {
           }
 
           setPlateLookupState('found')
+          const names = splitCustomerName(match.customer_name)
           setForm((current) => ({
             ...current,
             customer_id: match.customer_id || '',
             vehicle_id: match.vehicle_id || '',
             customer_name: match.customer_name || current.customer_name,
+            customer_first_name: names.first || current.customer_first_name,
+            customer_last_name: names.last || current.customer_last_name,
             customer_phone: match.customer_phone || current.customer_phone,
             vehicle_plate: match.plate_number || current.vehicle_plate,
             vehicle_make: match.vehicle_make || current.vehicle_make,
             vehicle_model: match.vehicle_model || current.vehicle_model,
+            vehicle_year: match.vehicle_year || current.vehicle_year,
+            vehicle_color: match.vehicle_color || current.vehicle_color,
             vehicle_type: normalizeVehicleType(match.vehicle_type || current.vehicle_type),
           }))
         })
@@ -456,6 +479,8 @@ export function NewQueueTicketPage() {
       return next
     })
   }
+  const setMake = (vehicle_make) => setForm((current) => ({ ...current, vehicle_make }))
+  const setModel = (vehicle_model) => setForm((current) => ({ ...current, vehicle_model }))
   const updateVehicleType = (event) => setForm((current) => ({ ...current, vehicle_type: normalizeVehicleType(event.target.value) }))
   const updateService = (event) => {
     const serviceId = event.target.value
@@ -515,8 +540,13 @@ export function NewQueueTicketPage() {
             <FormField label="Last name" value={form.customer_last_name} onChange={update('customer_last_name')} required />
             <FormField label="Phone number" value={form.customer_phone} onChange={update('customer_phone')} required />
             <FormField label="Email (optional)" value={form.customer_email} onChange={update('customer_email')} type="email" />
-            <FormField label="Vehicle make" value={form.vehicle_make} onChange={update('vehicle_make')} required />
-            <FormField label="Vehicle model" value={form.vehicle_model} onChange={update('vehicle_model')} required />
+            <VehicleMakeModelFields
+              make={form.vehicle_make}
+              model={form.vehicle_model}
+              onMakeChange={setMake}
+              onModelChange={setModel}
+              variant="floor"
+            />
             <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
             <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
             <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Vehicle type<select value={form.vehicle_type} onChange={updateVehicleType} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
@@ -525,7 +555,7 @@ export function NewQueueTicketPage() {
             <FormField label="Final Price in Pesos" value={form.final_price} onChange={update('final_price')} type="number" min="0" step="0.01" required />
             {showFormLowPriceWarning && <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
             <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Notes<textarea value={form.notes} onChange={update('notes')} className="mt-2 min-h-28 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
-            <button disabled={submitting} className="sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} /> : <Plus size={18} />}Create Queue Ticket</button>
+            <button disabled={submitting} className="floor-touch-btn sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 text-base font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} aria-hidden /> : <Plus size={18} aria-hidden />}Create Queue Ticket</button>
           </form>
         </Panel>
       </div>
@@ -681,16 +711,23 @@ export function KpiPage() {
   return (
     <section>
       <PageHeader eyebrow="Queue KPI" title="Crew performance" description="Queue-only KPI. Staff receive credit when assignments are released at payment handoff." action={<RefreshButton loading={loading} onClick={load} />} />
-      <Panel title="Crew KPI Summary" icon={BarChartIcon} className="mt-8">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="text-xs tracking-[0.14em] text-slate-500 uppercase"><tr><th className="px-4 py-3">Staff</th><th className="px-4 py-3">Branch</th><th className="px-4 py-3 text-right">Assigned</th><th className="px-4 py-3 text-right">Released</th><th className="px-4 py-3 text-right">Active</th><th className="px-4 py-3 text-right">Avg Minutes</th><th className="px-4 py-3 text-right">Today</th></tr></thead>
-            <tbody className="divide-y divide-white/8">
-              {rows.length ? rows.map((row) => <tr key={row.staff_id}><td className="px-4 py-4 font-medium">{row.staff_name}</td><td className="px-4 py-4 text-slate-400">{row.branch || 'All'}</td><td className="px-4 py-4 text-right tabular-nums">{row.total_assigned}</td><td className="px-4 py-4 text-right tabular-nums">{row.total_completed}</td><td className="px-4 py-4 text-right tabular-nums">{row.active_jobs}</td><td className="px-4 py-4 text-right tabular-nums">{Math.round(row.average_service_minutes || 0)}</td><td className="px-4 py-4 text-right tabular-nums">{row.completed_today}</td></tr>) : <tr><td colSpan="7" className="px-4 py-14 text-center text-slate-500">No KPI records yet.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
+      <div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2 xl:grid-cols-3">
+        {rows.length ? rows.map((row) => (
+          <article key={row.staff_id} className="rounded-2xl border border-white/10 bg-[#0d1726] p-4">
+            <p className="text-base font-semibold">{row.staff_name}</p>
+            <p className="mt-1 text-xs text-slate-500 uppercase tracking-wide">{row.branch || 'All'}</p>
+            <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Assigned</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.total_assigned}</dd></div>
+              <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Released</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.total_completed}</dd></div>
+              <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Active</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.active_jobs}</dd></div>
+              <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Avg min</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{Math.round(row.average_service_minutes || 0)}</dd></div>
+              <div className="col-span-2"><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Completed today</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.completed_today}</dd></div>
+            </dl>
+          </article>
+        )) : (
+          <EmptyLine text="No KPI records yet." />
+        )}
+      </div>
     </section>
   )
 }
@@ -717,6 +754,17 @@ export function MyTasksPage() {
   }, [user?.id])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!user?.id) return undefined
+    const channel = supabase
+      .channel(`my-tasks-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments', filter: `staff_id=eq.${user.id}` }, load)
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [load, user?.id])
 
   if (!canViewAssignedTasks) return <Navigate to="/operations/access-denied" replace />
 
@@ -787,7 +835,7 @@ export function AccessDeniedPage() {
 }
 
 function Panel({ title, icon: Icon, children, className = '' }) {
-  return <article className={`rounded-3xl border border-white/10 bg-[#0d1726] p-5 shadow-xl shadow-black/10 sm:p-6 ${className}`}><div className="mb-5 flex items-center gap-3"><Icon className="text-blue-300" size={20} /><h2 className="font-semibold">{title}</h2></div>{children}</article>
+  return <article className={`rounded-2xl border border-white/10 bg-[#0d1726] p-4 shadow-xl shadow-black/10 sm:rounded-3xl sm:p-5 ${className}`}><div className="mb-4 flex items-center gap-3"><Icon className="text-blue-300" size={18} aria-hidden /><h2 className="font-semibold">{title}</h2></div>{children}</article>
 }
 
 function CrewList({ title, rows, empty, busy = false }) {
@@ -851,19 +899,19 @@ function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeacti
             )}
             {canManage && !isEditing && (
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <button type="button" disabled={present || saving === `${member.id}-present`} onClick={() => onAttendance(member, 'present')} className="rounded-xl border border-emerald-300/20 px-3 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40">Mark present</button>
-                <button type="button" disabled={!present || saving === `${member.id}-absent`} onClick={() => onAttendance(member, 'absent')} className="rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40">Mark absent</button>
+                <button type="button" disabled={present || saving === `${member.id}-present`} onClick={() => onAttendance(member, 'present')} className="floor-touch-btn rounded-xl border border-emerald-300/20 px-3 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40">Mark present</button>
+                <button type="button" disabled={!present || saving === `${member.id}-absent`} onClick={() => onAttendance(member, 'absent')} className="floor-touch-btn rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40">Mark absent</button>
                 <button
                   type="button"
                   onClick={() => {
                     setEditingId(member.id)
                     setEditForm({ full_name: member.full_name || '', phone: member.phone || '' })
                   }}
-                  className="rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5"
+                  className="floor-touch-btn rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5"
                 >
                   Edit
                 </button>
-                <button type="button" disabled={saving === `${member.id}-off`} onClick={() => onDeactivate(member)} className="rounded-xl border border-red-300/20 px-3 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-400/10 disabled:opacity-40">Remove</button>
+                <button type="button" disabled={saving === `${member.id}-off`} onClick={() => onDeactivate(member)} className="floor-touch-btn rounded-xl border border-red-300/20 px-3 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-400/10 disabled:opacity-40">Remove</button>
               </div>
             )}
           </div>
@@ -898,21 +946,17 @@ function BranchSetupError() {
 }
 
 function RefreshButton({ loading, onClick }) {
-  return <button type="button" onClick={onClick} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/5"><RefreshCw className={loading ? 'animate-spin' : ''} size={17} />Refresh</button>
+  return <button type="button" onClick={onClick} className="floor-touch-btn inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/5 sm:px-5"><RefreshCw className={loading ? 'animate-spin' : ''} size={17} aria-hidden />Refresh</button>
 }
 
 function ActionButton({ children, loading, disabled, onClick }) {
-  return <button type="button" disabled={disabled || loading} onClick={onClick} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40">{loading ? <LoaderCircle className="animate-spin" size={17} /> : null}{children}</button>
+  return <button type="button" disabled={disabled || loading} onClick={onClick} className="floor-touch-btn inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40">{loading ? <LoaderCircle className="animate-spin" size={17} aria-hidden /> : null}{children}</button>
 }
 
 function Info({ label, value }) {
-  return <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-4"><p className="text-[10px] font-bold tracking-[0.16em] text-slate-500 uppercase">{label}</p><p className="mt-2 text-sm text-slate-100">{value || '-'}</p></div>
+  return <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-3.5 sm:p-4"><p className="text-[10px] font-bold tracking-[0.16em] text-slate-500 uppercase">{label}</p><p className="mt-2 text-sm text-slate-100">{value || '-'}</p></div>
 }
 
 function FormField({ label, value, onChange, type = 'text', required = false, min, step }) {
-  return <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">{label}<input type={type} value={value} onChange={onChange} required={required} min={min} step={step} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
-}
-
-function BarChartIcon(props) {
-  return <ClipboardList {...props} />
+  return <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">{label}<input type={type} value={value} onChange={onChange} required={required} min={min} step={step} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white outline-none focus:border-blue-300/60" /></label>
 }

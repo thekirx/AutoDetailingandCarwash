@@ -1,5 +1,5 @@
 /**
- * Push API auth matrix probes (WEB_PUSH_AGENT_PLAYBOOK §11).
+ * Push auth matrix (staff required for send).
  */
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
@@ -68,8 +68,29 @@ async function call(body, headers = {}) {
     url: '/operations',
     tag: 'probe-ops',
   })
-  assert.equal(r.status, 200, `anon+roles expected 200 got ${r.status} ${JSON.stringify(r.json)}`)
+  assert.equal(r.status, 403, `anon+roles expected 403 got ${r.status}`)
+}
+
+{
+  const service = process.env.SUPABASE_SERVICE_ROLE_KEY
+  assert.ok(service, 'SUPABASE_SERVICE_ROLE_KEY required')
+  const r = await call(
+    {
+      targets: [{ roles: ['admin'] }],
+      title: 'Ops ping',
+      body: 'Service fan-out probe',
+      url: '/operations',
+      tag: 'probe-ops-service',
+    },
+    { authorization: `Bearer ${service}` },
+  )
+  assert.equal(r.status, 200, `service+roles expected 200 got ${r.status} ${JSON.stringify(r.json)}`)
   assert.equal(r.json.ok, true)
+}
+
+{
+  const r = await call({ selfTest: true, title: 't', body: 'b' })
+  assert.equal(r.status, 401, `anon selfTest expected 401 got ${r.status}`)
 }
 
 console.log('push auth matrix: ok')

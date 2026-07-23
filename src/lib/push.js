@@ -1,4 +1,7 @@
 /** Client Web Push helpers — VITE_VAPID_PUBLIC_KEY only. */
+import { isIosDevice, isStandaloneDisplay } from '@/lib/installApp'
+
+export { isIosDevice, isStandaloneDisplay }
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -10,7 +13,18 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export function pushSupported() {
-  return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+  if (typeof window === 'undefined') return false
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return false
+  // iOS browser tab: PushManager may exist in newer versions but delivery needs PWA
+  if (isIosDevice() && !isStandaloneDisplay()) return false
+  return true
+}
+
+export function pushUnsupportedReason() {
+  if (typeof window === 'undefined') return 'unavailable'
+  if (isIosDevice() && !isStandaloneDisplay()) return 'ios-install'
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'unsupported'
+  return null
 }
 
 export async function getPushStatus() {
@@ -22,7 +36,13 @@ export async function getPushStatus() {
 }
 
 export async function enablePush(accessToken) {
-  if (!pushSupported()) throw new Error('Push not supported on this device.')
+  if (!pushSupported()) {
+    const reason = pushUnsupportedReason()
+    if (reason === 'ios-install') {
+      throw new Error('On iPhone/iPad: Share → Add to Home Screen, open Hakum from the icon, then enable alerts.')
+    }
+    throw new Error('Push not supported on this device.')
+  }
   const publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
   if (!publicKey) throw new Error('VAPID public key missing.')
   if (!accessToken) throw new Error('Sign in required.')

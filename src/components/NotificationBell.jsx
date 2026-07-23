@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-export default function NotificationBell({ className = '', light = false }) {
+export default function NotificationBell({ className = '', light = false, homeUrl = '/account', homeLabel = 'Open my account' }) {
   const [open, setOpen] = useState(false)
   const [rows, setRows] = useState([])
   const [unread, setUnread] = useState(0)
@@ -76,7 +76,7 @@ export default function NotificationBell({ className = '', light = false }) {
             {rows.map((row) => (
               <Link
                 key={row.id}
-                to={row.url || '/account'}
+                to={row.url || homeUrl}
                 onClick={() => openRow(row)}
                 className="block border-b border-border/60 px-3 py-2.5 text-left hover:bg-muted/50"
               >
@@ -85,8 +85,8 @@ export default function NotificationBell({ className = '', light = false }) {
               </Link>
             ))}
           </div>
-          <Link to="/account" onClick={() => setOpen(false)} className="block px-3 py-2.5 text-center text-sm font-medium text-primary">
-            Open my account
+          <Link to={homeUrl} onClick={() => setOpen(false)} className="block px-3 py-2.5 text-center text-sm font-medium text-primary">
+            {homeLabel}
           </Link>
         </div>
       )}

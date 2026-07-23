@@ -21,17 +21,27 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = event.notification?.data?.url || '/'
+  const raw = event.notification?.data?.url || '/'
+  const path = raw.startsWith('http') ? raw : new URL(raw, self.location.origin).href
   event.waitUntil(
     (async () => {
       const all = await clients.matchAll({ type: 'window', includeUncontrolled: true })
       for (const client of all) {
-        if ('focus' in client) {
-          client.navigate(url)
-          return client.focus()
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          // navigate() is not universal — openWindow is the reliable fallback
+          if (typeof client.navigate === 'function') {
+            try {
+              await client.navigate(path)
+              return client.focus()
+            } catch {
+              /* fall through */
+            }
+          }
+          await client.focus()
+          return
         }
       }
-      if (clients.openWindow) return clients.openWindow(url)
+      if (clients.openWindow) return clients.openWindow(path)
     })(),
   )
 })

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { usePublicBranches } from '../lib/branches'
 import { supabase } from '../lib/supabase'
+import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 
 export function QueuePage() {
   const { branch } = useParams()
@@ -48,10 +49,12 @@ export function BookingPage() {
   const [services, setServices] = useState([])
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
+  const [plateHint, setPlateHint] = useState('')
   const [form, setForm] = useState({
     customer_first_name: '',
     customer_last_name: '',
     customer_phone: '',
+    vehicle_plate: '',
     vehicle_make: '',
     vehicle_model: '',
     scheduled_start: '',
@@ -74,15 +77,44 @@ export function BookingPage() {
     }
   }, [branches, form.branch])
 
+  useEffect(() => {
+    const plate = form.vehicle_plate.trim()
+    if (plate.length < 2) {
+      setPlateHint('')
+      return undefined
+    }
+    const t = window.setTimeout(() => {
+      fetch(`/api/plate-lookup?plate=${encodeURIComponent(plate)}`)
+        .then((r) => r.json())
+        .then((body) => {
+          if (!body?.found) {
+            setPlateHint('New plate — enter vehicle details.')
+            return
+          }
+          setPlateHint('Known plate — brand/model filled from past visits.')
+          setForm((current) => ({
+            ...current,
+            vehicle_make: body.vehicle_make || current.vehicle_make,
+            vehicle_model: body.vehicle_model || current.vehicle_model,
+          }))
+        })
+        .catch(() => setPlateHint(''))
+    }, 280)
+    return () => window.clearTimeout(t)
+  }, [form.vehicle_plate])
+
+  const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+
   const submit = async (event) => {
     event.preventDefault()
     setStatus('loading')
     setError('')
     try {
       const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData.session?.access_token
       const headers = { 'Content-Type': 'application/json' }
-      if (token) headers.Authorization = `Bearer ${token}`
+      if (sessionData.session?.access_token) {
+        headers.Authorization = `Bearer ${sessionData.session.access_token}`
+      }
       const res = await fetch('/api/public-book', {
         method: 'POST',
         headers,
@@ -99,32 +131,27 @@ export function BookingPage() {
         }),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Unable to submit booking.')
-      setStatus('success')
+      if (!res.ok) throw new Error(body.error || 'Booking failed')
+      setStatus('done')
     } catch (err) {
       setError(err.message)
       setStatus('idle')
     }
   }
 
-  if (status === 'success') {
+  if (status === 'done') {
     return (
       <section className="booking-page">
-        <div className="booking-success">
+        <div className="public-shell">
           <Sparkles />
-          <p className="eyebrow">Booking received</p>
-          <h1>We’ll take it from here.</h1>
-          <p>Your request is with Hakum. We’ll text you status updates{/* BusyBee */} and confirm soon.</p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Link className="button button-blue" to="/account">My account</Link>
-            <Link className="button" to="/">Back to home</Link>
-          </div>
+          <p className="eyebrow">Request received</p>
+          <h1 className="section-title">You’re on the list.</h1>
+          <p>We’ll confirm by SMS. Track status anytime from My account if you signed in.</p>
+          <Link to="/" className="button button-blue" style={{ marginTop: 24 }}>Back home</Link>
         </div>
       </section>
     )
   }
-
-  const update = (key) => (event) => setForm({ ...form, [key]: event.target.value })
 
   return (
     <section className="booking-page">
@@ -138,16 +165,27 @@ export function BookingPage() {
           </p>
         </div>
         <form onSubmit={submit} className="booking-form">
-          <label>First name<input required placeholder="Juan" onChange={update('customer_first_name')} /></label>
-          <label>Last name<input required placeholder="Dela Cruz" onChange={update('customer_last_name')} /></label>
-          <label>Mobile number<input required placeholder="09XX XXX XXXX" onChange={update('customer_phone')} /></label>
-          <label>Plate number<input required placeholder="ABC 1234" onChange={update('vehicle_plate')} /></label>
-          <label>Vehicle make<input required placeholder="Toyota" onChange={update('vehicle_make')} /></label>
-          <label>Vehicle model<input required placeholder="Fortuner" onChange={update('vehicle_model')} /></label>
-          <label>Preferred date & time<input required type="datetime-local" onChange={update('scheduled_start')} /></label>
+          <label>First name<input required value={form.customer_first_name} placeholder="Juan" onChange={update('customer_first_name')} /></label>
+          <label>Last name<input required value={form.customer_last_name} placeholder="Dela Cruz" onChange={update('customer_last_name')} /></label>
+          <label>Mobile number<input required value={form.customer_phone} placeholder="09XX XXX XXXX" onChange={update('customer_phone')} /></label>
+          <label>
+            Plate number
+            <input required value={form.vehicle_plate} placeholder="ABC 1234" onChange={update('vehicle_plate')} autoComplete="off" />
+            {plateHint ? <span className="field-hint">{plateHint}</span> : null}
+          </label>
+          <VehicleMakeModelFields
+            make={form.vehicle_make}
+            model={form.vehicle_model}
+            onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
+            onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
+            variant="public"
+            makeLabel="Vehicle brand"
+            modelLabel="Vehicle model"
+          />
+          <label>Preferred date & time<input required type="datetime-local" value={form.scheduled_start} onChange={update('scheduled_start')} /></label>
           <label>
             Service
-            <select required onChange={update('service_id')}>
+            <select required value={form.service_id} onChange={update('service_id')}>
               <option value="">Select service</option>
               {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>

@@ -1,6 +1,9 @@
 /**
  * BusyBee BrandTxT SMS client (busybeeapi.md — /api/v2|v3/SendSMS).
  * Secrets: BUSYBEE_API_KEY, BUSYBEE_CLIENT_ID, BUSYBEE_SENDER_ID, BUSYBEE_API_BASE_URL
+ *
+ * ponytail: many *.busybee.ph names currently park/redirect; wrong host returns HTML.
+ * Set BUSYBEE_API_BASE_URL to the live portal API host from BusyBee (not a parked domain).
  */
 function cfg() {
   const apiKey = process.env.BUSYBEE_API_KEY || process.env.SMS_PROVIDER_API_KEY
@@ -8,6 +11,25 @@ function cfg() {
   const senderId = process.env.BUSYBEE_SENDER_ID || 'HAKUM'
   const baseUrl = (process.env.BUSYBEE_API_BASE_URL || 'https://brandtxt.busybee.ph').replace(/\/$/, '')
   return { apiKey, clientId, senderId, baseUrl }
+}
+
+function looksLikeParkingHtml(text) {
+  const t = String(text || '')
+  return (
+    /<!DOCTYPE html|<html[\s>]/i.test(t) ||
+    /window\.location\.replace/i.test(t) ||
+    /survey-smiles|consentmanager|gdprAppliesGlobally/i.test(t)
+  )
+}
+
+function parkingFailure(baseUrl, text, path) {
+  return {
+    ok: false,
+    status: 'failed',
+    providerResponse: `BusyBee host ${baseUrl} returned a website/parking page, not JSON API. Update BUSYBEE_API_BASE_URL to the API host from your BusyBee portal (and ask them to whitelist this server IP). Body: ${String(text).slice(0, 180)}`,
+    httpStatus: 200,
+    path,
+  }
 }
 
 /** Normalize PH mobiles to digits BusyBee expects (63XXXXXXXXXX). */
@@ -27,6 +49,18 @@ export async function busybeeBalance() {
   const tryParse = (res, text) => {
     if (res.status === 429 || /too many requests/i.test(text)) {
       return { ok: false, status: 429, json: { ErrorCode: 429, ErrorDescription: 'Too many requests' }, baseUrl }
+    }
+    if (looksLikeParkingHtml(text)) {
+      return {
+        ok: false,
+        status: res.status,
+        json: {
+          ErrorCode: -2,
+          ErrorDescription: `Parked/wrong host (${baseUrl}). Set BUSYBEE_API_BASE_URL to your live BusyBee API.`,
+          raw: true,
+        },
+        baseUrl,
+      }
     }
     let json = null
     try {
@@ -127,6 +161,10 @@ export async function busybeeSendSms({ phone, message }) {
           path: attempt.path,
         }
       }
+      if (looksLikeParkingHtml(text)) {
+        last = parkingFailure(baseUrl, text, attempt.path)
+        continue
+      }
       let json = null
       try {
         json = JSON.parse(text)
@@ -134,7 +172,7 @@ export async function busybeeSendSms({ phone, message }) {
         json = null
       }
       const errorCode = json?.ErrorCode ?? json?.errorCode
-      const ok = res.ok && (errorCode === 0 || errorCode === '0' || (res.ok && errorCode == null && !String(text).includes('<html')))
+      const ok = res.ok && (errorCode === 0 || errorCode === '0')
       last = {
         ok: Boolean(ok),
         status: ok ? 'sent' : 'failed',
@@ -144,8 +182,6 @@ export async function busybeeSendSms({ phone, message }) {
         path: attempt.path,
       }
       if (ok) return last
-      // HTML parking page → try next shape won't help same host; still try v2
-      if (String(text).includes('<html')) continue
     } catch (err) {
       last = { ok: false, status: 'failed', providerResponse: String(err.message || err) }
     }

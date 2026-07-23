@@ -331,7 +331,70 @@ export async function lookupPlate(plateNumber, profile) {
     .limit(1)
 
   if (error) throw error
-  return data?.[0] || null
+  const row = data?.[0]
+  if (!row) return null
+
+  // Enrich with year/color from vehicles when available
+  if (row.vehicle_id) {
+    const { data: vehicle } = await supabase
+      .from('vehicles')
+      .select('vehicle_year, color, vehicle_make, vehicle_model, vehicle_type')
+      .eq('id', row.vehicle_id)
+      .maybeSingle()
+    if (vehicle) {
+      return {
+        ...row,
+        vehicle_make: vehicle.vehicle_make || row.vehicle_make,
+        vehicle_model: vehicle.vehicle_model || row.vehicle_model,
+        vehicle_type: vehicle.vehicle_type || row.vehicle_type,
+        vehicle_year: vehicle.vehicle_year != null ? String(vehicle.vehicle_year) : '',
+        vehicle_color: vehicle.color || '',
+      }
+    }
+  }
+  return { ...row, vehicle_year: '', vehicle_color: '' }
+}
+
+/** POS loyalty attach — plate first, then name/phone. Limit 8 (ponytail: no trigram index yet). */
+export async function searchPosCustomer(query, profile) {
+  const raw = (query || '').trim()
+  if (raw.length < 2) return []
+  const safe = raw.replace(/[%_,]/g, ' ').replace(/\s+/g, ' ').trim()
+  if (safe.length < 2) return []
+
+  const results = []
+  const plateHit = await lookupPlate(safe, profile).catch(() => null)
+  if (plateHit?.customer_id) {
+    results.push({
+      id: plateHit.customer_id,
+      full_name: plateHit.customer_name || 'Customer',
+      phone: plateHit.customer_phone || '',
+      plate: plateHit.plate_number || plateHit.normalized_plate_number || '',
+      source: 'plate',
+    })
+  }
+
+  const pattern = `%${safe}%`
+  const { data, error } = await supabase
+    .from('customers')
+    .select('id, full_name, phone')
+    .eq('role', 'customer')
+    .eq('is_archived', false)
+    .or(`full_name.ilike."${pattern}",phone.ilike."${pattern}"`)
+    .limit(8)
+  if (error) throw error
+
+  for (const row of data || []) {
+    if (results.some((r) => r.id === row.id)) continue
+    results.push({
+      id: row.id,
+      full_name: row.full_name || 'Customer',
+      phone: row.phone || '',
+      plate: '',
+      source: 'name',
+    })
+  }
+  return results
 }
 
 async function ensureCustomer(form) {
