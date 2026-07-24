@@ -29,8 +29,9 @@ export function readJsonBody(req) {
 }
 
 export function bearer(req) {
-  const header = req.headers.authorization || ''
-  return header.startsWith('Bearer ') ? header.slice(7) : null
+  const header = req.headers?.authorization || req.headers?.Authorization || ''
+  if (typeof header !== 'string') return null
+  return header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : null
 }
 
 export function json(res, status, payload) {

@@ -10,29 +10,44 @@ export default function NotificationBell({ className = '', light = false, homeUr
   const root = useRef(null)
 
   const load = useCallback(async () => {
-    const { data: session } = await supabase.auth.getSession()
-    if (!session.session?.user) {
-      setRows([])
-      setUnread(0)
-      return
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      if (!session.session?.user) {
+        setRows([])
+        setUnread(0)
+        return
+      }
+      const { data } = await supabase
+        .from('user_notifications')
+        .select('id, title, body, url, read_at, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      setRows(data || [])
+      setUnread((data || []).filter((r) => !r.read_at).length)
+    } catch {
+      /* ponytail: never crash the account shell for inbox */
     }
-    const { data } = await supabase
-      .from('user_notifications')
-      .select('id, title, body, url, read_at, created_at')
-      .order('created_at', { ascending: false })
-      .limit(20)
-    setRows(data || [])
-    setUnread((data || []).filter((r) => !r.read_at).length)
   }, [])
 
   useEffect(() => {
+    let alive = true
     load()
-    const channel = supabase
-      .channel('user-notifications-bell')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications' }, load)
-      .subscribe()
+
+    // Unique channel name — Strict Mode remounts reuse a subscribed channel and throw
+    // "cannot add postgres_changes callbacks after subscribe()"
+    const channel = supabase.channel(`user-notifications-bell:${crypto.randomUUID()}`)
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'user_notifications' },
+      () => {
+        if (alive) load()
+      },
+    )
+    channel.subscribe()
+
     return () => {
-      supabase.removeChannel(channel)
+      alive = false
+      void supabase.removeChannel(channel)
     }
   }, [load])
 

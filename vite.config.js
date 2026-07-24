@@ -39,8 +39,10 @@ function apiHelpers(server, req) {
     siteOrigin: origin,
     getBody: () => readBody(req),
     getAccessToken: () => {
-      const header = req.headers.authorization || ''
-      return header.startsWith('Bearer ') ? header.slice(7) : null
+      const header = req.headers.authorization || req.headers.Authorization || ''
+      return typeof header === 'string' && header.toLowerCase().startsWith('bearer ')
+        ? header.slice(7).trim()
+        : null
     },
   }
 }
@@ -101,8 +103,15 @@ export default defineConfig({
       workbox: {
         importScripts: ['/push-sw.js'],
         navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+          },
+        ],
       },
       devOptions: {
         // classic SW so /push-sw.js importScripts works in local PWA testing

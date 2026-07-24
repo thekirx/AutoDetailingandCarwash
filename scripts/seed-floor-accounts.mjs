@@ -7,6 +7,8 @@
  *   admin@hakumautocare.com        → HakumAdmin2026!
  *   teamlead@hakumautocare.com     → HakumTL2026!
  *   staff1@hakumautocare.com       → HakumStaff2026!
+ *   marketing@hakumautocare.com    → HakumMkt2026!
+ *   sales@hakumautocare.com        → HakumSales2026!
  *   demo.customer@hakumautocare.com → HakumCustomer2026!
  */
 import { createClient } from '@supabase/supabase-js'
@@ -176,6 +178,32 @@ async function main() {
 
   await archiveOrphanStaff(staffIds)
 
+  const marketing = await ensureAuthUser({
+    email: 'marketing@hakumautocare.com',
+    password: 'HakumMkt2026!',
+    full_name: 'Marketing Lead',
+  })
+  await upsertStaffProfile(marketing, {
+    full_name: 'Marketing Lead',
+    role: 'marketing',
+    branch_slug: BRANCH,
+    phone: '09170000021',
+  })
+  console.log('Marketing', marketing.id)
+
+  const sales = await ensureAuthUser({
+    email: 'sales@hakumautocare.com',
+    password: 'HakumSales2026!',
+    full_name: 'Sales Associate',
+  })
+  await upsertStaffProfile(sales, {
+    full_name: 'Sales Associate',
+    role: 'sales',
+    branch_slug: BRANCH,
+    phone: '09170000022',
+  })
+  console.log('Sales', sales.id)
+
   const demo = await ensureAuthUser({
     email: 'demo.customer@hakumautocare.com',
     password: 'HakumCustomer2026!',
@@ -209,6 +237,8 @@ async function main() {
         admin: 'admin@hakumautocare.com / HakumAdmin2026!',
         teamlead: 'teamlead@hakumautocare.com / HakumTL2026!',
         staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026!',
+        marketing: 'marketing@hakumautocare.com / HakumMkt2026!',
+        sales: 'sales@hakumautocare.com / HakumSales2026!',
         customer: 'demo.customer@hakumautocare.com / HakumCustomer2026!',
         attendance_date: TODAY,
       },

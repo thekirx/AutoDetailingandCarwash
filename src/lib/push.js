@@ -73,6 +73,7 @@ export async function enablePush(accessToken) {
     }),
   })
   const body = await res.json().catch(() => ({}))
+  if (res.status === 401) throw new Error('Session expired — sign in again, then enable alerts.')
   if (!res.ok) throw new Error(body.error || 'Unable to save subscription.')
   return 'subscribed'
 }

@@ -28,6 +28,20 @@ export default function PublicLayout() {
   useEffect(() => setOpen(false), [pathname])
 
   const footerCities = branches.map((b) => b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name).join(' · ') || 'Philippines'
+  // Customer account hub is an app shell — skip marketing chrome (double header / footer).
+  const appShell = pathname === '/account'
+
+  if (appShell) {
+    return (
+      <div className="public-site account-shell">
+        <PublicPageMeta />
+        <main className="account-shell-main">
+          <Outlet />
+        </main>
+        <CustomerInstallPopup enabled={isCustomer} />
+      </div>
+    )
+  }
 
   return (
     <div className="public-site">

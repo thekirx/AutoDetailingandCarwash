@@ -68,23 +68,25 @@ export function canCreateAdminAccounts(profile) {
 }
 
 export function canEditBookings(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.MARKETING, ROLES.SALES, ROLES.TEAM_LEAD])
+  return has(profile, [...ADMIN_ROLES, ROLES.SALES, ROLES.TEAM_LEAD])
 }
 
 export function canCreateBookings(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.MARKETING, ROLES.SALES, ROLES.TEAM_LEAD])
+  return has(profile, [...ADMIN_ROLES, ROLES.SALES, ROLES.TEAM_LEAD])
 }
 
+/** Marketing runs CRM; Admin/BossMich too. Sales does not. */
 export function canAccessCrm(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.MARKETING, ROLES.SALES])
-}
-
-export function canAccessMarketing(profile) {
   return has(profile, [...ADMIN_ROLES, ROLES.MARKETING])
 }
 
+/** SMS console — Admins (marketing role is CRM-only). */
+export function canAccessMarketing(profile) {
+  return isAdmin(profile)
+}
+
 export function canAccessBookingBoard(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.MARKETING, ROLES.SALES, ROLES.TEAM_LEAD])
+  return has(profile, [...ADMIN_ROLES, ROLES.SALES, ROLES.TEAM_LEAD])
 }
 
 export function canUseOperations(profile) {
@@ -113,6 +115,17 @@ export function canViewAssignedTasks(profile) {
 
 /** Nav items for the shared ops shell — filtered by role. */
 export function getOperationsNav(profile) {
+  // Strict surfaces: marketing = CRM only; sales = POS + bookings
+  if (profile?.role === ROLES.MARKETING) {
+    return [{ label: 'CRM', to: '/operations/crm', icon: 'Contact' }]
+  }
+  if (profile?.role === ROLES.SALES) {
+    return [
+      { label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' },
+      { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' },
+    ]
+  }
+
   const items = []
 
   if (isAdmin(profile)) {
@@ -170,6 +183,6 @@ export function redirectForRole(role) {
   if (role === ROLES.STAFF) return '/operations/my-tasks'
   if (role === ROLES.TEAM_LEAD) return '/operations/dashboard'
   if (role === ROLES.CASHIER || role === ROLES.SALES) return '/operations/pos'
-  if (role === ROLES.MARKETING) return '/operations/bookings'
+  if (role === ROLES.MARKETING) return '/operations/crm'
   return '/operations/dashboard'
 }

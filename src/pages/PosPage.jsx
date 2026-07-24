@@ -101,7 +101,7 @@ export default function PosPage() {
     if (!branch) return
     load()
     const channel = supabase
-      .channel('pos-sales')
+      .channel(`pos-sales:${branch}:${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs' }, load)
       .subscribe()

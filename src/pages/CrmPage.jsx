@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Car, Contact, Pencil, Plus, Search, UserPlus } from 'lucide-react'
+import { Car, Contact, MessageSquare, Pencil, Plus, Search, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessCrm, isAdmin } from '@/auth/permissions'
 import { listBranches, listMembershipTiers } from '@/lib/adminApi'
@@ -53,6 +53,8 @@ export default function CrmPage() {
   const [editing, setEditing] = useState(null)
   const [vehicleForm, setVehicleForm] = useState(emptyVehicle)
   const [addingVehicle, setAddingVehicle] = useState(false)
+  const [messageOpen, setMessageOpen] = useState(false)
+  const [messageForm, setMessageForm] = useState({ title: '', body: '', sendSms: true })
   const [saving, setSaving] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
 
@@ -199,6 +201,61 @@ export default function CrmPage() {
     }
   }
 
+  async function sendCustomerMessage(event) {
+    event.preventDefault()
+    if (!selected) return
+    const title = messageForm.title.trim()
+    const body = messageForm.body.trim()
+    if (!title || !body) {
+      toast.error('Title and message are required.')
+      return
+    }
+    setSaving(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error('Sign in required.')
+
+      const pushRes = await fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          targets: [{ userId: selected.id }],
+          title,
+          body,
+          url: '/account',
+          tag: `crm-${selected.id}-${Date.now()}`,
+          kind: 'crm_message',
+        }),
+      })
+      const pushJson = await pushRes.json().catch(() => ({}))
+      if (!pushRes.ok) throw new Error(pushJson.error || 'Unable to send inbox/push.')
+
+      let smsNote = ''
+      if (messageForm.sendSms && selected.phone) {
+        const smsRes = await fetch('/api/busybee', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ phone: selected.phone, message: `Hakum Auto Care: ${body}` }),
+        })
+        const smsJson = await smsRes.json().catch(() => ({}))
+        if (!smsRes.ok || smsJson.ok === false) {
+          smsNote = ` · SMS failed (${smsJson.error || smsJson.status || 'provider'})`
+        } else {
+          smsNote = ' · SMS queued'
+        }
+      }
+
+      toast.success(`Notification sent${smsNote} (push ${pushJson.sent ?? 0})`)
+      setMessageOpen(false)
+      setMessageForm({ title: '', body: '', sendSms: true })
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (!canAccessCrm(profile)) return <Navigate to="/operations/access-denied" replace />
 
   const branchName = (slug) => branches.find((b) => b.slug === slug)?.name || slug
@@ -210,13 +267,15 @@ export default function CrmPage() {
           <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">CRM</p>
           <h1 className="text-3xl font-semibold tracking-tight">Customer relationships</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Register customers with login accounts, track vehicles and visits by branch, and review loyalty.
-            {isAdmin(profile) ? ' Super Admin and Admin see every branch.' : ''}
+            Register customers with login accounts, track vehicles and visits by branch, and message them via inbox, push, and SMS.
+            {isAdmin(profile) ? ' Super Admin and Admin see every branch.' : ' Marketing can run the full CRM for outreach.'}
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link to="/operations/memberships">Memberships</Link>
-        </Button>
+        {isAdmin(profile) ? (
+          <Button asChild variant="outline">
+            <Link to="/operations/memberships">Memberships</Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
@@ -305,20 +364,36 @@ export default function CrmPage() {
             </CardDescription>
           </div>
           {selected && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditing({
-                id: selected.id,
-                first_name: selected.first_name || '',
-                last_name: selected.last_name || '',
-                full_name: selected.full_name,
-                phone: selected.phone || '',
-                email: selected.email || '',
-              })}
-            >
-              <Pencil className="mr-1 size-4" /> Edit profile
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  setMessageForm({
+                    title: 'Hakum Auto Care',
+                    body: '',
+                    sendSms: Boolean(selected.phone),
+                  })
+                  setMessageOpen(true)
+                }}
+              >
+                <MessageSquare className="mr-1 size-4" /> Message
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing({
+                  id: selected.id,
+                  first_name: selected.first_name || '',
+                  last_name: selected.last_name || '',
+                  full_name: selected.full_name,
+                  phone: selected.phone || '',
+                  email: selected.email || '',
+                })}
+              >
+                <Pencil className="mr-1 size-4" /> Edit profile
+              </Button>
+            </div>
           )}
         </CardHeader>
         <CardContent>
@@ -446,6 +521,40 @@ export default function CrmPage() {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setAddingVehicle(false)}>Cancel</Button>
               <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Add vehicle'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={messageOpen} onOpenChange={(open) => !open && setMessageOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Message {selected?.full_name || 'customer'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={sendCustomerMessage} className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">
+              Sends inbox + web push. Optional SMS uses their phone on file.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Label>Title</Label>
+              <Input required value={messageForm.title} onChange={(e) => setMessageForm({ ...messageForm, title: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Message</Label>
+              <Input required value={messageForm.body} onChange={(e) => setMessageForm({ ...messageForm, body: e.target.value })} placeholder="Your car is ready for pickup…" />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={messageForm.sendSms}
+                disabled={!selected?.phone}
+                onChange={(e) => setMessageForm({ ...messageForm, sendSms: e.target.checked })}
+              />
+              Also send SMS{selected?.phone ? ` to ${selected.phone}` : ' (no phone on file)'}
+            </label>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setMessageOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving}>{saving ? 'Sending…' : 'Send notification'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
