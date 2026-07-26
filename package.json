@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "e2e:newrequest": "node scripts/e2e-newrequest.mjs",
+    "e2e:integrity": "node scripts/e2e-data-integrity.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

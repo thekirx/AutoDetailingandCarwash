@@ -5,6 +5,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { classifyIdentifier, normalizePlate, phoneDigits, phoneLoginEmail } from '../src/lib/customerAuth.js'
+import { clientIp, rateLimit } from './httpUtil.mjs'
 
 function adminClient() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -129,7 +130,10 @@ export async function lookupCustomerAuthStatus({ identifier }) {
   return statusForCustomer(admin, customer, kind)
 }
 
-/** Queue recovery / set-password link to the customer's phone (and note email if present). */
+/**
+ * Trigger Supabase Auth recovery / set-password email only.
+ * ponytail: SMS is transactional (booking notify) — never auth links.
+ */
 export async function sendCustomerSetupLink({ identifier, siteOrigin, mode = 'setup' }) {
   const admin = adminClient()
   const raw = String(identifier || '').trim()
@@ -148,40 +152,22 @@ export async function sendCustomerSetupLink({ identifier, siteOrigin, mode = 'se
   const loginEmail = user.email || customer.email
   if (!loginEmail) throw Object.assign(new Error('Account has no login email.'), { status: 400 })
 
-  const redirectTo = `${String(siteOrigin || '').replace(/\/$/, '')}/account/set-password`
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: 'recovery',
-    email: loginEmail,
-    options: { redirectTo },
-  })
-  if (linkError) throw Object.assign(new Error(linkError.message), { status: 400 })
-
-  const actionLink = linkData?.properties?.action_link || null
-  const first = (customer.full_name || 'there').split(' ')[0]
-  const isReset = mode === 'reset'
-  const message = actionLink
-    ? isReset
-      ? `Hi ${first}, reset your Hakum Auto Care password: ${actionLink}`
-      : `Hi ${first}, finish your Hakum Auto Care account — set your password: ${actionLink}`
-    : `Hi ${first}, open Hakum Auto Care and use Forgot password with your phone or plate.`
-
-  const eventType = isReset ? 'password_reset' : 'account_invite'
-  if (customer.phone) {
-    const { error } = await admin.from('sms_events').insert({
-      phone: customer.phone,
-      message,
-      event_type: eventType,
-      status: 'queued',
-    })
-    if (error) {
-      await admin.from('sms_events').insert({
-        to_phone: customer.phone,
-        body: message,
-        template_type: eventType,
-        status: 'queued',
-      })
-    }
+  const synthetic = String(loginEmail).endsWith('@customers.hakumautocare.com')
+  if (synthetic) {
+    throw Object.assign(
+      new Error(
+        'This account needs a real email for password reset. Ask the Team Lead to add your email on file, then try Forgot password again.',
+      ),
+      { status: 400 },
+    )
   }
+
+  const redirectTo = `${String(siteOrigin || '').replace(/\/$/, '')}/account/set-password`
+  const isReset = mode === 'reset'
+
+  // Supabase Auth sends the recovery email (configured SMTP / Supabase mail)
+  const { error: resetError } = await admin.auth.resetPasswordForEmail(loginEmail, { redirectTo })
+  if (resetError) throw Object.assign(new Error(resetError.message), { status: 400 })
 
   // First-time setup only — do not force this flag on normal password resets
   if (!isReset) {
@@ -190,14 +176,13 @@ export async function sendCustomerSetupLink({ identifier, siteOrigin, mode = 'se
     })
   }
 
-  const synthetic = String(loginEmail).endsWith('@customers.hakumautocare.com')
   return {
     status: isReset ? (user.user_metadata?.must_set_password ? 'needs_password' : 'ready') : 'needs_password',
     kind,
     sent: true,
-    via: customer.phone ? 'sms' : 'link_only',
-    can_email_reset: !synthetic,
-    // ponytail: never return action_link to the browser
+    via: 'email',
+    can_email_reset: true,
+    // ponytail: never return login_email or action_link — prevents enumeration / phishing
   }
 }
 
@@ -218,6 +203,16 @@ export async function handleCustomerAuthLookupRequest(req, res, { getBody, siteO
     const body = await getBody()
     const action = body.action || 'lookup'
     const origin = siteOrigin || body.site_origin || 'http://localhost:5173'
+    const idKey = String(body.identifier || '').trim().toLowerCase().slice(0, 64)
+    const ip = clientIp(req)
+
+    if (action === 'send_setup' || action === 'send_reset') {
+      rateLimit({ key: `auth-mail:${ip}`, limit: 8, windowMs: 15 * 60_000 })
+      rateLimit({ key: `auth-mail-id:${idKey || ip}`, limit: 5, windowMs: 15 * 60_000 })
+    } else {
+      rateLimit({ key: `auth-lookup:${ip}`, limit: 60, windowMs: 60_000 })
+    }
+
     let result
     if (action === 'send_setup') {
       result = await sendCustomerSetupLink({

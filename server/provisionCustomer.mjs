@@ -4,7 +4,8 @@
  */
 import { createClient } from '@supabase/supabase-js'
 
-export const QUEUE_PROVISION_ROLES = new Set(['team_lead', 'BossMich', 'admin', 'marketing', 'sales'])
+/** Admin / Super Admin / Assistant Super Admin only — not TL or marketing walk-in create. */
+export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin'])
 
 /** Phone digits → synthetic login email when walk-in has no email. */
 export function phoneLoginEmail(phone) {
@@ -38,7 +39,7 @@ async function assertQueueEditor(admin, accessToken) {
 
   if (staffError) throw staffError
   if (!staff || !QUEUE_PROVISION_ROLES.has(staff.role)) {
-    throw Object.assign(new Error('Only Admin, Team Lead, Super Admin, Marketing, or Sales can provision customer accounts.'), { status: 403 })
+    throw Object.assign(new Error('Only Admin, Super Admin, or Assistant Super Admin can provision customer accounts.'), { status: 403 })
   }
   return { user: userData.user, staff }
 }
@@ -225,10 +226,11 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
     customer_id: customerId,
     auth_user_id: authUser.id,
     login_email: authUser.email || loginEmail,
+    created: createdAuth,
     created_auth: createdAuth,
     notified: true,
     notify,
-    // ponytail: TL UI can show "invite queued"; never expose action_link in browser responses in prod — omit here
+    // ponytail: never expose action_link in browser responses
   }
 }
 

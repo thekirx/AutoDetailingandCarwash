@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
-import { isAdmin } from '@/auth/permissions'
+import { canAccessAudit } from '@/auth/permissions'
 import { listAuditLogs } from '@/lib/audit'
+import { formatAuditDetail } from '@/lib/auditDetail'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,10 +36,10 @@ export default function AuditLogPage() {
   }, [])
 
   useEffect(() => {
-    if (isAdmin(profile)) load()
+    if (canAccessAudit(profile)) load()
   }, [load, profile])
 
-  if (!isAdmin(profile)) return <Navigate to="/operations/access-denied" replace />
+  if (!canAccessAudit(profile)) return <Navigate to="/operations/access-denied" replace />
 
   return (
     <section className="flex flex-col gap-8">
@@ -84,7 +85,7 @@ export default function AuditLogPage() {
                       <div>{row.entity_type}</div>
                       <div className="text-xs text-muted-foreground">{row.entity_id || '—'}</div>
                     </TableCell>
-                    <TableCell>{row.summary}</TableCell>
+                    <TableCell className="max-w-md text-sm">{formatAuditDetail(row)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

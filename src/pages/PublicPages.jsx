@@ -12,9 +12,66 @@ const serviceItems = [
   ['Maintenance detailing','A tailored care plan that preserves your finish between major detailing sessions.'],
 ]
 
-export function ServicesPage(){return <PageHero eyebrow="Our services" title={<>Precision in<br/><i>every pass.</i></>} copy="Every vehicle receives a considered process, premium workmanship, and the same care we give our own."><section className="content-section"><div className="public-shell numbered-grid">{serviceItems.map(([name,copy],i)=><article key={name}><span>0{i+1}</span><Sparkles/><h2>{name}</h2><p>{copy}</p><Link to="/book">Book this service <ArrowRight/></Link></article>)}</div></section></PageHero>}
+export function ServicesPage() {
+  return (
+    <PageHero
+      eyebrow="Our services · Marketing overview"
+      title={
+        <>
+          Precision in
+          <br />
+          <i>every pass.</i>
+        </>
+      }
+      copy="Every vehicle receives a considered process, premium workmanship, and the same care we give our own. Live menu and pricing appear when you book."
+    >
+      <section className="content-section">
+        <p className="public-shell mb-6 text-sm text-slate-500">
+          This page is a marketing overview — not the live catalog. Book to see current services from Hakum.
+        </p>
+        <div className="public-shell numbered-grid">
+          {serviceItems.map(([name, copy], i) => (
+            <article key={name}>
+              <span>0{i + 1}</span>
+              <Sparkles />
+              <h2>{name}</h2>
+              <p>{copy}</p>
+              <Link to="/book">
+                Book this service <ArrowRight />
+              </Link>
+            </article>
+          ))}
+        </div>
+      </section>
+    </PageHero>
+  )
+}
 
-export function PackagesPage(){return <><PageHero eyebrow="Protection packages" title={<>Shine beyond limits.<br/><i>Shield beyond compare.</i></>} copy="Long-term ceramic gloss and precision-fit PPF, built around how much protection your vehicle needs."/><section className="package-section"><div className="public-shell package-columns"><Package title="Ceramic coating" icon={Waves} plans={['Essential gloss','Signature ceramic','Ultimate ceramic']}/><Package title="Paint protection film" icon={ShieldCheck} plans={['Essential front','Signature full front','Ultimate full body']}/></div></section><PPFVisualizer/></>}
+export function PackagesPage() {
+  return (
+    <>
+      <PageHero
+        eyebrow="Protection packages · Marketing overview"
+        title={
+          <>
+            Shine beyond limits.
+            <br />
+            <i>Shield beyond compare.</i>
+          </>
+        }
+        copy="Long-term ceramic gloss and precision-fit PPF, built around how much protection your vehicle needs. Confirm availability and pricing when you book."
+      />
+      <section className="package-section">
+        <p className="public-shell mb-4 text-sm text-slate-500">Marketing packages — live options are selected during booking.</p>
+        <div className="public-shell package-columns">
+          <Package title="Ceramic coating" icon={Waves} plans={['Essential gloss', 'Signature ceramic', 'Ultimate ceramic']} />
+          <Package title="Paint protection film" icon={ShieldCheck} plans={['Essential front', 'Signature full front', 'Ultimate full body']} />
+        </div>
+      </section>
+      <PPFVisualizer />
+    </>
+  )
+}
 function Package({title,icon:Icon,plans}){return <article className="package-card"><Icon/><p className="eyebrow">Protection system</p><h2>{title}</h2>{plans.map((p,i)=><div className="plan-row" key={p}><span>0{i+1}</span><strong>{p}</strong><Link to="/book"><ArrowRight/></Link></div>)}</article>}
 
 export function BranchesPage() {

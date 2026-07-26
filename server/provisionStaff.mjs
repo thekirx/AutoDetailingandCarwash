@@ -1,19 +1,20 @@
 /**
  * Server-only ops account provisioning (service role).
- * BossMich may create admin + crew roles; admin may create TL/staff/cashier only.
+ * BossMich may create admin + assistant_super_admin + crew; admin/assistant may create TL/staff.
  */
 import { createClient } from '@supabase/supabase-js'
 
 const SUPER = 'BossMich'
+const ASSISTANT = 'assistant_super_admin'
 const ADMIN = 'admin'
 
 /** Roles a caller may assign. */
 export function creatableRolesFor(callerRole) {
   if (callerRole === SUPER) {
-    return ['admin', 'team_lead', 'staff', 'cashier', 'marketing', 'sales']
+    return ['admin', 'assistant_super_admin', 'team_lead', 'staff', 'marketing']
   }
-  if (callerRole === ADMIN) {
-    return ['team_lead', 'staff', 'cashier']
+  if (callerRole === ADMIN || callerRole === ASSISTANT) {
+    return ['team_lead', 'staff']
   }
   return []
 }
@@ -42,8 +43,8 @@ async function assertAdminCaller(admin, accessToken) {
     .maybeSingle()
 
   if (error) throw error
-  if (!staff || ![SUPER, ADMIN].includes(staff.role)) {
-    throw Object.assign(new Error('Only Super Admin or Admin may create staff accounts.'), { status: 403 })
+  if (!staff || ![SUPER, ADMIN, ASSISTANT].includes(staff.role)) {
+    throw Object.assign(new Error('Only Super Admin, Assistant Super Admin, or Admin may create staff accounts.'), { status: 403 })
   }
   return { user: userData.user, staff }
 }
@@ -66,6 +67,11 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
     }
   }
   let branchSlug = body.branch_slug ? String(body.branch_slug).trim().toLowerCase() : null
+  const branchSlugs = Array.isArray(body.branch_slugs)
+    ? body.branch_slugs.map((s) => String(s).trim().toLowerCase()).filter(Boolean)
+    : branchSlug
+      ? [branchSlug]
+      : []
   const allowed = creatableRolesFor(caller.role)
 
   if (!email || !email.includes('@')) throw Object.assign(new Error('Valid email is required.'), { status: 400 })
@@ -80,11 +86,19 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
       throw Object.assign(new Error('Your admin account has no branch. Ask Super Admin to assign one.'), { status: 403 })
     }
     branchSlug = caller.branch_slug
+    branchSlugs.length = 0
+    branchSlugs.push(caller.branch_slug)
   }
 
-  if (['admin', 'team_lead', 'staff', 'cashier', 'marketing', 'sales'].includes(role) && !branchSlug) {
+  if (['admin', 'team_lead', 'staff', 'marketing'].includes(role) && !branchSlug && !branchSlugs.length) {
     throw Object.assign(new Error('Branch is required for this role.'), { status: 400 })
   }
+  if (!branchSlug && branchSlugs.length) branchSlug = branchSlugs[0]
+
+  const permissionGrants =
+    role === ASSISTANT && body.permission_grants && typeof body.permission_grants === 'object'
+      ? body.permission_grants
+      : {}
 
   if (branchSlug) {
     const { data: branch } = await admin
@@ -132,14 +146,26 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
       id: authUser.id,
       full_name: fullName,
       role,
-      branch_slug: role === SUPER ? null : branchSlug,
+      branch_slug: role === SUPER || role === ASSISTANT ? null : branchSlug,
       phone,
+      permission_grants: role === ASSISTANT ? permissionGrants : {},
       is_active: true,
       is_archived: false,
     },
     { onConflict: 'id' },
   )
   if (profileError) throw Object.assign(new Error(profileError.message), { status: 400 })
+
+  if (role === ADMIN || role === 'team_lead' || role === 'staff' || role === 'marketing') {
+    const slugs = branchSlugs.length ? branchSlugs : branchSlug ? [branchSlug] : []
+    await admin.from('staff_branch_assignments').delete().eq('staff_id', authUser.id)
+    if (slugs.length) {
+      const { error: assignErr } = await admin.from('staff_branch_assignments').insert(
+        slugs.map((slug) => ({ staff_id: authUser.id, branch_slug: slug })),
+      )
+      if (assignErr) throw Object.assign(new Error(assignErr.message), { status: 400 })
+    }
+  }
 
   const { data: linkData } = await admin.auth.admin.generateLink({
     type: 'recovery',

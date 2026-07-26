@@ -15,7 +15,8 @@ export function buildPosSalePayload({ branch, customerId, paymentMethod, cart, a
       product_id: line.item_type === 'product' ? line.id : null,
       name: line.name,
       quantity: line.quantity,
-      unit_price_minor: line.unit_price_minor,
+      unit_price_minor: line.is_loyalty_award ? 0 : line.unit_price_minor,
+      is_loyalty_award: Boolean(line.is_loyalty_award),
     })),
   }
 }

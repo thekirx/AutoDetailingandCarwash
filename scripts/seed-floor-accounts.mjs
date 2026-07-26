@@ -8,7 +8,10 @@
  *   teamlead@hakumautocare.com     → HakumTL2026!
  *   staff1@hakumautocare.com       → HakumStaff2026!
  *   marketing@hakumautocare.com    → HakumMkt2026!
- *   sales@hakumautocare.com        → HakumSales2026!
+ *   marketing@hakumautocare.com    → HakumMkt2026!
+ *   demo.customer@…                → HakumCustomer2026!
+ *
+ * (sales/cashier demos removed — Part 9)
  *   demo.customer@hakumautocare.com → HakumCustomer2026!
  */
 import { createClient } from '@supabase/supabase-js'
@@ -191,18 +194,7 @@ async function main() {
   })
   console.log('Marketing', marketing.id)
 
-  const sales = await ensureAuthUser({
-    email: 'sales@hakumautocare.com',
-    password: 'HakumSales2026!',
-    full_name: 'Sales Associate',
-  })
-  await upsertStaffProfile(sales, {
-    full_name: 'Sales Associate',
-    role: 'sales',
-    branch_slug: BRANCH,
-    phone: '09170000022',
-  })
-  console.log('Sales', sales.id)
+  // Part 9: do not seed sales/cashier demos — roles removed from app RBAC
 
   const demo = await ensureAuthUser({
     email: 'demo.customer@hakumautocare.com',
@@ -238,7 +230,6 @@ async function main() {
         teamlead: 'teamlead@hakumautocare.com / HakumTL2026!',
         staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026!',
         marketing: 'marketing@hakumautocare.com / HakumMkt2026!',
-        sales: 'sales@hakumautocare.com / HakumSales2026!',
         customer: 'demo.customer@hakumautocare.com / HakumCustomer2026!',
         attendance_date: TODAY,
       },

@@ -1,7 +1,9 @@
 import {
   BarChart3,
   Building2,
+  CarFront,
   ClipboardList,
+  Columns3,
   Contact,
   Crown,
   Gauge,
@@ -15,6 +17,7 @@ import {
   Package,
   Plus,
   ScrollText,
+  Settings,
   ShoppingCart,
   Sparkles,
   UserPlus,
@@ -27,7 +30,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { getOperationsNav, isAdmin, ROLES } from '../auth/permissions'
 import NotificationBell from '@/components/NotificationBell'
-import PushToggle from '@/components/PushToggle'
+import UserSettingsModal from '@/components/UserSettingsModal'
 import InstallGuide from '@/components/InstallGuide'
 import {
   Sidebar,
@@ -66,6 +69,8 @@ const iconMap = {
   Building2,
   UserPlus,
   ScrollText,
+  Columns3,
+  CarFront,
 }
 
 /** Primary tablet dock for Team Lead — max 5, thumb-reach. */
@@ -98,11 +103,12 @@ function formatScope(profile) {
 function TeamLeadFloorShell({ profile, user, signOut }) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const branch = formatScope(profile)
 
   return (
-    <div className="floor-shell dark flex h-svh max-h-svh w-full flex-col overflow-hidden bg-[#070b12] text-slate-100">
-      <header className="floor-topbar z-30 flex shrink-0 items-center gap-3 border-b border-white/10 bg-[#0a1220]/95 px-3 py-2 backdrop-blur-xl sm:px-4">
+    <div className="floor-shell flex h-svh max-h-svh w-full flex-col overflow-hidden bg-background text-foreground">
+      <header className="floor-topbar z-30 flex shrink-0 items-center gap-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur-xl sm:px-4">
         <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--color-brand-primary)] text-white" aria-hidden>
           <ClipboardList size={18} />
         </div>
@@ -114,13 +120,15 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
               LIVE
             </span>
           </div>
-          <p className="truncate text-xs text-slate-400">
-            {profile?.full_name || 'Team Lead'} · <span className="font-semibold text-blue-200 uppercase tracking-wide">{branch}</span>
+          <p className="truncate text-xs text-muted-foreground">
+            {profile?.full_name || 'Team Lead'} · <span className="font-semibold text-primary uppercase tracking-wide">{branch}</span>
           </p>
         </div>
         <div className="flex items-center gap-1">
           <NotificationBell light homeUrl="/operations/queue" homeLabel="Open floor" />
-          <PushToggle compact variant="ops" className="floor-icon-btn" />
+          <button type="button" className="floor-icon-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
+            <Settings size={18} />
+          </button>
         </div>
         <button
           type="button"
@@ -140,7 +148,7 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
       {moreOpen && (
         <div
           id="floor-more-panel"
-          className="z-20 flex shrink-0 flex-wrap gap-2 border-b border-white/10 bg-[#0d1726] px-3 py-3 sm:px-4"
+          className="z-20 flex shrink-0 flex-wrap gap-2 border-b border-border bg-muted/40 px-3 py-3 sm:px-4"
           role="navigation"
           aria-label="More floor tools"
         >
@@ -157,13 +165,21 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
               {label}
             </NavLink>
           ))}
-          <div className="w-full sm:w-auto">
-            <PushToggle variant="ops" className="w-full justify-center sm:w-auto" />
-          </div>
+          <button
+            type="button"
+            className="floor-chip"
+            onClick={() => {
+              setMoreOpen(false)
+              setSettingsOpen(true)
+            }}
+          >
+            <Settings size={16} aria-hidden />
+            Settings
+          </button>
           <div className="w-full basis-full">
             <InstallGuide variant="compact" audience="ops" />
           </div>
-          <span className="ml-auto self-center text-[10px] tracking-[0.16em] text-slate-500 uppercase">
+          <span className="ml-auto self-center text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
             Branch locked · {branch}
           </span>
         </div>
@@ -173,7 +189,9 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
         <Outlet />
       </main>
 
-      <nav className="floor-dock z-30 shrink-0 border-t border-white/10 bg-[#0a1220]/98 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl" aria-label="Floor navigation">
+      <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
+
+      <nav className="floor-dock z-30 shrink-0 border-t border-border bg-background/98 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl" aria-label="Floor navigation">
         <ul className="mx-auto grid max-w-3xl grid-cols-5 gap-1 px-1 py-1.5 sm:gap-2 sm:px-2">
           {TL_DOCK.map(({ label, to, icon: Icon, primary, end }) => (
             <li key={to} className="flex justify-center">
@@ -201,9 +219,11 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
 }
 
 function AdminOpsShell({ profile, user, signOut, navigation, adminShell }) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   return (
     <SidebarProvider>
-      <div className="dark flex min-h-svh w-full bg-background text-foreground">
+      <div className="flex min-h-svh w-full bg-background text-foreground">
         <Sidebar collapsible="icon" variant="inset">
           <SidebarHeader>
             <div className="flex items-center gap-3 px-2 py-1">
@@ -246,14 +266,17 @@ function AdminOpsShell({ profile, user, signOut, navigation, adminShell }) {
                 {formatRole(profile?.role)} · {formatScope(profile)}
               </p>
               <p className="truncate text-xs text-muted-foreground">{profile?.email || user?.email}</p>
-              <div className="mt-2">
-                <PushToggle className="w-full justify-center" />
-              </div>
               <div className="mt-2 group-data-[collapsible=icon]:hidden">
                 <InstallGuide variant="compact" audience="ops" surface="light" />
               </div>
             </div>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => setSettingsOpen(true)}>
+                  <Settings />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={signOut}>
                   <LogOut />
@@ -275,13 +298,21 @@ function AdminOpsShell({ profile, user, signOut, navigation, adminShell }) {
               </p>
             </div>
             <NotificationBell homeUrl="/operations/console" homeLabel="Open console" />
-            <PushToggle compact />
+            <button
+              type="button"
+              className="inline-flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+            >
+              <Settings size={18} />
+            </button>
           </header>
           <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <Outlet />
           </main>
         </SidebarInset>
       </div>
+      <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
     </SidebarProvider>
   )
 }

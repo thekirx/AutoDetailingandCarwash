@@ -4,11 +4,32 @@ import { supabase } from '../lib/supabase'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell from '../components/HakumAuthShell'
 import { usePageMeta } from '../lib/pageMeta'
+import { OPS_LOGIN_ROLES, redirectForRole } from '../auth/permissions'
+
+async function homeAfterPassword(userId) {
+  const { data: staff } = await supabase
+    .from('staff_profiles')
+    .select('role, is_active')
+    .eq('id', userId)
+    .eq('is_active', true)
+    .maybeSingle()
+  if (staff?.role) return redirectForRole(staff.role)
+
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('role')
+    .eq('id', userId)
+    .eq('is_archived', false)
+    .maybeSingle()
+  if (customer?.role === 'customer') return '/account'
+  if (customer?.role && OPS_LOGIN_ROLES.includes(customer.role)) return redirectForRole(customer.role)
+  return '/account'
+}
 
 export default function CustomerSetPasswordPage() {
   usePageMeta({
     title: 'Set password',
-    description: 'Choose a new password for your Hakum Auto Care customer account.',
+    description: 'Choose a new password for your Hakum Auto Care account.',
     path: '/account/set-password',
   })
 
@@ -29,7 +50,7 @@ export default function CustomerSetPasswordPage() {
       setHasSession(Boolean(session))
       setReady(true)
       if (!session) {
-        setError('Open the reset or set-password link from your SMS or email first.')
+        setError('Open the reset link from your email first.')
       } else {
         setError('')
       }
@@ -63,7 +84,7 @@ export default function CustomerSetPasswordPage() {
     event.preventDefault()
     setError('')
     if (!hasSession) {
-      setError('Open the reset or set-password link from your SMS or email first.')
+      setError('Open the reset link from your email first.')
       return
     }
     if (password.length < 8) {
@@ -76,13 +97,14 @@ export default function CustomerSetPasswordPage() {
     }
     setSubmitting(true)
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
+      const { data: userData, error: updateError } = await supabase.auth.updateUser({
         password,
         data: { must_set_password: false },
       })
       if (updateError) throw updateError
       setDone(true)
-      window.setTimeout(() => navigate('/account', { replace: true }), 1200)
+      const dest = await homeAfterPassword(userData.user?.id)
+      window.setTimeout(() => navigate(dest, { replace: true }), 1200)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -95,15 +117,17 @@ export default function CustomerSetPasswordPage() {
   return (
     <HakumAuthShell
       title="Secure your account."
-      subtitle="Choose a password to sign in, track your vehicle, and follow live queue progress."
+      subtitle="Choose a password to sign in and continue in your Hakum portal."
       footerLinks={
         <p>
-          <Link to="/signin">Back to sign in</Link>
+          <Link to="/signin">Customer sign in</Link>
+          {' · '}
+          <Link to="/operations/login">Team sign in</Link>
         </p>
       }
     >
       <h2>Set your password</h2>
-      <p className="hakum-auth-welcome">Use at least 8 characters. You will use this with your email, phone, or plate.</p>
+      <p className="hakum-auth-welcome">Use at least 8 characters. You will use this with your email or phone.</p>
       {error ? (
         <p className="hakum-auth-alert" role="alert">
           {error}
@@ -111,7 +135,7 @@ export default function CustomerSetPasswordPage() {
       ) : null}
       {done ? (
         <p className="hakum-auth-info" role="status">
-          Password saved. Redirecting to your account…
+          Password saved. Redirecting…
         </p>
       ) : (
         <form onSubmit={submit} className="hakum-auth-form">

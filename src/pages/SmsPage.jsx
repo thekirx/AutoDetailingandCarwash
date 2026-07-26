@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessMarketing, isAdmin } from '@/auth/permissions'
 import { getSmsNotificationsEnabled, setSmsNotificationsEnabled } from '@/lib/adminApi'
+import { getAccessTokenFresh } from '@/lib/authToken'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,7 +16,7 @@ import { toast } from 'sonner'
 
 const TYPES = ['promo', 'reminder', 'loyalty', 'birthday', 'booking_confirm', 'booking_remind']
 
-export default function SmsPage() {
+export default function SmsPage({ embedded = false }) {
   const { profile } = useAuth()
   const [templates, setTemplates] = useState([])
   const [events, setEvents] = useState([])
@@ -23,17 +24,22 @@ export default function SmsPage() {
   const [toggling, setToggling] = useState(false)
   const [providerHealth, setProviderHealth] = useState(null)
   const [form, setForm] = useState({ name: '', template_type: 'promo', body: '' })
-  const [send, setSend] = useState({ phone: '09625294043', body: '', template_type: 'promo' })
+  const [send, setSend] = useState({ phone: '', body: '', template_type: 'promo' })
 
   const load = useCallback(async () => {
     const [t, e, enabled, health] = await Promise.all([
       supabase.from('sms_templates').select('*').order('created_at', { ascending: false }),
       supabase.from('sms_events').select('*').order('created_at', { ascending: false }).limit(30),
-      getSmsNotificationsEnabled().catch(() => true),
+      getSmsNotificationsEnabled().catch((err) => {
+        toast.error(err.message || 'Unable to load SMS toggle')
+        return true
+      }),
       fetch('/api/busybee')
         .then(async (r) => ({ http: r.status, ...(await r.json().catch(() => ({}))) }))
         .catch((err) => ({ ok: false, error: err.message })),
     ])
+    if (t.error) toast.error(t.error.message)
+    if (e.error) toast.error(e.error.message)
     setTemplates(t.data || [])
     setEvents(e.data || [])
     setSmsEnabled(enabled)
@@ -44,7 +50,10 @@ export default function SmsPage() {
     load()
   }, [load])
 
-  if (!canAccessMarketing(profile)) return <Navigate to="/operations/access-denied" replace />
+  if (!canAccessMarketing(profile)) {
+    if (embedded) return <p className="text-sm text-muted-foreground">SMS requires CRM access.</p>
+    return <Navigate to="/operations/access-denied" replace />
+  }
 
   async function toggleSms() {
     if (!isAdmin(profile)) {
@@ -81,8 +90,7 @@ export default function SmsPage() {
 
   async function queueSms(event) {
     event.preventDefault()
-    const { data: sessionData } = await supabase.auth.getSession()
-    const token = sessionData.session?.access_token
+    const token = await getAccessTokenFresh()
     if (!token) {
       toast.error('Sign in required')
       return
@@ -116,11 +124,16 @@ export default function SmsPage() {
   }
 
   return (
-    <section className="flex flex-col gap-8">
-      <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Marketing</p>
-        <h1 className="text-3xl font-semibold tracking-tight">SMS campaigns</h1>
-      </div>
+    <section className={embedded ? 'flex flex-col gap-6' : 'flex flex-col gap-8'}>
+      {!embedded && (
+        <div>
+          <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Marketing</p>
+          <h1 className="text-3xl font-semibold tracking-tight">SMS campaigns</h1>
+        </div>
+      )}
+      {embedded && (
+        <p className="text-sm text-muted-foreground">Templates, BusyBee send, and SMS event log.</p>
+      )}
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

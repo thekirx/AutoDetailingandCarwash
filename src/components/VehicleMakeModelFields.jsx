@@ -1,14 +1,51 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import SuggestInput from './SuggestInput'
 import { filterVehicleMakes, filterVehicleModels, PH_VEHICLE_MAKES, modelsForMake } from '../lib/phVehicles'
+import { supabase } from '../lib/supabase'
 
 const FLOOR_INPUT =
   'mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white outline-none focus:border-blue-300/60'
-const PUBLIC_INPUT = undefined // uses parent .booking-form input styles
+const PUBLIC_INPUT = undefined
+
+let cachedCatalog = null
+let catalogPromise = null
+
+async function loadCatalogMap() {
+  if (cachedCatalog) return cachedCatalog
+  if (!catalogPromise) {
+    catalogPromise = supabase
+      .from('vehicle_catalog')
+      .select('make, model')
+      .eq('is_active', true)
+      .order('make')
+      .order('sort_order')
+      .then(({ data, error }) => {
+        if (error || !data?.length) {
+          cachedCatalog = null
+          return null
+        }
+        const map = {}
+        for (const row of data) {
+          if (!map[row.make]) map[row.make] = []
+          if (!map[row.make].includes(row.model)) map[row.make].push(row.model)
+        }
+        cachedCatalog = map
+        return map
+      })
+      .finally(() => {
+        catalogPromise = null
+      })
+  }
+  return catalogPromise
+}
+
+function makesFromMap(map) {
+  return Object.keys(map || {}).sort((a, b) => a.localeCompare(b))
+}
 
 /**
  * Brand + model smart search for PH market.
- * Changing brand clears model when the old model isn't valid for the new brand.
+ * Prefers Super Admin vehicle_catalog when present; else static PH_VEHICLE_CATALOG.
  */
 export default function VehicleMakeModelFields({
   make,
@@ -16,20 +53,45 @@ export default function VehicleMakeModelFields({
   onMakeChange,
   onModelChange,
   required = true,
-  variant = 'floor', // 'floor' | 'public' | 'crm'
+  variant = 'floor',
   makeLabel = 'Vehicle brand',
   modelLabel = 'Vehicle model',
 }) {
-  const makeOptions = useMemo(() => filterVehicleMakes(make, 14), [make])
+  const [dbMap, setDbMap] = useState(cachedCatalog)
+
+  useEffect(() => {
+    let alive = true
+    loadCatalogMap().then((map) => {
+      if (alive && map) setDbMap(map)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const makeList = useMemo(() => {
+    if (dbMap) return makesFromMap(dbMap)
+    return PH_VEHICLE_MAKES
+  }, [dbMap])
+
+  const makeOptions = useMemo(() => {
+    const q = String(make || '').trim().toLowerCase()
+    if (!q) return makeList.slice(0, 14)
+    return makeList.filter((m) => m.toLowerCase().includes(q)).slice(0, 14)
+  }, [make, makeList])
+
   const modelOptions = useMemo(() => {
+    if (dbMap) {
+      const key = makeList.find((m) => m.toLowerCase() === String(make || '').trim().toLowerCase())
+      const models = key ? dbMap[key] || [] : []
+      const q = String(model || '').trim().toLowerCase()
+      if (!q) return models.slice(0, 14)
+      return models.filter((m) => m.toLowerCase().includes(q)).slice(0, 14)
+    }
     const known = modelsForMake(make)
     if (known.length) return filterVehicleModels(make, model, 14)
-    // Unknown brand: still offer popular cross-brand models as weak hints from all catalogs
-    if (!String(model || '').trim()) {
-      return PH_VEHICLE_MAKES.slice(0, 0) // empty until they type a known brand
-    }
     return filterVehicleModels(make, model, 14)
-  }, [make, model])
+  }, [make, model, dbMap, makeList])
 
   const inputClass =
     variant === 'floor' ? FLOOR_INPUT : variant === 'crm' ? 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none' : PUBLIC_INPUT
@@ -48,12 +110,14 @@ export default function VehicleMakeModelFields({
         value={make}
         required={required}
         placeholder="Toyota, Mitsubishi…"
-        options={makeOptions.length ? makeOptions : PH_VEHICLE_MAKES.slice(0, 12)}
+        options={makeOptions.length ? makeOptions : makeList.slice(0, 12)}
         className={labelClass}
         inputClassName={inputClass}
         onChange={(next) => {
           onMakeChange(next)
-          const allowed = modelsForMake(next)
+          const allowed = dbMap
+            ? (dbMap[makeList.find((m) => m.toLowerCase() === String(next || '').trim().toLowerCase())] || [])
+            : modelsForMake(next)
           if (model && allowed.length && !allowed.some((m) => m.toLowerCase() === model.toLowerCase())) {
             onModelChange('')
           }
@@ -71,4 +135,8 @@ export default function VehicleMakeModelFields({
       />
     </>
   )
+}
+
+export function clearVehicleCatalogCache() {
+  cachedCatalog = null
 }

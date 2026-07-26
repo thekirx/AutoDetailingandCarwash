@@ -24,12 +24,14 @@ export default function PushToggle({
   autoPrompt = false,
   compact = false,
   variant = 'default',
+  surface = 'auto',
 }) {
   const [status, setStatus] = useState('loading')
   const [busy, setBusy] = useState(false)
   const [open, setOpen] = useState(false)
   const reason = pushUnsupportedReason()
   const ops = audience === 'ops' || variant === 'ops'
+  const lightChips = surface === 'light' || ops
 
   const refresh = useCallback(async () => {
     if (!pushSupported()) {
@@ -46,8 +48,20 @@ export default function PushToggle({
   useEffect(() => {
     if (!autoPrompt || status !== 'idle') return
     if (typeof localStorage !== 'undefined' && localStorage.getItem('hakum-push-prompt-v1')) return
+    try {
+      localStorage.setItem('hakum-prompt-busy', '1')
+    } catch {
+      /* ignore */
+    }
     const t = window.setTimeout(() => setOpen(true), 1600)
-    return () => window.clearTimeout(t)
+    return () => {
+      window.clearTimeout(t)
+      try {
+        localStorage.removeItem('hakum-prompt-busy')
+      } catch {
+        /* ignore */
+      }
+    }
   }, [autoPrompt, status])
 
   async function sessionToken() {
@@ -147,7 +161,7 @@ export default function PushToggle({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className={`push-chip ${on ? 'push-chip-on' : 'push-chip-off'} ${ops ? 'push-chip-ops' : ''}`}
+          className={`push-chip ${on ? 'push-chip-on' : 'push-chip-off'} ${lightChips ? 'push-chip-ops' : ''}`}
           disabled={busy || status === 'loading' || status === 'denied'}
           onClick={() => (on ? turnOff() : setOpen(true))}
         >
@@ -155,7 +169,7 @@ export default function PushToggle({
           <span>{status === 'denied' ? 'Blocked' : on ? 'Alerts on' : 'Enable alerts'}</span>
         </button>
         {on && !compact ? (
-          <button type="button" className={`push-chip push-chip-ghost ${ops ? 'push-chip-ops' : ''}`} disabled={busy} onClick={sendTest}>
+          <button type="button" className={`push-chip push-chip-ghost ${lightChips ? 'push-chip-ops' : ''}`} disabled={busy} onClick={sendTest}>
             Test alert
           </button>
         ) : null}

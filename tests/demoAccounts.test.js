@@ -8,6 +8,7 @@ describe('demo accounts', () => {
     for (const a of OPS_DEMO_ACCOUNTS) {
       assert.ok(a.email.includes('@'))
       assert.ok(a.password.length >= 8)
+      assert.ok(!/sales|cashier/i.test(a.id + a.label + a.email))
     }
     assert.equal(CUSTOMER_DEMO_ACCOUNT.email, 'demo.customer@hakumautocare.com')
     assert.ok(CUSTOMER_DEMO_ACCOUNT.password.length >= 8)

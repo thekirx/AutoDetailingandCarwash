@@ -17,19 +17,29 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
+import { listVehicleSizes } from '../lib/adminApi'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import { splitCustomerName } from '../lib/phVehicles'
+import { canSeeAllBranches } from '../auth/permissions'
 import {
-  ACTIVE_QUEUE_STATUSES,
-  QUEUE_PERMISSION_ERROR,
-  STATUS_LABELS,
   formatQueueNumber,
   getBranchScope,
+  getBranchScopeList,
+  getDashboardDateRange,
   getPlateLookupStatus,
   getQueueCounts,
+  groupVisitTickets,
+  isSuspiciousTiming,
   normalizeVehicleType,
   parsePesoInputToMinor,
+  queueByBranchCounts,
   requiresTeamLeadBranchSetup,
+  canOverrideQueueBranches,
+  DASHBOARD_DATE_PRESETS,
+  OPS_BOARD_STATUSES,
+  QUEUE_PERMISSION_ERROR,
+  REDO_FROM_STATUSES,
+  STATUS_LABELS,
 } from '../queue/queueLogic'
 import {
   addStaffMember,
@@ -42,6 +52,7 @@ import {
   fetchTicket,
   formatMoney,
   lookupPlate,
+  markTicketRedo,
   sendTicketToPayment,
   setStaffAttendance,
   updateCrewStaffMember,
@@ -54,15 +65,17 @@ const statusTone = {
   in_progress: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-100',
   final_checking: 'border-amber-300/20 bg-amber-500/10 text-amber-100',
   for_payment: 'border-violet-300/20 bg-violet-500/10 text-violet-100',
+  redo: 'border-rose-300/20 bg-rose-500/10 text-rose-100',
   completed: 'border-slate-300/20 bg-slate-500/10 text-slate-100',
 }
 
-const vehicleTypeOptions = [
+const FALLBACK_VEHICLE_TYPES = [
   { label: 'Sedan', value: 'sedan' },
   { label: 'SUV', value: 'suv' },
   { label: 'Van', value: 'van' },
   { label: 'Pickup', value: 'pickup' },
   { label: 'Motorcycle', value: 'motorcycle' },
+  { label: 'Other', value: 'other' },
 ]
 
 function PageHeader({ eyebrow, title, description, action }) {
@@ -91,7 +104,9 @@ function MetricCard({ label, value, icon: Icon, tone = 'blue' }) {
   )
 }
 
-function TicketCard({ ticket }) {
+function TicketCard({ ticket, timingWarnings }) {
+  const warn = isSuspiciousTiming(ticket, timingWarnings)
+  const linked = (ticket.linked_booking_ids?.length || 1) > 1
   return (
     <Link to={`/operations/queue/${ticket.booking_id}`} className="floor-ticket">
       <div className="flex items-start justify-between gap-3">
@@ -102,39 +117,41 @@ function TicketCard({ ticket }) {
         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusTone[ticket.status] || statusTone.completed}`}>{STATUS_LABELS[ticket.status] || ticket.status}</span>
       </div>
       <div className="mt-3 grid gap-0.5 text-xs text-slate-400">
+        <span className="truncate font-medium text-slate-300">{ticket.branch || '—'}</span>
         <span className="truncate">{[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'}</span>
         <span className="truncate">{ticket.vehicle_plate || 'No plate'} · {ticket.service_name || 'Service'}</span>
         <span className="truncate">{ticket.assigned_staff_name || 'No staff assigned'}</span>
+        {linked && <span className="text-blue-200">{ticket.linked_booking_ids.length} services · one visit</span>}
+        {warn && <span className="flex items-center gap-1 text-amber-200"><ShieldAlert size={12} aria-hidden />Fast in-progress → check</span>}
       </div>
     </Link>
   )
 }
 
-function useOperationsSnapshot() {
+function useOperationsSnapshot(branchFilter = 'all') {
   const { profile } = useAuth()
-  const [snapshot, setSnapshot] = useState({ queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [] })
+  const [snapshot, setSnapshot] = useState({ queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [], timingWarnings: null })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     setError('')
     try {
-      setSnapshot(await fetchOperationsSnapshot(profile))
+      setSnapshot(await fetchOperationsSnapshot(profile, { branchFilter }))
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [profile])
+  }, [profile, branchFilter])
 
   useEffect(() => {
     load()
   }, [load])
 
   useEffect(() => {
-    const branch = getBranchScope(profile) || 'all'
     const channel = supabase
-      .channel(`operations-queue-${branch}`)
+      .channel(`operations-queue-${branchFilter}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs' }, load)
@@ -144,29 +161,115 @@ function useOperationsSnapshot() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [load, profile])
+  }, [load, branchFilter])
 
   return { ...snapshot, loading, error, reload: load }
 }
 
 export function OperationsDashboardPage() {
   const { profile, canViewQueueOperations } = useAuth()
-  const { activeQueue, availableStaff, busyStaff, events, handoffs, loading, error, reload } = useOperationsSnapshot()
+  const seeAll = canSeeAllBranches(profile)
+  const scopeList = getBranchScopeList(profile)
+  const [branchFilter, setBranchFilter] = useState(seeAll ? 'all' : (Array.isArray(scopeList) && scopeList[0]) || getBranchScope(profile) || 'all')
+  const [datePreset, setDatePreset] = useState('3mo')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+  const [branches, setBranches] = useState([])
+  const { activeQueue, availableStaff, busyStaff, events, handoffs, timingWarnings, loading, error, reload } = useOperationsSnapshot(branchFilter)
   const counts = useMemo(() => getQueueCounts(activeQueue), [activeQueue])
+  const range = useMemo(() => getDashboardDateRange(datePreset, customStart, customEnd), [datePreset, customStart, customEnd])
+  const filteredEvents = useMemo(
+    () => (events || []).filter((e) => {
+      const t = new Date(e.created_at).getTime()
+      return t >= range.start.getTime() && t <= range.end.getTime()
+    }),
+    [events, range],
+  )
+  const filteredHandoffs = useMemo(
+    () => (handoffs || []).filter((h) => {
+      if (!h.handed_off_at) return true
+      const t = new Date(h.handed_off_at).getTime()
+      return t >= range.start.getTime() && t <= range.end.getTime()
+    }),
+    [handoffs, range],
+  )
+  const branchCompare = useMemo(() => queueByBranchCounts(activeQueue), [activeQueue])
+  const timingFlags = useMemo(
+    () => activeQueue.filter((t) => isSuspiciousTiming(t, timingWarnings)),
+    [activeQueue, timingWarnings],
+  )
+
+  useEffect(() => {
+    if (!seeAll && !(Array.isArray(scopeList) && scopeList.length > 1)) return
+    fetchBranches().then(setBranches).catch(() => setBranches([]))
+  }, [seeAll, scopeList])
+
   if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
-
   if (error) return <ErrorState error={error} onRetry={reload} />
+
+  const branchOptions = seeAll
+    ? [{ slug: 'all', name: 'All branches' }, ...branches]
+    : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
 
   return (
     <section>
-      <PageHeader eyebrow="Team Lead Dashboard" title="Active floor control" description="Track queue volume, crew availability, and handoffs ready for the future POS module." action={<RefreshButton loading={loading} onClick={reload} />} />
-      <div className="mt-4 grid gap-3 grid-cols-2 xl:grid-cols-4 sm:mt-6 sm:gap-4">
+      <PageHeader
+        eyebrow="Team Lead Dashboard"
+        title="Active floor control"
+        description="Track queue volume, crew availability, and handoffs ready for POS checkout."
+        action={<RefreshButton loading={loading} onClick={reload} />}
+      />
+      <div className="mt-4 flex flex-col gap-3 sm:mt-5 sm:flex-row sm:flex-wrap sm:items-end">
+        {(seeAll || branchOptions.length > 1) && (
+          <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+            Branch
+            <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="mt-2 block min-h-11 w-full rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white sm:w-48">
+              {branchOptions.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
+            </select>
+          </label>
+        )}
+        {!seeAll && branchOptions.length <= 1 && (
+          <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300">Branch · {getBranchScope(profile) || 'unassigned'}</p>
+        )}
+        <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+          Date range
+          <select value={datePreset} onChange={(e) => setDatePreset(e.target.value)} className="mt-2 block min-h-11 w-full rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white sm:w-40">
+            {DASHBOARD_DATE_PRESETS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+          </select>
+        </label>
+        {datePreset === 'custom' && (
+          <>
+            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">From<input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="mt-2 block min-h-11 rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white" /></label>
+            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">To<input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="mt-2 block min-h-11 rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white" /></label>
+          </>
+        )}
+      </div>
+      <div className="mt-4 grid gap-3 grid-cols-2 xl:grid-cols-5 sm:mt-6 sm:gap-4">
         <MetricCard label="Waiting" value={counts.waiting} icon={Clock3} />
         <MetricCard label="In Progress" value={counts.in_progress} icon={CarFront} tone="green" />
         <MetricCard label="Final Checking" value={counts.final_checking} icon={BadgeCheck} tone="amber" />
+        <MetricCard label="Redo" value={counts.redo} icon={ShieldAlert} tone="amber" />
         <MetricCard label="Total Active" value={counts.total} icon={ClipboardList} />
       </div>
+      {timingFlags.length > 0 && (
+        <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <ShieldAlert size={16} aria-hidden />
+          {timingFlags.length} ticket(s) reached final check faster than {timingWarnings?.min_seconds_in_progress ?? 120}s — review for QC shortcuts.
+        </p>
+      )}
+      {seeAll && (
+        <Panel title="Branch comparison" icon={ClipboardList} className="mt-4 sm:mt-5">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {Object.keys(branchCompare).length ? Object.entries(branchCompare).map(([slug, c]) => (
+              <div key={slug} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
+                <p className="font-semibold capitalize">{slug}</p>
+                <p className="mt-1 text-xs text-slate-400">W {c.waiting} · IP {c.in_progress} · FC {c.final_checking} · Redo {c.redo} · Total {c.total}</p>
+              </div>
+            )) : <EmptyLine text="No active tickets across branches." />}
+          </div>
+        </Panel>
+      )}
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr] sm:mt-5 sm:gap-5">
         <Panel title="Crew Availability" icon={Users}>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -176,23 +279,23 @@ export function OperationsDashboardPage() {
         </Panel>
         <Panel title="Recently Sent To Payment" icon={Send}>
           <div className="grid gap-3">
-            {handoffs.length ? handoffs.map((handoff) => (
+            {filteredHandoffs.length ? filteredHandoffs.slice(0, 8).map((handoff) => (
               <div key={handoff.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
                 <p className="font-semibold">{handoff.branch} · {formatMoney(handoff.amount_minor)}</p>
                 <p className="mt-1 text-xs text-slate-500">{handoff.status} · {handoff.handed_off_at ? new Date(handoff.handed_off_at).toLocaleString() : 'Pending'}</p>
               </div>
-            )) : <EmptyLine text="No payment handoffs yet." />}
+            )) : <EmptyLine text="No payment handoffs in this range." />}
           </div>
         </Panel>
       </div>
       <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
         <div className="grid max-h-64 gap-3 overflow-y-auto sm:max-h-80">
-          {events.length ? events.map((event) => (
+          {filteredEvents.length ? filteredEvents.slice(0, 20).map((event) => (
             <div key={event.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
               <p className="text-sm">{event.old_status || 'created'} to {event.new_status}</p>
               <p className="mt-1 text-xs text-slate-500">{event.branch} · {event.notes || 'Status update'} · {new Date(event.created_at).toLocaleString()}</p>
             </div>
-          )) : <EmptyLine text="No queue activity yet." />}
+          )) : <EmptyLine text="No queue activity in this range." />}
         </div>
       </Panel>
     </section>
@@ -201,11 +304,29 @@ export function OperationsDashboardPage() {
 
 export function OperationsQueuePage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
-  const { activeQueue, loading, error, reload } = useOperationsSnapshot()
-  const grouped = useMemo(() => Object.fromEntries(ACTIVE_QUEUE_STATUSES.map((status) => [status, activeQueue.filter((ticket) => ticket.status === status)])), [activeQueue])
+  const seeAll = canSeeAllBranches(profile)
+  const scopeList = getBranchScopeList(profile)
+  const [branchFilter, setBranchFilter] = useState(seeAll ? 'all' : (Array.isArray(scopeList) && scopeList[0]) || getBranchScope(profile) || 'all')
+  const [branches, setBranches] = useState([])
+  const { activeQueue, timingWarnings, loading, error, reload } = useOperationsSnapshot(branchFilter)
+  const boardTickets = useMemo(() => groupVisitTickets(activeQueue), [activeQueue])
+  const grouped = useMemo(
+    () => Object.fromEntries(OPS_BOARD_STATUSES.map((status) => [status, boardTickets.filter((ticket) => ticket.status === status)])),
+    [boardTickets],
+  )
+
+  useEffect(() => {
+    if (!seeAll && !(Array.isArray(scopeList) && scopeList.length > 1)) return
+    fetchBranches().then(setBranches).catch(() => setBranches([]))
+  }, [seeAll, scopeList])
+
   if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
+
+  const branchOptions = seeAll
+    ? [{ slug: 'all', name: 'All branches' }, ...branches]
+    : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
 
   return (
     <section className="flex min-h-0 flex-col">
@@ -215,15 +336,27 @@ export function OperationsQueuePage() {
         description="Manage active tickets until they are sent to payment. For Payment tickets leave this board by design."
         action={<div className="flex gap-2 sm:gap-3"><RefreshButton loading={loading} onClick={reload} />{canManageQueue && <Link to="/operations/queue/new" className="floor-touch-btn inline-flex items-center gap-2 rounded-2xl bg-blue-500 px-4 py-2.5 font-semibold text-white no-underline transition hover:bg-blue-400 sm:px-5"><Plus size={18} aria-hidden />New ticket</Link>}</div>}
       />
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        {(seeAll || branchOptions.length > 1) ? (
+          <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+            Branch
+            <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="mt-2 block min-h-11 rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white sm:w-48">
+              {branchOptions.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
+            </select>
+          </label>
+        ) : (
+          <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300">Branch · {getBranchScope(profile) || 'unassigned'}</p>
+        )}
+      </div>
       <div className="floor-lane-board mt-4 sm:mt-5" role="region" aria-label="Active queue lanes">
-        {ACTIVE_QUEUE_STATUSES.map((status) => (
+        {OPS_BOARD_STATUSES.map((status) => (
           <section key={status} className="floor-lane" aria-label={STATUS_LABELS[status]}>
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-xs font-bold tracking-[0.14em] text-slate-300 uppercase">{STATUS_LABELS[status]}</h2>
               <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs tabular-nums">{grouped[status].length}</span>
             </div>
             <div className="floor-lane-body">
-              {loading ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-white/5" />) : grouped[status].length ? grouped[status].map((ticket) => <TicketCard key={ticket.booking_id} ticket={ticket} />) : <EmptyLine text="No tickets in this lane." />}
+              {loading ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-white/5" />) : grouped[status].length ? grouped[status].map((ticket) => <TicketCard key={ticket.booking_id} ticket={ticket} timingWarnings={timingWarnings} />) : <EmptyLine text="No tickets in this lane." />}
             </div>
           </section>
         ))}
@@ -300,6 +433,9 @@ export function QueueTicketPage() {
 
   const staffById = new Map(staff.map((item) => [item.id, item]))
   const canSendToPayment = canManageQueue && ticket.status === 'final_checking'
+  const canRedo = canManageQueue && REDO_FROM_STATUSES.includes(ticket.status)
+  const canRestartFromRedo = canManageQueue && ticket.status === 'redo'
+  const timingWarn = isSuspiciousTiming(ticket)
   const parsedPrice = Number(String(price).replace(/,/g, '').trim())
   const showLowPriceWarning = Number.isFinite(parsedPrice) && parsedPrice > 0 && parsedPrice < 50
   const savePrice = () => {
@@ -307,12 +443,18 @@ export function QueueTicketPage() {
     if (amountMinor < 5000 && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) return Promise.resolve()
     return updateTicketPrice(ticket, amountMinor, priceReason, user.id)
   }
+  const runRedo = () => {
+    const reason = window.prompt('Redo reason (visible to owner in audit)', ticket.redo_reason || '')
+    if (reason === null) return Promise.resolve()
+    return markTicketRedo(ticket, reason)
+  }
 
   return (
     <section>
       <PageHeader eyebrow="Queue Ticket" title={`${formatQueueNumber(ticket.queue_number)} · ${ticket.customer_name}`} description={`${ticket.branch} · ${STATUS_LABELS[ticket.status] || ticket.status}`} action={<Link to="/operations/queue" className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline">Back to queue</Link>} />
       {error && <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100" role="alert">{error}</p>}
       {!canManageQueue && <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">{QUEUE_PERMISSION_ERROR}</p>}
+      {timingWarn && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4 text-sm text-amber-100"><ShieldAlert size={16} aria-hidden />Suspicious timing: in progress → final check was under the configured threshold.</p>}
       <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_360px] sm:mt-6 sm:gap-5">
         <Panel title="Ticket Details" icon={CarFront}>
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
@@ -324,6 +466,7 @@ export function QueueTicketPage() {
             <Info label="Price" value={formatMoney(ticket.final_price_minor ?? ticket.base_price_minor)} />
             <Info label="Created" value={new Date(ticket.created_at).toLocaleString()} />
             <Info label="Notes" value={ticket.notes || 'No internal notes'} />
+            {ticket.redo_reason && <Info label="Redo reason" value={ticket.redo_reason} />}
           </div>
         </Panel>
 
@@ -331,9 +474,10 @@ export function QueueTicketPage() {
           <div className="floor-actions-sticky xl:static xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none">
             <Panel title="Status Actions" icon={ArrowRight} className="shadow-none xl:shadow-xl">
               <div className="grid gap-2.5">
-                <ActionButton disabled={!canManageQueue || ticket.status !== 'waiting'} loading={saving === 'start'} onClick={() => runAction('start', () => updateTicketStatus(ticket, 'in_progress'))}>Start Service</ActionButton>
-                <ActionButton disabled={!canManageQueue || ticket.status !== 'in_progress'} loading={saving === 'check'} onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}>Send To Final Checking</ActionButton>
-                <ActionButton disabled={!canSendToPayment} loading={saving === 'payment'} onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}><Send size={17} aria-hidden />Send To Payment</ActionButton>
+                <ActionButton disabled={!canManageQueue || (ticket.status !== 'waiting' && !canRestartFromRedo)} loading={saving === 'start'} onClick={() => runAction('start', () => updateTicketStatus(ticket, 'in_progress'))}>Start Service</ActionButton>
+                <ActionButton disabled={!canManageQueue || ticket.status !== 'in_progress'} loading={saving === 'check'} onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}>Final check → POS</ActionButton>
+                <ActionButton disabled={!canSendToPayment} loading={saving === 'payment'} onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}><Send size={17} aria-hidden />Retry send to payment</ActionButton>
+                <ActionButton disabled={!canRedo} loading={saving === 'redo'} onClick={() => runAction('redo', runRedo)}><ShieldAlert size={17} aria-hidden />Mark redo</ActionButton>
               </div>
             </Panel>
           </div>
@@ -380,7 +524,8 @@ export function NewQueueTicketPage() {
   const navigate = useNavigate()
   const { user, profile, canManageQueue } = useAuth()
   const assignedBranch = getBranchScope(profile)
-  const canChooseBranch = profile?.role === 'BossMich'
+  const scopeList = getBranchScopeList(profile)
+  const canChooseBranch = canOverrideQueueBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
   const [services, setServices] = useState([])
   const [branches, setBranches] = useState([])
   const [plateMatch, setPlateMatch] = useState(null)
@@ -399,7 +544,7 @@ export function NewQueueTicketPage() {
     vehicle_year: '',
     vehicle_color: '',
     vehicle_type: 'sedan',
-    service_id: '',
+    service_ids: [],
     branch: assignedBranch || '',
     final_price: '',
     notes: '',
@@ -408,24 +553,36 @@ export function NewQueueTicketPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [vehicleTypeOptions, setVehicleTypeOptions] = useState(FALLBACK_VEHICLE_TYPES)
 
   useEffect(() => {
-    Promise.all([fetchServices(), canChooseBranch ? fetchBranches() : Promise.resolve([])])
-      .then(([serviceRows, branchRows]) => {
+    Promise.all([
+      fetchServices(),
+      canChooseBranch ? fetchBranches() : Promise.resolve([]),
+      listVehicleSizes({ activeOnly: true }).catch(() => []),
+    ])
+      .then(([serviceRows, branchRows, sizes]) => {
         const firstService = serviceRows[0]
         setServices(serviceRows)
-        setBranches(branchRows)
+        setBranches(
+          Array.isArray(scopeList) && scopeList.length > 1 && !canOverrideQueueBranches(profile)
+            ? branchRows.filter((b) => scopeList.includes(b.slug))
+            : branchRows,
+        )
+        if (sizes?.length) {
+          setVehicleTypeOptions(sizes.map((s) => ({ label: s.label, value: s.slug })))
+        }
         setForm((current) => ({
           ...current,
           branch: assignedBranch || current.branch || branchRows[0]?.slug || '',
           services: serviceRows,
-          service_id: firstService?.id || current.service_id,
+          service_ids: firstService ? [firstService.id] : current.service_ids,
           final_price: firstService ? String(firstService.price_minor / 100) : current.final_price,
         }))
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [assignedBranch, canChooseBranch])
+  }, [assignedBranch, canChooseBranch, profile, scopeList])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -482,14 +639,19 @@ export function NewQueueTicketPage() {
   const setMake = (vehicle_make) => setForm((current) => ({ ...current, vehicle_make }))
   const setModel = (vehicle_model) => setForm((current) => ({ ...current, vehicle_model }))
   const updateVehicleType = (event) => setForm((current) => ({ ...current, vehicle_type: normalizeVehicleType(event.target.value) }))
-  const updateService = (event) => {
-    const serviceId = event.target.value
-    const service = services.find((item) => item.id === serviceId)
-    setForm((current) => ({
-      ...current,
-      service_id: serviceId,
-      final_price: service ? String(service.price_minor / 100) : current.final_price,
-    }))
+  const updateServiceToggle = (serviceId) => {
+    setForm((current) => {
+      const selected = new Set(current.service_ids || [])
+      if (selected.has(serviceId)) selected.delete(serviceId)
+      else selected.add(serviceId)
+      const ids = [...selected]
+      const total = ids.reduce((sum, id) => sum + (services.find((s) => s.id === id)?.price_minor || 0), 0)
+      return {
+        ...current,
+        service_ids: ids,
+        final_price: ids.length ? String(total / 100) : current.final_price,
+      }
+    })
   }
 
   const parsedFormPrice = Number(String(form.final_price).replace(/,/g, '').trim())
@@ -500,6 +662,7 @@ export function NewQueueTicketPage() {
     setSubmitting(true)
     setError('')
     try {
+      if (!form.service_ids?.length) throw new Error('Select at least one service.')
       if (showFormLowPriceWarning && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) {
         setSubmitting(false)
         return
@@ -508,6 +671,8 @@ export function NewQueueTicketPage() {
         ...form,
         branch: canChooseBranch ? form.branch : assignedBranch,
         vehicle_type: normalizeVehicleType(form.vehicle_type),
+        service_ids: form.service_ids,
+        service_id: form.service_ids[0],
         services,
         created_by: user.id,
       })
@@ -550,7 +715,23 @@ export function NewQueueTicketPage() {
             <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
             <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
             <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Vehicle type<select value={form.vehicle_type} onChange={updateVehicleType} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Service<select value={form.service_id} onChange={updateService} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{services.map((service) => <option key={service.id} value={service.id}>{service.name} · {formatMoney(service.price_minor)}</option>)}</select></label>
+            <fieldset className="sm:col-span-2 space-y-2">
+              <legend className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Services (multi-select · one visit)</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {services.map((service) => {
+                  const checked = (form.service_ids || []).includes(service.id)
+                  return (
+                    <label key={service.id} className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${checked ? 'border-blue-300/40 bg-blue-500/10' : 'border-white/10 bg-white/5'}`}>
+                      <span>{service.name}</span>
+                      <span className="flex items-center gap-3 tabular-nums text-slate-300">
+                        {formatMoney(service.price_minor)}
+                        <input type="checkbox" className="size-4 accent-blue-500" checked={checked} onChange={() => updateServiceToggle(service.id)} />
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            </fieldset>
             {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
             <FormField label="Final Price in Pesos" value={form.final_price} onChange={update('final_price')} type="number" min="0" step="0.01" required />
             {showFormLowPriceWarning && <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
@@ -566,11 +747,13 @@ export function NewQueueTicketPage() {
 export function CrewPage() {
   const { profile, canManageCrew, canViewQueueOperations } = useAuth()
   const { staffPool, availableStaff, busyStaff, loading, error, reload } = useOperationsSnapshot()
-  const [form, setForm] = useState({ full_name: '', phone: '', branch_slug: getBranchScope(profile) || '', present_today: true })
+  const [form, setForm] = useState({ full_name: '', username: '', phone: '', branch_slug: getBranchScope(profile) || '', present_today: true })
   const [branches, setBranches] = useState([])
   const [saving, setSaving] = useState('')
   const [actionError, setActionError] = useState('')
+  const [crewTab, setCrewTab] = useState('pool')
   const presentCount = staffPool.filter((member) => member.is_present_today).length
+  const presentRows = useMemo(() => staffPool.filter((m) => m.is_present_today), [staffPool])
 
   useEffect(() => {
     if (profile?.role !== 'BossMich') return
@@ -600,7 +783,7 @@ export function CrewPage() {
     event.preventDefault()
     runCrewAction('add-staff', async () => {
       await addStaffMember(form, profile)
-      setForm((current) => ({ ...current, full_name: '', phone: '' }))
+      setForm((current) => ({ ...current, full_name: '', username: '', phone: '' }))
     })
   }
 
@@ -609,27 +792,45 @@ export function CrewPage() {
   if (error) return <ErrorState error={error} onRetry={reload} />
   return (
     <section>
-      <PageHeader eyebrow="Crew" title="Staff pool and attendance" description="Add staff once, mark who attended today, then deploy only present staff into queue tickets." action={<RefreshButton loading={loading} onClick={reload} />} />
+      <PageHeader eyebrow="Crew" title="Staff pool and attendance" description="Add staff with a unique username, mark attendance, then deploy present staff into queue tickets." action={<RefreshButton loading={loading} onClick={reload} />} />
       {actionError && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{actionError}</p>}
-      <div className="mt-8 grid gap-6 xl:grid-cols-[.9fr_1.1fr]">
-        <Panel title="Staff Pool" icon={UserPlus}>
+      <div className="mt-6 mb-4 grid grid-cols-3 gap-3 text-center text-xs text-slate-400">
+        <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{staffPool.length}</strong>Pool</span>
+        <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{presentCount}</strong>Present</span>
+        <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{availableStaff.length}</strong>Deployable</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {[
+          { key: 'pool', label: `Pool (${staffPool.length})` },
+          { key: 'present', label: `Present (${presentCount})` },
+          { key: 'busy', label: `Busy (${busyStaff.length})` },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setCrewTab(tab.key)}
+            className={`min-h-10 rounded-2xl px-4 text-sm font-semibold transition ${crewTab === tab.key ? 'bg-blue-500 text-white' : 'border border-white/10 text-slate-300 hover:bg-white/5'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {crewTab === 'pool' && (
+        <Panel title="Staff Pool" icon={UserPlus} className="mt-5">
           {canManageCrew && (
-            <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-[1fr_160px_auto]">
+            <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-[1fr_1fr_160px_auto]">
               <input value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} required placeholder="Staff name" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
+              <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} required minLength={3} placeholder="Username *" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
               <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Phone" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
               <button disabled={saving === 'add-staff'} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60">{saving === 'add-staff' ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}Add</button>
-              {profile?.role === 'BossMich' && <select value={form.branch_slug} onChange={(event) => setForm((current) => ({ ...current, branch_slug: event.target.value }))} required className="md:col-span-3 rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select>}
-              <label className="md:col-span-3 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] px-4 py-3 text-sm text-slate-300">
+              {profile?.role === 'BossMich' && <select value={form.branch_slug} onChange={(event) => setForm((current) => ({ ...current, branch_slug: event.target.value }))} required className="md:col-span-4 rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select>}
+              <label className="md:col-span-4 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] px-4 py-3 text-sm text-slate-300">
                 <input type="checkbox" checked={form.present_today} onChange={(event) => setForm((current) => ({ ...current, present_today: event.target.checked }))} />
                 Mark as attended today
               </label>
             </form>
           )}
-          <div className="mb-4 grid grid-cols-3 gap-3 text-center text-xs text-slate-400">
-            <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{staffPool.length}</strong>Pool</span>
-            <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{presentCount}</strong>Present</span>
-            <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{availableStaff.length}</strong>Deployable</span>
-          </div>
           <StaffPoolList
             rows={staffPool}
             canManage={canManageCrew}
@@ -642,114 +843,64 @@ export function CrewPage() {
             }}
           />
         </Panel>
-        <Panel title="Available Today" icon={CheckCircle2}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
-      </div>
-      <div className="mt-6 grid gap-6">
-        <Panel title="Busy Staff" icon={Users}><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
-      </div>
+      )}
+      {crewTab === 'present' && (
+        <div className="mt-5 grid gap-6 xl:grid-cols-2">
+          <Panel title="Present today" icon={CheckCircle2}>
+            <StaffPoolList
+              rows={presentRows}
+              canManage={canManageCrew}
+              saving={saving}
+              onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
+              onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
+              onDeactivate={(member) => {
+                if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
+                return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
+              }}
+            />
+          </Panel>
+          <Panel title="Deployable (not on a ticket)" icon={Users}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
+        </div>
+      )}
+      {crewTab === 'busy' && (
+        <Panel title="Busy Staff" icon={Users} className="mt-5"><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
+      )}
     </section>
   )
 }
 
-export function KpiPage() {
-  const { profile, canViewQueueOperations } = useAuth()
-  const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const load = useCallback(async () => {
-    setError('')
-    setLoading(true)
-    if (requiresTeamLeadBranchSetup(profile)) {
-      setRows([])
-      setLoading(false)
-      return
-    }
-    const branchScope = getBranchScope(profile)
-    try {
-      let query = supabase
-        .from('crew_kpi_summary')
-        .select('staff_id, staff_name, branch, total_assigned, total_completed, average_service_minutes, active_jobs, completed_today')
-      if (branchScope) query = query.eq('branch', branchScope)
-      const { data, error: viewError } = await query.order('staff_name')
-      if (!viewError) {
-        setRows(data || [])
-        setLoading(false)
-        return
-      }
-      // Fallback when view grant is missing — security definer RPC already granted
-      if (!/permission denied|42501/i.test(viewError.message)) throw viewError
-
-      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
-      const { data: rpcRows, error: rpcError } = await supabase.rpc('get_crew_kpi', {
-        input_start_date: '2024-01-01',
-        input_end_date: today,
-        input_branch_slug: branchScope || null,
-      })
-      if (rpcError) throw rpcError
-      setRows(
-        (rpcRows || []).map((row) => ({
-          staff_id: row.staff_id,
-          staff_name: row.staff_name,
-          branch: row.branch_slug || row.branch_name,
-          total_assigned: Number(row.cars_handled || 0) + Number(row.active_jobs || 0),
-          total_completed: Number(row.cars_handled || 0),
-          average_service_minutes: Number(row.average_completed_seconds || 0) / 60,
-          active_jobs: Number(row.active_jobs || 0),
-          completed_today: 0,
-        })),
-      )
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [profile])
-  useEffect(() => { load() }, [load])
-  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
-  if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
-  if (error) return <ErrorState error={error} onRetry={load} />
-  return (
-    <section>
-      <PageHeader eyebrow="Queue KPI" title="Crew performance" description="Queue-only KPI. Staff receive credit when assignments are released at payment handoff." action={<RefreshButton loading={loading} onClick={load} />} />
-      <div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2 xl:grid-cols-3">
-        {rows.length ? rows.map((row) => (
-          <article key={row.staff_id} className="rounded-2xl border border-white/10 bg-[#0d1726] p-4">
-            <p className="text-base font-semibold">{row.staff_name}</p>
-            <p className="mt-1 text-xs text-slate-500 uppercase tracking-wide">{row.branch || 'All'}</p>
-            <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-              <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Assigned</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.total_assigned}</dd></div>
-              <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Released</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.total_completed}</dd></div>
-              <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Active</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.active_jobs}</dd></div>
-              <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Avg min</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{Math.round(row.average_service_minutes || 0)}</dd></div>
-              <div className="col-span-2"><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Completed today</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.completed_today}</dd></div>
-            </dl>
-          </article>
-        )) : (
-          <EmptyLine text="No KPI records yet." />
-        )}
-      </div>
-    </section>
-  )
-}
+export { default as KpiPage } from './KpiPage.jsx'
 
 export function MyTasksPage() {
   const { user, profile, canViewAssignedTasks } = useAuth()
-  const [rows, setRows] = useState([])
+  const [queueRows, setQueueRows] = useState([])
+  const [planRows, setPlanRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState('')
 
   const load = useCallback(async () => {
     if (!user?.id) return
     setError('')
     setLoading(true)
-    const { data, error: qError } = await supabase
-      .from('queue_assignments')
-      .select('id, booking_id, task_name, task_notes, status, started_at, completed_at, released_at, created_at, bookings(vehicle_plate, branch, status, queue_number)')
-      .eq('staff_id', user.id)
-      .in('status', ['active', 'pending'])
-      .order('created_at', { ascending: false })
-    if (qError) setError(qError.message)
-    else setRows(data || [])
+    const [queueRes, planRes] = await Promise.all([
+      supabase
+        .from('queue_assignments')
+        .select('id, booking_id, task_name, task_notes, status, started_at, completed_at, released_at, created_at, bookings(vehicle_plate, branch, status, queue_number)')
+        .eq('staff_id', user.id)
+        .in('status', ['active', 'pending'])
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('plan_card_assignees')
+        .select('id, status, notes, created_at, updated_at, card_id, plan_cards(id, title, description, due_at, labels)')
+        .eq('staff_id', user.id)
+        .in('status', ['todo', 'in_progress'])
+        .order('created_at', { ascending: false }),
+    ])
+    if (queueRes.error) setError(queueRes.error.message)
+    else setQueueRows(queueRes.data || [])
+    if (planRes.error) setError((prev) => prev || planRes.error.message)
+    else setPlanRows(planRes.data || [])
     setLoading(false)
   }, [user?.id])
 
@@ -760,6 +911,7 @@ export function MyTasksPage() {
     const channel = supabase
       .channel(`my-tasks-${user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments', filter: `staff_id=eq.${user.id}` }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_card_assignees', filter: `staff_id=eq.${user.id}` }, load)
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -777,46 +929,89 @@ export function MyTasksPage() {
     else load()
   }
 
+  const updatePlanTask = async (row, nextStatus) => {
+    setSaving(row.id)
+    const { error: uError } = await supabase
+      .from('plan_card_assignees')
+      .update({ status: nextStatus, updated_at: new Date().toISOString() })
+      .eq('id', row.id)
+      .eq('staff_id', user.id)
+    setSaving('')
+    if (uError) setError(uError.message)
+    else load()
+  }
+
   if (error) return <ErrorState error={error} onRetry={load} />
+  const empty = !loading && !queueRows.length && !planRows.length
   return (
     <section className="px-1 sm:px-0">
-      <PageHeader eyebrow="My Tasks" title="Assigned work" description="Your active vehicle assignments. Tap a ticket to see floor details when available." action={<RefreshButton loading={loading} onClick={load} />} />
-      <div className="mt-6 grid gap-4 sm:mt-8">
-        {rows.length ? rows.map((row) => {
-          const booking = row.bookings
-          return (
-            <article key={row.id} className="rounded-3xl border border-white/10 bg-[#0d1726] p-4 sm:p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-lg font-semibold">{row.task_name || 'Queue service task'}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {booking?.vehicle_plate ? `${booking.vehicle_plate} · ` : ''}
-                    {booking?.branch || '—'}
-                    {booking?.queue_number ? ` · #${formatQueueNumber(booking.queue_number)}` : ''}
-                  </p>
-                  <p className="mt-1 text-xs capitalize text-slate-400">{row.status}{booking?.status ? ` · ticket ${booking.status}` : ''}</p>
+      <PageHeader eyebrow="My Tasks" title="Assigned work" description="Queue floor jobs and planning cards assigned to you." action={<RefreshButton loading={loading} onClick={load} />} />
+
+      <Panel title="Planning assignments" icon={ClipboardList} className="mt-6">
+        <div className="grid gap-4">
+          {planRows.length ? planRows.map((row) => {
+            const card = row.plan_cards
+            return (
+              <article key={row.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold">{card?.title || 'Planning card'}</p>
+                    <p className="mt-1 text-xs capitalize text-slate-400">{row.status.replace('_', ' ')}{card?.due_at ? ` · due ${new Date(card.due_at).toLocaleString()}` : ''}</p>
+                    {card?.description && <p className="mt-2 text-sm text-slate-400 line-clamp-2">{card.description}</p>}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {row.status === 'todo' && (
+                      <button type="button" disabled={saving === row.id} onClick={() => updatePlanTask(row, 'in_progress')} className="min-h-11 rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white disabled:opacity-40">Start</button>
+                    )}
+                    {row.status === 'in_progress' && (
+                      <button type="button" disabled={saving === row.id} onClick={() => updatePlanTask(row, 'done')} className="min-h-11 rounded-2xl border border-emerald-300/30 px-4 text-sm font-semibold text-emerald-100 disabled:opacity-40">Mark done</button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  {row.booking_id && (profile?.role !== 'staff') && (
-                    <Link to={`/operations/queue/${row.booking_id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 no-underline">
-                      Open ticket
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    disabled={row.status === 'active'}
-                    onClick={() => markInProgress(row)}
-                    className="min-h-11 rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {row.status === 'active' ? 'In progress' : 'Acknowledge'}
-                  </button>
+              </article>
+            )
+          }) : <EmptyLine text={loading ? 'Loading…' : 'No open planning assignments.'} />}
+        </div>
+      </Panel>
+
+      <Panel title="Queue assignments" icon={CarFront} className="mt-5">
+        <div className="grid gap-4">
+          {queueRows.length ? queueRows.map((row) => {
+            const booking = row.bookings
+            return (
+              <article key={row.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-lg font-semibold">{row.task_name || 'Queue service task'}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {booking?.vehicle_plate ? `${booking.vehicle_plate} · ` : ''}
+                      {booking?.branch || '—'}
+                      {booking?.queue_number ? ` · #${formatQueueNumber(booking.queue_number)}` : ''}
+                    </p>
+                    <p className="mt-1 text-xs capitalize text-slate-400">{row.status}{booking?.status ? ` · ticket ${booking.status}` : ''}</p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    {row.booking_id && (profile?.role !== 'staff') && (
+                      <Link to={`/operations/queue/${row.booking_id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 no-underline">
+                        Open ticket
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      disabled={row.status === 'active'}
+                      onClick={() => markInProgress(row)}
+                      className="min-h-11 rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {row.status === 'active' ? 'In progress' : 'Acknowledge'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-              {row.task_notes && <p className="mt-4 text-sm text-slate-400">{row.task_notes}</p>}
-            </article>
-          )
-        }) : <EmptyLine text={loading ? 'Loading tasks…' : 'No assigned tasks right now.'} />}
-      </div>
+                {row.task_notes && <p className="mt-4 text-sm text-slate-400">{row.task_notes}</p>}
+              </article>
+            )
+          }) : <EmptyLine text={loading ? 'Loading…' : empty ? 'No assigned tasks right now.' : 'No queue assignments.'} />}
+        </div>
+      </Panel>
     </section>
   )
 }
@@ -851,7 +1046,7 @@ function CrewList({ title, rows, empty, busy = false }) {
 
 function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeactivate }) {
   const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({ full_name: '', phone: '' })
+  const [editForm, setEditForm] = useState({ full_name: '', username: '', phone: '' })
 
   if (!rows.length) return <EmptyLine text="No staff in this branch pool yet." />
 
@@ -866,7 +1061,11 @@ function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeacti
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium">{member.full_name}</p>
-                <p className="mt-1 text-xs text-slate-500">{member.branch_slug || 'No branch'}{member.phone ? ` · ${member.phone}` : ''}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {member.username ? `@${member.username} · ` : ''}
+                  {member.branch_slug || 'No branch'}
+                  {member.phone ? ` · ${member.phone}` : ''}
+                </p>
               </div>
               <span className={`w-fit rounded-full border px-3 py-1 text-[10px] font-bold uppercase ${present ? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-100' : 'border-slate-300/20 bg-slate-400/10 text-slate-300'}`}>
                 {present ? (busy ? 'Deployed' : 'Present') : 'Not attended'}
@@ -874,7 +1073,7 @@ function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeacti
             </div>
             {canManage && isEditing && (
               <form
-                className="mt-4 grid gap-2 sm:grid-cols-[1fr_140px_auto_auto]"
+                className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_140px_auto_auto]"
                 onSubmit={async (event) => {
                   event.preventDefault()
                   await onEdit(member, editForm)
@@ -885,6 +1084,14 @@ function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeacti
                   required
                   value={editForm.full_name}
                   onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                />
+                <input
+                  required
+                  minLength={3}
+                  value={editForm.username}
+                  onChange={(e) => setEditForm((f) => ({ ...f, username: e.target.value }))}
+                  placeholder="Username"
                   className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
                 />
                 <input
@@ -905,7 +1112,7 @@ function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeacti
                   type="button"
                   onClick={() => {
                     setEditingId(member.id)
-                    setEditForm({ full_name: member.full_name || '', phone: member.phone || '' })
+                    setEditForm({ full_name: member.full_name || '', username: member.username || '', phone: member.phone || '' })
                   }}
                   className="floor-touch-btn rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5"
                 >

@@ -79,42 +79,42 @@ export function getInstallSteps(platform = getInstallPlatform()) {
   if (platform === 'ios') {
     return {
       platform,
-      title: 'Install Hakum on iPhone / iPad',
-      lead: 'Safari only — Add to Home Screen unlocks the full app and push alerts.',
+      title: 'Add Hakum to Home Screen',
+      lead: 'Use Safari — Home Screen unlocks the full app and visit push alerts.',
       steps: [
-        'Open this site in Safari (not Chrome or in-app browsers).',
-        'Tap the Share button at the bottom (square with an arrow up).',
-        'Scroll and tap Add to Home Screen, then Add.',
-        'Open Hakum from your home screen icon, then enable alerts.',
+        'Open this page in Safari (not Chrome or in-app browsers).',
+        'Tap Share (square with an arrow up).',
+        'Tap Add to Home Screen, then Add.',
+        'Open Hakum from the new icon, then tap Enable alerts.',
       ],
-      tip: 'iOS 16.4+ required for push notifications from the home screen app.',
+      tip: 'iOS 16.4+ needed for push alerts from the Home Screen app.',
     }
   }
   if (platform === 'android') {
     return {
       platform,
       title: 'Install Hakum on Android',
-      lead: 'Add Hakum to your home screen for one-tap booking, queue, and alerts.',
+      lead: 'Add Hakum to your home screen for one-tap queue, stamps, and alerts.',
       steps: [
-        'Open this site in Chrome.',
-        'Tap the menu (⋮) → Install app or Add to Home screen.',
+        'Open this page in Chrome.',
+        'Tap Menu (⋮) → Install app or Add to Home screen.',
         'Confirm Install.',
         'Open Hakum from your home screen, then enable alerts.',
       ],
-      tip: 'If you see Install Hakum below, tap it for the fastest path.',
+      tip: 'If Install Hakum appears below, use that for the fastest path.',
     }
   }
   return {
     platform: 'desktop',
-    title: 'Install Hakum on this computer',
-    lead: 'Use Chrome or Edge to install a desktop app icon — works offline-friendly with your ops or customer login.',
+    title: 'Install Hakum on this device',
+    lead: 'Chrome or Edge can install Hakum as an app for faster access and alerts.',
     steps: [
-      'Open this site in Google Chrome or Microsoft Edge.',
-      'Click the install icon in the address bar (⊕ / computer+arrow), or Menu → Install Hakum Auto Care…',
+      'Open this site in Chrome or Microsoft Edge.',
+      'Click the install icon in the address bar, or Menu → Install Hakum Auto Care…',
       'Confirm Install.',
-      'Launch Hakum from your desktop or Start/Dock, then enable alerts.',
+      'Open Hakum from your desktop or Start/Dock, then enable alerts.',
     ],
-    tip: 'Firefox and Safari on desktop do not support one-click install the same way — use Chrome or Edge.',
+    tip: 'Desktop Safari and Firefox do not support one-click install — use Chrome or Edge.',
   }
 }
 

@@ -33,9 +33,9 @@ assert.equal(buildBookingNotifyPayload(booking, 'nope'), null)
 
 const opsTargets = buildOpsPushTargets(booking)
 assert.equal(opsTargets.length, 2)
-assert.deepEqual(opsTargets[0].roles, ['admin', 'team_lead', 'staff', 'cashier', 'sales'])
+assert.deepEqual(opsTargets[0].roles, ['admin', 'team_lead', 'staff'])
 assert.equal(opsTargets[0].branchId, 'bacoor')
-assert.deepEqual(opsTargets[1].roles, ['BossMich'])
+assert.deepEqual(opsTargets[1].roles, ['BossMich', 'assistant_super_admin'])
 
 const opsCopy = buildOpsNotifyCopy(booking, 'waiting')
 assert.equal(opsCopy.url, '/operations/queue')

@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { Car, Contact, MessageSquare, Pencil, Plus, Search, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessCrm, isAdmin } from '@/auth/permissions'
 import { listBranches, listMembershipTiers } from '@/lib/adminApi'
+import { getAccessTokenFresh } from '@/lib/authToken'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
+import CrmInsightsPanel from '@/pages/CrmInsightsPanel'
+import SmsPage from '@/pages/SmsPage'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,12 +21,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 
+const CRM_TABS = ['directory', 'insights', 'sms']
 const emptyForm = { first_name: '', last_name: '', phone: '', email: '', plate: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan' }
 const emptyVehicle = { plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan', color: '' }
 
 async function provisionCustomer(body) {
-  const { data: sessionData } = await supabase.auth.getSession()
-  const token = sessionData.session?.access_token
+  const token = await getAccessTokenFresh()
   if (!token) throw new Error('Sign in required.')
   const res = await fetch('/api/provision-customer', {
     method: 'POST',
@@ -40,6 +43,8 @@ async function provisionCustomer(body) {
 
 export default function CrmPage() {
   const { profile } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = CRM_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'directory'
   const [customers, setCustomers] = useState([])
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(null)
@@ -50,6 +55,7 @@ export default function CrmPage() {
   const [tiers, setTiers] = useState([])
   const [branches, setBranches] = useState([])
   const [form, setForm] = useState(emptyForm)
+  const [registerOpen, setRegisterOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [vehicleForm, setVehicleForm] = useState(emptyVehicle)
   const [addingVehicle, setAddingVehicle] = useState(false)
@@ -73,8 +79,8 @@ export default function CrmPage() {
   useEffect(() => {
     if (!canAccessCrm(profile)) return
     loadCustomers()
-    listMembershipTiers().then(setTiers).catch(() => {})
-    listBranches().then(setBranches).catch(() => {})
+    listMembershipTiers().then(setTiers).catch((err) => toast.error(err.message))
+    listBranches().then(setBranches).catch((err) => toast.error(err.message))
   }, [loadCustomers, profile])
 
   const filtered = useMemo(() => {
@@ -108,6 +114,8 @@ export default function CrmPage() {
     ])
     if (v.error) toast.error(v.error.message)
     if (b.error) toast.error(b.error.message)
+    if (l.error) toast.error(l.error.message)
+    if (m.error) toast.error(m.error.message)
     setVehicles(v.data || [])
     setBookings(b.data || [])
     setLoyalty(l.data || [])
@@ -133,6 +141,7 @@ export default function CrmPage() {
       })
       toast.success('Customer registered — account invite queued')
       setForm(emptyForm)
+      setRegisterOpen(false)
       await loadCustomers()
     } catch (err) {
       toast.error(err.message)
@@ -212,8 +221,7 @@ export default function CrmPage() {
     }
     setSaving(true)
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData.session?.access_token
+      const token = await getAccessTokenFresh()
       if (!token) throw new Error('Sign in required.')
 
       const pushRes = await fetch('/api/send-push', {
@@ -261,97 +269,76 @@ export default function CrmPage() {
   const branchName = (slug) => branches.find((b) => b.slug === slug)?.name || slug
 
   return (
-    <section className="flex flex-col gap-8">
+    <section className="flex flex-col gap-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">CRM</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Customer relationships</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Marketing & directory</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Register customers with login accounts, track vehicles and visits by branch, and message them via inbox, push, and SMS.
-            {isAdmin(profile) ? ' Super Admin and Admin see every branch.' : ' Marketing can run the full CRM for outreach.'}
+            Accounts come from Admin/POS. Insights show sales hours and peaks; SMS lives here.
           </p>
         </div>
-        {isAdmin(profile) ? (
-          <Button asChild variant="outline">
-            <Link to="/operations/memberships">Memberships</Link>
+        <div className="flex flex-wrap gap-2">
+          {isAdmin(profile) ? (
+            <Button asChild variant="outline">
+              <Link to="/operations/memberships">Memberships</Link>
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" onClick={() => setRegisterOpen(true)}>
+            <UserPlus className="mr-1 size-4" /> Register account
           </Button>
-        ) : null}
+        </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><UserPlus size={18} /> Register customer</CardTitle>
-            <CardDescription>Creates a Hakum login so their queue visits appear in the customer portal.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={createCustomer} className="flex flex-col gap-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-2"><Label>First name</Label><Input required value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} /></div>
-                <div className="flex flex-col gap-2"><Label>Last name</Label><Input required value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} /></div>
-              </div>
-              <div className="flex flex-col gap-2"><Label>Phone</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="09XXXXXXXXX" /></div>
-              <div className="flex flex-col gap-2"><Label>Email (optional)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div className="flex flex-col gap-2"><Label>Plate (optional)</Label><Input value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value.toUpperCase() })} placeholder="ABC 1234" /></div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <VehicleMakeModelFields
-                  make={form.vehicle_make}
-                  model={form.vehicle_model}
-                  onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
-                  onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
-                  variant="crm"
-                  required={false}
-                  makeLabel="Brand"
-                  modelLabel="Model"
-                />
-              </div>
-              <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save customer'}</Button>
-            </form>
-          </CardContent>
-        </Card>
+      <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'directory' ? {} : { tab: next }, { replace: true })}>
+        <TabsList className="flex h-auto flex-wrap gap-1">
+          <TabsTrigger value="directory">Directory</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
+          <TabsTrigger value="sms">SMS</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2"><Contact size={18} /> Directory</CardTitle>
-              <CardDescription>{filtered.length} customers</CardDescription>
-            </div>
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" placeholder="Search name, phone, email" value={query} onChange={(e) => setQuery(e.target.value)} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Loyalty</TableHead>
-                  <TableHead className="text-right">Open</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((row) => (
-                  <TableRow key={row.id} className={selected?.id === row.id ? 'bg-muted/40' : ''}>
-                    <TableCell className="font-medium">{row.full_name}</TableCell>
-                    <TableCell>{row.phone || '—'}</TableCell>
-                    <TableCell className="tabular-nums">{row.loyalty_points ?? 0} pts · {row.loyalty_stamps ?? 0} stamps</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => openCustomer(row)}>View</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!filtered.length && (
+        <TabsContent value="directory" className="mt-6 flex flex-col gap-6">
+          <Card>
+            <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2"><Contact size={18} /> Directory</CardTitle>
+                <CardDescription>{filtered.length} customers from Admin/POS accounts</CardDescription>
+              </div>
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input className="pl-9" placeholder="Search name, phone, email" value={query} onChange={(e) => setQuery(e.target.value)} />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-muted-foreground">No customers match.</TableCell>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Loyalty</TableHead>
+                    <TableHead className="text-right">Open</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((row) => (
+                    <TableRow key={row.id} className={selected?.id === row.id ? 'bg-muted/40' : ''}>
+                      <TableCell className="font-medium">{row.full_name}</TableCell>
+                      <TableCell>{row.phone || '—'}</TableCell>
+                      <TableCell className="tabular-nums">{row.loyalty_points ?? 0} pts · {row.loyalty_stamps ?? 0} stamps</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => openCustomer(row)}>View</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!filtered.length && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-muted-foreground">No customers match.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -474,6 +461,50 @@ export default function CrmPage() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="insights" className="mt-6">
+          <CrmInsightsPanel profile={profile} />
+        </TabsContent>
+
+        <TabsContent value="sms" className="mt-6">
+          <SmsPage embedded />
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Register customer account</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Secondary path — prefer Admin/POS provision. Creates login for portal visits.</p>
+          <form onSubmit={createCustomer} className="flex flex-col gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-2"><Label>First name</Label><Input required value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} /></div>
+              <div className="flex flex-col gap-2"><Label>Last name</Label><Input required value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} /></div>
+            </div>
+            <div className="flex flex-col gap-2"><Label>Phone</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="09XXXXXXXXX" /></div>
+            <div className="flex flex-col gap-2"><Label>Email (optional)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            <div className="flex flex-col gap-2"><Label>Plate (optional)</Label><Input value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value.toUpperCase() })} placeholder="ABC 1234" /></div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <VehicleMakeModelFields
+                make={form.vehicle_make}
+                model={form.vehicle_model}
+                onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
+                onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
+                variant="crm"
+                required={false}
+                makeLabel="Brand"
+                modelLabel="Model"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setRegisterOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save customer'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>

@@ -2,7 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Pencil, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canCreateAdminAccounts, canManagePeople, isSuperAdmin } from '@/auth/permissions'
+import {
+  ASSISTANT_GRANT_KEYS,
+  DEFAULT_ASSISTANT_GRANTS,
+  ROLES,
+  canCreateAdminAccounts,
+  canEditAssistantGrants,
+  canManagePeople,
+  isSuperAdmin,
+} from '@/auth/permissions'
 import {
   deactivateStaffPerson,
   listBranches,
@@ -22,12 +30,18 @@ import { toast } from 'sonner'
 
 const ROLE_LABELS = {
   admin: 'Admin',
+  assistant_super_admin: 'Assistant Super Admin',
   team_lead: 'Team Lead',
   staff: 'Staff',
-  cashier: 'Cashier',
   marketing: 'Marketing',
-  sales: 'Sales',
   BossMich: 'Super Admin',
+}
+
+function toggleSlug(list, slug) {
+  const set = new Set(list || [])
+  if (set.has(slug)) set.delete(slug)
+  else set.add(slug)
+  return [...set]
 }
 
 export default function PeopleManagePage() {
@@ -42,21 +56,22 @@ export default function PeopleManagePage() {
     phone: '',
     role: 'staff',
     branch_slug: '',
+    branch_slugs: [],
     temporary_password: '',
+    permission_grants: { ...DEFAULT_ASSISTANT_GRANTS },
   })
 
   const roleOptions = useMemo(() => {
     const base = [
       { value: 'team_lead', label: 'Team Lead' },
       { value: 'staff', label: 'Staff' },
-      { value: 'cashier', label: 'Cashier' },
     ]
     if (canCreateAdminAccounts(profile)) {
       return [
-        { value: 'admin', label: 'Admin (lesser RBAC)' },
+        { value: 'admin', label: 'Admin (multi-branch)' },
+        { value: 'assistant_super_admin', label: 'Assistant Super Admin' },
         ...base,
         { value: 'marketing', label: 'Marketing' },
-        { value: 'sales', label: 'Sales' },
       ]
     }
     return base
@@ -67,7 +82,11 @@ export default function PeopleManagePage() {
     setPeople(p)
     setBranches(b)
     const defaultBranch = profile?.branch_slug || b[0]?.slug || ''
-    setForm((f) => ({ ...f, branch_slug: f.branch_slug || defaultBranch }))
+    setForm((f) => ({
+      ...f,
+      branch_slug: f.branch_slug || defaultBranch,
+      branch_slugs: f.branch_slugs.length ? f.branch_slugs : defaultBranch ? [defaultBranch] : [],
+    }))
   }, [profile?.branch_slug])
 
   useEffect(() => {
@@ -80,12 +99,15 @@ export default function PeopleManagePage() {
     event.preventDefault()
     setSaving(true)
     try {
-      const needsBranch = ['admin', 'team_lead', 'staff', 'cashier', 'marketing', 'sales'].includes(form.role)
+      const needsBranch = ['admin', 'team_lead', 'staff', 'marketing'].includes(form.role)
+      const slugs = form.role === 'admin' ? form.branch_slugs : form.branch_slug ? [form.branch_slug] : []
       await provisionStaff({
         ...form,
-        branch_slug: needsBranch ? form.branch_slug || null : null,
+        branch_slug: needsBranch ? slugs[0] || form.branch_slug || null : null,
+        branch_slugs: needsBranch ? slugs : [],
+        permission_grants: form.role === ROLES.ASSISTANT_SUPER_ADMIN ? form.permission_grants : {},
       })
-      toast.success('Account created — invite queued if phone was set')
+      toast.success('Account created')
       setForm((f) => ({ ...f, full_name: '', email: '', phone: '', temporary_password: '' }))
       await load()
     } catch (err) {
@@ -104,9 +126,11 @@ export default function PeopleManagePage() {
         id: editing.id,
         full_name: editing.full_name,
         role: editing.role,
-        branch_slug: editing.branch_slug,
+        branch_slug: editing.branch_slugs?.[0] || editing.branch_slug,
+        branch_slugs: editing.branch_slugs,
         phone: editing.phone,
         is_active: editing.is_active,
+        permission_grants: editing.permission_grants,
       })
       toast.success('Staff updated')
       setEditing(null)
@@ -130,6 +154,8 @@ export default function PeopleManagePage() {
     }
   }
 
+  const showBranchPicker = (role) => ['admin', 'team_lead', 'staff', 'marketing'].includes(role)
+
   return (
     <section className="flex flex-col gap-8">
       <div>
@@ -137,8 +163,8 @@ export default function PeopleManagePage() {
         <h1 className="text-3xl font-semibold tracking-tight">Accounts & branch assignment</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {isSuperAdmin(profile)
-            ? 'Super Admin creates Admins (each assigned to a branch), Team Leads, and staff. Edit or deactivate from the directory.'
-            : 'Create Team Leads, staff, and cashiers for your assigned branch. Edit role, phone, or deactivate as needed.'}
+            ? 'Super Admin creates Admins (multi-branch), Assistant Super Admins (grants), Team Leads, and staff.'
+            : 'Create Team Leads and staff for your assigned branch.'}
         </p>
       </div>
 
@@ -146,7 +172,7 @@ export default function PeopleManagePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><UserPlus size={18} /> Create account</CardTitle>
-            <CardDescription>Creates Auth login + staff profile. Optional temp password; otherwise a recovery link is generated.</CardDescription>
+            <CardDescription>Auth login + staff profile. Optional temp password.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -159,8 +185,8 @@ export default function PeopleManagePage() {
                 <Input id="p-email" type="email" required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="p-phone">Phone (optional notify)</Label>
-                <Input id="p-phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="09XXXXXXXXX" />
+                <Label htmlFor="p-phone">Phone (optional)</Label>
+                <Input id="p-phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Role</Label>
@@ -173,12 +199,29 @@ export default function PeopleManagePage() {
                   </SelectContent>
                 </Select>
               </div>
-              {form.role !== 'BossMich' && (
+              {showBranchPicker(form.role) && form.role === 'admin' && (
                 <div className="flex flex-col gap-2">
-                  <Label>Branch{form.role === 'admin' ? ' (required for Admin)' : ''}</Label>
+                  <Label>Branches (multi)</Label>
+                  <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
+                    {branches.map((b) => (
+                      <label key={b.slug} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={form.branch_slugs.includes(b.slug)}
+                          onChange={() => setForm((f) => ({ ...f, branch_slugs: toggleSlug(f.branch_slugs, b.slug) }))}
+                        />
+                        {b.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {showBranchPicker(form.role) && form.role !== 'admin' && (
+                <div className="flex flex-col gap-2">
+                  <Label>Branch</Label>
                   <Select
                     value={form.branch_slug}
-                    onValueChange={(branch_slug) => setForm((f) => ({ ...f, branch_slug }))}
+                    onValueChange={(branch_slug) => setForm((f) => ({ ...f, branch_slug, branch_slugs: [branch_slug] }))}
                     disabled={!isSuperAdmin(profile) && Boolean(profile?.branch_slug)}
                   >
                     <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
@@ -190,9 +233,31 @@ export default function PeopleManagePage() {
                   </Select>
                 </div>
               )}
+              {form.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile) && (
+                <div className="flex flex-col gap-2">
+                  <Label>Permission grants</Label>
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
+                    {ASSISTANT_GRANT_KEYS.map((key) => (
+                      <label key={key} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(form.permission_grants[key])}
+                          onChange={() =>
+                            setForm((f) => ({
+                              ...f,
+                              permission_grants: { ...f.permission_grants, [key]: !f.permission_grants[key] },
+                            }))
+                          }
+                        />
+                        {key}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="p-pass">Temporary password (optional)</Label>
-                <Input id="p-pass" type="text" value={form.temporary_password} onChange={(e) => setForm((f) => ({ ...f, temporary_password: e.target.value }))} placeholder="Leave blank to auto-generate" />
+                <Input id="p-pass" type="text" value={form.temporary_password} onChange={(e) => setForm((f) => ({ ...f, temporary_password: e.target.value }))} />
               </div>
               <Button type="submit" disabled={saving}>{saving ? 'Creating…' : 'Create account'}</Button>
             </form>
@@ -202,7 +267,7 @@ export default function PeopleManagePage() {
         <Card>
           <CardHeader>
             <CardTitle>Directory</CardTitle>
-            <CardDescription>{people.length} profiles (active + inactive)</CardDescription>
+            <CardDescription>{people.length} profiles</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -223,14 +288,26 @@ export default function PeopleManagePage() {
                       <div className="text-xs text-muted-foreground">{row.phone || '—'}</div>
                     </TableCell>
                     <TableCell><Badge variant="secondary">{ROLE_LABELS[row.role] || row.role}</Badge></TableCell>
-                    <TableCell>{row.branch_slug || 'All / HQ'}</TableCell>
+                    <TableCell className="max-w-[10rem] truncate text-xs">
+                      {(row.branch_slugs || []).join(', ') || row.branch_slug || 'All / HQ'}
+                    </TableCell>
                     <TableCell>
                       {row.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
                       {row.role !== 'BossMich' && (
                         <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => setEditing({ ...row })}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setEditing({
+                                ...row,
+                                branch_slugs: row.branch_slugs || (row.branch_slug ? [row.branch_slug] : []),
+                                permission_grants: { ...DEFAULT_ASSISTANT_GRANTS, ...(row.permission_grants || {}) },
+                              })
+                            }
+                          >
                             <Pencil size={14} className="mr-1" /> Edit
                           </Button>
                           {row.is_active && (
@@ -249,7 +326,7 @@ export default function PeopleManagePage() {
       </div>
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90svh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit staff</DialogTitle>
           </DialogHeader>
@@ -274,17 +351,64 @@ export default function PeopleManagePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-col gap-2">
-                <Label>Branch</Label>
-                <Select value={editing.branch_slug || ''} onValueChange={(branch_slug) => setEditing((r) => ({ ...r, branch_slug }))}>
-                  <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
-                  <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
+              {showBranchPicker(editing.role) && (
+                <div className="flex flex-col gap-2">
+                  <Label>{editing.role === 'admin' ? 'Branches (multi)' : 'Branch'}</Label>
+                  {editing.role === 'admin' ? (
+                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
+                      {branches.map((b) => (
+                        <label key={b.slug} className="flex cursor-pointer items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={(editing.branch_slugs || []).includes(b.slug)}
+                            onChange={() =>
+                              setEditing((r) => ({ ...r, branch_slugs: toggleSlug(r.branch_slugs, b.slug) }))
+                            }
+                          />
+                          {b.name}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <Select
+                      value={editing.branch_slug || editing.branch_slugs?.[0] || ''}
+                      onValueChange={(branch_slug) => setEditing((r) => ({ ...r, branch_slug, branch_slugs: [branch_slug] }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                      <SelectContent>
+                        {branches.map((b) => (
+                          <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
+              {editing.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile) && (
+                <div className="flex flex-col gap-2">
+                  <Label>Permission grants</Label>
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
+                    {ASSISTANT_GRANT_KEYS.map((key) => (
+                      <label key={key} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(editing.permission_grants?.[key])}
+                          onChange={() =>
+                            setEditing((r) => ({
+                              ...r,
+                              permission_grants: {
+                                ...r.permission_grants,
+                                [key]: !r.permission_grants?.[key],
+                              },
+                            }))
+                          }
+                        />
+                        {key}
+                      </label>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select

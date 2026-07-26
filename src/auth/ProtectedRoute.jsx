@@ -2,7 +2,11 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthProvider'
 import LoadingScreen from '../components/LoadingScreen'
 
-export default function ProtectedRoute({ allowedRoles, redirectTo = '/operations/login' }) {
+export default function ProtectedRoute({
+  allowedRoles,
+  redirectTo = '/operations/login',
+  unauthorizedTo = '/operations/access-denied',
+}) {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
@@ -13,7 +17,7 @@ export default function ProtectedRoute({ allowedRoles, redirectTo = '/operations
   }
 
   if (allowedRoles?.length && !allowedRoles.includes(profile?.role)) {
-    return <Navigate to="/operations/access-denied" replace state={{ from: location, unauthorized: true }} />
+    return <Navigate to={unauthorizedTo} replace state={{ from: location, unauthorized: true }} />
   }
 
   return <Outlet />

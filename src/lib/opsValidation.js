@@ -3,7 +3,8 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const BRANCH_CODE_RE = /^[A-Z]{2,5}$/
-const EDITABLE_ROLES = new Set(['admin', 'team_lead', 'staff', 'cashier', 'marketing', 'sales'])
+const EDITABLE_ROLES = new Set(['admin', 'assistant_super_admin', 'team_lead', 'staff', 'marketing'])
+const BRANCH_REQUIRED_ROLES = new Set(['admin', 'team_lead', 'staff', 'marketing'])
 
 export function validateBranchInput(
   { name, slug, code, address, latitude, longitude, coming_soon, is_active, status },
@@ -54,7 +55,7 @@ export function validateBranchInput(
   }
 }
 
-export function validateServiceInput({ name, slug, price, duration_minutes, display_order }) {
+export function validateServiceInput({ name, slug, price, duration_minutes, display_order, pay_category }) {
   const errors = []
   const trimmedName = String(name || '').trim()
   if (!trimmedName) errors.push('Service name is required.')
@@ -70,13 +71,16 @@ export function validateServiceInput({ name, slug, price, duration_minutes, disp
   const priceNum = Number(price)
   if (!Number.isFinite(priceNum) || priceNum < 0) errors.push('Price must be a number 0 or greater.')
 
-  const duration = Number(duration_minutes)
+  // ponytail: duration kept in DB for legacy calendar; UI no longer requires it
+  let duration = Number(duration_minutes)
   if (!Number.isFinite(duration) || duration <= 0 || !Number.isInteger(duration)) {
-    errors.push('Duration must be a whole number of minutes greater than 0.')
+    duration = 60
   }
 
   const order = display_order == null || display_order === '' ? 0 : Number(display_order)
   if (!Number.isFinite(order) || order < 0) errors.push('Display order must be 0 or greater.')
+
+  const category = String(pay_category || 'general').trim().toLowerCase() || 'general'
 
   if (errors.length) throw new Error(errors[0])
   return {
@@ -85,6 +89,7 @@ export function validateServiceInput({ name, slug, price, duration_minutes, disp
     price_minor: Math.round(priceNum * 100),
     duration_minutes: duration,
     display_order: order,
+    pay_category: category,
   }
 }
 
@@ -94,7 +99,7 @@ export function validateStaffUpdate({ id, full_name, role, branch_slug, phone })
   const name = String(full_name || '').trim()
   if (!name) throw new Error('Full name is required.')
   if (role && !EDITABLE_ROLES.has(role)) throw new Error(`Role "${role}" cannot be assigned here.`)
-  if (['admin', 'team_lead', 'staff', 'cashier', 'marketing', 'sales'].includes(role) && !branch_slug) {
+  if (BRANCH_REQUIRED_ROLES.has(role) && !branch_slug) {
     throw new Error('Branch is required for this role.')
   }
   const phoneDigits = String(phone || '').replace(/\D/g, '')
@@ -197,7 +202,7 @@ export function validateProvisionStaffInput({ email, full_name, role, branch_slu
   const name = String(full_name || '').trim()
   if (!name) throw new Error('Full name is required.')
   if (!EDITABLE_ROLES.has(role)) throw new Error(`Role "${role}" is not allowed.`)
-  if (['admin', 'team_lead', 'staff', 'cashier', 'marketing', 'sales'].includes(role) && !branch_slug) {
+  if (BRANCH_REQUIRED_ROLES.has(role) && !branch_slug) {
     throw new Error('Branch is required for this role.')
   }
   const phoneDigits = String(phone || '').replace(/\D/g, '')

@@ -1,5 +1,6 @@
-/** Compact demo account chips for ops / customer login. */
+/** Compact demo account chips for ops / customer login — never in production builds. */
 export default function DemoAccountChips({ accounts, onPick, title = 'Demo accounts' }) {
+  if (!import.meta.env.DEV) return null
   if (!accounts?.length) return null
   return (
     <div className="hakum-demo">

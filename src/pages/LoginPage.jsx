@@ -14,7 +14,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const { user, profile, loading, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -29,6 +31,7 @@ export default function LoginPage() {
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
+    setInfo('')
     setSubmitting(true)
 
     const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
@@ -45,7 +48,15 @@ export default function LoginPage() {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (profileError || !staffProfile) {
+    if (profileError) {
+      await supabase.auth.signOut()
+      const rls = /42501|permission|policy|row-level/i.test(profileError.message || '')
+      setError(rls ? 'Unable to verify your role (permissions). Try again or contact Super Admin.' : 'Unable to load your staff profile. Try again.')
+      setSubmitting(false)
+      return
+    }
+
+    if (!staffProfile) {
       const { data: legacyProfile, error: legacyError } = await supabase
         .from('customers')
         .select('role')
@@ -54,7 +65,14 @@ export default function LoginPage() {
         .eq('is_archived', false)
         .maybeSingle()
 
-      if (legacyError || !legacyProfile) {
+      if (legacyError) {
+        await supabase.auth.signOut()
+        setError('Unable to verify team access. Try again.')
+        setSubmitting(false)
+        return
+      }
+
+      if (!legacyProfile) {
         await supabase.auth.signOut()
         setError('This account does not have team portal access.')
         setSubmitting(false)
@@ -68,6 +86,27 @@ export default function LoginPage() {
 
     navigate(location.state?.from?.pathname || redirectForRole(staffProfile.role), { replace: true })
     setSubmitting(false)
+  }
+
+  const handleForgot = async () => {
+    setError('')
+    setInfo('')
+    const trimmed = email.trim()
+    if (!trimmed) {
+      setError('Enter your team email, then tap Forgot password.')
+      return
+    }
+    setResetting(true)
+    try {
+      const redirectTo = `${window.location.origin}/account/set-password`
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed, { redirectTo })
+      if (resetError) throw resetError
+      setInfo('Password reset email sent. Open the link, set a new password, then sign in here.')
+    } catch (err) {
+      setError(err.message || 'Could not send reset email.')
+    } finally {
+      setResetting(false)
+    }
   }
 
   return (
@@ -98,6 +137,11 @@ export default function LoginPage() {
       {error ? (
         <p className="hakum-auth-alert" role="alert">
           {error}
+        </p>
+      ) : null}
+      {info ? (
+        <p className="hakum-auth-info" role="status">
+          {info}
         </p>
       ) : null}
 
@@ -137,6 +181,12 @@ export default function LoginPage() {
         </button>
       </form>
 
+      <div className="hakum-auth-row">
+        <button type="button" className="hakum-auth-text-btn" onClick={handleForgot} disabled={resetting}>
+          {resetting ? 'Sending reset…' : 'Forgot password?'}
+        </button>
+      </div>
+
       <DemoAccountChips
         title="Demo team accounts"
         accounts={OPS_DEMO_ACCOUNTS}
@@ -144,6 +194,7 @@ export default function LoginPage() {
           setEmail(a.email)
           setPassword(a.password)
           setError('')
+          setInfo('')
         }}
       />
     </HakumAuthShell>

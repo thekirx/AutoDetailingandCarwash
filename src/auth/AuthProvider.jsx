@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { shouldReloadProfile } from '../lib/session'
 import {
   OPS_LOGIN_ROLES,
   canAccessPos,
@@ -27,14 +28,25 @@ export function AuthProvider({ children }) {
 
     const { data: staffProfile, error: staffError } = await supabase
       .from('staff_profiles')
-      .select('id, full_name, role, branch_slug, phone, is_active')
+      .select('id, full_name, role, branch_slug, phone, is_active, permission_grants')
       .eq('id', user.id)
       .eq('is_active', true)
       .maybeSingle()
 
     if (staffError) throw staffError
     if (staffProfile) {
-      const next = { ...staffProfile, email: user.email, source: 'staff_profiles' }
+      const { data: assigns } = await supabase
+        .from('staff_branch_assignments')
+        .select('branch_slug')
+        .eq('staff_id', user.id)
+      const branch_slugs = (assigns || []).map((a) => a.branch_slug).filter(Boolean)
+      const next = {
+        ...staffProfile,
+        permission_grants: staffProfile.permission_grants || {},
+        branch_slugs: branch_slugs.length ? branch_slugs : staffProfile.branch_slug ? [staffProfile.branch_slug] : [],
+        email: user.email,
+        source: 'staff_profiles',
+      }
       setProfile(next)
       return next
     }
@@ -82,8 +94,10 @@ export function AuthProvider({ children }) {
       setSession(data.session)
       try {
         await loadProfile(data.session?.user)
-      } catch {
-        if (active) setProfile(null)
+      } catch (err) {
+        // keep last profile on transient RLS/network errors (do not wipe while session exists)
+        console.warn('[auth] profile load failed', err?.message || err)
+        if (active && !data.session?.user) setProfile(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -91,24 +105,59 @@ export function AuthProvider({ children }) {
 
     initialize()
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!active) return
       setSession(nextSession)
-      setLoading(true)
 
-      setTimeout(() => {
+      // TOKEN_REFRESHED / INITIAL_SESSION: keep session in sync without full-screen loading flicker
+      if (!shouldReloadProfile(event)) {
+        if (event === 'SIGNED_OUT' || !nextSession?.user) setProfile(null)
+        return
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setProfile(null)
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      queueMicrotask(() => {
         loadProfile(nextSession?.user)
-          .catch(() => setProfile(null))
-          .finally(() => setLoading(false))
-      }, 0)
+          .catch((err) => {
+            console.warn('[auth] profile load failed', err?.message || err)
+            if (!nextSession?.user) setProfile(null)
+          })
+          .finally(() => {
+            if (active) setLoading(false)
+          })
+      })
     })
+
+    // Resume from sleep / background: ensure autoRefresh ran
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      supabase.auth.getSession().then(({ data }) => {
+        if (!active) return
+        setSession(data.session)
+      })
+    }
+    document.addEventListener('visibilitychange', onVisible)
 
     return () => {
       active = false
       listener.subscription.unsubscribe()
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [loadProfile])
 
-  const signOut = useCallback(() => supabase.auth.signOut(), [])
+  const signOut = useCallback(async () => {
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
+    if (error) throw error
+    setSession(null)
+    setProfile(null)
+  }, [])
+
   const value = useMemo(
     () => ({
       session,

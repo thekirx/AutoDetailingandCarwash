@@ -8,18 +8,41 @@ import { formatMoney } from '@/queue/queueApi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 
+/** Super Admin (+ ASA reports grant) module rollup. */
 export default function ReportsPage() {
   const { profile } = useAuth()
   const [daily, setDaily] = useState([])
   const [services, setServices] = useState([])
+  const [expenseTotal, setExpenseTotal] = useState(0)
+  const [expenseCount, setExpenseCount] = useState(0)
+  const [kpiCrew, setKpiCrew] = useState(0)
+  const [complaints, setComplaints] = useState(0)
+  const [bookingsDone, setBookingsDone] = useState(0)
 
   const load = useCallback(async () => {
-    const [sales, lines] = await Promise.all([
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+    const start30 = new Date()
+    start30.setDate(start30.getDate() - 30)
+    const startIso = start30.toISOString()
+
+    const [sales, lines, expenses, crew, comps, books] = await Promise.all([
       supabase.from('daily_sales_summary').select('*').order('sale_date', { ascending: false }).limit(30),
       supabase.from('sale_line_items').select('name, item_type, line_total_minor, quantity').limit(500),
+      supabase.from('expenses').select('total_minor, status').gte('created_at', startIso).limit(500),
+      supabase.from('crew_kpi_summary').select('staff_id', { count: 'exact', head: true }),
+      supabase.from('complaints').select('id', { count: 'exact', head: true }).gte('created_at', startIso),
+      supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_archived', false)
+        .in('status', ['completed', 'for_payment'])
+        .gte('scheduled_start', startIso),
     ])
+
     if (sales.error) toast.error(sales.error.message)
+    if (lines.error) toast.error(lines.error.message)
     setDaily((sales.data || []).reverse())
+
     const byName = {}
     for (const line of lines.data || []) {
       const key = `${line.item_type}:${line.name}`
@@ -31,6 +54,14 @@ export default function ReportsPage() {
         .sort((a, b) => b.total - a.total)
         .slice(0, 8),
     )
+
+    const expRows = expenses.data || []
+    setExpenseCount(expRows.length)
+    setExpenseTotal(expRows.reduce((s, r) => s + Number(r.total_minor || 0), 0))
+    setKpiCrew(crew.count || 0)
+    setComplaints(comps.count || 0)
+    setBookingsDone(books.count || 0)
+    void today
   }, [])
 
   useEffect(() => {
@@ -51,13 +82,19 @@ export default function ReportsPage() {
       <div>
         <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Analytics</p>
         <h1 className="text-3xl font-semibold tracking-tight">Reports</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Super Admin module rollup — sales, expenses, KPI headcount, complaints, bookings.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Tracked revenue" value={formatMoney(revenue)} />
-        <Metric label="Days loaded" value={daily.length} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <Metric label="Sales (30d loaded)" value={formatMoney(revenue)} />
+        <Metric label="Expenses (30d)" value={formatMoney(expenseTotal)} />
+        <Metric label="Net (sales − expenses)" value={formatMoney(revenue - expenseTotal)} />
+        <Metric label="Crew in KPI view" value={kpiCrew} />
+        <Metric label="Complaints (30d)" value={complaints} />
+        <Metric label="Completed bookings (30d)" value={bookingsDone} />
+        <Metric label="Expense rows" value={expenseCount} />
         <Metric label="Top SKUs" value={services.length} />
-        <Metric label="Branches" value={new Set(daily.map((d) => d.branch)).size} />
+        <Metric label="Branches in sales" value={new Set(daily.map((d) => d.branch)).size} />
       </div>
 
       <Card>

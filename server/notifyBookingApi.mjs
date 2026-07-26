@@ -9,7 +9,7 @@ function admin() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'team_lead', 'staff', 'cashier', 'sales'])
+const ALLOWED = new Set(['admin', 'BossMich', 'assistant_super_admin', 'marketing', 'team_lead', 'staff'])
 
 /**
  * Notify only (booking already updated). Used by floor queue after status changes.

@@ -12,5 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    // Standard SPA auth flow; keep default storageKey so existing sessions are not wiped
+    flowType: 'pkce',
   },
 })

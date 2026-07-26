@@ -1,10 +1,11 @@
 /**
- * Customer portal data (service role) — verifies JWT is a customer, then returns
- * history / active bookings / queue counts / branches.
+ * Customer portal data (service role) — JWT customer → history / garage / queue / loyalty.
+ * POST actions: add-vehicle | archive-vehicle | sync-email | update-phone
  */
 import { createClient } from '@supabase/supabase-js'
-import { getQueueCounts, buildVisitProgress, formatQueueNumber } from '../src/queue/queueLogic.js'
+import { getQueueCounts, buildVisitProgress, formatQueueNumber, normalizePlate } from '../src/queue/queueLogic.js'
 import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
+import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 
 function adminClient() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -13,14 +14,14 @@ function adminClient() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-export async function loadCustomerPortal({ accessToken }) {
+async function requireCustomer(accessToken) {
   if (!accessToken) throw Object.assign(new Error('Unauthorized'), { status: 401 })
   const admin = adminClient()
   const { data: userData, error: userError } = await admin.auth.getUser(accessToken)
   if (userError || !userData?.user) throw Object.assign(new Error('Unauthorized'), { status: 401 })
 
   const userId = userData.user.id
-  const { data: customer } = await admin
+  const { data: customer, error: customerError } = await admin
     .from('customers')
     .select('id, full_name, phone, email, role')
     .eq('id', userId)
@@ -28,43 +29,58 @@ export async function loadCustomerPortal({ accessToken }) {
     .eq('is_archived', false)
     .maybeSingle()
 
-  const isCustomer =
-    customer ||
-    userData.user.user_metadata?.role === 'customer' ||
-    (userData.user.email || '').includes('@customers.hakumautocare.com')
+  // ponytail: never trust user_metadata.role — client can set it via updateUser
+  if (customerError || !customer) {
+    throw Object.assign(new Error('Customer account required.'), { status: 403 })
+  }
+  return { admin, userId, user: userData.user, customer }
+}
 
-  if (!isCustomer) throw Object.assign(new Error('Customer account required.'), { status: 403 })
+export async function loadCustomerPortal({ accessToken }) {
+  const { admin, userId, user, customer } = await requireCustomer(accessToken)
 
-  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow] = await Promise.all([
-    admin.from('branches').select('slug, name, address, is_active').eq('is_active', true).eq('is_archived', false).order('name'),
-    admin
-      .from('bookings')
-      .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, final_price_minor, scheduled_start, created_at, customer_name')
-      .eq('customer_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(40),
-    admin
-      .from('sales')
-      .select('id, branch, total_minor, payment_method, occurred_at, status')
-      .eq('customer_id', userId)
-      .eq('status', 'paid')
-      .order('occurred_at', { ascending: false })
-      .limit(40),
-    admin
-      .from('bookings')
-      .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, final_price_minor, queue_number, service_id, services(name)')
-      .eq('customer_id', userId)
-      .in('status', ['waiting', 'in_progress', 'final_checking', 'for_payment'])
-      .order('scheduled_start', { ascending: true }),
-    admin
-      .from('bookings')
-      .select('id, branch, status')
-      .in('status', ['waiting', 'in_progress', 'final_checking'])
-      .eq('is_archived', false),
-    admin.from('loyalty_program_settings').select('card_slots').eq('id', 1).maybeSingle(),
-    admin.from('loyalty_milestones').select('id, threshold_points, reward_label, reward_description, sort_order').eq('is_active', true).order('sort_order').order('threshold_points'),
-    admin.from('customers').select('loyalty_stamps, loyalty_points').eq('id', userId).maybeSingle(),
-  ])
+  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles] =
+    await Promise.all([
+      admin.from('branches').select('slug, name, address, is_active').eq('is_active', true).eq('is_archived', false).order('name'),
+      admin
+        .from('bookings')
+        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, final_price_minor, scheduled_start, created_at, customer_name')
+        .eq('customer_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(40),
+      admin
+        .from('sales')
+        .select('id, branch, total_minor, payment_method, occurred_at, status')
+        .eq('customer_id', userId)
+        .eq('status', 'paid')
+        .order('occurred_at', { ascending: false })
+        .limit(40),
+      admin
+        .from('bookings')
+        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, final_price_minor, queue_number, service_id, services(name)')
+        .eq('customer_id', userId)
+        .in('status', ['waiting', 'in_progress', 'final_checking', 'for_payment'])
+        .order('scheduled_start', { ascending: true }),
+      admin
+        .from('bookings')
+        .select('id, branch, status')
+        .in('status', ['waiting', 'in_progress', 'final_checking'])
+        .eq('is_archived', false),
+      admin.from('loyalty_program_settings').select('card_slots').eq('id', 1).maybeSingle(),
+      admin
+        .from('loyalty_milestones')
+        .select('id, threshold_points, reward_label, reward_description, sort_order')
+        .eq('is_active', true)
+        .order('sort_order')
+        .order('threshold_points'),
+      admin.from('customers').select('loyalty_stamps, loyalty_points, phone, email, full_name').eq('id', userId).maybeSingle(),
+      admin
+        .from('vehicles')
+        .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color')
+        .eq('customer_id', userId)
+        .eq('is_archived', false)
+        .order('plate_number'),
+    ])
 
   const queueRows = queue.data || []
   const queueByBranch = {}
@@ -89,18 +105,21 @@ export async function loadCustomerPortal({ accessToken }) {
     visit: buildVisitProgress(row.status),
   }))
 
+  const profile = {
+    id: userId,
+    full_name: customerRow.data?.full_name || customer?.full_name || user.user_metadata?.full_name || 'Customer',
+    phone: customerRow.data?.phone || customer?.phone || user.user_metadata?.phone || null,
+    email: customerRow.data?.email || customer?.email || user.email,
+    role: 'customer',
+  }
+
   return {
-    profile: customer || {
-      id: userId,
-      full_name: userData.user.user_metadata?.full_name || 'Customer',
-      phone: userData.user.user_metadata?.phone || null,
-      email: userData.user.email,
-      role: 'customer',
-    },
+    profile,
     branches: branches.data || [],
     history: history.data || [],
     purchases: purchases.data || [],
     bookings: activeBookings,
+    vehicles: vehicles.data || [],
     queueCounts,
     loyalty: {
       ...loyalty,
@@ -110,26 +129,138 @@ export async function loadCustomerPortal({ accessToken }) {
   }
 }
 
+export async function mutateCustomerPortal({ accessToken, body }) {
+  const { admin, userId } = await requireCustomer(accessToken)
+  const action = String(body?.action || '').trim()
+
+  if (action === 'add-vehicle') {
+    const plate = String(body.plate_number || body.vehicle_plate || '').trim()
+    const normalized = normalizePlate(plate)
+    if (!normalized) throw Object.assign(new Error('Plate number is required.'), { status: 400 })
+
+    const payload = {
+      customer_id: userId,
+      plate_number: plate.toUpperCase(),
+      normalized_plate_number: normalized,
+      vehicle_make: String(body.vehicle_make || '').trim() || null,
+      vehicle_model: String(body.vehicle_model || '').trim() || null,
+      vehicle_type: String(body.vehicle_type || 'sedan').trim() || 'sedan',
+      color: String(body.color || '').trim() || null,
+      is_archived: false,
+    }
+
+    // Own row only — never upsert across customer_id (plate hijack)
+    const { data: ownUpdate, error: ownErr } = await admin
+      .from('vehicles')
+      .update(payload)
+      .eq('normalized_plate_number', normalized)
+      .eq('customer_id', userId)
+      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color')
+      .maybeSingle()
+    if (ownErr) throw Object.assign(new Error(ownErr.message), { status: 400 })
+    if (ownUpdate) return { ok: true, vehicle: ownUpdate }
+
+    const { data: taken } = await admin
+      .from('vehicles')
+      .select('customer_id')
+      .eq('normalized_plate_number', normalized)
+      .maybeSingle()
+    if (taken?.customer_id) {
+      throw Object.assign(new Error('This plate is already linked to another account.'), { status: 409 })
+    }
+
+    const { data, error } = await admin
+      .from('vehicles')
+      .insert(payload)
+      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color')
+      .single()
+    if (error) {
+      // Race: another writer claimed the plate between select and insert
+      if (error.code === '23505') {
+        throw Object.assign(new Error('This plate is already linked to another account.'), { status: 409 })
+      }
+      throw Object.assign(new Error(error.message), { status: 400 })
+    }
+    return { ok: true, vehicle: data }
+  }
+
+  if (action === 'archive-vehicle') {
+    const vehicleId = String(body.vehicle_id || '').trim()
+    if (!vehicleId) throw Object.assign(new Error('vehicle_id required.'), { status: 400 })
+
+    // Block archive while an active visit is open for this plate/vehicle
+    const { data: vehicle, error: vErr } = await admin
+      .from('vehicles')
+      .select('id, plate_number, customer_id')
+      .eq('id', vehicleId)
+      .eq('customer_id', userId)
+      .maybeSingle()
+    if (vErr) throw Object.assign(new Error(vErr.message), { status: 400 })
+    if (!vehicle) throw Object.assign(new Error('Vehicle not found.'), { status: 404 })
+
+    const { data: active } = await admin
+      .from('bookings')
+      .select('id')
+      .eq('customer_id', userId)
+      .eq('is_archived', false)
+      .in('status', ['pending', 'confirmed', 'waiting', 'in_progress', 'final_checking', 'for_payment'])
+      .or(`vehicle_id.eq.${vehicleId},vehicle_plate.eq.${vehicle.plate_number}`)
+      .limit(1)
+      .maybeSingle()
+    if (active?.id) {
+      throw Object.assign(new Error('Cannot remove a car with an active visit. Ask the branch when the job is done.'), { status: 409 })
+    }
+
+    const { error } = await admin
+      .from('vehicles')
+      .update({ is_archived: true })
+      .eq('id', vehicleId)
+      .eq('customer_id', userId)
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return { ok: true, archived: vehicleId }
+  }
+
+  if (action === 'sync-email') {
+    const email = String(body.email || '').trim().toLowerCase()
+    if (!email || !email.includes('@')) throw Object.assign(new Error('Valid email required.'), { status: 400 })
+    const { error } = await admin.from('customers').update({ email }).eq('id', userId)
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return { ok: true, email }
+  }
+
+  if (action === 'update-phone') {
+    const phone = String(body.phone || '').trim()
+    if (phone.length < 7) throw Object.assign(new Error('Valid phone required.'), { status: 400 })
+    const { error } = await admin.from('customers').update({ phone }).eq('id', userId)
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return { ok: true, phone }
+  }
+
+  throw Object.assign(new Error('Unknown action.'), { status: 400 })
+}
+
 export async function handleCustomerPortalRequest(req, res, { getAccessToken }) {
+  setCors(res)
   try {
     if (req.method === 'OPTIONS') {
       res.statusCode = 204
       res.end()
       return
     }
-    if (req.method !== 'GET' && req.method !== 'POST') {
-      res.statusCode = 405
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify({ error: 'Method not allowed' }))
-      return
+    const accessToken = getAccessToken?.() || bearer(req)
+    if (req.method === 'POST') {
+      const body = await readJsonBody(req)
+      if (body?.action) {
+        const result = await mutateCustomerPortal({ accessToken, body })
+        return json(res, 200, result)
+      }
     }
-    const result = await loadCustomerPortal({ accessToken: getAccessToken() })
-    res.statusCode = 200
-    res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify(result))
+    if (req.method !== 'GET' && req.method !== 'POST') {
+      return json(res, 405, { error: 'Method not allowed' })
+    }
+    const result = await loadCustomerPortal({ accessToken })
+    return json(res, 200, result)
   } catch (err) {
-    res.statusCode = err.status || 500
-    res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify({ error: err.message || String(err) }))
+    return json(res, err.status || 500, { error: err.message || String(err) })
   }
 }

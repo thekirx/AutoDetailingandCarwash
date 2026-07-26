@@ -31,4 +31,26 @@ assert.equal(handoff.customer_id, 'cust-1')
 assert.equal(handoff.payment_method, 'gcash')
 assert.equal(handoff.notes, 'Walk-in: Ana · Plate ABC123')
 
+const loyalty = buildPosSalePayload({
+  branch: 'bacoor',
+  customerId: 'cust-2',
+  paymentMethod: 'cash',
+  notes: 'Includes loyalty award line',
+  cart: [
+    { item_type: 'service', id: 'svc-1', name: 'Wash', quantity: 1, unit_price_minor: 35000 },
+    {
+      item_type: 'service',
+      id: 'svc-2',
+      name: 'Interior (loyalty award)',
+      quantity: 1,
+      unit_price_minor: 99900,
+      is_loyalty_award: true,
+    },
+  ],
+  activeHandoff: null,
+})
+assert.equal(loyalty.lines[1].unit_price_minor, 0)
+assert.equal(loyalty.lines[1].is_loyalty_award, true)
+assert.equal(loyalty.lines[0].unit_price_minor, 35000)
+
 console.log('posSale.buildPosSalePayload: ok')

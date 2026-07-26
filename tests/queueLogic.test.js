@@ -14,6 +14,9 @@ import {
   normalizeAssignmentStatus,
   getBranchScope,
   getPlateLookupStatus,
+  groupVisitTickets,
+  getDashboardDateRange,
+  isSuspiciousTiming,
   hasValidTeamLeadBranch,
   normalizePlate,
   parsePesoInputToMinor,
@@ -35,6 +38,7 @@ describe('queue logic', () => {
       waiting: 2,
       in_progress: 1,
       final_checking: 1,
+      redo: 0,
       total: 4,
     })
   })
@@ -134,7 +138,8 @@ describe('queue logic', () => {
     assert.equal(normalizeVehicleType('pick-up'), 'pickup')
     assert.equal(normalizeVehicleType('Motorbike'), 'motorcycle')
     assert.equal(normalizeVehicleType(''), 'sedan')
-    assert.equal(normalizeVehicleType('Coupe'), 'sedan')
+    assert.equal(normalizeVehicleType('full-size'), 'full-size')
+    assert.equal(normalizeVehicleType('Not A Type!!!'), 'sedan')
   })
 
   it('converts visible peso inputs to minor units', () => {
@@ -211,5 +216,39 @@ describe('queue logic', () => {
     assert.deepEqual(model.availableStaff.map((row) => row.staff_id), ['a'])
     assert.deepEqual(model.busyStaff.map((row) => row.staff_id), ['b'])
     assert.equal(model.presentCount, 2)
+  })
+
+  it('groups multi-service visit tickets into one board card', () => {
+    const grouped = groupVisitTickets([
+      { booking_id: 'a', visit_group_id: 'g1', service_name: 'Wash', final_price_minor: 10000, status: 'waiting' },
+      { booking_id: 'b', visit_group_id: 'g1', service_name: 'Interior', final_price_minor: 20000, status: 'waiting' },
+      { booking_id: 'c', visit_group_id: null, service_name: 'Solo', final_price_minor: 5000, status: 'waiting' },
+    ])
+    assert.equal(grouped.length, 2)
+    const multi = grouped.find((row) => row.visit_group_id === 'g1')
+    assert.equal(multi.service_name, 'Wash + Interior')
+    assert.equal(multi.final_price_minor, 30000)
+    assert.deepEqual(multi.linked_booking_ids, ['a', 'b'])
+  })
+
+  it('flags suspicious in_progress → final_checking timing', () => {
+    const start = '2026-07-26T10:00:00.000Z'
+    const endFast = '2026-07-26T10:00:30.000Z'
+    const endOk = '2026-07-26T10:05:00.000Z'
+    assert.equal(isSuspiciousTiming({ in_progress_at: start, final_checking_at: endFast }, { enabled: true, min_seconds_in_progress: 120 }), true)
+    assert.equal(isSuspiciousTiming({ in_progress_at: start, final_checking_at: endOk }, { enabled: true, min_seconds_in_progress: 120 }), false)
+    assert.equal(isSuspiciousTiming({ in_progress_at: start, final_checking_at: endFast }, { enabled: false, min_seconds_in_progress: 120 }), false)
+  })
+
+  it('resolves dashboard date presets', () => {
+    const now = new Date('2026-07-26T12:00:00.000Z')
+    const three = getDashboardDateRange('3mo', '', '', now)
+    assert.ok(three.start < now)
+    const six = getDashboardDateRange('6mo', '', '', now)
+    assert.ok(six.start < three.start)
+    const custom = getDashboardDateRange('custom', '2026-01-01', '2026-01-31', now)
+    assert.equal(custom.start.getFullYear(), 2026)
+    assert.equal(custom.start.getMonth(), 0)
+    assert.equal(custom.start.getDate(), 1)
   })
 })

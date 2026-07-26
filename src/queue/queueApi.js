@@ -1,15 +1,23 @@
 import { supabase } from '../lib/supabase'
+import { getAccessTokenFresh } from '../lib/authToken'
 import {
   ACTIVE_QUEUE_STATUSES,
+  DEFAULT_TIMING_WARNINGS,
+  OPS_BOARD_STATUSES,
+  REDO_FROM_STATUSES,
   formatQueueActionError,
   getBranchScope,
+  getBranchScopeFilter,
   getCrewAttendanceModel,
   MISSING_QUEUE_PROFILE_ERROR,
   normalizePlate,
   normalizeVehicleType,
   parsePesoInputToMinor,
   requiresTeamLeadBranchSetup,
+  resolveBranchFilter,
+  validateCrewUsername,
 } from './queueLogic'
+import { writeAudit } from '../lib/audit'
 
 export const QUEUE_BOARD_SELECT = `
   booking_id,
@@ -40,7 +48,12 @@ export const QUEUE_BOARD_SELECT = `
   actual_start,
   actual_end,
   created_at,
-  notes
+  notes,
+  visit_group_id,
+  in_progress_at,
+  final_checking_at,
+  redo_at,
+  redo_reason
 `
 
 function getTodayDate() {
@@ -57,11 +70,15 @@ export function formatMoney(minor) {
 }
 
 function scopedQuery(query, branchScope) {
-  return branchScope ? query.eq('branch', branchScope) : query
+  if (!branchScope) return query
+  if (Array.isArray(branchScope)) return query.in('branch', branchScope)
+  return query.eq('branch', branchScope)
 }
 
 function scopedStaffQuery(query, branchScope) {
-  return branchScope ? query.eq('branch_slug', branchScope) : query
+  if (!branchScope) return query
+  if (Array.isArray(branchScope)) return query.in('branch_slug', branchScope)
+  return query.eq('branch_slug', branchScope)
 }
 
 export async function getCurrentProfile({ required = true } = {}) {
@@ -113,37 +130,42 @@ export async function getCurrentProfile({ required = true } = {}) {
   return data ? { ...data, branch_slug: null, source: 'customers' } : null
 }
 
-export async function fetchOperationsSnapshot(profile) {
+export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } = {}) {
   if (requiresTeamLeadBranchSetup(profile)) {
-    return { queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [] }
+    return { queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [], timingWarnings: DEFAULT_TIMING_WARNINGS }
   }
 
-  const branchScope = getBranchScope(profile)
+  const branchScope = resolveBranchFilter(profile, branchFilter)
   const queueQuery = scopedQuery(supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT), branchScope)
   const staffPoolQuery = scopedStaffQuery(
     supabase
       .from('staff_profiles')
-      .select('id, full_name, role, branch_slug, phone, is_active')
+      .select('id, full_name, role, branch_slug, phone, is_active, username')
       .eq('role', 'staff')
       .eq('is_active', true),
     branchScope,
   )
-  const attendanceQuery = branchScope
-    ? supabase.from('staff_attendance').select('id, staff_id, branch_slug, attendance_date, status, checked_in_at, checked_out_at').eq('attendance_date', getTodayDate()).eq('branch_slug', branchScope)
-    : supabase.from('staff_attendance').select('id, staff_id, branch_slug, attendance_date, status, checked_in_at, checked_out_at').eq('attendance_date', getTodayDate())
-  const busyQuery = branchScope
-    ? supabase.from('busy_staff_view').select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at').eq('branch_slug', branchScope)
-    : supabase.from('busy_staff_view').select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at')
+  let attendanceQuery = supabase
+    .from('staff_attendance')
+    .select('id, staff_id, branch_slug, attendance_date, status, checked_in_at, checked_out_at')
+    .eq('attendance_date', getTodayDate())
+  attendanceQuery = scopedStaffQuery(attendanceQuery, branchScope)
+  let busyQuery = supabase
+    .from('busy_staff_view')
+    .select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at')
+  busyQuery = scopedStaffQuery(busyQuery, branchScope)
   const eventsQuery = scopedQuery(supabase.from('queue_events').select('id, booking_id, branch, old_status, new_status, notes, created_at'), branchScope)
   const handoffsQuery = scopedQuery(supabase.from('pos_handoffs').select('id, booking_id, branch, amount_minor, status, handed_off_at'), branchScope)
+  const settingsQuery = supabase.from('app_settings').select('value').eq('key', 'queue_timing_warnings').maybeSingle()
 
-  const [queue, staffPool, attendance, busyStaff, events, handoffs] = await Promise.all([
+  const [queue, staffPool, attendance, busyStaff, events, handoffs, settings] = await Promise.all([
     queueQuery.order('created_at', { ascending: false }),
     staffPoolQuery.order('full_name'),
     attendanceQuery,
     busyQuery.order('assigned_at', { ascending: false }),
-    eventsQuery.order('created_at', { ascending: false }).limit(8),
-    handoffsQuery.order('handed_off_at', { ascending: false }).limit(8),
+    eventsQuery.order('created_at', { ascending: false }).limit(40),
+    handoffsQuery.order('handed_off_at', { ascending: false }).limit(40),
+    settingsQuery,
   ])
 
   const attendanceRows = attendance.error ? [] : attendance.data || []
@@ -156,14 +178,20 @@ export async function fetchOperationsSnapshot(profile) {
     busyStaff: busyStaff.data || [],
   })
 
+  const timingWarnings = {
+    ...DEFAULT_TIMING_WARNINGS,
+    ...(settings.data?.value && typeof settings.data.value === 'object' ? settings.data.value : {}),
+  }
+
   return {
     queue: queue.data || [],
-    activeQueue: (queue.data || []).filter((ticket) => ACTIVE_QUEUE_STATUSES.includes(ticket.status)),
+    activeQueue: (queue.data || []).filter((ticket) => OPS_BOARD_STATUSES.includes(ticket.status)),
     staffPool: crewModel.staffPool,
     availableStaff: crewModel.availableStaff,
     busyStaff: crewModel.busyStaff,
     events: events.data || [],
     handoffs: handoffs.data || [],
+    timingWarnings,
   }
 }
 
@@ -172,14 +200,18 @@ export async function fetchTicket(bookingId, profile) {
     return { ticket: null, assignments: [], staff: [] }
   }
 
-  const branchScope = getBranchScope(profile)
-  const ticketQuery = supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).eq('booking_id', bookingId)
-  const attendanceQuery = branchScope
-    ? supabase.from('staff_attendance').select('staff_id, branch_slug, attendance_date, status').eq('attendance_date', getTodayDate()).eq('branch_slug', branchScope).eq('status', 'present')
-    : supabase.from('staff_attendance').select('staff_id, branch_slug, attendance_date, status').eq('attendance_date', getTodayDate()).eq('status', 'present')
+  const branchScope = getBranchScopeFilter(profile)
+  let ticketQuery = supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).eq('booking_id', bookingId)
+  ticketQuery = scopedQuery(ticketQuery, branchScope)
+  let attendanceQuery = supabase
+    .from('staff_attendance')
+    .select('staff_id, branch_slug, attendance_date, status')
+    .eq('attendance_date', getTodayDate())
+    .eq('status', 'present')
+  attendanceQuery = scopedStaffQuery(attendanceQuery, branchScope)
   const staffQuery = supabase.from('staff_profiles').select('id, full_name, role, branch_slug, is_active').eq('role', 'staff').eq('is_active', true)
   const [ticketResult, assignmentsResult, staffResult] = await Promise.all([
-    (branchScope ? ticketQuery.eq('branch', branchScope) : ticketQuery).maybeSingle(),
+    ticketQuery.maybeSingle(),
     supabase
       .from('queue_assignments')
       .select('id, booking_id, staff_id, assigned_by, task_name, task_notes, started_at, completed_at, released_at, status, created_at')
@@ -220,11 +252,15 @@ export async function addStaffMember(form, profile) {
   const currentProfile = await getCurrentProfile({ required: true })
   const branchSlug = profile?.role === 'BossMich' ? form.branch_slug : getBranchScope(profile)
   if (!branchSlug) throw new Error('Your Team Lead account has no assigned branch. Please contact BossMich.')
+  const username = validateCrewUsername(form.username)
+  const name = String(form.full_name || '').trim()
+  if (!name) throw new Error('Staff name is required.')
 
   const { data, error } = await supabase
     .from('staff_profiles')
     .insert({
-      full_name: form.full_name.trim(),
+      full_name: name,
+      username,
       role: 'staff',
       branch_slug: branchSlug,
       phone: form.phone?.trim() || null,
@@ -235,6 +271,9 @@ export async function addStaffMember(form, profile) {
 
   if (error) {
     console.error('Unable to add staff member', error)
+    if (/staff_profiles_username|duplicate key|unique/i.test(error.message || '')) {
+      throw new Error('That username is already taken.')
+    }
     throw formatQueueActionError(error)
   }
 
@@ -282,22 +321,31 @@ export async function setStaffAttendance(member, status, profile) {
   }
 }
 
-export async function updateCrewStaffMember(memberId, { full_name, phone }) {
+export async function updateCrewStaffMember(memberId, { full_name, phone, username }) {
   const name = String(full_name || '').trim()
   if (!memberId) throw new Error('Staff id is required.')
   if (!name) throw new Error('Staff name is required.')
+  const patch = {
+    full_name: name,
+    phone: phone?.trim() || null,
+    updated_at: new Date().toISOString(),
+  }
+  if (username != null) {
+    patch.username = validateCrewUsername(username)
+  }
   const { data, error } = await supabase
     .from('staff_profiles')
-    .update({
-      full_name: name,
-      phone: phone?.trim() || null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq('id', memberId)
     .eq('role', 'staff')
     .select('id')
     .maybeSingle()
-  if (error) throw formatQueueActionError(error)
+  if (error) {
+    if (/staff_profiles_username|duplicate key|unique/i.test(error.message || '')) {
+      throw new Error('That username is already taken.')
+    }
+    throw formatQueueActionError(error)
+  }
   if (!data) throw new Error('Staff member not found or not editable.')
   return data
 }
@@ -406,8 +454,7 @@ async function ensureCustomer(form) {
   if (!fullName) throw new Error('Customer name is required.')
 
   // Provision auth account (set-password invite) via server — creates customers row + notifies
-  const { data: sessionData } = await supabase.auth.getSession()
-  const accessToken = sessionData.session?.access_token
+  const accessToken = await getAccessTokenFresh()
   if (!accessToken) throw new Error('You must be signed in to create a queue ticket.')
 
   const response = await fetch('/api/provision-customer', {
@@ -477,55 +524,74 @@ export async function createQueueTicket(form) {
     vehicleId = vehicle.id
   }
 
-  const service = form.services.find((item) => item.id === form.service_id)
-  const finalPriceMinor = form.final_price_minor
-    ? Number(form.final_price_minor)
-    : form.final_price
-      ? parsePesoInputToMinor(form.final_price)
-      : service?.price_minor || 0
-  const { data, error } = await supabase
-    .from('bookings')
-    .insert({
-      customer_id: customerId,
-      vehicle_id: vehicleId,
-      service_id: form.service_id,
-      customer_name: form.customer_name.trim(),
-      customer_email: form.customer_email?.trim() || null,
-      customer_phone: form.customer_phone.trim(),
-      vehicle_make: form.vehicle_make.trim(),
-      vehicle_model: form.vehicle_model.trim(),
-      vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
-      vehicle_plate: form.vehicle_plate.trim().toUpperCase() || null,
-      vehicle_type: vehicleType,
-      scheduled_start: new Date().toISOString(),
-      branch: form.branch,
-      status: 'waiting',
-      created_by: form.created_by,
-      team_lead_id: profile.id,
-      waiting_at: new Date().toISOString(),
-      notes: form.notes?.trim() || null,
-      final_price_minor: finalPriceMinor,
-      price_minor: finalPriceMinor,
-    })
-    .select('id')
-    .single()
+  const serviceIds = Array.isArray(form.service_ids) && form.service_ids.length
+    ? [...new Set(form.service_ids.filter(Boolean))]
+    : form.service_id
+      ? [form.service_id]
+      : []
+  if (!serviceIds.length) throw new Error('Select at least one service.')
 
-  if (error) {
-    console.error('Unable to create queue ticket', error)
-    throw formatQueueActionError(error)
+  const visitGroupId = serviceIds.length > 1 ? crypto.randomUUID() : null
+  const shared = {
+    customer_id: customerId,
+    vehicle_id: vehicleId,
+    customer_name: form.customer_name.trim(),
+    customer_email: form.customer_email?.trim() || null,
+    customer_phone: form.customer_phone.trim(),
+    vehicle_make: form.vehicle_make.trim(),
+    vehicle_model: form.vehicle_model.trim(),
+    vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
+    vehicle_plate: form.vehicle_plate.trim().toUpperCase() || null,
+    vehicle_type: vehicleType,
+    scheduled_start: new Date().toISOString(),
+    branch: form.branch,
+    status: 'waiting',
+    created_by: form.created_by,
+    team_lead_id: profile.id,
+    waiting_at: new Date().toISOString(),
+    notes: form.notes?.trim() || null,
+    visit_group_id: visitGroupId,
   }
-  // Best-effort SMS / push — never fail ticket create
+
+  let primaryId = null
+  let sharedQueueNumber = null
+
+  for (let i = 0; i < serviceIds.length; i += 1) {
+    const serviceId = serviceIds[i]
+    const service = form.services.find((item) => item.id === serviceId)
+    const linePrice =
+      serviceIds.length === 1 && form.final_price
+        ? parsePesoInputToMinor(form.final_price)
+        : service?.price_minor || 0
+    const row = {
+      ...shared,
+      service_id: serviceId,
+      final_price_minor: linePrice,
+      price_minor: linePrice,
+    }
+    if (sharedQueueNumber != null) row.queue_number = sharedQueueNumber
+
+    const { data, error } = await supabase.from('bookings').insert(row).select('id, queue_number').single()
+    if (error) {
+      console.error('Unable to create queue ticket', error)
+      throw formatQueueActionError(error)
+    }
+    if (i === 0) {
+      primaryId = data.id
+      sharedQueueNumber = data.queue_number
+    }
+  }
+
   try {
-    await notifyBookingClient(data.id, 'waiting')
+    await notifyBookingClient(primaryId, 'waiting')
   } catch {
     /* ignore */
   }
-  return data
+  return { id: primaryId, visit_group_id: visitGroupId }
 }
 
 async function notifyBookingClient(bookingId, status) {
-  const { data: sessionData } = await supabase.auth.getSession()
-  const token = sessionData.session?.access_token
+  const token = await getAccessTokenFresh()
   if (!token || !bookingId) return null
   const res = await fetch('/api/notify-booking', {
     method: 'POST',
@@ -554,14 +620,65 @@ export async function updateTicketStatus(ticket, nextStatus) {
   if (nextStatus === 'for_payment') patch.for_payment_at = now
   if (nextStatus === 'completed') patch.completed_at = now
   if (nextStatus === 'cancelled') patch.cancelled_at = now
+  if (nextStatus === 'redo') {
+    patch.redo_at = now
+    if (profile?.id) patch.redo_by = profile.id
+  }
 
   const { error } = await supabase.from('bookings').update(patch).eq('id', ticket.booking_id)
   if (error) {
     console.error('Unable to update queue ticket status', error)
     throw formatQueueActionError(error)
   }
+  // Part 2: final checking → POS pending payment handoff (idempotent RPC)
+  if (nextStatus === 'final_checking') {
+    try {
+      await sendTicketToPayment(ticket.booking_id)
+    } catch (handoffErr) {
+      console.error('Auto payment handoff after final_checking failed', handoffErr)
+      throw handoffErr
+    }
+  } else {
+    try {
+      await notifyBookingClient(ticket.booking_id, nextStatus)
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export async function markTicketRedo(ticket, reason = '') {
+  if (!REDO_FROM_STATUSES.includes(ticket.status)) {
+    throw new Error('Redo is only available from in progress, final checking, or for payment.')
+  }
+  const profile = await getCurrentProfile({ required: true })
+  const note = String(reason || '').trim()
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('bookings')
+    .update({
+      status: 'redo',
+      redo_at: now,
+      redo_by: profile.id,
+      redo_reason: note || null,
+    })
+    .eq('id', ticket.booking_id)
+  if (error) throw formatQueueActionError(error)
+  await writeAudit({
+    action: 'redo',
+    entityType: 'booking',
+    entityId: ticket.booking_id,
+    summary: `Marked queue ticket ${ticket.queue_number || ticket.booking_id} as redo`,
+    meta: {
+      from: ticket.status,
+      to: 'redo',
+      branch: ticket.branch,
+      reason: note || null,
+      visit_group_id: ticket.visit_group_id || null,
+    },
+  })
   try {
-    await notifyBookingClient(ticket.booking_id, nextStatus)
+    await notifyBookingClient(ticket.booking_id, 'redo')
   } catch {
     /* ignore */
   }

@@ -1,27 +1,50 @@
-/** Single source of truth for Hakum RBAC (owner plan §16). BossMich = Super Admin. */
+/** Single source of truth for Hakum RBAC. BossMich = Super Admin; assistant_super_admin = lesser elevated. */
 
 export const ROLES = {
   SUPER_ADMIN: 'BossMich',
+  ASSISTANT_SUPER_ADMIN: 'assistant_super_admin',
   ADMIN: 'admin',
   TEAM_LEAD: 'team_lead',
   STAFF: 'staff',
-  CASHIER: 'cashier',
   MARKETING: 'marketing',
+}
+
+/** @deprecated enum values may still exist in DB; do not assign in app */
+export const DEPRECATED_ROLES = {
+  CASHIER: 'cashier',
   SALES: 'sales',
 }
 
+/** Defaults when assistant has empty permission_grants. BossMich can override per user. */
+export const DEFAULT_ASSISTANT_GRANTS = {
+  pos: true,
+  finance_view: true,
+  finance_write: false,
+  reports: true,
+  planning_edit: false,
+  people: true,
+  branches: true,
+  services_merch: true,
+  queue_all: true,
+  kpi_all: true,
+  audit: true,
+  memberships: true,
+  rbac_edit: false,
+}
+
+export const ASSISTANT_GRANT_KEYS = Object.keys(DEFAULT_ASSISTANT_GRANTS)
+
 export const SUPER_ADMIN_ROLES = [ROLES.SUPER_ADMIN]
-export const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN]
-export const QUEUE_EDITOR_ROLES = [ROLES.TEAM_LEAD, ROLES.SUPER_ADMIN]
-export const QUEUE_VIEWER_ROLES = [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.SUPER_ADMIN]
+export const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN, ROLES.ADMIN]
+export const QUEUE_EDITOR_ROLES = [ROLES.TEAM_LEAD, ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN]
+export const QUEUE_VIEWER_ROLES = [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN]
 export const OPS_LOGIN_ROLES = [
   ROLES.STAFF,
   ROLES.TEAM_LEAD,
   ROLES.ADMIN,
   ROLES.SUPER_ADMIN,
-  ROLES.CASHIER,
+  ROLES.ASSISTANT_SUPER_ADMIN,
   ROLES.MARKETING,
-  ROLES.SALES,
 ]
 
 const has = (profile, roles) => roles.includes(profile?.role)
@@ -30,24 +53,71 @@ export function isSuperAdmin(profile) {
   return has(profile, SUPER_ADMIN_ROLES)
 }
 
+export function isAssistantSuperAdmin(profile) {
+  return profile?.role === ROLES.ASSISTANT_SUPER_ADMIN
+}
+
+/** Console-tier: owner, assistant, or branch admin */
 export function isAdmin(profile) {
   return has(profile, ADMIN_ROLES)
 }
 
+export function resolveAssistantGrants(profile) {
+  if (!isAssistantSuperAdmin(profile)) return null
+  return { ...DEFAULT_ASSISTANT_GRANTS, ...(profile?.permission_grants || {}) }
+}
+
+export function hasGrant(profile, key) {
+  if (isSuperAdmin(profile)) return true
+  const grants = resolveAssistantGrants(profile)
+  if (!grants) return false
+  return Boolean(grants[key])
+}
+
+/** All branches (null) vs slug list. */
+export function getBranchScopeList(profile) {
+  if (!profile) return []
+  if (isSuperAdmin(profile)) return null
+  if (isAssistantSuperAdmin(profile) && (hasGrant(profile, 'queue_all') || hasGrant(profile, 'kpi_all'))) {
+    return null
+  }
+  const multi = Array.isArray(profile.branch_slugs) ? profile.branch_slugs.filter(Boolean) : []
+  if (multi.length) return multi
+  if (profile.branch_slug) return [profile.branch_slug]
+  return []
+}
+
+export function canSeeAllBranches(profile) {
+  return getBranchScopeList(profile) === null
+}
+
 export function canAccessPos(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.SALES, ROLES.CASHIER])
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'pos')
+  return profile?.role === ROLES.ADMIN
 }
 
 export function canAccessFinance(profile) {
-  return isAdmin(profile)
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'finance_view')
+  return profile?.role === ROLES.ADMIN
+}
+
+export function canWriteFinance(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'finance_write')
+  return profile?.role === ROLES.ADMIN
 }
 
 export function canAccessReports(profile) {
-  return isAdmin(profile)
+  if (isSuperAdmin(profile)) return true
+  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'reports')
 }
 
 export function canManageServices(profile) {
-  return isAdmin(profile)
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'services_merch') || hasGrant(profile, 'pos')
+  return profile?.role === ROLES.ADMIN
 }
 
 export function canManageCrew(profile) {
@@ -55,54 +125,78 @@ export function canManageCrew(profile) {
 }
 
 export function canManageBranches(profile) {
-  return isAdmin(profile)
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'branches')
+  return profile?.role === ROLES.ADMIN
 }
 
 export function canManagePeople(profile) {
-  return isAdmin(profile)
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'people')
+  return profile?.role === ROLES.ADMIN
 }
 
-/** Only Super Admin may create lesser Admin accounts. */
 export function canCreateAdminAccounts(profile) {
   return isSuperAdmin(profile)
 }
 
+export function canEditAssistantGrants(profile) {
+  return isSuperAdmin(profile)
+}
+
+export function canAccessAudit(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'audit')
+  return profile?.role === ROLES.ADMIN
+}
+
+/** Super Admin only — master make/model catalog for TL picker */
+export function canManageVehicleCatalog(profile) {
+  return isSuperAdmin(profile)
+}
+
+export function canAccessConsole(profile) {
+  return isAdmin(profile)
+}
+
 export function canEditBookings(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.SALES, ROLES.TEAM_LEAD])
+  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD])
 }
 
 export function canCreateBookings(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.SALES, ROLES.TEAM_LEAD])
+  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD])
 }
 
-/** Marketing runs CRM; Admin/BossMich too. Sales does not. */
 export function canAccessCrm(profile) {
   return has(profile, [...ADMIN_ROLES, ROLES.MARKETING])
 }
 
-/** SMS console — Admins (marketing role is CRM-only). */
+/** @deprecated SMS lives under CRM; kept for redirects */
 export function canAccessMarketing(profile) {
-  return isAdmin(profile)
+  return canAccessCrm(profile)
 }
 
 export function canAccessBookingBoard(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.SALES, ROLES.TEAM_LEAD])
+  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD])
+}
+
+export function canViewPlanning(profile) {
+  return isAdmin(profile)
+}
+
+export function canEditPlanning(profile) {
+  if (isSuperAdmin(profile)) return true
+  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'planning_edit')
 }
 
 export function canUseOperations(profile) {
-  return has(profile, [
-    ROLES.STAFF,
-    ROLES.TEAM_LEAD,
-    ROLES.ADMIN,
-    ROLES.SUPER_ADMIN,
-    ROLES.SALES,
-    ROLES.CASHIER,
-    ROLES.MARKETING,
-  ])
+  return has(profile, OPS_LOGIN_ROLES)
 }
 
 export function canEditQueueOperations(profile) {
-  return has(profile, QUEUE_EDITOR_ROLES)
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
+  return profile?.role === ROLES.TEAM_LEAD
 }
 
 export function canViewQueueOperations(profile) {
@@ -110,31 +204,40 @@ export function canViewQueueOperations(profile) {
 }
 
 export function canViewAssignedTasks(profile) {
-  return has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD, ROLES.ADMIN, ROLES.SUPER_ADMIN])
+  return has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN])
 }
 
-/** Nav items for the shared ops shell — filtered by role. */
+export function canAccessMemberships(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'memberships')
+  return profile?.role === ROLES.ADMIN
+}
+
+/** Nav items for the shared ops shell — filtered by role + grants. */
 export function getOperationsNav(profile) {
-  // Strict surfaces: marketing = CRM only; sales = POS + bookings
   if (profile?.role === ROLES.MARKETING) {
     return [{ label: 'CRM', to: '/operations/crm', icon: 'Contact' }]
-  }
-  if (profile?.role === ROLES.SALES) {
-    return [
-      { label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' },
-      { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' },
-    ]
   }
 
   const items = []
 
-  if (isAdmin(profile)) {
-    items.push(
-      { label: 'Console', to: '/operations/console', icon: 'LayoutDashboard' },
-      { label: 'People', to: '/operations/people', icon: 'UserPlus' },
-      { label: 'Branches', to: '/operations/branches', icon: 'Building2' },
-      { label: 'Audit', to: '/operations/audit', icon: 'ScrollText' },
-    )
+  if (canAccessConsole(profile)) {
+    items.push({ label: 'Console', to: '/operations/console', icon: 'LayoutDashboard' })
+  }
+  if (canViewPlanning(profile)) {
+    items.push({ label: 'Planning', to: '/operations/planning', icon: 'Columns3' })
+  }
+  if (canManagePeople(profile)) {
+    items.push({ label: 'People', to: '/operations/people', icon: 'UserPlus' })
+  }
+  if (canManageBranches(profile)) {
+    items.push({ label: 'Branches', to: '/operations/branches', icon: 'Building2' })
+  }
+  if (canManageVehicleCatalog(profile)) {
+    items.push({ label: 'Cars', to: '/operations/cars', icon: 'CarFront' })
+  }
+  if (canAccessAudit(profile)) {
+    items.push({ label: 'Audit', to: '/operations/audit', icon: 'ScrollText' })
   }
 
   if (canViewQueueOperations(profile)) {
@@ -157,32 +260,52 @@ export function getOperationsNav(profile) {
   if (canAccessCrm(profile)) {
     items.push({ label: 'CRM', to: '/operations/crm', icon: 'Contact' })
   }
-  if (canManageServices(profile)) {
-    items.push(
-      { label: 'Services', to: '/operations/services', icon: 'Sparkles' },
-      { label: 'Merch', to: '/operations/products', icon: 'Package' },
-    )
-  }
-  if (canAccessMarketing(profile)) {
-    items.push({ label: 'SMS', to: '/operations/sms', icon: 'MessageSquare' })
-  }
+  // Services / Merch / SMS — folded into POS / CRM (redirects in App.jsx)
   if (canAccessBookingBoard(profile)) {
     items.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
   }
   if (canAccessReports(profile)) {
     items.push({ label: 'Reports', to: '/operations/reports', icon: 'LineChart' })
   }
-  if (isAdmin(profile)) {
+  if (canAccessMemberships(profile)) {
     items.push({ label: 'Memberships', to: '/operations/memberships', icon: 'Crown' })
   }
   return items
 }
 
 export function redirectForRole(role) {
-  if (role === ROLES.SUPER_ADMIN || role === ROLES.ADMIN) return '/operations/console'
+  if (role === ROLES.SUPER_ADMIN || role === ROLES.ASSISTANT_SUPER_ADMIN || role === ROLES.ADMIN) {
+    return '/operations/console'
+  }
   if (role === ROLES.STAFF) return '/operations/my-tasks'
   if (role === ROLES.TEAM_LEAD) return '/operations/dashboard'
-  if (role === ROLES.CASHIER || role === ROLES.SALES) return '/operations/pos'
   if (role === ROLES.MARKETING) return '/operations/crm'
+  // legacy
+  if (role === DEPRECATED_ROLES.CASHIER || role === DEPRECATED_ROLES.SALES) return '/operations/pos'
   return '/operations/dashboard'
+}
+
+/** Route allow helpers for App.jsx */
+export function allowRoute(profile, key) {
+  const map = {
+    console: canAccessConsole,
+    planning: canViewPlanning,
+    people: canManagePeople,
+    branches: canManageBranches,
+    cars: canManageVehicleCatalog,
+    audit: canAccessAudit,
+    dashboard: canViewQueueOperations,
+    queue: canViewQueueOperations,
+    crew: canManageCrew,
+    kpi: canViewQueueOperations,
+    'my-tasks': canViewAssignedTasks,
+    pos: canAccessPos,
+    finance: canAccessFinance,
+    crm: canAccessCrm,
+    bookings: canAccessBookingBoard,
+    reports: canAccessReports,
+    memberships: canAccessMemberships,
+  }
+  const fn = map[key]
+  return fn ? fn(profile) : false
 }

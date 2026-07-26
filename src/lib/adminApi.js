@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { getAccessTokenFresh } from './authToken'
 import { getBranchScope } from '../queue/queueLogic'
 import { writeAudit } from './audit'
 import {
@@ -77,29 +78,84 @@ export async function archiveBranch(slug) {
 export async function listStaffPeople({ includeInactive = false } = {}) {
   let q = supabase
     .from('staff_profiles')
-    .select('id, full_name, role, branch_slug, phone, is_active, is_archived, created_at, updated_at')
+    .select('id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, created_at, updated_at')
     .eq('is_archived', false)
     .order('full_name')
   if (!includeInactive) q = q.eq('is_active', true)
   const { data, error } = await q
   if (error) throw mapDbError(error)
-  return data || []
+  const rows = data || []
+  if (!rows.length) return rows
+  const ids = rows.map((r) => r.id)
+  const { data: assigns, error: aErr } = await supabase
+    .from('staff_branch_assignments')
+    .select('staff_id, branch_slug')
+    .in('staff_id', ids)
+  if (aErr) throw mapDbError(aErr)
+  const byStaff = new Map()
+  for (const a of assigns || []) {
+    const list = byStaff.get(a.staff_id) || []
+    list.push(a.branch_slug)
+    byStaff.set(a.staff_id, list)
+  }
+  return rows.map((r) => ({
+    ...r,
+    permission_grants: r.permission_grants || {},
+    branch_slugs: byStaff.get(r.id) || (r.branch_slug ? [r.branch_slug] : []),
+  }))
 }
 
-export async function updateStaffPerson({ id, full_name, role, branch_slug, phone, is_active }) {
-  const v = validateStaffUpdate({ id, full_name, role, branch_slug, phone })
+export async function updateStaffPerson({
+  id,
+  full_name,
+  role,
+  branch_slug,
+  branch_slugs,
+  phone,
+  is_active,
+  permission_grants,
+}) {
+  const primary =
+    branch_slug || (Array.isArray(branch_slugs) && branch_slugs.length ? branch_slugs[0] : null)
+  const v = validateStaffUpdate({
+    id,
+    full_name,
+    role,
+    branch_slug: role === 'assistant_super_admin' ? null : primary,
+    phone,
+  })
   const patch = {
     full_name: v.full_name,
     role: v.role,
-    branch_slug: v.branch_slug,
+    branch_slug: v.role === 'assistant_super_admin' ? null : v.branch_slug,
     phone: v.phone,
     is_active: is_active ?? true,
     updated_at: new Date().toISOString(),
+  }
+  if (v.role === 'assistant_super_admin' && permission_grants && typeof permission_grants === 'object') {
+    patch.permission_grants = permission_grants
   }
 
   const { data, error } = await supabase.from('staff_profiles').update(patch).eq('id', id).select().maybeSingle()
   if (error) throw mapDbError(error)
   if (!data) throw new Error('Staff profile not found.')
+
+  if (['admin', 'team_lead', 'staff', 'marketing'].includes(v.role)) {
+    const slugs = Array.isArray(branch_slugs) && branch_slugs.length
+      ? branch_slugs.map(String)
+      : v.branch_slug
+        ? [v.branch_slug]
+        : []
+    const { error: delErr } = await supabase.from('staff_branch_assignments').delete().eq('staff_id', id)
+    if (delErr) throw mapDbError(delErr)
+    if (slugs.length) {
+      const { error: insErr } = await supabase
+        .from('staff_branch_assignments')
+        .insert(slugs.map((slug) => ({ staff_id: id, branch_slug: slug })))
+      if (insErr) throw mapDbError(insErr)
+    }
+  }
+
   await writeAudit({
     action: 'update',
     entityType: 'staff_profile',
@@ -143,8 +199,7 @@ export async function deactivateStaffPerson(id, { archive = false } = {}) {
 
 export async function provisionStaff(payload) {
   validateProvisionStaffInput(payload)
-  const { data: sessionData } = await supabase.auth.getSession()
-  const token = sessionData.session?.access_token
+  const token = await getAccessTokenFresh()
   if (!token) throw new Error('Sign in required.')
   const res = await fetch('/api/provision-staff', {
     method: 'POST',
@@ -166,7 +221,7 @@ export async function provisionStaff(payload) {
 export async function listServices({ includeArchived = false } = {}) {
   let q = supabase
     .from('services')
-    .select('id, name, slug, description, price_minor, duration_minutes, is_active, is_archived, display_order, loyalty_weight')
+    .select('id, name, slug, description, price_minor, duration_minutes, pay_category, is_active, is_archived, display_order, loyalty_weight')
     .order('display_order')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
@@ -182,6 +237,7 @@ export async function createService(payload) {
     description: payload.description?.trim() || null,
     price_minor: v.price_minor,
     duration_minutes: v.duration_minutes,
+    pay_category: v.pay_category,
     display_order: v.display_order,
     is_active: true,
     is_archived: false,
@@ -193,7 +249,7 @@ export async function createService(payload) {
     entityType: 'service',
     entityId: data?.id,
     summary: `Created service ${data?.name}`,
-    meta: { price_minor: data?.price_minor },
+    meta: { price_minor: data?.price_minor, pay_category: data?.pay_category },
   })
   return data
 }
@@ -206,6 +262,7 @@ export async function updateService(id, payload) {
     price: payload.price,
     duration_minutes: payload.duration_minutes,
     display_order: payload.display_order,
+    pay_category: payload.pay_category,
   })
   const patch = {
     name: v.name,
@@ -213,6 +270,7 @@ export async function updateService(id, payload) {
     description: payload.description?.trim() || null,
     price_minor: v.price_minor,
     duration_minutes: v.duration_minutes,
+    pay_category: v.pay_category,
     display_order: v.display_order,
     is_active: payload.is_active,
     updated_at: new Date().toISOString(),
@@ -537,10 +595,17 @@ export async function listCustomersForMembership(limit = 50) {
   return data || []
 }
 
+function stockGroupFromName(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
 export async function listProducts({ includeArchived = false } = {}) {
   let q = supabase
     .from('products')
-    .select('id, name, sku, category, price_minor, stock_qty, branch_slug, is_active, is_archived, updated_at')
+    .select('id, name, sku, category, price_minor, stock_qty, stock_group, branch_slug, is_active, is_archived, updated_at')
     .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
@@ -559,6 +624,7 @@ export async function createProduct(payload) {
     category: String(payload.category || 'merch').trim() || 'merch',
     price_minor: Math.round(price * 100),
     stock_qty: Math.max(0, Number(payload.stock_qty) || 0),
+    stock_group: stockGroupFromName(payload.stock_group || name),
     branch_slug: payload.branch_slug || null,
     is_active: payload.is_active !== false,
     is_archived: false,
@@ -570,7 +636,7 @@ export async function createProduct(payload) {
     entityType: 'product',
     entityId: data?.id,
     summary: `Created product ${data?.name}`,
-    meta: { price_minor: data?.price_minor, stock_qty: data?.stock_qty },
+    meta: { price_minor: data?.price_minor, stock_qty: data?.stock_qty, stock_group: data?.stock_group },
   })
   return data
 }
@@ -587,6 +653,7 @@ export async function updateProduct(id, payload) {
     category: String(payload.category || 'merch').trim() || 'merch',
     price_minor: Math.round(price * 100),
     stock_qty: Math.max(0, Number(payload.stock_qty) || 0),
+    stock_group: stockGroupFromName(payload.stock_group || name),
     branch_slug: payload.branch_slug || null,
     is_active: payload.is_active !== false,
     updated_at: new Date().toISOString(),
@@ -649,5 +716,42 @@ export async function setSmsNotificationsEnabled(enabled) {
     summary: `SMS notifications ${enabled ? 'enabled' : 'disabled'}`,
     meta: { enabled: Boolean(enabled) },
   })
+  return data
+}
+
+export async function listVehicleSizes({ activeOnly = true } = {}) {
+  let q = supabase.from('vehicle_sizes').select('id, slug, label, sort_order, is_active').order('sort_order')
+  if (activeOnly) q = q.eq('is_active', true)
+  const { data, error } = await q
+  if (error) throw mapDbError(error)
+  return data || []
+}
+
+export async function upsertVehicleSize({ id, slug, label, sort_order, is_active }) {
+  const row = {
+    slug: String(slug || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-'),
+    label: String(label || '').trim(),
+    sort_order: Number(sort_order) || 0,
+    is_active: is_active !== false,
+  }
+  if (!row.slug || !row.label) throw new Error('Size slug and label are required.')
+  if (id) {
+    const { data, error } = await supabase.from('vehicle_sizes').update(row).eq('id', id).select().maybeSingle()
+    if (error) throw mapDbError(error)
+    return data
+  }
+  const { data, error } = await supabase.from('vehicle_sizes').insert(row).select().maybeSingle()
+  if (error) throw mapDbError(error)
+  return data
+}
+
+export async function deactivateVehicleSize(id) {
+  const { data, error } = await supabase
+    .from('vehicle_sizes')
+    .update({ is_active: false })
+    .eq('id', id)
+    .select()
+    .maybeSingle()
+  if (error) throw mapDbError(error)
   return data
 }

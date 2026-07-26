@@ -1,46 +1,37 @@
-import { ArrowLeft, MapPin, Radio, Sparkles } from 'lucide-react'
+import { ArrowLeft, MapPin, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { usePublicBranches } from '../lib/branches'
 import { supabase } from '../lib/supabase'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 
 export function QueuePage() {
-  const { branch } = useParams()
   const { branches, loading, error } = usePublicBranches()
 
-  if (!branch) {
-    return (
-      <section className="utility-hero">
-        <div className="public-shell">
-          <p className="eyebrow eyebrow-light">Live service queue</p>
-          <h1 className="display-title">Plan your<br /><span>arrival.</span></h1>
-          <p className="inner-hero-copy">Choose a branch for a simple, customer-safe view of current service activity.</p>
-          {error && <p className="form-error">{error}</p>}
-          <div className="queue-choice">
-            {loading && <p className="text-slate-400">Loading branches…</p>}
-            {branches.map((b) => (
-              <Link to={`/queue/${b.slug}`} key={b.slug}>
-                <MapPin />
-                <strong>{b.name}</strong>
-                <span>{b.address || b.slug}</span>
-              </Link>
-            ))}
-            {!loading && !branches.length && <p className="text-slate-400">No active branches yet.</p>}
-          </div>
-        </div>
-      </section>
-    )
-  }
-
-  const details = branches.find((b) => b.slug === branch)
-  if (!loading && !details) return <PublicMessage title="Branch not found" message="Choose a valid Hakum branch." />
   return (
-    <PublicMessage
-      title={`${details?.name || branch} live queue`}
-      message={`Redirecting to live queue for ${details?.address || branch}…`}
-      icon={Radio}
-    />
+    <section className="utility-hero">
+      <div className="public-shell">
+        <p className="eyebrow eyebrow-light">Live service queue</p>
+        <h1 className="display-title">
+          Plan your
+          <br />
+          <span>arrival.</span>
+        </h1>
+        <p className="inner-hero-copy">Choose a branch for a simple, customer-safe view of current service activity.</p>
+        {error && <p className="form-error">{error}</p>}
+        <div className="queue-choice">
+          {loading && <p className="text-slate-400">Loading branches…</p>}
+          {branches.map((b) => (
+            <Link to={`/queue/${b.slug}`} key={b.slug}>
+              <MapPin />
+              <strong>{b.name}</strong>
+              <span>{b.address || b.slug}</span>
+            </Link>
+          ))}
+          {!loading && !branches.length && <p className="text-slate-400">No active branches yet.</p>}
+        </div>
+      </div>
+    </section>
   )
 }
 

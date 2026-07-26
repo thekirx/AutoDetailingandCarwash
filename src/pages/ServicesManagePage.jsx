@@ -6,16 +6,26 @@ import { archiveService, createService, listServices, updateService } from '@/li
 import { formatMoney } from '@/queue/queueApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
+import VehicleSizesPanel from '@/components/VehicleSizesPanel'
 
-const empty = { name: '', price: '', duration_minutes: '60', slug: '', display_order: '0' }
+const PAY_CATEGORIES = [
+  { value: 'general', label: 'General' },
+  { value: 'detailing', label: 'Detailing' },
+  { value: 'wash', label: 'Wash' },
+  { value: 'ppf', label: 'PPF / Film' },
+  { value: 'addon', label: 'Add-on' },
+]
 
-export default function ServicesManagePage() {
+const empty = { name: '', price: '', slug: '', display_order: '0', pay_category: 'general' }
+
+export default function ServicesManagePage({ embedded = false }) {
   const { profile } = useAuth()
   const [services, setServices] = useState([])
   const [form, setForm] = useState(empty)
@@ -34,7 +44,10 @@ export default function ServicesManagePage() {
     if (canManageServices(profile)) load()
   }, [load, profile])
 
-  if (!canManageServices(profile)) return <Navigate to="/operations/access-denied" replace />
+  if (!canManageServices(profile)) {
+    if (embedded) return null
+    return <Navigate to="/operations/access-denied" replace />
+  }
 
   async function onCreate(event) {
     event.preventDefault()
@@ -60,7 +73,7 @@ export default function ServicesManagePage() {
         name: editing.name,
         slug: editing.slug,
         price: editing.price,
-        duration_minutes: editing.duration_minutes,
+        pay_category: editing.pay_category,
         display_order: editing.display_order,
         is_active: editing.is_active,
       })
@@ -80,7 +93,7 @@ export default function ServicesManagePage() {
         name: row.name,
         slug: row.slug,
         price: Number(row.price_minor) / 100,
-        duration_minutes: row.duration_minutes,
+        pay_category: row.pay_category || 'general',
         display_order: row.display_order,
         is_active: !row.is_active,
       })
@@ -103,20 +116,38 @@ export default function ServicesManagePage() {
   }
 
   return (
-    <section className="flex flex-col gap-8">
-      <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Catalog</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Service management</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Create, edit prices/duration, activate, or archive services used on the floor.</p>
-      </div>
+    <section className={`flex flex-col gap-8 ${embedded ? '' : ''}`}>
+      {!embedded && (
+        <div>
+          <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Catalog</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Service management</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Category, name, price, and status. Duration removed from UI (legacy calendar uses default).</p>
+        </div>
+      )}
+      {embedded && (
+        <p className="text-sm text-muted-foreground">Category · name · price · status. Pay category feeds future crew pay bands.</p>
+      )}
       <Card>
-        <CardHeader><CardTitle>Add service</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Add service</CardTitle>
+          <CardDescription>No duration field — keep pricing and category only.</CardDescription>
+        </CardHeader>
         <CardContent>
           <form onSubmit={onCreate} className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2"><Label>Name</Label><Input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="flex flex-col gap-2"><Label>Slug</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} placeholder="auto-from-name" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></div>
+            <div className="flex flex-col gap-2"><Label>Slug</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} placeholder="auto-from-name" /></div>
             <div className="flex flex-col gap-2"><Label>Price (₱)</Label><Input required type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
-            <div className="flex flex-col gap-2"><Label>Duration (min)</Label><Input type="number" min="1" step="1" required value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })} /></div>
+            <div className="flex flex-col gap-2">
+              <Label>Category</Label>
+              <Select value={form.pay_category} onValueChange={(pay_category) => setForm({ ...form, pay_category })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAY_CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button type="submit" className="md:col-span-2" disabled={saving}>{saving ? 'Saving…' : 'Create service'}</Button>
           </form>
         </CardContent>
@@ -128,8 +159,8 @@ export default function ServicesManagePage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
-                <TableHead>Duration</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -141,8 +172,8 @@ export default function ServicesManagePage() {
                     <div className="font-medium">{s.name}</div>
                     <div className="text-xs text-muted-foreground">{s.slug}</div>
                   </TableCell>
+                  <TableCell><Badge variant="outline">{s.pay_category || 'general'}</Badge></TableCell>
                   <TableCell>{formatMoney(s.price_minor)}</TableCell>
-                  <TableCell>{s.duration_minutes}m</TableCell>
                   <TableCell>{s.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -151,19 +182,15 @@ export default function ServicesManagePage() {
                         variant="outline"
                         onClick={() =>
                           setEditing({
-                            id: s.id,
-                            name: s.name,
-                            slug: s.slug,
+                            ...s,
                             price: String(Number(s.price_minor) / 100),
-                            duration_minutes: String(s.duration_minutes),
-                            display_order: String(s.display_order ?? 0),
-                            is_active: s.is_active,
+                            pay_category: s.pay_category || 'general',
                           })
                         }
                       >
                         Edit
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => toggleActive(s)}>
+                      <Button size="sm" variant="ghost" onClick={() => toggleActive(s)}>
                         {s.is_active ? 'Deactivate' : 'Activate'}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => onArchive(s.id)}>Archive</Button>
@@ -176,18 +203,29 @@ export default function ServicesManagePage() {
         </CardContent>
       </Card>
 
+      <VehicleSizesPanel />
+
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit service</DialogTitle></DialogHeader>
           {editing && (
             <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2"><Label>Name</Label><Input required value={editing.name} onChange={(e) => setEditing((r) => ({ ...r, name: e.target.value }))} /></div>
-              <div className="flex flex-col gap-2"><Label>Slug</Label><Input value={editing.slug} onChange={(e) => setEditing((r) => ({ ...r, slug: e.target.value }))} /></div>
-              <div className="flex flex-col gap-2"><Label>Price (₱)</Label><Input required value={editing.price} onChange={(e) => setEditing((r) => ({ ...r, price: e.target.value }))} /></div>
-              <div className="flex flex-col gap-2"><Label>Duration (min)</Label><Input type="number" required value={editing.duration_minutes} onChange={(e) => setEditing((r) => ({ ...r, duration_minutes: e.target.value }))} /></div>
+              <div className="flex flex-col gap-2"><Label>Name</Label><Input required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
+              <div className="flex flex-col gap-2"><Label>Price (₱)</Label><Input required type="number" min="0" step="0.01" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} /></div>
+              <div className="flex flex-col gap-2">
+                <Label>Category</Label>
+                <Select value={editing.pay_category || 'general'} onValueChange={(pay_category) => setEditing({ ...editing, pay_category })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PAY_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-                <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
+                <Button type="submit" disabled={saving}>Save</Button>
               </DialogFooter>
             </form>
           )}

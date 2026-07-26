@@ -120,7 +120,7 @@ export default function CustomerSignInPage() {
         throw new Error('Invalid email, phone, plate, or password.')
       }
 
-      const { data: customer } = await supabase
+      const { data: customer, error: customerError } = await supabase
         .from('customers')
         .select('id, role, is_archived')
         .eq('id', data.user.id)
@@ -131,6 +131,15 @@ export default function CustomerSignInPage() {
       const metaCustomer =
         data.user.user_metadata?.role === 'customer' ||
         (data.user.email || '').includes('@customers.hakumautocare.com')
+
+      if (customerError && !metaCustomer) {
+        await supabase.auth.signOut()
+        throw new Error(
+          /42501|permission|policy|row-level/i.test(customerError.message || '')
+            ? 'Unable to verify your customer profile (permissions). Try again shortly.'
+            : customerError.message || 'Unable to verify customer account.',
+        )
+      }
 
       if (!customer && !metaCustomer) {
         await supabase.auth.signOut()
@@ -156,7 +165,7 @@ export default function CustomerSignInPage() {
     setSendingSetup(true)
     try {
       await authLookup(identifier.trim(), 'send_setup')
-      setInfo('Set-password link queued to your phone. Open it to finish your account, then sign in here.')
+      setInfo('Set-password email sent via Supabase. Check your inbox (and spam), open the link, then sign in here.')
       setSetupStatus('needs_password')
     } catch (err) {
       setError(err.message)
@@ -176,17 +185,10 @@ export default function CustomerSignInPage() {
     setSendingReset(true)
     try {
       const redirectTo = `${window.location.origin}/account/set-password`
-      let viaSms = false
-      let emailed = false
-
       try {
         const data = await authLookup(raw, 'send_reset')
-        viaSms = data.via === 'sms'
-        if (data.can_email_reset) {
-          const email = data.login_email || (await resolveEmail(raw))
-          const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
-          if (!resetError) emailed = true
-        }
+        if (!data.sent) throw new Error('Could not send reset email.')
+        setInfo('Password reset email sent. Check your inbox (and spam), then choose a new password.')
       } catch (lookupErr) {
         // Email-only path when lookup misses CRM row but Auth email exists
         const kind = classifyIdentifier(raw)
@@ -194,17 +196,7 @@ export default function CustomerSignInPage() {
         const email = resolveLoginEmail(raw)
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
         if (resetError) throw resetError
-        emailed = true
-      }
-
-      if (viaSms && emailed) {
-        setInfo('Password reset link sent to your phone and email. Open the link, then choose a new password.')
-      } else if (viaSms) {
-        setInfo('Password reset link sent to your phone. Open it to choose a new password.')
-      } else if (emailed) {
         setInfo('Password reset email sent. Check your inbox (and spam), then choose a new password.')
-      } else {
-        setInfo('If we found your account, a reset link was queued. Check SMS or email, or ask the Team Lead at the shop.')
       }
     } catch (err) {
       setError(err.message)
@@ -263,11 +255,11 @@ export default function CustomerSignInPage() {
           <div className="hakum-auth-setup" role="status">
             <strong>Set up your password</strong>
             <p>
-              Your Team Lead already registered your visit. You do not have a password yet — send a set-password link to finish
-              your account.
+              Your Team Lead already registered your visit. You do not have a password yet — we will email a Supabase
+              set-password link to the address on your account.
             </p>
             <button type="button" className="hakum-auth-setup-btn" onClick={handleSendSetup} disabled={sendingSetup || !identifier.trim()}>
-              {sendingSetup ? 'Sending…' : 'Send set-password link'}
+              {sendingSetup ? 'Sending…' : 'Email set-password link'}
             </button>
           </div>
         ) : null}

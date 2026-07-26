@@ -4,23 +4,21 @@ import {
   canAccessCrm,
   canAccessPos,
   canAccessBookingBoard,
-  canAccessMarketing,
+  canAccessReports,
   getOperationsNav,
   redirectForRole,
 } from '../src/auth/permissions.js'
 
 const marketing = { role: ROLES.MARKETING, branch_slug: 'bacoor' }
-const sales = { role: ROLES.SALES, branch_slug: 'bacoor' }
 const admin = { role: ROLES.ADMIN, branch_slug: 'bacoor' }
+const assistant = { role: ROLES.ASSISTANT_SUPER_ADMIN, permission_grants: {} }
 
 assert.equal(canAccessCrm(marketing), true)
-assert.equal(canAccessCrm(sales), false)
-assert.equal(canAccessPos(sales), true)
 assert.equal(canAccessPos(marketing), false)
-assert.equal(canAccessBookingBoard(sales), true)
 assert.equal(canAccessBookingBoard(marketing), false)
-assert.equal(canAccessMarketing(marketing), false) // SMS is admin-only; marketing is CRM-only
-assert.equal(canAccessMarketing(admin), true)
+assert.equal(canAccessPos(admin), true)
+assert.equal(canAccessReports(admin), false)
+assert.equal(canAccessReports(assistant), true)
 
 const mNav = getOperationsNav(marketing)
 assert.deepEqual(
@@ -28,13 +26,7 @@ assert.deepEqual(
   ['/operations/crm'],
 )
 
-const sNav = getOperationsNav(sales)
-assert.deepEqual(
-  sNav.map((i) => i.to),
-  ['/operations/pos', '/operations/bookings'],
-)
-
 assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
-assert.equal(redirectForRole(ROLES.SALES), '/operations/pos')
+assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/console')
 
 console.log('permissions.marketingSalesNav: ok')

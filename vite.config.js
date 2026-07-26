@@ -87,6 +87,10 @@ function provisionApiPlugin() {
         const mod = await import('./api/busybee.js')
         return mod.default(req, res)
       })
+      mount('/api/send-finance-quote', async (req, res, helpers) => {
+        const { handleFinanceQuoteRequest } = await import('./server/sendFinanceQuote.mjs')
+        return handleFinanceQuoteRequest(req, res, helpers)
+      })
     },
   }
 }
@@ -122,6 +126,23 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(root, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // ponytail: split heavy vendors so main chunk stays under Vite's 500kb warn when possible
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('react-dom') || id.includes('/react/') || id.includes('\\react\\')) return 'react-vendor'
+          if (id.includes('@supabase')) return 'supabase'
+          if (id.includes('recharts') || id.includes('d3-')) return 'charts'
+          if (id.includes('three') || id.includes('@react-three')) return 'three'
+          if (id.includes('react-big-calendar') || id.includes('date-fns')) return 'calendar'
+          if (id.includes('leaflet')) return 'maps'
+          if (id.includes('lucide-react')) return 'icons'
+        },
+      },
     },
   },
 })

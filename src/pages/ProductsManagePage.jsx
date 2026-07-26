@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 
 const empty = { name: '', sku: '', category: 'merch', price: '', stock_qty: '0', branch_slug: '' }
 
-export default function ProductsManagePage() {
+export default function ProductsManagePage({ embedded = false }) {
   const { profile } = useAuth()
   const [products, setProducts] = useState([])
   const [branches, setBranches] = useState([])
@@ -38,7 +38,10 @@ export default function ProductsManagePage() {
     if (canManageServices(profile)) load()
   }, [load, profile])
 
-  if (!canManageServices(profile)) return <Navigate to="/operations/access-denied" replace />
+  if (!canManageServices(profile)) {
+    if (embedded) return null
+    return <Navigate to="/operations/access-denied" replace />
+  }
 
   async function onCreate(event) {
     event.preventDefault()
@@ -110,22 +113,30 @@ export default function ProductsManagePage() {
 
   return (
     <section className="flex flex-col gap-8">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Inventory</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Merch & products</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Car cleaning kits, air fresheners, and retail items for POS.</p>
+      {!embedded ? (
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Inventory</p>
+            <h1 className="text-3xl font-semibold tracking-tight">Merch & products</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Same product name shares stock automatically (stock group). Distinct SKU allowed for variants.
+            </p>
+          </div>
+          <Link to="/operations/pos?tab=merch" className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
+            Open POS merch
+          </Link>
         </div>
-        <Link to="/operations/pos" className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
-          Open POS
-        </Link>
-      </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Same name → shared stock pool. Different SKUs can still share stock when names match.
+        </p>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
         <Card>
           <CardHeader>
             <CardTitle>Add merch item</CardTitle>
-            <CardDescription>Shows under the Merch tab on POS.</CardDescription>
+            <CardDescription>Shows under Checkout → Merch on POS.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={onCreate} className="flex flex-col gap-3">

@@ -12,7 +12,7 @@ export default function EventsPage() {
   useEffect(() => {
     supabase
       .from('events')
-      .select('id, title, description, branch, starts_at, ends_at, banner_url')
+      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug')
       .eq('is_published', true)
       .order('starts_at')
       .then(({ data, error: e }) => {
@@ -60,7 +60,10 @@ export default function EventsPage() {
               <h2>{item.title}</h2>
               <p>{item.description}</p>
               <p>{item.branch} · {new Date(item.starts_at).toLocaleString()}</p>
-              <button type="button" className="button button-blue" onClick={() => setRegisterFor(item.id)}>Register</button>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
+                {item.slug && <Link className="button button-blue" to={`/events/${item.slug}`}>Open share page</Link>}
+                <button type="button" className="button button-blue" onClick={() => setRegisterFor(item.id)}>Register</button>
+              </div>
             </article>
           ))}
         </div>

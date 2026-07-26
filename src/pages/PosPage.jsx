@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
-import { Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
+import { Navigate, useSearchParams } from 'react-router-dom'
+import { Gift, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, canManageServices, isSuperAdmin } from '@/auth/permissions'
+import { canAccessPos, canManageServices, canSeeAllBranches, isAdmin } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
+import { getAccessTokenFresh } from '@/lib/authToken'
 import { buildPosSalePayload } from '@/lib/posSale'
 import { supabase } from '@/lib/supabase'
 import { getBranchScope } from '@/queue/queueLogic'
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
+import ServicesManagePage from '@/pages/ServicesManagePage'
+import ProductsManagePage from '@/pages/ProductsManagePage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -27,8 +30,13 @@ const PAYMENT_OPTIONS = [
 
 export default function PosPage() {
   const { profile } = useAuth()
-  const branchLocked = !isSuperAdmin(profile)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const shellTab = ['checkout', 'services', 'merch'].includes(searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : 'checkout'
+  const branchLocked = !canSeeAllBranches(profile)
   const assignedBranch = getBranchScope(profile) || profile?.branch_slug || ''
+  const canProvisionCustomer = isAdmin(profile)
 
   const [services, setServices] = useState([])
   const [products, setProducts] = useState([])
@@ -72,6 +80,7 @@ export default function PosPage() {
     ])
     if (svc.error) toast.error(svc.error.message)
     if (prod.error) toast.error(prod.error.message)
+    if (stats.error) toast.error(stats.error.message)
     if (handoffRes.error) toast.error(handoffRes.error.message)
     setServices(svc.data || [])
     setProducts(prod.data || [])
@@ -154,14 +163,27 @@ export default function PosPage() {
     setPaymentMethod('cash')
   }
 
-  function addToCart(item) {
+  function addToCart(item, { loyaltyAward = false } = {}) {
     setActiveHandoff(null)
+    const price = loyaltyAward ? 0 : item.price_minor
     setCart((current) => {
-      const existing = current.find((line) => line.key === item.key)
+      const key = loyaltyAward ? `${item.key}-loyalty` : item.key
+      const existing = current.find((line) => line.key === key)
       if (existing) {
-        return current.map((line) => (line.key === item.key ? { ...line, quantity: line.quantity + 1 } : line))
+        return current.map((line) => (line.key === key ? { ...line, quantity: line.quantity + 1 } : line))
       }
-      return [...current, { ...item, quantity: 1, unit_price_minor: item.price_minor }]
+      return [
+        ...current,
+        {
+          ...item,
+          key,
+          quantity: 1,
+          unit_price_minor: price,
+          price_minor: price,
+          is_loyalty_award: loyaltyAward,
+          name: loyaltyAward ? `${item.name} (loyalty award)` : item.name,
+        },
+      ]
     })
     setCartOpen(true)
   }
@@ -238,15 +260,45 @@ export default function PosPage() {
     if (!cart.length || !branch) return
     setSaving(true)
     const handoff = activeHandoff
+    let resolvedCustomerId = customerId
+
+    // Admin+ only: create customer account on paid walk-in (idempotent via provision API)
+    if (!resolvedCustomerId && canProvisionCustomer && guestPhone.trim().length >= 10) {
+      try {
+        const token = await getAccessTokenFresh()
+        if (token) {
+          const res = await fetch('/api/provision-customer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              customer_name: guestName.trim() || 'Walk-in customer',
+              customer_phone: guestPhone.trim(),
+              site_origin: window.location.origin,
+            }),
+          })
+          const body = await res.json().catch(() => ({}))
+          if (res.ok && body.customer_id) {
+            resolvedCustomerId = body.customer_id
+            toast.message(body.created ? 'Customer account created' : 'Linked existing customer')
+          } else if (!res.ok && !body.customer_id) {
+            toast.warning(body.error || 'Could not create customer — sale continues as walk-in')
+          }
+        }
+      } catch (err) {
+        toast.warning(err.message || 'Customer provision skipped')
+      }
+    }
+
     const noteParts = []
-    if (!customerId && (guestName.trim() || guestPhone.trim())) {
+    if (!resolvedCustomerId && (guestName.trim() || guestPhone.trim())) {
       noteParts.push(`Walk-in: ${[guestName.trim(), guestPhone.trim()].filter(Boolean).join(' · ')}`)
     }
     if (linkedCustomer?.plate) noteParts.push(`Plate ${linkedCustomer.plate}`)
+    if (cart.some((l) => l.is_loyalty_award)) noteParts.push('Includes loyalty award line')
     const { data, error } = await supabase.rpc('complete_pos_sale', {
       payload: buildPosSalePayload({
         branch,
-        customerId,
+        customerId: resolvedCustomerId,
         paymentMethod,
         cart,
         activeHandoff: handoff,
@@ -260,17 +312,20 @@ export default function PosPage() {
     }
     if (handoff?.booking_id) {
       try {
-        const { data: sessionData } = await supabase.auth.getSession()
-        const token = sessionData.session?.access_token
+        const token = await getAccessTokenFresh()
         if (token) {
-          await fetch('/api/notify-booking', {
+          const res = await fetch('/api/notify-booking', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ booking_id: handoff.booking_id, status: 'completed' }),
           })
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}))
+            toast.warning(body.error || 'Sale saved — customer notify failed')
+          }
         }
-      } catch {
-        /* ignore */
+      } catch (err) {
+        toast.warning(err.message || 'Sale saved — customer notify failed')
       }
     }
     const loyalty = data?.loyalty_awarded || data?.stamps_awarded
@@ -290,33 +345,47 @@ export default function PosPage() {
 
   const catalog = tab === 'services' ? serviceItems : merchItems
 
+  function setShellTab(next) {
+    setSearchParams(next === 'checkout' ? {} : { tab: next }, { replace: true })
+  }
+
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
           <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Point of sale</p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Fast checkout</h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">POS hub</h1>
           <p className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
             <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
             <span>
-              Walk-ins and queue tickets for <strong className="text-foreground">{branchLabel}</strong>
-              {branchLocked ? ' · your assigned branch' : ' · Super Admin can switch'}
+              Checkout, services catalog, and merch inventory
+              {branchLocked ? ' · your assigned branch' : ' · all branches'}
             </span>
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {canManageServices(profile) && (
-            <Link to="/operations/products" className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
-              Manage merch
-            </Link>
-          )}
+        {shellTab === 'checkout' && (
           <Button onClick={() => setCartOpen(true)} className="min-h-11 gap-2">
             <ShoppingCart data-icon="inline-start" />
             Cart · {cart.length} · {formatMoney(cartTotal)}
           </Button>
-        </div>
+        )}
       </div>
 
+      <Tabs value={shellTab} onValueChange={setShellTab}>
+        <TabsList className="flex h-auto flex-wrap gap-1">
+          <TabsTrigger value="checkout">Checkout</TabsTrigger>
+          {canManageServices(profile) && <TabsTrigger value="services">Manage services</TabsTrigger>}
+          {canManageServices(profile) && <TabsTrigger value="merch">Manage merch</TabsTrigger>}
+        </TabsList>
+
+        <TabsContent value="services" className="mt-6">
+          <ServicesManagePage embedded />
+        </TabsContent>
+        <TabsContent value="merch" className="mt-6">
+          <ProductsManagePage embedded />
+        </TabsContent>
+
+        <TabsContent value="checkout" className="mt-6 flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Sales today" value={formatMoney(todayStats?.total_sales_minor || 0)} />
         <Stat label="Paid" value={todayStats?.paid_count ?? 0} />
@@ -402,6 +471,8 @@ export default function PosPage() {
           <CatalogGrid items={catalog} onAdd={addToCart} empty="No merch items. Add stock under Manage merch." />
         </TabsContent>
       </Tabs>
+        </TabsContent>
+      </Tabs>
 
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
         <SheetContent className="pos-checkout-sheet flex w-full flex-col gap-0 border-l-0 p-0 sm:max-w-md">
@@ -425,7 +496,14 @@ export default function PosPage() {
                   <div>
                     <p className="font-medium">{line.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {line.quantity} × {formatMoney(line.unit_price_minor)} · {line.item_type}
+                      {line.quantity} ×{' '}
+                      {line.is_loyalty_award ? (
+                        <span className="font-medium text-emerald-600">FREE</span>
+                      ) : (
+                        formatMoney(line.unit_price_minor)
+                      )}{' '}
+                      · {line.item_type}
+                      {line.is_loyalty_award ? ' · loyalty' : ''}
                     </p>
                   </div>
                   <Button
@@ -536,7 +614,7 @@ export default function PosPage() {
                     </div>
                   </div>
                   <p className="text-[11px] leading-relaxed text-muted-foreground">
-                    Walk-in stays unlinked unless you Search and attach a customer — loyalty stamps need a linked account.
+                    Search to link an existing account. With a phone number, Admin / Super Admin creates a customer on payment if none exists.
                   </p>
                 </>
               )}
@@ -585,20 +663,34 @@ function CatalogGrid({ items, onAdd, empty }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {items.map((item) => (
-        <button key={item.key} type="button" onClick={() => onAdd(item)} className="min-h-[100px] text-left">
+        <div key={item.key} className="min-h-[100px]">
           <Card className="h-full transition hover:border-primary/50 hover:bg-accent/30">
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="text-lg">{item.name}</CardTitle>
-                <Badge variant="secondary">{item.item_type}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold tabular-nums">{formatMoney(item.price_minor)}</p>
-              {item.meta && <p className="mt-2 text-xs text-muted-foreground">{item.meta}</p>}
-            </CardContent>
+            <button type="button" onClick={() => onAdd(item)} className="w-full text-left">
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-lg">{item.name}</CardTitle>
+                  <Badge variant="secondary">{item.item_type}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold tabular-nums">{formatMoney(item.price_minor)}</p>
+                {item.meta && <p className="mt-2 text-xs text-muted-foreground">{item.meta}</p>}
+              </CardContent>
+            </button>
+            <div className="border-t border-border px-4 py-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-xs text-muted-foreground"
+                onClick={() => onAdd(item, { loyaltyAward: true })}
+              >
+                <Gift className="size-3.5" aria-hidden />
+                Loyalty / free
+              </Button>
+            </div>
           </Card>
-        </button>
+        </div>
       ))}
     </div>
   )

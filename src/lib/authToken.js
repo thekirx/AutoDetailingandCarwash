@@ -1,18 +1,14 @@
-/** Resolve a fresh access token for /api/* calls (avoids stale getSession races). */
+/**
+ * Resolve a fresh access token for /api/* calls.
+ * Uses single-flight refresh so concurrent callers do not burn refresh_token.
+ */
 import { supabase } from '@/lib/supabase'
+import { ensureFreshAccessToken } from '@/lib/session'
 
 export async function getAccessTokenFresh() {
-  const { data } = await supabase.auth.getSession()
-  const session = data.session
-  if (!session?.access_token) {
-    const refreshed = await supabase.auth.refreshSession()
-    return refreshed.data.session?.access_token || null
+  try {
+    return await ensureFreshAccessToken(supabase.auth)
+  } catch {
+    return null
   }
-  // ponytail: refresh near expiry — JWT clock skew / long-open tabs otherwise 401 /api/*
-  const expiresAtMs = session.expires_at ? session.expires_at * 1000 : 0
-  if (expiresAtMs && expiresAtMs < Date.now() + 60_000) {
-    const refreshed = await supabase.auth.refreshSession()
-    return refreshed.data.session?.access_token || session.access_token
-  }
-  return session.access_token
 }

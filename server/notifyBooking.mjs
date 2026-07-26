@@ -117,8 +117,8 @@ export function buildOpsPushTargets(booking) {
   const branch = booking?.branch
   if (!branch) return [{ roles: ['BossMich'] }]
   return [
-    { roles: ['admin', 'team_lead', 'staff', 'cashier', 'sales'], branchId: branch },
-    { roles: ['BossMich'] },
+    { roles: ['admin', 'team_lead', 'staff'], branchId: branch },
+    { roles: ['BossMich', 'assistant_super_admin'] },
   ]
 }
 
@@ -186,17 +186,36 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
   result.smsEnabled = smsOn
 
   if (payload.phone && smsOn) {
-    const sms = await busybeeSendSms({ phone: payload.phone, message: payload.sms })
-    result.sms = sms
-    await logSmsEvent(db, {
-      phone: payload.phone,
-      message: payload.sms,
-      eventType: payload.kind,
-      bookingId: booking.id,
-      customerId: payload.userId,
-      status: sms.status,
-      providerResponse: sms.providerResponse,
-    })
+    let userSmsOk = true
+    if (payload.userId) {
+      const { data: authUser, error: authErr } = await db.auth.admin.getUserById(payload.userId)
+      if (!authErr && authUser?.user?.user_metadata?.sms_opt_in === false) userSmsOk = false
+    }
+
+    if (userSmsOk) {
+      const sms = await busybeeSendSms({ phone: payload.phone, message: payload.sms })
+      result.sms = sms
+      await logSmsEvent(db, {
+        phone: payload.phone,
+        message: payload.sms,
+        eventType: payload.kind,
+        bookingId: booking.id,
+        customerId: payload.userId,
+        status: sms.status,
+        providerResponse: sms.providerResponse,
+      })
+    } else {
+      result.sms = { ok: false, status: 'opted_out', providerResponse: 'user_metadata.sms_opt_in=false' }
+      await logSmsEvent(db, {
+        phone: payload.phone,
+        message: payload.sms,
+        eventType: payload.kind,
+        bookingId: booking.id,
+        customerId: payload.userId,
+        status: 'opted_out',
+        providerResponse: 'user_metadata.sms_opt_in=false',
+      })
+    }
   } else if (payload.phone && !smsOn) {
     result.sms = { ok: false, status: 'disabled', providerResponse: 'SMS notifications toggled off by admin' }
     await logSmsEvent(db, {
