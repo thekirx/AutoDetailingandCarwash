@@ -4,7 +4,11 @@ import { CUSTOMER_DEMO_ACCOUNT, OPS_DEMO_ACCOUNTS } from '../src/lib/demoAccount
 
 describe('demo accounts', () => {
   it('exposes ops and customer demos with passwords', () => {
-    assert.ok(OPS_DEMO_ACCOUNTS.length >= 3)
+    assert.ok(OPS_DEMO_ACCOUNTS.length >= 6)
+    const ids = OPS_DEMO_ACCOUNTS.map((a) => a.id)
+    for (const need of ['boss', 'asa', 'admin', 'tl', 'staff', 'marketing']) {
+      assert.ok(ids.includes(need), `missing demo chip: ${need}`)
+    }
     for (const a of OPS_DEMO_ACCOUNTS) {
       assert.ok(a.email.includes('@'))
       assert.ok(a.password.length >= 8)

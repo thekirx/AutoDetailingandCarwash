@@ -8,7 +8,7 @@
  *   teamlead@hakumautocare.com     → HakumTL2026!
  *   staff1@hakumautocare.com       → HakumStaff2026!
  *   marketing@hakumautocare.com    → HakumMkt2026!
- *   marketing@hakumautocare.com    → HakumMkt2026!
+ *   assistant@hakumautocare.com    → HakumAsa2026!
  *   demo.customer@…                → HakumCustomer2026!
  *
  * (sales/cashier demos removed — Part 9)
@@ -71,19 +71,18 @@ async function ensureAuthUser({ email, password, full_name, user_metadata = {} }
   return found
 }
 
-async function upsertStaffProfile(user, { full_name, role, branch_slug, phone = null }) {
-  const { error } = await admin.from('staff_profiles').upsert(
-    {
-      id: user.id,
-      full_name,
-      role,
-      branch_slug,
-      phone,
-      is_active: true,
-      is_archived: false,
-    },
-    { onConflict: 'id' },
-  )
+async function upsertStaffProfile(user, { full_name, role, branch_slug, phone = null, permission_grants = undefined }) {
+  const row = {
+    id: user.id,
+    full_name,
+    role,
+    branch_slug,
+    phone,
+    is_active: true,
+    is_archived: false,
+  }
+  if (permission_grants !== undefined) row.permission_grants = permission_grants
+  const { error } = await admin.from('staff_profiles').upsert(row, { onConflict: 'id' })
   if (error) throw error
   return user.id
 }
@@ -194,6 +193,20 @@ async function main() {
   })
   console.log('Marketing', marketing.id)
 
+  const asa = await ensureAuthUser({
+    email: 'assistant@hakumautocare.com',
+    password: 'HakumAsa2026!',
+    full_name: 'Assistant Super Admin',
+  })
+  await upsertStaffProfile(asa, {
+    full_name: 'Assistant Super Admin',
+    role: 'assistant_super_admin',
+    branch_slug: null,
+    phone: '09170000030',
+    permission_grants: {},
+  })
+  console.log('Assistant Super Admin', asa.id)
+
   // Part 9: do not seed sales/cashier demos — roles removed from app RBAC
 
   const demo = await ensureAuthUser({
@@ -230,6 +243,7 @@ async function main() {
         teamlead: 'teamlead@hakumautocare.com / HakumTL2026!',
         staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026!',
         marketing: 'marketing@hakumautocare.com / HakumMkt2026!',
+        assistant: 'assistant@hakumautocare.com / HakumAsa2026!',
         customer: 'demo.customer@hakumautocare.com / HakumCustomer2026!',
         attendance_date: TODAY,
       },

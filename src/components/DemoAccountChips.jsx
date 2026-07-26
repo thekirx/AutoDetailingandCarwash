@@ -7,9 +7,16 @@ export default function DemoAccountChips({ accounts, onPick, title = 'Demo accou
       <p className="hakum-demo-label">{title}</p>
       <div className="hakum-demo-chips">
         {accounts.map((a) => (
-          <button key={a.id || a.email} type="button" className="hakum-demo-chip" onClick={() => onPick(a)} title={a.hint || a.email}>
+          <button
+            key={a.id || a.email}
+            type="button"
+            className="hakum-demo-chip"
+            onClick={() => onPick(a)}
+            title={`${a.email}${a.password ? ` · ${a.password}` : ''}`}
+          >
             <span>{a.label}</span>
             {a.hint ? <small>{a.hint}</small> : null}
+            {a.email ? <small className="hakum-demo-email">{a.email}</small> : null}
           </button>
         ))}
       </div>

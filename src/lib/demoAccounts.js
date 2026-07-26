@@ -9,6 +9,13 @@ export const OPS_DEMO_ACCOUNTS = [
     hint: 'All branches · console',
   },
   {
+    id: 'asa',
+    label: 'Assistant Super Admin',
+    email: 'assistant@hakumautocare.com',
+    password: 'HakumAsa2026!',
+    hint: 'Elevated · grant toggles',
+  },
+  {
     id: 'admin',
     label: 'Admin',
     email: 'admin@hakumautocare.com',
@@ -28,6 +35,13 @@ export const OPS_DEMO_ACCOUNTS = [
     email: 'staff1@hakumautocare.com',
     password: 'HakumStaff2026!',
     hint: 'My tasks',
+  },
+  {
+    id: 'marketing',
+    label: 'Marketing',
+    email: 'marketing@hakumautocare.com',
+    password: 'HakumMkt2026!',
+    hint: 'CRM + SMS only',
   },
 ]
 
