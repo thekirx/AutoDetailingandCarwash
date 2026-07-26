@@ -137,9 +137,11 @@ describe('queue logic', () => {
     assert.equal(normalizeVehicleType('Pickup'), 'pickup')
     assert.equal(normalizeVehicleType('pick-up'), 'pickup')
     assert.equal(normalizeVehicleType('Motorbike'), 'motorcycle')
-    assert.equal(normalizeVehicleType(''), 'sedan')
-    assert.equal(normalizeVehicleType('full-size'), 'full-size')
-    assert.equal(normalizeVehicleType('Not A Type!!!'), 'sedan')
+    assert.equal(normalizeVehicleType(''), 'medium')
+    assert.equal(normalizeVehicleType('full-size'), 'full_size')
+    assert.equal(normalizeVehicleType('Not A Type!!!'), 'medium')
+    assert.equal(normalizeVehicleType('extra_large'), 'extra_large')
+    assert.equal(normalizeVehicleType('xl'), 'extra_large')
   })
 
   it('converts visible peso inputs to minor units', () => {

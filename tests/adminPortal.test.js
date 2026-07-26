@@ -22,10 +22,11 @@ describe('nearest branch', () => {
 })
 
 describe('staff provision RBAC', () => {
-  it('BossMich can create admin; admin cannot', () => {
+  it('BossMich can create admin; admin cannot; TL can create staff', () => {
     assert.ok(creatableRolesFor('BossMich').includes('admin'))
     assert.ok(!creatableRolesFor('admin').includes('admin'))
     assert.ok(creatableRolesFor('admin').includes('team_lead'))
+    assert.deepEqual(creatableRolesFor('team_lead'), ['staff'])
   })
 
   it('permission helpers align', () => {

@@ -155,6 +155,17 @@ export function canManageVehicleCatalog(profile) {
   return isSuperAdmin(profile)
 }
 
+export function canOverrideAttendance(profile) {
+  return isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || profile?.role === ROLES.ADMIN
+}
+
+/** Branch geofence + shift settings (Admin / BossMich / ASA with people or branches). */
+export function canEditAttendanceSettings(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'branches') || hasGrant(profile, 'people')
+  return profile?.role === ROLES.ADMIN
+}
+
 export function canAccessConsole(profile) {
   return isAdmin(profile)
 }
@@ -296,7 +307,7 @@ export function allowRoute(profile, key) {
     audit: canAccessAudit,
     dashboard: canViewQueueOperations,
     queue: canViewQueueOperations,
-    crew: canManageCrew,
+    crew: canViewQueueOperations,
     kpi: canViewQueueOperations,
     'my-tasks': canViewAssignedTasks,
     pos: canAccessPos,

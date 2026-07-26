@@ -46,10 +46,17 @@ describe('ops CRUD validation', () => {
     )
   })
 
-  it('rejects blank service name and bad price/duration', () => {
+  it('rejects blank service name and bad price; duration defaults when missing', () => {
     assert.throws(() => validateServiceInput({ name: '  ', price: '100', duration_minutes: '30' }), /name is required/)
     assert.throws(() => validateServiceInput({ name: 'Wash', price: '-1', duration_minutes: '30' }), /0 or greater/)
-    assert.throws(() => validateServiceInput({ name: 'Wash', price: '100', duration_minutes: '0' }), /greater than 0/)
+    const soft = validateServiceInput({ name: 'Wash', price: '100', duration_minutes: '0' })
+    assert.equal(soft.duration_minutes, 60)
+    const sized = validateServiceInput({
+      name: 'Detail',
+      size_prices: { small: '100', medium: '200', large: '300', extra_large: '400' },
+    })
+    assert.equal(sized.price_minor, 20000)
+    assert.equal(sized.size_price_minor.extra_large, 40000)
     const v = validateServiceInput({ name: 'Exterior Wash', price: '199.5', duration_minutes: '45' })
     assert.equal(v.price_minor, 19950)
     assert.equal(v.slug, 'exterior-wash')

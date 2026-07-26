@@ -16,6 +16,7 @@ import ContactPage from './pages/ContactPage'
 import ComplaintsPage from './pages/ComplaintsPage'
 import EventsPage from './pages/EventsPage'
 import EventSharePage from './pages/EventSharePage'
+import PublicFormPage from './pages/PublicFormPage'
 import {
   AccessDeniedPage,
   CrewPage,
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="/complaints" element={<ComplaintsPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:slug" element={<EventSharePage />} />
+        <Route path="/f/:slug" element={<PublicFormPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route element={<ProtectedRoute allowedRoles={['customer']} redirectTo="/signin" unauthorizedTo="/signin" />}>

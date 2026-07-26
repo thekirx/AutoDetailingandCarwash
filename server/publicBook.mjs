@@ -35,6 +35,8 @@ export async function handlePublicBookRequest(req, res) {
     const branch = String(body.branch || '').trim()
     const scheduled_start = body.scheduled_start ? new Date(body.scheduled_start).toISOString() : null
 
+    const vehicle_type = String(body.vehicle_type || 'medium').trim().toLowerCase() || 'medium'
+
     if (!customer_name || !customer_phone || !service_id || !branch || !scheduled_start) {
       return json(res, 400, { error: 'Name, phone, service, branch, and schedule are required.' })
     }
@@ -49,6 +51,19 @@ export async function handlePublicBookRequest(req, res) {
       .maybeSingle()
     if (!branchRow) return json(res, 400, { error: 'Branch is not available for booking.' })
     if (branchRow.coming_soon) return json(res, 400, { error: 'This branch is coming soon.' })
+
+    const { data: svc } = await db
+      .from('services')
+      .select('id, price_minor, service_size_prices(size_slug, price_minor)')
+      .eq('id', service_id)
+      .maybeSingle()
+    if (!svc) return json(res, 400, { error: 'Service not found.' })
+    const sizeMap = Object.fromEntries((svc.service_size_prices || []).map((p) => [p.size_slug, p.price_minor]))
+    const pricingSlug = ['small', 'medium', 'large', 'extra_large'].includes(vehicle_type)
+      ? vehicle_type
+      : 'medium'
+    const priced =
+      sizeMap[pricingSlug] ?? sizeMap.medium ?? svc.price_minor ?? 0
 
     // Optional: attach logged-in customer
     let customer_id = null
@@ -85,11 +100,14 @@ export async function handlePublicBookRequest(req, res) {
       vehicle_plate,
       vehicle_make,
       vehicle_model,
+      vehicle_type: pricingSlug,
       service_id,
       branch,
       scheduled_start,
       status: 'pending',
       is_archived: false,
+      price_minor: priced,
+      final_price_minor: priced,
     }
 
     const { data: booking, error } = await db.from('bookings').insert(insert).select('*').single()

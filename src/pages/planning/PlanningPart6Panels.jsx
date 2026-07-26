@@ -8,13 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
-import {
-  complaintFields,
-  formatFormPayloadDescription,
-  parseCustomFieldsCsv,
-  slugifyEventTitle,
-} from '@/lib/planningPart6'
+import { slugifyEventTitle } from '@/lib/planningPart6'
 import { toast } from 'sonner'
+
+export { default as PlanningFormsPanel } from './PlanningFormsSmartPanel'
 
 export function PlanningSettingsPanel({ canEdit, onPresetsChanged }) {
   const [labels, setLabels] = useState([])
@@ -183,229 +180,9 @@ export function PlanningSettingsPanel({ canEdit, onPresetsChanged }) {
   )
 }
 
-export function PlanningFormsPanel({ canEdit, lists }) {
-  const [forms, setForms] = useState([])
-  const [submissions, setSubmissions] = useState([])
-  const [newForm, setNewForm] = useState({ name: '', kind: 'custom', fieldsCsv: 'Issue|Notes' })
-  const [fillFormId, setFillFormId] = useState('')
-  const [payload, setPayload] = useState({})
-  const [dueAt, setDueAt] = useState('')
-  const [listId, setListId] = useState('')
-
-  const load = useCallback(async () => {
-    const [f, s] = await Promise.all([
-      supabase.from('ops_forms').select('id, name, kind, fields, is_active').order('created_at'),
-      supabase
-        .from('ops_form_submissions')
-        .select('id, form_id, payload, plan_card_id, due_at, created_at, ops_forms ( name, kind )')
-        .order('created_at', { ascending: false })
-        .limit(40),
-    ])
-    if (f.error) toast.error(f.error.message)
-    else {
-      setForms(f.data || [])
-      if (!fillFormId && f.data?.[0]) setFillFormId(f.data[0].id)
-    }
-    if (s.error) toast.error(s.error.message)
-    else setSubmissions(s.data || [])
-    if (!listId && lists?.[0]?.id) setListId(lists[0].id)
-  }, [fillFormId, listId, lists])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  const activeForm = forms.find((f) => f.id === fillFormId)
-  const fields = Array.isArray(activeForm?.fields) ? activeForm.fields : []
-
-  async function createForm(e) {
-    e.preventDefault()
-    if (!canEdit) return
-    const name = newForm.name.trim()
-    if (!name) return
-    const fields = newForm.kind === 'complaint' ? complaintFields() : parseCustomFieldsCsv(newForm.fieldsCsv)
-    const { error } = await supabase.from('ops_forms').insert({
-      name,
-      kind: newForm.kind,
-      fields,
-      is_active: true,
-    })
-    if (error) toast.error(error.message)
-    else {
-      toast.success('Form created')
-      setNewForm({ name: '', kind: 'custom', fieldsCsv: 'Issue|Notes' })
-      load()
-    }
-  }
-
-  async function submitAndPush(e) {
-    e.preventDefault()
-    if (!canEdit) return
-    if (!activeForm || !listId) return toast.error('Pick a form and planning list')
-    for (const field of fields) {
-      if (field.required && !String(payload[field.key] || '').trim()) {
-        return toast.error(`${field.label} is required`)
-      }
-    }
-    const title =
-      activeForm.kind === 'complaint'
-        ? `Complaint: ${payload.customer_name || 'Customer'} (${payload.branch || 'branch'})`
-        : `${activeForm.name}: ${payload[fields[0]?.key] || 'Submission'}`
-    const description = formatFormPayloadDescription(payload)
-    const dueIso = dueAt ? new Date(dueAt).toISOString() : null
-
-    const { data: card, error: cardErr } = await supabase
-      .from('plan_cards')
-      .insert({
-        list_id: listId,
-        title: title.slice(0, 200),
-        description,
-        due_at: dueIso,
-        position: Date.now() % 1_000_000,
-        labels: activeForm.kind === 'complaint' ? [{ name: 'Ops', color: '#38bdf8' }] : [],
-      })
-      .select('id')
-      .single()
-    if (cardErr) {
-      toast.error(cardErr.message)
-      return
-    }
-
-    const { error: subErr } = await supabase.from('ops_form_submissions').insert({
-      form_id: activeForm.id,
-      payload,
-      plan_card_id: card.id,
-      due_at: dueIso,
-    })
-    if (subErr) toast.error(subErr.message)
-    else {
-      toast.success('Submitted and pushed to planning' + (dueIso ? ' calendar' : ''))
-      setPayload({})
-      setDueAt('')
-      load()
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-6">
-      {canEdit && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Create form</CardTitle>
-            <CardDescription>Complaint template or custom fields (pipe-separated labels).</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={createForm} className="grid gap-3 md:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label>Name</Label>
-                <Input required value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Kind</Label>
-                <Select value={newForm.kind} onValueChange={(kind) => setNewForm({ ...newForm, kind })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="complaint">Complaint</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {newForm.kind === 'custom' && (
-                <div className="flex flex-col gap-2 md:col-span-2">
-                  <Label>Fields (Label|Label2)</Label>
-                  <Input value={newForm.fieldsCsv} onChange={(e) => setNewForm({ ...newForm, fieldsCsv: e.target.value })} />
-                </div>
-              )}
-              <Button type="submit" className="md:col-span-2 w-fit">Create form</Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Fill & push to planning</CardTitle>
-          <CardDescription>Creates a plan card (and calendar entry when due date is set).</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canEdit ? (
-            <p className="text-sm text-muted-foreground">View-only — need planning_edit to submit.</p>
-          ) : (
-            <form onSubmit={submitAndPush} className="grid max-w-xl gap-3">
-              <div className="flex flex-col gap-2">
-                <Label>Form</Label>
-                <Select value={fillFormId} onValueChange={(id) => { setFillFormId(id); setPayload({}) }}>
-                  <SelectTrigger><SelectValue placeholder="Select form" /></SelectTrigger>
-                  <SelectContent>
-                    {forms.filter((f) => f.is_active).map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name} ({f.kind})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Planning list</Label>
-                <Select value={listId} onValueChange={setListId}>
-                  <SelectTrigger><SelectValue placeholder="List" /></SelectTrigger>
-                  <SelectContent>
-                    {(lists || []).map((l) => (
-                      <SelectItem key={l.id} value={l.id}>{l.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Due (optional → calendar)</Label>
-                <Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
-              </div>
-              {fields.map((field) => (
-                <div key={field.key} className="flex flex-col gap-2">
-                  <Label>{field.label}{field.required ? ' *' : ''}</Label>
-                  {field.type === 'textarea' ? (
-                    <Textarea required={!!field.required} value={payload[field.key] || ''} onChange={(e) => setPayload({ ...payload, [field.key]: e.target.value })} />
-                  ) : (
-                    <Input required={!!field.required} value={payload[field.key] || ''} onChange={(e) => setPayload({ ...payload, [field.key]: e.target.value })} />
-                  )}
-                </div>
-              ))}
-              <Button type="submit" disabled={!fields.length}>Submit → planning</Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Recent submissions</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Form</TableHead>
-                <TableHead>When</TableHead>
-                <TableHead>Card</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {submissions.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell>{s.ops_forms?.name || s.form_id}</TableCell>
-                  <TableCell>{new Date(s.created_at).toLocaleString()}</TableCell>
-                  <TableCell>{s.plan_card_id ? <Badge variant="secondary">Linked</Badge> : '—'}</TableCell>
-                </TableRow>
-              ))}
-              {!submissions.length && (
-                <TableRow><TableCell colSpan={3} className="text-muted-foreground">No submissions yet.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
 export function PlanningEventsPanel({ canEdit }) {
   const [events, setEvents] = useState([])
+  const [opsForms, setOpsForms] = useState([])
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -413,16 +190,26 @@ export function PlanningEventsPanel({ canEdit }) {
     starts_at: '',
     ends_at: '',
     is_published: true,
+    form_id: '',
   })
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('events')
-      .select('id, title, description, branch, starts_at, ends_at, is_published, slug')
-      .order('starts_at', { ascending: false })
-      .limit(50)
-    if (error) toast.error(error.message)
-    else setEvents(data || [])
+    const [ev, forms] = await Promise.all([
+      supabase
+        .from('events')
+        .select('id, title, description, branch, starts_at, ends_at, is_published, slug, form_id, ops_forms ( id, name, slug )')
+        .order('starts_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('ops_forms')
+        .select('id, name, slug, status, public_enabled')
+        .eq('is_active', true)
+        .neq('status', 'archived')
+        .order('name'),
+    ])
+    if (ev.error) toast.error(ev.error.message)
+    else setEvents(ev.data || [])
+    if (!forms.error) setOpsForms(forms.data || [])
   }, [])
 
   useEffect(() => {
@@ -445,11 +232,22 @@ export function PlanningEventsPanel({ canEdit }) {
       ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
       is_published: Boolean(form.is_published),
       slug,
+      form_id: form.form_id || null,
     })
     if (error) toast.error(error.message)
     else {
       toast.success('Event created')
-      setForm({ title: '', description: '', branch: 'bacoor', starts_at: '', ends_at: '', is_published: true })
+      setForm({ title: '', description: '', branch: 'bacoor', starts_at: '', ends_at: '', is_published: true, form_id: '' })
+      load()
+    }
+  }
+
+  async function assignForm(ev, formId) {
+    if (!canEdit) return
+    const { error } = await supabase.from('events').update({ form_id: formId || null }).eq('id', ev.id)
+    if (error) toast.error(error.message)
+    else {
+      toast.success(formId ? 'Form attached' : 'Form cleared')
       load()
     }
   }
@@ -514,14 +312,30 @@ export function PlanningEventsPanel({ canEdit }) {
                 <Label>Ends</Label>
                 <Input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
               </div>
-              <Button type="submit" className="md:col-span-2 w-fit">Create event</Button>
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <Label>Optional form for attendees</Label>
+                <Select value={form.form_id || 'none'} onValueChange={(v) => setForm({ ...form, form_id: v === 'none' ? '' : v })}>
+                  <SelectTrigger className="cursor-pointer"><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No form</SelectItem>
+                    {opsForms.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Shown on the public event page when set. Publish the form + enable its public link to accept answers.</p>
+              </div>
+              <Button type="submit" className="md:col-span-2 w-fit cursor-pointer">Create event</Button>
             </form>
           </CardContent>
         </Card>
       )}
 
       <Card>
-        <CardHeader><CardTitle>Events</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Events</CardTitle>
+          <CardDescription>Share links and optional attached smart forms.</CardDescription>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
@@ -529,6 +343,7 @@ export function PlanningEventsPanel({ canEdit }) {
                 <TableHead>Title</TableHead>
                 <TableHead>When</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Form</TableHead>
                 <TableHead>Share</TableHead>
               </TableRow>
             </TableHeader>
@@ -536,18 +351,33 @@ export function PlanningEventsPanel({ canEdit }) {
               {events.map((ev) => (
                 <TableRow key={ev.id}>
                   <TableCell>
-                    <div className="font-medium">{ev.title}</div>
+                    <div className="font-medium text-foreground">{ev.title}</div>
                     <div className="text-xs text-muted-foreground capitalize">{ev.branch}</div>
                   </TableCell>
-                  <TableCell className="text-sm">{new Date(ev.starts_at).toLocaleString()}</TableCell>
+                  <TableCell className="text-sm text-foreground">{new Date(ev.starts_at).toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge variant={ev.is_published ? 'default' : 'secondary'}>
                       {ev.is_published ? 'Published' : 'Draft'}
                     </Badge>
                     {canEdit && (
-                      <Button size="sm" variant="ghost" className="ml-2" onClick={() => togglePublish(ev)}>
+                      <Button size="sm" variant="ghost" className="ml-2 cursor-pointer" onClick={() => togglePublish(ev)}>
                         Toggle
                       </Button>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {canEdit ? (
+                      <Select value={ev.form_id || 'none'} onValueChange={(v) => assignForm(ev, v === 'none' ? '' : v)}>
+                        <SelectTrigger className="h-9 w-44 cursor-pointer"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {opsForms.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">{ev.ops_forms?.name || '—'}</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -556,14 +386,14 @@ export function PlanningEventsPanel({ canEdit }) {
                         <a className="text-sm text-primary underline" href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">
                           /events/{ev.slug}
                         </a>
-                        <Button size="sm" variant="outline" onClick={() => copyLink(ev)}>Copy</Button>
+                        <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => copyLink(ev)}>Copy</Button>
                       </div>
                     ) : '—'}
                   </TableCell>
                 </TableRow>
               ))}
               {!events.length && (
-                <TableRow><TableCell colSpan={4} className="text-muted-foreground">No events yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-muted-foreground">No events yet.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

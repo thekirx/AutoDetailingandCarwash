@@ -3,6 +3,7 @@ import { CalendarPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
+import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '@/lib/servicePricing'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,6 +16,10 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+
+function formatPeso(minor) {
+  return `₱${(Number(minor || 0) / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`
+}
 
 /**
  * Mobile / account booking sheet — same /api/public-book backend as /book.
@@ -37,6 +42,7 @@ export default function CustomerBookingModal({
     vehicle_plate: '',
     vehicle_make: '',
     vehicle_model: '',
+    vehicle_type: 'medium',
     scheduled_start: '',
     service_id: '',
     branch: '',
@@ -46,7 +52,7 @@ export default function CustomerBookingModal({
     if (!open) return
     supabase
       .from('services')
-      .select('id, name, price_minor')
+      .select('id, name, price_minor, service_size_prices(size_slug, price_minor)')
       .eq('is_active', true)
       .order('display_order')
       .then(({ data, error: svcError }) => {
@@ -56,7 +62,12 @@ export default function CustomerBookingModal({
           setServices([])
           return
         }
-        setServices(data || [])
+        setServices(
+          (data || []).map((row) => ({
+            ...row,
+            size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+          })),
+        )
       })
   }, [open])
 
@@ -73,6 +84,7 @@ export default function CustomerBookingModal({
       vehicle_plate: f.vehicle_plate || vehicles[0]?.plate_number || '',
       vehicle_make: f.vehicle_make || vehicles[0]?.vehicle_make || '',
       vehicle_model: f.vehicle_model || vehicles[0]?.vehicle_model || '',
+      vehicle_type: vehicles[0]?.vehicle_type || f.vehicle_type || 'medium',
     }))
   }, [open, profile, branches, vehicles])
 
@@ -88,11 +100,12 @@ export default function CustomerBookingModal({
       vehicle_plate: v.plate_number || '',
       vehicle_make: v.vehicle_make || '',
       vehicle_model: v.vehicle_model || '',
+      vehicle_type: v.vehicle_type || f.vehicle_type || 'medium',
     }))
   }
 
-  async function submit(event) {
-    event.preventDefault()
+  async function submit(e) {
+    e.preventDefault()
     setBusy(true)
     setError('')
     try {
@@ -116,6 +129,8 @@ export default function CustomerBookingModal({
       setBusy(false)
     }
   }
+
+  const selected = services.find((s) => s.id === form.service_id)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -176,23 +191,64 @@ export default function CustomerBookingModal({
             modelLabel="Model"
           />
           <div className="grid gap-1.5">
-            <Label htmlFor="book-when">Preferred date & time</Label>
-            <Input id="book-when" required type="datetime-local" className="min-h-11" value={form.scheduled_start} onChange={(e) => set('scheduled_start', e.target.value)} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="book-service">Service</Label>
-            <select id="book-service" required className="account-field" value={form.service_id} onChange={(e) => set('service_id', e.target.value)}>
-              <option value="">Select service</option>
-              {services.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
+            <Label htmlFor="book-size">Car size</Label>
+            <select
+              id="book-size"
+              required
+              className="account-field"
+              value={form.vehicle_type}
+              onChange={(e) => set('vehicle_type', e.target.value)}
+            >
+              {PRICING_SIZES.map((sz) => (
+                <option key={sz.slug} value={sz.slug}>
+                  {sz.label}
                 </option>
               ))}
             </select>
           </div>
           <div className="grid gap-1.5">
+            <Label htmlFor="book-when">Preferred date & time</Label>
+            <Input
+              id="book-when"
+              required
+              type="datetime-local"
+              className="min-h-11"
+              value={form.scheduled_start}
+              onChange={(e) => set('scheduled_start', e.target.value)}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="book-service">Service</Label>
+            <select
+              id="book-service"
+              required
+              className="account-field"
+              value={form.service_id}
+              onChange={(e) => set('service_id', e.target.value)}
+            >
+              <option value="">Select service</option>
+              {services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} · {formatSizePriceRange(s, formatPeso)}
+                </option>
+              ))}
+            </select>
+            {selected ? (
+              <p className="text-xs text-muted-foreground">
+                For {PRICING_SIZES.find((s) => s.slug === form.vehicle_type)?.label || form.vehicle_type}:{' '}
+                {formatPeso(resolveServicePriceMinor(selected, form.vehicle_type))}
+              </p>
+            ) : null}
+          </div>
+          <div className="grid gap-1.5">
             <Label htmlFor="book-branch">Branch</Label>
-            <select id="book-branch" required className="account-field" value={form.branch} onChange={(e) => set('branch', e.target.value)}>
+            <select
+              id="book-branch"
+              required
+              className="account-field"
+              value={form.branch}
+              onChange={(e) => set('branch', e.target.value)}
+            >
               <option value="">Select branch</option>
               {branches.map((b) => (
                 <option key={b.slug} value={b.slug}>

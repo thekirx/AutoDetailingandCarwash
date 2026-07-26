@@ -434,6 +434,8 @@ export default function PlanningBoardPage() {
   const [newCardTitle, setNewCardTitle] = useState('')
   const [labelPresets, setLabelPresets] = useState(FALLBACK_LABELS)
   const [checklistTemplates, setChecklistTemplates] = useState([])
+  const [calSources, setCalSources] = useState({ planning: true, forms: true, events: true, bookings: true })
+  const [calExtra, setCalExtra] = useState({ formSubs: [], meetEvents: [], bookings: [] })
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -483,23 +485,98 @@ export default function PlanningBoardPage() {
 
   const lists = useMemo(() => [...(board?.plan_lists || [])].sort(sortByPos), [board])
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const [subs, meets, books] = await Promise.all([
+        supabase
+          .from('ops_form_submissions')
+          .select('id, calendar_at, due_at, respondent_label, status, ops_forms ( name, kind )')
+          .or('calendar_at.not.is.null,due_at.not.is.null')
+          .limit(300),
+        supabase
+          .from('events')
+          .select('id, title, starts_at, ends_at, is_published, slug')
+          .order('starts_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('bookings')
+          .select('id, customer_name, scheduled_start, scheduled_end, status, branch, vehicle_plate')
+          .eq('is_archived', false)
+          .not('scheduled_start', 'is', null)
+          .order('scheduled_start', { ascending: false })
+          .limit(300),
+      ])
+      if (cancelled) return
+      setCalExtra({
+        formSubs: subs.error ? [] : subs.data || [],
+        meetEvents: meets.error ? [] : meets.data || [],
+        bookings: books.error ? [] : books.data || [],
+      })
+    })()
+    return () => { cancelled = true }
+  }, [tab])
+
   const calendarEvents = useMemo(() => {
-    const events = []
-    for (const list of lists) {
-      for (const card of list.plan_cards || []) {
-        if (!card.due_at) continue
-        const start = new Date(card.due_at)
-        events.push({
-          id: card.id,
-          title: card.title,
+    const out = []
+    if (calSources.planning) {
+      for (const list of lists) {
+        for (const card of list.plan_cards || []) {
+          if (!card.due_at) continue
+          const start = new Date(card.due_at)
+          out.push({
+            id: `plan-${card.id}`,
+            title: `[Plan] ${card.title}`,
+            start,
+            end: new Date(start.getTime() + 60 * 60_000),
+            resource: { type: 'planning', card },
+          })
+        }
+      }
+    }
+    if (calSources.forms) {
+      for (const s of calExtra.formSubs) {
+        const iso = s.calendar_at || s.due_at
+        if (!iso) continue
+        const start = new Date(iso)
+        out.push({
+          id: `form-${s.id}`,
+          title: `[Form] ${s.ops_forms?.name || 'Form'}: ${s.respondent_label || s.status}`,
           start,
           end: new Date(start.getTime() + 60 * 60_000),
-          resource: card,
+          resource: { type: 'form', submission: s },
         })
       }
     }
-    return events
-  }, [lists])
+    if (calSources.events) {
+      for (const ev of calExtra.meetEvents) {
+        if (!ev.starts_at) continue
+        const start = new Date(ev.starts_at)
+        const end = ev.ends_at ? new Date(ev.ends_at) : new Date(start.getTime() + 60 * 60_000)
+        out.push({
+          id: `event-${ev.id}`,
+          title: `[Event] ${ev.title}${ev.is_published ? '' : ' (draft)'}`,
+          start,
+          end,
+          resource: { type: 'event', event: ev },
+        })
+      }
+    }
+    if (calSources.bookings) {
+      for (const b of calExtra.bookings) {
+        const start = new Date(b.scheduled_start)
+        const end = b.scheduled_end ? new Date(b.scheduled_end) : new Date(start.getTime() + 60 * 60_000)
+        out.push({
+          id: `booking-${b.id}`,
+          title: `[Booking] ${b.customer_name}${b.vehicle_plate ? ` · ${b.vehicle_plate}` : ''}`,
+          start,
+          end,
+          resource: { type: 'booking', booking: b },
+        })
+      }
+    }
+    return out
+  }, [lists, calSources, calExtra])
 
   const moveCard = async (cardId, targetListId) => {
     if (!canEdit) return
@@ -585,7 +662,7 @@ export default function PlanningBoardPage() {
             {board.name}
           </h1>
           <p className="floor-desc mt-1 text-sm text-muted-foreground">
-            {canEdit ? 'Edit enabled' : 'View only'} — board, calendar, settings, forms & events.
+            {canEdit ? 'Edit enabled' : 'View only'} — board, filtered calendar, smart forms with share links, and events.
           </p>
         </div>
       </div>
@@ -721,7 +798,29 @@ export default function PlanningBoardPage() {
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-4">
-          <div className="min-h-[28rem] rounded-2xl border border-white/10 bg-[#0d1726] p-3 sm:p-4 [&_.rbc-calendar]:text-slate-200">
+          <div className="mb-3 flex flex-wrap gap-2">
+            {[
+              { key: 'planning', label: 'Planning cards' },
+              { key: 'forms', label: 'Form results' },
+              { key: 'events', label: 'Events' },
+              { key: 'bookings', label: 'Bookings' },
+            ].map((src) => (
+              <button
+                key={src.key}
+                type="button"
+                className={`min-h-10 cursor-pointer rounded-xl border px-3 text-sm font-medium transition ${
+                  calSources[src.key]
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-foreground hover:bg-muted'
+                }`}
+                aria-pressed={calSources[src.key]}
+                onClick={() => setCalSources((s) => ({ ...s, [src.key]: !s[src.key] }))}
+              >
+                {src.label}
+              </button>
+            ))}
+          </div>
+          <div className="min-h-[28rem] rounded-2xl border border-border bg-card p-3 text-foreground shadow-sm sm:p-4 [&_.rbc-toolbar]:mb-3 [&_.rbc-toolbar_button]:min-h-10 [&_.rbc-toolbar_button]:cursor-pointer [&_.rbc-toolbar_button]:rounded-md [&_.rbc-toolbar_button]:border [&_.rbc-toolbar_button]:border-border [&_.rbc-toolbar_button]:bg-background [&_.rbc-toolbar_button]:px-3 [&_.rbc-toolbar_button]:text-foreground [&_.rbc-header]:border-border [&_.rbc-header]:bg-muted/40 [&_.rbc-header]:py-2 [&_.rbc-header]:text-xs [&_.rbc-header]:font-semibold [&_.rbc-header]:text-muted-foreground [&_.rbc-off-range-bg]:bg-muted/30 [&_.rbc-today]:bg-primary/5 [&_.rbc-event]:border-0 [&_.rbc-event]:bg-primary [&_.rbc-event]:text-primary-foreground [&_.rbc-month-view]:rounded-xl [&_.rbc-month-view]:border [&_.rbc-month-view]:border-border [&_.rbc-day-bg]:border-border [&_.rbc-month-row]:border-border">
             <BigCalendar
               localizer={localizer}
               events={calendarEvents}
@@ -729,8 +828,15 @@ export default function PlanningBoardPage() {
               views={[Views.MONTH, Views.WEEK, Views.AGENDA]}
               style={{ minHeight: 420 }}
               onSelectEvent={(ev) => {
-                const card = lists.flatMap((l) => l.plan_cards || []).find((c) => c.id === ev.id)
-                if (card) setActiveCard(card)
+                if (ev.resource?.type === 'planning' && ev.resource.card) setActiveCard(ev.resource.card)
+                else if (ev.resource?.type === 'event' && ev.resource.event?.slug) {
+                  window.open(`/events/${ev.resource.event.slug}`, '_blank', 'noopener,noreferrer')
+                } else if (ev.resource?.type === 'form') {
+                  setTab('forms')
+                  toast.message('Open Forms → Results to manage this submission')
+                } else if (ev.resource?.type === 'booking') {
+                  toast.message(`Booking · ${ev.resource.booking?.status || 'scheduled'}`)
+                }
               }}
             />
           </div>

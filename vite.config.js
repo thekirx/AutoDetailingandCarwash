@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { handleProvisionRequest } from './server/provisionCustomer.mjs'
-import { handleProvisionStaffRequest } from './server/provisionStaff.mjs'
+import { handleProvisionStaffRequest, handleUpdateStaffRequest } from './server/provisionStaff.mjs'
 import { handleCustomerPortalRequest } from './server/customerPortal.mjs'
 import { handlePublicBookRequest } from './server/publicBook.mjs'
 import { handleBookingStatusRequest } from './server/bookingStatus.mjs'
@@ -62,6 +62,7 @@ function provisionApiPlugin() {
 
       mount('/api/provision-customer', handleProvisionRequest)
       mount('/api/provision-staff', handleProvisionStaffRequest)
+      mount('/api/update-staff', handleUpdateStaffRequest)
       mount('/api/customer-portal', handleCustomerPortalRequest)
       mount('/api/customer-signup', async (req, res, helpers) => {
         const { handleCustomerSignupRequest } = await import('./server/customerSignup.mjs')

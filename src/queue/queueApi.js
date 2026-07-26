@@ -18,6 +18,7 @@ import {
   validateCrewUsername,
 } from './queueLogic'
 import { writeAudit } from '../lib/audit'
+import { resolveServicePriceMinor } from '../lib/servicePricing'
 
 export const QUEUE_BOARD_SELECT = `
   booking_id,
@@ -140,7 +141,7 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
   const staffPoolQuery = scopedStaffQuery(
     supabase
       .from('staff_profiles')
-      .select('id, full_name, role, branch_slug, phone, is_active, username')
+      .select('id, full_name, role, branch_slug, phone, is_active, username, login_email')
       .eq('role', 'staff')
       .eq('is_active', true),
     branchScope,
@@ -236,10 +237,18 @@ export async function fetchTicket(bookingId, profile) {
 }
 
 export async function fetchServices() {
-  const services = await supabase.from('services').select('id, name, price_minor, duration_minutes').eq('is_active', true).eq('is_archived', false).order('display_order')
+  const services = await supabase
+    .from('services')
+    .select('id, name, price_minor, duration_minutes, service_size_prices(size_slug, price_minor)')
+    .eq('is_active', true)
+    .eq('is_archived', false)
+    .order('display_order')
   const error = services.error
   if (error) throw error
-  return services.data || []
+  return (services.data || []).map((row) => ({
+    ...row,
+    size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+  }))
 }
 
 export async function fetchBranches() {
@@ -250,43 +259,41 @@ export async function fetchBranches() {
 
 export async function addStaffMember(form, profile) {
   const currentProfile = await getCurrentProfile({ required: true })
-  const branchSlug = profile?.role === 'BossMich' ? form.branch_slug : getBranchScope(profile)
-  if (!branchSlug) throw new Error('Your Team Lead account has no assigned branch. Please contact BossMich.')
+  const branchSlug =
+    profile?.role === 'BossMich' || profile?.role === 'assistant_super_admin'
+      ? form.branch_slug
+      : getBranchScope(profile)
+  if (!branchSlug) throw new Error('Your account has no assigned branch. Please contact BossMich.')
   const username = validateCrewUsername(form.username)
   const name = String(form.full_name || '').trim()
+  const email = String(form.email || '').trim().toLowerCase()
   if (!name) throw new Error('Staff name is required.')
+  if (!email || !email.includes('@')) throw new Error('Valid email is required.')
 
-  const { data, error } = await supabase
-    .from('staff_profiles')
-    .insert({
-      full_name: name,
-      username,
-      role: 'staff',
-      branch_slug: branchSlug,
-      phone: form.phone?.trim() || null,
-      is_active: true,
-    })
-    .select('id')
-    .single()
+  const { provisionStaff } = await import('../lib/adminApi.js')
+  const provisioned = await provisionStaff({
+    email,
+    full_name: name,
+    phone: form.phone?.trim() || null,
+    username,
+    temporary_password: form.password?.trim() || form.temporary_password?.trim() || undefined,
+    role: 'staff',
+    branch_slug: branchSlug,
+    branch_slugs: [branchSlug],
+  })
 
-  if (error) {
-    console.error('Unable to add staff member', error)
-    if (/staff_profiles_username|duplicate key|unique/i.test(error.message || '')) {
-      throw new Error('That username is already taken.')
-    }
-    throw formatQueueActionError(error)
-  }
-
+  const staffId = provisioned.user_id
   const { error: attendanceError } = await supabase
     .from('staff_attendance')
     .upsert({
-      staff_id: data.id,
+      staff_id: staffId,
       branch_slug: branchSlug,
       attendance_date: getTodayDate(),
       status: form.present_today ? 'present' : 'absent',
       checked_in_at: form.present_today ? new Date().toISOString() : null,
       checked_out_at: form.present_today ? null : new Date().toISOString(),
       marked_by: currentProfile.id,
+      source: 'admin',
     }, { onConflict: 'staff_id,attendance_date' })
 
   if (attendanceError) {
@@ -294,7 +301,7 @@ export async function addStaffMember(form, profile) {
     throw formatQueueActionError(attendanceError)
   }
 
-  return data
+  return { id: staffId }
 }
 
 export async function setStaffAttendance(member, status, profile) {
@@ -321,33 +328,19 @@ export async function setStaffAttendance(member, status, profile) {
   }
 }
 
-export async function updateCrewStaffMember(memberId, { full_name, phone, username }) {
-  const name = String(full_name || '').trim()
+export async function updateCrewStaffMember(memberId, patch) {
   if (!memberId) throw new Error('Staff id is required.')
-  if (!name) throw new Error('Staff name is required.')
-  const patch = {
-    full_name: name,
-    phone: phone?.trim() || null,
-    updated_at: new Date().toISOString(),
+  const { updateStaffAccountFields } = await import('../lib/adminApi.js')
+  const body = {
+    id: memberId,
+    full_name: patch.full_name,
+    phone: patch.phone,
+    username: patch.username,
   }
-  if (username != null) {
-    patch.username = validateCrewUsername(username)
-  }
-  const { data, error } = await supabase
-    .from('staff_profiles')
-    .update(patch)
-    .eq('id', memberId)
-    .eq('role', 'staff')
-    .select('id')
-    .maybeSingle()
-  if (error) {
-    if (/staff_profiles_username|duplicate key|unique/i.test(error.message || '')) {
-      throw new Error('That username is already taken.')
-    }
-    throw formatQueueActionError(error)
-  }
-  if (!data) throw new Error('Staff member not found or not editable.')
-  return data
+  if (patch.branch_slug) body.branch_slug = patch.branch_slug
+  if (patch.email?.trim()) body.email = patch.email.trim()
+  if (patch.password?.trim()) body.temporary_password = patch.password.trim()
+  return updateStaffAccountFields(body)
 }
 
 export async function deactivateCrewStaffMember(memberId) {
@@ -559,10 +552,11 @@ export async function createQueueTicket(form) {
   for (let i = 0; i < serviceIds.length; i += 1) {
     const serviceId = serviceIds[i]
     const service = form.services.find((item) => item.id === serviceId)
+    const sizedPrice = resolveServicePriceMinor(service, vehicleType)
     const linePrice =
       serviceIds.length === 1 && form.final_price
         ? parsePesoInputToMinor(form.final_price)
-        : service?.price_minor || 0
+        : sizedPrice || 0
     const row = {
       ...shared,
       service_id: serviceId,

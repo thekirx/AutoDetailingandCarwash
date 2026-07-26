@@ -1,12 +1,14 @@
 /**
  * Server-only ops account provisioning (service role).
- * BossMich may create admin + assistant_super_admin + crew; admin/assistant may create TL/staff.
+ * BossMich may create admin + assistant_super_admin + crew; admin/assistant may create TL/staff;
+ * team_lead may create staff for their own branch.
  */
 import { createClient } from '@supabase/supabase-js'
 
 const SUPER = 'BossMich'
 const ASSISTANT = 'assistant_super_admin'
 const ADMIN = 'admin'
+const TEAM_LEAD = 'team_lead'
 
 /** Roles a caller may assign. */
 export function creatableRolesFor(callerRole) {
@@ -15,6 +17,9 @@ export function creatableRolesFor(callerRole) {
   }
   if (callerRole === ADMIN || callerRole === ASSISTANT) {
     return ['team_lead', 'staff']
+  }
+  if (callerRole === TEAM_LEAD) {
+    return ['staff']
   }
   return []
 }
@@ -30,7 +35,17 @@ function randomTempPassword() {
   return `Hakum-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}!`
 }
 
-async function assertAdminCaller(admin, accessToken) {
+function normalizeUsername(raw) {
+  const username = String(raw || '').trim().toLowerCase()
+  if (!username) return null
+  if (username.length < 3) throw Object.assign(new Error('Username must be at least 3 characters.'), { status: 400 })
+  if (!/^[a-z0-9._-]+$/.test(username)) {
+    throw Object.assign(new Error('Username may only use letters, numbers, dots, underscores, or hyphens.'), { status: 400 })
+  }
+  return username
+}
+
+async function assertStaffManagerCaller(admin, accessToken) {
   if (!accessToken) throw Object.assign(new Error('Unauthorized'), { status: 401 })
   const { data: userData, error: userError } = await admin.auth.getUser(accessToken)
   if (userError || !userData?.user) throw Object.assign(new Error('Unauthorized'), { status: 401 })
@@ -43,8 +58,8 @@ async function assertAdminCaller(admin, accessToken) {
     .maybeSingle()
 
   if (error) throw error
-  if (!staff || ![SUPER, ADMIN, ASSISTANT].includes(staff.role)) {
-    throw Object.assign(new Error('Only Super Admin, Assistant Super Admin, or Admin may create staff accounts.'), { status: 403 })
+  if (!staff || ![SUPER, ADMIN, ASSISTANT, TEAM_LEAD].includes(staff.role)) {
+    throw Object.assign(new Error('Only Super Admin, Assistant Super Admin, Admin, or Team Lead may manage staff accounts.'), { status: 403 })
   }
   return { user: userData.user, staff }
 }
@@ -54,12 +69,13 @@ async function assertAdminCaller(admin, accessToken) {
  */
 export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
   const admin = adminClient()
-  const { staff: caller } = await assertAdminCaller(admin, accessToken)
+  const { staff: caller } = await assertStaffManagerCaller(admin, accessToken)
 
   const email = String(body.email || '').trim().toLowerCase()
   const fullName = String(body.full_name || '').trim()
   const role = String(body.role || '').trim()
   const phone = String(body.phone || '').trim() || null
+  const username = normalizeUsername(body.username)
   if (phone) {
     const digits = phone.replace(/\D/g, '')
     if (digits.length < 10) {
@@ -80,10 +96,10 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
     throw Object.assign(new Error(`You cannot create role "${role}". Allowed: ${allowed.join(', ')}`), { status: 403 })
   }
 
-  // Branch admins can only provision into their own site
-  if (caller.role === ADMIN) {
+  // Branch admins / TLs can only provision into their own site
+  if (caller.role === ADMIN || caller.role === TEAM_LEAD) {
     if (!caller.branch_slug) {
-      throw Object.assign(new Error('Your admin account has no branch. Ask Super Admin to assign one.'), { status: 403 })
+      throw Object.assign(new Error('Your account has no branch. Ask Super Admin to assign one.'), { status: 403 })
     }
     branchSlug = caller.branch_slug
     branchSlugs.length = 0
@@ -148,6 +164,8 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
       role,
       branch_slug: role === SUPER || role === ASSISTANT ? null : branchSlug,
       phone,
+      username,
+      login_email: email,
       permission_grants: role === ASSISTANT ? permissionGrants : {},
       is_active: true,
       is_archived: false,
@@ -192,6 +210,111 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
   }
 }
 
+/**
+ * Update crew profile + optional auth email/password (service role).
+ * Body: { id, full_name?, phone?, username?, branch_slug?, email?, temporary_password? }
+ */
+export async function updateStaffAccount({ accessToken, body }) {
+  const admin = adminClient()
+  const { staff: caller } = await assertStaffManagerCaller(admin, accessToken)
+  const id = String(body.id || '').trim()
+  if (!id) throw Object.assign(new Error('Staff id is required.'), { status: 400 })
+
+  const { data: target, error: targetErr } = await admin
+    .from('staff_profiles')
+    .select('id, role, branch_slug, full_name, phone, username, login_email')
+    .eq('id', id)
+    .maybeSingle()
+  if (targetErr) throw targetErr
+  if (!target) throw Object.assign(new Error('Staff not found.'), { status: 404 })
+  if (target.role === SUPER) throw Object.assign(new Error('Cannot edit Super Admin via this endpoint.'), { status: 403 })
+
+  if (caller.role === TEAM_LEAD) {
+    if (target.role !== 'staff') throw Object.assign(new Error('Team Lead may only edit staff.'), { status: 403 })
+    if (!caller.branch_slug || target.branch_slug !== caller.branch_slug) {
+      throw Object.assign(new Error('Staff is outside your branch.'), { status: 403 })
+    }
+  }
+  if (caller.role === ADMIN) {
+    if (!caller.branch_slug) throw Object.assign(new Error('Your admin account has no branch.'), { status: 403 })
+    if (target.branch_slug && target.branch_slug !== caller.branch_slug) {
+      const { data: assign } = await admin
+        .from('staff_branch_assignments')
+        .select('branch_slug')
+        .eq('staff_id', id)
+        .eq('branch_slug', caller.branch_slug)
+        .maybeSingle()
+      if (!assign) {
+        throw Object.assign(new Error('Staff is outside your branch.'), { status: 403 })
+      }
+    }
+  }
+
+  const patch = { updated_at: new Date().toISOString() }
+  if (body.full_name != null) {
+    const name = String(body.full_name).trim()
+    if (!name) throw Object.assign(new Error('Full name is required.'), { status: 400 })
+    patch.full_name = name
+  }
+  if (body.phone !== undefined) {
+    const phone = String(body.phone || '').trim() || null
+    if (phone) {
+      const digits = phone.replace(/\D/g, '')
+      if (digits.length < 10) throw Object.assign(new Error('Phone must have at least 10 digits.'), { status: 400 })
+    }
+    patch.phone = phone
+  }
+  if (body.username !== undefined) {
+    patch.username = normalizeUsername(body.username)
+  }
+
+  let branchSlug = body.branch_slug != null ? String(body.branch_slug).trim().toLowerCase() || null : undefined
+  if (branchSlug !== undefined) {
+    if (caller.role === TEAM_LEAD || caller.role === ADMIN) {
+      branchSlug = caller.branch_slug
+    }
+    if (branchSlug) {
+      const { data: branch } = await admin
+        .from('branches')
+        .select('slug')
+        .eq('slug', branchSlug)
+        .eq('is_active', true)
+        .eq('is_archived', false)
+        .maybeSingle()
+      if (!branch) throw Object.assign(new Error('Branch not found or inactive.'), { status: 400 })
+    }
+    patch.branch_slug = branchSlug
+  }
+
+  const email = body.email != null ? String(body.email).trim().toLowerCase() : ''
+  const password = body.temporary_password != null ? String(body.temporary_password).trim() : ''
+  if (email || password) {
+    const authPatch = {}
+    if (email) {
+      if (!email.includes('@')) throw Object.assign(new Error('Valid email is required.'), { status: 400 })
+      authPatch.email = email
+      patch.login_email = email
+    }
+    if (password) {
+      if (password.length < 8) throw Object.assign(new Error('Password must be at least 8 characters.'), { status: 400 })
+      authPatch.password = password
+    }
+    const { error: authErr } = await admin.auth.admin.updateUserById(id, authPatch)
+    if (authErr) throw Object.assign(new Error(authErr.message), { status: 400 })
+  }
+
+  const { data, error } = await admin.from('staff_profiles').update(patch).eq('id', id).select().maybeSingle()
+  if (error) throw Object.assign(new Error(error.message), { status: 400 })
+  if (!data) throw Object.assign(new Error('Staff not found.'), { status: 404 })
+
+  if (patch.branch_slug && ['admin', 'team_lead', 'staff', 'marketing'].includes(data.role)) {
+    await admin.from('staff_branch_assignments').delete().eq('staff_id', id)
+    await admin.from('staff_branch_assignments').insert({ staff_id: id, branch_slug: patch.branch_slug })
+  }
+
+  return data
+}
+
 export async function handleProvisionStaffRequest(req, res, { siteOrigin, getBody, getAccessToken }) {
   try {
     if (req.method === 'OPTIONS') {
@@ -211,6 +334,31 @@ export async function handleProvisionStaffRequest(req, res, { siteOrigin, getBod
       body,
       siteOrigin: siteOrigin || body.site_origin || 'http://localhost:5173',
     })
+    res.statusCode = 200
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify(result))
+  } catch (err) {
+    res.statusCode = err.status || 500
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ error: err.message || String(err) }))
+  }
+}
+
+export async function handleUpdateStaffRequest(req, res, { getBody, getAccessToken }) {
+  try {
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204
+      res.end()
+      return
+    }
+    if (req.method !== 'POST') {
+      res.statusCode = 405
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ error: 'Method not allowed' }))
+      return
+    }
+    const body = await getBody()
+    const result = await updateStaffAccount({ accessToken: getAccessToken(), body })
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify(result))

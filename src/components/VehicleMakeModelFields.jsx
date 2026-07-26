@@ -46,6 +46,7 @@ function makesFromMap(map) {
 /**
  * Brand + model smart search for PH market.
  * Prefers Super Admin vehicle_catalog when present; else static PH_VEHICLE_CATALOG.
+ * Subscribes to realtime so TL/floor pickers see BossMich catalog edits without refresh.
  */
 export default function VehicleMakeModelFields({
   make,
@@ -61,11 +62,22 @@ export default function VehicleMakeModelFields({
 
   useEffect(() => {
     let alive = true
-    loadCatalogMap().then((map) => {
-      if (alive && map) setDbMap(map)
-    })
+    function apply(map) {
+      if (alive) setDbMap(map)
+    }
+    loadCatalogMap().then(apply)
+
+    const channel = supabase
+      .channel(`vehicle-catalog-picker:${crypto.randomUUID()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicle_catalog' }, () => {
+        clearVehicleCatalogCache()
+        loadCatalogMap().then(apply)
+      })
+      .subscribe()
+
     return () => {
       alive = false
+      supabase.removeChannel(channel)
     }
   }, [])
 

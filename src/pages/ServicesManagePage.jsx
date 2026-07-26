@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageServices } from '@/auth/permissions'
 import { archiveService, createService, listServices, updateService } from '@/lib/adminApi'
+import { formatSizePriceRange, PRICING_SIZES, sizePricesFromService, emptySizePriceForm } from '@/lib/servicePricing'
 import { formatMoney } from '@/queue/queueApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,7 +24,38 @@ const PAY_CATEGORIES = [
   { value: 'addon', label: 'Add-on' },
 ]
 
-const empty = { name: '', price: '', slug: '', display_order: '0', pay_category: 'general' }
+const empty = {
+  name: '',
+  slug: '',
+  display_order: '0',
+  pay_category: 'general',
+  size_prices: emptySizePriceForm(''),
+}
+
+function SizePriceFields({ value, onChange }) {
+  return (
+    <div className="md:col-span-2 space-y-2">
+      <Label>Pricing by car size *</Label>
+      <p className="text-xs text-muted-foreground">Small · Medium · Large · Extra Large (₱)</p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {PRICING_SIZES.map((size) => (
+          <div key={size.slug} className="flex flex-col gap-1">
+            <Label className="text-xs font-medium">{size.label}</Label>
+            <Input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={value[size.slug] ?? ''}
+              onChange={(e) => onChange({ ...value, [size.slug]: e.target.value })}
+              placeholder="0.00"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function ServicesManagePage({ embedded = false }) {
   const { profile } = useAuth()
@@ -53,7 +85,11 @@ export default function ServicesManagePage({ embedded = false }) {
     event.preventDefault()
     setSaving(true)
     try {
-      await createService(form)
+      await createService({
+        ...form,
+        price: form.size_prices.medium,
+        size_prices: form.size_prices,
+      })
       toast.success('Service created')
       setForm(empty)
       await load()
@@ -72,7 +108,8 @@ export default function ServicesManagePage({ embedded = false }) {
       await updateService(editing.id, {
         name: editing.name,
         slug: editing.slug,
-        price: editing.price,
+        price: editing.size_prices.medium,
+        size_prices: editing.size_prices,
         pay_category: editing.pay_category,
         display_order: editing.display_order,
         is_active: editing.is_active,
@@ -93,6 +130,7 @@ export default function ServicesManagePage({ embedded = false }) {
         name: row.name,
         slug: row.slug,
         price: Number(row.price_minor) / 100,
+        size_prices: sizePricesFromService(row),
         pay_category: row.pay_category || 'general',
         display_order: row.display_order,
         is_active: !row.is_active,
@@ -121,46 +159,67 @@ export default function ServicesManagePage({ embedded = false }) {
         <div>
           <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Catalog</p>
           <h1 className="text-3xl font-semibold tracking-tight">Service management</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Category, name, price, and status. Duration removed from UI (legacy calendar uses default).</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Category, name, and prices by car size (Small · Medium · Large · Extra Large). Super Admin and Assistant Super Admin.
+          </p>
         </div>
       )}
       {embedded && (
-        <p className="text-sm text-muted-foreground">Category · name · price · status. Pay category feeds future crew pay bands.</p>
+        <p className="text-sm text-muted-foreground">
+          Set a price for each car size. Queue and POS use the selected size automatically.
+        </p>
       )}
       <Card>
         <CardHeader>
           <CardTitle>Add service</CardTitle>
-          <CardDescription>No duration field — keep pricing and category only.</CardDescription>
+          <CardDescription>Required: pricing by car size for Small, Medium, Large, and Extra Large.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onCreate} className="grid gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-2"><Label>Name</Label><Input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="flex flex-col gap-2"><Label>Slug</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} placeholder="auto-from-name" /></div>
-            <div className="flex flex-col gap-2"><Label>Price (₱)</Label><Input required type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
+            <div className="flex flex-col gap-2">
+              <Label>Name</Label>
+              <Input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Slug</Label>
+              <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} placeholder="auto-from-name" />
+            </div>
             <div className="flex flex-col gap-2">
               <Label>Category</Label>
               <Select value={form.pay_category} onValueChange={(pay_category) => setForm({ ...form, pay_category })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {PAY_CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" className="md:col-span-2" disabled={saving}>{saving ? 'Saving…' : 'Create service'}</Button>
+            <SizePriceFields
+              value={form.size_prices}
+              onChange={(size_prices) => setForm({ ...form, size_prices })}
+            />
+            <Button type="submit" className="md:col-span-2" disabled={saving}>
+              {saving ? 'Saving…' : 'Create service'}
+            </Button>
           </form>
         </CardContent>
       </Card>
       <Card>
-        <CardHeader><CardTitle>Services</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Services</CardTitle>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
+                <TableHead>Price by size</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -172,8 +231,19 @@ export default function ServicesManagePage({ embedded = false }) {
                     <div className="font-medium">{s.name}</div>
                     <div className="text-xs text-muted-foreground">{s.slug}</div>
                   </TableCell>
-                  <TableCell><Badge variant="outline">{s.pay_category || 'general'}</Badge></TableCell>
-                  <TableCell>{formatMoney(s.price_minor)}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{s.pay_category || 'general'}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm tabular-nums">{formatSizePriceRange(s, formatMoney)}</div>
+                    <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-muted-foreground">
+                      {PRICING_SIZES.map((sz) => (
+                        <span key={sz.slug}>
+                          {sz.label[0]} {formatMoney(s.size_prices?.[sz.slug] ?? s.price_minor)}
+                        </span>
+                      ))}
+                    </div>
+                  </TableCell>
                   <TableCell>{s.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -183,7 +253,7 @@ export default function ServicesManagePage({ embedded = false }) {
                         onClick={() =>
                           setEditing({
                             ...s,
-                            price: String(Number(s.price_minor) / 100),
+                            size_prices: sizePricesFromService(s),
                             pay_category: s.pay_category || 'general',
                           })
                         }
@@ -193,7 +263,9 @@ export default function ServicesManagePage({ embedded = false }) {
                       <Button size="sm" variant="ghost" onClick={() => toggleActive(s)}>
                         {s.is_active ? 'Deactivate' : 'Activate'}
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => onArchive(s.id)}>Archive</Button>
+                      <Button size="sm" variant="ghost" onClick={() => onArchive(s.id)}>
+                        Archive
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -206,26 +278,45 @@ export default function ServicesManagePage({ embedded = false }) {
       <VehicleSizesPanel />
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Edit service</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit service</DialogTitle>
+          </DialogHeader>
           {editing && (
             <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2"><Label>Name</Label><Input required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
-              <div className="flex flex-col gap-2"><Label>Price (₱)</Label><Input required type="number" min="0" step="0.01" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} /></div>
+              <div className="flex flex-col gap-2">
+                <Label>Name</Label>
+                <Input required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+              </div>
               <div className="flex flex-col gap-2">
                 <Label>Category</Label>
-                <Select value={editing.pay_category || 'general'} onValueChange={(pay_category) => setEditing({ ...editing, pay_category })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={editing.pay_category || 'general'}
+                  onValueChange={(pay_category) => setEditing({ ...editing, pay_category })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {PAY_CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+              <SizePriceFields
+                value={editing.size_prices}
+                onChange={(size_prices) => setEditing({ ...editing, size_prices })}
+              />
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-                <Button type="submit" disabled={saving}>Save</Button>
+                <Button type="button" variant="outline" onClick={() => setEditing(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  Save
+                </Button>
               </DialogFooter>
             </form>
           )}

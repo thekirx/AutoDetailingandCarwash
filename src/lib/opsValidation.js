@@ -55,7 +55,7 @@ export function validateBranchInput(
   }
 }
 
-export function validateServiceInput({ name, slug, price, duration_minutes, display_order, pay_category }) {
+export function validateServiceInput({ name, slug, price, duration_minutes, display_order, pay_category, size_prices }) {
   const errors = []
   const trimmedName = String(name || '').trim()
   if (!trimmedName) errors.push('Service name is required.')
@@ -68,8 +68,27 @@ export function validateServiceInput({ name, slug, price, duration_minutes, disp
     errors.push('Service slug must be lowercase and URL-safe.')
   }
 
-  const priceNum = Number(price)
-  if (!Number.isFinite(priceNum) || priceNum < 0) errors.push('Price must be a number 0 or greater.')
+  const SIZE_SLUGS = ['small', 'medium', 'large', 'extra_large']
+  const sizePriceMinor = {}
+  let hasSizeMatrix = size_prices && typeof size_prices === 'object'
+
+  if (hasSizeMatrix) {
+    for (const size of SIZE_SLUGS) {
+      const raw = size_prices[size]
+      const n = Number(raw)
+      if (!Number.isFinite(n) || n < 0) {
+        errors.push(`Price for ${size.replace('_', ' ')} must be 0 or greater.`)
+        break
+      }
+      sizePriceMinor[size] = Math.round(n * 100)
+    }
+  }
+
+  // Compat: single `price` = Medium when matrix omitted
+  const priceNum = hasSizeMatrix ? sizePriceMinor.medium / 100 : Number(price)
+  if (!hasSizeMatrix && (!Number.isFinite(priceNum) || priceNum < 0)) {
+    errors.push('Price must be a number 0 or greater.')
+  }
 
   // ponytail: duration kept in DB for legacy calendar; UI no longer requires it
   let duration = Number(duration_minutes)
@@ -86,7 +105,15 @@ export function validateServiceInput({ name, slug, price, duration_minutes, disp
   return {
     name: trimmedName,
     slug: normalizedSlug,
-    price_minor: Math.round(priceNum * 100),
+    price_minor: Math.round(Number(priceNum) * 100),
+    size_price_minor: hasSizeMatrix
+      ? sizePriceMinor
+      : {
+          small: Math.round(priceNum * 100),
+          medium: Math.round(priceNum * 100),
+          large: Math.round(priceNum * 100),
+          extra_large: Math.round(priceNum * 100),
+        },
     duration_minutes: duration,
     display_order: order,
     pay_category: category,

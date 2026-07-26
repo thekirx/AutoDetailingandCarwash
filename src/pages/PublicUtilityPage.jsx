@@ -3,7 +3,12 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { usePublicBranches } from '../lib/branches'
 import { supabase } from '../lib/supabase'
+import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '../lib/servicePricing'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
+
+function formatPeso(minor) {
+  return `₱${(Number(minor || 0) / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`
+}
 
 export function QueuePage() {
   const { branches, loading, error } = usePublicBranches()
@@ -48,6 +53,7 @@ export function BookingPage() {
     vehicle_plate: '',
     vehicle_make: '',
     vehicle_model: '',
+    vehicle_type: 'medium',
     scheduled_start: '',
     service_id: '',
     branch: '',
@@ -56,10 +62,21 @@ export function BookingPage() {
   useEffect(() => {
     supabase
       .from('services')
-      .select('id, name, price_minor')
+      .select('id, name, price_minor, service_size_prices(size_slug, price_minor)')
       .eq('is_active', true)
       .order('display_order')
-      .then(({ data, error: e }) => (e ? setError(e.message) : setServices(data ?? [])))
+      .then(({ data, error: e }) => {
+        if (e) {
+          setError(e.message)
+          return
+        }
+        setServices(
+          (data || []).map((row) => ({
+            ...row,
+            size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+          })),
+        )
+      })
   }, [])
 
   useEffect(() => {
@@ -116,6 +133,7 @@ export function BookingPage() {
           vehicle_plate: form.vehicle_plate,
           vehicle_make: form.vehicle_make,
           vehicle_model: form.vehicle_model,
+          vehicle_type: form.vehicle_type,
           scheduled_start: form.scheduled_start,
           service_id: form.service_id,
           branch: form.branch,
@@ -173,13 +191,33 @@ export function BookingPage() {
             makeLabel="Vehicle brand"
             modelLabel="Vehicle model"
           />
+          <label>
+            Car size
+            <select required value={form.vehicle_type} onChange={update('vehicle_type')}>
+              {PRICING_SIZES.map((sz) => (
+                <option key={sz.slug} value={sz.slug}>
+                  {sz.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>Preferred date & time<input required type="datetime-local" value={form.scheduled_start} onChange={update('scheduled_start')} /></label>
           <label>
             Service
             <select required value={form.service_id} onChange={update('service_id')}>
               <option value="">Select service</option>
-              {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} · {formatSizePriceRange(s, formatPeso)}
+                </option>
+              ))}
             </select>
+            {form.service_id ? (
+              <span className="field-hint">
+                {PRICING_SIZES.find((s) => s.slug === form.vehicle_type)?.label}:{' '}
+                {formatPeso(resolveServicePriceMinor(services.find((s) => s.id === form.service_id), form.vehicle_type))}
+              </span>
+            ) : null}
           </label>
           <label>
             Branch

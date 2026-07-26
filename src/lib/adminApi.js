@@ -218,15 +218,58 @@ export async function provisionStaff(payload) {
   return body
 }
 
+/** Update crew login + profile (email/password/branch via service role). */
+export async function updateStaffAccountFields(payload) {
+  if (!payload?.id) throw new Error('Staff id is required.')
+  const token = await getAccessTokenFresh()
+  if (!token) throw new Error('Sign in required.')
+  const res = await fetch('/api/update-staff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(body.error || 'Unable to update staff account.')
+  await writeAudit({
+    action: 'update',
+    entityType: 'staff_profile',
+    entityId: payload.id,
+    summary: `Updated staff account ${body.full_name || payload.id}`,
+    meta: {
+      email: payload.email || undefined,
+      branch_slug: payload.branch_slug || undefined,
+      password_set: Boolean(payload.temporary_password),
+    },
+  })
+  return body
+}
+
 export async function listServices({ includeArchived = false } = {}) {
   let q = supabase
     .from('services')
-    .select('id, name, slug, description, price_minor, duration_minutes, pay_category, is_active, is_archived, display_order, loyalty_weight')
+    .select(
+      'id, name, slug, description, price_minor, duration_minutes, pay_category, is_active, is_archived, display_order, loyalty_weight, service_size_prices(size_slug, price_minor)',
+    )
     .order('display_order')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
   if (error) throw mapDbError(error)
-  return data || []
+  return (data || []).map((row) => ({
+    ...row,
+    size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+  }))
+}
+
+async function upsertServiceSizePrices(serviceId, sizePriceMinor) {
+  if (!serviceId || !sizePriceMinor) return
+  const rows = Object.entries(sizePriceMinor).map(([size_slug, price_minor]) => ({
+    service_id: serviceId,
+    size_slug,
+    price_minor,
+    updated_at: new Date().toISOString(),
+  }))
+  const { error } = await supabase.from('service_size_prices').upsert(rows, { onConflict: 'service_id,size_slug' })
+  if (error) throw mapDbError(error)
 }
 
 export async function createService(payload) {
@@ -244,12 +287,13 @@ export async function createService(payload) {
   }
   const { data, error } = await supabase.from('services').insert(row).select().maybeSingle()
   if (error) throw mapDbError(error)
+  await upsertServiceSizePrices(data?.id, v.size_price_minor)
   await writeAudit({
     action: 'create',
     entityType: 'service',
     entityId: data?.id,
     summary: `Created service ${data?.name}`,
-    meta: { price_minor: data?.price_minor, pay_category: data?.pay_category },
+    meta: { price_minor: data?.price_minor, pay_category: data?.pay_category, size_prices: v.size_price_minor },
   })
   return data
 }
@@ -260,6 +304,7 @@ export async function updateService(id, payload) {
     name: payload.name,
     slug: payload.slug,
     price: payload.price,
+    size_prices: payload.size_prices,
     duration_minutes: payload.duration_minutes,
     display_order: payload.display_order,
     pay_category: payload.pay_category,
@@ -280,12 +325,13 @@ export async function updateService(id, payload) {
   const { data, error } = await supabase.from('services').update(patch).eq('id', id).select().maybeSingle()
   if (error) throw mapDbError(error)
   if (!data) throw new Error('Service not found.')
+  await upsertServiceSizePrices(id, v.size_price_minor)
   await writeAudit({
     action: 'update',
     entityType: 'service',
     entityId: id,
     summary: `Updated service ${data.name}`,
-    meta: { is_active: data.is_active, price_minor: data.price_minor },
+    meta: { is_active: data.is_active, price_minor: data.price_minor, size_prices: v.size_price_minor },
   })
   return data
 }

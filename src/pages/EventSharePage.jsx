@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { shareFormUrl } from '@/lib/opsForms'
 
 export default function EventSharePage() {
   const { slug } = useParams()
@@ -13,7 +14,7 @@ export default function EventSharePage() {
     if (!slug) return
     supabase
       .from('events')
-      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, is_published')
+      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, is_published, form_id, ops_forms ( id, name, slug, public_enabled, status )')
       .eq('slug', slug)
       .eq('is_published', true)
       .maybeSingle()
@@ -43,6 +44,9 @@ export default function EventSharePage() {
     setForm({ name: '', phone: '', email: '' })
   }
 
+  const attached = event?.ops_forms
+  const formOpen = attached?.slug && attached.public_enabled && attached.status === 'published'
+
   return (
     <>
       <section className="inner-hero">
@@ -66,6 +70,19 @@ export default function EventSharePage() {
               {event.description && <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{event.description}</p>}
               {event.ends_at && (
                 <p style={{ marginTop: 12, opacity: 0.8 }}>Ends {new Date(event.ends_at).toLocaleString()}</p>
+              )}
+              {formOpen && (
+                <p style={{ marginTop: 24, padding: 16, border: '1px solid var(--color-border-light, #e5e7eb)', borderRadius: 12 }}>
+                  This event has a form: <strong>{attached.name}</strong>
+                  <br />
+                  <Link className="dark-link" to={`/f/${attached.slug}`} style={{ display: 'inline-block', marginTop: 8 }}>
+                    Open form →
+                  </Link>
+                  {' '}
+                  <a className="dark-link" href={shareFormUrl(attached.slug)} style={{ marginLeft: 8 }}>
+                    Direct link
+                  </a>
+                </p>
               )}
               <form onSubmit={register} className="booking-form" style={{ marginTop: 32 }}>
                 <label>Name<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>

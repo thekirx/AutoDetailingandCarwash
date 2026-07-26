@@ -6,6 +6,7 @@ import { canAccessPos, canManageServices, canSeeAllBranches, isAdmin } from '@/a
 import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { buildPosSalePayload } from '@/lib/posSale'
+import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange } from '@/lib/servicePricing'
 import { supabase } from '@/lib/supabase'
 import { getBranchScope } from '@/queue/queueLogic'
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
@@ -45,6 +46,7 @@ export default function PosPage() {
   const [cart, setCart] = useState([])
   const [branch, setBranch] = useState(assignedBranch)
   const [branches, setBranches] = useState([])
+  const [carSize, setCarSize] = useState('medium')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [customerId, setCustomerId] = useState('')
   const [linkedCustomer, setLinkedCustomer] = useState(null)
@@ -68,12 +70,16 @@ export default function PosPage() {
     if (!branch) return
     const today = new Date().toISOString().slice(0, 10)
     const [svc, prod, stats, handoffRes] = await Promise.all([
-      supabase.from('services').select('id, name, price_minor').eq('is_active', true).eq('is_archived', false),
+      supabase
+        .from('services')
+        .select('id, name, price_minor, service_size_prices(size_slug, price_minor)')
+        .eq('is_active', true)
+        .eq('is_archived', false),
       supabase.from('products').select('id, name, price_minor, category, stock_qty, sku').eq('is_active', true).eq('is_archived', false),
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
       supabase
         .from('pos_handoffs')
-        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, vehicle_plate, service_id, final_price_minor, status, queue_number)')
+        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, vehicle_plate, service_id, final_price_minor, vehicle_type, status, queue_number)')
         .eq('status', 'pending')
         .eq('branch', branch)
         .order('created_at', { ascending: true }),
@@ -82,7 +88,12 @@ export default function PosPage() {
     if (prod.error) toast.error(prod.error.message)
     if (stats.error) toast.error(stats.error.message)
     if (handoffRes.error) toast.error(handoffRes.error.message)
-    setServices(svc.data || [])
+    setServices(
+      (svc.data || []).map((row) => ({
+        ...row,
+        size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+      })),
+    )
     setProducts(prod.data || [])
     setTodayStats(stats.data)
     setHandoffs(handoffRes.data || [])
@@ -122,16 +133,19 @@ export default function PosPage() {
   const serviceItems = useMemo(() => {
     const q = query.trim().toLowerCase()
     return (services || [])
-      .map((s) => ({
-        key: `service-${s.id}`,
-        item_type: 'service',
-        id: s.id,
-        name: s.name,
-        price_minor: s.price_minor,
-        meta: null,
-      }))
+      .map((s) => {
+        const price_minor = resolveServicePriceMinor(s, carSize)
+        return {
+          key: `service-${s.id}-${carSize}`,
+          item_type: 'service',
+          id: s.id,
+          name: s.name,
+          price_minor,
+          meta: `Size: ${PRICING_SIZES.find((x) => x.slug === carSize)?.label || carSize} · range ${formatSizePriceRange(s, formatMoney)}`,
+        }
+      })
       .filter((item) => !q || item.name.toLowerCase().includes(q))
-  }, [services, query])
+  }, [services, query, carSize])
 
   const merchItems = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -192,7 +206,12 @@ export default function PosPage() {
     const booking = row.bookings || {}
     const serviceId = booking.service_id
     const svc = services.find((s) => s.id === serviceId)
-    const amount = row.amount_minor ?? booking.final_price_minor ?? svc?.price_minor ?? 0
+    if (booking.vehicle_type) setCarSize(booking.vehicle_type)
+    const amount =
+      row.amount_minor ??
+      booking.final_price_minor ??
+      resolveServicePriceMinor(svc, booking.vehicle_type || carSize) ??
+      0
     const name = svc?.name || `Queue · ${booking.vehicle_plate || 'ticket'}`
     setActiveHandoff(row)
     if (!branchLocked) setBranch(row.branch || branch)
@@ -424,8 +443,8 @@ export default function PosPage() {
         </Card>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="relative min-w-[12rem] flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="min-h-11 pl-9"
@@ -434,6 +453,20 @@ export default function PosPage() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
+        {tab === 'services' && (
+          <Select value={carSize} onValueChange={setCarSize}>
+            <SelectTrigger className="min-h-11 w-full sm:w-48">
+              <SelectValue placeholder="Car size" />
+            </SelectTrigger>
+            <SelectContent>
+              {PRICING_SIZES.map((sz) => (
+                <SelectItem key={sz.slug} value={sz.slug}>
+                  {sz.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {branchLocked ? (
           <div className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 text-sm">
             <MapPin className="size-4 text-primary" aria-hidden />

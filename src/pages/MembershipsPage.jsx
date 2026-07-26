@@ -18,6 +18,7 @@ import {
   updateServiceLoyaltyWeight,
 } from '@/lib/adminApi'
 import { formatMoney } from '@/queue/queueApi'
+import { formatSizePriceRange } from '@/lib/servicePricing'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -382,7 +383,7 @@ export default function MembershipsPage() {
                   {services.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="font-medium">{row.name}</TableCell>
-                      <TableCell>{formatMoney(row.price_minor)}</TableCell>
+                      <TableCell>{formatSizePriceRange(row, formatMoney)}</TableCell>
                       <TableCell>
                         <Input
                           type="number"

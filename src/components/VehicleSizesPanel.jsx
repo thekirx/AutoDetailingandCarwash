@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
-import { isSuperAdmin } from '@/auth/permissions'
+import { canManageServices } from '@/auth/permissions'
 import { deactivateVehicleSize, listVehicleSizes, upsertVehicleSize } from '@/lib/adminApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 
 export default function VehicleSizesPanel() {
   const { profile } = useAuth()
-  const canEdit = isSuperAdmin(profile)
+  const canEdit = canManageServices(profile)
   const [rows, setRows] = useState([])
   const [form, setForm] = useState({ slug: '', label: '', sort_order: '0' })
   const [saving, setSaving] = useState(false)
@@ -50,7 +50,8 @@ export default function VehicleSizesPanel() {
       <CardHeader>
         <CardTitle>Vehicle sizes</CardTitle>
         <CardDescription>
-          Used on queue / booking forms. {canEdit ? 'Super Admin can CRUD.' : 'View only — ask Super Admin to edit.'}
+          Pricing sizes: Small · Medium · Large · Extra Large. Used on queue / POS / bookings.{' '}
+          {canEdit ? 'Super Admin and Assistant Super Admin can CRUD.' : 'View only.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

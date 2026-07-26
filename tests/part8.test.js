@@ -7,6 +7,7 @@ import {
   bookingCycleMinutes,
   compareBranchesByCompleted,
 } from '../src/lib/kpiPart8.js'
+import { normalizeCatalogPair } from '../src/lib/vehicleCatalog.js'
 
 describe('Part 8 KPI helpers', () => {
   it('computes cycle minutes and averages', () => {
@@ -43,5 +44,12 @@ describe('Part 8 audit detail', () => {
       }),
       /Deducted sales ₱10,000/,
     )
+  })
+})
+
+describe('Cars catalog edit normalize', () => {
+  it('trims make/model for update uniqueness', () => {
+    assert.deepEqual(normalizeCatalogPair('  Toyota  ', ' Vios '), { make: 'Toyota', model: 'Vios' })
+    assert.deepEqual(normalizeCatalogPair('', '  '), { make: '', model: '' })
   })
 })

@@ -222,13 +222,14 @@ export function normalizePlate(value = '') {
 }
 
 export function normalizeVehicleType(value) {
-  if (!value) return 'sedan'
-  const normalized = value.trim().toLowerCase()
+  if (!value) return 'medium'
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, '_')
   if (normalized === 'pick-up') return 'pickup'
   if (normalized === 'motorbike') return 'motorcycle'
-  // Allow vehicle_sizes.slug values from DB (sedan, suv, custom sizes)
-  if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)) return normalized
-  return 'sedan'
+  if (normalized === 'xl' || normalized === 'extra-large') return 'extra_large'
+  // Allow vehicle_sizes.slug values (small/medium/large/extra_large + legacy body styles)
+  if (/^[a-z0-9]+(?:[_-][a-z0-9]+)*$/.test(normalized)) return normalized.replace(/-/g, '_')
+  return 'medium'
 }
 
 export function hasValidTeamLeadBranch(profile) {

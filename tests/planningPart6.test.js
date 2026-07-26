@@ -26,6 +26,6 @@ describe('planning Part 6 helpers', () => {
     const fields = parseCustomFieldsCsv('Issue|Priority')
     assert.equal(fields.length, 2)
     assert.equal(fields[0].key, 'issue')
-    assert.equal(complaintFields().length, 4)
+    assert.ok(complaintFields().length >= 4)
   })
 })

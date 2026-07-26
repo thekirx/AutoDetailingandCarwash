@@ -18,7 +18,9 @@ import {
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 import { listVehicleSizes } from '../lib/adminApi'
+import { resolveServicePriceMinor } from '../lib/servicePricing'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
+import { CrewAttendancePanel, CrewSettingsPanel } from './crew/CrewAttendancePanels'
 import { splitCustomerName } from '../lib/phVehicles'
 import { canSeeAllBranches } from '../auth/permissions'
 import {
@@ -70,12 +72,10 @@ const statusTone = {
 }
 
 const FALLBACK_VEHICLE_TYPES = [
-  { label: 'Sedan', value: 'sedan' },
-  { label: 'SUV', value: 'suv' },
-  { label: 'Van', value: 'van' },
-  { label: 'Pickup', value: 'pickup' },
-  { label: 'Motorcycle', value: 'motorcycle' },
-  { label: 'Other', value: 'other' },
+  { label: 'Small', value: 'small' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'Large', value: 'large' },
+  { label: 'Extra Large', value: 'extra_large' },
 ]
 
 function PageHeader({ eyebrow, title, description, action }) {
@@ -543,7 +543,7 @@ export function NewQueueTicketPage() {
     vehicle_model: '',
     vehicle_year: '',
     vehicle_color: '',
-    vehicle_type: 'sedan',
+    vehicle_type: 'medium',
     service_ids: [],
     branch: assignedBranch || '',
     final_price: '',
@@ -554,6 +554,13 @@ export function NewQueueTicketPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [vehicleTypeOptions, setVehicleTypeOptions] = useState(FALLBACK_VEHICLE_TYPES)
+
+  function sumSelectedPrices(serviceRows, ids, sizeSlug) {
+    return ids.reduce((sum, id) => {
+      const svc = serviceRows.find((s) => s.id === id)
+      return sum + resolveServicePriceMinor(svc, sizeSlug)
+    }, 0)
+  }
 
   useEffect(() => {
     Promise.all([
@@ -572,12 +579,19 @@ export function NewQueueTicketPage() {
         if (sizes?.length) {
           setVehicleTypeOptions(sizes.map((s) => ({ label: s.label, value: s.slug })))
         }
+        const defaultSize = sizes?.some((s) => s.slug === 'medium')
+          ? 'medium'
+          : sizes?.[0]?.slug || 'medium'
+        const ids = firstService ? [firstService.id] : []
         setForm((current) => ({
           ...current,
           branch: assignedBranch || current.branch || branchRows[0]?.slug || '',
           services: serviceRows,
-          service_ids: firstService ? [firstService.id] : current.service_ids,
-          final_price: firstService ? String(firstService.price_minor / 100) : current.final_price,
+          service_ids: ids.length ? ids : current.service_ids,
+          vehicle_type: defaultSize,
+          final_price: ids.length
+            ? String(sumSelectedPrices(serviceRows, ids, defaultSize) / 100)
+            : current.final_price,
         }))
       })
       .catch((err) => setError(err.message))
@@ -638,14 +652,25 @@ export function NewQueueTicketPage() {
   }
   const setMake = (vehicle_make) => setForm((current) => ({ ...current, vehicle_make }))
   const setModel = (vehicle_model) => setForm((current) => ({ ...current, vehicle_model }))
-  const updateVehicleType = (event) => setForm((current) => ({ ...current, vehicle_type: normalizeVehicleType(event.target.value) }))
+  const updateVehicleType = (event) => {
+    const vehicle_type = normalizeVehicleType(event.target.value)
+    setForm((current) => {
+      const ids = current.service_ids || []
+      const total = sumSelectedPrices(services, ids, vehicle_type)
+      return {
+        ...current,
+        vehicle_type,
+        final_price: ids.length ? String(total / 100) : current.final_price,
+      }
+    })
+  }
   const updateServiceToggle = (serviceId) => {
     setForm((current) => {
       const selected = new Set(current.service_ids || [])
       if (selected.has(serviceId)) selected.delete(serviceId)
       else selected.add(serviceId)
       const ids = [...selected]
-      const total = ids.reduce((sum, id) => sum + (services.find((s) => s.id === id)?.price_minor || 0), 0)
+      const total = sumSelectedPrices(services, ids, current.vehicle_type)
       return {
         ...current,
         service_ids: ids,
@@ -714,17 +739,18 @@ export function NewQueueTicketPage() {
             />
             <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
             <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
-            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Vehicle type<select value={form.vehicle_type} onChange={updateVehicleType} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Car size (pricing)<select value={form.vehicle_type} onChange={updateVehicleType} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <fieldset className="sm:col-span-2 space-y-2">
               <legend className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Services (multi-select · one visit)</legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {services.map((service) => {
                   const checked = (form.service_ids || []).includes(service.id)
+                  const sized = resolveServicePriceMinor(service, form.vehicle_type)
                   return (
                     <label key={service.id} className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${checked ? 'border-blue-300/40 bg-blue-500/10' : 'border-white/10 bg-white/5'}`}>
                       <span>{service.name}</span>
                       <span className="flex items-center gap-3 tabular-nums text-slate-300">
-                        {formatMoney(service.price_minor)}
+                        {formatMoney(sized)}
                         <input type="checkbox" className="size-4 accent-blue-500" checked={checked} onChange={() => updateServiceToggle(service.id)} />
                       </span>
                     </label>
@@ -747,23 +773,33 @@ export function NewQueueTicketPage() {
 export function CrewPage() {
   const { profile, canManageCrew, canViewQueueOperations } = useAuth()
   const { staffPool, availableStaff, busyStaff, loading, error, reload } = useOperationsSnapshot()
-  const [form, setForm] = useState({ full_name: '', username: '', phone: '', branch_slug: getBranchScope(profile) || '', present_today: true })
+  const [form, setForm] = useState({
+    full_name: '',
+    username: '',
+    email: '',
+    password: '',
+    phone: '',
+    branch_slug: getBranchScope(profile) || '',
+    present_today: true,
+  })
   const [branches, setBranches] = useState([])
   const [saving, setSaving] = useState('')
   const [actionError, setActionError] = useState('')
+  const [mainTab, setMainTab] = useState('attendance')
   const [crewTab, setCrewTab] = useState('pool')
   const presentCount = staffPool.filter((member) => member.is_present_today).length
   const presentRows = useMemo(() => staffPool.filter((m) => m.is_present_today), [staffPool])
+  const canPickBranch = profile?.role === 'BossMich' || profile?.role === 'assistant_super_admin'
 
   useEffect(() => {
-    if (profile?.role !== 'BossMich') return
+    if (!canPickBranch) return
     fetchBranches()
       .then((rows) => {
         setBranches(rows)
-        setForm((current) => ({ ...current, branch_slug: current.branch_slug || rows[0]?.slug || '' }))
+        setForm((current) => ({ ...current, branch_slug: current.branch_slug || getBranchScope(profile) || rows[0]?.slug || '' }))
       })
       .catch((err) => setActionError(err.message))
-  }, [profile?.role])
+  }, [canPickBranch, profile])
 
   const runCrewAction = async (label, action) => {
     setSaving(label)
@@ -783,7 +819,7 @@ export function CrewPage() {
     event.preventDefault()
     runCrewAction('add-staff', async () => {
       await addStaffMember(form, profile)
-      setForm((current) => ({ ...current, full_name: '', username: '', phone: '' }))
+      setForm((current) => ({ ...current, full_name: '', username: '', email: '', password: '', phone: '' }))
     })
   }
 
@@ -792,78 +828,136 @@ export function CrewPage() {
   if (error) return <ErrorState error={error} onRetry={reload} />
   return (
     <section>
-      <PageHeader eyebrow="Crew" title="Staff pool and attendance" description="Add staff with a unique username, mark attendance, then deploy present staff into queue tickets." action={<RefreshButton loading={loading} onClick={reload} />} />
+      <PageHeader
+        eyebrow="Crew"
+        title="Crew & attendance"
+        description="Geofenced time clock, attendance heatmap, and staff pool CRUD."
+        action={<RefreshButton loading={loading} onClick={reload} />}
+      />
       {actionError && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{actionError}</p>}
-      <div className="mt-6 mb-4 grid grid-cols-3 gap-3 text-center text-xs text-slate-400">
-        <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{staffPool.length}</strong>Pool</span>
-        <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{presentCount}</strong>Present</span>
-        <span className="rounded-xl bg-white/[0.035] px-3 py-2"><strong className="block text-lg text-white">{availableStaff.length}</strong>Deployable</span>
-      </div>
-      <div className="flex flex-wrap gap-2">
+
+      <div className="mt-6 flex flex-wrap gap-2">
         {[
-          { key: 'pool', label: `Pool (${staffPool.length})` },
-          { key: 'present', label: `Present (${presentCount})` },
-          { key: 'busy', label: `Busy (${busyStaff.length})` },
+          { key: 'attendance', label: 'Attendance' },
+          { key: 'crew', label: 'Crew' },
+          { key: 'settings', label: 'Settings' },
         ].map((tab) => (
           <button
             key={tab.key}
             type="button"
-            onClick={() => setCrewTab(tab.key)}
-            className={`min-h-10 rounded-2xl px-4 text-sm font-semibold transition ${crewTab === tab.key ? 'bg-blue-500 text-white' : 'border border-white/10 text-slate-300 hover:bg-white/5'}`}
+            onClick={() => setMainTab(tab.key)}
+            className={`min-h-10 rounded-2xl px-4 text-sm font-semibold transition ${mainTab === tab.key ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:bg-muted'}`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {crewTab === 'pool' && (
-        <Panel title="Staff Pool" icon={UserPlus} className="mt-5">
-          {canManageCrew && (
-            <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-[1fr_1fr_160px_auto]">
-              <input value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} required placeholder="Staff name" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
-              <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} required minLength={3} placeholder="Username *" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
-              <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Phone" className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" />
-              <button disabled={saving === 'add-staff'} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60">{saving === 'add-staff' ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}Add</button>
-              {profile?.role === 'BossMich' && <select value={form.branch_slug} onChange={(event) => setForm((current) => ({ ...current, branch_slug: event.target.value }))} required className="md:col-span-4 rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select>}
-              <label className="md:col-span-4 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] px-4 py-3 text-sm text-slate-300">
-                <input type="checkbox" checked={form.present_today} onChange={(event) => setForm((current) => ({ ...current, present_today: event.target.checked }))} />
-                Mark as attended today
-              </label>
-            </form>
+      {mainTab === 'attendance' && <CrewAttendancePanel profile={profile} canManage={canManageCrew} />}
+      {mainTab === 'settings' && <CrewSettingsPanel profile={profile} />}
+
+      {mainTab === 'crew' && (
+        <>
+          <div className="mt-6 mb-4 grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground">
+            <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{staffPool.length}</strong>Pool</span>
+            <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{presentCount}</strong>Present</span>
+            <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{availableStaff.length}</strong>Deployable</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: 'pool', label: `Pool (${staffPool.length})` },
+              { key: 'present', label: `Present (${presentCount})` },
+              { key: 'busy', label: `Busy (${busyStaff.length})` },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setCrewTab(tab.key)}
+                className={`min-h-10 rounded-2xl px-4 text-sm font-semibold transition ${crewTab === tab.key ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:bg-muted'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {crewTab === 'pool' && (
+            <Panel title="Staff Pool" icon={UserPlus} className="mt-5">
+              {canManageCrew && (
+                <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-2">
+                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Staff name
+                    <input value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} required placeholder="Full name" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Username *
+                    <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} required minLength={3} placeholder="login handle" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Email *
+                    <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required placeholder="staff@hakumautocare.com" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Password *
+                    <input type="text" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} required minLength={8} placeholder="Temp password (min 8)" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Phone
+                    <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="09…" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+                  </label>
+                  {canPickBranch && (
+                    <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Branch
+                      <select value={form.branch_slug} onChange={(event) => setForm((current) => ({ ...current, branch_slug: event.target.value }))} required className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none">
+                        {branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  <label className="md:col-span-2 flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-foreground">
+                    <input type="checkbox" checked={form.present_today} onChange={(event) => setForm((current) => ({ ...current, present_today: event.target.checked }))} />
+                    Mark as attended today
+                  </label>
+                  <button disabled={saving === 'add-staff'} className="md:col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60">{saving === 'add-staff' ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}Add crew member</button>
+                </form>
+              )}
+              <StaffPoolList
+                rows={staffPool}
+                canManage={canManageCrew}
+                canPickBranch={canPickBranch}
+                branches={branches}
+                saving={saving}
+                onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
+                onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
+                onDeactivate={(member) => {
+                  if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
+                  return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
+                }}
+              />
+            </Panel>
           )}
-          <StaffPoolList
-            rows={staffPool}
-            canManage={canManageCrew}
-            saving={saving}
-            onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
-            onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
-            onDeactivate={(member) => {
-              if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
-              return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
-            }}
-          />
-        </Panel>
-      )}
-      {crewTab === 'present' && (
-        <div className="mt-5 grid gap-6 xl:grid-cols-2">
-          <Panel title="Present today" icon={CheckCircle2}>
-            <StaffPoolList
-              rows={presentRows}
-              canManage={canManageCrew}
-              saving={saving}
-              onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
-              onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
-              onDeactivate={(member) => {
-                if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
-                return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
-              }}
-            />
-          </Panel>
-          <Panel title="Deployable (not on a ticket)" icon={Users}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
-        </div>
-      )}
-      {crewTab === 'busy' && (
-        <Panel title="Busy Staff" icon={Users} className="mt-5"><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
+          {crewTab === 'present' && (
+            <div className="mt-5 grid gap-6 xl:grid-cols-2">
+              <Panel title="Present today" icon={CheckCircle2}>
+                <StaffPoolList
+                  rows={presentRows}
+                  canManage={canManageCrew}
+                  canPickBranch={canPickBranch}
+                  branches={branches}
+                  saving={saving}
+                  onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
+                  onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
+                  onDeactivate={(member) => {
+                    if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
+                    return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
+                  }}
+                />
+              </Panel>
+              <Panel title="Deployable (not on a ticket)" icon={Users}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
+            </div>
+          )}
+          {crewTab === 'busy' && (
+            <Panel title="Busy Staff" icon={Users} className="mt-5"><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
+          )}
+        </>
       )}
     </section>
   )
@@ -1030,23 +1124,46 @@ export function AccessDeniedPage() {
 }
 
 function Panel({ title, icon: Icon, children, className = '' }) {
-  return <article className={`rounded-2xl border border-white/10 bg-[#0d1726] p-4 shadow-xl shadow-black/10 sm:rounded-3xl sm:p-5 ${className}`}><div className="mb-4 flex items-center gap-3"><Icon className="text-blue-300" size={18} aria-hidden /><h2 className="font-semibold">{title}</h2></div>{children}</article>
+  return (
+    <article className={`rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:rounded-3xl sm:p-5 ${className}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <Icon className="text-primary" size={18} aria-hidden />
+        <h2 className="font-semibold text-foreground">{title}</h2>
+      </div>
+      {children}
+    </article>
+  )
 }
 
 function CrewList({ title, rows, empty, busy = false }) {
   return (
     <div>
-      {title && <h3 className="mb-3 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">{title}</h3>}
+      {title && <h3 className="mb-3 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">{title}</h3>}
       <div className="grid gap-3">
-        {rows.length ? rows.map((row) => <div key={`${row.staff_id}-${row.booking_id || 'free'}`} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4"><p className="font-medium">{row.full_name}</p><p className="mt-1 text-xs text-slate-500">{row.branch_slug || 'All branches'}{busy && row.queue_number ? ` · ${formatQueueNumber(row.queue_number)}` : ''}</p></div>) : <EmptyLine text={empty} />}
+        {rows.length ? rows.map((row) => (
+          <div key={`${row.staff_id}-${row.booking_id || 'free'}`} className="rounded-2xl border border-border bg-muted/30 p-4">
+            <p className="font-medium text-foreground">{row.full_name}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {row.branch_slug || 'All branches'}
+              {busy && row.queue_number ? ` · ${formatQueueNumber(row.queue_number)}` : ''}
+            </p>
+          </div>
+        )) : <EmptyLine text={empty} />}
       </div>
     </div>
   )
 }
 
-function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeactivate }) {
+function StaffPoolList({ rows, canManage, canPickBranch, branches = [], saving, onAttendance, onEdit, onDeactivate }) {
   const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({ full_name: '', username: '', phone: '' })
+  const [editForm, setEditForm] = useState({
+    full_name: '',
+    username: '',
+    phone: '',
+    email: '',
+    password: '',
+    branch_slug: '',
+  })
 
   if (!rows.length) return <EmptyLine text="No staff in this branch pool yet." />
 
@@ -1057,23 +1174,24 @@ function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeacti
         const busy = member.is_busy_today
         const isEditing = editingId === member.id
         return (
-          <div key={member.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
+          <div key={member.id} className="rounded-2xl border border-border bg-muted/20 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-medium">{member.full_name}</p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="font-medium text-foreground">{member.full_name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
                   {member.username ? `@${member.username} · ` : ''}
+                  {member.login_email ? `${member.login_email} · ` : ''}
                   {member.branch_slug || 'No branch'}
                   {member.phone ? ` · ${member.phone}` : ''}
                 </p>
               </div>
-              <span className={`w-fit rounded-full border px-3 py-1 text-[10px] font-bold uppercase ${present ? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-100' : 'border-slate-300/20 bg-slate-400/10 text-slate-300'}`}>
+              <span className={`w-fit rounded-full border px-3 py-1 text-[10px] font-bold uppercase ${present ? 'border-emerald-600/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200' : 'border-border bg-muted text-muted-foreground'}`}>
                 {present ? (busy ? 'Deployed' : 'Present') : 'Not attended'}
               </span>
             </div>
             {canManage && isEditing && (
               <form
-                className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_140px_auto_auto]"
+                className="mt-4 grid gap-2 md:grid-cols-2"
                 onSubmit={async (event) => {
                   event.preventDefault()
                   await onEdit(member, editForm)
@@ -1082,43 +1200,82 @@ function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeacti
               >
                 <input
                   required
+                  aria-label="Staff name"
                   value={editForm.full_name}
                   onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                  className="min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none"
                 />
                 <input
                   required
                   minLength={3}
+                  aria-label="Username"
                   value={editForm.username}
                   onChange={(e) => setEditForm((f) => ({ ...f, username: e.target.value }))}
                   placeholder="Username"
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                  className="min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none"
                 />
                 <input
+                  type="email"
+                  aria-label="Email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="Email (leave blank to keep)"
+                  className="min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none"
+                />
+                <input
+                  type="text"
+                  aria-label="New password"
+                  value={editForm.password}
+                  onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
+                  placeholder="New password (optional)"
+                  minLength={8}
+                  className="min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none"
+                />
+                <input
+                  aria-label="Phone"
                   value={editForm.phone}
                   onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
                   placeholder="Phone"
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                  className="min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none"
                 />
-                <button type="submit" disabled={saving === `${member.id}-edit`} className="rounded-xl bg-blue-500 px-3 py-2 text-sm font-semibold text-white">Save</button>
-                <button type="button" onClick={() => setEditingId(null)} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-200">Cancel</button>
+                {canPickBranch && (
+                  <select
+                    aria-label="Branch"
+                    value={editForm.branch_slug}
+                    onChange={(e) => setEditForm((f) => ({ ...f, branch_slug: e.target.value }))}
+                    className="min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none"
+                  >
+                    {branches.map((branch) => (
+                      <option key={branch.slug} value={branch.slug}>{branch.name}</option>
+                    ))}
+                  </select>
+                )}
+                <button type="submit" disabled={saving === `${member.id}-edit`} className="min-h-11 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">Save</button>
+                <button type="button" onClick={() => setEditingId(null)} className="min-h-11 rounded-xl border border-border px-3 py-2 text-sm text-foreground">Cancel</button>
               </form>
             )}
             {canManage && !isEditing && (
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <button type="button" disabled={present || saving === `${member.id}-present`} onClick={() => onAttendance(member, 'present')} className="floor-touch-btn rounded-xl border border-emerald-300/20 px-3 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40">Mark present</button>
-                <button type="button" disabled={!present || saving === `${member.id}-absent`} onClick={() => onAttendance(member, 'absent')} className="floor-touch-btn rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40">Mark absent</button>
+                <button type="button" disabled={present || saving === `${member.id}-present`} onClick={() => onAttendance(member, 'present')} className="floor-touch-btn rounded-xl border border-emerald-600/30 px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-100">Mark present</button>
+                <button type="button" disabled={!present || saving === `${member.id}-absent`} onClick={() => onAttendance(member, 'absent')} className="floor-touch-btn rounded-xl border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40">Mark absent</button>
                 <button
                   type="button"
                   onClick={() => {
                     setEditingId(member.id)
-                    setEditForm({ full_name: member.full_name || '', username: member.username || '', phone: member.phone || '' })
+                    setEditForm({
+                      full_name: member.full_name || '',
+                      username: member.username || '',
+                      phone: member.phone || '',
+                      email: member.login_email || '',
+                      password: '',
+                      branch_slug: member.branch_slug || '',
+                    })
                   }}
-                  className="floor-touch-btn rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/5"
+                  className="floor-touch-btn rounded-xl border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
                 >
                   Edit
                 </button>
-                <button type="button" disabled={saving === `${member.id}-off`} onClick={() => onDeactivate(member)} className="floor-touch-btn rounded-xl border border-red-300/20 px-3 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-400/10 disabled:opacity-40">Remove</button>
+                <button type="button" disabled={saving === `${member.id}-off`} onClick={() => onDeactivate(member)} className="floor-touch-btn rounded-xl border border-red-500/30 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-500/10 disabled:opacity-40 dark:text-red-200">Remove</button>
               </div>
             )}
           </div>
@@ -1129,7 +1286,7 @@ function StaffPoolList({ rows, canManage, saving, onAttendance, onEdit, onDeacti
 }
 
 function EmptyLine({ text }) {
-  return <p className="rounded-2xl border border-dashed border-white/10 p-5 text-center text-sm text-slate-500">{text}</p>
+  return <p className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">{text}</p>
 }
 
 function ErrorState({ error, onRetry }) {

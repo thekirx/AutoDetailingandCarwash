@@ -36,10 +36,42 @@ results.push('helpers: ok')
 
 const admin = createClient(url, service, { auth: { autoRefreshToken: false, persistSession: false } })
 
-const { data: cats, error: catErr } = await admin.from('vehicle_catalog').select('id, make, model').limit(5)
+const { data: cats, error: catErr } = await admin.from('vehicle_catalog').select('id, make, model, is_active').limit(5)
 assert(!catErr, `vehicle_catalog: ${catErr?.message}`)
 assert(cats?.length, 'expected seeded catalog')
 results.push(`db.vehicle_catalog: ok (${cats.length}+)`)
+
+// Full CRUD roundtrip (especially UPDATE / edit) — isolated probe row
+const probeMake = `__E2E_${Date.now()}__`
+const { data: created, error: createErr } = await admin
+  .from('vehicle_catalog')
+  .insert({ make: probeMake, model: 'Probe', is_active: true, sort_order: 0 })
+  .select('id, make, model')
+  .single()
+assert(!createErr && created?.id, `create: ${createErr?.message}`)
+results.push('crud.create: ok')
+
+const { data: edited, error: editErr } = await admin
+  .from('vehicle_catalog')
+  .update({ make: probeMake, model: 'ProbeEdited', updated_at: new Date().toISOString() })
+  .eq('id', created.id)
+  .select('id, model')
+  .single()
+assert(!editErr && edited?.model === 'ProbeEdited', `edit: ${editErr?.message}`)
+results.push('crud.update: ok')
+
+const { data: tlVisible, error: tlErr } = await admin
+  .from('vehicle_catalog')
+  .select('id, make, model')
+  .eq('is_active', true)
+  .eq('id', created.id)
+  .maybeSingle()
+assert(!tlErr && tlVisible?.model === 'ProbeEdited', 'TL active catalog should see edited row')
+results.push('tl.visible_active: ok')
+
+const { error: delErr } = await admin.from('vehicle_catalog').delete().eq('id', created.id)
+assert(!delErr, `delete: ${delErr?.message}`)
+results.push('crud.delete: ok')
 
 const { error: auditErr } = await admin.from('audit_logs').select('id, summary, meta').limit(1)
 assert(!auditErr, `audit_logs: ${auditErr?.message}`)

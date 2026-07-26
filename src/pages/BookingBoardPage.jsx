@@ -19,7 +19,7 @@ import { supabase } from '@/lib/supabase'
 import { getDashboardDateRange, requiresTeamLeadBranchSetup, resolveBranchFilter } from '@/queue/queueLogic'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,15 +28,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 const BOOKING_TABS = ['board', 'table', 'calendar']
 const COLUMNS = [
-  { id: 'pending', label: 'New' },
-  { id: 'confirmed', label: 'Confirmed' },
-  { id: 'in_progress', label: 'In Progress' },
-  { id: 'waiting', label: 'Waiting' },
-  { id: 'completed', label: 'Done' },
-  { id: 'cancelled', label: 'Cancelled' },
+  { id: 'pending', label: 'New', tone: 'border-l-blue-500' },
+  { id: 'confirmed', label: 'Confirmed', tone: 'border-l-emerald-500' },
+  { id: 'in_progress', label: 'In Progress', tone: 'border-l-amber-500' },
+  { id: 'waiting', label: 'Waiting', tone: 'border-l-violet-500' },
+  { id: 'completed', label: 'Done', tone: 'border-l-slate-400' },
+  { id: 'cancelled', label: 'Cancelled', tone: 'border-l-red-500' },
 ]
 
 const localizer = dateFnsLocalizer({
@@ -61,6 +62,12 @@ const emptyBooking = {
 
 function todayISO() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+}
+
+function vehicleLine(booking) {
+  const car = [booking.vehicle_make, booking.vehicle_model].filter(Boolean).join(' ')
+  if (booking.vehicle_plate && car) return `${booking.vehicle_plate} · ${car}`
+  return booking.vehicle_plate || car || 'No vehicle details'
 }
 
 export default function BookingBoardPage() {
@@ -248,7 +255,7 @@ export default function BookingBoardPage() {
   if (!canAccessBookingBoard(profile)) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) {
     return (
-      <section className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-6 text-amber-100">
+      <section className="rounded-2xl border border-amber-600/30 bg-amber-500/10 p-6 text-amber-950 dark:text-amber-100" role="alert">
         Branch setup required before viewing bookings.
       </section>
     )
@@ -262,26 +269,30 @@ export default function BookingBoardPage() {
       }))
 
   return (
-    <section className="flex min-h-0 flex-col gap-4">
+    <section className="flex min-h-0 flex-col gap-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="floor-compact-header">
-          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">Bookings</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bookings</h1>
+          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">Operations</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Bookings</h1>
           <p className="floor-desc mt-1 text-sm text-muted-foreground">
             Board, table, and calendar · {range.start} → {range.end}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {(canSeeAllBranches(profile) || branchOptions.length > 1) && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger className="min-h-11 w-40"><SelectValue placeholder="Branch" /></SelectTrigger>
+              <SelectTrigger className="min-h-11 w-44 cursor-pointer" aria-label="Filter by branch">
+                <SelectValue placeholder="Branch" />
+              </SelectTrigger>
               <SelectContent>
                 {branchOptions.map((b) => <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
           <Select value={datePreset} onValueChange={setDatePreset}>
-            <SelectTrigger className="min-h-11 w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="min-h-11 w-40 cursor-pointer" aria-label="Date range">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="today">Today</SelectItem>
               <SelectItem value="week">This week</SelectItem>
@@ -292,54 +303,77 @@ export default function BookingBoardPage() {
           </Select>
           {datePreset === 'custom' && (
             <>
-              <Input type="date" className="min-h-11 w-36" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
-              <Input type="date" className="min-h-11 w-36" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
+              <Input type="date" className="min-h-11 w-36" aria-label="Start date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
+              <Input type="date" className="min-h-11 w-36" aria-label="End date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
             </>
           )}
           {canCreate && (
-            <Button type="button" onClick={openCreate}>New booking</Button>
+            <Button type="button" className="min-h-11 cursor-pointer" onClick={openCreate}>New booking</Button>
           )}
         </div>
       </div>
 
       <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'board' ? {} : { tab: next }, { replace: true })}>
-        <TabsList className="flex h-auto flex-wrap gap-1">
-          <TabsTrigger value="board">Board</TabsTrigger>
-          <TabsTrigger value="table">Table</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 sm:w-auto">
+          <TabsTrigger value="board" className="cursor-pointer">Board</TabsTrigger>
+          <TabsTrigger value="table" className="cursor-pointer">Table</TabsTrigger>
+          <TabsTrigger value="calendar" className="cursor-pointer">Calendar</TabsTrigger>
         </TabsList>
 
         <TabsContent value="board" className="mt-4">
           <div className="floor-lane-board" role="region" aria-label="Booking columns">
             {COLUMNS.map((col) => (
-              <section key={col.id} className="floor-lane" aria-label={col.label}>
+              <section key={col.id} className="floor-lane" aria-label={`${col.label} column`}>
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <h2 className="text-xs font-bold tracking-[0.14em] text-slate-300 uppercase">{col.label}</h2>
-                  <Badge variant="secondary">{grouped[col.id].length}</Badge>
+                  <h2 className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">{col.label}</h2>
+                  <Badge variant="secondary" className="tabular-nums">{grouped[col.id].length}</Badge>
                 </div>
                 <div className="floor-lane-body">
                   {grouped[col.id].map((booking) => (
-                    <article key={booking.id} className="floor-ticket !cursor-default">
-                      <p className="font-medium">{booking.customer_name}</p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {booking.vehicle_plate ? `${booking.vehicle_plate} · ` : ''}
-                        {booking.branch} · {[booking.vehicle_make, booking.vehicle_model].filter(Boolean).join(' ')}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">{new Date(booking.scheduled_start).toLocaleString()}</p>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {canEdit && COLUMNS.filter((c) => c.id !== booking.status).slice(0, 3).map((c) => (
-                          <Button key={c.id} size="sm" variant="outline" className="min-h-10 cursor-pointer" onClick={() => move(booking, c.id)}>
-                            {c.label}
-                          </Button>
-                        ))}
+                    <article
+                      key={booking.id}
+                      className={cn('floor-ticket !cursor-default border-l-4', col.tone)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-foreground">{booking.customer_name}</p>
                         {canEdit && (
-                          <Button size="sm" variant="ghost" onClick={() => openEdit(booking)}>Edit</Button>
+                          <Button size="sm" variant="ghost" className="h-8 shrink-0 cursor-pointer px-2" onClick={() => openEdit(booking)}>
+                            Edit
+                          </Button>
                         )}
                       </div>
+                      <p className="mt-1 text-sm text-foreground/80">{vehicleLine(booking)}</p>
+                      <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
+                        {booking.branch}
+                        {' · '}
+                        {new Date(booking.scheduled_start).toLocaleString([], {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                      {canEdit && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {COLUMNS.filter((c) => c.id !== booking.status).slice(0, 3).map((c) => (
+                            <Button
+                              key={c.id}
+                              size="sm"
+                              variant="outline"
+                              className="min-h-10 cursor-pointer"
+                              onClick={() => move(booking, c.id)}
+                            >
+                              {c.label}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
                     </article>
                   ))}
                   {!grouped[col.id].length && (
-                    <p className="rounded-2xl border border-dashed border-white/10 p-4 text-center text-sm text-slate-500">Empty</p>
+                    <p className="rounded-2xl border border-dashed border-border bg-background/50 p-5 text-center text-sm text-muted-foreground">
+                      No {col.label.toLowerCase()} bookings
+                    </p>
                   )}
                 </div>
               </section>
@@ -349,7 +383,10 @@ export default function BookingBoardPage() {
 
         <TabsContent value="table" className="mt-4">
           <Card>
-            <CardHeader><CardTitle>{bookings.length} bookings</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>{bookings.length} bookings</CardTitle>
+              <CardDescription>Flat list for the selected branch and date range.</CardDescription>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -365,17 +402,17 @@ export default function BookingBoardPage() {
                 <TableBody>
                   {bookings.map((b) => (
                     <TableRow key={b.id}>
-                      <TableCell className="whitespace-nowrap text-sm">{new Date(b.scheduled_start).toLocaleString()}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm text-foreground">{new Date(b.scheduled_start).toLocaleString()}</TableCell>
                       <TableCell>
-                        <div className="font-medium">{b.customer_name}</div>
+                        <div className="font-medium text-foreground">{b.customer_name}</div>
                         <div className="text-xs text-muted-foreground">{b.customer_phone || '—'}</div>
                       </TableCell>
-                      <TableCell className="capitalize">{b.branch}</TableCell>
-                      <TableCell>{b.vehicle_plate || [b.vehicle_make, b.vehicle_model].filter(Boolean).join(' ') || '—'}</TableCell>
+                      <TableCell className="capitalize text-foreground">{b.branch}</TableCell>
+                      <TableCell className="text-foreground">{b.vehicle_plate || [b.vehicle_make, b.vehicle_model].filter(Boolean).join(' ') || '—'}</TableCell>
                       <TableCell><Badge variant="secondary">{b.status}</Badge></TableCell>
                       <TableCell className="flex flex-wrap gap-1">
-                        {canEdit && <Button size="sm" variant="outline" onClick={() => openEdit(b)}>Edit</Button>}
-                        {canEdit && <Button size="sm" variant="ghost" onClick={() => archiveBooking(b)}>Archive</Button>}
+                        {canEdit && <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(b)}>Edit</Button>}
+                        {canEdit && <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => archiveBooking(b)}>Archive</Button>}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -389,16 +426,20 @@ export default function BookingBoardPage() {
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-4">
-          <div className="min-h-[28rem] rounded-2xl border border-white/10 bg-[#0d1726] p-3 sm:p-4 [&_.rbc-calendar]:text-slate-200">
-            <BigCalendar
-              localizer={localizer}
-              events={calendarEvents}
-              defaultView={Views.WEEK}
-              views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
-              style={{ minHeight: 420 }}
-              onSelectEvent={(ev) => canEdit && openEdit(ev.resource)}
-            />
-          </div>
+          <Card className="overflow-hidden">
+            <CardContent className="p-3 sm:p-4">
+              <div className="booking-calendar min-h-[28rem] text-foreground [&_.rbc-toolbar]:mb-3 [&_.rbc-toolbar_button]:min-h-10 [&_.rbc-toolbar_button]:cursor-pointer [&_.rbc-toolbar_button]:rounded-md [&_.rbc-toolbar_button]:border [&_.rbc-toolbar_button]:border-border [&_.rbc-toolbar_button]:bg-background [&_.rbc-toolbar_button]:px-3 [&_.rbc-toolbar_button]:text-foreground [&_.rbc-month-view]:rounded-xl [&_.rbc-month-view]:border [&_.rbc-month-view]:border-border [&_.rbc-header]:border-border [&_.rbc-header]:bg-muted/50 [&_.rbc-header]:py-2 [&_.rbc-header]:text-xs [&_.rbc-header]:font-semibold [&_.rbc-header]:text-muted-foreground [&_.rbc-off-range-bg]:bg-muted/30 [&_.rbc-today]:bg-primary/5 [&_.rbc-event]:border-0 [&_.rbc-event]:bg-primary [&_.rbc-event]:text-primary-foreground [&_.rbc-time-content]:border-border [&_.rbc-timeslot-group]:border-border [&_.rbc-day-bg]:border-border [&_.rbc-month-row]:border-border">
+                <BigCalendar
+                  localizer={localizer}
+                  events={calendarEvents}
+                  defaultView={Views.WEEK}
+                  views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
+                  style={{ minHeight: 420 }}
+                  onSelectEvent={(ev) => canEdit && openEdit(ev.resource)}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -409,56 +450,56 @@ export default function BookingBoardPage() {
           </DialogHeader>
           <form onSubmit={saveBooking} className="grid gap-3">
             <div className="flex flex-col gap-2">
-              <Label>Customer name</Label>
-              <Input required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
+              <Label htmlFor="bk-name">Customer name</Label>
+              <Input id="bk-name" required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Phone</Label>
-              <Input value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
+              <Label htmlFor="bk-phone">Phone</Label>
+              <Input id="bk-phone" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
             </div>
             <div className="flex flex-col gap-2">
               <Label>Branch</Label>
               <Select value={form.branch} onValueChange={(branch) => setForm({ ...form, branch })}>
-                <SelectTrigger><SelectValue placeholder="Branch" /></SelectTrigger>
+                <SelectTrigger className="cursor-pointer"><SelectValue placeholder="Branch" /></SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Scheduled start</Label>
-              <Input type="datetime-local" required value={form.scheduled_start} onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />
+              <Label htmlFor="bk-start">Scheduled start</Label>
+              <Input id="bk-start" type="datetime-local" required value={form.scheduled_start} onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-2">
-                <Label>Plate</Label>
-                <Input value={form.vehicle_plate} onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} />
+                <Label htmlFor="bk-plate">Plate</Label>
+                <Input id="bk-plate" value={form.vehicle_plate} onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Make</Label>
-                <Input value={form.vehicle_make} onChange={(e) => setForm({ ...form, vehicle_make: e.target.value })} />
+                <Label htmlFor="bk-make">Make</Label>
+                <Input id="bk-make" value={form.vehicle_make} onChange={(e) => setForm({ ...form, vehicle_make: e.target.value })} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Model</Label>
-                <Input value={form.vehicle_model} onChange={(e) => setForm({ ...form, vehicle_model: e.target.value })} />
+                <Label htmlFor="bk-model">Model</Label>
+                <Input id="bk-model" value={form.vehicle_model} onChange={(e) => setForm({ ...form, vehicle_model: e.target.value })} />
               </div>
             </div>
             <div className="flex flex-col gap-2">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(status) => setForm({ ...form, status })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="cursor-pointer"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {COLUMNS.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              <Label htmlFor="bk-notes">Notes</Label>
+              <Textarea id="bk-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+              <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setFormOpen(false)}>Cancel</Button>
+              <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
