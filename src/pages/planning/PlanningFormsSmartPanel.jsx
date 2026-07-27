@@ -8,6 +8,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react'
+import BrandedOpsForm from '@/components/BrandedOpsForm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +16,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { NamedSelect } from '@/components/ui/named-select'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
@@ -150,12 +152,14 @@ function DynamicFields({ fields, values, onChange }) {
               onChange={(e) => onChange({ ...values, [field.key]: e.target.value })}
             />
           ) : field.type === 'select' ? (
-            <Select value={values[field.key] || ''} onValueChange={(v) => onChange({ ...values, [field.key]: v })}>
-              <SelectTrigger id={`df-${field.key}`} className="cursor-pointer"><SelectValue placeholder="Select…" /></SelectTrigger>
-              <SelectContent>
-                {(field.options || []).map((opt) => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <NamedSelect
+              id={`df-${field.key}`}
+              required={field.required}
+              value={values[field.key] || ''}
+              onChange={(v) => onChange({ ...values, [field.key]: v })}
+              placeholder="Select…"
+              options={(field.options || []).map((opt) => ({ value: opt, label: opt }))}
+            />
           ) : field.type === 'checkbox' ? (
             <label className="flex min-h-11 items-center gap-2 text-sm">
               <input
@@ -189,6 +193,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
   const [editor, setEditor] = useState(emptyEditor)
   const [resultsFormId, setResultsFormId] = useState('')
   const [resultsOpen, setResultsOpen] = useState(false)
+  const [previewForm, setPreviewForm] = useState(null)
   const [fillFormId, setFillFormId] = useState('')
   const [payload, setPayload] = useState({})
   const [listId, setListId] = useState('')
@@ -402,8 +407,16 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
                   <TableCell>{form.public_enabled && form.status === 'published' ? 'Open' : 'Closed'}</TableCell>
                   <TableCell className="tabular-nums">{countsByForm.get(form.id) || 0}</TableCell>
                   <TableCell className="flex flex-wrap justify-end gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="cursor-pointer"
+                      onClick={() => setPreviewForm(form)}
+                    >
+                      <Eye className="size-3.5" /> Preview
+                    </Button>
                     <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => { setResultsFormId(form.id); setResultsOpen(true); setStatusFilter('all') }}>
-                      <Eye className="size-3.5" /> Results
+                      <Link2 className="size-3.5" /> Results
                     </Button>
                     {canEdit && (
                       <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(form)}>
@@ -446,15 +459,16 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
           ) : (
             <form onSubmit={submitStaff} className="grid max-w-xl gap-3">
               <div className="flex flex-col gap-2">
-                <Label>Form</Label>
-                <Select value={fillFormId} onValueChange={(id) => { setFillFormId(id); setPayload({}) }}>
-                  <SelectTrigger className="cursor-pointer"><SelectValue placeholder="Select form" /></SelectTrigger>
-                  <SelectContent>
-                    {forms.filter((f) => f.is_active && f.status !== 'archived').map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="staff-fill-form">Form</Label>
+                <NamedSelect
+                  id="staff-fill-form"
+                  value={fillFormId}
+                  onChange={(id) => { setFillFormId(id); setPayload({}) }}
+                  placeholder="Select form"
+                  options={forms
+                    .filter((f) => f.is_active && f.status !== 'archived')
+                    .map((f) => ({ value: f.id, label: f.name }))}
+                />
               </div>
               <label className="flex items-center gap-2 text-sm text-foreground">
                 <input type="checkbox" checked={pushPlanning} onChange={(e) => setPushPlanning(e.target.checked)} />
@@ -462,13 +476,14 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
               </label>
               {pushPlanning && (
                 <div className="flex flex-col gap-2">
-                  <Label>Planning list</Label>
-                  <Select value={listId} onValueChange={setListId}>
-                    <SelectTrigger className="cursor-pointer"><SelectValue placeholder="List" /></SelectTrigger>
-                    <SelectContent>
-                      {(lists || []).map((l) => <SelectItem key={l.id} value={l.id}>{l.title}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="staff-fill-list">Planning list</Label>
+                  <NamedSelect
+                    id="staff-fill-list"
+                    value={listId}
+                    onChange={setListId}
+                    placeholder="Select list"
+                    options={(lists || []).map((l) => ({ value: l.id, label: l.title || 'Untitled list' }))}
+                  />
                 </div>
               )}
               <DynamicFields fields={activeForm?.fields || []} values={payload} onChange={setPayload} />
@@ -515,16 +530,14 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Attach to event (optional)</Label>
-                <Select value={editor.event_id || 'none'} onValueChange={(v) => setEditor({ ...editor, event_id: v === 'none' ? '' : v })}>
-                  <SelectTrigger className="cursor-pointer"><SelectValue placeholder="None" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No event</SelectItem>
-                    {events.map((ev) => (
-                      <SelectItem key={ev.id} value={ev.id}>{ev.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="sf-event">Attach to event (optional)</Label>
+                <NamedSelect
+                  id="sf-event"
+                  value={editor.event_id || ''}
+                  onChange={(v) => setEditor({ ...editor, event_id: v })}
+                  emptyLabel="No event"
+                  options={events.map((ev) => ({ value: ev.id, label: ev.title }))}
+                />
               </div>
             </div>
             <div className="flex flex-col gap-2">
@@ -548,11 +561,62 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
                 disabled={!canEdit}
               />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setEditorOpen(false)}>Cancel</Button>
-              <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save form'}</Button>
+            <DialogFooter className="gap-2 sm:justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() =>
+                  setPreviewForm({
+                    ...editor,
+                    kind: editor.kind,
+                    fields: editor.fields,
+                    name: editor.name || 'Untitled form',
+                    description: editor.description,
+                    slug: forms.find((f) => f.id === editor.id)?.slug,
+                    public_enabled: editor.public_enabled,
+                    status: editor.status,
+                  })
+                }
+              >
+                <Eye className="size-3.5" /> Preview
+              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setEditorOpen(false)}>Cancel</Button>
+                <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save form'}</Button>
+              </div>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(previewForm)} onOpenChange={(open) => !open && setPreviewForm(null)}>
+        <DialogContent className="max-h-[94vh] overflow-y-auto border-0 bg-transparent p-0 shadow-none sm:max-w-lg">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Customer preview · {previewForm?.name || 'Form'}</DialogTitle>
+          </DialogHeader>
+          {previewForm ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm">
+                <span>How customers see this form</span>
+                <div className="flex flex-wrap gap-2">
+                  {previewForm.slug && previewForm.public_enabled && previewForm.status === 'published' ? (
+                    <Button size="sm" variant="outline" className="cursor-pointer" asChild>
+                      <a href={shareFormUrl(previewForm.slug)} target="_blank" rel="noreferrer">
+                        <ExternalLink className="size-3.5" /> Open live
+                      </a>
+                    </Button>
+                  ) : (
+                    <span className="text-xs">Publish + enable public link for a live URL</span>
+                  )}
+                  <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setPreviewForm(null)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+              <BrandedOpsForm form={previewForm} preview values={{}} />
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
 

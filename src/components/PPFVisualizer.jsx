@@ -1,4 +1,4 @@
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import { ArrowRight } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -27,6 +27,18 @@ const BASIC_LIGHT_SURFACES = {
   headlightRight: [1.925,.72,-.72, 1.925,.72,-.38, 1.9,.88,-.4, 1.9,.88,-.68],
   taillightLeft: [-1.925,.7,.38, -1.925,.7,.7, -1.905,.86,.68, -1.905,.86,.4],
   taillightRight: [-1.925,.7,-.7, -1.925,.7,-.38, -1.905,.86,-.4, -1.905,.86,-.68],
+}
+
+function DisposeGlOnUnmount() {
+  const { gl } = useThree()
+  useEffect(() => () => {
+    try {
+      gl.dispose()
+    } catch {
+      /* context may already be lost on route change */
+    }
+  }, [gl])
+  return null
 }
 
 function getCoverageState(packageData) {
@@ -179,7 +191,7 @@ export default function PPFVisualizer() {
     <div className="visualizer-grid">
       <div className="car-canvas">
         <div className="ppf-canvas-label"><span>Interactive coverage view</span><strong>{data.title}</strong></div><span>Drag to rotate · Select a panel</span>
-        <div className="ppf-canvas-stage"><Canvas camera={{position:[6,3.8,6],fov:38}} onPointerMissed={() => setInspected(null)}><ambientLight intensity={1.4}/><directionalLight position={[6,8,5]} intensity={4}/><pointLight position={[-4,3,-4]} color="#315eff" intensity={coverage.emphasis==='heavy'?30:20}/><Car coverage={coverage} onInspect={setInspected}/><OrbitControls enablePan={false} enableZoom={false} autoRotate autoRotateSpeed={.7}/></Canvas></div>
+        <div className="ppf-canvas-stage"><Canvas camera={{position:[6,3.8,6],fov:38}} onPointerMissed={() => setInspected(null)}><DisposeGlOnUnmount/><ambientLight intensity={1.4}/><directionalLight position={[6,8,5]} intensity={4}/><pointLight position={[-4,3,-4]} color="#315eff" intensity={coverage.emphasis==='heavy'?30:20}/><Car coverage={coverage} onInspect={setInspected}/><OrbitControls enablePan={false} enableZoom={false} autoRotate autoRotateSpeed={.7}/></Canvas></div>
         <div className={`ppf-mobile-diagram ${coverage.fullBody?'is-full':''} ${coverage.emphasis==='heavy'?'is-heavy':''}`} aria-label={`${data.title} coverage diagram`}><div className="ppf-diagram-car"><i className="hood"/><i className="roof"/><i className="doors"/><i className="rear"/><b>360°</b></div><p>{data.coverageType}<small>{data.coverageAreas.join(' · ')}</small></p></div>
         {inspected && <div className="ppf-panel-tooltip" role="status"><span>Coverage area</span><strong>{inspected.label}</strong><p>{inspected.description}</p></div>}
         <div className={`ppf-coverage-legend is-${data.id}`}><span><i/> {PPF_COLORS[data.id].label}</span><span><i className="ppf-legend-base"/> Vehicle surface</span></div>

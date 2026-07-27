@@ -19,6 +19,9 @@ import {
 } from './queueLogic'
 import { writeAudit } from '../lib/audit'
 import { resolveServicePriceMinor } from '../lib/servicePricing'
+import { createTtlCache } from '../lib/coalesceReload'
+
+const timingWarningsCache = createTtlCache(120_000)
 
 export const QUEUE_BOARD_SELECT = `
   booking_id,
@@ -137,7 +140,11 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
   }
 
   const branchScope = resolveBranchFilter(profile, branchFilter)
-  const queueQuery = scopedQuery(supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT), branchScope)
+  // Active floor only — keeps TL/ASA snapshot payloads small under concurrent load
+  const queueQuery = scopedQuery(
+    supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).in('status', OPS_BOARD_STATUSES),
+    branchScope,
+  )
   const staffPoolQuery = scopedStaffQuery(
     supabase
       .from('staff_profiles')
@@ -157,13 +164,17 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
   busyQuery = scopedStaffQuery(busyQuery, branchScope)
   const eventsQuery = scopedQuery(supabase.from('queue_events').select('id, booking_id, branch, old_status, new_status, notes, created_at'), branchScope)
   const handoffsQuery = scopedQuery(supabase.from('pos_handoffs').select('id, booking_id, branch, amount_minor, status, handed_off_at'), branchScope)
-  const settingsQuery = supabase.from('app_settings').select('value').eq('key', 'queue_timing_warnings').maybeSingle()
+
+  const cachedTiming = timingWarningsCache.get()
+  const settingsQuery = cachedTiming
+    ? Promise.resolve({ data: { value: cachedTiming }, error: null })
+    : supabase.from('app_settings').select('value').eq('key', 'queue_timing_warnings').maybeSingle()
 
   const [queue, staffPool, attendance, busyStaff, events, handoffs, settings] = await Promise.all([
-    queueQuery.order('created_at', { ascending: false }),
+    queueQuery.order('created_at', { ascending: false }).limit(250),
     staffPoolQuery.order('full_name'),
     attendanceQuery,
-    busyQuery.order('assigned_at', { ascending: false }),
+    busyQuery.order('assigned_at', { ascending: false }).limit(200),
     eventsQuery.order('created_at', { ascending: false }).limit(40),
     handoffsQuery.order('handed_off_at', { ascending: false }).limit(40),
     settingsQuery,
@@ -179,9 +190,12 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
     busyStaff: busyStaff.data || [],
   })
 
+  const timingValue = settings.data?.value && typeof settings.data.value === 'object' ? settings.data.value : null
+  if (timingValue && !cachedTiming) timingWarningsCache.set(timingValue)
+
   const timingWarnings = {
     ...DEFAULT_TIMING_WARNINGS,
-    ...(settings.data?.value && typeof settings.data.value === 'object' ? settings.data.value : {}),
+    ...(timingValue || cachedTiming || {}),
   }
 
   return {

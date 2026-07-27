@@ -4,6 +4,7 @@ import { Activity, Clock3, Radio, Wifi } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { fetchPublicBranches } from '../lib/branches'
 import { ACTIVE_QUEUE_STATUSES, STATUS_LABELS, buildPublicQueueModel } from '../queue/queueLogic'
+import { createCoalescedReload } from '../lib/coalesceReload'
 
 const statCards = [
   ['waiting', 'Waiting', 'from-blue-500/25 to-blue-950/35'],
@@ -71,14 +72,14 @@ export default function PublicQueuePage() {
 
   useEffect(() => {
     if (!branch || branchValid === false) return undefined
+    const scheduleReload = createCoalescedReload(() => loadQueue(), 400)
     const channel = supabase
       .channel(`public-queue-${branch}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `branch=eq.${branch}` }, () => {
-        loadQueue()
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `branch=eq.${branch}` }, scheduleReload)
       .subscribe()
 
     return () => {
+      scheduleReload.cancel()
       supabase.removeChannel(channel)
     }
   }, [branch, loadQueue, branchValid])

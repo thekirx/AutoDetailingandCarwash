@@ -28,7 +28,7 @@ import {
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
-import { getOperationsNav, isAdmin, ROLES } from '../auth/permissions'
+import { getOperationsNav, getTeamLeadDock, getTeamLeadMore, isAdmin, ROLES, canSeeAllBranches } from '../auth/permissions'
 import NotificationBell from '@/components/NotificationBell'
 import UserSettingsModal from '@/components/UserSettingsModal'
 import InstallGuide from '@/components/InstallGuide'
@@ -71,32 +71,24 @@ const iconMap = {
   ScrollText,
   Columns3,
   CarFront,
+  Plus,
 }
-
-/** Primary tablet dock for Team Lead — max 5, thumb-reach. */
-const TL_DOCK = [
-  { label: 'Floor', to: '/operations/dashboard', icon: Gauge },
-  { label: 'Queue', to: '/operations/queue', icon: ClipboardList, end: true },
-  { label: 'New', to: '/operations/queue/new', icon: Plus, primary: true },
-  { label: 'Crew', to: '/operations/crew', icon: Users },
-  { label: 'Bookings', to: '/operations/bookings', icon: Kanban },
-]
-
-const TL_MORE = [
-  { label: 'KPI', to: '/operations/kpi', icon: BarChart3 },
-  { label: 'My Tasks', to: '/operations/my-tasks', icon: ListChecks },
-]
 
 function formatRole(role) {
   if (role === 'team_lead') return 'Team Lead'
   if (role === 'BossMich') return 'Super Admin'
+  if (role === 'assistant_super_admin') return 'Assistant Super Admin'
   if (role === 'admin') return 'Admin'
   if (role === 'staff') return 'Crew'
+  if (role === 'marketing') return 'Marketing'
   return role || 'Ops'
 }
 
 function formatScope(profile) {
-  if (profile?.role === 'BossMich') return 'All branches'
+  if (canSeeAllBranches(profile)) return 'All branches'
+  const multi = Array.isArray(profile?.branch_slugs) ? profile.branch_slugs.filter(Boolean) : []
+  if (multi.length > 1) return multi.join(', ')
+  if (multi.length === 1) return multi[0]
   return profile?.branch_slug || 'No branch'
 }
 
@@ -105,6 +97,8 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const branch = formatScope(profile)
+  const dock = useMemo(() => getTeamLeadDock(profile), [profile])
+  const more = useMemo(() => getTeamLeadMore(profile), [profile])
 
   return (
     <div className="floor-shell flex h-svh max-h-svh w-full flex-col overflow-hidden bg-background text-foreground">
@@ -152,19 +146,22 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
           role="navigation"
           aria-label="More floor tools"
         >
-          {TL_MORE.map(({ label, to, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={() => setMoreOpen(false)}
-              className={({ isActive }) =>
-                `floor-chip ${isActive || location.pathname.startsWith(to) ? 'floor-chip-active' : ''}`
-              }
-            >
-              <Icon size={16} aria-hidden />
-              {label}
-            </NavLink>
-          ))}
+          {more.map(({ label, to, icon }) => {
+            const Icon = iconMap[icon] || ClipboardList
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={() => setMoreOpen(false)}
+                className={({ isActive }) =>
+                  `floor-chip ${isActive || location.pathname.startsWith(to) ? 'floor-chip-active' : ''}`
+                }
+              >
+                <Icon size={16} aria-hidden />
+                {label}
+              </NavLink>
+            )
+          })}
           <button
             type="button"
             className="floor-chip"
@@ -180,7 +177,7 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
             <InstallGuide variant="compact" audience="ops" />
           </div>
           <span className="ml-auto self-center text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
-            Branch locked · {branch}
+            Scope · {branch}
           </span>
         </div>
       )}
@@ -192,26 +189,29 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
       <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
 
       <nav className="floor-dock z-30 shrink-0 border-t border-border bg-background/98 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl" aria-label="Floor navigation">
-        <ul className="mx-auto grid max-w-3xl grid-cols-5 gap-1 px-1 py-1.5 sm:gap-2 sm:px-2">
-          {TL_DOCK.map(({ label, to, icon: Icon, primary, end }) => (
-            <li key={to} className="flex justify-center">
-              <NavLink
-                to={to}
-                end={Boolean(end)}
-                className={({ isActive }) => {
-                  const onQueueBoard = to === '/operations/queue' && location.pathname === '/operations/queue'
-                  const active = primary ? location.pathname === to : end ? onQueueBoard : isActive || location.pathname.startsWith(to)
-                  if (primary) {
-                    return `floor-dock-fab ${active ? 'floor-dock-fab-active' : ''}`
-                  }
-                  return `floor-dock-item ${active ? 'floor-dock-item-active' : ''}`
-                }}
-              >
-                <Icon size={primary ? 22 : 20} aria-hidden />
-                <span>{label}</span>
-              </NavLink>
-            </li>
-          ))}
+        <ul className={`mx-auto grid max-w-3xl gap-1 px-1 py-1.5 sm:gap-2 sm:px-2 ${dock.length >= 5 ? 'grid-cols-5' : `grid-cols-${Math.max(dock.length, 1)}`}`} style={{ gridTemplateColumns: `repeat(${Math.max(dock.length, 1)}, minmax(0, 1fr))` }}>
+          {dock.map(({ label, to, icon, primary, end }) => {
+            const Icon = iconMap[icon] || ClipboardList
+            return (
+              <li key={to} className="flex justify-center">
+                <NavLink
+                  to={to}
+                  end={Boolean(end)}
+                  className={({ isActive }) => {
+                    const onQueueBoard = to === '/operations/queue' && location.pathname === '/operations/queue'
+                    const active = primary ? location.pathname === to : end ? onQueueBoard : isActive || location.pathname.startsWith(to)
+                    if (primary) {
+                      return `floor-dock-fab ${active ? 'floor-dock-fab-active' : ''}`
+                    }
+                    return `floor-dock-item ${active ? 'floor-dock-item-active' : ''}`
+                  }}
+                >
+                  <Icon size={primary ? 22 : 20} aria-hidden />
+                  <span>{label}</span>
+                </NavLink>
+              </li>
+            )
+          })}
         </ul>
       </nav>
     </div>

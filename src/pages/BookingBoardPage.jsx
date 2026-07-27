@@ -29,6 +29,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { createCoalescedReload } from '@/lib/coalesceReload'
 
 const BOOKING_TABS = ['board', 'table', 'calendar']
 const COLUMNS = [
@@ -130,11 +131,23 @@ export default function BookingBoardPage() {
   }, [load])
 
   useEffect(() => {
+    const loadRef = { current: load }
+    loadRef.current = load
+    const scheduleReload = createCoalescedReload(() => loadRef.current(), 450)
+    const filter =
+      typeof branchScope === 'string' && branchScope && branchScope !== 'all'
+        ? `branch=eq.${branchScope}`
+        : undefined
     const channel = supabase
       .channel(`booking-board-${JSON.stringify(branchScope)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, load)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings', ...(filter ? { filter } : {}) },
+        scheduleReload,
+      )
       .subscribe()
     return () => {
+      scheduleReload.cancel()
       supabase.removeChannel(channel)
     }
   }, [load, branchScope])

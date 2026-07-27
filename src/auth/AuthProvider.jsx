@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  const loadProfile = useCallback(async (user) => {
+  const loadProfile = useCallback(async (user, { quiet = false } = {}) => {
     if (!user) {
       setProfile(null)
       return null
@@ -35,10 +35,13 @@ export function AuthProvider({ children }) {
 
     if (staffError) throw staffError
     if (staffProfile) {
-      const { data: assigns } = await supabase
+      const { data: assigns, error: assignErr } = await supabase
         .from('staff_branch_assignments')
         .select('branch_slug')
         .eq('staff_id', user.id)
+      if (assignErr) {
+        console.warn('[auth] branch assignments unavailable', assignErr.message || assignErr)
+      }
       const branch_slugs = (assigns || []).map((a) => a.branch_slug).filter(Boolean)
       const next = {
         ...staffProfile,
@@ -80,7 +83,7 @@ export function AuthProvider({ children }) {
       return next
     }
 
-    setProfile(null)
+    if (!quiet) setProfile(null)
     return null
   }, [])
 
@@ -95,7 +98,6 @@ export function AuthProvider({ children }) {
       try {
         await loadProfile(data.session?.user)
       } catch (err) {
-        // keep last profile on transient RLS/network errors (do not wipe while session exists)
         console.warn('[auth] profile load failed', err?.message || err)
         if (active && !data.session?.user) setProfile(null)
       } finally {
@@ -109,7 +111,6 @@ export function AuthProvider({ children }) {
       if (!active) return
       setSession(nextSession)
 
-      // TOKEN_REFRESHED / INITIAL_SESSION: keep session in sync without full-screen loading flicker
       if (!shouldReloadProfile(event)) {
         if (event === 'SIGNED_OUT' || !nextSession?.user) setProfile(null)
         return
@@ -134,12 +135,14 @@ export function AuthProvider({ children }) {
       })
     })
 
-    // Resume from sleep / background: ensure autoRefresh ran
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return
       supabase.auth.getSession().then(({ data }) => {
         if (!active) return
         setSession(data.session)
+        if (data.session?.user) {
+          loadProfile(data.session.user, { quiet: true }).catch(() => {})
+        }
       })
     }
     document.addEventListener('visibilitychange', onVisible)
@@ -151,12 +154,49 @@ export function AuthProvider({ children }) {
     }
   }, [loadProfile])
 
+  // Live RBAC: Super Admin grant/branch edits apply without re-login
+  useEffect(() => {
+    const userId = session?.user?.id
+    if (!userId) return undefined
+
+    const channel = supabase
+      .channel(`rbac-profile-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'staff_profiles', filter: `id=eq.${userId}` },
+        () => {
+          loadProfile(session.user, { quiet: true }).catch((err) => {
+            console.warn('[auth] rbac profile refresh failed', err?.message || err)
+          })
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'staff_branch_assignments', filter: `staff_id=eq.${userId}` },
+        () => {
+          loadProfile(session.user, { quiet: true }).catch((err) => {
+            console.warn('[auth] rbac branch refresh failed', err?.message || err)
+          })
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [session?.user?.id, session?.user, loadProfile])
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut({ scope: 'local' })
     if (error) throw error
     setSession(null)
     setProfile(null)
   }, [])
+
+  const refreshProfile = useCallback(async () => {
+    if (!session?.user) return null
+    return loadProfile(session.user, { quiet: true })
+  }, [loadProfile, session?.user])
 
   const value = useMemo(
     () => ({
@@ -176,8 +216,9 @@ export function AuthProvider({ children }) {
       canUseFuturePOS: canAccessPos(profile),
       loading,
       signOut,
+      refreshProfile,
     }),
-    [session, profile, loading, signOut],
+    [session, profile, loading, signOut, refreshProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

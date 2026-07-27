@@ -24,6 +24,7 @@ export const DEFAULT_ASSISTANT_GRANTS = {
   planning_edit: false,
   people: true,
   branches: true,
+  branches_all: true,
   services_merch: true,
   queue_all: true,
   kpi_all: true,
@@ -33,6 +34,24 @@ export const DEFAULT_ASSISTANT_GRANTS = {
 }
 
 export const ASSISTANT_GRANT_KEYS = Object.keys(DEFAULT_ASSISTANT_GRANTS)
+
+/** Human labels for People / RBAC editor */
+export const ASSISTANT_GRANT_LABELS = {
+  pos: 'POS checkout',
+  finance_view: 'Finance view',
+  finance_write: 'Finance write',
+  reports: 'Reports',
+  planning_edit: 'Planning edit',
+  people: 'People CRUD',
+  branches: 'Branches CRUD',
+  branches_all: 'All branches (data scope)',
+  services_merch: 'Services & merch',
+  queue_all: 'Queue edit (all sites)',
+  kpi_all: 'KPI (all sites)',
+  audit: 'Audit log',
+  memberships: 'Memberships',
+  rbac_edit: 'Edit other ASA grants',
+}
 
 export const SUPER_ADMIN_ROLES = [ROLES.SUPER_ADMIN]
 export const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN, ROLES.ADMIN]
@@ -74,13 +93,11 @@ export function hasGrant(profile, key) {
   return Boolean(grants[key])
 }
 
-/** All branches (null) vs slug list. */
+/** All branches (null) vs slug list. Scope uses branches_all — not queue/kpi grants. */
 export function getBranchScopeList(profile) {
   if (!profile) return []
   if (isSuperAdmin(profile)) return null
-  if (isAssistantSuperAdmin(profile) && (hasGrant(profile, 'queue_all') || hasGrant(profile, 'kpi_all'))) {
-    return null
-  }
+  if (isAssistantSuperAdmin(profile) && hasGrant(profile, 'branches_all')) return null
   const multi = Array.isArray(profile.branch_slugs) ? profile.branch_slugs.filter(Boolean) : []
   if (multi.length) return multi
   if (profile.branch_slug) return [profile.branch_slug]
@@ -141,7 +158,8 @@ export function canCreateAdminAccounts(profile) {
 }
 
 export function canEditAssistantGrants(profile) {
-  return isSuperAdmin(profile)
+  if (isSuperAdmin(profile)) return true
+  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'rbac_edit')
 }
 
 export function canAccessAudit(profile) {
@@ -214,6 +232,11 @@ export function canViewQueueOperations(profile) {
   return has(profile, QUEUE_VIEWER_ROLES)
 }
 
+/** Redo QC lane — Super Admin + Assistant Super Admin only (not customers, TL, or branch admin). */
+export function canViewRedoLane(profile) {
+  return isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
+}
+
 export function canViewAssignedTasks(profile) {
   return has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN])
 }
@@ -282,6 +305,27 @@ export function getOperationsNav(profile) {
     items.push({ label: 'Memberships', to: '/operations/memberships', icon: 'Crown' })
   }
   return items
+}
+
+/** Team Lead floor dock — same allowRoute matrix, fixed thumb order + New ticket when editable. */
+export function getTeamLeadDock(profile) {
+  const canQueue = canViewQueueOperations(profile)
+  const canEdit = canEditQueueOperations(profile)
+  const canBook = canAccessBookingBoard(profile)
+  const dock = []
+  if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
+  if (canQueue) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
+  if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
+  if (canQueue) dock.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
+  if (canBook) dock.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
+  return dock.slice(0, 5)
+}
+
+export function getTeamLeadMore(profile) {
+  const more = []
+  if (canViewQueueOperations(profile)) more.push({ label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' })
+  if (canViewAssignedTasks(profile)) more.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
+  return more
 }
 
 export function redirectForRole(role) {

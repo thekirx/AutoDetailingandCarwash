@@ -5,6 +5,7 @@ import {
   canEditQueueOperations as permCanEditQueue,
   canSeeAllBranches,
   canViewQueueOperations as permCanViewQueue,
+  canViewRedoLane,
   getBranchScopeList,
 } from '../auth/permissions.js'
 
@@ -69,11 +70,17 @@ export function isOpsBoardStatus(status) {
   return OPS_BOARD_STATUSES.includes(status)
 }
 
-export function getQueueCounts(rows = []) {
+/** Board columns for this profile. Customers / TL / Admin: active lanes only. SA + ASA: + Redo. */
+export function getOpsBoardStatuses(profile) {
+  return canViewRedoLane(profile) ? OPS_BOARD_STATUSES : ACTIVE_QUEUE_STATUSES
+}
+
+export function getQueueCounts(rows = [], { includeRedo = true } = {}) {
   const counts = { waiting: 0, in_progress: 0, final_checking: 0, redo: 0, total: 0 }
+  const allowed = includeRedo ? OPS_BOARD_STATUSES : ACTIVE_QUEUE_STATUSES
 
   for (const row of rows) {
-    if (!isOpsBoardStatus(row.status)) continue
+    if (!allowed.includes(row.status)) continue
     counts[row.status] += 1
     counts.total += 1
   }
@@ -264,6 +271,8 @@ export function canEditQueueOperations(profile) {
 export function canViewQueueOperations(profile) {
   return permCanViewQueue(profile)
 }
+
+export { canViewRedoLane }
 
 export function canOverrideQueueBranches(profile) {
   return canSeeAllBranches(profile)

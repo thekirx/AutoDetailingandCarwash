@@ -1,12 +1,9 @@
-import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './auth/ProtectedRoute'
 import OpsRoleGate from './auth/OpsRoleGate'
-import { OPS_LOGIN_ROLES, ROLES } from './auth/permissions'
-import AdminLayout from './layouts/AdminLayout'
+import { OPS_LOGIN_ROLES } from './auth/permissions'
 import OperationsLayout from './layouts/OperationsLayout'
 import LoginPage from './pages/LoginPage'
-import LoadingScreen from './components/LoadingScreen'
 import PublicLayout from './layouts/PublicLayout'
 import PublicLandingPage from './pages/PublicLandingPage'
 import { BookingPage, QueuePage } from './pages/PublicUtilityPage'
@@ -47,11 +44,7 @@ import { PrivacyPage, TermsPage } from './pages/LegalPages'
 import NotFoundPage from './pages/NotFoundPage'
 import OpsIndexRedirect from './pages/OpsIndexRedirect'
 
-const MasterlistPage = lazy(() => import('./pages/MasterlistPage'))
-const DashboardPage = lazy(() => import('./pages/DashboardPage'))
-
 const opsRoles = OPS_LOGIN_ROLES
-const adminRoles = [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN]
 
 function gate(routeKey, el) {
   return <OpsRoleGate routeKey={routeKey}>{el}</OpsRoleGate>
@@ -88,6 +81,11 @@ export default function App() {
 
       <Route path="/queue/:branch" element={<PublicQueuePage />} />
       <Route path="/admin" element={<Navigate to="/operations/login" replace />} />
+      <Route path="/admin/dashboard" element={<Navigate to="/operations/console" replace />} />
+      <Route path="/admin/customers" element={<Navigate to="/operations/crm" replace />} />
+      <Route path="/admin/bookings" element={<Navigate to="/operations/bookings?tab=calendar" replace />} />
+      <Route path="/admin/queue" element={<Navigate to="/operations/queue" replace />} />
+      <Route path="/admin/reports" element={<Navigate to="/operations/reports" replace />} />
       <Route path="/operations/login" element={<LoginPage />} />
       <Route path="/login" element={<Navigate to="/signin" replace />} />
       <Route path="/operations/access-denied" element={<AccessDeniedPage />} />
@@ -110,24 +108,13 @@ export default function App() {
           <Route path="pos" element={gate('pos', <PosPage />)} />
           <Route path="finance" element={gate('finance', <FinancePage />)} />
           <Route path="crm" element={gate('crm', <CrmPage />)} />
-          {/* Folded into POS / CRM — Part 2 wires tabs; redirects keep old bookmarks alive */}
-          <Route path="services" element={<Navigate to="/operations/pos?tab=services" replace />} />
-          <Route path="products" element={<Navigate to="/operations/pos?tab=merch" replace />} />
-          <Route path="sms" element={<Navigate to="/operations/crm?tab=sms" replace />} />
+          <Route path="services" element={gate('pos', <Navigate to="/operations/pos?tab=services" replace />)} />
+          <Route path="products" element={gate('pos', <Navigate to="/operations/pos?tab=merch" replace />)} />
+          <Route path="sms" element={gate('crm', <Navigate to="/operations/crm?tab=sms" replace />)} />
           <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />
           <Route path="planning" element={gate('planning', <PlanningBoardPage />)} />
           <Route path="reports" element={gate('reports', <ReportsPage />)} />
           <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
-        </Route>
-      </Route>
-
-      <Route element={<ProtectedRoute allowedRoles={adminRoles} redirectTo="/operations/login" />}>
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route path="dashboard" element={<Suspense fallback={<LoadingScreen />}><DashboardPage /></Suspense>} />
-          <Route path="bookings" element={<Navigate to="/operations/bookings?tab=calendar" replace />} />
-          <Route path="queue" element={<Navigate to="/operations/queue" replace />} />
-          <Route path="customers" element={<Suspense fallback={<LoadingScreen />}><MasterlistPage /></Suspense>} />
-          <Route path="reports" element={<Navigate to="/operations/reports" replace />} />
         </Route>
       </Route>
 

@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabase'
+import { createCoalescedReload } from '@/lib/coalesceReload'
 import {
   PlanningEventsPanel,
   PlanningFormsPanel,
@@ -211,7 +212,7 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4 backdrop-blur-[2px]"
       role="presentation"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -219,22 +220,22 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
         role="dialog"
         aria-modal="true"
         aria-labelledby="plan-card-title"
-        className="max-h-[90svh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-[#111820] p-6 shadow-2xl sm:p-8"
+        className="max-h-[90svh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-xl sm:p-7"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium tracking-[0.2em] text-primary uppercase">
+            <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
               {canEdit ? 'Edit card' : 'View card'}
             </p>
             {canEdit ? (
               <input
                 id="plan-card-title"
-                className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xl font-semibold text-slate-100 outline-none focus:border-primary/50"
+                className="mt-2 w-full rounded-xl border border-input bg-background px-3 py-2 text-xl font-semibold text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
             ) : (
-              <h2 id="plan-card-title" className="mt-2 text-2xl font-semibold">
+              <h2 id="plan-card-title" className="mt-2 text-2xl font-semibold text-foreground">
                 {card.title}
               </h2>
             )}
@@ -242,28 +243,28 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
           <button
             type="button"
             onClick={onClose}
-            className="grid size-10 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:bg-white/5 hover:text-white"
+            className="grid size-10 place-items-center rounded-xl border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
             aria-label="Close"
           >
             <X size={19} />
           </button>
         </div>
 
-        <label className="mt-5 block text-xs text-slate-500">
+        <label className="mt-5 block text-xs font-medium text-muted-foreground">
           Description
           <textarea
-            className="mt-1 min-h-24 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 outline-none focus:border-primary/50 disabled:opacity-70"
+            className="mt-1 min-h-24 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-70"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={!canEdit}
           />
         </label>
 
-        <label className="mt-4 block text-xs text-slate-500">
+        <label className="mt-4 block text-xs font-medium text-muted-foreground">
           Due date
           <input
             type="datetime-local"
-            className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 outline-none focus:border-primary/50 disabled:opacity-70"
+            className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-70"
             value={dueAt}
             onChange={(e) => setDueAt(e.target.value)}
             disabled={!canEdit}
@@ -271,7 +272,7 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
         </label>
 
         <div className="mt-4">
-          <p className="text-xs text-slate-500">Labels</p>
+          <p className="text-xs font-medium text-muted-foreground">Labels</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {presets.map((preset) => {
               const on = labels.some((l) => l.name === preset.name)
@@ -284,8 +285,8 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
                   className="rounded-full px-3 py-1 text-xs font-semibold text-slate-950 transition disabled:cursor-default"
                   style={{
                     backgroundColor: preset.color,
-                    opacity: on ? 1 : 0.35,
-                    outline: on ? '2px solid white' : 'none',
+                    opacity: on ? 1 : 0.4,
+                    outline: on ? '2px solid var(--foreground)' : 'none',
                     outlineOffset: 2,
                   }}
                 >
@@ -297,7 +298,7 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
         </div>
 
         <div className="mt-5">
-          <p className="text-xs text-slate-500">Assignees {canEdit ? '(BossMich CRUD)' : ''}</p>
+          <p className="text-xs font-medium text-muted-foreground">Assignees</p>
           {assignees.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {assignees.map((a) => (
@@ -310,7 +311,7 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
             </div>
           )}
           {canEdit && (
-            <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-white/10 p-2">
+            <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-border bg-muted/30 p-2">
               {staffPool.length ? staffPool.map((staff) => {
                 const on = assignees.some((a) => a.staff_id === staff.id)
                 return (
@@ -318,24 +319,24 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
                     key={staff.id}
                     type="button"
                     onClick={() => toggleAssignee(staff)}
-                    className={`flex w-full min-h-10 items-center justify-between rounded-lg px-3 text-left text-sm ${on ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-slate-300'}`}
+                    className={`flex w-full min-h-10 items-center justify-between rounded-lg px-3 text-left text-sm ${on ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-muted'}`}
                   >
                     <span>{staff.full_name}{staff.username ? ` · @${staff.username}` : ''}</span>
                     <span className="text-xs uppercase tracking-wide opacity-70">{on ? 'Assigned' : 'Add'}</span>
                   </button>
                 )
-              }) : <p className="px-2 py-3 text-xs text-slate-500">No staff profiles found.</p>}
+              }) : <p className="px-2 py-3 text-xs text-muted-foreground">No staff profiles found.</p>}
             </div>
           )}
         </div>
 
         <div className="mt-5">
-          <p className="flex items-center gap-2 text-xs text-slate-500">
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <CheckSquare size={14} /> Checklist
           </p>
           <ul className="mt-2 space-y-2">
             {items.map((item) => (
-              <li key={item.id} className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
+              <li key={item.id} className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
                 <input
                   type="checkbox"
                   checked={!!item.done}
@@ -343,11 +344,11 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
                   onChange={() => toggleCheck(item)}
                   className="size-4 accent-primary"
                 />
-                <span className={`flex-1 text-sm ${item.done ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                <span className={`flex-1 text-sm ${item.done ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                   {item.title}
                 </span>
                 {canEdit && (
-                  <button type="button" className="text-slate-500 hover:text-red-400" onClick={() => removeCheck(item)} aria-label="Remove item">
+                  <button type="button" className="text-muted-foreground hover:text-destructive" onClick={() => removeCheck(item)} aria-label="Remove item">
                     <Trash2 size={14} />
                   </button>
                 )}
@@ -358,7 +359,7 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
             <div className="mt-2 flex flex-col gap-2">
               <div className="flex gap-2">
                 <input
-                  className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/50"
+                  className="min-w-0 flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
                   placeholder="Add checklist item"
                   value={newItem}
                   onChange={(e) => setNewItem(e.target.value)}
@@ -370,7 +371,7 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
               </div>
               {checklistTemplates?.length > 0 && (
                 <select
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200"
+                  className="rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground"
                   defaultValue=""
                   onChange={async (e) => {
                     const tid = e.target.value
@@ -400,13 +401,13 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
           )}
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2 border-t border-border pt-4">
           {canEdit && (
             <>
               <Button type="button" onClick={save} disabled={saving}>
                 {saving ? 'Saving…' : 'Save'}
               </Button>
-              <Button type="button" variant="outline" className="text-red-300" onClick={remove}>
+              <Button type="button" variant="outline" className="text-destructive" onClick={remove}>
                 Delete
               </Button>
             </>
@@ -471,14 +472,16 @@ export default function PlanningBoardPage() {
   }, [load, loadCatalogs])
 
   useEffect(() => {
+    const scheduleReload = createCoalescedReload(() => load(), 500)
     const channel = supabase
       .channel('planning-board')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_cards' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_lists' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_checklist_items' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_card_assignees' }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_cards' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_lists' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_checklist_items' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_card_assignees' }, scheduleReload)
       .subscribe()
     return () => {
+      scheduleReload.cancel()
       supabase.removeChannel(channel)
     }
   }, [load])
@@ -653,22 +656,25 @@ export default function PlanningBoardPage() {
   }
 
   return (
-    <section className="flex min-h-0 flex-col gap-4">
-      <div className="floor-compact-header flex flex-wrap items-end justify-between gap-3">
+    <section className="planning-shell flex min-h-0 flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
         <div>
           <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">Planning</p>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             <Columns3 className="size-7 text-primary" />
             {board.name}
           </h1>
-          <p className="floor-desc mt-1 text-sm text-muted-foreground">
-            {canEdit ? 'Edit enabled' : 'View only'} — board, filtered calendar, smart forms with share links, and events.
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            {canEdit ? 'Full edit' : 'View only'} — board, calendar, smart forms with share links, and events. Labels and lists sync live from Supabase.
           </p>
         </div>
+        <Badge variant={canEdit ? 'default' : 'secondary'} className="min-h-8 px-3">
+          {canEdit ? 'Editor' : 'Viewer'}
+        </Badge>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="flex h-auto flex-wrap gap-1">
+        <TabsList className="planning-tabs-list">
           <TabsTrigger value="board">Board</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -683,7 +689,7 @@ export default function PlanningBoardPage() {
               return (
                 <section
                   key={list.id}
-                  className="floor-lane"
+                  className="floor-lane planning-lane"
                   aria-label={list.title}
                   onDragOver={(e) => canEdit && e.preventDefault()}
                   onDrop={(e) => {
@@ -696,15 +702,15 @@ export default function PlanningBoardPage() {
                   <div className="mb-3 flex items-center justify-between gap-2">
                     {canEdit ? (
                       <input
-                        className="min-w-0 flex-1 bg-transparent text-xs font-bold tracking-[0.14em] text-slate-300 uppercase outline-none"
+                        className="min-w-0 flex-1 bg-transparent text-xs font-bold tracking-[0.14em] text-foreground uppercase outline-none"
                         defaultValue={list.title}
                         onBlur={(e) => renameList(list, e.target.value)}
                         aria-label="List title"
                       />
                     ) : (
-                      <h2 className="text-xs font-bold tracking-[0.14em] text-slate-300 uppercase">{list.title}</h2>
+                      <h2 className="text-xs font-bold tracking-[0.14em] text-foreground uppercase">{list.title}</h2>
                     )}
-                    <Badge variant="secondary">{cards.length}</Badge>
+                    <Badge variant="secondary" className="tabular-nums">{cards.length}</Badge>
                   </div>
                   <div className="floor-lane-body">
                     {cards.map((card) => {
@@ -732,8 +738,8 @@ export default function PlanningBoardPage() {
                               ))}
                             </div>
                           )}
-                          <p className="font-medium">{card.title}</p>
-                          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+                          <p className="font-medium text-foreground">{card.title}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                             {card.due_at && (
                               <span className="inline-flex items-center gap-1">
                                 <CalendarDays size={12} />
@@ -750,11 +756,16 @@ export default function PlanningBoardPage() {
                         </article>
                       )
                     })}
+                    {!cards.length && (
+                      <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
+                        No cards yet
+                      </p>
+                    )}
                     {canEdit && (
                       addingCardFor === list.id ? (
-                        <div className="mt-2 space-y-2">
+                        <div className="mt-1 space-y-2 rounded-xl border border-border bg-background p-2">
                           <input
-                            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
+                            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
                             placeholder="Card title"
                             value={newCardTitle}
                             onChange={(e) => setNewCardTitle(e.target.value)}
@@ -769,7 +780,7 @@ export default function PlanningBoardPage() {
                       ) : (
                         <button
                           type="button"
-                          className="mt-2 flex min-h-10 w-full items-center gap-2 rounded-xl px-2 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                          className="mt-1 flex min-h-10 w-full items-center gap-2 rounded-xl border border-dashed border-border px-2 text-sm text-muted-foreground transition hover:border-primary/40 hover:bg-background hover:text-foreground"
                           onClick={() => setAddingCardFor(list.id)}
                         >
                           <Plus size={16} /> Add card
@@ -781,15 +792,15 @@ export default function PlanningBoardPage() {
               )
             })}
             {canEdit && (
-              <section className="floor-lane opacity-80">
+              <section className="floor-lane planning-lane planning-lane-new">
                 <input
-                  className="mb-3 w-full bg-transparent text-xs font-bold tracking-[0.14em] text-slate-400 uppercase outline-none"
+                  className="mb-3 w-full bg-transparent text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase outline-none placeholder:text-muted-foreground"
                   placeholder="New list…"
                   value={newListTitle}
                   onChange={(e) => setNewListTitle(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addList()}
                 />
-                <Button size="sm" variant="outline" onClick={addList} disabled={!newListTitle.trim()}>
+                <Button size="sm" variant="outline" className="w-full cursor-pointer" onClick={addList} disabled={!newListTitle.trim()}>
                   Add list
                 </Button>
               </section>
@@ -798,7 +809,8 @@ export default function PlanningBoardPage() {
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-4">
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="planning-cal-filters" role="group" aria-label="Calendar sources">
+            <span className="planning-cal-filters-label">Show</span>
             {[
               { key: 'planning', label: 'Planning cards' },
               { key: 'forms', label: 'Form results' },
@@ -808,19 +820,16 @@ export default function PlanningBoardPage() {
               <button
                 key={src.key}
                 type="button"
-                className={`min-h-10 cursor-pointer rounded-xl border px-3 text-sm font-medium transition ${
-                  calSources[src.key]
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-card text-foreground hover:bg-muted'
-                }`}
+                className="planning-cal-filter"
                 aria-pressed={calSources[src.key]}
                 onClick={() => setCalSources((s) => ({ ...s, [src.key]: !s[src.key] }))}
               >
+                <span className="planning-cal-filter-dot" aria-hidden />
                 {src.label}
               </button>
             ))}
           </div>
-          <div className="min-h-[28rem] rounded-2xl border border-border bg-card p-3 text-foreground shadow-sm sm:p-4 [&_.rbc-toolbar]:mb-3 [&_.rbc-toolbar_button]:min-h-10 [&_.rbc-toolbar_button]:cursor-pointer [&_.rbc-toolbar_button]:rounded-md [&_.rbc-toolbar_button]:border [&_.rbc-toolbar_button]:border-border [&_.rbc-toolbar_button]:bg-background [&_.rbc-toolbar_button]:px-3 [&_.rbc-toolbar_button]:text-foreground [&_.rbc-header]:border-border [&_.rbc-header]:bg-muted/40 [&_.rbc-header]:py-2 [&_.rbc-header]:text-xs [&_.rbc-header]:font-semibold [&_.rbc-header]:text-muted-foreground [&_.rbc-off-range-bg]:bg-muted/30 [&_.rbc-today]:bg-primary/5 [&_.rbc-event]:border-0 [&_.rbc-event]:bg-primary [&_.rbc-event]:text-primary-foreground [&_.rbc-month-view]:rounded-xl [&_.rbc-month-view]:border [&_.rbc-month-view]:border-border [&_.rbc-day-bg]:border-border [&_.rbc-month-row]:border-border">
+          <div className="planning-calendar min-h-[28rem] rounded-2xl border border-border bg-card p-3 text-foreground shadow-sm sm:p-4">
             <BigCalendar
               localizer={localizer}
               events={calendarEvents}

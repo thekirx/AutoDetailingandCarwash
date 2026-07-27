@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Crown, Gift, Pencil, Plus, Sparkles } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { isAdmin, isSuperAdmin } from '@/auth/permissions'
+import { canAccessMemberships, isSuperAdmin } from '@/auth/permissions'
 import {
   assignCustomerMembership,
   createLoyaltyMilestone,
@@ -82,12 +82,12 @@ export default function MembershipsPage() {
   }, [])
 
   useEffect(() => {
-    if (isAdmin(profile)) load().catch((e) => toast.error(e.message))
+    if (canAccessMemberships(profile)) load().catch((e) => toast.error(e.message))
   }, [load, profile])
 
   const activeTiers = useMemo(() => tiers.filter((t) => t.is_active), [tiers])
 
-  if (!isAdmin(profile)) return <Navigate to="/operations/access-denied" replace />
+  if (!canAccessMemberships(profile)) return <Navigate to="/operations/access-denied" replace />
 
   async function onCreateTier(event) {
     event.preventDefault()

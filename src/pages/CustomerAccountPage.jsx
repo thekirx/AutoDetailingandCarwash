@@ -122,20 +122,45 @@ export default function CustomerAccountPage() {
   useEffect(() => {
     if (!branches.length || !navigator.geolocation) return
     if (bookings[0]?.branch) return
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const nearest = nearestBranchSlug(
-          { lat: pos.coords.latitude, lng: pos.coords.longitude },
-          branches,
-        )
-        if (nearest) {
-          setSelectedBranch(nearest.slug)
-          setGeoNote(`Nearest · ${branchLabel(branches, nearest.slug)}`)
-        }
-      },
-      () => setGeoNote('Choose a branch'),
-      { enableHighAccuracy: false, timeout: 8000 },
-    )
+    let cancelled = false
+    const run = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (cancelled) return
+          const nearest = nearestBranchSlug(
+            { lat: pos.coords.latitude, lng: pos.coords.longitude },
+            branches,
+          )
+          if (nearest) {
+            setSelectedBranch(nearest.slug)
+            setGeoNote(`Nearest · ${branchLabel(branches, nearest.slug)}`)
+          }
+        },
+        () => {
+          if (!cancelled) setGeoNote('Choose a branch')
+        },
+        { enableHighAccuracy: false, timeout: 8000 },
+      )
+    }
+    // Avoid hammering Chrome when permission was previously denied
+    if (navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' })
+        .then((status) => {
+          if (cancelled) return
+          if (status.state === 'denied') {
+            setGeoNote('Choose a branch')
+            return
+          }
+          run()
+        })
+        .catch(run)
+    } else {
+      run()
+    }
+    return () => {
+      cancelled = true
+    }
   }, [branches, bookings])
 
   const selectedCounts = useMemo(
@@ -156,17 +181,24 @@ export default function CustomerAccountPage() {
   }
 
   function pickNearest() {
-    if (!navigator.geolocation) return
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const nearest = nearestBranchSlug(
-        { lat: pos.coords.latitude, lng: pos.coords.longitude },
-        branches,
-      )
-      if (nearest) {
-        setSelectedBranch(nearest.slug)
-        setGeoNote(`Nearest · ${branchLabel(branches, nearest.slug)}`)
-      }
-    })
+    if (!navigator.geolocation) {
+      setGeoNote('Location unavailable — pick a branch')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const nearest = nearestBranchSlug(
+          { lat: pos.coords.latitude, lng: pos.coords.longitude },
+          branches,
+        )
+        if (nearest) {
+          setSelectedBranch(nearest.slug)
+          setGeoNote(`Nearest · ${branchLabel(branches, nearest.slug)}`)
+        }
+      },
+      () => setGeoNote('Location blocked — pick a branch manually'),
+      { enableHighAccuracy: false, timeout: 8000 },
+    )
   }
 
   if (authLoading) {

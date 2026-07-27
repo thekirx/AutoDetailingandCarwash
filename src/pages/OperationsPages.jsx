@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowRight,
@@ -22,12 +22,13 @@ import { resolveServicePriceMinor } from '../lib/servicePricing'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import { CrewAttendancePanel, CrewSettingsPanel } from './crew/CrewAttendancePanels'
 import { splitCustomerName } from '../lib/phVehicles'
-import { canSeeAllBranches } from '../auth/permissions'
+import { canSeeAllBranches, canViewRedoLane, redirectForRole } from '../auth/permissions'
 import {
   formatQueueNumber,
   getBranchScope,
   getBranchScopeList,
   getDashboardDateRange,
+  getOpsBoardStatuses,
   getPlateLookupStatus,
   getQueueCounts,
   groupVisitTickets,
@@ -37,8 +38,8 @@ import {
   queueByBranchCounts,
   requiresTeamLeadBranchSetup,
   canOverrideQueueBranches,
+  ACTIVE_QUEUE_STATUSES,
   DASHBOARD_DATE_PRESETS,
-  OPS_BOARD_STATUSES,
   QUEUE_PERMISSION_ERROR,
   REDO_FROM_STATUSES,
   STATUS_LABELS,
@@ -61,14 +62,22 @@ import {
   updateTicketPrice,
   updateTicketStatus,
 } from '../queue/queueApi'
+import { createCoalescedReload } from '../lib/coalesceReload'
 
 const statusTone = {
-  waiting: 'border-blue-300/20 bg-blue-500/10 text-blue-100',
-  in_progress: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-100',
-  final_checking: 'border-amber-300/20 bg-amber-500/10 text-amber-100',
-  for_payment: 'border-violet-300/20 bg-violet-500/10 text-violet-100',
-  redo: 'border-rose-300/20 bg-rose-500/10 text-rose-100',
-  completed: 'border-slate-300/20 bg-slate-500/10 text-slate-100',
+  waiting: 'queue-status-pill queue-status-waiting',
+  in_progress: 'queue-status-pill queue-status-progress',
+  final_checking: 'queue-status-pill queue-status-check',
+  for_payment: 'queue-status-pill queue-status-pay',
+  redo: 'queue-status-pill queue-status-redo',
+  completed: 'queue-status-pill queue-status-done',
+}
+
+const LANE_META = {
+  waiting: { icon: Clock3, hint: 'Ready to start' },
+  in_progress: { icon: CarFront, hint: 'On the bay' },
+  final_checking: { icon: BadgeCheck, hint: 'QC before payment' },
+  redo: { icon: ShieldAlert, hint: 'Owner QC fail lane' },
 }
 
 const FALLBACK_VEHICLE_TYPES = [
@@ -78,13 +87,21 @@ const FALLBACK_VEHICLE_TYPES = [
   { label: 'Extra Large', value: 'extra_large' },
 ]
 
-function PageHeader({ eyebrow, title, description, action }) {
+function PageHeader({ eyebrow, title, description, action, live = false }) {
   return (
     <div className="floor-compact-header flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
       <div className="min-w-0">
-        <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-blue-300 uppercase">{eyebrow}</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
-        {description && <p className="floor-desc mt-2 max-w-2xl text-slate-400">{description}</p>}
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <p className="text-[10px] font-bold tracking-[0.22em] text-primary uppercase">{eyebrow}</p>
+          {live ? (
+            <span className="floor-live-pill" aria-live="polite">
+              <span className="floor-live-dot" aria-hidden />
+              Live
+            </span>
+          ) : null}
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
+        {description && <p className="floor-desc mt-2 max-w-2xl text-muted-foreground">{description}</p>}
       </div>
       {action && <div className="flex shrink-0 flex-wrap gap-2">{action}</div>}
     </div>
@@ -92,14 +109,14 @@ function PageHeader({ eyebrow, title, description, action }) {
 }
 
 function MetricCard({ label, value, icon: Icon, tone = 'blue' }) {
-  const colors = tone === 'green' ? 'text-emerald-200 bg-emerald-400/10' : tone === 'amber' ? 'text-amber-200 bg-amber-400/10' : 'text-blue-200 bg-blue-400/10'
+  const colors = tone === 'green' ? 'text-emerald-700 bg-emerald-500/15 dark:text-emerald-200 dark:bg-emerald-400/10' : tone === 'amber' ? 'text-amber-800 bg-amber-500/15 dark:text-amber-200 dark:bg-amber-400/10' : 'text-primary bg-primary/10'
   return (
-    <article className="rounded-2xl border border-white/10 bg-[#0d1726] p-4 shadow-xl shadow-black/10 sm:p-5">
+    <article className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">{label}</p>
+        <p className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">{label}</p>
         <span className={`grid size-9 place-items-center rounded-xl ${colors}`}><Icon size={16} aria-hidden /></span>
       </div>
-      <p className="mt-3 text-2xl font-semibold tabular-nums sm:mt-4 sm:text-3xl">{value}</p>
+      <p className="mt-3 text-2xl font-semibold tabular-nums text-foreground sm:mt-4 sm:text-3xl">{value}</p>
     </article>
   )
 }
@@ -108,21 +125,21 @@ function TicketCard({ ticket, timingWarnings }) {
   const warn = isSuspiciousTiming(ticket, timingWarnings)
   const linked = (ticket.linked_booking_ids?.length || 1) > 1
   return (
-    <Link to={`/operations/queue/${ticket.booking_id}`} className="floor-ticket">
+    <Link to={`/operations/queue/${ticket.booking_id}`} className="floor-ticket queue-ticket-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xl font-black tabular-nums sm:text-2xl">{formatQueueNumber(ticket.queue_number)}</p>
-          <p className="mt-1 truncate text-sm font-medium">{ticket.customer_name}</p>
+          <p className="text-xl font-black tabular-nums text-foreground sm:text-2xl">{formatQueueNumber(ticket.queue_number)}</p>
+          <p className="mt-1 truncate text-sm font-semibold text-foreground">{ticket.customer_name}</p>
         </div>
         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusTone[ticket.status] || statusTone.completed}`}>{STATUS_LABELS[ticket.status] || ticket.status}</span>
       </div>
-      <div className="mt-3 grid gap-0.5 text-xs text-slate-400">
-        <span className="truncate font-medium text-slate-300">{ticket.branch || '—'}</span>
+      <div className="mt-3 grid gap-0.5 text-xs text-muted-foreground">
+        <span className="truncate font-medium text-foreground/80">{ticket.branch || '—'}</span>
         <span className="truncate">{[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'}</span>
         <span className="truncate">{ticket.vehicle_plate || 'No plate'} · {ticket.service_name || 'Service'}</span>
         <span className="truncate">{ticket.assigned_staff_name || 'No staff assigned'}</span>
-        {linked && <span className="text-blue-200">{ticket.linked_booking_ids.length} services · one visit</span>}
-        {warn && <span className="flex items-center gap-1 text-amber-200"><ShieldAlert size={12} aria-hidden />Fast in-progress → check</span>}
+        {linked && <span className="font-medium text-primary">{ticket.linked_booking_ids.length} services · one visit</span>}
+        {warn && <span className="flex items-center gap-1 font-medium text-amber-700 dark:text-amber-200"><ShieldAlert size={12} aria-hidden />Fast in-progress → check</span>}
       </div>
     </Link>
   )
@@ -133,6 +150,7 @@ function useOperationsSnapshot(branchFilter = 'all') {
   const [snapshot, setSnapshot] = useState({ queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [], timingWarnings: null })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [live, setLive] = useState(false)
 
   const load = useCallback(async () => {
     setError('')
@@ -145,38 +163,65 @@ function useOperationsSnapshot(branchFilter = 'all') {
     }
   }, [profile, branchFilter])
 
+  const loadRef = useRef(load)
+  loadRef.current = load
+  const scheduleReload = useMemo(
+    () => createCoalescedReload(() => loadRef.current(), branchFilter === 'all' ? 600 : 350),
+    [branchFilter],
+  )
+
   useEffect(() => {
     load()
   }, [load])
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`operations-queue-${branchFilter}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_attendance' }, load)
-      .subscribe()
+    const bookingFilter =
+      branchFilter && branchFilter !== 'all' && typeof branchFilter === 'string'
+        ? `branch=eq.${branchFilter}`
+        : undefined
+    const channel = supabase.channel(`operations-queue-${branchFilter}`)
+    const opts = (table, filter) => ({
+      event: '*',
+      schema: 'public',
+      table,
+      ...(filter ? { filter } : {}),
+    })
+    channel
+      .on('postgres_changes', opts('bookings', bookingFilter), scheduleReload)
+      .on('postgres_changes', opts('queue_assignments'), scheduleReload)
+      .on('postgres_changes', opts('pos_handoffs', bookingFilter), scheduleReload)
+      .on('postgres_changes', opts('staff_attendance'), scheduleReload)
+      .subscribe((status) => {
+        setLive(status === 'SUBSCRIBED')
+      })
 
     return () => {
+      setLive(false)
+      scheduleReload.cancel()
       supabase.removeChannel(channel)
     }
-  }, [load, branchFilter])
+  }, [scheduleReload, branchFilter])
 
-  return { ...snapshot, loading, error, reload: load }
+  return { ...snapshot, loading, error, live, reload: load }
 }
 
 export function OperationsDashboardPage() {
   const { profile, canViewQueueOperations } = useAuth()
   const seeAll = canSeeAllBranches(profile)
+  const seeRedo = canViewRedoLane(profile)
   const scopeList = getBranchScopeList(profile)
   const [branchFilter, setBranchFilter] = useState(seeAll ? 'all' : (Array.isArray(scopeList) && scopeList[0]) || getBranchScope(profile) || 'all')
   const [datePreset, setDatePreset] = useState('3mo')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const [branches, setBranches] = useState([])
-  const { activeQueue, availableStaff, busyStaff, events, handoffs, timingWarnings, loading, error, reload } = useOperationsSnapshot(branchFilter)
-  const counts = useMemo(() => getQueueCounts(activeQueue), [activeQueue])
+  const { activeQueue, availableStaff, busyStaff, events, handoffs, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter)
+  const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
+  const visibleQueue = useMemo(
+    () => (activeQueue || []).filter((ticket) => boardStatuses.includes(ticket.status)),
+    [activeQueue, boardStatuses],
+  )
+  const counts = useMemo(() => getQueueCounts(visibleQueue, { includeRedo: seeRedo }), [visibleQueue, seeRedo])
   const range = useMemo(() => getDashboardDateRange(datePreset, customStart, customEnd), [datePreset, customStart, customEnd])
   const filteredEvents = useMemo(
     () => (events || []).filter((e) => {
@@ -193,10 +238,10 @@ export function OperationsDashboardPage() {
     }),
     [handoffs, range],
   )
-  const branchCompare = useMemo(() => queueByBranchCounts(activeQueue), [activeQueue])
+  const branchCompare = useMemo(() => queueByBranchCounts(visibleQueue), [visibleQueue])
   const timingFlags = useMemo(
-    () => activeQueue.filter((t) => isSuspiciousTiming(t, timingWarnings)),
-    [activeQueue, timingWarnings],
+    () => visibleQueue.filter((t) => isSuspiciousTiming(t, timingWarnings)),
+    [visibleQueue, timingWarnings],
   )
 
   useEffect(() => {
@@ -218,42 +263,43 @@ export function OperationsDashboardPage() {
         eyebrow="Team Lead Dashboard"
         title="Active floor control"
         description="Track queue volume, crew availability, and handoffs ready for POS checkout."
+        live={live}
         action={<RefreshButton loading={loading} onClick={reload} />}
       />
       <div className="mt-4 flex flex-col gap-3 sm:mt-5 sm:flex-row sm:flex-wrap sm:items-end">
         {(seeAll || branchOptions.length > 1) && (
-          <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+          <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
             Branch
-            <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="mt-2 block min-h-11 w-full rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white sm:w-48">
+            <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground sm:w-48">
               {branchOptions.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
             </select>
           </label>
         )}
         {!seeAll && branchOptions.length <= 1 && (
-          <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300">Branch · {getBranchScope(profile) || 'unassigned'}</p>
+          <p className="rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground">Branch · {getBranchScope(profile) || 'unassigned'}</p>
         )}
-        <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+        <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
           Date range
-          <select value={datePreset} onChange={(e) => setDatePreset(e.target.value)} className="mt-2 block min-h-11 w-full rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white sm:w-40">
+          <select value={datePreset} onChange={(e) => setDatePreset(e.target.value)} className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground sm:w-40">
             {DASHBOARD_DATE_PRESETS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
           </select>
         </label>
         {datePreset === 'custom' && (
           <>
-            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">From<input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="mt-2 block min-h-11 rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white" /></label>
-            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">To<input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="mt-2 block min-h-11 rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white" /></label>
+            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">From<input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="mt-2 block min-h-11 rounded-xl border border-border bg-background px-3 text-sm text-foreground" /></label>
+            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">To<input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="mt-2 block min-h-11 rounded-xl border border-border bg-background px-3 text-sm text-foreground" /></label>
           </>
         )}
       </div>
-      <div className="mt-4 grid gap-3 grid-cols-2 xl:grid-cols-5 sm:mt-6 sm:gap-4">
+      <div className={`mt-4 grid gap-3 grid-cols-2 sm:mt-6 sm:gap-4 ${seeRedo ? 'xl:grid-cols-5' : 'xl:grid-cols-4'}`}>
         <MetricCard label="Waiting" value={counts.waiting} icon={Clock3} />
         <MetricCard label="In Progress" value={counts.in_progress} icon={CarFront} tone="green" />
         <MetricCard label="Final Checking" value={counts.final_checking} icon={BadgeCheck} tone="amber" />
-        <MetricCard label="Redo" value={counts.redo} icon={ShieldAlert} tone="amber" />
+        {seeRedo ? <MetricCard label="Redo" value={counts.redo} icon={ShieldAlert} tone="amber" /> : null}
         <MetricCard label="Total Active" value={counts.total} icon={ClipboardList} />
       </div>
       {timingFlags.length > 0 && (
-        <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
           <ShieldAlert size={16} aria-hidden />
           {timingFlags.length} ticket(s) reached final check faster than {timingWarnings?.min_seconds_in_progress ?? 120}s — review for QC shortcuts.
         </p>
@@ -262,9 +308,12 @@ export function OperationsDashboardPage() {
         <Panel title="Branch comparison" icon={ClipboardList} className="mt-4 sm:mt-5">
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {Object.keys(branchCompare).length ? Object.entries(branchCompare).map(([slug, c]) => (
-              <div key={slug} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
-                <p className="font-semibold capitalize">{slug}</p>
-                <p className="mt-1 text-xs text-slate-400">W {c.waiting} · IP {c.in_progress} · FC {c.final_checking} · Redo {c.redo} · Total {c.total}</p>
+              <div key={slug} className="rounded-2xl border border-border bg-card p-4">
+                <p className="font-semibold capitalize text-foreground">{slug}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  W {c.waiting} · IP {c.in_progress} · FC {c.final_checking}
+                  {seeRedo ? ` · Redo ${c.redo}` : ''} · Total {c.total}
+                </p>
               </div>
             )) : <EmptyLine text="No active tickets across branches." />}
           </div>
@@ -280,9 +329,9 @@ export function OperationsDashboardPage() {
         <Panel title="Recently Sent To Payment" icon={Send}>
           <div className="grid gap-3">
             {filteredHandoffs.length ? filteredHandoffs.slice(0, 8).map((handoff) => (
-              <div key={handoff.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
-                <p className="font-semibold">{handoff.branch} · {formatMoney(handoff.amount_minor)}</p>
-                <p className="mt-1 text-xs text-slate-500">{handoff.status} · {handoff.handed_off_at ? new Date(handoff.handed_off_at).toLocaleString() : 'Pending'}</p>
+              <div key={handoff.id} className="rounded-2xl border border-border bg-card p-4">
+                <p className="font-semibold text-foreground">{handoff.branch} · {formatMoney(handoff.amount_minor)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{handoff.status} · {handoff.handed_off_at ? new Date(handoff.handed_off_at).toLocaleString() : 'Pending'}</p>
               </div>
             )) : <EmptyLine text="No payment handoffs in this range." />}
           </div>
@@ -291,9 +340,9 @@ export function OperationsDashboardPage() {
       <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
         <div className="grid max-h-64 gap-3 overflow-y-auto sm:max-h-80">
           {filteredEvents.length ? filteredEvents.slice(0, 20).map((event) => (
-            <div key={event.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
-              <p className="text-sm">{event.old_status || 'created'} to {event.new_status}</p>
-              <p className="mt-1 text-xs text-slate-500">{event.branch} · {event.notes || 'Status update'} · {new Date(event.created_at).toLocaleString()}</p>
+            <div key={event.id} className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-sm text-foreground">{event.old_status || 'created'} to {event.new_status}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{event.branch} · {event.notes || 'Status update'} · {new Date(event.created_at).toLocaleString()}</p>
             </div>
           )) : <EmptyLine text="No queue activity in this range." />}
         </div>
@@ -305,15 +354,22 @@ export function OperationsDashboardPage() {
 export function OperationsQueuePage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
   const seeAll = canSeeAllBranches(profile)
+  const seeRedo = canViewRedoLane(profile)
   const scopeList = getBranchScopeList(profile)
   const [branchFilter, setBranchFilter] = useState(seeAll ? 'all' : (Array.isArray(scopeList) && scopeList[0]) || getBranchScope(profile) || 'all')
   const [branches, setBranches] = useState([])
-  const { activeQueue, timingWarnings, loading, error, reload } = useOperationsSnapshot(branchFilter)
-  const boardTickets = useMemo(() => groupVisitTickets(activeQueue), [activeQueue])
-  const grouped = useMemo(
-    () => Object.fromEntries(OPS_BOARD_STATUSES.map((status) => [status, boardTickets.filter((ticket) => ticket.status === status)])),
-    [boardTickets],
+  const { activeQueue, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter)
+  const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
+  const visibleQueue = useMemo(
+    () => (activeQueue || []).filter((ticket) => boardStatuses.includes(ticket.status)),
+    [activeQueue, boardStatuses],
   )
+  const boardTickets = useMemo(() => groupVisitTickets(visibleQueue), [visibleQueue])
+  const grouped = useMemo(
+    () => Object.fromEntries(boardStatuses.map((status) => [status, boardTickets.filter((ticket) => ticket.status === status)])),
+    [boardTickets, boardStatuses],
+  )
+  const counts = useMemo(() => getQueueCounts(visibleQueue, { includeRedo: seeRedo }), [visibleQueue, seeRedo])
 
   useEffect(() => {
     if (!seeAll && !(Array.isArray(scopeList) && scopeList.length > 1)) return
@@ -329,37 +385,99 @@ export function OperationsQueuePage() {
     : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
 
   return (
-    <section className="flex min-h-0 flex-col">
+    <section className="queue-board flex min-h-0 flex-col">
       <PageHeader
         eyebrow="Queue Board"
         title="Today on the floor"
-        description="Manage active tickets until they are sent to payment. For Payment tickets leave this board by design."
-        action={<div className="flex gap-2 sm:gap-3"><RefreshButton loading={loading} onClick={reload} />{canManageQueue && <Link to="/operations/queue/new" className="floor-touch-btn inline-flex items-center gap-2 rounded-2xl bg-blue-500 px-4 py-2.5 font-semibold text-white no-underline transition hover:bg-blue-400 sm:px-5"><Plus size={18} aria-hidden />New ticket</Link>}</div>}
-      />
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        {(seeAll || branchOptions.length > 1) ? (
-          <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
-            Branch
-            <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="mt-2 block min-h-11 rounded-xl border border-white/10 bg-[#101a2a] px-3 text-sm text-white sm:w-48">
-              {branchOptions.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
-            </select>
-          </label>
-        ) : (
-          <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300">Branch · {getBranchScope(profile) || 'unassigned'}</p>
+        description={seeRedo
+          ? 'Manage active tickets until payment. Redo is the owner QC lane — customers never see it.'
+          : 'Manage active tickets until they are sent to payment. Waiting, in progress, and final checking only.'}
+        live={live}
+        action={(
+          <div className="flex gap-2 sm:gap-3">
+            <RefreshButton loading={loading} onClick={reload} />
+            {canManageQueue && (
+              <Link to="/operations/queue/new" className="floor-touch-btn inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 font-semibold text-primary-foreground no-underline transition hover:opacity-90 sm:px-5">
+                <Plus size={18} aria-hidden />
+                New ticket
+              </Link>
+            )}
+          </div>
         )}
+      />
+
+      <div className="queue-board-toolbar mt-3 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          {(seeAll || branchOptions.length > 1) ? (
+            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+              Branch
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="mt-2 block min-h-11 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground sm:w-52"
+              >
+                {branchOptions.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
+              </select>
+            </label>
+          ) : (
+            <p className="rounded-xl border border-border bg-muted px-3 py-2 text-sm font-medium text-foreground">
+              Branch · {getBranchScope(profile) || 'unassigned'}
+            </p>
+          )}
+        </div>
+        <div className="queue-board-stats" aria-label="Lane totals">
+          {ACTIVE_QUEUE_STATUSES.map((status) => (
+            <div key={status} className="queue-board-stat" data-status={status}>
+              <span className="queue-board-stat-label">{STATUS_LABELS[status]}</span>
+              <span className="queue-board-stat-value tabular-nums">{counts[status] || 0}</span>
+            </div>
+          ))}
+          {seeRedo ? (
+            <div className="queue-board-stat" data-status="redo">
+              <span className="queue-board-stat-label">Redo</span>
+              <span className="queue-board-stat-value tabular-nums">{counts.redo || 0}</span>
+            </div>
+          ) : null}
+          <div className="queue-board-stat queue-board-stat-total">
+            <span className="queue-board-stat-label">Active</span>
+            <span className="queue-board-stat-value tabular-nums">{counts.total}</span>
+          </div>
+        </div>
       </div>
-      <div className="floor-lane-board mt-4 sm:mt-5" role="region" aria-label="Active queue lanes">
-        {OPS_BOARD_STATUSES.map((status) => (
-          <section key={status} className="floor-lane" aria-label={STATUS_LABELS[status]}>
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="text-xs font-bold tracking-[0.14em] text-slate-300 uppercase">{STATUS_LABELS[status]}</h2>
-              <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs tabular-nums">{grouped[status].length}</span>
-            </div>
-            <div className="floor-lane-body">
-              {loading ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-white/5" />) : grouped[status].length ? grouped[status].map((ticket) => <TicketCard key={ticket.booking_id} ticket={ticket} timingWarnings={timingWarnings} />) : <EmptyLine text="No tickets in this lane." />}
-            </div>
-          </section>
-        ))}
+
+      <div
+        className={`floor-lane-board queue-lane-board mt-4 sm:mt-5 ${seeRedo ? 'queue-lane-board-redo' : 'queue-lane-board-active'}`}
+        role="region"
+        aria-label="Active queue lanes"
+      >
+        {boardStatuses.map((status) => {
+          const meta = LANE_META[status] || LANE_META.waiting
+          const Icon = meta.icon
+          const tickets = grouped[status] || []
+          return (
+            <section key={status} className="floor-lane queue-lane" data-status={status} aria-label={STATUS_LABELS[status]}>
+              <div className="queue-lane-head mb-3 flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="queue-lane-icon" aria-hidden>
+                      <Icon size={14} />
+                    </span>
+                    <h2 className="queue-lane-title text-xs font-bold tracking-[0.14em] uppercase">{STATUS_LABELS[status]}</h2>
+                  </div>
+                  <p className="queue-lane-hint mt-1 text-[11px]">{meta.hint}</p>
+                </div>
+                <span className="queue-lane-count shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums">{tickets.length}</span>
+              </div>
+              <div className="floor-lane-body">
+                {loading
+                  ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-muted" />)
+                  : tickets.length
+                    ? tickets.map((ticket) => <TicketCard key={ticket.booking_id} ticket={ticket} timingWarnings={timingWarnings} />)
+                    : <EmptyLine text="No tickets in this lane." />}
+              </div>
+            </section>
+          )
+        })}
       </div>
     </section>
   )
@@ -434,7 +552,7 @@ export function QueueTicketPage() {
   const staffById = new Map(staff.map((item) => [item.id, item]))
   const canSendToPayment = canManageQueue && ticket.status === 'final_checking'
   const canRedo = canManageQueue && REDO_FROM_STATUSES.includes(ticket.status)
-  const canRestartFromRedo = canManageQueue && ticket.status === 'redo'
+  const canRestartFromRedo = canManageQueue && canViewRedoLane(profile) && ticket.status === 'redo'
   const timingWarn = isSuspiciousTiming(ticket)
   const parsedPrice = Number(String(price).replace(/,/g, '').trim())
   const showLowPriceWarning = Number.isFinite(parsedPrice) && parsedPrice > 0 && parsedPrice < 50
@@ -1111,13 +1229,55 @@ export function MyTasksPage() {
 }
 
 export function AccessDeniedPage() {
+  const { profile, signOut } = useAuth()
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+
+  const goLogin = async () => {
+    setBusy(true)
+    try {
+      await signOut()
+    } catch (err) {
+      console.warn('[auth] sign out from access denied failed', err?.message || err)
+      try {
+        await supabase.auth.signOut({ scope: 'local' })
+      } catch {
+        /* still navigate */
+      }
+    } finally {
+      navigate('/operations/login', { replace: true, state: { signedOut: true } })
+      setBusy(false)
+    }
+  }
+
+  const home = profile?.role ? redirectForRole(profile.role) : '/operations/login'
+
   return (
-    <section className="grid min-h-[60vh] place-items-center">
-      <div className="max-w-md rounded-3xl border border-amber-300/20 bg-amber-400/10 p-8 text-center">
-        <ShieldAlert className="mx-auto text-amber-200" size={42} />
-        <h1 className="mt-5 text-3xl font-semibold">Access denied</h1>
-        <p className="mt-3 text-slate-400">Your account does not have access to this queue operations area.</p>
-        <Link to="/operations/login" className="mt-6 inline-flex rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white no-underline">Back to login</Link>
+    <section className="grid min-h-[60vh] place-items-center px-4">
+      <div className="max-w-md rounded-3xl border border-border bg-card p-8 text-center text-card-foreground shadow-sm">
+        <ShieldAlert className="mx-auto text-amber-600 dark:text-amber-200" size={42} />
+        <h1 className="mt-5 text-3xl font-semibold text-foreground">Access denied</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Your account does not have access to this operations area.
+        </p>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          {profile?.role ? (
+            <Link
+              to={home}
+              className="inline-flex items-center justify-center rounded-2xl border border-border bg-background px-5 py-3 font-semibold text-foreground no-underline"
+            >
+              Go to my home
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={goLogin}
+            className="inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {busy ? 'Signing out…' : 'Sign out & back to login'}
+          </button>
+        </div>
       </div>
     </section>
   )
@@ -1310,7 +1470,16 @@ function BranchSetupError() {
 }
 
 function RefreshButton({ loading, onClick }) {
-  return <button type="button" onClick={onClick} className="floor-touch-btn inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/5 sm:px-5"><RefreshCw className={loading ? 'animate-spin' : ''} size={17} aria-hidden />Refresh</button>
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="floor-touch-btn inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted sm:px-5"
+    >
+      <RefreshCw className={loading ? 'animate-spin' : ''} size={17} aria-hidden />
+      Refresh
+    </button>
+  )
 }
 
 function ActionButton({ children, loading, disabled, onClick }) {

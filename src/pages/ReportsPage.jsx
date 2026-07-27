@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessReports } from '@/auth/permissions'
+import { canAccessReports, getBranchScopeList } from '@/auth/permissions'
+import { applyBranchScope } from '@/lib/crmInsights'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 
-/** Super Admin (+ ASA reports grant) module rollup. */
+/** Super Admin (+ ASA reports grant) module rollup — branch-scoped for non-all roles. */
 export default function ReportsPage() {
   const { profile } = useAuth()
   const [daily, setDaily] = useState([])
@@ -20,23 +21,31 @@ export default function ReportsPage() {
   const [bookingsDone, setBookingsDone] = useState(0)
 
   const load = useCallback(async () => {
+    const scope = getBranchScopeList(profile)
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
     const start30 = new Date()
     start30.setDate(start30.getDate() - 30)
     const startIso = start30.toISOString()
 
+    let salesQ = supabase.from('daily_sales_summary').select('*').order('sale_date', { ascending: false }).limit(30)
+    salesQ = applyBranchScope(salesQ, scope === null ? 'all' : scope)
+    let expensesQ = supabase.from('expenses').select('total_minor, status, branch').gte('created_at', startIso).limit(500)
+    expensesQ = applyBranchScope(expensesQ, scope === null ? 'all' : scope)
+    let booksQ = supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_archived', false)
+      .in('status', ['completed', 'for_payment'])
+      .gte('scheduled_start', startIso)
+    booksQ = applyBranchScope(booksQ, scope === null ? 'all' : scope)
+
     const [sales, lines, expenses, crew, comps, books] = await Promise.all([
-      supabase.from('daily_sales_summary').select('*').order('sale_date', { ascending: false }).limit(30),
+      salesQ,
       supabase.from('sale_line_items').select('name, item_type, line_total_minor, quantity').limit(500),
-      supabase.from('expenses').select('total_minor, status').gte('created_at', startIso).limit(500),
+      expensesQ,
       supabase.from('crew_kpi_summary').select('staff_id', { count: 'exact', head: true }),
       supabase.from('complaints').select('id', { count: 'exact', head: true }).gte('created_at', startIso),
-      supabase
-        .from('bookings')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_archived', false)
-        .in('status', ['completed', 'for_payment'])
-        .gte('scheduled_start', startIso),
+      booksQ,
     ])
 
     if (sales.error) toast.error(sales.error.message)
@@ -62,7 +71,7 @@ export default function ReportsPage() {
     setComplaints(comps.count || 0)
     setBookingsDone(books.count || 0)
     void today
-  }, [])
+  }, [profile])
 
   useEffect(() => {
     load()
@@ -76,13 +85,18 @@ export default function ReportsPage() {
     sales: (row.total_sales_minor || 0) / 100,
     branch: row.branch,
   }))
+  const scopeLabel = getBranchScopeList(profile) === null
+    ? 'All branches'
+    : (getBranchScopeList(profile) || []).join(', ') || 'No branch'
 
   return (
     <section className="flex flex-col gap-8">
       <div>
         <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Analytics</p>
         <h1 className="text-3xl font-semibold tracking-tight">Reports</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Super Admin module rollup — sales, expenses, KPI headcount, complaints, bookings.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Module rollup — sales, expenses, KPI headcount, complaints, bookings. Scope · {scopeLabel}.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

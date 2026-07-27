@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { Car, Contact, MessageSquare, Pencil, Plus, Search, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessCrm, isAdmin } from '@/auth/permissions'
+import { canAccessCrm, getBranchScopeList, isAdmin } from '@/auth/permissions'
 import { listBranches, listMembershipTiers } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
+import { applyBranchScope } from '@/lib/crmInsights'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
@@ -65,16 +66,41 @@ export default function CrmPage() {
   const [loadingDetail, setLoadingDetail] = useState(false)
 
   const loadCustomers = useCallback(async () => {
-    const { data, error } = await supabase
+    const scope = getBranchScopeList(profile)
+    let customerIds = null
+    if (Array.isArray(scope)) {
+      if (!scope.length) {
+        setCustomers([])
+        return
+      }
+      let bookingQuery = supabase.from('bookings').select('customer_id').not('customer_id', 'is', null).eq('is_archived', false).limit(2500)
+      bookingQuery = applyBranchScope(bookingQuery, scope)
+      const { data: bookingRows, error: bookingErr } = await bookingQuery
+      if (bookingErr) {
+        toast.error(bookingErr.message)
+        setCustomers([])
+        return
+      }
+      customerIds = [...new Set((bookingRows || []).map((r) => r.customer_id).filter(Boolean))]
+      if (!customerIds.length) {
+        setCustomers([])
+        return
+      }
+    }
+
+    let query = supabase
       .from('customers')
       .select('id, full_name, first_name, last_name, phone, email, loyalty_points, loyalty_stamps, created_at')
       .eq('role', 'customer')
       .eq('is_archived', false)
       .order('created_at', { ascending: false })
       .limit(200)
+    if (customerIds) query = query.in('id', customerIds.slice(0, 200))
+
+    const { data, error } = await query
     if (error) toast.error(error.message)
     setCustomers(data || [])
-  }, [])
+  }, [profile])
 
   useEffect(() => {
     if (!canAccessCrm(profile)) return

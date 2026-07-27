@@ -13,6 +13,11 @@ import {
   validateStaffUpdate,
 } from './opsValidation'
 
+import { createTtlCache } from './coalesceReload'
+
+const branchesCache = createTtlCache(90_000)
+const servicesCache = createTtlCache(90_000)
+
 function mapDbError(error, fallback = 'Request failed.') {
   const msg = error?.message || fallback
   if (/duplicate key|unique constraint/i.test(msg)) return new Error('That record already exists.')
@@ -22,6 +27,10 @@ function mapDbError(error, fallback = 'Request failed.') {
 }
 
 export async function listBranches({ includeArchived = false } = {}) {
+  const key = includeArchived ? 'all' : 'active'
+  const hit = branchesCache.get()
+  if (hit && hit.key === key) return hit.rows
+
   let q = supabase
     .from('branches')
     .select('id, slug, name, code, address, latitude, longitude, coming_soon, is_active, is_archived')
@@ -29,7 +38,9 @@ export async function listBranches({ includeArchived = false } = {}) {
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
   if (error) throw mapDbError(error)
-  return data || []
+  const rows = data || []
+  branchesCache.set({ key, rows })
+  return rows
 }
 
 export async function createBranch(input) {
@@ -45,6 +56,7 @@ export async function createBranch(input) {
     input_is_active: v.is_active,
   })
   if (error) throw mapDbError(error)
+  branchesCache.clear()
   return data
 }
 
@@ -65,6 +77,7 @@ export async function updateBranch({ slug, name, code, address, is_active, latit
     input_coming_soon: v.coming_soon,
   })
   if (error) throw mapDbError(error)
+  branchesCache.clear()
   return data
 }
 
@@ -72,6 +85,7 @@ export async function archiveBranch(slug) {
   if (!String(slug || '').trim()) throw new Error('Branch slug is required.')
   const { data, error } = await supabase.rpc('archive_branch', { input_branch_slug: slug })
   if (error) throw mapDbError(error)
+  branchesCache.clear()
   return data
 }
 
@@ -245,6 +259,10 @@ export async function updateStaffAccountFields(payload) {
 }
 
 export async function listServices({ includeArchived = false } = {}) {
+  const key = includeArchived ? 'all' : 'active'
+  const hit = servicesCache.get()
+  if (hit && hit.key === key) return hit.rows
+
   let q = supabase
     .from('services')
     .select(
@@ -254,10 +272,12 @@ export async function listServices({ includeArchived = false } = {}) {
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
   if (error) throw mapDbError(error)
-  return (data || []).map((row) => ({
+  const rows = (data || []).map((row) => ({
     ...row,
     size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
   }))
+  servicesCache.set({ key, rows })
+  return rows
 }
 
 async function upsertServiceSizePrices(serviceId, sizePriceMinor) {
@@ -288,6 +308,7 @@ export async function createService(payload) {
   const { data, error } = await supabase.from('services').insert(row).select().maybeSingle()
   if (error) throw mapDbError(error)
   await upsertServiceSizePrices(data?.id, v.size_price_minor)
+  servicesCache.clear()
   await writeAudit({
     action: 'create',
     entityType: 'service',
@@ -326,6 +347,7 @@ export async function updateService(id, payload) {
   if (error) throw mapDbError(error)
   if (!data) throw new Error('Service not found.')
   await upsertServiceSizePrices(id, v.size_price_minor)
+  servicesCache.clear()
   await writeAudit({
     action: 'update',
     entityType: 'service',
@@ -346,6 +368,7 @@ export async function archiveService(id) {
     .maybeSingle()
   if (error) throw mapDbError(error)
   if (!data) throw new Error('Service not found.')
+  servicesCache.clear()
   await writeAudit({
     action: 'archive',
     entityType: 'service',

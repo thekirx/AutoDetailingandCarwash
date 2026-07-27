@@ -4,6 +4,7 @@ import { Pencil, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   ASSISTANT_GRANT_KEYS,
+  ASSISTANT_GRANT_LABELS,
   DEFAULT_ASSISTANT_GRANTS,
   ROLES,
   canCreateAdminAccounts,
@@ -42,6 +43,14 @@ function toggleSlug(list, slug) {
   if (set.has(slug)) set.delete(slug)
   else set.add(slug)
   return [...set]
+}
+
+function usesMultiBranch(role) {
+  return role === 'admin' || role === 'marketing'
+}
+
+function showBranchPicker(role) {
+  return ['admin', 'team_lead', 'staff', 'marketing'].includes(role)
 }
 
 export default function PeopleManagePage() {
@@ -99,8 +108,8 @@ export default function PeopleManagePage() {
     event.preventDefault()
     setSaving(true)
     try {
-      const needsBranch = ['admin', 'team_lead', 'staff', 'marketing'].includes(form.role)
-      const slugs = form.role === 'admin' ? form.branch_slugs : form.branch_slug ? [form.branch_slug] : []
+      const needsBranch = showBranchPicker(form.role)
+      const slugs = usesMultiBranch(form.role) ? form.branch_slugs : form.branch_slug ? [form.branch_slug] : []
       await provisionStaff({
         ...form,
         branch_slug: needsBranch ? slugs[0] || form.branch_slug || null : null,
@@ -154,17 +163,17 @@ export default function PeopleManagePage() {
     }
   }
 
-  const showBranchPicker = (role) => ['admin', 'team_lead', 'staff', 'marketing'].includes(role)
-
   return (
     <section className="flex flex-col gap-8">
       <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">People</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Accounts & branch assignment</h1>
+        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">RBAC</p>
+        <h1 className="text-3xl font-semibold tracking-tight">People & access control</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {isSuperAdmin(profile)
-            ? 'Super Admin creates Admins (multi-branch), Assistant Super Admins (grants), Team Leads, and staff.'
-            : 'Create Team Leads and staff for your assigned branch.'}
+            ? 'Create roles, assign multi-branch scope, and toggle Assistant Super Admin grants in realtime. Changes push to open sessions.'
+            : canEditAssistantGrants(profile)
+              ? 'Manage people and ASA grants for your authority. Branch-scoped data follows assignments.'
+              : 'Create Team Leads and staff for your assigned branch.'}
         </p>
       </div>
 
@@ -199,7 +208,7 @@ export default function PeopleManagePage() {
                   </SelectContent>
                 </Select>
               </div>
-              {showBranchPicker(form.role) && form.role === 'admin' && (
+              {showBranchPicker(form.role) && usesMultiBranch(form.role) && (
                 <div className="flex flex-col gap-2">
                   <Label>Branches (multi)</Label>
                   <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
@@ -216,7 +225,7 @@ export default function PeopleManagePage() {
                   </div>
                 </div>
               )}
-              {showBranchPicker(form.role) && form.role !== 'admin' && (
+              {showBranchPicker(form.role) && !usesMultiBranch(form.role) && (
                 <div className="flex flex-col gap-2">
                   <Label>Branch</Label>
                   <Select
@@ -249,7 +258,10 @@ export default function PeopleManagePage() {
                             }))
                           }
                         />
-                        {key}
+                        <span>
+                          <span className="font-medium">{ASSISTANT_GRANT_LABELS[key] || key}</span>
+                          <span className="ml-1 text-xs text-muted-foreground">({key})</span>
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -353,8 +365,8 @@ export default function PeopleManagePage() {
               </div>
               {showBranchPicker(editing.role) && (
                 <div className="flex flex-col gap-2">
-                  <Label>{editing.role === 'admin' ? 'Branches (multi)' : 'Branch'}</Label>
-                  {editing.role === 'admin' ? (
+                  <Label>{usesMultiBranch(editing.role) ? 'Branches (multi)' : 'Branch'}</Label>
+                  {usesMultiBranch(editing.role) ? (
                     <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
                       {branches.map((b) => (
                         <label key={b.slug} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -403,7 +415,10 @@ export default function PeopleManagePage() {
                             }))
                           }
                         />
-                        {key}
+                        <span>
+                          <span className="font-medium">{ASSISTANT_GRANT_LABELS[key] || key}</span>
+                          <span className="ml-1 text-xs text-muted-foreground">({key})</span>
+                        </span>
                       </label>
                     ))}
                   </div>

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { NamedSelect } from '@/components/ui/named-select'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
 import { slugifyEventTitle } from '@/lib/planningPart6'
@@ -313,16 +314,14 @@ export function PlanningEventsPanel({ canEdit }) {
                 <Input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
               </div>
               <div className="flex flex-col gap-2 md:col-span-2">
-                <Label>Optional form for attendees</Label>
-                <Select value={form.form_id || 'none'} onValueChange={(v) => setForm({ ...form, form_id: v === 'none' ? '' : v })}>
-                  <SelectTrigger className="cursor-pointer"><SelectValue placeholder="None" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No form</SelectItem>
-                    {opsForms.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="ev-form">Optional form for attendees</Label>
+                <NamedSelect
+                  id="ev-form"
+                  value={form.form_id || ''}
+                  onChange={(v) => setForm({ ...form, form_id: v })}
+                  emptyLabel="No form"
+                  options={opsForms.map((f) => ({ value: f.id, label: f.name }))}
+                />
                 <p className="text-xs text-muted-foreground">Shown on the public event page when set. Publish the form + enable its public link to accept answers.</p>
               </div>
               <Button type="submit" className="md:col-span-2 w-fit cursor-pointer">Create event</Button>
@@ -367,15 +366,13 @@ export function PlanningEventsPanel({ canEdit }) {
                   </TableCell>
                   <TableCell>
                     {canEdit ? (
-                      <Select value={ev.form_id || 'none'} onValueChange={(v) => assignForm(ev, v === 'none' ? '' : v)}>
-                        <SelectTrigger className="h-9 w-44 cursor-pointer"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {opsForms.map((f) => (
-                            <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <NamedSelect
+                        value={ev.form_id || ''}
+                        onChange={(v) => assignForm(ev, v)}
+                        emptyLabel="None"
+                        className="h-9 w-48"
+                        options={opsForms.map((f) => ({ value: f.id, label: f.name }))}
+                      />
                     ) : (
                       <span className="text-sm text-muted-foreground">{ev.ops_forms?.name || '—'}</span>
                     )}

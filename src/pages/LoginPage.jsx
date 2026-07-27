@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { OPS_LOGIN_ROLES, redirectForRole } from '../auth/permissions'
+import { safeAuthReturnPath } from '../auth/authRedirect'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
@@ -20,13 +21,23 @@ export default function LoginPage() {
   const { user, profile, loading, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const returnPath = safeAuthReturnPath(location.state?.from?.pathname)
 
   useEffect(() => {
     if (!loading && user && !profile) signOut()
   }, [loading, user, profile, signOut])
 
+  useEffect(() => {
+    if (!loading && location.state?.signedOut && user) {
+      signOut().catch(() => {})
+    }
+  }, [loading, location.state?.signedOut, user, signOut])
+
   if (loading) return <LoadingScreen />
-  if (user && profile) return <Navigate to={location.state?.from?.pathname || redirectForRole(profile.role)} replace />
+  // After explicit sign-out from access-denied, stay on the form even if session briefly lingers
+  if (user && profile && !location.state?.signedOut) {
+    return <Navigate to={returnPath || redirectForRole(profile.role)} replace />
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -79,12 +90,12 @@ export default function LoginPage() {
         return
       }
 
-      navigate(location.state?.from?.pathname || redirectForRole(legacyProfile.role), { replace: true })
+      navigate(returnPath || redirectForRole(legacyProfile.role), { replace: true })
       setSubmitting(false)
       return
     }
 
-    navigate(location.state?.from?.pathname || redirectForRole(staffProfile.role), { replace: true })
+    navigate(returnPath || redirectForRole(staffProfile.role), { replace: true })
     setSubmitting(false)
   }
 

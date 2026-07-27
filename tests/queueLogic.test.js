@@ -7,8 +7,10 @@ import {
   canEditQueueOperations,
   canOverrideQueueBranches,
   canViewQueueOperations,
+  canViewRedoLane,
   formatQueueActionError,
   getCrewAttendanceModel,
+  getOpsBoardStatuses,
   getQueueCounts,
   isStaffAssignmentBusy,
   normalizeAssignmentStatus,
@@ -21,6 +23,7 @@ import {
   normalizePlate,
   parsePesoInputToMinor,
   normalizeVehicleType,
+  OPS_BOARD_STATUSES,
 } from '../src/queue/queueLogic.js'
 
 describe('queue logic', () => {
@@ -66,11 +69,16 @@ describe('queue logic', () => {
         service_name: 'Premium Wash',
       },
       { branch: 'bacoor', queue_number: 13, status: 'for_payment' },
+      { branch: 'bacoor', queue_number: 14, status: 'redo' },
       { branch: 'batangas', queue_number: 3, status: 'waiting' },
     ], 'bacoor')
 
     assert.equal(model.counts.total, 1)
+    assert.equal(model.counts.redo, 0)
     assert.deepEqual(model.groups.in_progress, [{ queueNumber: 'Q-012', status: 'in_progress' }])
+    assert.equal(model.groups.waiting.length, 0)
+    assert.equal(model.groups.final_checking.length, 0)
+    assert.equal(Object.hasOwn(model.groups, 'redo'), false)
     assert.equal(JSON.stringify(model).includes('Private'), false)
     assert.equal(JSON.stringify(model).includes('ABC123'), false)
     assert.equal(JSON.stringify(model).includes('Premium Wash'), false)
@@ -88,6 +96,44 @@ describe('queue logic', () => {
     assert.equal(normalizeAssignmentStatus('completed'), 'released')
     assert.equal(normalizeAssignmentStatus('released'), 'released')
     assert.deepEqual(ACTIVE_QUEUE_STATUSES, ['waiting', 'in_progress', 'final_checking'])
+  })
+
+  it('shows redo lane only for Super Admin and Assistant Super Admin', () => {
+    assert.equal(canViewRedoLane({ role: 'BossMich' }), true)
+    assert.equal(canViewRedoLane({ role: 'assistant_super_admin' }), true)
+    assert.equal(canViewRedoLane({ role: 'admin' }), false)
+    assert.equal(canViewRedoLane({ role: 'team_lead' }), false)
+    assert.equal(canViewRedoLane({ role: 'staff' }), false)
+    assert.equal(canViewRedoLane(null), false)
+    assert.deepEqual(getOpsBoardStatuses({ role: 'BossMich' }), OPS_BOARD_STATUSES)
+    assert.deepEqual(getOpsBoardStatuses({ role: 'assistant_super_admin' }), OPS_BOARD_STATUSES)
+    assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), ACTIVE_QUEUE_STATUSES)
+    assert.deepEqual(getOpsBoardStatuses({ role: 'admin' }), ACTIVE_QUEUE_STATUSES)
+    assert.ok(!ACTIVE_QUEUE_STATUSES.includes('redo'))
+    assert.ok(OPS_BOARD_STATUSES.includes('redo'))
+  })
+
+  it('excludes redo from counts when includeRedo is false (customer / non-owner board)', () => {
+    const rows = [
+      { status: 'waiting' },
+      { status: 'redo' },
+      { status: 'in_progress' },
+      { status: 'final_checking' },
+    ]
+    assert.deepEqual(getQueueCounts(rows, { includeRedo: false }), {
+      waiting: 1,
+      in_progress: 1,
+      final_checking: 1,
+      redo: 0,
+      total: 3,
+    })
+    assert.deepEqual(getQueueCounts(rows), {
+      waiting: 1,
+      in_progress: 1,
+      final_checking: 1,
+      redo: 1,
+      total: 4,
+    })
   })
 
   it('uses the logged-in profile branch as the operations scope', () => {
