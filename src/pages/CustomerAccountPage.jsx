@@ -260,13 +260,13 @@ export default function CustomerAccountPage() {
               </div>
             </div>
           </div>
-          <div className="mt-5 flex flex-wrap items-center gap-2.5">
+          <div className="account-hero-ctas">
             <PushToggle audience="customer" autoPrompt />
-            <Button type="button" className="account-btn account-btn-on-navy min-h-10" onClick={() => setBookOpen(true)}>
+            <Button type="button" className="account-btn account-btn-on-navy min-h-11" onClick={() => setBookOpen(true)}>
               <CalendarPlus data-icon="inline-start" />
               Book a service
             </Button>
-            <Button asChild className="account-btn account-btn-ghost-light min-h-10">
+            <Button asChild className="account-btn account-btn-ghost-light min-h-11">
               <Link to={queueHref}>
                 <Radio data-icon="inline-start" />
                 Live queue
@@ -305,8 +305,8 @@ export default function CustomerAccountPage() {
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              className="account-btn shrink-0"
+              variant="ghost"
+              className="account-btn shrink-0 text-[#052699] hover:bg-[#052699]/08 hover:text-[#052699]"
               onClick={() => openSettings('car')}
             >
               <Settings data-icon="inline-start" />
@@ -361,20 +361,22 @@ export default function CustomerAccountPage() {
                 </ul>
               ) : (
                 <div className="account-empty account-empty-inset mt-4">
-                  No cars on file yet. Plates are usually added at the branch or POS when you visit.{' '}
-                  <button type="button" className="font-semibold text-[#052699] underline" onClick={() => openSettings('car')}>
+                  <strong>No cars on file yet</strong>
+                  Plates are usually added at the branch or POS when you visit.{' '}
+                  <button type="button" className="account-link-btn" onClick={() => openSettings('car')}>
                     Save a plate in settings
-                  </button>
-                  {' '}if you already know it.
+                  </button>{' '}
+                  if you already know it.
                 </div>
               )}
 
-              <div className="mt-5 border-t border-[#052699]/08 pt-4">
-                <p className="mb-3 text-[10px] font-extrabold tracking-[0.16em] text-[#052699] uppercase">Active visit</p>
+              <div className="mt-5 border-t border-[color:var(--account-line)] pt-5">
+                <p className="account-section-label">Active visit</p>
                 {bookings.length === 0 ? (
                   <div className="account-empty account-empty-inset">
-                    No active visit.{' '}
-                    <button type="button" className="font-semibold text-[#052699] underline" onClick={() => setBookOpen(true)}>
+                    <strong>No active visit</strong>
+                    Book a service to track your car on the floor.{' '}
+                    <button type="button" className="account-link-btn" onClick={() => setBookOpen(true)}>
                       Book a service
                     </button>
                   </div>
@@ -524,7 +526,18 @@ export default function CustomerAccountPage() {
           <InstallGuide variant="panel" audience="customer" />
         </div>
 
-        <div className="account-area-history">
+        <section className="account-sheet account-area-history" aria-labelledby="history-heading">
+          <div className="account-sheet-head mb-4">
+            <span className="account-sheet-icon" aria-hidden>
+              <CalendarDays className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 id="history-heading" className="account-sheet-title">
+                Activity
+              </h2>
+              <p className="account-sheet-sub">Past visits and store purchases linked to your account.</p>
+            </div>
+          </div>
           <div className="account-seg account-seg-2" role="tablist" aria-label="History">
             {[
               ['history', 'Past visits'],
@@ -548,7 +561,7 @@ export default function CustomerAccountPage() {
               (loading ? (
                 <Skeleton className="h-28 w-full rounded-2xl" />
               ) : history.length === 0 ? (
-                <EmptyBlock>No past visits yet.</EmptyBlock>
+                <EmptyBlock title="No past visits yet">Completed services will show up here.</EmptyBlock>
               ) : (
                 history.map((row) => (
                   <article key={row.id} className="account-tile account-tile-row">
@@ -558,16 +571,16 @@ export default function CustomerAccountPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-semibold text-[#020a31]">{row.vehicle_plate || 'Visit'}</p>
-                          <p className="truncate text-xs text-slate-500">
+                          <p className="font-semibold text-[color:var(--account-ink,#020a31)]">{row.vehicle_plate || 'Visit'}</p>
+                          <p className="truncate text-xs text-[color:var(--account-muted,#5b6478)]">
                             {[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ') || 'Service'}
                           </p>
                         </div>
-                        <p className="shrink-0 text-sm font-bold tabular-nums text-[#052699]">
+                        <p className="shrink-0 text-sm font-bold tabular-nums text-[color:var(--account-navy,#052699)]">
                           {formatMoney(row.final_price_minor)}
                         </p>
                       </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--account-muted,#5b6478)]">
                         <span>{formatWhen(row.created_at || row.scheduled_start)}</span>
                         <span aria-hidden>·</span>
                         <span>{branchLabel(branches, row.branch) || row.branch}</span>
@@ -584,7 +597,9 @@ export default function CustomerAccountPage() {
               (loading ? (
                 <Skeleton className="h-28 w-full rounded-2xl" />
               ) : purchases.length === 0 ? (
-                <EmptyBlock>No store purchases linked yet. Ask Admin or POS to search your name or plate at checkout.</EmptyBlock>
+                <EmptyBlock title="No store purchases linked">
+                  Ask Admin or POS to search your name or plate at checkout.
+                </EmptyBlock>
               ) : (
                 purchases.map((row) => (
                   <article key={row.id} className="account-tile account-tile-row">
@@ -594,27 +609,27 @@ export default function CustomerAccountPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="font-semibold text-[#020a31]">Store purchase</p>
-                          <p className="text-xs text-slate-500 capitalize">
+                          <p className="font-semibold text-[color:var(--account-ink,#020a31)]">Store purchase</p>
+                          <p className="text-xs text-[color:var(--account-muted,#5b6478)] capitalize">
                             {row.payment_method || 'paid'} · {branchLabel(branches, row.branch) || row.branch}
                           </p>
                         </div>
-                        <p className="shrink-0 text-sm font-bold tabular-nums text-[#052699]">
+                        <p className="shrink-0 text-sm font-bold tabular-nums text-[color:var(--account-navy,#052699)]">
                           {formatMoney(row.total_minor)}
                         </p>
                       </div>
-                      <p className="mt-2 text-xs text-slate-400">{formatWhen(row.occurred_at)}</p>
+                      <p className="mt-2 text-xs text-[color:var(--account-muted,#5b6478)]">{formatWhen(row.occurred_at)}</p>
                     </div>
                   </article>
                 ))
               ))}
           </div>
-        </div>
+        </section>
 
         <aside className="account-desktop-only account-area-actions account-sheet" aria-label="Quick actions">
           <h2 className="account-sheet-title">Quick actions</h2>
           <p className="account-sheet-sub mt-1">Book, queue, settings, and home.</p>
-          <div className="mt-4 flex flex-col gap-2">
+          <div className="mt-5 flex flex-col gap-2.5">
             <Button type="button" className="account-btn account-btn-primary min-h-11 w-full justify-start" onClick={() => setBookOpen(true)}>
               <CalendarPlus data-icon="inline-start" />
               Book a service
@@ -636,8 +651,8 @@ export default function CustomerAccountPage() {
               </Link>
             </Button>
           </div>
-          <div className="mt-4 rounded-xl border border-[#052699]/12 bg-[#f4f6fb] p-3">
-            <p className="mb-2 text-xs font-bold text-[#020a31]">Push alerts</p>
+          <div className="mt-5 rounded-xl border border-[color:var(--account-line)] bg-[color:var(--account-soft,#f5f7fc)] p-3.5">
+            <p className="mb-2.5 text-xs font-bold text-[color:var(--account-ink,#020a31)]">Push alerts</p>
             <PushToggle audience="customer" surface="light" />
           </div>
         </aside>
@@ -677,6 +692,11 @@ export default function CustomerAccountPage() {
   )
 }
 
-function EmptyBlock({ children }) {
-  return <div className="account-empty">{children}</div>
+function EmptyBlock({ title, children }) {
+  return (
+    <div className="account-empty">
+      {title ? <strong>{title}</strong> : null}
+      {children}
+    </div>
+  )
 }

@@ -18,7 +18,7 @@ export default function LoyaltyCard({
     <section
       className={
         hakum
-          ? 'loyalty-card-hakum relative overflow-hidden rounded-[1.5rem] border border-[#052699]/15 bg-white p-5 shadow-[0_12px_40px_rgba(5,20,65,0.08)] sm:p-7'
+          ? 'loyalty-card-hakum relative overflow-hidden rounded-[1.25rem] border border-[rgba(5,38,153,0.1)] bg-white p-5 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_12px_32px_rgba(5,20,65,0.055)] sm:p-6'
           : 'relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d1316] p-6 shadow-2xl sm:p-10'
       }
     >
