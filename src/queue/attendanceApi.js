@@ -1,4 +1,5 @@
 import { canEditAttendanceRoles } from '../auth/permissions'
+import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { getBranchScope } from './queueLogic'
 import { getCurrentProfile } from './queueApi'
 import { supabase } from '../lib/supabase'
@@ -19,7 +20,7 @@ import { formatQueueActionError } from './queueLogic'
 const ATTENDANCE_ROLES_KEY = 'attendance_roles'
 
 function getTodayDateSafe() {
-  return new Date().toISOString().slice(0, 10)
+  return getLocalCalendarDate()
 }
 
 /** Read Super Admin role allow-list (defaults if missing). */

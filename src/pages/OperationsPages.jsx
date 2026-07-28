@@ -611,7 +611,7 @@ export function QueueTicketPage() {
             })}
           </div>
           <div>
-            <ActionButton disabled={!canManageQueue} loading={saving === 'assign'} onClick={() => runAction('assign', () => assignStaff(ticket, selectedStaff, user.id))}>Save Assignments</ActionButton>
+            <ActionButton disabled={!canManageQueue} loading={saving === 'assign'} onClick={() => runAction('assign', () => assignStaff(ticket, selectedStaff))}>Save Assignments</ActionButton>
             <div className="mt-4 grid gap-2 text-sm text-slate-400">
               {assignments.length ? assignments.map((assignment) => (
                 <p key={assignment.id}>{staffById.get(assignment.staff_id)?.full_name || assignment.staff_id}: <span className="capitalize text-slate-200">{assignment.status}</span></p>

@@ -19,6 +19,7 @@ import {
   isoToLocalHhmm,
   shiftTimeToLabel,
 } from '@/lib/attendanceGeo'
+import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
 import {
   adminOverrideAttendance,
@@ -94,7 +95,7 @@ export function CrewAttendancePanel({ profile, canManage }) {
       setAttendance(attRows)
       setDates(range.dates)
       if (profile?.id) {
-        const today = new Date().toISOString().slice(0, 10)
+        const today = getLocalCalendarDate()
         setMyToday(attRows.find((r) => r.staff_id === profile.id && r.attendance_date === today) || null)
       }
     } catch (err) {

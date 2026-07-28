@@ -20,6 +20,7 @@ import {
 import { writeAudit } from '../lib/audit'
 import { resolveServicePriceMinor } from '../lib/servicePricing'
 import { createTtlCache } from '../lib/coalesceReload'
+import { getLocalCalendarDate } from '../lib/localCalendarDate'
 
 const timingWarningsCache = createTtlCache(120_000)
 
@@ -61,7 +62,7 @@ export const QUEUE_BOARD_SELECT = `
 `
 
 function getTodayDate() {
-  return new Date().toISOString().slice(0, 10)
+  return getLocalCalendarDate()
 }
 
 export function formatMoney(minor) {
@@ -709,60 +710,16 @@ export async function updateTicketPrice(ticket, amountMinor, reason, userId) {
   }
 }
 
-export async function assignStaff(ticket, staffIds, userId) {
+export async function assignStaff(ticket, staffIds) {
   await getCurrentProfile({ required: true })
-  const selected = new Set(staffIds)
-  const { data: existing, error: existingError } = await supabase
-    .from('queue_assignments')
-    .select('id, staff_id, status')
-    .eq('booking_id', ticket.booking_id)
-
-  if (existingError) {
-    console.error('Unable to load existing queue assignments', existingError)
-    throw formatQueueActionError(existingError)
-  }
-
-  const activeExisting = existing || []
-  const toRelease = activeExisting.filter((assignment) => assignment.status === 'active' && !selected.has(assignment.staff_id)).map((assignment) => assignment.id)
-  if (toRelease.length) {
-    const { error } = await supabase
-      .from('queue_assignments')
-      .update({ status: 'released', released_at: new Date().toISOString(), completed_at: new Date().toISOString() })
-      .in('id', toRelease)
-    if (error) {
-      console.error('Unable to release queue assignments', error)
-      throw formatQueueActionError(error)
-    }
-  }
-
-  const activeIds = new Set(activeExisting.filter((assignment) => assignment.status === 'active').map((assignment) => assignment.staff_id))
-  const inserts = staffIds
-    .filter((staffId) => !activeIds.has(staffId))
-    .map((staffId) => ({
-      booking_id: ticket.booking_id,
-      staff_id: staffId,
-      assigned_by: userId,
-      task_name: ticket.service_name || 'Queue service',
-      status: 'active',
-      started_at: ticket.status === 'in_progress' ? new Date().toISOString() : null,
-    }))
-
-  if (inserts.length) {
-    const { error } = await supabase.from('queue_assignments').insert(inserts)
-    if (error) {
-      console.error('Unable to insert queue assignments', error)
-      throw formatQueueActionError(error)
-    }
-  }
-
-  const { error: bookingError } = await supabase
-    .from('bookings')
-    .update({ assigned_staff_id: staffIds[0] || null })
-    .eq('id', ticket.booking_id)
-
-  if (bookingError) {
-    console.error('Unable to update assigned queue staff', bookingError)
-    throw formatQueueActionError(bookingError)
+  const ids = (staffIds || []).filter(Boolean)
+  const { error } = await supabase.rpc('sync_queue_assignments', {
+    input_booking_id: ticket.booking_id,
+    input_staff_ids: ids,
+  })
+  if (error) {
+    console.error('Unable to sync queue assignments', error)
+    throw formatQueueActionError(error)
   }
 }
 
