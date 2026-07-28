@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { AttendanceHeatmap } from '@/components/ui/attendance-heatmap'
 import { Button } from '@/components/ui/button'
@@ -6,7 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { canEditAttendanceSettings, canOverrideAttendance, getBranchScopeList, isSuperAdmin } from '@/auth/permissions'
+import { canEditAttendanceRoles, canEditAttendanceSettings, canOverrideAttendance, getBranchScopeList, isSuperAdmin } from '@/auth/permissions'
+import {
+  ATTENDANCE_ROLE_OPTIONS,
+  DEFAULT_ATTENDANCE_ROLES,
+} from '@/lib/attendanceRoles'
 import {
   buildAttendanceHeatmap,
   buildAttendanceTableRows,
@@ -18,13 +23,28 @@ import { supabase } from '@/lib/supabase'
 import {
   adminOverrideAttendance,
   fetchAttendanceMatrix,
+  fetchAttendanceRoleSettings,
   fetchBranchAttendanceSettings,
   geoTimeIn,
   geoTimeOut,
   readBrowserPosition,
+  resetAttendanceRoleSettings,
+  updateAttendanceRoleSettings,
   updateBranchAttendanceSettings,
 } from '@/queue/attendanceApi'
 import { fetchBranches } from '@/queue/queueApi'
+
+/** Client page size — swap load() to server range when row volume needs it. */
+const ATTENDANCE_PAGE_SIZE = 25
+
+const ROLE_LABELS = {
+  staff: 'Staff',
+  team_lead: 'Team Lead',
+  admin: 'Admin',
+  assistant_super_admin: 'ASA',
+  BossMich: 'Super Admin',
+  marketing: 'Marketing',
+}
 
 function fmtTime(iso) {
   if (!iso) return '—'
@@ -42,6 +62,10 @@ function statusBadge(status) {
   return 'text-muted-foreground'
 }
 
+function roleLabel(role) {
+  return ROLE_LABELS[role] || role || '—'
+}
+
 export function CrewAttendancePanel({ profile, canManage }) {
   const [period, setPeriod] = useState('weekly')
   const [branchSlug, setBranchSlug] = useState(profile?.branch_slug || '')
@@ -56,6 +80,8 @@ export function CrewAttendancePanel({ profile, canManage }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showHeatmap, setShowHeatmap] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(ATTENDANCE_PAGE_SIZE)
   const canOverride = canOverrideAttendance(profile)
   const scope = getBranchScopeList(profile)
 
@@ -118,9 +144,24 @@ export function CrewAttendancePanel({ profile, canManage }) {
         return false
       }
       if (!q) return true
-      return r.name.toLowerCase().includes(q) || r.username.toLowerCase().includes(q) || r.date.includes(q)
+      const roleText = roleLabel(r.role).toLowerCase()
+      return (
+        r.name.toLowerCase().includes(q)
+        || r.username.toLowerCase().includes(q)
+        || r.date.includes(q)
+        || roleText.includes(q)
+      )
     })
   }, [tableRows, search, statusFilter])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, statusFilter, period, branchSlug, pageSize])
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const pageStart = (safePage - 1) * pageSize
+  const pagedRows = filteredRows.slice(pageStart, pageStart + pageSize)
 
   const branchOptions = useMemo(() => {
     if (scope === null) return branches
@@ -191,13 +232,13 @@ export function CrewAttendancePanel({ profile, canManage }) {
   }
 
   return (
-    <div className="mt-5 flex flex-col gap-6">
+    <div className="mt-4 flex flex-col gap-4">
       <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <CardHeader className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <CardTitle>Geofenced time clock</CardTitle>
             <CardDescription>
-              Time in inside the branch radius. Late is flagged vs shift start. Live for Team Lead and floor.
+              Time in inside the branch radius. Late is flagged vs shift start — works for every floor role.
             </CardDescription>
             {myToday && (
               <p className={`mt-2 text-sm font-medium capitalize ${statusBadge(myToday.status)}`}>
@@ -208,10 +249,10 @@ export function CrewAttendancePanel({ profile, canManage }) {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" disabled={!!busy} onClick={() => runGeo('in')}>
+            <Button type="button" className="min-h-11" disabled={!!busy} onClick={() => runGeo('in')}>
               {busy === 'in' ? 'Locating…' : 'Time in'}
             </Button>
-            <Button type="button" variant="outline" disabled={!!busy} onClick={() => runGeo('out')}>
+            <Button type="button" variant="outline" className="min-h-11" disabled={!!busy} onClick={() => runGeo('out')}>
               {busy === 'out' ? 'Saving…' : 'Time out'}
             </Button>
           </div>
@@ -219,13 +260,15 @@ export function CrewAttendancePanel({ profile, canManage }) {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <CardTitle>Attendance register</CardTitle>
               <CardDescription>
-                Table view for the selected period. Team Lead sees their branch live.
-                {canOverride ? ' Click Override to correct a cell.' : ''}
+                {staff.length
+                  ? `${staff.length} people on this branch (roles configured by Super Admin).`
+                  : 'People on this branch per Super Admin attendance-role settings.'}
+                {canOverride ? ' Click a heatmap cell or Override to correct a row.' : ''}
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -233,7 +276,8 @@ export function CrewAttendancePanel({ profile, canManage }) {
                 <select
                   value={branchSlug}
                   onChange={(e) => setBranchSlug(e.target.value)}
-                  className="flex h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                  className="flex h-10 min-h-11 rounded-md border border-input bg-transparent px-3 text-sm"
+                  aria-label="Branch"
                 >
                   {branchOptions.map((b) => (
                     <option key={b.slug} value={b.slug}>{b.name}</option>
@@ -245,8 +289,8 @@ export function CrewAttendancePanel({ profile, canManage }) {
                   key={key}
                   type="button"
                   size="sm"
+                  className="min-h-10 capitalize"
                   variant={period === key ? 'default' : 'outline'}
-                  className="capitalize"
                   onClick={() => setPeriod(key)}
                 >
                   {key}
@@ -254,14 +298,15 @@ export function CrewAttendancePanel({ profile, canManage }) {
               ))}
             </div>
           </div>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex flex-1 flex-col gap-2">
               <Label htmlFor="att-search">Search</Label>
               <Input
                 id="att-search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Staff name, username, or date…"
+                placeholder="Name, role, username, or date…"
+                className="min-h-11"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -270,7 +315,7 @@ export function CrewAttendancePanel({ profile, canManage }) {
                 id="att-status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="flex h-9 min-w-[9rem] rounded-md border border-input bg-transparent px-3 text-sm"
+                className="flex h-11 min-w-[9rem] rounded-md border border-input bg-transparent px-3 text-sm"
               >
                 <option value="all">All rows</option>
                 <option value="recorded">Recorded only</option>
@@ -280,12 +325,12 @@ export function CrewAttendancePanel({ profile, canManage }) {
                 <option value="absent">Absent</option>
               </select>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setShowHeatmap((v) => !v)}>
+            <Button type="button" variant="ghost" size="sm" className="min-h-11" onClick={() => setShowHeatmap((v) => !v)}>
               {showHeatmap ? 'Hide heatmap' : 'Show heatmap'}
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           {showHeatmap && !loading && (
             <AttendanceHeatmap
               matrix={matrix}
@@ -297,13 +342,33 @@ export function CrewAttendancePanel({ profile, canManage }) {
           )}
 
           <div>
-            <p className="mb-3 text-sm font-medium text-muted-foreground">
-              {loading ? 'Loading…' : `${filteredRows.length} row${filteredRows.length === 1 ? '' : 's'}`}
-            </p>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-muted-foreground">
+                {loading
+                  ? 'Loading…'
+                  : filteredRows.length === 0
+                    ? '0 rows'
+                    : `Showing ${pageStart + 1}–${Math.min(pageStart + pageSize, filteredRows.length)} of ${filteredRows.length}`}
+              </p>
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                Rows
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  className="h-9 rounded-md border border-input bg-transparent px-2 text-sm text-foreground"
+                  aria-label="Rows per page"
+                >
+                  {[10, 25, 50, 100].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Staff</TableHead>
+                  <TableHead>Person</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Check in</TableHead>
@@ -313,11 +378,14 @@ export function CrewAttendancePanel({ profile, canManage }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!loading && filteredRows.map((row) => (
+                {!loading && pagedRows.map((row) => (
                   <TableRow key={row.key}>
                     <TableCell>
                       <div className="font-medium">{row.name}</div>
                       {row.username ? <div className="text-xs text-muted-foreground">@{row.username}</div> : null}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs font-semibold text-muted-foreground">
+                      {roleLabel(row.role)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{row.date}</TableCell>
                     <TableCell className={`capitalize font-medium ${statusBadge(row.status)}`}>
@@ -328,7 +396,7 @@ export function CrewAttendancePanel({ profile, canManage }) {
                     <TableCell className="capitalize text-muted-foreground">{row.source || '—'}</TableCell>
                     <TableCell>
                       {canOverride ? (
-                        <Button size="sm" variant="secondary" onClick={() => openOverride(row)}>
+                        <Button size="sm" variant="secondary" className="min-h-9" onClick={() => openOverride(row)}>
                           Override
                         </Button>
                       ) : null}
@@ -337,13 +405,44 @@ export function CrewAttendancePanel({ profile, canManage }) {
                 ))}
                 {!loading && !filteredRows.length && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-muted-foreground">
+                    <TableCell colSpan={8} className="text-muted-foreground">
                       No attendance rows match this search/filter.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+
+            {!loading && filteredRows.length > 0 ? (
+              <nav className="mt-4 flex flex-wrap items-center justify-between gap-3" aria-label="Attendance pagination">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-10 gap-1"
+                  disabled={safePage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="size-4" aria-hidden />
+                  Previous
+                </Button>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Page <span className="tabular-nums text-foreground">{safePage}</span> of{' '}
+                  <span className="tabular-nums text-foreground">{totalPages}</span>
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-10 gap-1"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                  <ChevronRight className="size-4" aria-hidden />
+                </Button>
+              </nav>
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -415,11 +514,15 @@ export function CrewAttendancePanel({ profile, canManage }) {
 
 export function CrewSettingsPanel({ profile }) {
   const canEdit = canEditAttendanceSettings(profile)
+  const canRoles = canEditAttendanceRoles(profile)
   const [branches, setBranches] = useState([])
   const [slug, setSlug] = useState(profile?.branch_slug || '')
   const [form, setForm] = useState({ geofence_radius_m: 150, shift_start: '08:00', shift_end: '18:00' })
   const [meta, setMeta] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [roleDraft, setRoleDraft] = useState([...DEFAULT_ATTENDANCE_ROLES])
+  const [rolesLoading, setRolesLoading] = useState(false)
+  const [rolesSaving, setRolesSaving] = useState(false)
 
   const load = useCallback(async (nextSlug) => {
     if (!nextSlug) return
@@ -432,6 +535,19 @@ export function CrewSettingsPanel({ profile }) {
     })
   }, [])
 
+  const loadRoles = useCallback(async () => {
+    if (!canRoles) return
+    setRolesLoading(true)
+    try {
+      const roles = await fetchAttendanceRoleSettings()
+      setRoleDraft(roles)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setRolesLoading(false)
+    }
+  }, [canRoles])
+
   useEffect(() => {
     fetchBranches()
       .then((rows) => {
@@ -443,18 +559,52 @@ export function CrewSettingsPanel({ profile }) {
   }, [profile?.branch_slug])
 
   useEffect(() => {
-    if (slug) load(slug).catch((err) => toast.error(err.message))
-  }, [slug, load])
+    if (slug && canEdit) load(slug).catch((err) => toast.error(err.message))
+  }, [slug, load, canEdit])
 
-  if (!canEdit) {
+  useEffect(() => {
+    loadRoles()
+  }, [loadRoles])
+
+  if (!canEdit && !canRoles) {
     return (
       <Card className="mt-5">
         <CardContent className="pt-6 text-sm text-muted-foreground">
           Only Admin / Super Admin / Assistant Super Admin (branches grant) can edit geofence and shifts.
-          Team Lead can view attendance on the Attendance tab.
+          Which roles appear on attendance is Super Admin only.
         </CardContent>
       </Card>
     )
+  }
+
+  const toggleRole = (value) => {
+    setRoleDraft((prev) => (prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value]))
+  }
+
+  const saveRoles = async () => {
+    setRolesSaving(true)
+    try {
+      const next = await updateAttendanceRoleSettings(roleDraft, profile)
+      setRoleDraft(next)
+      toast.success('Attendance roles saved')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setRolesSaving(false)
+    }
+  }
+
+  const resetRoles = async () => {
+    setRolesSaving(true)
+    try {
+      const next = await resetAttendanceRoleSettings(profile)
+      setRoleDraft(next)
+      toast.success('Attendance roles reset to defaults')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setRolesSaving(false)
+    }
   }
 
   const save = async (e) => {
@@ -466,7 +616,7 @@ export function CrewSettingsPanel({ profile }) {
         shift_start: form.shift_start,
         shift_end: form.shift_end,
       })
-      toast.success('Attendance settings saved')
+      toast.success('Branch attendance settings saved')
       await load(slug)
     } catch (err) {
       toast.error(err.message)
@@ -476,52 +626,106 @@ export function CrewSettingsPanel({ profile }) {
   }
 
   return (
-    <Card className="mt-5">
-      <CardHeader>
-        <CardTitle>Attendance settings</CardTitle>
-        <CardDescription>Geofence radius and shift window per branch. Staff time-in uses the branch map pin.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={save} className="grid max-w-xl gap-4">
-          <div className="grid gap-2">
-            <Label>Branch</Label>
-            <select value={slug} onChange={(e) => setSlug(e.target.value)} className="flex h-9 rounded-md border border-input bg-transparent px-3 text-sm">
-              {branches.map((b) => (
-                <option key={b.slug} value={b.slug}>{b.name}</option>
-              ))}
-            </select>
-          </div>
-          {meta && (
+    <div className="mt-4 flex flex-col gap-4">
+      {canRoles ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Attendance roles</CardTitle>
+            <CardDescription>
+              Super Admin only. Choose which employee roles appear on the attendance register and heatmap.
+              Unchecked roles are excluded company-wide.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid max-w-xl gap-4">
+            {rolesLoading ? (
+              <p className="text-sm text-muted-foreground">Loading roles…</p>
+            ) : (
+              <fieldset className="grid gap-2">
+                <legend className="sr-only">Employee roles for attendance</legend>
+                {ATTENDANCE_ROLE_OPTIONS.map((opt) => {
+                  const checked = roleDraft.includes(opt.value)
+                  return (
+                    <label
+                      key={opt.value}
+                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 text-sm font-medium"
+                    >
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-[var(--primary)]"
+                        checked={checked}
+                        onChange={() => toggleRole(opt.value)}
+                      />
+                      <span>{opt.label}</span>
+                      <span className="ml-auto font-mono text-[10px] text-muted-foreground">{opt.value}</span>
+                    </label>
+                  )
+                })}
+              </fieldset>
+            )}
             <p className="text-xs text-muted-foreground">
-              Pin: {meta.latitude != null ? `${meta.latitude}, ${meta.longitude}` : 'missing — set in Branches first'}
+              Selected: {roleDraft.length || 0}. At least one role is required to save.
             </p>
-          )}
-          <div className="grid gap-2">
-            <Label>Geofence radius (meters)</Label>
-            <Input
-              type="number"
-              min={30}
-              max={5000}
-              required
-              value={form.geofence_radius_m}
-              onChange={(e) => setForm((f) => ({ ...f, geofence_radius_m: e.target.value }))}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Shift start</Label>
-              <Input type="time" required value={form.shift_start} onChange={(e) => setForm((f) => ({ ...f, shift_start: e.target.value }))} />
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" disabled={rolesSaving || rolesLoading} onClick={saveRoles}>
+                {rolesSaving ? 'Saving…' : 'Save roles'}
+              </Button>
+              <Button type="button" variant="outline" disabled={rolesSaving || rolesLoading} onClick={resetRoles}>
+                Reset defaults
+              </Button>
             </div>
-            <div className="grid gap-2">
-              <Label>Shift end</Label>
-              <Input type="time" required value={form.shift_end} onChange={(e) => setForm((f) => ({ ...f, shift_end: e.target.value }))} />
-            </div>
-          </div>
-          <Button type="submit" disabled={saving} className="w-fit">
-            {saving ? 'Saving…' : 'Save settings'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {canEdit ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Branch geofence & shifts</CardTitle>
+            <CardDescription>Geofence radius and shift window per branch. Time-in uses the branch map pin.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={save} className="grid max-w-xl gap-4">
+              <div className="grid gap-2">
+                <Label>Branch</Label>
+                <select value={slug} onChange={(e) => setSlug(e.target.value)} className="flex h-11 rounded-md border border-input bg-transparent px-3 text-sm">
+                  {branches.map((b) => (
+                    <option key={b.slug} value={b.slug}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+              {meta && (
+                <p className="text-xs text-muted-foreground">
+                  Pin: {meta.latitude != null ? `${meta.latitude}, ${meta.longitude}` : 'missing — set in Branches first'}
+                </p>
+              )}
+              <div className="grid gap-2">
+                <Label>Geofence radius (meters)</Label>
+                <Input
+                  type="number"
+                  min={30}
+                  max={5000}
+                  required
+                  value={form.geofence_radius_m}
+                  onChange={(e) => setForm((f) => ({ ...f, geofence_radius_m: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label>Shift start</Label>
+                  <Input type="time" required value={form.shift_start} onChange={(e) => setForm((f) => ({ ...f, shift_start: e.target.value }))} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Shift end</Label>
+                  <Input type="time" required value={form.shift_end} onChange={(e) => setForm((f) => ({ ...f, shift_end: e.target.value }))} />
+                </div>
+              </div>
+              <Button type="submit" disabled={saving} className="w-fit">
+                {saving ? 'Saving…' : 'Save branch settings'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
   )
 }

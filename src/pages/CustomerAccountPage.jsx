@@ -25,7 +25,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import LoyaltyCard from '@/components/LoyaltyCard'
 import NotificationBell from '@/components/NotificationBell'
 import PushToggle from '@/components/PushToggle'
-import InstallGuide from '@/components/InstallGuide'
 import CustomerBookingModal from '@/components/CustomerBookingModal'
 import CustomerSettingsModal from '@/components/CustomerSettingsModal'
 
@@ -520,10 +519,6 @@ export default function CustomerAccountPage() {
           ) : (
             <div className="account-empty">Loyalty stamps appear after your first completed visit.</div>
           )}
-        </div>
-
-        <div className="account-area-install">
-          <InstallGuide variant="panel" audience="customer" />
         </div>
 
         <section className="account-sheet account-area-history" aria-labelledby="history-heading">

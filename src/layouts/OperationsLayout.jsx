@@ -31,7 +31,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { getOperationsNav, getTeamLeadDock, getTeamLeadMore, isAdmin, ROLES, canSeeAllBranches } from '../auth/permissions'
 import NotificationBell from '@/components/NotificationBell'
 import UserSettingsModal from '@/components/UserSettingsModal'
-import InstallGuide from '@/components/InstallGuide'
+import { OpsInstallPopup } from '@/components/InstallGuide'
 import {
   Sidebar,
   SidebarContent,
@@ -173,9 +173,6 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
             <Settings size={16} aria-hidden />
             Settings
           </button>
-          <div className="w-full basis-full">
-            <InstallGuide variant="compact" audience="ops" />
-          </div>
           <span className="ml-auto self-center text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
             Scope · {branch}
           </span>
@@ -187,6 +184,7 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
       </main>
 
       <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
+      <OpsInstallPopup />
 
       <nav className="floor-dock z-30 shrink-0 border-t border-border bg-background/98 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl" aria-label="Floor navigation">
         <ul className={`mx-auto grid max-w-3xl gap-1 px-1 py-1.5 sm:gap-2 sm:px-2 ${dock.length >= 5 ? 'grid-cols-5' : `grid-cols-${Math.max(dock.length, 1)}`}`} style={{ gridTemplateColumns: `repeat(${Math.max(dock.length, 1)}, minmax(0, 1fr))` }}>
@@ -266,9 +264,6 @@ function AdminOpsShell({ profile, user, signOut, navigation, adminShell }) {
                 {formatRole(profile?.role)} · {formatScope(profile)}
               </p>
               <p className="truncate text-xs text-muted-foreground">{profile?.email || user?.email}</p>
-              <div className="mt-2 group-data-[collapsible=icon]:hidden">
-                <InstallGuide variant="compact" audience="ops" surface="light" />
-              </div>
             </div>
             <SidebarMenu>
               <SidebarMenuItem>

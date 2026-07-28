@@ -38,7 +38,6 @@ import {
   queueByBranchCounts,
   requiresTeamLeadBranchSetup,
   canOverrideQueueBranches,
-  ACTIVE_QUEUE_STATUSES,
   DASHBOARD_DATE_PRESETS,
   QUEUE_PERMISSION_ERROR,
   REDO_FROM_STATUSES,
@@ -390,8 +389,8 @@ export function OperationsQueuePage() {
         eyebrow="Queue Board"
         title="Today on the floor"
         description={seeRedo
-          ? 'Manage active tickets until payment. Redo is the owner QC lane — customers never see it.'
-          : 'Manage active tickets until they are sent to payment. Waiting, in progress, and final checking only.'}
+          ? 'Active tickets until payment. Redo is the owner QC lane — customers never see it.'
+          : 'Active tickets until payment — waiting, in progress, and final checking.'}
         live={live}
         action={(
           <div className="flex gap-2 sm:gap-3">
@@ -425,28 +424,15 @@ export function OperationsQueuePage() {
             </p>
           )}
         </div>
-        <div className="queue-board-stats" aria-label="Lane totals">
-          {ACTIVE_QUEUE_STATUSES.map((status) => (
-            <div key={status} className="queue-board-stat" data-status={status}>
-              <span className="queue-board-stat-label">{STATUS_LABELS[status]}</span>
-              <span className="queue-board-stat-value tabular-nums">{counts[status] || 0}</span>
-            </div>
-          ))}
-          {seeRedo ? (
-            <div className="queue-board-stat" data-status="redo">
-              <span className="queue-board-stat-label">Redo</span>
-              <span className="queue-board-stat-value tabular-nums">{counts.redo || 0}</span>
-            </div>
-          ) : null}
-          <div className="queue-board-stat queue-board-stat-total">
-            <span className="queue-board-stat-label">Active</span>
-            <span className="queue-board-stat-value tabular-nums">{counts.total}</span>
-          </div>
-        </div>
+        {/* Lane counts live on column headers — avoid a second summary strip */}
+        <p className="rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground">
+          <span className="tabular-nums text-primary">{counts.total}</span>
+          <span className="ml-1.5 text-muted-foreground font-medium">active on board</span>
+        </p>
       </div>
 
       <div
-        className={`floor-lane-board queue-lane-board mt-4 sm:mt-5 ${seeRedo ? 'queue-lane-board-redo' : 'queue-lane-board-active'}`}
+        className={`floor-lane-board queue-lane-board mt-3 sm:mt-4 ${seeRedo ? 'queue-lane-board-redo' : 'queue-lane-board-active'}`}
         role="region"
         aria-label="Active queue lanes"
       >
@@ -949,7 +935,7 @@ export function CrewPage() {
       <PageHeader
         eyebrow="Crew"
         title="Crew & attendance"
-        description="Geofenced time clock, attendance heatmap, and staff pool CRUD."
+        description="Geofenced clock-in for every floor role, attendance heatmap, and crew pool."
         action={<RefreshButton loading={loading} onClick={reload} />}
       />
       {actionError && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{actionError}</p>}

@@ -50,7 +50,7 @@ export function AttendanceHeatmap({
           }}
         >
           <div className="sticky left-0 z-10 bg-muted/30 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Staff
+            Team
           </div>
           {dates.map((d) => (
             <div key={d} className="truncate text-center text-[10px] font-semibold text-muted-foreground" title={d}>
@@ -62,7 +62,7 @@ export function AttendanceHeatmap({
             <div key={row.staffId} className="contents">
               <div
                 className="sticky left-0 z-10 truncate bg-muted/30 py-0.5 pr-2 text-xs font-medium text-foreground"
-                title={row.name}
+                title={row.role ? `${row.name} · ${row.role}` : row.name}
               >
                 {row.name}
               </div>
@@ -94,13 +94,22 @@ export function AttendanceHeatmap({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-        <span>Empty</span>
-        {palette.map((color, i) => (
-          <div key={i} className="h-3 w-3 rounded-[4px]" style={{ backgroundColor: color }} title={['none', 'absent', 'late', '', 'present'][i]} />
+      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        {[
+          [0, 'Empty'],
+          [1, 'Absent'],
+          [2, 'Late'],
+          [4, 'Present'],
+        ].map(([idx, label]) => (
+          <span key={label} className="inline-flex items-center gap-1.5">
+            <span
+              className="inline-block h-3 w-3 rounded-[4px] border border-border/60"
+              style={{ backgroundColor: palette[idx] }}
+              aria-hidden
+            />
+            {label}
+          </span>
         ))}
-        <span>Present</span>
-        <span className="ml-2">· absent · late · present</span>
       </div>
     </div>
   )

@@ -47,7 +47,7 @@ export function attendanceStatusCount(status) {
 
 /**
  * Build staff × date matrix for heatmap.
- * @returns {{ staffId, name, cells: { date, status, count, row }[] }[]}
+ * @returns {{ staffId, name, role, cells: { date, status, count, row }[] }[]}
  */
 export function buildAttendanceHeatmap(staffRows, attendanceRows, dates) {
   const byKey = new Map()
@@ -56,7 +56,8 @@ export function buildAttendanceHeatmap(staffRows, attendanceRows, dates) {
   }
   return (staffRows || []).map((s) => ({
     staffId: s.id,
-    name: s.full_name || s.username || 'Staff',
+    name: s.full_name || s.username || 'Team member',
+    role: s.role || '',
     cells: dates.map((date) => {
       const row = byKey.get(`${s.id}|${date}`) || null
       const status = row?.status || null
@@ -108,7 +109,7 @@ export function recentDays(n = 14, anchor = new Date()) {
   return eachDayOfInterval({ start, end }).map((d) => format(d, 'yyyy-MM-dd'))
 }
 
-/** Flatten staff × dates into table rows for search/filter UI. */
+/** Flatten people × dates into table rows for search/filter UI. */
 export function buildAttendanceTableRows(staff, attendance, dates) {
   const byKey = new Map()
   for (const row of attendance || []) {
@@ -121,8 +122,9 @@ export function buildAttendanceTableRows(staff, attendance, dates) {
       out.push({
         key: `${s.id}|${date}`,
         staffId: s.id,
-        name: s.full_name || s.username || 'Staff',
+        name: s.full_name || s.username || 'Team member',
         username: s.username || '',
+        role: s.role || '',
         date,
         status: row?.status || null,
         checked_in_at: row?.checked_in_at || null,
@@ -135,4 +137,41 @@ export function buildAttendanceTableRows(staff, attendance, dates) {
   return out
 }
 
+/** Dedupe primary branch + assignment lists; floor roles first, then name. */
+export function mergeAttendancePeople(primaryRows = [], assignedRows = []) {
+  const byId = new Map()
+  for (const row of [...primaryRows, ...assignedRows]) {
+    if (!row?.id) continue
+    byId.set(row.id, row)
+  }
+  const rank = {
+    BossMich: 0,
+    assistant_super_admin: 1,
+    admin: 2,
+    team_lead: 3,
+    staff: 4,
+    marketing: 5,
+  }
+  return [...byId.values()].sort((a, b) => {
+    const ra = rank[a.role] ?? 9
+    const rb = rank[b.role] ?? 9
+    if (ra !== rb) return ra - rb
+    return String(a.full_name || a.username || '').localeCompare(String(b.full_name || b.username || ''))
+  })
+}
+
 export { format, addDays }
+
+// ponytail: self-check for merge + table flatten (ceiling: tiny assert; upgrade → vitest)
+if (typeof process !== 'undefined' && process.env?.ATTENDANCE_SELF_CHECK === '1') {
+  const merged = mergeAttendancePeople(
+    [{ id: 'a', full_name: 'Staff A', role: 'staff' }],
+    [
+      { id: 'a', full_name: 'Staff A', role: 'staff' },
+      { id: 'b', full_name: 'TL B', role: 'team_lead' },
+    ],
+  )
+  if (merged.length !== 2 || merged[0].role !== 'team_lead') {
+    throw new Error('mergeAttendancePeople self-check failed')
+  }
+}

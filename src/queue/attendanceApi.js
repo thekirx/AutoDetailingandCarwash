@@ -1,3 +1,4 @@
+import { canEditAttendanceRoles } from '../auth/permissions'
 import { getBranchScope } from './queueLogic'
 import { getCurrentProfile } from './queueApi'
 import { supabase } from '../lib/supabase'
@@ -6,11 +7,76 @@ import {
   isInsideGeofence,
   isLateVsShift,
   haversineMeters,
+  mergeAttendancePeople,
 } from '../lib/attendanceGeo'
+import {
+  DEFAULT_ATTENDANCE_ROLES,
+  normalizeAttendanceRoles,
+  peopleInAttendanceRoles,
+} from '../lib/attendanceRoles'
 import { formatQueueActionError } from './queueLogic'
+
+const ATTENDANCE_ROLES_KEY = 'attendance_roles'
 
 function getTodayDateSafe() {
   return new Date().toISOString().slice(0, 10)
+}
+
+/** Read Super Admin role allow-list (defaults if missing). */
+export async function fetchAttendanceRoleSettings() {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', ATTENDANCE_ROLES_KEY)
+    .maybeSingle()
+  if (error) throw formatQueueActionError(error)
+  return normalizeAttendanceRoles(data?.value)
+}
+
+/**
+ * Super Admin only — upsert which roles appear on attendance.
+ * @returns {Promise<string[]>}
+ */
+export async function updateAttendanceRoleSettings(roles, profile) {
+  if (!canEditAttendanceRoles(profile)) {
+    throw new Error('Only Super Admin can edit which roles appear on attendance.')
+  }
+  // Strict: do not silently expand empty selection to defaults on write
+  const raw = Array.isArray(roles) ? roles : roles?.roles
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new Error('Select at least one role for attendance.')
+  }
+  const cleaned = []
+  const seen = new Set()
+  for (const r of raw) {
+    const role = String(r || '').trim()
+    if (!DEFAULT_ATTENDANCE_ROLES.includes(role) || seen.has(role)) continue
+    seen.add(role)
+    cleaned.push(role)
+  }
+  if (!cleaned.length) {
+    throw new Error('Select at least one valid employee role.')
+  }
+
+  const { data, error } = await supabase
+    .from('app_settings')
+    .upsert(
+      {
+        key: ATTENDANCE_ROLES_KEY,
+        value: { roles: cleaned },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' },
+    )
+    .select('value')
+    .single()
+  if (error) throw formatQueueActionError(error)
+  return normalizeAttendanceRoles(data?.value)
+}
+
+/** Reset allow-list to product defaults — Super Admin only. */
+export async function resetAttendanceRoleSettings(profile) {
+  return updateAttendanceRoleSettings([...DEFAULT_ATTENDANCE_ROLES], profile)
 }
 
 export async function fetchBranchAttendanceSettings(branchSlug) {
@@ -41,14 +107,41 @@ export async function updateBranchAttendanceSettings(branchSlug, patch) {
 
 export async function fetchAttendanceMatrix({ branchSlug, period, anchor }) {
   const range = attendanceDateRange(period, anchor)
-  const { data: staff, error: staffErr } = await supabase
-    .from('staff_profiles')
-    .select('id, full_name, username, branch_slug, role, is_active')
-    .eq('is_active', true)
-    .eq('branch_slug', branchSlug)
-    .in('role', ['staff', 'team_lead'])
-    .order('full_name')
-  if (staffErr) throw formatQueueActionError(staffErr)
+  const personSelect = 'id, full_name, username, branch_slug, role, is_active'
+  const roles = await fetchAttendanceRoleSettings()
+
+  const [{ data: primary, error: primaryErr }, { data: assigns, error: assignErr }] = await Promise.all([
+    supabase
+      .from('staff_profiles')
+      .select(personSelect)
+      .eq('is_active', true)
+      .eq('branch_slug', branchSlug)
+      .in('role', roles)
+      .order('full_name'),
+    supabase
+      .from('staff_branch_assignments')
+      .select('staff_id')
+      .eq('branch_slug', branchSlug),
+  ])
+  if (primaryErr) throw formatQueueActionError(primaryErr)
+  if (assignErr) throw formatQueueActionError(assignErr)
+
+  const assignedIds = [...new Set((assigns || []).map((a) => a.staff_id).filter(Boolean))]
+  let assignedPeople = []
+  if (assignedIds.length) {
+    const { data, error } = await supabase
+      .from('staff_profiles')
+      .select(personSelect)
+      .eq('is_active', true)
+      .in('id', assignedIds)
+      .in('role', roles)
+      .order('full_name')
+    if (error) throw formatQueueActionError(error)
+    assignedPeople = data || []
+  }
+
+  // Defense in depth: re-filter after merge if roles config raced
+  const staff = peopleInAttendanceRoles(mergeAttendancePeople(primary || [], assignedPeople), roles)
 
   const { data: rows, error } = await supabase
     .from('staff_attendance')
@@ -58,7 +151,7 @@ export async function fetchAttendanceMatrix({ branchSlug, period, anchor }) {
     .lte('attendance_date', range.end)
   if (error) throw formatQueueActionError(error)
 
-  return { staff: staff || [], attendance: rows || [], range }
+  return { staff, attendance: rows || [], range, roles }
 }
 
 /** Staff self time-in via browser geolocation + branch geofence. */

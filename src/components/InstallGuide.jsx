@@ -165,8 +165,8 @@ export default function InstallGuide({
 
   if (hidden) return null
 
-  // Customer account panel: respect 14-day dismiss.
-  if (variant === 'panel' && audience === 'customer' && wasInstallDismissed()) {
+  // Panel / compact permanently retired — popup only (less annoying).
+  if (variant === 'panel' || variant === 'compact') {
     return null
   }
 
@@ -216,135 +216,16 @@ export default function InstallGuide({
     )
   }
 
-  if (variant === 'compact') {
-    const light = surface === 'light' || (surface === 'auto' && audience === 'customer')
-    return (
-      <div className={`install-compact ${light ? 'install-compact-light' : ''} ${className}`}>
-        <p className="install-compact-title">{copy.title}</p>
-        <GuideBody
-          audience={audience}
-          copy={copy}
-          canNativeInstall={canNativeInstall}
-          onInstall={handleInstall}
-          busy={busy}
-        />
-        <button type="button" className="install-dismiss" onClick={() => { dismissInstallGuide(); setHidden(true); onDismiss?.() }}>
-          Dismiss
-        </button>
-      </div>
-    )
-  }
-
-  // panel
-  const panelOps = audience === 'ops' && surface !== 'light'
-  const customerPanel = audience === 'customer' && !panelOps
-  return (
-    <aside
-      className={`install-panel ${panelOps ? 'install-panel-ops' : ''} ${customerPanel ? 'install-panel-app' : ''} ${className}`}
-      aria-label="Install app"
-    >
-      <div className="install-panel-top">
-        <span className="install-panel-icon" aria-hidden>
-          <Smartphone className="size-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="install-panel-eyebrow">{audience === 'ops' ? 'Floor app' : 'Get the app'}</p>
-          <h2 className="install-panel-title">
-            {customerPanel
-              ? platform === 'ios'
-                ? 'Add Hakum to your Home Screen'
-                : platform === 'android'
-                  ? 'Install Hakum on your phone'
-                  : 'Install Hakum on this device'
-              : copy.title}
-          </h2>
-          {customerPanel ? (
-            <p className="install-panel-blurb">
-              One tap for live queue, stamps, and visit alerts — best from the installed app.
-            </p>
-          ) : null}
-        </div>
-        {customerPanel ? (
-          <button
-            type="button"
-            className="install-panel-dismiss"
-            aria-label="Dismiss install guide"
-            onClick={() => {
-              dismissInstallGuide()
-              setHidden(true)
-              onDismiss?.()
-            }}
-          >
-            ×
-          </button>
-        ) : null}
-      </div>
-      {customerPanel ? (
-        <>
-          <StepList steps={copy.steps.slice(0, 3)} />
-          {copy.tip ? <p className="install-tip">{copy.tip}</p> : null}
-          <div className="install-panel-actions">
-            {canNativeInstall ? (
-              <Button type="button" className="min-h-11 flex-1" disabled={busy} onClick={handleInstall}>
-                <Download data-icon="inline-start" />
-                Install Hakum
-              </Button>
-            ) : (
-              <Button type="button" className="min-h-11 flex-1" onClick={() => setOpen(true)}>
-                Show install steps
-              </Button>
-            )}
-          </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogContent className="install-dialog max-w-md gap-0 overflow-hidden p-0 sm:max-w-md" showCloseButton={false}>
-              <div className="install-dialog-head">
-                <span className="install-dialog-badge" aria-hidden>
-                  <Smartphone className="size-5" />
-                </span>
-                <DialogHeader className="gap-1 text-left">
-                  <DialogTitle className="text-xl text-white">{copy.title}</DialogTitle>
-                  <DialogDescription className="text-white/75">
-                    Install for live queue, loyalty stamps, and visit alerts on your phone.
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
-              <div className="install-dialog-body">
-                <GuideBody
-                  audience={audience}
-                  copy={copy}
-                  canNativeInstall={canNativeInstall}
-                  onInstall={handleInstall}
-                  busy={busy}
-                />
-              </div>
-              <DialogFooter className="install-dialog-footer flex-col gap-2 sm:flex-col">
-                {platform === 'ios' ? (
-                  <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-                    <Share className="size-3.5" aria-hidden /> Safari → Share → Add to Home Screen
-                  </p>
-                ) : null}
-                <Button type="button" className="min-h-11 w-full" onClick={() => setOpen(false)}>
-                  Got it
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
-      ) : (
-        <GuideBody
-          audience={audience}
-          copy={copy}
-          canNativeInstall={canNativeInstall}
-          onInstall={handleInstall}
-          busy={busy}
-        />
-      )}
-    </aside>
-  )
+  return null
 }
 
 /** Customer-only auto popup wrapper for layouts. */
 export function CustomerInstallPopup({ enabled }) {
   if (!enabled) return null
   return <InstallGuide variant="popup" audience="customer" autoPopup />
+}
+
+/** Ops floor — one install modal, respects dismiss; no sticky sidebar panel. */
+export function OpsInstallPopup() {
+  return <InstallGuide variant="popup" audience="ops" autoPopup />
 }

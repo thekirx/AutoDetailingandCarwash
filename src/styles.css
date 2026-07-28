@@ -998,49 +998,6 @@ html:not(.dark) .floor-dock-item-active {
 }
 
 /* Queue board — high-contrast lanes on light/dark ops shell */
-.queue-board-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-.queue-board-stat {
-  display: grid;
-  gap: 0.15rem;
-  min-width: 4.5rem;
-  padding: 0.45rem 0.7rem;
-  border-radius: 0.85rem;
-  border: 1px solid var(--border);
-  background: var(--card);
-}
-.queue-board-stat-label {
-  font-size: 0.625rem;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
-.queue-board-stat-value {
-  font-size: 1.125rem;
-  font-weight: 750;
-  color: var(--foreground);
-  line-height: 1.1;
-}
-.queue-board-stat[data-status='waiting'] {
-  border-color: color-mix(in oklab, #2563eb 35%, var(--border));
-}
-.queue-board-stat[data-status='in_progress'] {
-  border-color: color-mix(in oklab, #059669 35%, var(--border));
-}
-.queue-board-stat[data-status='final_checking'] {
-  border-color: color-mix(in oklab, #d97706 35%, var(--border));
-}
-.queue-board-stat[data-status='redo'] {
-  border-color: color-mix(in oklab, #e11d48 40%, var(--border));
-}
-.queue-board-stat-total {
-  border-color: color-mix(in oklab, var(--primary) 40%, var(--border));
-  background: color-mix(in oklab, var(--primary) 8%, var(--card));
-}
 .queue-lane {
   border-top: 3px solid var(--border);
   background: color-mix(in oklab, var(--muted) 70%, var(--card));
@@ -1790,7 +1747,6 @@ html:not(.dark) .floor-dock-item-active {
       "error error"
       "car queue"
       "loyalty queue"
-      "loyalty install"
       "history actions";
     align-items: start;
     gap: 1.5rem 1.65rem;
@@ -1806,9 +1762,6 @@ html:not(.dark) .floor-dock-item-active {
   }
   .account-area-loyalty {
     grid-area: loyalty;
-  }
-  .account-area-install {
-    grid-area: install;
   }
   .account-area-history {
     grid-area: history;

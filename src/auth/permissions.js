@@ -184,6 +184,11 @@ export function canEditAttendanceSettings(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+/** Which employee roles appear on the attendance register — Super Admin only. */
+export function canEditAttendanceRoles(profile) {
+  return isSuperAdmin(profile)
+}
+
 export function canAccessConsole(profile) {
   return isAdmin(profile)
 }
