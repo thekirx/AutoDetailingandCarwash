@@ -3,7 +3,8 @@ import { Navigate } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessReports, getBranchScopeList } from '@/auth/permissions'
-import { applyBranchScope } from '@/lib/crmInsights'
+import { aggregateBestSellers, applyBranchScope } from '@/lib/crmInsights'
+import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,47 +23,58 @@ export default function ReportsPage() {
 
   const load = useCallback(async () => {
     const scope = getBranchScopeList(profile)
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+    const branchFilter = scope === null ? 'all' : scope
     const start30 = new Date()
     start30.setDate(start30.getDate() - 30)
     const startIso = start30.toISOString()
+    // Manila calendar for display consistency (sale queries use occurred_at window)
+    void getLocalCalendarDate()
 
     let salesQ = supabase.from('daily_sales_summary').select('*').order('sale_date', { ascending: false }).limit(30)
-    salesQ = applyBranchScope(salesQ, scope === null ? 'all' : scope)
+    salesQ = applyBranchScope(salesQ, branchFilter)
     let expensesQ = supabase.from('expenses').select('total_minor, status, branch').gte('created_at', startIso).limit(500)
-    expensesQ = applyBranchScope(expensesQ, scope === null ? 'all' : scope)
+    expensesQ = applyBranchScope(expensesQ, branchFilter)
     let booksQ = supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
       .eq('is_archived', false)
       .in('status', ['completed', 'for_payment'])
       .gte('scheduled_start', startIso)
-    booksQ = applyBranchScope(booksQ, scope === null ? 'all' : scope)
+    booksQ = applyBranchScope(booksQ, branchFilter)
 
-    const [sales, lines, expenses, crew, comps, books] = await Promise.all([
+    // sale_line_items has no branch — scope via parent sales ids
+    let saleIdsQ = supabase.from('sales').select('id').gte('occurred_at', startIso).limit(500)
+    saleIdsQ = applyBranchScope(saleIdsQ, branchFilter)
+
+    let crewQ = supabase.from('crew_kpi_summary').select('staff_id', { count: 'exact', head: true })
+    crewQ = applyBranchScope(crewQ, branchFilter)
+    let compsQ = supabase.from('complaints').select('id', { count: 'exact', head: true }).gte('created_at', startIso)
+    compsQ = applyBranchScope(compsQ, branchFilter)
+
+    const [sales, saleIdsRes, expenses, crew, comps, books] = await Promise.all([
       salesQ,
-      supabase.from('sale_line_items').select('name, item_type, line_total_minor, quantity').limit(500),
+      saleIdsQ,
       expensesQ,
-      supabase.from('crew_kpi_summary').select('staff_id', { count: 'exact', head: true }),
-      supabase.from('complaints').select('id', { count: 'exact', head: true }).gte('created_at', startIso),
+      crewQ,
+      compsQ,
       booksQ,
     ])
 
     if (sales.error) toast.error(sales.error.message)
-    if (lines.error) toast.error(lines.error.message)
+    if (saleIdsRes.error) toast.error(saleIdsRes.error.message)
     setDaily((sales.data || []).reverse())
 
-    const byName = {}
-    for (const line of lines.data || []) {
-      const key = `${line.item_type}:${line.name}`
-      byName[key] = (byName[key] || 0) + (line.line_total_minor || 0)
+    const saleIds = (saleIdsRes.data || []).map((r) => r.id).filter(Boolean)
+    let lines = { data: [], error: null }
+    if (saleIds.length) {
+      lines = await supabase
+        .from('sale_line_items')
+        .select('name, item_type, line_total_minor, quantity, sale_id')
+        .in('sale_id', saleIds)
+        .limit(1000)
+      if (lines.error) toast.error(lines.error.message)
     }
-    setServices(
-      Object.entries(byName)
-        .map(([key, total]) => ({ name: key.split(':')[1], total: total / 100 }))
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 8),
-    )
+    setServices(aggregateBestSellers(lines.data || [], 8))
 
     const expRows = expenses.data || []
     setExpenseCount(expRows.length)
@@ -70,7 +82,6 @@ export default function ReportsPage() {
     setKpiCrew(crew.count || 0)
     setComplaints(comps.count || 0)
     setBookingsDone(books.count || 0)
-    void today
   }, [profile])
 
   useEffect(() => {

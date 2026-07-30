@@ -94,9 +94,9 @@ begin
     join pg_namespace n on n.oid = c.relnamespace and n.nspname = v.schemaname
     where v.schemaname = 'public'
       and v.viewname in ('public_queue_counts', 'public_queue_numbers')
-      and not coalesce(c.reloptions, array[]::text[]) @> array['security_invoker=true']
+      and coalesce(c.reloptions, array[]::text[]) @> array['security_invoker=true']
   ) then
-    raise exception 'VERIFY: public queue views must use security_invoker';
+    raise exception 'VERIFY: public queue views must use security_definer (not security_invoker) so signed-in customers see the full board without anon bookings SELECT';
   end if;
 
   if exists (

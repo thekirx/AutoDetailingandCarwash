@@ -52,7 +52,7 @@ async function assertStaffManagerCaller(admin, accessToken) {
 
   const { data: staff, error } = await admin
     .from('staff_profiles')
-    .select('id, role, is_active, branch_slug')
+    .select('id, role, is_active, branch_slug, permission_grants')
     .eq('id', userData.user.id)
     .eq('is_active', true)
     .maybeSingle()
@@ -60,6 +60,14 @@ async function assertStaffManagerCaller(admin, accessToken) {
   if (error) throw error
   if (!staff || ![SUPER, ADMIN, ASSISTANT, TEAM_LEAD].includes(staff.role)) {
     throw Object.assign(new Error('Only Super Admin, Assistant Super Admin, Admin, or Team Lead may manage staff accounts.'), { status: 403 })
+  }
+  // ASA must hold people grant (defaults merge treats missing as true)
+  if (staff.role === ASSISTANT) {
+    const grants = staff.permission_grants || {}
+    const peopleOk = grants.people !== false
+    if (!peopleOk) {
+      throw Object.assign(new Error('Your Assistant Super Admin account lacks the people grant.'), { status: 403 })
+    }
   }
   return { user: userData.user, staff }
 }
@@ -178,6 +186,19 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
     const slugs = branchSlugs.length ? branchSlugs : branchSlug ? [branchSlug] : []
     await admin.from('staff_branch_assignments').delete().eq('staff_id', authUser.id)
     if (slugs.length) {
+      const { error: assignErr } = await admin.from('staff_branch_assignments').insert(
+        slugs.map((slug) => ({ staff_id: authUser.id, branch_slug: slug })),
+      )
+      if (assignErr) throw Object.assign(new Error(assignErr.message), { status: 400 })
+    }
+  } else if (role === ASSISTANT) {
+    const grants = { branches_all: true, ...permissionGrants }
+    await admin.from('staff_branch_assignments').delete().eq('staff_id', authUser.id)
+    if (grants.branches_all === false) {
+      const slugs = branchSlugs.length ? branchSlugs : branchSlug ? [branchSlug] : []
+      if (!slugs.length) {
+        throw Object.assign(new Error('Assign at least one branch when branches_all is off.'), { status: 400 })
+      }
       const { error: assignErr } = await admin.from('staff_branch_assignments').insert(
         slugs.map((slug) => ({ staff_id: authUser.id, branch_slug: slug })),
       )

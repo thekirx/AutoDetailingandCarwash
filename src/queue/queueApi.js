@@ -10,6 +10,7 @@ import {
   getBranchScopeFilter,
   getCrewAttendanceModel,
   MISSING_QUEUE_PROFILE_ERROR,
+  NO_BRANCH_SCOPE,
   normalizePlate,
   normalizeVehicleType,
   parsePesoInputToMinor,
@@ -278,7 +279,9 @@ export async function addStaffMember(form, profile) {
     profile?.role === 'BossMich' || profile?.role === 'assistant_super_admin'
       ? form.branch_slug
       : getBranchScope(profile)
-  if (!branchSlug) throw new Error('Your account has no assigned branch. Please contact BossMich.')
+  if (!branchSlug || branchSlug === NO_BRANCH_SCOPE) {
+    throw new Error('Your account has no assigned branch. Please contact BossMich.')
+  }
   const username = validateCrewUsername(form.username)
   const name = String(form.full_name || '').trim()
   const email = String(form.email || '').trim().toLowerCase()
@@ -568,9 +571,13 @@ export async function createQueueTicket(form) {
     const serviceId = serviceIds[i]
     const service = form.services.find((item) => item.id === serviceId)
     const sizedPrice = resolveServicePriceMinor(service, vehicleType)
+    // Prefer per-line override map, then shared final_price for single or multi
+    const override =
+      form.line_prices?.[serviceId] ??
+      (form.final_price ? parsePesoInputToMinor(form.final_price) : null)
     const linePrice =
-      serviceIds.length === 1 && form.final_price
-        ? parsePesoInputToMinor(form.final_price)
+      Number.isFinite(override) && override > 0
+        ? override
         : sizedPrice || 0
     const row = {
       ...shared,
@@ -735,5 +742,23 @@ export async function sendTicketToPayment(bookingId) {
   } catch {
     /* ignore */
   }
+  return data
+}
+
+/** Staff My Tasks: acknowledge pending → active (RPC locks booking_id). */
+export async function acknowledgeQueueAssignment(assignmentId) {
+  const { data, error } = await supabase.rpc('acknowledge_queue_assignment', {
+    p_assignment_id: assignmentId,
+  })
+  if (error) throw formatQueueActionError(error)
+  return data
+}
+
+/** Staff My Tasks: complete active → released. */
+export async function completeQueueAssignment(assignmentId) {
+  const { data, error } = await supabase.rpc('complete_queue_assignment', {
+    p_assignment_id: assignmentId,
+  })
+  if (error) throw formatQueueActionError(error)
   return data
 }

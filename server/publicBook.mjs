@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { notifyBookingStatus } from './notifyBooking.mjs'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -65,7 +66,7 @@ export async function handlePublicBookRequest(req, res) {
     const priced =
       sizeMap[pricingSlug] ?? sizeMap.medium ?? svc.price_minor ?? 0
 
-    // Optional: attach logged-in customer
+    // Attach only when JWT maps to customers.role=customer (never phone / metadata)
     let customer_id = null
     const token = bearer(req)
     if (token) {
@@ -73,24 +74,8 @@ export async function handlePublicBookRequest(req, res) {
       const uid = userData?.user?.id
       if (uid) {
         const { data: cust } = await db.from('customers').select('id, role').eq('id', uid).maybeSingle()
-        if (cust?.role === 'customer' || userData.user.user_metadata?.role === 'customer') {
-          customer_id = uid
-        }
+        customer_id = resolveBookingCustomerId({ authUid: uid, customerRole: cust?.role })
       }
-    }
-
-    // Match existing CRM by phone when guest books
-    if (!customer_id) {
-      const { data: byPhone } = await db
-        .from('customers')
-        .select('id')
-        .eq('role', 'customer')
-        .eq('phone', customer_phone)
-        .eq('is_archived', false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      customer_id = byPhone?.id || null
     }
 
     const insert = {

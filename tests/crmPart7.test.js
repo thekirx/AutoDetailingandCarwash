@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  aggregateBestSellers,
   aggregateLineItemsByService,
   aggregateSalesByBranch,
   aggregateSalesByHour,
   peakSalesHour,
+  resolveKpiRpcBranch,
 } from '../src/lib/crmInsights.js'
 import { getDashboardDateRange } from '../src/queue/queueLogic.js'
 
@@ -32,6 +34,28 @@ describe('CRM insights Part 7', () => {
     ])
     assert.equal(rows.length, 1)
     assert.equal(rows[0].count, 2)
+  })
+
+  it('aggregates best sellers in pesos with limit', () => {
+    const top = aggregateBestSellers(
+      [
+        { item_type: 'service', name: 'Wash', line_total_minor: 50000 },
+        { item_type: 'service', name: 'Wash', line_total_minor: 30000 },
+        { item_type: 'product', name: 'Wax', line_total_minor: 10000 },
+      ],
+      1,
+    )
+    assert.equal(top.length, 1)
+    assert.equal(top[0].name, 'Wash')
+    assert.equal(top[0].total, 800)
+  })
+
+  it('resolves KPI RPC branch slug without passing arrays', () => {
+    assert.equal(resolveKpiRpcBranch('all'), null)
+    assert.equal(resolveKpiRpcBranch('bacoor'), 'bacoor')
+    assert.equal(resolveKpiRpcBranch(['bacoor']), 'bacoor')
+    assert.equal(resolveKpiRpcBranch(['bacoor', 'imus']), null)
+    assert.equal(resolveKpiRpcBranch(null, 'legacy'), null)
   })
 })
 

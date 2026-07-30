@@ -34,6 +34,7 @@ import {
   updateBranchAttendanceSettings,
 } from '@/queue/attendanceApi'
 import { fetchBranches } from '@/queue/queueApi'
+import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 
 /** Client page size — swap load() to server range when row volume needs it. */
 const ATTENDANCE_PAGE_SIZE = 25
@@ -112,7 +113,8 @@ export function CrewAttendancePanel({ profile, canManage }) {
         setBranchSlug((cur) => {
           if (cur) return cur
           if (scope === null) return rows[0]?.slug || ''
-          return scope?.[0] || profile?.branch_slug || rows[0]?.slug || ''
+          if (Array.isArray(scope) && scope.length) return scope[0]
+          return profile?.branch_slug || ''
         })
       })
       .catch((err) => toast.error(err.message))
@@ -552,12 +554,13 @@ export function CrewSettingsPanel({ profile }) {
   useEffect(() => {
     fetchBranches()
       .then((rows) => {
-        setBranches(rows || [])
-        const first = profile?.branch_slug || rows[0]?.slug || ''
+        const scoped = filterBranchesForProfile(rows || [], profile)
+        setBranches(scoped)
+        const first = pickDefaultBranchSlug(profile, scoped)
         setSlug((s) => s || first)
       })
       .catch((err) => toast.error(err.message))
-  }, [profile?.branch_slug])
+  }, [profile])
 
   useEffect(() => {
     if (slug && canEdit) load(slug).catch((err) => toast.error(err.message))

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
-import { canSeeAllBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
+import { canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
-import { applyBranchScope } from '@/lib/crmInsights'
+import { applyBranchScope, resolveKpiRpcBranch } from '@/lib/crmInsights'
 import { aggregateByService, averageCycleMinutes, compareBranchesByCompleted } from '@/lib/kpiPart8'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
@@ -36,7 +36,7 @@ export default function KpiPage() {
   const [complaints, setComplaints] = useState([])
   const [services, setServices] = useState([])
   const [branches, setBranches] = useState([])
-  const [branchFilter, setBranchFilter] = useState(canSeeAllBranches(profile) ? 'all' : (getBranchScopeList(profile)?.[0] || 'all'))
+  const [branchFilter, setBranchFilter] = useState(canSeeAllKpiBranches(profile) ? 'all' : (getBranchScopeList(profile)?.[0] || 'all'))
   const [datePreset, setDatePreset] = useState('month')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
@@ -55,7 +55,13 @@ export default function KpiPage() {
     }
   }, [datePreset, customStart, customEnd])
 
-  const branchScope = useMemo(() => resolveBranchFilter(profile, branchFilter), [profile, branchFilter])
+  const branchScope = useMemo(() => {
+    if (canSeeAllKpiBranches(profile)) {
+      if (!branchFilter || branchFilter === 'all') return null
+      return branchFilter
+    }
+    return resolveBranchFilter(profile, branchFilter)
+  }, [profile, branchFilter])
 
   const load = useCallback(async () => {
     if (requiresTeamLeadBranchSetup(profile)) {
@@ -66,23 +72,25 @@ export default function KpiPage() {
     const startIso = `${range.start}T00:00:00+08:00`
     const endIso = `${range.end}T23:59:59.999+08:00`
     const legacyScope = getBranchScope(profile)
+    const rpcBranch = resolveKpiRpcBranch(branchScope, legacyScope)
 
     try {
       const { data: rpcRows, error: rpcError } = await supabase.rpc('get_crew_kpi', {
         input_start_date: range.start,
         input_end_date: range.end,
-        input_branch_slug: typeof branchScope === 'string' ? branchScope : legacyScope || null,
+        input_branch_slug: rpcBranch,
       })
       if (rpcError) {
-        // fallback view
+        // fallback view — honor UI branch filter, not only legacy single scope
         let q = supabase
           .from('crew_kpi_summary')
           .select('staff_id, staff_name, branch, total_assigned, total_completed, average_service_minutes, active_jobs, completed_today')
-        if (legacyScope) q = q.eq('branch', legacyScope)
+        q = applyBranchScope(q, branchScope)
         const { data, error } = await q.order('staff_name')
         if (error) throw error
         setCrewRows(data || [])
       } else {
+        const today = todayISO()
         setCrewRows(
           (rpcRows || []).map((row) => ({
             staff_id: row.staff_id,
@@ -92,7 +100,8 @@ export default function KpiPage() {
             total_completed: Number(row.cars_handled || 0),
             average_service_minutes: Number(row.average_completed_seconds || 0) / 60,
             active_jobs: Number(row.active_jobs || 0),
-            completed_today: 0,
+            completed_today: Number(row.completed_today ?? row.cars_handled_today ?? 0),
+            _range_end: today,
           })),
         )
       }
@@ -165,7 +174,7 @@ export default function KpiPage() {
     )
   }
 
-  const branchOptions = canSeeAllBranches(profile)
+  const branchOptions = canSeeAllKpiBranches(profile)
     ? [{ slug: 'all', name: 'All branches' }, ...branches]
     : (getBranchScopeList(profile) || []).map((slug) => ({
         slug,
@@ -184,7 +193,7 @@ export default function KpiPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {(canSeeAllBranches(profile) || branchOptions.length > 1) && (
+          {(canSeeAllKpiBranches(profile) || branchOptions.length > 1) && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
               <SelectTrigger className="min-h-11 w-40"><SelectValue /></SelectTrigger>
               <SelectContent>

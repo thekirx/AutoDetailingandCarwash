@@ -2,6 +2,7 @@
  * Public plate soft-lookup — returns vehicle make/model/type only (no customer PII).
  */
 import { createClient } from '@supabase/supabase-js'
+import { clientIp, rateLimit } from './httpUtil.mjs'
 
 function normalizePlate(value) {
   return String(value || '')
@@ -33,9 +34,12 @@ export async function handlePublicPlateLookup(req, res) {
   }
 
   try {
+    const ip = clientIp(req)
+    rateLimit({ key: `plate-lookup:${ip}`, limit: 30, windowMs: 60_000 })
+
     const url = new URL(req.url, 'http://localhost')
     const plate = normalizePlate(url.searchParams.get('plate') || '')
-    if (plate.length < 2) {
+    if (plate.length < 4) {
       res.statusCode = 200
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify({ found: false }))
@@ -73,7 +77,8 @@ export async function handlePublicPlateLookup(req, res) {
       }),
     )
   } catch (err) {
-    res.statusCode = 500
+    const status = err.status || 500
+    res.statusCode = status
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ error: String(err.message || err) }))
   }

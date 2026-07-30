@@ -115,8 +115,8 @@ export default function CustomerAccountPage() {
   useEffect(() => {
     if (authLoading) return
     if (!session?.access_token) return
-    if (authProfile?.role === 'customer' || user?.user_metadata?.role === 'customer') load()
-  }, [load, authProfile, user, session?.access_token, authLoading])
+    if (authProfile?.role === 'customer') load()
+  }, [load, authProfile, session?.access_token, authLoading])
 
   useEffect(() => {
     if (!branches.length || !navigator.geolocation) return
@@ -208,7 +208,7 @@ export default function CustomerAccountPage() {
     )
   }
 
-  if (!user || (authProfile && authProfile.role !== 'customer' && user.user_metadata?.role !== 'customer')) {
+  if (!user || !authProfile || authProfile.role !== 'customer') {
     return <Navigate to="/signin" replace />
   }
 

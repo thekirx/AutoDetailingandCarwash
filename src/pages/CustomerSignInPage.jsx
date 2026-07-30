@@ -7,7 +7,6 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
 import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
 import DemoAccountChips from '../components/DemoAccountChips'
-import { CUSTOMER_DEMO_ACCOUNT } from '../lib/demoAccounts'
 import { usePageMeta } from '../lib/pageMeta'
 
 async function authLookup(identifier, action = 'lookup') {
@@ -39,8 +38,20 @@ export default function CustomerSignInPage() {
   const [sendingSetup, setSendingSetup] = useState(false)
   const [sendingReset, setSendingReset] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [demoCustomer, setDemoCustomer] = useState(null)
   const { user, profile, loading, signOut } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return undefined
+    let cancelled = false
+    import('../lib/demoAccounts').then((m) => {
+      if (!cancelled) setDemoCustomer(m.CUSTOMER_DEMO_ACCOUNT)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!loading && user && profile?.role === 'customer') navigate('/account', { replace: true })
@@ -128,22 +139,15 @@ export default function CustomerSignInPage() {
         .eq('is_archived', false)
         .maybeSingle()
 
-      const metaCustomer =
-        data.user.user_metadata?.role === 'customer' ||
-        (data.user.email || '').includes('@customers.hakumautocare.com')
-
-      if (customerError && !metaCustomer) {
+      if (customerError || !customer) {
         await supabase.auth.signOut()
         throw new Error(
-          /42501|permission|policy|row-level/i.test(customerError.message || '')
+          customerError && /42501|permission|policy|row-level/i.test(customerError.message || '')
             ? 'Unable to verify your customer profile (permissions). Try again shortly.'
-            : customerError.message || 'Unable to verify customer account.',
+            : !customer
+              ? 'This sign-in is for customers. Team members use the operations portal.'
+              : customerError.message || 'Unable to verify customer account.',
         )
-      }
-
-      if (!customer && !metaCustomer) {
-        await supabase.auth.signOut()
-        throw new Error('This sign-in is for customers. Team members use the operations portal.')
       }
 
       if (data.user.user_metadata?.must_set_password) {
@@ -301,7 +305,7 @@ export default function CustomerSignInPage() {
 
       <DemoAccountChips
         title="Demo customer"
-        accounts={[CUSTOMER_DEMO_ACCOUNT]}
+        accounts={demoCustomer ? [demoCustomer] : []}
         onPick={(a) => {
           setIdentifier(a.email)
           setPassword(a.password)

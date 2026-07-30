@@ -5,7 +5,7 @@ import { canAccessFinance, canSeeAllBranches, canWriteFinance, getBranchScopeLis
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
-import { getDashboardDateRange } from '@/queue/queueLogic'
+import { getDashboardDateRange, filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { formatMoney } from '@/queue/queueApi'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,7 +41,7 @@ function scopeExpenses(query, profile, branchFilter) {
   if (branchFilter && branchFilter !== 'all' && list.includes(branchFilter)) return query.eq('branch', branchFilter)
   if (list.length === 1) return query.eq('branch', list[0])
   if (list.length > 1) return query.in('branch', list)
-  return query
+  return query.eq('branch', '__none__')
 }
 
 function scopeSales(query, profile, branchFilter) {
@@ -120,12 +120,13 @@ export default function FinancePage() {
       setExpenses(rows.data || [])
       setSalesRows(sales.data || [])
       setBranches(branchRows || [])
+      const defaultBranch = pickDefaultBranchSlug(profile, branchRows)
       setForm((f) => ({
         ...f,
         category_id: f.category_id || cats.data?.[0]?.id || '',
-        branch: f.branch || branchRows?.[0]?.slug || profile?.branch_slug || '',
+        branch: f.branch || defaultBranch,
       }))
-      setQuote((q) => ({ ...q, branch: q.branch || branchRows?.[0]?.slug || '' }))
+      setQuote((q) => ({ ...q, branch: q.branch || defaultBranch }))
     } catch (err) {
       toast.error(err.message || 'Unable to load finance data')
     }
@@ -156,6 +157,8 @@ export default function FinancePage() {
 
   if (!canAccessFinance(profile)) return <Navigate to="/operations/access-denied" replace />
 
+  const writableBranches = useMemo(() => filterBranchesForProfile(branches, profile), [branches, profile])
+
   const branchOptions = canSeeAllBranches(profile)
     ? [{ slug: 'all', name: 'All branches' }, ...branches]
     : (getBranchScopeList(profile) || []).map((slug) => ({ slug, name: branches.find((b) => b.slug === slug)?.name || slug }))
@@ -176,8 +179,21 @@ export default function FinancePage() {
     if (!canWrite) return toast.error('You do not have finance write access')
     setSaving(true)
     const qty = Number(form.quantity)
-    const unit = Math.round(Number(String(form.unit_cost).replace(/,/g, '')) * 100)
+    const unitPesos = Number(String(form.unit_cost).replace(/,/g, '').trim())
+    if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(unitPesos) || unitPesos < 0) {
+      setSaving(false)
+      return toast.error('Enter a valid quantity and unit cost')
+    }
+    const unit = Math.round(unitPesos * 100)
     const total = Math.round(qty * unit)
+    if (!Number.isFinite(total) || !form.branch) {
+      setSaving(false)
+      return toast.error('Branch and amount are required')
+    }
+    if (!writableBranches.some((b) => b.slug === form.branch) && getBranchScopeList(profile) !== null) {
+      setSaving(false)
+      return toast.error('You can only file expenses for your assigned branches')
+    }
     let categoryId = form.category_id
     if (kindHint) {
       const match = categories.find((c) => c.kind === kindHint)
@@ -379,9 +395,9 @@ export default function FinancePage() {
         </TabsContent>
 
         <TabsContent value="expenses" className="mt-6 flex flex-col gap-6">
-          {canWrite ? <ExpenseForm form={form} setForm={setForm} branches={branches} categories={categories.filter((c) => !['payroll', 'marketing'].includes(c.kind))} saving={saving} onSubmit={(e) => createExpense(e)} /> : <p className="text-sm text-muted-foreground">View-only — ask Super Admin for finance_write.</p>}
+          {canWrite ? <ExpenseForm form={form} setForm={setForm} branches={writableBranches} categories={categories.filter((c) => !['payroll', 'marketing'].includes(c.kind))} saving={saving} onSubmit={(e) => createExpense(e)} /> : <p className="text-sm text-muted-foreground">View-only — ask Super Admin for finance write access.</p>}
           <ExpenseTable rows={generalExpenses} canWrite={canWrite} onTransition={transition} />
-          {canWrite && <QuoteCard quote={quote} setQuote={setQuote} branches={branches} saving={saving} onSubmit={sendQuote} />}
+          {canWrite && <QuoteCard quote={quote} setQuote={setQuote} branches={writableBranches} saving={saving} onSubmit={sendQuote} />}
         </TabsContent>
 
         <TabsContent value="categories" className="mt-6 flex flex-col gap-6">
@@ -436,13 +452,13 @@ export default function FinancePage() {
 
         <TabsContent value="salary" className="mt-6 flex flex-col gap-6">
           <p className="text-sm text-muted-foreground">Payroll / incentive expenses (category kind = payroll).</p>
-          {canWrite ? <ExpenseForm form={form} setForm={setForm} branches={branches} categories={categories.filter((c) => c.kind === 'payroll')} saving={saving} onSubmit={(e) => createExpense(e, 'payroll')} submitLabel="Save salary / incentive" /> : null}
+          {canWrite ? <ExpenseForm form={form} setForm={setForm} branches={writableBranches} categories={categories.filter((c) => c.kind === 'payroll')} saving={saving} onSubmit={(e) => createExpense(e, 'payroll')} submitLabel="Save salary / incentive" /> : null}
           <ExpenseTable rows={expensesByKind('payroll')} canWrite={canWrite} onTransition={transition} />
         </TabsContent>
 
         <TabsContent value="marketing" className="mt-6 flex flex-col gap-6">
           <p className="text-sm text-muted-foreground">Marketing spend (category kind = marketing).</p>
-          {canWrite ? <ExpenseForm form={form} setForm={setForm} branches={branches} categories={categories.filter((c) => c.kind === 'marketing')} saving={saving} onSubmit={(e) => createExpense(e, 'marketing')} submitLabel="Save marketing cost" /> : null}
+          {canWrite ? <ExpenseForm form={form} setForm={setForm} branches={writableBranches} categories={categories.filter((c) => c.kind === 'marketing')} saving={saving} onSubmit={(e) => createExpense(e, 'marketing')} submitLabel="Save marketing cost" /> : null}
           <ExpenseTable rows={expensesByKind('marketing')} canWrite={canWrite} onTransition={transition} />
         </TabsContent>
 
@@ -476,7 +492,7 @@ export default function FinancePage() {
               {!salesRows.length && <p className="text-sm text-muted-foreground">No sales in range.</p>}
             </CardContent>
           </Card>
-          {canWrite && <QuoteCard quote={quote} setQuote={setQuote} branches={branches} saving={saving} onSubmit={sendQuote} />}
+          {canWrite && <QuoteCard quote={quote} setQuote={setQuote} branches={writableBranches} saving={saving} onSubmit={sendQuote} />}
         </TabsContent>
       </Tabs>
     </section>

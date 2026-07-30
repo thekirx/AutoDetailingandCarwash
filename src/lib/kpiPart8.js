@@ -17,6 +17,9 @@ export function averageCycleMinutes(bookings = []) {
 export function compareBranchesByCompleted(rows = []) {
   const map = {}
   for (const row of rows) {
+    const status = String(row.status || '')
+    // Name says completed — count finished floor outcomes only
+    if (!['completed', 'for_payment'].includes(status)) continue
     const key = row.branch || 'unknown'
     if (!map[key]) map[key] = { branch: key, count: 0, avg_min: 0, _sum: 0, _n: 0 }
     map[key].count += 1

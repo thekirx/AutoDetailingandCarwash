@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { Building2, Pencil, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canManageBranches } from '@/auth/permissions'
+import { canCreateBranches, canManageBranches } from '@/auth/permissions'
 import { archiveBranch, createBranch, listBranches, updateBranch } from '@/lib/adminApi'
+import { filterBranchesForProfile } from '@/queue/queueLogic'
 import { branchStatusLabel } from '@/lib/branches'
 import BranchLocationPicker from '@/components/BranchLocationPicker'
 import { Badge } from '@/components/ui/badge'
@@ -32,14 +33,17 @@ function statusFromRow(row) {
 
 export default function BranchesManagePage() {
   const { profile } = useAuth()
+  const canCreate = canCreateBranches(profile)
   const [rows, setRows] = useState([])
   const [form, setForm] = useState(empty)
   const [editingSlug, setEditingSlug] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
-    setRows(await listBranches({ includeArchived: true }))
-  }, [])
+    const all = await listBranches({ includeArchived: true })
+    // SA/ASA with branches grant see all; branch Admin only assigned sites
+    setRows(canCreateBranches(profile) ? all : filterBranchesForProfile(all, profile))
+  }, [profile])
 
   useEffect(() => {
     if (canManageBranches(profile)) load().catch((e) => toast.error(e.message))
@@ -65,6 +69,7 @@ export default function BranchesManagePage() {
         toast.success('Branch updated')
         setEditingSlug(null)
       } else {
+        if (!canCreate) throw new Error('Only Super Admin can open new company sites.')
         await createBranch(payload)
         toast.success(
           form.status === 'coming_soon'
@@ -118,6 +123,10 @@ export default function BranchesManagePage() {
   }
 
   async function onArchive(slug) {
+    if (!canCreate) {
+      toast.error('Only Super Admin can archive company sites.')
+      return
+    }
     if (!window.confirm(`Archive branch ${slug}? Staff scoped here keep their slug until reassigned.`)) return
     try {
       await archiveBranch(slug)
@@ -135,12 +144,14 @@ export default function BranchesManagePage() {
         <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Sites</p>
         <h1 className="text-3xl font-semibold tracking-tight">Branches</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Add a Philippine site with map pin. Active branches get live queue, booking, staff assignment, and show on customer visits.
-          Coming soon sites appear on the public branches page without accepting bookings yet.
+          {canCreate
+            ? 'Add a Philippine site with map pin. Active branches get live queue, booking, staff assignment, and show on customer visits. Coming soon sites appear on the public branches page without accepting bookings yet.'
+            : 'Update geo and status for your assigned sites. Opening or archiving company sites is Super Admin only.'}
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
+      <div className={`grid gap-6 ${canCreate || editingSlug ? 'xl:grid-cols-[minmax(0,420px)_1fr]' : ''}`}>
+        {(canCreate || editingSlug) ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -248,10 +259,11 @@ export default function BranchesManagePage() {
             </form>
           </CardContent>
         </Card>
+        ) : null}
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Building2 size={18} /> All branches</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Building2 size={18} /> {canCreate ? 'All branches' : 'My branches'}</CardTitle>
             <CardDescription>
               After create: assign staff under <Link className="text-primary underline-offset-2 hover:underline" to="/operations/people">People</Link>,
               open queue at /queue/&#123;slug&#125;, and take bookings — branch slug is stored on every visit.
@@ -313,7 +325,9 @@ export default function BranchesManagePage() {
                           {statusFromRow(row) !== 'inactive' && (
                             <Button size="sm" variant="outline" onClick={() => setStatus(row, 'inactive')}>Deactivate</Button>
                           )}
-                          <Button size="sm" variant="ghost" onClick={() => onArchive(row.slug)}>Archive</Button>
+                          {canCreate ? (
+                            <Button size="sm" variant="ghost" onClick={() => onArchive(row.slug)}>Archive</Button>
+                          ) : null}
                         </div>
                       )}
                     </TableCell>

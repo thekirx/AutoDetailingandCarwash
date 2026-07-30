@@ -13,6 +13,9 @@ const statCards = [
   ['total', 'Total Active Queue', 'from-slate-200/15 to-blue-950/35'],
 ]
 
+/** Poll safe public_queue_* views only — never Realtime WAL on bookings (full-row PII). */
+const PUBLIC_QUEUE_POLL_MS = 8_000
+
 export default function PublicQueuePage() {
   const { branch } = useParams()
   const [branchDetails, setBranchDetails] = useState(null)
@@ -70,17 +73,14 @@ export default function PublicQueuePage() {
     return () => window.clearInterval(timer)
   }, [])
 
+  // CUST-C1: poll safe views only — never subscribe to bookings Realtime (full-row PII).
   useEffect(() => {
     if (!branch || branchValid === false) return undefined
     const scheduleReload = createCoalescedReload(() => loadQueue(), 400)
-    const channel = supabase
-      .channel(`public-queue-${branch}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `branch=eq.${branch}` }, scheduleReload)
-      .subscribe()
-
+    const timer = window.setInterval(() => scheduleReload(), PUBLIC_QUEUE_POLL_MS)
     return () => {
       scheduleReload.cancel()
-      supabase.removeChannel(channel)
+      window.clearInterval(timer)
     }
   }, [branch, loadQueue, branchValid])
 

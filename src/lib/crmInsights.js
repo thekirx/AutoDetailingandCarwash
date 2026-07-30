@@ -64,3 +64,30 @@ export function applyBranchScope(query, branchFilter) {
   }
   return query.eq('branch', branchFilter)
 }
+
+/** Best-seller rollup for Reports (pesos). Independent of UI. */
+export function aggregateBestSellers(lines = [], limit = 8) {
+  const byName = {}
+  for (const line of lines || []) {
+    const key = `${line.item_type || 'item'}:${line.name || 'Unknown'}`
+    byName[key] = (byName[key] || 0) + Number(line.line_total_minor || 0)
+  }
+  return Object.entries(byName)
+    .map(([key, totalMinor]) => ({ name: key.split(':').slice(1).join(':'), total: totalMinor / 100 }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limit)
+}
+
+/**
+ * get_crew_kpi accepts one branch slug (or null = all).
+ * Prefer explicit single-branch filter; never pass an array.
+ */
+export function resolveKpiRpcBranch(branchScope, legacyScope = null) {
+  if (branchScope == null || branchScope === 'all') return null
+  if (typeof branchScope === 'string') return branchScope
+  if (Array.isArray(branchScope)) {
+    if (branchScope.length === 1) return branchScope[0]
+    return null
+  }
+  return legacyScope || null
+}

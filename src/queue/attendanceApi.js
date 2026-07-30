@@ -1,7 +1,5 @@
 import { canEditAttendanceRoles } from '../auth/permissions'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
-import { getBranchScope } from './queueLogic'
-import { getCurrentProfile } from './queueApi'
 import { supabase } from '../lib/supabase'
 import {
   attendanceDateRange,
@@ -15,7 +13,8 @@ import {
   normalizeAttendanceRoles,
   peopleInAttendanceRoles,
 } from '../lib/attendanceRoles'
-import { formatQueueActionError } from './queueLogic'
+import { getCurrentProfile } from './queueApi'
+import { formatQueueActionError, getBranchScope, NO_BRANCH_SCOPE } from './queueLogic'
 
 const ATTENDANCE_ROLES_KEY = 'attendance_roles'
 
@@ -159,7 +158,9 @@ export async function fetchAttendanceMatrix({ branchSlug, period, anchor }) {
 export async function geoTimeIn({ profile, coords }) {
   const currentProfile = await getCurrentProfile({ required: true })
   const branchSlug = profile?.branch_slug || getBranchScope(profile)
-  if (!branchSlug) throw new Error('No branch assigned — cannot time in.')
+  if (!branchSlug || branchSlug === NO_BRANCH_SCOPE) {
+    throw new Error('No branch assigned — cannot time in.')
+  }
 
   const branch = await fetchBranchAttendanceSettings(branchSlug)
   if (branch?.latitude == null || branch?.longitude == null) {
@@ -208,7 +209,7 @@ export async function geoTimeIn({ profile, coords }) {
 export async function geoTimeOut({ profile, coords }) {
   const currentProfile = await getCurrentProfile({ required: true })
   const branchSlug = profile?.branch_slug || getBranchScope(profile)
-  if (!branchSlug) throw new Error('No branch assigned.')
+  if (!branchSlug || branchSlug === NO_BRANCH_SCOPE) throw new Error('No branch assigned.')
   const today = getTodayDateSafe()
 
   const patch = {

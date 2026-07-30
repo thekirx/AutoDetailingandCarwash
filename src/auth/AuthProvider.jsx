@@ -68,21 +68,7 @@ export function AuthProvider({ children }) {
       return next
     }
 
-    // ponytail: RLS may block customer self-select until migration; metadata is enough for portal
-    if (user.user_metadata?.role === 'customer' || (!data && user.email?.includes('@customers.hakumautocare.com'))) {
-      const next = {
-        id: user.id,
-        full_name: user.user_metadata?.full_name || 'Customer',
-        email: user.email,
-        phone: user.user_metadata?.phone || null,
-        role: 'customer',
-        branch_slug: null,
-        source: 'auth_metadata',
-      }
-      setProfile(next)
-      return next
-    }
-
+    // ponytail: never trust user_metadata.role — clients can set it via updateUser (CUST-H7)
     if (!quiet) setProfile(null)
     return null
   }, [])

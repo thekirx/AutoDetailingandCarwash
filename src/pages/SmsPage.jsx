@@ -24,9 +24,10 @@ export default function SmsPage({ embedded = false }) {
   const [toggling, setToggling] = useState(false)
   const [providerHealth, setProviderHealth] = useState(null)
   const [form, setForm] = useState({ name: '', template_type: 'promo', body: '' })
-  const [send, setSend] = useState({ phone: '', body: '', template_type: 'promo' })
+  const [send, setSend] = useState({ phone: '', body: '', template_type: 'promo', template_id: '' })
 
   const load = useCallback(async () => {
+    const token = await getAccessTokenFresh().catch(() => null)
     const [t, e, enabled, health] = await Promise.all([
       supabase.from('sms_templates').select('*').order('created_at', { ascending: false }),
       supabase.from('sms_events').select('*').order('created_at', { ascending: false }).limit(30),
@@ -34,7 +35,9 @@ export default function SmsPage({ embedded = false }) {
         toast.error(err.message || 'Unable to load SMS toggle')
         return true
       }),
-      fetch('/api/busybee')
+      fetch('/api/busybee', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
         .then(async (r) => ({ http: r.status, ...(await r.json().catch(() => ({}))) }))
         .catch((err) => ({ ok: false, error: err.message })),
     ])
@@ -119,7 +122,7 @@ export default function SmsPage({ embedded = false }) {
       provider_response: body.providerResponse || null,
       sent_at: body.ok ? new Date().toISOString() : null,
     })
-    setSend({ phone: '', body: '', template_type: 'promo' })
+      setSend({ phone: '', body: '', template_type: 'promo', template_id: '' })
     load()
   }
 
@@ -195,13 +198,41 @@ export default function SmsPage({ embedded = false }) {
             <form onSubmit={queueSms} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2"><Label>Phone</Label><Input required value={send.phone} onChange={(e) => setSend({ ...send, phone: e.target.value })} /></div>
               <div className="flex flex-col gap-2">
+                <Label>Use template</Label>
+                <Select
+                  value={send.template_id || '__none__'}
+                  onValueChange={(v) => {
+                    if (v === '__none__') {
+                      setSend((s) => ({ ...s, template_id: '', body: s.body }))
+                      return
+                    }
+                    const t = templates.find((row) => row.id === v)
+                    if (!t) return
+                    setSend((s) => ({
+                      ...s,
+                      template_id: t.id,
+                      template_type: t.template_type || s.template_type,
+                      body: t.body || '',
+                    }))
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Optional template" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None — write custom</SelectItem>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select value={send.template_type} onValueChange={(v) => setSend({ ...send, template_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-col gap-2"><Label>Message</Label><Textarea required value={send.body} onChange={(e) => setSend({ ...send, body: e.target.value })} /></div>
+              <div className="flex flex-col gap-2"><Label>Message</Label><Textarea required value={send.body} onChange={(e) => setSend({ ...send, body: e.target.value, template_id: '' })} /></div>
               <Button type="submit">Queue SMS</Button>
             </form>
           </CardContent>
@@ -212,10 +243,31 @@ export default function SmsPage({ embedded = false }) {
         <CardHeader><CardTitle>Templates</CardTitle></CardHeader>
         <CardContent>
           <Table>
-            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Body</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Body</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody>
               {templates.map((t) => (
-                <TableRow key={t.id}><TableCell>{t.name}</TableCell><TableCell>{t.template_type}</TableCell><TableCell className="max-w-md truncate">{t.body}</TableCell></TableRow>
+                <TableRow key={t.id}>
+                  <TableCell>{t.name}</TableCell>
+                  <TableCell>{t.template_type}</TableCell>
+                  <TableCell className="max-w-md truncate">{t.body}</TableCell>
+                  <TableCell>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setSend((s) => ({
+                          ...s,
+                          template_id: t.id,
+                          template_type: t.template_type || 'promo',
+                          body: t.body || '',
+                        }))
+                      }
+                    >
+                      Use
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
             </TableBody>
           </Table>
@@ -225,7 +277,35 @@ export default function SmsPage({ embedded = false }) {
       <Card>
         <CardHeader><CardTitle>Recent SMS events</CardTitle></CardHeader>
         <CardContent>
-          <pre className="overflow-auto rounded-lg bg-muted/40 p-4 text-xs">{JSON.stringify(events, null, 2)}</pre>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>When</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Message</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {events.map((ev) => (
+                <TableRow key={ev.id}>
+                  <TableCell className="whitespace-nowrap text-xs">
+                    {ev.sent_at || ev.created_at ? new Date(ev.sent_at || ev.created_at).toLocaleString() : '—'}
+                  </TableCell>
+                  <TableCell>{ev.phone}</TableCell>
+                  <TableCell>{ev.event_type}</TableCell>
+                  <TableCell>{ev.status}</TableCell>
+                  <TableCell className="max-w-xs truncate text-xs">{ev.message}</TableCell>
+                </TableRow>
+              ))}
+              {!events.length ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-muted-foreground">No SMS events yet.</TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </section>

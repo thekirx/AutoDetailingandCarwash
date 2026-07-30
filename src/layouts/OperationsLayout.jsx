@@ -28,7 +28,7 @@ import {
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
-import { getOperationsNav, getTeamLeadDock, getTeamLeadMore, isAdmin, ROLES, canSeeAllBranches } from '../auth/permissions'
+import { getOperationsNav, getTeamLeadDock, getTeamLeadMore, isAdmin, ROLES, canSeeAllBranches, redirectForRole } from '../auth/permissions'
 import NotificationBell from '@/components/NotificationBell'
 import UserSettingsModal from '@/components/UserSettingsModal'
 import { OpsInstallPopup } from '@/components/InstallGuide'
@@ -292,7 +292,10 @@ function AdminOpsShell({ profile, user, signOut, navigation, adminShell }) {
                 {adminShell ? 'Operations · cost · profit · stock' : `Branch · ${formatScope(profile)}`}
               </p>
             </div>
-            <NotificationBell homeUrl="/operations/console" homeLabel="Open console" />
+            <NotificationBell
+              homeUrl={adminShell ? '/operations/console' : redirectForRole(profile?.role)}
+              homeLabel={adminShell ? 'Open console' : 'Open my tasks'}
+            />
             <button
               type="button"
               className="inline-flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"

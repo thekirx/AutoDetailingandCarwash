@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Gift, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
+import { Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, canManageServices, canSeeAllBranches, isAdmin } from '@/auth/permissions'
+import { canAccessPos, canManageServices, canSeeAllBranches, getBranchScopeList, isAdmin } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
-import { buildPosSalePayload } from '@/lib/posSale'
+import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import { buildHandoffCartLine, buildPosSalePayload } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange } from '@/lib/servicePricing'
 import { supabase } from '@/lib/supabase'
-import { getBranchScope } from '@/queue/queueLogic'
+import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
 import ServicesManagePage from '@/pages/ServicesManagePage'
 import ProductsManagePage from '@/pages/ProductsManagePage'
@@ -35,8 +36,10 @@ export default function PosPage() {
   const shellTab = ['checkout', 'services', 'merch'].includes(searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'checkout'
-  const branchLocked = !canSeeAllBranches(profile)
-  const assignedBranch = getBranchScope(profile) || profile?.branch_slug || ''
+  const scopeList = getBranchScopeList(profile)
+  const canPickPosBranch = canSeeAllBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
+  const branchLocked = !canPickPosBranch
+  const assignedBranch = pickDefaultBranchSlug(profile, [])
   const canProvisionCustomer = isAdmin(profile)
 
   const [services, setServices] = useState([])
@@ -68,7 +71,7 @@ export default function PosPage() {
 
   const load = useCallback(async () => {
     if (!branch) return
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalCalendarDate()
     const [svc, prod, stats, handoffRes] = await Promise.all([
       supabase
         .from('services')
@@ -102,19 +105,21 @@ export default function PosPage() {
   useEffect(() => {
     listBranches()
       .then((rows) => {
-        setBranches(rows)
+        const scoped = filterBranchesForProfile(rows, profile)
+        const options = canSeeAllBranches(profile) ? rows : scoped
+        setBranches(options)
         setBranch((current) => {
+          if (current && options.some((b) => b.slug === current)) return current
           if (branchLocked && assignedBranch) return assignedBranch
-          return current || assignedBranch || rows[0]?.slug || ''
+          return assignedBranch || options[0]?.slug || ''
         })
       })
       .catch((err) => toast.error(err.message))
-  }, [assignedBranch, branchLocked])
+  }, [assignedBranch, branchLocked, profile])
 
   useEffect(() => {
-    if (branchLocked && assignedBranch && branch !== assignedBranch) {
-      setBranch(assignedBranch)
-    }
+    if (!branchLocked) return
+    if (assignedBranch && branch !== assignedBranch) setBranch(assignedBranch)
   }, [assignedBranch, branchLocked, branch])
 
   useEffect(() => {
@@ -205,14 +210,13 @@ export default function PosPage() {
   function loadHandoff(row) {
     const booking = row.bookings || {}
     const serviceId = booking.service_id
-    const svc = services.find((s) => s.id === serviceId)
+    const svc = serviceId ? services.find((s) => s.id === serviceId) : null
     if (booking.vehicle_type) setCarSize(booking.vehicle_type)
     const amount =
       row.amount_minor ??
       booking.final_price_minor ??
       resolveServicePriceMinor(svc, booking.vehicle_type || carSize) ??
       0
-    const name = svc?.name || `Queue · ${booking.vehicle_plate || 'ticket'}`
     setActiveHandoff(row)
     if (!branchLocked) setBranch(row.branch || branch)
     const cid = booking.customer_id || ''
@@ -233,17 +237,11 @@ export default function PosPage() {
     setCustomerSearch('')
     setCustomerHits([])
     setTab('services')
-    setCart([
-      {
-        key: `handoff-${row.id}`,
-        item_type: 'service',
-        id: serviceId || row.id,
-        name,
-        quantity: 1,
-        unit_price_minor: amount,
-        price_minor: amount,
-      },
-    ])
+    const line = buildHandoffCartLine({ handoff: row, services, amountMinor: amount })
+    setCart([line])
+    if (line.missing_service) {
+      toast.message('Queue ticket has no linked service — checkout will record the amount without loyalty stamps.')
+    }
     setCartOpen(true)
   }
 

@@ -27,6 +27,9 @@ export const MISSING_QUEUE_PROFILE_ERROR = 'Your user profile is missing. Ask Su
 export const MISSING_STAFF_ATTENDANCE_ERROR = 'Staff attendance is not fully migrated yet. Ask Super Admin to apply the staff attendance Supabase migration.'
 export const DEFAULT_TIMING_WARNINGS = { enabled: true, min_seconds_in_progress: 120 }
 
+/** Sentinel for fail-closed branch filters (matches applyBranchScope empty-list behavior). */
+export const NO_BRANCH_SCOPE = '__none__'
+
 export const STATUS_LABELS = {
   waiting: 'Waiting',
   in_progress: 'In Progress',
@@ -117,10 +120,47 @@ export function resolveBranchFilter(profile, uiFilter = 'all') {
     if (!uiFilter || uiFilter === 'all') return null
     return uiFilter
   }
-  if (!list.length) return profile?.branch_slug || null
+  // Fail-closed: scoped role with zero assignments must not widen to "all branches"
+  if (!list.length) return NO_BRANCH_SCOPE
   if (uiFilter && uiFilter !== 'all' && list.includes(uiFilter)) return uiFilter
   if (list.length === 1) return list[0]
   return list
+}
+
+/** Branches the profile may pick in write forms (expense, booking, POS). */
+export function filterBranchesForProfile(branches = [], profile) {
+  const list = getBranchScopeList(profile)
+  if (list === null) return branches || []
+  if (!list.length) return []
+  const allowed = new Set(list)
+  return (branches || []).filter((b) => allowed.has(b.slug))
+}
+
+/**
+ * Default branch for attendance / forms.
+ * Never fall through to the first company-wide branch when the profile is scoped.
+ */
+export function pickDefaultBranchSlug(profile, branches = []) {
+  const list = getBranchScopeList(profile)
+  if (list === null) return branches[0]?.slug || profile?.branch_slug || ''
+  if (list.length) return list[0]
+  return profile?.branch_slug || ''
+}
+
+/** People directory: keep rows that touch the actor's branch scope (fail-closed when empty). */
+export function filterPeopleForProfile(people = [], profile) {
+  const list = getBranchScopeList(profile)
+  if (list === null) return people || []
+  if (!list.length) return []
+  const allowed = new Set(list)
+  return (people || []).filter((p) => {
+    const slugs = Array.isArray(p.branch_slugs) && p.branch_slugs.length
+      ? p.branch_slugs
+      : p.branch_slug
+        ? [p.branch_slug]
+        : []
+    return slugs.some((s) => allowed.has(s))
+  })
 }
 
 export function getDashboardDateRange(preset, customStart, customEnd, now = new Date()) {
@@ -241,6 +281,8 @@ export function normalizeVehicleType(value) {
 
 export function hasValidTeamLeadBranch(profile) {
   if (profile?.role !== 'team_lead') return true
+  const list = getBranchScopeList(profile)
+  if (Array.isArray(list) && list.length > 0) return true
   return Boolean(profile.branch_slug)
 }
 
@@ -254,14 +296,15 @@ export function getBranchScope(profile) {
   const list = getBranchScopeList(profile)
   if (Array.isArray(list) && list.length === 1) return list[0]
   if (Array.isArray(list) && list.length > 1) return list[0] // legacy single-slug callers
-  return profile.branch_slug || null
+  if (Array.isArray(list) && list.length === 0) return NO_BRANCH_SCOPE
+  return profile.branch_slug || NO_BRANCH_SCOPE
 }
 
 export function getBranchScopeFilter(profile) {
   if (!profile || canSeeAllBranches(profile)) return null
   const list = getBranchScopeList(profile)
   if (Array.isArray(list) && list.length) return list.length === 1 ? list[0] : list
-  return profile.branch_slug || null
+  return profile.branch_slug || NO_BRANCH_SCOPE
 }
 
 export function canEditQueueOperations(profile) {

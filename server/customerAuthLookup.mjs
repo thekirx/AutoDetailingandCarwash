@@ -5,6 +5,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { classifyIdentifier, normalizePlate, phoneDigits, phoneLoginEmail } from '../src/lib/customerAuth.js'
+import { publicAuthLookupPayload } from './customerAuthPublic.mjs'
 import { clientIp, rateLimit } from './httpUtil.mjs'
 
 function adminClient() {
@@ -227,7 +228,7 @@ export async function handleCustomerAuthLookupRequest(req, res, { getBody, siteO
         mode: 'reset',
       })
     } else {
-      result = await lookupCustomerAuthStatus({ identifier: body.identifier })
+      result = publicAuthLookupPayload(await lookupCustomerAuthStatus({ identifier: body.identifier }))
     }
 
     res.statusCode = 200

@@ -3,9 +3,10 @@
  * Used by Vite middleware (dev) and Vercel /api/provision-customer (prod).
  */
 import { createClient } from '@supabase/supabase-js'
+import { authCreateUserIdForCrm, buildProvisionInviteMessage } from './provisionSms.mjs'
 
-/** Admin / Super Admin / Assistant Super Admin only — not TL or marketing walk-in create. */
-export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin'])
+/** Queue walk-in provision: SA / Admin / ASA / Team Lead (TL forced to own branch at ticket create). */
+export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin', 'team_lead'])
 
 /** Phone digits → synthetic login email when walk-in has no email. */
 export function phoneLoginEmail(phone) {
@@ -39,7 +40,7 @@ async function assertQueueEditor(admin, accessToken) {
 
   if (staffError) throw staffError
   if (!staff || !QUEUE_PROVISION_ROLES.has(staff.role)) {
-    throw Object.assign(new Error('Only Admin, Super Admin, or Assistant Super Admin can provision customer accounts.'), { status: 403 })
+    throw Object.assign(new Error('Only Admin, Super Admin, Assistant Super Admin, or Team Lead can provision customer accounts.'), { status: 403 })
   }
   return { user: userData.user, staff }
 }
@@ -101,7 +102,6 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
 
   let authUser = null
   let createdAuth = false
-  let actionLink = null
 
   // Resolve existing auth via customers.email index (not listUsers — query-missing-indexes / N+1 avoid)
   const { data: byLoginEmail } = await admin
@@ -132,12 +132,15 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
       }
     }
     if (!authUser) {
-      const { data: created, error: createError } = await admin.auth.admin.createUser({
+      const createPayload = {
         email: loginEmail,
         password: randomTempPassword(),
         email_confirm: true,
         user_metadata: { role: 'customer', full_name: fullName, phone, plate, must_set_password: true },
-      })
+      }
+      const pinnedId = authCreateUserIdForCrm(customerId)
+      if (pinnedId) createPayload.id = pinnedId
+      const { data: created, error: createError } = await admin.auth.admin.createUser(createPayload)
       if (createError) {
         // Already registered — recovery link still works below once we resolve id
         const { data: again } = await admin
@@ -158,42 +161,30 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
     }
   }
 
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: 'recovery',
-    email: authUser.email || loginEmail,
-    options: { redirectTo },
-  })
-  if (!linkError) actionLink = linkData?.properties?.action_link || null
-
-  // Ensure customers row: prefer auth user id when inserting new
-  if (customerId) {
-    const { data: existingAuth } = await admin.auth.admin.getUserById(customerId)
-    if (!existingAuth?.user && authUser.id !== customerId) {
-      // Walk-in CRM row without auth — keep row, point email/phone; ticket still uses CRM id
-      await admin
-        .from('customers')
-        .update({
-          first_name: first || null,
-          last_name: last || null,
-          full_name: fullName,
-          phone,
-          email: email || loginEmail,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', customerId)
-    } else {
-      await admin
-        .from('customers')
-        .update({
-          first_name: first || null,
-          last_name: last || null,
-          full_name: fullName,
-          phone,
-          email: email || loginEmail,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', customerId)
-    }
+  // Ensure customers row shares Auth uid (CUST-C3 — never leave CRM id ≠ Auth uid)
+  if (customerId && authUser.id !== customerId) {
+    await remountCustomerOntoAuthUid(admin, {
+      fromId: customerId,
+      toId: authUser.id,
+      first,
+      last,
+      fullName,
+      phone,
+      email: email || loginEmail,
+    })
+    customerId = authUser.id
+  } else if (customerId) {
+    await admin
+      .from('customers')
+      .update({
+        first_name: first || null,
+        last_name: last || null,
+        full_name: fullName,
+        phone,
+        email: email || loginEmail,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', customerId)
   } else {
     customerId = authUser.id
     const { error: upsertError } = await admin.from('customers').upsert(
@@ -212,13 +203,11 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
     if (upsertError) throw Object.assign(new Error(upsertError.message), { status: 400 })
   }
 
-  const setPasswordHint = actionLink
-    ? `Set your password here: ${actionLink}`
-    : 'Open the Hakum set-password link sent to you, or ask the Team Lead to resend it.'
-
-  const message = email
-    ? `Hi ${fullName.split(' ')[0]}, your Hakum Auto Care account is ready (${email}). ${setPasswordHint}`
-    : `Hi ${fullName.split(' ')[0]}, your Hakum account login is your phone number (${phone}). ${setPasswordHint}`
+  const message = buildProvisionInviteMessage({
+    firstName: fullName.split(' ')[0],
+    phone,
+    email,
+  })
 
   const notify = await notifyCustomer(admin, { phone, email, message })
 
@@ -231,6 +220,37 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
     notified: true,
     notify,
     // ponytail: never expose action_link in browser responses
+  }
+}
+
+/** Move CRM + FK rows onto Auth uid when invite/create could not pin CRM id. */
+async function remountCustomerOntoAuthUid(admin, { fromId, toId, first, last, fullName, phone, email }) {
+  const { data: old } = await admin.from('customers').select('*').eq('id', fromId).maybeSingle()
+  const { error: upsertError } = await admin.from('customers').upsert(
+    {
+      id: toId,
+      role: 'customer',
+      first_name: first || old?.first_name || null,
+      last_name: last || old?.last_name || null,
+      full_name: fullName || old?.full_name,
+      phone: phone || old?.phone,
+      email: email || old?.email,
+      loyalty_stamps: old?.loyalty_stamps ?? 0,
+      loyalty_points: old?.loyalty_points ?? 0,
+      is_archived: false,
+    },
+    { onConflict: 'id' },
+  )
+  if (upsertError) throw Object.assign(new Error(upsertError.message), { status: 400 })
+
+  await Promise.all([
+    admin.from('bookings').update({ customer_id: toId }).eq('customer_id', fromId),
+    admin.from('vehicles').update({ customer_id: toId }).eq('customer_id', fromId),
+    admin.from('sales').update({ customer_id: toId }).eq('customer_id', fromId),
+  ])
+
+  if (fromId !== toId) {
+    await admin.from('customers').delete().eq('id', fromId)
   }
 }
 

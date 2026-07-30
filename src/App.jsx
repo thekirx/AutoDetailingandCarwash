@@ -100,7 +100,7 @@ export default function App() {
           <Route path="audit" element={gate('audit', <AuditLogPage />)} />
           <Route path="dashboard" element={gate('dashboard', <OperationsDashboardPage />)} />
           <Route path="queue" element={gate('queue', <OperationsQueuePage />)} />
-          <Route path="queue/new" element={gate('queue', <NewQueueTicketPage />)} />
+          <Route path="queue/new" element={gate('queue-new', <NewQueueTicketPage />)} />
           <Route path="queue/:id" element={gate('queue', <QueueTicketPage />)} />
           <Route path="crew" element={gate('crew', <CrewPage />)} />
           <Route path="kpi" element={gate('kpi', <KpiPage />)} />

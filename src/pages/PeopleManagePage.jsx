@@ -19,6 +19,7 @@ import {
   provisionStaff,
   updateStaffPerson,
 } from '@/lib/adminApi'
+import { filterBranchesForProfile, filterPeopleForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -45,12 +46,24 @@ function toggleSlug(list, slug) {
   return [...set]
 }
 
-function usesMultiBranch(role) {
-  return role === 'admin' || role === 'marketing'
+function usesMultiBranch(role, grants) {
+  if (role === 'admin' || role === 'marketing') return true
+  if (role === 'assistant_super_admin' && grants && grants.branches_all === false) return true
+  return false
 }
 
-function showBranchPicker(role) {
-  return ['admin', 'team_lead', 'staff', 'marketing'].includes(role)
+function showBranchPicker(role, grants) {
+  if (['admin', 'team_lead', 'staff', 'marketing'].includes(role)) return true
+  if (role === 'assistant_super_admin' && grants && grants.branches_all === false) return true
+  return false
+}
+
+function canMutateDirectoryPerson(actor, target) {
+  if (!target || target.role === 'BossMich') return false
+  if (isSuperAdmin(actor)) return true
+  // ASA/Admin peers: only Super Admin may edit or deactivate
+  if (target.role === 'assistant_super_admin' || target.role === 'admin') return false
+  return canManagePeople(actor)
 }
 
 export default function PeopleManagePage() {
@@ -88,15 +101,17 @@ export default function PeopleManagePage() {
 
   const load = useCallback(async () => {
     const [p, b] = await Promise.all([listStaffPeople({ includeInactive: true }), listBranches()])
-    setPeople(p)
-    setBranches(b)
-    const defaultBranch = profile?.branch_slug || b[0]?.slug || ''
+    const scopedBranches = filterBranchesForProfile(b, profile)
+    const scopedPeople = filterPeopleForProfile(p, profile)
+    setPeople(scopedPeople)
+    setBranches(scopedBranches)
+    const defaultBranch = pickDefaultBranchSlug(profile, scopedBranches)
     setForm((f) => ({
       ...f,
       branch_slug: f.branch_slug || defaultBranch,
       branch_slugs: f.branch_slugs.length ? f.branch_slugs : defaultBranch ? [defaultBranch] : [],
     }))
-  }, [profile?.branch_slug])
+  }, [profile])
 
   useEffect(() => {
     if (canManagePeople(profile)) load().catch((e) => toast.error(e.message))
@@ -108,8 +123,10 @@ export default function PeopleManagePage() {
     event.preventDefault()
     setSaving(true)
     try {
-      const needsBranch = showBranchPicker(form.role)
-      const slugs = usesMultiBranch(form.role) ? form.branch_slugs : form.branch_slug ? [form.branch_slug] : []
+      const grants = form.role === ROLES.ASSISTANT_SUPER_ADMIN ? form.permission_grants : null
+      const needsBranch = showBranchPicker(form.role, grants)
+      const multi = usesMultiBranch(form.role, grants)
+      const slugs = multi ? form.branch_slugs : form.branch_slug ? [form.branch_slug] : []
       await provisionStaff({
         ...form,
         branch_slug: needsBranch ? slugs[0] || form.branch_slug || null : null,
@@ -129,9 +146,14 @@ export default function PeopleManagePage() {
   async function saveEdit(event) {
     event.preventDefault()
     if (!editing) return
+    if (!canMutateDirectoryPerson(profile, editing)) {
+      toast.error('Only Super Admin can edit this account.')
+      return
+    }
     setSaving(true)
     try {
-      await updateStaffPerson({
+      const grants = editing.role === ROLES.ASSISTANT_SUPER_ADMIN ? editing.permission_grants : null
+      const payload = {
         id: editing.id,
         full_name: editing.full_name,
         role: editing.role,
@@ -139,8 +161,15 @@ export default function PeopleManagePage() {
         branch_slugs: editing.branch_slugs,
         phone: editing.phone,
         is_active: editing.is_active,
-        permission_grants: editing.permission_grants,
-      })
+      }
+      if (editing.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile)) {
+        payload.permission_grants = editing.permission_grants
+      }
+      // Keep branch_slugs when scoped ASA (branches_all false)
+      if (editing.role === ROLES.ASSISTANT_SUPER_ADMIN && grants?.branches_all === false) {
+        payload.branch_slugs = editing.branch_slugs || []
+      }
+      await updateStaffPerson(payload)
       toast.success('Staff updated')
       setEditing(null)
       await load()
@@ -152,7 +181,7 @@ export default function PeopleManagePage() {
   }
 
   async function onDeactivate(row, archive) {
-    if (row.role === 'BossMich') return
+    if (!canMutateDirectoryPerson(profile, row)) return
     if (!window.confirm(`${archive ? 'Archive' : 'Deactivate'} ${row.full_name}?`)) return
     try {
       await deactivateStaffPerson(row.id, { archive })
@@ -170,7 +199,7 @@ export default function PeopleManagePage() {
         <h1 className="text-3xl font-semibold tracking-tight">People & access control</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {isSuperAdmin(profile)
-            ? 'Create roles, assign multi-branch scope, and toggle Assistant Super Admin grants in realtime. Changes push to open sessions.'
+            ? 'Create roles, assign multi-branch scope, and toggle Assistant Super Admin grants. Reload after edits; open sessions pick up grant changes on next auth refresh.'
             : canEditAssistantGrants(profile)
               ? 'Manage people and ASA grants for your authority. Branch-scoped data follows assignments.'
               : 'Create Team Leads and staff for your assigned branch.'}
@@ -208,7 +237,7 @@ export default function PeopleManagePage() {
                   </SelectContent>
                 </Select>
               </div>
-              {showBranchPicker(form.role) && usesMultiBranch(form.role) && (
+              {showBranchPicker(form.role, form.permission_grants) && usesMultiBranch(form.role, form.permission_grants) && (
                 <div className="flex flex-col gap-2">
                   <Label>Branches (multi)</Label>
                   <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
@@ -225,7 +254,7 @@ export default function PeopleManagePage() {
                   </div>
                 </div>
               )}
-              {showBranchPicker(form.role) && !usesMultiBranch(form.role) && (
+              {showBranchPicker(form.role, form.permission_grants) && !usesMultiBranch(form.role, form.permission_grants) && (
                 <div className="flex flex-col gap-2">
                   <Label>Branch</Label>
                   <Select
@@ -307,7 +336,7 @@ export default function PeopleManagePage() {
                       {row.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
-                      {row.role !== 'BossMich' && (
+                      {canMutateDirectoryPerson(profile, row) && (
                         <div className="flex justify-end gap-2">
                           <Button
                             size="sm"
@@ -363,10 +392,10 @@ export default function PeopleManagePage() {
                   </SelectContent>
                 </Select>
               </div>
-              {showBranchPicker(editing.role) && (
-                <div className="flex flex-col gap-2">
-                  <Label>{usesMultiBranch(editing.role) ? 'Branches (multi)' : 'Branch'}</Label>
-                  {usesMultiBranch(editing.role) ? (
+              {showBranchPicker(editing.role, editing.permission_grants) && (
+                  <div className="flex flex-col gap-2">
+                  <Label>{usesMultiBranch(editing.role, editing.permission_grants) ? 'Branches (multi)' : 'Branch'}</Label>
+                  {usesMultiBranch(editing.role, editing.permission_grants) ? (
                     <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
                       {branches.map((b) => (
                         <label key={b.slug} className="flex cursor-pointer items-center gap-2 text-sm">

@@ -1,6 +1,8 @@
 import { supabase } from './supabase'
 import { getAccessTokenFresh } from './authToken'
 import { getBranchScope } from '../queue/queueLogic'
+import { DEFAULT_ASSISTANT_GRANTS, getBranchScopeList } from '../auth/permissions'
+import { applyBranchScope } from './crmInsights'
 import { writeAudit } from './audit'
 import {
   validateBranchInput,
@@ -146,7 +148,13 @@ export async function updateStaffPerson({
     is_active: is_active ?? true,
     updated_at: new Date().toISOString(),
   }
-  if (v.role === 'assistant_super_admin' && permission_grants && typeof permission_grants === 'object') {
+  // Only patch grants when explicitly provided (People UI omits when editor lacks rbac_edit)
+  if (
+    v.role === 'assistant_super_admin' &&
+    permission_grants !== undefined &&
+    permission_grants &&
+    typeof permission_grants === 'object'
+  ) {
     patch.permission_grants = permission_grants
   }
 
@@ -167,6 +175,25 @@ export async function updateStaffPerson({
         .from('staff_branch_assignments')
         .insert(slugs.map((slug) => ({ staff_id: id, branch_slug: slug })))
       if (insErr) throw mapDbError(insErr)
+    }
+  } else if (v.role === 'BossMich') {
+    const { error: delErr } = await supabase.from('staff_branch_assignments').delete().eq('staff_id', id)
+    if (delErr) throw mapDbError(delErr)
+  } else if (v.role === 'assistant_super_admin') {
+    const grants = { ...DEFAULT_ASSISTANT_GRANTS, ...(data.permission_grants || {}) }
+    const { error: delErr } = await supabase.from('staff_branch_assignments').delete().eq('staff_id', id)
+    if (delErr) throw mapDbError(delErr)
+    // Scoped ASA needs assignments; all-branch ASA stays clear
+    if (grants.branches_all === false) {
+      const slugs = Array.isArray(branch_slugs) && branch_slugs.length
+        ? branch_slugs.map(String)
+        : []
+      if (slugs.length) {
+        const { error: insErr } = await supabase
+          .from('staff_branch_assignments')
+          .insert(slugs.map((slug) => ({ staff_id: id, branch_slug: slug })))
+        if (insErr) throw mapDbError(insErr)
+      }
     }
   }
 
@@ -378,9 +405,22 @@ export async function archiveService(id) {
   return data
 }
 
-/** Console metrics: sales, expenses, stock, queue — optional branch filter. */
+/** Console metrics: sales, expenses, stock, queue — optional branch filter (slug | 'all' | list). */
 export async function fetchAdminConsoleSnapshot(profile, branchFilter = 'all') {
-  const scope = branchFilter && branchFilter !== 'all' ? branchFilter : getBranchScope(profile)
+  // Prefer explicit UI filter; 'all' for scoped Admin → all assigned branches via getBranchScopeList
+  let scope =
+    branchFilter && branchFilter !== 'all'
+      ? branchFilter
+      : (() => {
+          const list = getBranchScopeList(profile)
+          if (list === null) return null
+          if (!list.length) return '__none__'
+          return list.length === 1 ? list[0] : list
+        })()
+  // Legacy single-slug callers may still pass getBranchScope()
+  if (scope == null && branchFilter === 'all' && getBranchScope(profile) && getBranchScope(profile) !== '__none__') {
+    scope = null
+  }
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
 
   let salesQ = supabase.from('daily_sales_summary').select('*').order('sale_date', { ascending: false }).limit(60)
@@ -399,20 +439,37 @@ export async function fetchAdminConsoleSnapshot(profile, branchFilter = 'all') {
     .select('id, branch, status')
     .in('status', ['waiting', 'in_progress', 'final_checking', 'for_payment'])
 
-  if (scope) {
-    salesQ = salesQ.eq('branch', scope)
-    expensesQ = expensesQ.eq('branch', scope)
-    bookingsQ = bookingsQ.eq('branch', scope)
-    queueQ = queueQ.eq('branch', scope)
+  salesQ = applyBranchScope(salesQ, scope ?? 'all')
+  expensesQ = applyBranchScope(expensesQ, scope ?? 'all')
+  bookingsQ = applyBranchScope(bookingsQ, scope ?? 'all')
+  queueQ = applyBranchScope(queueQ, scope ?? 'all')
+
+  let productsQ = supabase
+    .from('products')
+    .select('id, name, sku, stock_qty, price_minor, category, is_active')
+    .eq('is_archived', false)
+    .order('name')
+  // products are global inventory (no branch column) — stock stays company-wide
+  let staffQ = supabase
+    .from('staff_profiles')
+    .select('id, role, branch_slug, is_active')
+    .eq('is_active', true)
+    .eq('is_archived', false)
+  if (typeof scope === 'string' && scope && scope !== 'all') {
+    staffQ = staffQ.eq('branch_slug', scope)
+  } else if (Array.isArray(scope) && scope.length) {
+    staffQ = staffQ.in('branch_slug', scope)
+  } else if (scope === '__none__') {
+    staffQ = staffQ.eq('branch_slug', '__none__')
   }
 
   const [sales, expenses, products, queue, bookings, staff, branches] = await Promise.all([
     salesQ,
     expensesQ,
-    supabase.from('products').select('id, name, sku, stock_qty, price_minor, category, is_active').eq('is_archived', false).order('name'),
+    productsQ,
     queueQ,
     bookingsQ,
-    supabase.from('staff_profiles').select('id, role, branch_slug, is_active').eq('is_active', true).eq('is_archived', false),
+    staffQ,
     listBranches(),
   ])
 

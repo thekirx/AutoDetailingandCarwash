@@ -16,7 +16,7 @@ import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope } from '@/lib/crmInsights'
 import { supabase } from '@/lib/supabase'
-import { getDashboardDateRange, requiresTeamLeadBranchSetup, resolveBranchFilter } from '@/queue/queueLogic'
+import { getDashboardDateRange, requiresTeamLeadBranchSetup, resolveBranchFilter, filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,8 +35,11 @@ const BOOKING_TABS = ['board', 'table', 'calendar']
 const COLUMNS = [
   { id: 'pending', label: 'New', tone: 'border-l-blue-500' },
   { id: 'confirmed', label: 'Confirmed', tone: 'border-l-emerald-500' },
-  { id: 'in_progress', label: 'In Progress', tone: 'border-l-amber-500' },
   { id: 'waiting', label: 'Waiting', tone: 'border-l-violet-500' },
+  { id: 'in_progress', label: 'In Progress', tone: 'border-l-amber-500' },
+  { id: 'final_checking', label: 'Final check', tone: 'border-l-cyan-500' },
+  { id: 'for_payment', label: 'For payment', tone: 'border-l-orange-500' },
+  { id: 'redo', label: 'Redo', tone: 'border-l-rose-500' },
   { id: 'completed', label: 'Done', tone: 'border-l-slate-400' },
   { id: 'cancelled', label: 'Cancelled', tone: 'border-l-red-500' },
 ]
@@ -121,10 +124,14 @@ export default function BookingBoardPage() {
 
   useEffect(() => {
     listBranches().then((rows) => {
+      const scoped = filterBranchesForProfile(rows || [], profile)
       setBranches(rows || [])
-      setForm((f) => ({ ...f, branch: f.branch || rows?.[0]?.slug || profile?.branch_slug || '' }))
+      setForm((f) => ({
+        ...f,
+        branch: f.branch || pickDefaultBranchSlug(profile, scoped),
+      }))
     }).catch(() => {})
-  }, [profile?.branch_slug])
+  }, [profile])
 
   useEffect(() => {
     load()
@@ -203,9 +210,14 @@ export default function BookingBoardPage() {
 
   function openCreate() {
     setEditing(null)
+    const formBranches = filterBranchesForProfile(branches, profile)
+    const defaultBranch =
+      branchFilter !== 'all'
+        ? branchFilter
+        : pickDefaultBranchSlug(profile, formBranches) || formBranches[0]?.slug || ''
     setForm({
       ...emptyBooking,
-      branch: branchFilter !== 'all' ? branchFilter : (branches[0]?.slug || profile?.branch_slug || ''),
+      branch: defaultBranch,
       scheduled_start: `${todayISO()}T10:00`,
     })
     setFormOpen(true)
@@ -368,7 +380,7 @@ export default function BookingBoardPage() {
                       </p>
                       {canEdit && (
                         <div className="mt-3 flex flex-wrap gap-1.5">
-                          {COLUMNS.filter((c) => c.id !== booking.status).slice(0, 3).map((c) => (
+                          {COLUMNS.filter((c) => c.id !== booking.status).slice(0, 6).map((c) => (
                             <Button
                               key={c.id}
                               size="sm"
@@ -475,7 +487,9 @@ export default function BookingBoardPage() {
               <Select value={form.branch} onValueChange={(branch) => setForm({ ...form, branch })}>
                 <SelectTrigger className="cursor-pointer"><SelectValue placeholder="Branch" /></SelectTrigger>
                 <SelectContent>
-                  {branches.map((b) => <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>)}
+                  {filterBranchesForProfile(branches, profile).map((b) => (
+                    <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -47,7 +47,7 @@ export const ASSISTANT_GRANT_LABELS = {
   branches_all: 'All branches (data scope)',
   services_merch: 'Services & merch',
   queue_all: 'Queue edit (all sites)',
-  kpi_all: 'KPI (all sites)',
+  kpi_all: 'KPI all sites',
   audit: 'Audit log',
   memberships: 'Memberships',
   rbac_edit: 'Edit other ASA grants',
@@ -108,6 +108,13 @@ export function canSeeAllBranches(profile) {
   return getBranchScopeList(profile) === null
 }
 
+/** KPI board: ASA uses kpi_all (independent of general branches_all). */
+export function canSeeAllKpiBranches(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'kpi_all')
+  return canSeeAllBranches(profile)
+}
+
 export function canAccessPos(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'pos')
@@ -145,6 +152,13 @@ export function canManageBranches(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'branches')
   return profile?.role === ROLES.ADMIN
+}
+
+/** Open new company sites — Super Admin / ASA with branches grant (not branch Admin). */
+export function canCreateBranches(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'branches')
+  return false
 }
 
 export function canManagePeople(profile) {
@@ -356,6 +370,7 @@ export function allowRoute(profile, key) {
     audit: canAccessAudit,
     dashboard: canViewQueueOperations,
     queue: canViewQueueOperations,
+    'queue-new': canEditQueueOperations,
     crew: canViewQueueOperations,
     kpi: canViewQueueOperations,
     'my-tasks': canViewAssignedTasks,

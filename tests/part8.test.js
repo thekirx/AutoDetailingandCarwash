@@ -12,6 +12,7 @@ import { normalizeCatalogPair } from '../src/lib/vehicleCatalog.js'
 describe('Part 8 KPI helpers', () => {
   it('computes cycle minutes and averages', () => {
     const b = {
+      status: 'completed',
       in_progress_at: '2026-07-26T02:00:00.000Z',
       for_payment_at: '2026-07-26T02:30:00.000Z',
       branch: 'bacoor',

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { notifyBookingStatus } from './notifyBooking.mjs'
+import { canStaffUpdateBookingStatus } from './bookingStatusAccess.mjs'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 
 function admin() {
@@ -9,7 +10,7 @@ function admin() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'team_lead'])
+const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'team_lead', 'assistant_super_admin'])
 
 /**
  * Ops updates booking status + triggers BusyBee SMS / push.
@@ -34,16 +35,37 @@ export async function handleBookingStatusRequest(req, res) {
 
     const { data: staff } = await db
       .from('staff_profiles')
-      .select('id, role, is_active')
+      .select('id, role, is_active, branch_slug')
       .eq('id', userData.user.id)
       .eq('is_active', true)
       .maybeSingle()
     if (!staff || !ALLOWED.has(staff.role)) return json(res, 403, { error: 'Forbidden' })
 
+    let branch_slugs = staff.branch_slug ? [staff.branch_slug] : []
+    if (staff.role === 'admin') {
+      const { data: assigns } = await db
+        .from('staff_branch_assignments')
+        .select('branch_slug')
+        .eq('staff_id', staff.id)
+      if (assigns?.length) branch_slugs = assigns.map((a) => a.branch_slug).filter(Boolean)
+    }
+
     const body = await readJsonBody(req)
     const bookingId = body.booking_id
     const status = String(body.status || '').trim()
     if (!bookingId || !status) return json(res, 400, { error: 'booking_id and status required' })
+
+    const { data: existing, error: loadErr } = await db
+      .from('bookings')
+      .select('id, branch, status')
+      .eq('id', bookingId)
+      .maybeSingle()
+    if (loadErr) return json(res, 400, { error: loadErr.message })
+    if (!existing) return json(res, 404, { error: 'Booking not found' })
+
+    if (!canStaffUpdateBookingStatus({ ...staff, branch_slugs }, existing, { nextStatus: status })) {
+      return json(res, 403, { error: 'Not allowed to update bookings outside your branch scope' })
+    }
 
     const { data: booking, error } = await db
       .from('bookings')

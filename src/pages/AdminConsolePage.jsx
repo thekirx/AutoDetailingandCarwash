@@ -11,7 +11,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { isAdmin, isSuperAdmin } from '@/auth/permissions'
+import { isAdmin, canSeeAllBranches, getBranchScopeList } from '@/auth/permissions'
 import { fetchAdminConsoleSnapshot, formatPeso } from '@/lib/adminApi'
 import { getBranchScope } from '@/queue/queueLogic'
 import { Badge } from '@/components/ui/badge'
@@ -40,8 +40,16 @@ function MetricCard({ label, value, detail, icon: Icon, tone = 'default' }) {
 
 export default function AdminConsolePage() {
   const { profile } = useAuth()
-  const scoped = getBranchScope(profile)
-  const [branch, setBranch] = useState(scoped || 'all')
+  const scopeList = getBranchScopeList(profile)
+  const canPickBranch = canSeeAllBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
+  const defaultBranch = canSeeAllBranches(profile)
+    ? 'all'
+    : Array.isArray(scopeList) && scopeList.length === 1
+      ? scopeList[0]
+      : Array.isArray(scopeList) && scopeList.length > 1
+        ? 'all'
+        : getBranchScope(profile) || 'all'
+  const [branch, setBranch] = useState(defaultBranch)
   const [snap, setSnap] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -50,23 +58,18 @@ export default function AdminConsolePage() {
     setLoading(true)
     setError('')
     try {
-      const filter = scoped || branch
-      const data = await fetchAdminConsoleSnapshot(profile, filter)
+      const data = await fetchAdminConsoleSnapshot(profile, branch)
       setSnap(data)
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [profile, branch, scoped])
+  }, [profile, branch])
 
   useEffect(() => {
     if (isAdmin(profile)) load()
   }, [load, profile])
-
-  useEffect(() => {
-    if (scoped) setBranch(scoped)
-  }, [scoped])
 
   const staffCounts = useMemo(() => {
     const rows = snap?.staffRows || []
@@ -74,11 +77,15 @@ export default function AdminConsolePage() {
       total: rows.length,
       leads: rows.filter((r) => r.role === 'team_lead').length,
       crew: rows.filter((r) => r.role === 'staff').length,
-      admins: rows.filter((r) => r.role === 'admin' || r.role === 'BossMich').length,
+      admins: rows.filter((r) => r.role === 'admin' || r.role === 'BossMich' || r.role === 'assistant_super_admin').length,
     }
   }, [snap])
 
   if (!isAdmin(profile)) return <Navigate to="/operations/access-denied" replace />
+
+  const pickerBranches = canSeeAllBranches(profile)
+    ? snap?.branches || []
+    : (snap?.branches || []).filter((b) => (scopeList || []).includes(b.slug))
 
   return (
     <section className="flex flex-col gap-8">
@@ -87,31 +94,38 @@ export default function AdminConsolePage() {
           <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Command</p>
           <h1 className="text-3xl font-semibold tracking-tight">Operations console</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Live revenue, cost, profit, stock, and floor queue — all branches or one site.
+            {canSeeAllBranches(profile)
+              ? 'Live revenue, cost, profit, stock, and floor queue — all branches or one site.'
+              : 'Live revenue, cost, profit, stock, and floor queue for your assigned branches.'}
           </p>
         </div>
         <div className="w-full sm:w-56">
-          {isSuperAdmin(profile) ? (
+          {canPickBranch ? (
             <Select value={branch} onValueChange={setBranch}>
               <SelectTrigger aria-label="Branch filter">
                 <SelectValue placeholder="Branch" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All branches</SelectItem>
-                {(snap?.branches || []).map((b) => (
+                <SelectItem value="all">{canSeeAllBranches(profile) ? 'All branches' : 'All my branches'}</SelectItem>
+                {pickerBranches.map((b) => (
                   <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           ) : (
             <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-              Branch · {scoped || 'unassigned'}
+              Branch · {Array.isArray(scopeList) && scopeList[0] ? scopeList[0] : 'No branch assigned'}
             </p>
           )}
         </div>
       </div>
 
       {error ? <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p> : null}
+      {snap?.errors?.length ? (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200" role="status">
+          Partial data load: {snap.errors.map((e) => e.message || String(e)).join(' · ')}
+        </p>
+      ) : null}
 
       {loading && !snap ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -310,9 +310,11 @@ export default function CrmPage() {
               <Link to="/operations/memberships">Memberships</Link>
             </Button>
           ) : null}
-          <Button type="button" variant="outline" onClick={() => setRegisterOpen(true)}>
-            <UserPlus className="mr-1 size-4" /> Register account
-          </Button>
+          {isAdmin(profile) ? (
+            <Button type="button" variant="outline" onClick={() => setRegisterOpen(true)}>
+              <UserPlus className="mr-1 size-4" /> Register account
+            </Button>
+          ) : null}
         </div>
       </div>
 

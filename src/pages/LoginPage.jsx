@@ -8,7 +8,6 @@ import { safeAuthReturnPath } from '../auth/authRedirect'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
-import { OPS_DEMO_ACCOUNTS } from '../lib/demoAccounts'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -18,10 +17,22 @@ export default function LoginPage() {
   const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [demoAccounts, setDemoAccounts] = useState([])
   const { user, profile, loading, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const returnPath = safeAuthReturnPath(location.state?.from?.pathname)
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return undefined
+    let cancelled = false
+    import('../lib/demoAccounts').then((m) => {
+      if (!cancelled) setDemoAccounts(m.OPS_DEMO_ACCOUNTS)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!loading && user && !profile) signOut()
@@ -200,7 +211,7 @@ export default function LoginPage() {
 
       <DemoAccountChips
         title="Demo team accounts"
-        accounts={OPS_DEMO_ACCOUNTS}
+        accounts={demoAccounts}
         onPick={(a) => {
           setEmail(a.email)
           setPassword(a.password)

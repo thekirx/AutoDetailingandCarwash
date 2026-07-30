@@ -22,7 +22,7 @@ import { resolveServicePriceMinor } from '../lib/servicePricing'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import { CrewAttendancePanel, CrewSettingsPanel } from './crew/CrewAttendancePanels'
 import { splitCustomerName } from '../lib/phVehicles'
-import { canSeeAllBranches, canViewRedoLane, redirectForRole } from '../auth/permissions'
+import { canEditAttendanceRoles, canEditAttendanceSettings, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES } from '../auth/permissions'
 import {
   formatQueueNumber,
   getBranchScope,
@@ -45,7 +45,9 @@ import {
 } from '../queue/queueLogic'
 import {
   addStaffMember,
+  acknowledgeQueueAssignment,
   assignStaff,
+  completeQueueAssignment,
   createQueueTicket,
   deactivateCrewStaffMember,
   fetchBranches,
@@ -61,7 +63,10 @@ import {
   updateTicketPrice,
   updateTicketStatus,
 } from '../queue/queueApi'
+import { geoTimeIn, geoTimeOut, readBrowserPosition } from '../queue/attendanceApi'
+import { allowedStaffPlanAssigneePatch } from '../queue/staffTaskLogic'
 import { createCoalescedReload } from '../lib/coalesceReload'
+import { toast } from 'sonner'
 
 const statusTone = {
   waiting: 'queue-status-pill queue-status-waiting',
@@ -209,7 +214,12 @@ export function OperationsDashboardPage() {
   const seeAll = canSeeAllBranches(profile)
   const seeRedo = canViewRedoLane(profile)
   const scopeList = getBranchScopeList(profile)
-  const [branchFilter, setBranchFilter] = useState(seeAll ? 'all' : (Array.isArray(scopeList) && scopeList[0]) || getBranchScope(profile) || 'all')
+  const [branchFilter, setBranchFilter] = useState(() => {
+    if (seeAll) return 'all'
+    if (Array.isArray(scopeList) && scopeList.length > 1) return 'all'
+    if (Array.isArray(scopeList) && scopeList[0]) return scopeList[0]
+    return getBranchScope(profile) || 'all'
+  })
   const [datePreset, setDatePreset] = useState('3mo')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
@@ -252,14 +262,24 @@ export function OperationsDashboardPage() {
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
 
+  const scopedBranchRows = Array.isArray(scopeList)
+    ? branches.filter((b) => scopeList.includes(b.slug))
+    : []
   const branchOptions = seeAll
     ? [{ slug: 'all', name: 'All branches' }, ...branches]
-    : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
+    : Array.isArray(scopeList) && scopeList.length > 1
+      ? [
+          { slug: 'all', name: 'All my branches' },
+          ...(scopedBranchRows.length
+            ? scopedBranchRows
+            : scopeList.map((slug) => ({ slug, name: slug }))),
+        ]
+      : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
 
   return (
     <section>
       <PageHeader
-        eyebrow="Team Lead Dashboard"
+        eyebrow={profile?.role === 'admin' ? 'Branch Admin Dashboard' : 'Team Lead Dashboard'}
         title="Active floor control"
         description="Track queue volume, crew availability, and handoffs ready for POS checkout."
         live={live}
@@ -355,7 +375,12 @@ export function OperationsQueuePage() {
   const seeAll = canSeeAllBranches(profile)
   const seeRedo = canViewRedoLane(profile)
   const scopeList = getBranchScopeList(profile)
-  const [branchFilter, setBranchFilter] = useState(seeAll ? 'all' : (Array.isArray(scopeList) && scopeList[0]) || getBranchScope(profile) || 'all')
+  const [branchFilter, setBranchFilter] = useState(() => {
+    if (seeAll) return 'all'
+    if (Array.isArray(scopeList) && scopeList.length > 1) return 'all'
+    if (Array.isArray(scopeList) && scopeList[0]) return scopeList[0]
+    return getBranchScope(profile) || 'all'
+  })
   const [branches, setBranches] = useState([])
   const { activeQueue, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter)
   const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
@@ -379,9 +404,19 @@ export function OperationsQueuePage() {
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
 
+  const scopedBranchRows = Array.isArray(scopeList)
+    ? branches.filter((b) => scopeList.includes(b.slug))
+    : []
   const branchOptions = seeAll
     ? [{ slug: 'all', name: 'All branches' }, ...branches]
-    : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
+    : Array.isArray(scopeList) && scopeList.length > 1
+      ? [
+          { slug: 'all', name: 'All my branches' },
+          ...(scopedBranchRows.length
+            ? scopedBranchRows
+            : scopeList.map((slug) => ({ slug, name: slug }))),
+        ]
+      : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
 
   return (
     <section className="queue-board flex min-h-0 flex-col">
@@ -480,10 +515,11 @@ export function QueueTicketPage() {
   const [priceReason, setPriceReason] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
-  const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [actionError, setActionError] = useState('')
 
   const load = useCallback(async () => {
-    setError('')
+    setLoadError('')
     try {
       const data = await fetchTicket(id, profile)
       setTicket(data.ticket)
@@ -493,7 +529,7 @@ export function QueueTicketPage() {
       setPrice(String(((data.ticket?.final_price_minor ?? data.ticket?.base_price_minor ?? 0) / 100) || ''))
       setPriceReason('')
     } catch (err) {
-      setError(err.message)
+      setLoadError(err.message)
     } finally {
       setLoading(false)
     }
@@ -517,13 +553,13 @@ export function QueueTicketPage() {
 
   const runAction = async (label, action) => {
     setSaving(label)
-    setError('')
+    setActionError('')
     try {
       await action()
       await load()
     } catch (err) {
       console.error('Queue action failed', err)
-      setError(err.message)
+      setActionError(err.message)
     } finally {
       setSaving('')
     }
@@ -532,12 +568,13 @@ export function QueueTicketPage() {
   if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (loading) return <LoadingPanel />
-  if (error) return <ErrorState error={error} onRetry={load} />
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />
   if (!ticket) return <Navigate to="/operations/queue" replace />
 
   const staffById = new Map(staff.map((item) => [item.id, item]))
   const canSendToPayment = canManageQueue && ticket.status === 'final_checking'
-  const canRedo = canManageQueue && REDO_FROM_STATUSES.includes(ticket.status)
+  // Redo lane is SA/ASA-only — TL must not mark redo (ticket vanishes from their board)
+  const canRedo = canManageQueue && canViewRedoLane(profile) && REDO_FROM_STATUSES.includes(ticket.status)
   const canRestartFromRedo = canManageQueue && canViewRedoLane(profile) && ticket.status === 'redo'
   const timingWarn = isSuspiciousTiming(ticket)
   const parsedPrice = Number(String(price).replace(/,/g, '').trim())
@@ -556,7 +593,7 @@ export function QueueTicketPage() {
   return (
     <section>
       <PageHeader eyebrow="Queue Ticket" title={`${formatQueueNumber(ticket.queue_number)} · ${ticket.customer_name}`} description={`${ticket.branch} · ${STATUS_LABELS[ticket.status] || ticket.status}`} action={<Link to="/operations/queue" className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline">Back to queue</Link>} />
-      {error && <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100" role="alert">{error}</p>}
+      {actionError && <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100" role="alert">{actionError}</p>}
       {!canManageQueue && <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">{QUEUE_PERMISSION_ERROR}</p>}
       {timingWarn && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4 text-sm text-amber-100"><ShieldAlert size={16} aria-hidden />Suspicious timing: in progress → final check was under the configured threshold.</p>}
       <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_360px] sm:mt-6 sm:gap-5">
@@ -876,6 +913,7 @@ export function NewQueueTicketPage() {
 
 export function CrewPage() {
   const { profile, canManageCrew, canViewQueueOperations } = useAuth()
+  const canSettings = canEditAttendanceSettings(profile) || canEditAttendanceRoles(profile)
   const { staffPool, availableStaff, busyStaff, loading, error, reload } = useOperationsSnapshot()
   const [form, setForm] = useState({
     full_name: '',
@@ -893,7 +931,7 @@ export function CrewPage() {
   const [crewTab, setCrewTab] = useState('pool')
   const presentCount = staffPool.filter((member) => member.is_present_today).length
   const presentRows = useMemo(() => staffPool.filter((m) => m.is_present_today), [staffPool])
-  const canPickBranch = profile?.role === 'BossMich' || profile?.role === 'assistant_super_admin'
+  const canPickBranch = canSeeAllBranches(profile)
 
   useEffect(() => {
     if (!canPickBranch) return
@@ -944,7 +982,7 @@ export function CrewPage() {
         {[
           { key: 'attendance', label: 'Attendance' },
           { key: 'crew', label: 'Crew' },
-          { key: 'settings', label: 'Settings' },
+          ...(canSettings ? [{ key: 'settings', label: 'Settings' }] : []),
         ].map((tab) => (
           <button
             key={tab.key}
@@ -958,7 +996,7 @@ export function CrewPage() {
       </div>
 
       {mainTab === 'attendance' && <CrewAttendancePanel profile={profile} canManage={canManageCrew} />}
-      {mainTab === 'settings' && <CrewSettingsPanel profile={profile} />}
+      {mainTab === 'settings' && canSettings && <CrewSettingsPanel profile={profile} />}
 
       {mainTab === 'crew' && (
         <>
@@ -1119,19 +1157,39 @@ export function MyTasksPage() {
   if (!canViewAssignedTasks) return <Navigate to="/operations/access-denied" replace />
 
   const markInProgress = async (assignment) => {
-    const { error: uError } = await supabase
-      .from('queue_assignments')
-      .update({ status: 'active', started_at: assignment.started_at || new Date().toISOString() })
-      .eq('id', assignment.id)
-    if (uError) setError(uError.message)
-    else load()
+    setSaving(assignment.id)
+    try {
+      await acknowledgeQueueAssignment(assignment.id)
+      await load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving('')
+    }
+  }
+
+  const markQueueDone = async (assignment) => {
+    setSaving(assignment.id)
+    try {
+      await completeQueueAssignment(assignment.id)
+      await load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving('')
+    }
   }
 
   const updatePlanTask = async (row, nextStatus) => {
+    const patch = allowedStaffPlanAssigneePatch(row, { status: nextStatus })
+    if (!patch) {
+      setError('Illegal planning status change.')
+      return
+    }
     setSaving(row.id)
     const { error: uError } = await supabase
       .from('plan_card_assignees')
-      .update({ status: nextStatus, updated_at: new Date().toISOString() })
+      .update(patch)
       .eq('id', row.id)
       .eq('staff_id', user.id)
     setSaving('')
@@ -1139,11 +1197,54 @@ export function MyTasksPage() {
     else load()
   }
 
+  const runClock = async (kind) => {
+    setSaving(`clock-${kind}`)
+    try {
+      const coords = await readBrowserPosition()
+      if (kind === 'in') {
+        await geoTimeIn({ profile, coords })
+        toast.success('Timed in')
+      } else {
+        await geoTimeOut({ profile, coords })
+        toast.success('Timed out')
+      }
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving('')
+    }
+  }
+
   if (error) return <ErrorState error={error} onRetry={load} />
   const empty = !loading && !queueRows.length && !planRows.length
+  const isStaff = profile?.role === ROLES.STAFF
   return (
     <section className="px-1 sm:px-0">
       <PageHeader eyebrow="My Tasks" title="Assigned work" description="Queue floor jobs and planning cards assigned to you." action={<RefreshButton loading={loading} onClick={load} />} />
+
+      {isStaff && (
+        <Panel title="Attendance" icon={Clock3} className="mt-6">
+          <p className="mb-4 text-sm text-slate-400">Time in inside the branch geofence. Late is flagged vs shift start.</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={Boolean(saving)}
+              onClick={() => runClock('in')}
+              className="min-h-11 rounded-2xl bg-emerald-600 px-4 text-sm font-semibold text-white disabled:opacity-40"
+            >
+              {saving === 'clock-in' ? 'Locating…' : 'Time in'}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(saving)}
+              onClick={() => runClock('out')}
+              className="min-h-11 rounded-2xl border border-white/10 px-4 text-sm font-semibold text-slate-200 disabled:opacity-40"
+            >
+              {saving === 'clock-out' ? 'Saving…' : 'Time out'}
+            </button>
+          </div>
+        </Panel>
+      )}
 
       <Panel title="Planning assignments" icon={ClipboardList} className="mt-6">
         <div className="grid gap-4">
@@ -1189,19 +1290,31 @@ export function MyTasksPage() {
                     <p className="mt-1 text-xs capitalize text-slate-400">{row.status}{booking?.status ? ` · ticket ${booking.status}` : ''}</p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    {row.booking_id && (profile?.role !== 'staff') && (
+                    {row.booking_id && !isStaff && (
                       <Link to={`/operations/queue/${row.booking_id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 no-underline">
                         Open ticket
                       </Link>
                     )}
-                    <button
-                      type="button"
-                      disabled={row.status === 'active'}
-                      onClick={() => markInProgress(row)}
-                      className="min-h-11 rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {row.status === 'active' ? 'In progress' : 'Acknowledge'}
-                    </button>
+                    {row.status === 'pending' && (
+                      <button
+                        type="button"
+                        disabled={saving === row.id}
+                        onClick={() => markInProgress(row)}
+                        className="min-h-11 rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {saving === row.id ? 'Saving…' : 'Acknowledge'}
+                      </button>
+                    )}
+                    {row.status === 'active' && (
+                      <button
+                        type="button"
+                        disabled={saving === row.id}
+                        onClick={() => markQueueDone(row)}
+                        className="min-h-11 rounded-2xl border border-emerald-300/30 px-4 py-2 text-sm font-semibold text-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {saving === row.id ? 'Saving…' : 'Mark done'}
+                      </button>
+                    )}
                   </div>
                 </div>
                 {row.task_notes && <p className="mt-4 text-sm text-slate-400">{row.task_notes}</p>}

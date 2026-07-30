@@ -5,6 +5,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { getQueueCounts, buildVisitProgress, formatQueueNumber, normalizePlate } from '../src/queue/queueLogic.js'
 import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
+import { CUSTOMER_ACTIVE_VISIT_STATUSES } from '../src/lib/customerPortalActive.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 
 function adminClient() {
@@ -59,7 +60,7 @@ export async function loadCustomerPortal({ accessToken }) {
         .from('bookings')
         .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, final_price_minor, queue_number, service_id, services(name)')
         .eq('customer_id', userId)
-        .in('status', ['waiting', 'in_progress', 'final_checking', 'for_payment'])
+        .in('status', CUSTOMER_ACTIVE_VISIT_STATUSES)
         .order('scheduled_start', { ascending: true }),
       admin
         .from('bookings')
@@ -231,6 +232,16 @@ export async function mutateCustomerPortal({ accessToken, body }) {
   if (action === 'update-phone') {
     const phone = String(body.phone || '').trim()
     if (phone.length < 7) throw Object.assign(new Error('Valid phone required.'), { status: 400 })
+    const { data: taken } = await admin
+      .from('customers')
+      .select('id')
+      .eq('role', 'customer')
+      .eq('is_archived', false)
+      .eq('phone', phone)
+      .neq('id', userId)
+      .limit(1)
+      .maybeSingle()
+    if (taken) throw Object.assign(new Error('That phone is already on another Hakum account.'), { status: 409 })
     const { error } = await admin.from('customers').update({ phone }).eq('id', userId)
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
     return { ok: true, phone }
