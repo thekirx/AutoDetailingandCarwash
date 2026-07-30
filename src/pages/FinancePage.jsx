@@ -492,7 +492,6 @@ export default function FinancePage() {
               {!salesRows.length && <p className="text-sm text-muted-foreground">No sales in range.</p>}
             </CardContent>
           </Card>
-          {canWrite && <QuoteCard quote={quote} setQuote={setQuote} branches={writableBranches} saving={saving} onSubmit={sendQuote} />}
         </TabsContent>
       </Tabs>
     </section>

@@ -1,9 +1,10 @@
-import { ArrowLeft, MapPin, Sparkles } from 'lucide-react'
+import { MapPin, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { usePublicBranches } from '../lib/branches'
 import { supabase } from '../lib/supabase'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '../lib/servicePricing'
+import { applyPublicBookPrefill, matchServiceIdByPrefillName } from '../lib/uiDeadControls'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 
 function formatPeso(minor) {
@@ -41,11 +42,14 @@ export function QueuePage() {
 }
 
 export function BookingPage() {
+  const location = useLocation()
   const { branches, loading: branchesLoading, error: branchesError } = usePublicBranches()
   const [services, setServices] = useState([])
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
   const [plateHint, setPlateHint] = useState('')
+  const [packageNote, setPackageNote] = useState('')
+  const [prefServiceName, setPrefServiceName] = useState('')
   const [form, setForm] = useState({
     customer_first_name: '',
     customer_last_name: '',
@@ -60,6 +64,13 @@ export function BookingPage() {
   })
 
   useEffect(() => {
+    const prefilled = applyPublicBookPrefill({}, location.state)
+    if (prefilled._prefNotes) setPackageNote(prefilled._prefNotes)
+    if (prefilled._prefServiceName) setPrefServiceName(prefilled._prefServiceName)
+    if (prefilled.service_id) setForm((f) => ({ ...f, service_id: prefilled.service_id }))
+  }, [location.state])
+
+  useEffect(() => {
     supabase
       .from('services')
       .select('id, name, price_minor, service_size_prices(size_slug, price_minor)')
@@ -70,14 +81,18 @@ export function BookingPage() {
           setError(e.message)
           return
         }
-        setServices(
-          (data || []).map((row) => ({
-            ...row,
-            size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
-          })),
-        )
+        const rows = (data || []).map((row) => ({
+          ...row,
+          size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+        }))
+        setServices(rows)
+        setForm((f) => {
+          if (f.service_id) return f
+          const matched = matchServiceIdByPrefillName(rows, prefServiceName)
+          return matched ? { ...f, service_id: matched } : f
+        })
       })
-  }, [])
+  }, [prefServiceName])
 
   useEffect(() => {
     if (!form.branch && branches[0]?.slug) {
@@ -169,6 +184,7 @@ export function BookingPage() {
           <p className="eyebrow">Book a service</p>
           <h1 className="section-title">Your car’s next<br />chapter starts here.</h1>
           <p>Tell us what you drive and when you’d like to visit. Works with or without an account — we’ll SMS you updates.</p>
+          {packageNote ? <p className="field-hint" style={{ marginTop: 12 }}>Selected: {packageNote}</p> : null}
           <p style={{ marginTop: 12 }}>
             Have an account? <Link to="/signin">Sign in</Link> so this visit appears under My account.
           </p>
@@ -236,16 +252,3 @@ export function BookingPage() {
   )
 }
 
-function PublicMessage({ title, message, icon: Icon = MapPin }) {
-  return (
-    <section className="public-message">
-      <div>
-        <Icon />
-        <p className="eyebrow">Live queue</p>
-        <h1>{title}</h1>
-        <p>{message}</p>
-        <Link to="/queue"><ArrowLeft />All branches</Link>
-      </div>
-    </section>
-  )
-}

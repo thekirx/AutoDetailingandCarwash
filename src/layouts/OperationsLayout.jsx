@@ -6,6 +6,7 @@ import {
   Columns3,
   Contact,
   Crown,
+  Database,
   Gauge,
   Kanban,
   LayoutDashboard,
@@ -72,6 +73,7 @@ const iconMap = {
   Columns3,
   CarFront,
   Plus,
+  Database,
 }
 
 function formatRole(role) {
@@ -120,9 +122,6 @@ function TeamLeadFloorShell({ profile, user, signOut }) {
         </div>
         <div className="flex items-center gap-1">
           <NotificationBell light homeUrl="/operations/queue" homeLabel="Open floor" />
-          <button type="button" className="floor-icon-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
-            <Settings size={18} />
-          </button>
         </div>
         <button
           type="button"
@@ -296,14 +295,6 @@ function AdminOpsShell({ profile, user, signOut, navigation, adminShell }) {
               homeUrl={adminShell ? '/operations/console' : redirectForRole(profile?.role)}
               homeLabel={adminShell ? 'Open console' : 'Open my tasks'}
             />
-            <button
-              type="button"
-              className="inline-flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Settings"
-            >
-              <Settings size={18} />
-            </button>
           </header>
           <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <Outlet />

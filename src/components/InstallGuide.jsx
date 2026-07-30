@@ -206,8 +206,16 @@ export default function InstallGuide({
               <Button type="button" variant="ghost" className="min-h-11 flex-1" onClick={() => closePopup(true)}>
                 Not now
               </Button>
-              <Button type="button" className="min-h-11 flex-1" onClick={() => closePopup(true)}>
-                Got it
+              <Button
+                type="button"
+                className="min-h-11 flex-1"
+                disabled={busy}
+                onClick={() => {
+                  if (canNativeInstall) handleInstall()
+                  else closePopup(true)
+                }}
+              >
+                {canNativeInstall ? (busy ? 'Installing…' : 'Install') : 'Got it'}
               </Button>
             </div>
           </DialogFooter>

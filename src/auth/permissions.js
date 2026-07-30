@@ -266,6 +266,10 @@ export function canAccessMemberships(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+export function canAccessDataCenter(profile) {
+  return isSuperAdmin(profile)
+}
+
 /** Nav items for the shared ops shell — filtered by role + grants. */
 export function getOperationsNav(profile) {
   if (profile?.role === ROLES.MARKETING) {
@@ -291,6 +295,9 @@ export function getOperationsNav(profile) {
   }
   if (canAccessAudit(profile)) {
     items.push({ label: 'Audit', to: '/operations/audit', icon: 'ScrollText' })
+  }
+  if (canAccessDataCenter(profile)) {
+    items.push({ label: 'Data Center', to: '/operations/data-center', icon: 'Database' })
   }
 
   if (canViewQueueOperations(profile)) {
@@ -368,6 +375,7 @@ export function allowRoute(profile, key) {
     branches: canManageBranches,
     cars: canManageVehicleCatalog,
     audit: canAccessAudit,
+    'data-center': canAccessDataCenter,
     dashboard: canViewQueueOperations,
     queue: canViewQueueOperations,
     'queue-new': canEditQueueOperations,

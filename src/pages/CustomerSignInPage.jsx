@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
 import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
+import { canOfferPasswordEmailReset } from '../lib/uiDeadControls'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { usePageMeta } from '../lib/pageMeta'
 
@@ -209,6 +210,9 @@ export default function CustomerSignInPage() {
     }
   }
 
+  const idKind = classifyIdentifier(identifier.trim())
+  const offerEmailReset = idKind === 'email' && canOfferPasswordEmailReset(identifier.trim())
+
   return (
     <HakumAuthShell
       title="Your car. Your account."
@@ -262,9 +266,18 @@ export default function CustomerSignInPage() {
               Your Team Lead already registered your visit. You do not have a password yet — we will email a Supabase
               set-password link to the address on your account.
             </p>
-            <button type="button" className="hakum-auth-setup-btn" onClick={handleSendSetup} disabled={sendingSetup || !identifier.trim()}>
+            <button
+              type="button"
+              className="hakum-auth-setup-btn"
+              onClick={handleSendSetup}
+              disabled={sendingSetup || !identifier.trim() || !offerEmailReset}
+              title={!offerEmailReset ? 'Add a real email on your Hakum account to receive set-password mail' : undefined}
+            >
               {sendingSetup ? 'Sending…' : 'Email set-password link'}
             </button>
+            {!offerEmailReset ? (
+              <p className="hakum-auth-hint">Phone-only accounts need a real email on file — ask your Team Lead to add one, then try again.</p>
+            ) : null}
           </div>
         ) : null}
 
@@ -294,10 +307,19 @@ export default function CustomerSignInPage() {
           </div>
         </label>
         <div className="hakum-auth-row">
-          <button type="button" className="hakum-auth-text-btn" onClick={handleForgot} disabled={sendingReset || !identifier.trim()}>
+          <button
+            type="button"
+            className="hakum-auth-text-btn"
+            onClick={handleForgot}
+            disabled={sendingReset || !identifier.trim() || (idKind !== 'email' && idKind !== 'unknown')}
+            title={idKind === 'phone' || idKind === 'plate' ? 'Password reset needs a real email on file' : undefined}
+          >
             {sendingReset ? 'Sending reset…' : 'Forgot password?'}
           </button>
         </div>
+        {(idKind === 'phone' || idKind === 'plate') ? (
+          <p className="hakum-auth-hint">Forgot password works with your email. Ask the shop to add one if you only use phone/plate.</p>
+        ) : null}
         <button type="submit" className="hakum-auth-submit" disabled={submitting || setupStatus === 'needs_invite'}>
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>

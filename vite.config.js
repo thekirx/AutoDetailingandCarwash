@@ -92,6 +92,10 @@ function provisionApiPlugin() {
         const { handleFinanceQuoteRequest } = await import('./server/sendFinanceQuote.mjs')
         return handleFinanceQuoteRequest(req, res, helpers)
       })
+      mount('/api/data-center', async (req, res) => {
+        const { handleDataCenterRequest } = await import('./server/dataCenter.mjs')
+        return handleDataCenterRequest(req, res)
+      })
     },
   }
 }

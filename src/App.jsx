@@ -35,6 +35,7 @@ import AdminConsolePage from './pages/AdminConsolePage'
 import BranchesManagePage from './pages/BranchesManagePage'
 import PeopleManagePage from './pages/PeopleManagePage'
 import AuditLogPage from './pages/AuditLogPage'
+import DataCenterPage from './pages/DataCenterPage'
 import CarsCatalogPage from './pages/CarsCatalogPage'
 import CustomerSignInPage from './pages/CustomerSignInPage'
 import CustomerSignUpPage from './pages/CustomerSignUpPage'
@@ -98,6 +99,7 @@ export default function App() {
           <Route path="branches" element={gate('branches', <BranchesManagePage />)} />
           <Route path="cars" element={gate('cars', <CarsCatalogPage />)} />
           <Route path="audit" element={gate('audit', <AuditLogPage />)} />
+          <Route path="data-center" element={gate('data-center', <DataCenterPage />)} />
           <Route path="dashboard" element={gate('dashboard', <OperationsDashboardPage />)} />
           <Route path="queue" element={gate('queue', <OperationsQueuePage />)} />
           <Route path="queue/new" element={gate('queue-new', <NewQueueTicketPage />)} />

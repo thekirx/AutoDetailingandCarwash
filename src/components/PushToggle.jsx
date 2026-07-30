@@ -216,8 +216,8 @@ function PushModal({ open, onOpenChange, busy, status, reason, onEnable, onDismi
           ) : null}
         </div>
         <DialogFooter className="push-modal-footer flex-col gap-2 sm:flex-col">
-          <Button type="button" className="min-h-12 w-full text-base" disabled={busy || status === 'denied'} onClick={onEnable}>
-            {busy ? 'Enabling…' : 'Enable alerts'}
+          <Button type="button" className="min-h-12 w-full text-base" disabled={busy || status === 'denied' || status === 'unsupported'} onClick={onEnable}>
+            {busy ? 'Enabling…' : status === 'unsupported' ? 'Install app first' : 'Enable alerts'}
           </Button>
           <Button type="button" variant="ghost" className="min-h-11 w-full" onClick={onDismiss}>
             Not now

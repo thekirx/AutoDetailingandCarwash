@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '@/lib/servicePricing'
+import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,6 +31,7 @@ export default function CustomerBookingModal({
   profile,
   branches = [],
   vehicles = [],
+  initialVehicle = null,
   onBooked,
 }) {
   const [services, setServices] = useState([])
@@ -75,18 +77,20 @@ export default function CustomerBookingModal({
     if (!open) return
     const name = String(profile?.full_name || '').trim()
     const parts = name.split(/\s+/).filter(Boolean)
-    setForm((f) => ({
-      ...f,
-      customer_first_name: parts[0] || f.customer_first_name,
-      customer_last_name: parts.slice(1).join(' ') || f.customer_last_name,
-      customer_phone: profile?.phone || f.customer_phone,
-      branch: f.branch || branches[0]?.slug || '',
-      vehicle_plate: f.vehicle_plate || vehicles[0]?.plate_number || '',
-      vehicle_make: f.vehicle_make || vehicles[0]?.vehicle_make || '',
-      vehicle_model: f.vehicle_model || vehicles[0]?.vehicle_model || '',
-      vehicle_type: vehicles[0]?.vehicle_type || f.vehicle_type || 'medium',
-    }))
-  }, [open, profile, branches, vehicles])
+    const pick = initialVehicle || vehicles[0] || null
+    setForm((f) =>
+      seedBookingFromVehicle(
+        {
+          ...f,
+          customer_first_name: parts[0] || f.customer_first_name,
+          customer_last_name: parts.slice(1).join(' ') || f.customer_last_name,
+          customer_phone: profile?.phone || f.customer_phone,
+          branch: f.branch || branches[0]?.slug || '',
+        },
+        pick,
+      ),
+    )
+  }, [open, profile, branches, vehicles, initialVehicle])
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))

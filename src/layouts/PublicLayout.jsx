@@ -22,8 +22,8 @@ export default function PublicLayout() {
   const { pathname } = useLocation()
   const { branches } = usePublicBranches({ mode: 'visible' })
   const { user, profile, loading } = useAuth()
-  const isCustomer =
-    !loading && Boolean(user) && (profile?.role === 'customer' || user?.user_metadata?.role === 'customer')
+  // Trust DB profile only — metadata.role is client-writable
+  const isCustomer = !loading && Boolean(user) && profile?.role === 'customer'
 
   useEffect(() => setOpen(false), [pathname])
 

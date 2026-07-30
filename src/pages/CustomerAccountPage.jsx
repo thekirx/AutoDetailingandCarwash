@@ -76,6 +76,7 @@ export default function CustomerAccountPage() {
   const [error, setError] = useState('')
   const [tab, setTab] = useState('history')
   const [bookOpen, setBookOpen] = useState(false)
+  const [bookVehicle, setBookVehicle] = useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState('alerts')
 
@@ -261,7 +262,7 @@ export default function CustomerAccountPage() {
           </div>
           <div className="account-hero-ctas">
             <PushToggle audience="customer" autoPrompt />
-            <Button type="button" className="account-btn account-btn-on-navy min-h-11" onClick={() => setBookOpen(true)}>
+            <Button type="button" className="account-btn account-btn-on-navy min-h-11" onClick={() => { setBookVehicle(null); setBookOpen(true) }}>
               <CalendarPlus data-icon="inline-start" />
               Book a service
             </Button>
@@ -328,7 +329,7 @@ export default function CustomerAccountPage() {
                         </p>
                       </div>
                       <div className="flex shrink-0 flex-wrap gap-2">
-                        <Button type="button" size="sm" className="account-btn account-btn-primary" onClick={() => setBookOpen(true)}>
+                        <Button type="button" size="sm" className="account-btn account-btn-primary" onClick={() => { setBookVehicle(v); setBookOpen(true) }}>
                           Book
                         </Button>
                         <Button
@@ -670,10 +671,14 @@ export default function CustomerAccountPage() {
 
       <CustomerBookingModal
         open={bookOpen}
-        onOpenChange={setBookOpen}
+        onOpenChange={(open) => {
+          setBookOpen(open)
+          if (!open) setBookVehicle(null)
+        }}
         profile={settingsProfile}
         branches={branches}
         vehicles={vehicles}
+        initialVehicle={bookVehicle}
         onBooked={load}
       />
       <CustomerSettingsModal
