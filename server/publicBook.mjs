@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { notifyBookingStatus } from './notifyBooking.mjs'
-import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
 
 function admin() {
@@ -24,6 +24,7 @@ export async function handlePublicBookRequest(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
 
   try {
+    rateLimit({ key: `public-book:${clientIp(req)}`, limit: 20, windowMs: 60_000 })
     const body = await readJsonBody(req)
     const first = String(body.customer_first_name || '').trim()
     const last = String(body.customer_last_name || '').trim()
@@ -118,6 +119,6 @@ export async function handlePublicBookRequest(req, res) {
       notify,
     })
   } catch (err) {
-    return json(res, 500, { error: String(err.message || err) })
+    return json(res, err.status || 500, { error: String(err.message || err) })
   }
 }

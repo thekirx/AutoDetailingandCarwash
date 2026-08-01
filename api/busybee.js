@@ -1,5 +1,5 @@
 import { busybeeBalance, busybeeSendSms } from '../server/busybee.mjs'
-import { json, readJsonBody, setCors, bearer } from '../server/httpUtil.mjs'
+import { json, readJsonBody, setCors, bearer, clientIp, rateLimit } from '../server/httpUtil.mjs'
 import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req, res) {
@@ -11,6 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    rateLimit({ key: `busybee:${clientIp(req)}`, limit: 40, windowMs: 60_000 })
     if (req.method === 'GET' || req.method === 'POST') {
       const token = bearer(req)
       if (!token) return json(res, 401, { error: 'Unauthorized' })
@@ -40,6 +41,6 @@ export default async function handler(req, res) {
 
     return json(res, 405, { error: 'Method not allowed' })
   } catch (err) {
-    return json(res, 500, { error: String(err.message || err) })
+    return json(res, err.status || 500, { error: String(err.message || err) })
   }
 }

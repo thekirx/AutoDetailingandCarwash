@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Database & scale — flows · 2026-08-01</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</head>
+<body class="bg-stone-100 text-slate-800 min-h-screen">
+  <header class="border-b border-stone-300 bg-slate-800 text-stone-100">
+    <div class="max-w-5xl mx-auto px-4 py-6">
+      <p class="text-xs uppercase tracking-widest text-stone-400">Full-system audit · 2026-08-01</p>
+      <h1 class="text-2xl font-semibold mt-1">Database &amp; scale</h1>
+      <p class="text-stone-300 text-sm mt-2">Queue uniqueness · dual ledgers · indexes · RLS · ASA grants · public WITH CHECK</p>
+      <a href="../index.html" class="inline-block mt-3 text-sm text-emerald-300 hover:underline">← Master dashboard</a>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8 space-y-10">
+    <section>
+      <h2 class="text-lg font-semibold text-slate-900 mb-3">Dependency flowchart</h2>
+      <div class="bg-white border border-stone-300 rounded-lg p-4 overflow-x-auto">
+        <pre class="mermaid">
+flowchart TD
+  A[New Ticket / Public Book] --> B{assign_daily_queue_number}
+  B -->|missing from git| Z1[P0 DB-P0-1]
+  B --> C[Insert bookings]
+  C --> D{UNIQUE branch+date+number}
+  D -->|missing| Z1
+  D --> E[Floor board Realtime]
+  E --> F[Multi-TL safe]
+  G[ASA grant toggle UI] --> H{RPC / RLS check}
+  H -->|pos finance reports ignore| Z2[P0 ASA-P0-1]
+  H --> I[Honest deny]
+  J[sms_events write] --> K{Indexes}
+  K -->|gap| Z3[P1 scale]
+  L[Public forms] --> M{WITH CHECK true}
+  M --> Z4[CUST-H9 spam]
+  N[Dual ledgers] --> O[Reports + Finance]
+  O --> P{Same branch scope}
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-semibold text-slate-900 mb-3">Area status</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm bg-white border border-stone-300">
+          <thead class="bg-slate-700 text-stone-100">
+            <tr>
+              <th class="text-left p-2">Area</th>
+              <th class="text-left p-2">Ready?</th>
+              <th class="text-left p-2">Notes</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-stone-200">
+            <tr>
+              <td class="p-2">Queue UNIQUE + assign RPC</td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded bg-red-100 text-red-800 font-medium">No</span></td>
+              <td class="p-2">DB-P0-1</td>
+            </tr>
+            <tr>
+              <td class="p-2">ASA grants vs RLS/RPC</td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-medium">Partial</span></td>
+              <td class="p-2">queue_all Fixed; pos/finance/reports UI-only</td>
+            </tr>
+            <tr>
+              <td class="p-2">Dual ledgers</td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-medium">Partial</span></td>
+              <td class="p-2">Needs reconciliation checklist</td>
+            </tr>
+            <tr>
+              <td class="p-2">Indexes (hot + sms_events)</td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-medium">Partial</span></td>
+              <td class="p-2">Review overlap + add sms_events</td>
+            </tr>
+            <tr>
+              <td class="p-2">RLS recursion</td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">Ready</span></td>
+              <td class="p-2">Historically fixed — re-verify</td>
+            </tr>
+            <tr>
+              <td class="p-2">Base DDL drift vs git</td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-medium">Partial</span></td>
+              <td class="p-2">assign RPC missing from repo</td>
+            </tr>
+            <tr>
+              <td class="p-2">Public WITH CHECK true</td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-medium">Partial</span></td>
+              <td class="p-2">CUST-H9</td>
+            </tr>
+            <tr>
+              <td class="p-2">queue_number text vs int</td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-medium">Partial</span></td>
+              <td class="p-2">Normalize + document</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-stone-500 mt-2">Legend:
+        <span class="text-emerald-700 font-medium">Ready</span> ·
+        <span class="text-amber-800 font-medium">Partial</span> ·
+        <span class="text-red-700 font-medium">No</span>
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-semibold text-slate-900 mb-3">Open defects</h2>
+      <ul class="bg-white border border-stone-300 rounded-lg divide-y divide-stone-200 text-sm">
+        <li class="p-3"><span class="font-mono text-red-700">DB-P0-1</span> — No UNIQUE(branch, queue_date, queue_number); assign_daily_queue_number missing from git</li>
+        <li class="p-3"><span class="font-mono text-red-700">ASA-P0-1</span> — pos/finance/reports grants UI-only</li>
+        <li class="p-3"><span class="font-mono text-amber-800">ASA-M1</span> — Expenses RLS ignores finance_write</li>
+        <li class="p-3"><span class="font-mono text-amber-800">ASA-M2</span> — complete_pos_sale ignores pos grant</li>
+        <li class="p-3"><span class="font-mono text-amber-800">CUST-H9</span> — Public inserts WITH CHECK true</li>
+        <li class="p-3"><span class="font-mono text-slate-600">DB-P2-*</span> — Dual ledgers, overlapping indexes, queue_number type</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

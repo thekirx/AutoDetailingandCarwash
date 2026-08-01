@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { usePublicBranches } from '@/lib/branches'
+import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 
 export default function ComplaintsPage() {
   const { branches, loading: branchesLoading } = usePublicBranches()
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
+  const [guard, setGuard] = useState(() => createPublicFormGuard())
   const [form, setForm] = useState({
     customer_name: '',
     branch: '',
@@ -24,6 +26,12 @@ export default function ComplaintsPage() {
     event.preventDefault()
     setStatus('loading')
     setError('')
+    const blocked = validatePublicFormGuard(guard)
+    if (blocked) {
+      setError(blocked)
+      setStatus('idle')
+      return
+    }
     const { error: e } = await supabase.from('complaints').insert({
       customer_name: form.customer_name.trim(),
       branch: form.branch,
@@ -37,6 +45,7 @@ export default function ComplaintsPage() {
       return
     }
     setStatus('success')
+    setGuard(createPublicFormGuard())
   }
 
   if (status === 'success') {
@@ -80,6 +89,15 @@ export default function ComplaintsPage() {
             </select>
           </label>
           <label>Description<textarea required value={form.description} onChange={update('description')} /></label>
+          <label className="sr-only" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }}>
+            Company website
+            <input
+              tabIndex={-1}
+              autoComplete="off"
+              value={guard.honeypot}
+              onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
+            />
+          </label>
           {error && <p className="form-error">{error}</p>}
           <button disabled={status === 'loading' || branchesLoading || !form.branch} className="button button-blue">{status === 'loading' ? 'Submitting…' : 'Submit complaint'}</button>
         </form>

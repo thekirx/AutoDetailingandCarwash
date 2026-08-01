@@ -2,6 +2,7 @@ import { MapPin, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { usePublicBranches } from '../lib/branches'
+import { getAccessTokenFresh } from '../lib/authToken'
 import { supabase } from '../lib/supabase'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '../lib/servicePricing'
 import { applyPublicBookPrefill, matchServiceIdByPrefillName } from '../lib/uiDeadControls'
@@ -133,11 +134,9 @@ export function BookingPage() {
     setStatus('loading')
     setError('')
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
       const headers = { 'Content-Type': 'application/json' }
-      if (sessionData.session?.access_token) {
-        headers.Authorization = `Bearer ${sessionData.session.access_token}`
-      }
+      const token = await getAccessTokenFresh()
+      if (token) headers.Authorization = `Bearer ${token}`
       const res = await fetch('/api/public-book', {
         method: 'POST',
         headers,

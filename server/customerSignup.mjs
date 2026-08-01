@@ -3,6 +3,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { phoneLoginEmail } from '../src/lib/customerAuth.js'
+import { clientIp, rateLimit } from './httpUtil.mjs'
 
 function adminClient() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -86,6 +87,7 @@ export async function handleCustomerSignupRequest(req, res, { getBody }) {
       res.end(JSON.stringify({ error: 'Method not allowed' }))
       return
     }
+    rateLimit({ key: `customer-signup:${clientIp(req)}`, limit: 8, windowMs: 15 * 60_000 })
     const body = await getBody()
     const result = await signupCustomer({ body })
     res.statusCode = 200

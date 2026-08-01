@@ -88,6 +88,45 @@ describe('Orphan ops pages removed (OPS-M9)', () => {
   })
 })
 
+describe('P0 residual fixes (full-system 2026-08-01)', () => {
+  it('App.jsx uses React.lazy for heavy routes (PERF-P0-1)', () => {
+    const src = readFileSync(join(root, 'src/App.jsx'), 'utf8')
+    assert.match(src, /lazy\(/)
+    assert.match(src, /Suspense/)
+    assert.match(src, /PublicLandingPage/)
+  })
+
+  it('public book uses getAccessTokenFresh (AUTH-P0-1)', () => {
+    const src = readFileSync(join(root, 'src/pages/PublicUtilityPage.jsx'), 'utf8')
+    assert.match(src, /getAccessTokenFresh/)
+    assert.doesNotMatch(src, /getSession\(\)/)
+  })
+
+  it('ReportsPage toasts expenses/crew/comps/books errors (RPT-P0-1)', () => {
+    const src = readFileSync(join(root, 'src/pages/ReportsPage.jsx'), 'utf8')
+    assert.match(src, /expenses\.error/)
+    assert.match(src, /crew\.error/)
+    assert.match(src, /comps\.error/)
+    assert.match(src, /books\.error/)
+  })
+
+  it('Memberships hides Save for non-SA (OPS-M7)', () => {
+    const src = readFileSync(join(root, 'src/pages/MembershipsPage.jsx'), 'utf8')
+    assert.match(src, /superAdmin \?/)
+    assert.match(src, /saveServiceWeight/)
+    assert.doesNotMatch(src, /disabled=\{!superAdmin\} onClick=\{\(\) => saveServiceWeight/)
+  })
+
+  it('Memberships Program tab exposes SA loyalty kill-switches', () => {
+    const src = readFileSync(join(root, 'src/pages/MembershipsPage.jsx'), 'utf8')
+    assert.match(src, /TabsTrigger value="program"/)
+    assert.match(src, /stamps_enabled/)
+    assert.match(src, /stamp_earn_mode/)
+    assert.match(src, /pay_categories/)
+    assert.match(src, /revokeCustomerMembership/)
+  })
+})
+
 function awaitImportFs() {
   return { existsSync: (p) => {
     try {

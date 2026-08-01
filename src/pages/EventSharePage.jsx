@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { shareFormUrl } from '@/lib/opsForms'
+import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 
 export default function EventSharePage() {
   const { slug } = useParams()
@@ -9,6 +10,7 @@ export default function EventSharePage() {
   const [error, setError] = useState('')
   const [form, setForm] = useState({ name: '', phone: '', email: '' })
   const [status, setStatus] = useState('idle')
+  const [guard, setGuard] = useState(() => createPublicFormGuard())
 
   useEffect(() => {
     if (!slug) return
@@ -29,6 +31,12 @@ export default function EventSharePage() {
     e.preventDefault()
     if (!event) return
     setStatus('loading')
+    const blocked = validatePublicFormGuard(guard)
+    if (blocked) {
+      setError(blocked)
+      setStatus('idle')
+      return
+    }
     const { error: err } = await supabase.from('event_registrations').insert({
       event_id: event.id,
       name: form.name.trim(),
@@ -42,6 +50,7 @@ export default function EventSharePage() {
     }
     setStatus('success')
     setForm({ name: '', phone: '', email: '' })
+    setGuard(createPublicFormGuard())
   }
 
   const attached = event?.ops_forms
@@ -88,6 +97,15 @@ export default function EventSharePage() {
                 <label>Name<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
                 <label>Phone<input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
                 <label>Email<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+                <label className="sr-only" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }}>
+                  Company website
+                  <input
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={guard.honeypot}
+                    onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
+                  />
+                </label>
                 <button className="button button-blue" disabled={status === 'loading'}>Register</button>
               </form>
             </>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Full-system audit dashboard · 2026-08-01</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 text-slate-800 min-h-screen">
+  <header class="bg-slate-900 text-stone-100 border-b border-slate-700">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+      <p class="text-xs uppercase tracking-[0.2em] text-stone-400">Auto Detailing &amp; Carwash</p>
+      <h1 class="text-3xl font-semibold mt-2">Full-system audit · 2026-08-01</h1>
+      <p class="mt-3 text-stone-300 max-w-2xl text-sm leading-relaxed">
+        Residual readiness after role deep audits fixed most CRITICAL bugs.
+        This pack = page checklists, HTML flows, open defects, database-scale, and go/no-go gates.
+      </p>
+      <div class="mt-4 flex flex-wrap gap-3 text-sm">
+        <a href="./00-MASTER-README.md" class="text-emerald-300 hover:underline">Master README</a>
+        <a href="./01-READYNESS-CHECKLIST.md" class="text-emerald-300 hover:underline">Readiness checklist</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-10 space-y-10">
+    <!-- Readiness summary -->
+    <section>
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">Readiness summary</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white border border-stone-300 rounded-lg p-4">
+          <p class="text-xs text-stone-500 uppercase">Soft launch</p>
+          <p class="text-2xl font-semibold text-amber-700 mt-1">72</p>
+          <p class="text-xs text-stone-600 mt-1">Conditional — queue UNIQUE + Reports errors</p>
+        </div>
+        <div class="bg-white border border-stone-300 rounded-lg p-4">
+          <p class="text-xs text-stone-500 uppercase">Multi-TL floor</p>
+          <p class="text-2xl font-semibold text-red-700 mt-1">55</p>
+          <p class="text-xs text-stone-600 mt-1">Hold — no daily queue UNIQUE</p>
+        </div>
+        <div class="bg-white border border-stone-300 rounded-lg p-4">
+          <p class="text-xs text-stone-500 uppercase">ASA grant honesty</p>
+          <p class="text-2xl font-semibold text-red-700 mt-1">48</p>
+          <p class="text-xs text-stone-600 mt-1">Hold — UI-only pos/finance/reports</p>
+        </div>
+        <div class="bg-white border border-stone-300 rounded-lg p-4">
+          <p class="text-xs text-stone-500 uppercase">Scale 50+</p>
+          <p class="text-2xl font-semibold text-red-700 mt-1">40</p>
+          <p class="text-xs text-stone-600 mt-1">Hold — eager bundles + rate limits</p>
+        </div>
+      </div>
+      <p class="mt-4 text-sm">
+        Overall:
+        <span class="inline-flex items-center px-2.5 py-1 rounded bg-red-100 text-red-800 font-medium">NO-GO</span>
+        until P0 backlog cleared or signed risk acceptance.
+        <span class="text-stone-500">BusyBee ~70 · SMTP ~65 · Secrets ~60 (conditional).</span>
+      </p>
+      <p class="text-xs text-stone-500 mt-2">Legend:
+        <span class="text-emerald-700 font-medium">Ready</span> ·
+        <span class="text-amber-800 font-medium">Partial</span> ·
+        <span class="text-red-700 font-medium">No / Hold</span>
+      </p>
+    </section>
+
+    <!-- Role packs -->
+    <section>
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">Role &amp; track flows</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <a href="./super-admin/flows.html" class="block bg-white border border-stone-300 rounded-lg p-4 hover:border-slate-500 transition">
+          <p class="font-medium">Super Admin</p>
+          <p class="text-xs text-stone-500 mt-1">BossMich · console home</p>
+          <p class="mt-2 text-xs"><span class="text-amber-800">Partial</span> console/people/crew/reports</p>
+        </a>
+        <a href="./asa/flows.html" class="block bg-white border border-stone-300 rounded-lg p-4 hover:border-slate-500 transition">
+          <p class="font-medium">ASA</p>
+          <p class="text-xs text-stone-500 mt-1">Grants · no cars/data-center</p>
+          <p class="mt-2 text-xs"><span class="text-amber-800">Partial</span> ASA-M1/M2 honesty</p>
+        </a>
+        <a href="./admin/flows.html" class="block bg-white border border-stone-300 rounded-lg p-4 hover:border-slate-500 transition">
+          <p class="font-medium">Admin</p>
+          <p class="text-xs text-stone-500 mt-1">Branch-scoped</p>
+          <p class="mt-2 text-xs"><span class="text-emerald-700">Ready</span> core · <span class="text-amber-800">OPS-M7</span></p>
+        </a>
+        <a href="./team-lead/flows.html" class="block bg-white border border-stone-300 rounded-lg p-4 hover:border-slate-500 transition">
+          <p class="font-medium">Team Lead</p>
+          <p class="text-xs text-stone-500 mt-1">Floor · no POS</p>
+          <p class="mt-2 text-xs"><span class="text-emerald-700">Ready</span> · TL-C5 deferred</p>
+        </a>
+        <a href="./staff/flows.html" class="block bg-white border border-stone-300 rounded-lg p-4 hover:border-slate-500 transition">
+          <p class="font-medium">Staff</p>
+          <p class="text-xs text-stone-500 mt-1">My Tasks only</p>
+          <p class="mt-2 text-xs"><span class="text-amber-800">Partial</span> STF-H1 geo</p>
+        </a>
+        <a href="./marketing/flows.html" class="block bg-white border border-stone-300 rounded-lg p-4 hover:border-slate-500 transition">
+          <p class="font-medium">Marketing</p>
+          <p class="text-xs text-stone-500 mt-1">CRM only</p>
+          <p class="mt-2 text-xs"><span class="text-amber-800">Partial</span> events/push</p>
+        </a>
+        <a href="./customer/flows.html" class="block bg-white border border-stone-300 rounded-lg p-4 hover:border-slate-500 transition">
+          <p class="font-medium">Customer</p>
+          <p class="text-xs text-stone-500 mt-1">Account portal</p>
+          <p class="mt-2 text-xs"><span class="text-amber-800">Partial</span> signin CUST-H2</p>
+        </a>
+        <a href="./public/flows.html" class="block bg-white border border-stone-300 rounded-lg p-4 hover:border-slate-500 transition">
+          <p class="font-medium">Public</p>
+          <p class="text-xs text-stone-500 mt-1">Book · queue · forms</p>
+          <p class="mt-2 text-xs"><span class="text-emerald-700">book/queue</span> · forms Partial</p>
+        </a>
+        <a href="./database-scale/flows.html" class="block bg-white border border-stone-300 rounded-lg p-4 hover:border-slate-500 transition">
+          <p class="font-medium">Database &amp; scale</p>
+          <p class="text-xs text-stone-500 mt-1">UNIQUE · RLS · indexes</p>
+          <p class="mt-2 text-xs"><span class="text-red-700">No</span> queue UNIQUE</p>
+        </a>
+      </div>
+    </section>
+
+    <!-- P0 backlog -->
+    <section>
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">P0 backlog</h2>
+      <ol class="bg-white border border-stone-300 rounded-lg divide-y divide-stone-200 text-sm">
+        <li class="p-3 flex gap-3">
+          <span class="font-mono text-red-700 shrink-0">DB-P0-1</span>
+          <span>No <code>UNIQUE(branch, queue_date, queue_number)</code>; <code>assign_daily_queue_number</code> missing from git</span>
+        </li>
+        <li class="p-3 flex gap-3">
+          <span class="font-mono text-red-700 shrink-0">ASA-P0-1</span>
+          <span>ASA grants for pos / finance / reports are UI-only (RPC/RLS ignore)</span>
+        </li>
+        <li class="p-3 flex gap-3">
+          <span class="font-mono text-red-700 shrink-0">RPT-P0-1</span>
+          <span>ReportsPage silent <code>.error</code> on expenses / crew / comps / books</span>
+        </li>
+        <li class="p-3 flex gap-3">
+          <span class="font-mono text-red-700 shrink-0">PERF-P0-1</span>
+          <span>Eager <code>App.jsx</code> — no <code>React.lazy</code> (three ~980KB chunks)</span>
+        </li>
+        <li class="p-3 flex gap-3">
+          <span class="font-mono text-red-700 shrink-0">OPS-P0-1</span>
+          <span>In-memory rate limits on Vercel (multi-instance ineffective)</span>
+        </li>
+        <li class="p-3 flex gap-3">
+          <span class="font-mono text-red-700 shrink-0">AUTH-P0-1</span>
+          <span><code>getSession</code> on PublicUtilityPage / NotificationBell / userSettings</span>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Prior audits -->
+    <section class="text-sm text-stone-600">
+      <h2 class="text-lg font-semibold text-slate-900 mb-2">Prior deep audits</h2>
+      <p>
+        <a class="text-emerald-700 hover:underline" href="../super-admin-deep/00-README.md">super-admin-deep</a> ·
+        <a class="text-emerald-700 hover:underline" href="../asa-deep/00-README.md">asa-deep</a> ·
+        <a class="text-emerald-700 hover:underline" href="../admin-deep/00-README.md">admin-deep</a> ·
+        <a class="text-emerald-700 hover:underline" href="../team-lead-deep/00-README.md">team-lead-deep</a> ·
+        <a class="text-emerald-700 hover:underline" href="../staff-deep/00-README.md">staff-deep</a> ·
+        <a class="text-emerald-700 hover:underline" href="../marketing-deep/00-README.md">marketing-deep</a> ·
+        <a class="text-emerald-700 hover:underline" href="../customer-deep/00-README.md">customer-deep</a> ·
+        <a class="text-emerald-700 hover:underline" href="../ui-dead-controls/00-README.md">ui-dead-controls</a>
+      </p>
+    </section>
+  </main>
+
+  <footer class="border-t border-stone-300 py-6 text-center text-xs text-stone-500">
+    Open this file locally in a browser · Tailwind CDN · docs only under audits/full-system-2026-08-01/
+  </footer>
+</body>
+</html>

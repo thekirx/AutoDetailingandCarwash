@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Crown, Gift, Pencil, Plus, Sparkles } from 'lucide-react'
+import { Crown, Gift, Pencil, Plus, Settings2, Sparkles } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessMemberships, isSuperAdmin } from '@/auth/permissions'
 import {
@@ -8,15 +8,18 @@ import {
   createLoyaltyMilestone,
   createMembershipTier,
   getLoyaltyProgramSettings,
+  listActiveCustomerMemberships,
   listCustomersForMembership,
   listLoyaltyMilestones,
   listMembershipTiers,
   listServices,
+  revokeCustomerMembership,
   updateLoyaltyMilestone,
   updateLoyaltyProgramSettings,
   updateMembershipTier,
   updateServiceLoyaltyWeight,
 } from '@/lib/adminApi'
+import { LOYALTY_PAY_CATEGORIES } from '@/lib/loyaltyLogic'
 import { formatMoney } from '@/queue/queueApi'
 import { formatSizePriceRange } from '@/lib/servicePricing'
 import { Badge } from '@/components/ui/badge'
@@ -47,6 +50,32 @@ const emptyMilestone = {
   sort_order: '0',
 }
 
+const emptyProgramForm = {
+  card_slots: '15',
+  stamps_enabled: true,
+  points_enabled: true,
+  memberships_enabled: true,
+  stamp_earn_mode: 'all_weighted',
+  stamp_pay_categories: ['wash'],
+  apply_membership_multiplier_to_stamps: false,
+  wrap_stamps_at_card: false,
+}
+
+function settingsToProgramForm(row) {
+  return {
+    card_slots: String(row?.card_slots || 15),
+    stamps_enabled: row?.stamps_enabled !== false,
+    points_enabled: row?.points_enabled !== false,
+    memberships_enabled: row?.memberships_enabled !== false,
+    stamp_earn_mode: row?.stamp_earn_mode || 'all_weighted',
+    stamp_pay_categories: Array.isArray(row?.stamp_pay_categories) && row.stamp_pay_categories.length
+      ? [...row.stamp_pay_categories]
+      : ['wash'],
+    apply_membership_multiplier_to_stamps: !!row?.apply_membership_multiplier_to_stamps,
+    wrap_stamps_at_card: !!row?.wrap_stamps_at_card,
+  }
+}
+
 export default function MembershipsPage() {
   const { profile } = useAuth()
   const superAdmin = isSuperAdmin(profile)
@@ -54,10 +83,11 @@ export default function MembershipsPage() {
   const [milestones, setMilestones] = useState([])
   const [services, setServices] = useState([])
   const [customers, setCustomers] = useState([])
+  const [activeMemberships, setActiveMemberships] = useState([])
   const [settings, setSettings] = useState({ card_slots: 15 })
+  const [programForm, setProgramForm] = useState(emptyProgramForm)
   const [tierForm, setTierForm] = useState(emptyTier)
   const [milestoneForm, setMilestoneForm] = useState(emptyMilestone)
-  const [cardSlots, setCardSlots] = useState('15')
   const [assignForm, setAssignForm] = useState({ customer_id: '', tier_id: '' })
   const [editingTier, setEditingTier] = useState(null)
   const [editingMilestone, setEditingMilestone] = useState(null)
@@ -65,19 +95,21 @@ export default function MembershipsPage() {
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
-    const [tierRows, milestoneRows, serviceRows, settingsRow, customerRows] = await Promise.all([
+    const [tierRows, milestoneRows, serviceRows, settingsRow, customerRows, membershipRows] = await Promise.all([
       listMembershipTiers(),
       listLoyaltyMilestones({ includeInactive: true }),
       listServices({ includeArchived: false }),
       getLoyaltyProgramSettings(),
       listCustomersForMembership(),
+      listActiveCustomerMemberships(),
     ])
     setTiers(tierRows)
     setMilestones(milestoneRows)
     setServices(serviceRows)
     setSettings(settingsRow)
-    setCardSlots(String(settingsRow.card_slots || 15))
+    setProgramForm(settingsToProgramForm(settingsRow))
     setCustomers(customerRows)
+    setActiveMemberships(membershipRows)
     setWeightDrafts(Object.fromEntries(serviceRows.map((s) => [s.id, String(s.loyalty_weight ?? 1)])))
   }, [])
 
@@ -169,18 +201,32 @@ export default function MembershipsPage() {
     }
   }
 
-  async function onSaveSettings(event) {
+  async function onSaveProgram(event) {
     event.preventDefault()
+    if (!superAdmin) {
+      toast.error('Only Super Admin can change loyalty program settings.')
+      return
+    }
     setSaving(true)
     try {
-      await updateLoyaltyProgramSettings({ card_slots: cardSlots })
-      toast.success('Loyalty card settings saved')
+      await updateLoyaltyProgramSettings(programForm)
+      toast.success('Loyalty program settings saved')
       await load()
     } catch (err) {
       toast.error(err.message)
     } finally {
       setSaving(false)
     }
+  }
+
+  function togglePayCategory(value) {
+    setProgramForm((f) => {
+      const has = f.stamp_pay_categories.includes(value)
+      const next = has
+        ? f.stamp_pay_categories.filter((c) => c !== value)
+        : [...f.stamp_pay_categories, value]
+      return { ...f, stamp_pay_categories: next }
+    })
   }
 
   async function saveServiceWeight(serviceId) {
@@ -212,23 +258,159 @@ export default function MembershipsPage() {
     }
   }
 
+  async function onRevokeMembership(id) {
+    setSaving(true)
+    try {
+      await revokeCustomerMembership(id)
+      toast.success('Membership revoked')
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <section className="flex flex-col gap-8">
       <div>
         <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Membership</p>
         <h1 className="text-3xl font-semibold tracking-tight">Plans & loyalty</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Configure premium tiers, stamp-card thresholds, and per-service loyalty scores. Customers earn weighted points on every paid visit.
+          Super Admin controls the whole loyalty program — stamps, points, memberships, carwash-only earn, and per-service scores. POS honors these settings live.
         </p>
       </div>
 
-      <Tabs defaultValue="tiers">
+      <Tabs defaultValue={superAdmin ? 'program' : 'tiers'}>
         <TabsList className="flex h-auto flex-wrap gap-1">
+          {superAdmin ? (
+            <TabsTrigger value="program"><Settings2 data-icon="inline-start" /> Program</TabsTrigger>
+          ) : null}
           <TabsTrigger value="tiers"><Crown data-icon="inline-start" /> Premium plans</TabsTrigger>
           <TabsTrigger value="loyalty"><Gift data-icon="inline-start" /> Stamp thresholds</TabsTrigger>
           <TabsTrigger value="scoring"><Sparkles data-icon="inline-start" /> Service scoring</TabsTrigger>
           <TabsTrigger value="assign">Assign members</TabsTrigger>
         </TabsList>
+
+        {superAdmin ? (
+          <TabsContent value="program" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Loyalty program controls</CardTitle>
+                <CardDescription>
+                  Kill-switches and earn rules for stamps, spend points, and paid memberships. Changes apply on the next POS checkout.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={onSaveProgram} className="flex flex-col gap-6">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {[
+                      ['stamps_enabled', 'Stamp card', 'Customers earn stamps on paid services'],
+                      ['points_enabled', 'Spend points', '₱1 of service spend ≈ 1 point × membership multiplier'],
+                      ['memberships_enabled', 'Memberships', 'Paid tiers and multipliers stay active'],
+                    ].map(([key, label, hint]) => (
+                      <label key={key} className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm">
+                        <span className="flex items-center gap-2 font-medium">
+                          <input
+                            type="checkbox"
+                            checked={!!programForm[key]}
+                            onChange={(e) => setProgramForm({ ...programForm, [key]: e.target.checked })}
+                          />
+                          {label}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{hint}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="card-slots">Stamp card slots</Label>
+                      <Input
+                        id="card-slots"
+                        type="number"
+                        min="5"
+                        max="50"
+                        className="w-32"
+                        value={programForm.card_slots}
+                        onChange={(e) => setProgramForm({ ...programForm, card_slots: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Stamp earn mode</Label>
+                      <Select
+                        value={programForm.stamp_earn_mode}
+                        onValueChange={(v) => setProgramForm({ ...programForm, stamp_earn_mode: v })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all_weighted">All services with score &gt; 0</SelectItem>
+                          <SelectItem value="pay_categories">Only selected categories (e.g. carwash)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {programForm.stamp_earn_mode === 'pay_categories' ? (
+                    <div className="flex flex-col gap-2">
+                      <Label>Categories that earn stamps</Label>
+                      <div className="flex flex-wrap gap-3">
+                        {LOYALTY_PAY_CATEGORIES.map((c) => (
+                          <label key={c.value} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={programForm.stamp_pay_categories.includes(c.value)}
+                              onChange={() => togglePayCategory(c.value)}
+                            />
+                            {c.label}
+                          </label>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Tip: select Wash only for carwash-stamp programs. Per-service scores still apply inside those categories.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={programForm.apply_membership_multiplier_to_stamps}
+                        onChange={(e) =>
+                          setProgramForm({ ...programForm, apply_membership_multiplier_to_stamps: e.target.checked })
+                        }
+                      />
+                      <span>
+                        <span className="font-medium">Multiply stamps by membership</span>
+                        <span className="block text-xs text-muted-foreground">
+                          Uses the member tier loyalty multiplier on stamp awards (not only spend points).
+                        </span>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={programForm.wrap_stamps_at_card}
+                        onChange={(e) => setProgramForm({ ...programForm, wrap_stamps_at_card: e.target.checked })}
+                      />
+                      <span>
+                        <span className="font-medium">Wrap stamp card when full</span>
+                        <span className="block text-xs text-muted-foreground">
+                          After a full card, balance rolls to stamps % slots (new card cycle).
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+
+                  <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save program settings'}</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="tiers" className="mt-6 flex flex-col gap-6">
           <Card>
@@ -288,29 +470,23 @@ export default function MembershipsPage() {
         <TabsContent value="loyalty" className="mt-6 flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Stamp card settings</CardTitle>
-              <CardDescription>How many slots appear on the customer loyalty card.</CardDescription>
+              <CardTitle>Stamp card</CardTitle>
+              <CardDescription>
+                {superAdmin
+                  ? `Card capacity is ${settings.card_slots} slots — change it under Program.`
+                  : `Card capacity: ${settings.card_slots} weighted stamps (Super Admin sets this under Program).`}
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={onSaveSettings} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="card-slots">Card slots</Label>
-                  <Input id="card-slots" type="number" min="5" max="50" className="w-32" value={cardSlots} onChange={(e) => setCardSlots(e.target.value)} />
-                </div>
-                <Button type="submit" disabled={saving}>Save settings</Button>
-              </form>
-              <p className="mt-3 text-xs text-muted-foreground">Current card capacity: {settings.card_slots} weighted points max display.</p>
-            </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Add reward threshold</CardTitle>
-              <CardDescription>When a customer reaches this weighted point total, they unlock the reward.</CardDescription>
+              <CardTitle>Add stamp threshold</CardTitle>
+              <CardDescription>When a customer reaches this stamp total on their card, they unlock the reward. (Spend points are separate — toggled under Program.)</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={onCreateMilestone} className="grid gap-4 md:grid-cols-2">
-                <div className="flex flex-col gap-2"><Label>Threshold points</Label><Input required type="number" min="1" step="1" value={milestoneForm.threshold_points} onChange={(e) => setMilestoneForm({ ...milestoneForm, threshold_points: e.target.value })} placeholder="10" /></div>
+                <div className="flex flex-col gap-2"><Label>Threshold stamps</Label><Input required type="number" min="1" step="1" value={milestoneForm.threshold_points} onChange={(e) => setMilestoneForm({ ...milestoneForm, threshold_points: e.target.value })} placeholder="10" /></div>
                 <div className="flex flex-col gap-2"><Label>Sort order</Label><Input type="number" min="0" value={milestoneForm.sort_order} onChange={(e) => setMilestoneForm({ ...milestoneForm, sort_order: e.target.value })} /></div>
                 <div className="flex flex-col gap-2"><Label>Reward label</Label><Input required value={milestoneForm.reward_label} onChange={(e) => setMilestoneForm({ ...milestoneForm, reward_label: e.target.value })} placeholder="Free wash" /></div>
                 <div className="flex flex-col gap-2"><Label>Description</Label><Input value={milestoneForm.reward_description} onChange={(e) => setMilestoneForm({ ...milestoneForm, reward_description: e.target.value })} placeholder="Complimentary standard wash" /></div>
@@ -325,7 +501,7 @@ export default function MembershipsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Points</TableHead>
+                    <TableHead>Stamps</TableHead>
                     <TableHead>Reward</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Status</TableHead>
@@ -365,7 +541,7 @@ export default function MembershipsPage() {
               <CardTitle>Service loyalty scores</CardTitle>
               <CardDescription>
                 {superAdmin
-                  ? 'Set how many stamp points each service earns per visit. Example: basic wash = 1, premium detail = 3.'
+                  ? 'Set how many stamp points each service earns per unit. Combined with Program earn mode (all weighted vs wash-only categories).'
                   : 'Only Super Admin (BossMich) can edit scores. You can review current weights below.'}
               </CardDescription>
             </CardHeader>
@@ -374,15 +550,17 @@ export default function MembershipsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Service</TableHead>
+                    <TableHead>Category</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Loyalty score</TableHead>
-                    <TableHead className="text-right">Save</TableHead>
+                    {superAdmin ? <TableHead className="text-right">Save</TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {services.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="font-medium">{row.name}</TableCell>
+                      <TableCell className="capitalize text-muted-foreground">{row.pay_category || 'general'}</TableCell>
                       <TableCell>{formatSizePriceRange(row, formatMoney)}</TableCell>
                       <TableCell>
                         <Input
@@ -391,17 +569,24 @@ export default function MembershipsPage() {
                           max="100"
                           className="w-24"
                           disabled={!superAdmin}
+                          readOnly={!superAdmin}
                           value={weightDrafts[row.id] ?? '1'}
                           onChange={(e) => setWeightDrafts((d) => ({ ...d, [row.id]: e.target.value }))}
                         />
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="outline" disabled={!superAdmin} onClick={() => saveServiceWeight(row.id)}>Save</Button>
-                      </TableCell>
+                      {superAdmin ? (
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" onClick={() => saveServiceWeight(row.id)}>Save</Button>
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   ))}
                   {!services.length && (
-                    <TableRow><TableCell colSpan={4} className="text-muted-foreground">No active services — add services first.</TableCell></TableRow>
+                    <TableRow>
+                      <TableCell colSpan={superAdmin ? 5 : 4} className="text-muted-foreground">
+                        No active services — add services first.
+                      </TableCell>
+                    </TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -409,11 +594,14 @@ export default function MembershipsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="assign" className="mt-6">
+        <TabsContent value="assign" className="mt-6 flex flex-col gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Assign premium membership</CardTitle>
-              <CardDescription>Link a customer to a paid tier for POS loyalty multipliers.</CardDescription>
+              <CardDescription>
+                Link a customer to a paid tier for POS loyalty multipliers
+                {settings.memberships_enabled === false ? ' (memberships are currently disabled in Program).' : '.'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={onAssignMembership} className="grid gap-4 md:grid-cols-2">
@@ -445,6 +633,53 @@ export default function MembershipsPage() {
                   Assign membership
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Active memberships</CardTitle>
+              <CardDescription>Revoke to stop multipliers immediately on the next sale.</CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Tier</TableHead>
+                    <TableHead>Starts</TableHead>
+                    <TableHead>Ends</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activeMemberships.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-medium">
+                        {row.customers?.full_name || row.customers?.email || row.customers?.phone || row.customer_id}
+                      </TableCell>
+                      <TableCell>{row.membership_tiers?.name || '—'}</TableCell>
+                      <TableCell>{row.starts_at || '—'}</TableCell>
+                      <TableCell>{row.ends_at || 'Open'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={saving}
+                          onClick={() => onRevokeMembership(row.id)}
+                        >
+                          Revoke
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!activeMemberships.length && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-muted-foreground">No active memberships.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -483,7 +718,7 @@ export default function MembershipsPage() {
           <DialogHeader><DialogTitle>Edit milestone</DialogTitle></DialogHeader>
           {editingMilestone && (
             <form onSubmit={onSaveMilestone} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2"><Label>Threshold points</Label><Input required type="number" min="1" value={editingMilestone.threshold_points} onChange={(e) => setEditingMilestone({ ...editingMilestone, threshold_points: e.target.value })} /></div>
+              <div className="flex flex-col gap-2"><Label>Threshold stamps</Label><Input required type="number" min="1" value={editingMilestone.threshold_points} onChange={(e) => setEditingMilestone({ ...editingMilestone, threshold_points: e.target.value })} /></div>
               <div className="flex flex-col gap-2"><Label>Reward label</Label><Input required value={editingMilestone.reward_label} onChange={(e) => setEditingMilestone({ ...editingMilestone, reward_label: e.target.value })} /></div>
               <div className="flex flex-col gap-2"><Label>Description</Label><Input value={editingMilestone.reward_description || ''} onChange={(e) => setEditingMilestone({ ...editingMilestone, reward_description: e.target.value })} /></div>
               <div className="flex flex-col gap-2"><Label>Sort order</Label><Input type="number" min="0" value={editingMilestone.sort_order} onChange={(e) => setEditingMilestone({ ...editingMilestone, sort_order: e.target.value })} /></div>

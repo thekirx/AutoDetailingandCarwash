@@ -8,8 +8,8 @@ export async function loadUserSettings() {
 }
 
 export async function saveSmsOptIn(sms_opt_in) {
-  const { data: sessionData } = await supabase.auth.getSession()
-  if (!sessionData.session?.user?.id) throw new Error('Sign in required.')
+  const { data: userData } = await supabase.auth.getUser()
+  if (!userData.user?.id) throw new Error('Sign in required.')
   const { error } = await supabase.auth.updateUser({
     data: { sms_opt_in: Boolean(sms_opt_in) },
   })

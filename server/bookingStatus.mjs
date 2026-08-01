@@ -35,7 +35,7 @@ export async function handleBookingStatusRequest(req, res) {
 
     const { data: staff } = await db
       .from('staff_profiles')
-      .select('id, role, is_active, branch_slug')
+      .select('id, role, is_active, branch_slug, permission_grants')
       .eq('id', userData.user.id)
       .eq('is_active', true)
       .maybeSingle()
@@ -63,8 +63,14 @@ export async function handleBookingStatusRequest(req, res) {
     if (loadErr) return json(res, 400, { error: loadErr.message })
     if (!existing) return json(res, 404, { error: 'Booking not found' })
 
-    if (!canStaffUpdateBookingStatus({ ...staff, branch_slugs }, existing, { nextStatus: status })) {
-      return json(res, 403, { error: 'Not allowed to update bookings outside your branch scope' })
+    if (
+      !canStaffUpdateBookingStatus(
+        { ...staff, branch_slugs, permission_grants: staff.permission_grants },
+        existing,
+        { nextStatus: status },
+      )
+    ) {
+      return json(res, 403, { error: 'Not allowed to update this booking' })
     }
 
     const { data: booking, error } = await db

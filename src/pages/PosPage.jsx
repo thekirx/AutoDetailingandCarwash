@@ -3,10 +3,10 @@ import { Navigate, useSearchParams } from 'react-router-dom'
 import { Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessPos, canManageServices, canSeeAllBranches, getBranchScopeList, isAdmin } from '@/auth/permissions'
-import { listBranches } from '@/lib/adminApi'
+import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { buildHandoffCartLine, buildPosSalePayload } from '@/lib/posSale'
+import { buildHandoffCartLine, buildPosSalePayload, priceCartForMembership } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange } from '@/lib/servicePricing'
 import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
@@ -63,6 +63,17 @@ export default function PosPage() {
   const [todayStats, setTodayStats] = useState(null)
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
+  const [activeMembership, setActiveMembership] = useState(null)
+  const [membershipsEnabled, setMembershipsEnabled] = useState(true)
+
+  const membershipContext = useMemo(
+    () => ({
+      membershipsEnabled: membershipsEnabled && !!activeMembership,
+      discountPercent: Number(activeMembership?.discount_percent) || 0,
+      includedServices: activeMembership?.included_services || [],
+    }),
+    [activeMembership, membershipsEnabled],
+  )
 
   const branchLabel = useMemo(
     () => branches.find((b) => b.slug === branch)?.name || branch || '—',
@@ -168,11 +179,67 @@ export default function PosPage() {
 
   const cartTotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price_minor, 0)
 
+  async function refreshMembershipForCustomer(cid) {
+    if (!cid) {
+      setActiveMembership(null)
+      const ctx = { membershipsEnabled: false, discountPercent: 0, includedServices: [] }
+      setCart((current) => priceCartForMembership(current, ctx))
+      return
+    }
+    try {
+      const [settings, memRes] = await Promise.all([
+        getLoyaltyProgramSettings(),
+        supabase
+          .from('customer_memberships')
+          .select(
+            'id, ends_at, membership_tiers(name, discount_percent, loyalty_multiplier, included_services, is_active)',
+          )
+          .eq('customer_id', cid)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+      const enabled = settings?.memberships_enabled !== false
+      setMembershipsEnabled(enabled)
+      const tier = memRes.data?.membership_tiers
+      const today = getLocalCalendarDate()
+      const expired = memRes.data?.ends_at && memRes.data.ends_at < today
+      const membership =
+        enabled && tier?.is_active !== false && !expired && !memRes.error
+          ? {
+              name: tier.name,
+              discount_percent: tier.discount_percent,
+              loyalty_multiplier: tier.loyalty_multiplier,
+              included_services: tier.included_services || [],
+            }
+          : null
+      setActiveMembership(membership)
+      const ctx = {
+        membershipsEnabled: enabled && !!membership,
+        discountPercent: Number(membership?.discount_percent) || 0,
+        includedServices: membership?.included_services || [],
+      }
+      setCart((current) => priceCartForMembership(current, ctx))
+    } catch (err) {
+      toast.warning(err.message || 'Could not load membership')
+      setActiveMembership(null)
+    }
+  }
+
   function clearCustomerLink() {
     setCustomerId('')
     setLinkedCustomer(null)
     setCustomerHits([])
     setCustomerSearch('')
+    setActiveMembership(null)
+    setCart((current) =>
+      priceCartForMembership(current, {
+        membershipsEnabled: false,
+        discountPercent: 0,
+        includedServices: [],
+      }),
+    )
   }
 
   function resetCheckoutExtras() {
@@ -184,25 +251,29 @@ export default function PosPage() {
 
   function addToCart(item, { loyaltyAward = false } = {}) {
     setActiveHandoff(null)
-    const price = loyaltyAward ? 0 : item.price_minor
-    setCart((current) => {
-      const key = loyaltyAward ? `${item.key}-loyalty` : item.key
-      const existing = current.find((line) => line.key === key)
-      if (existing) {
-        return current.map((line) => (line.key === key ? { ...line, quantity: line.quantity + 1 } : line))
-      }
-      return [
-        ...current,
+    const listPrice = item.price_minor
+    const priced = priceCartForMembership(
+      [
         {
           ...item,
-          key,
+          key: loyaltyAward ? `${item.key}-loyalty` : item.key,
           quantity: 1,
-          unit_price_minor: price,
-          price_minor: price,
+          list_price_minor: listPrice,
+          unit_price_minor: listPrice,
+          price_minor: listPrice,
           is_loyalty_award: loyaltyAward,
           name: loyaltyAward ? `${item.name} (loyalty award)` : item.name,
+          from_handoff: false,
         },
-      ]
+      ],
+      membershipContext,
+    )[0]
+    setCart((current) => {
+      const existing = current.find((line) => line.key === priced.key)
+      if (existing) {
+        return current.map((line) => (line.key === priced.key ? { ...line, quantity: line.quantity + 1 } : line))
+      }
+      return [...current, priced]
     })
     setCartOpen(true)
   }
@@ -243,6 +314,10 @@ export default function PosPage() {
       toast.message('Queue ticket has no linked service — checkout will record the amount without loyalty stamps.')
     }
     setCartOpen(true)
+    if (cid) refreshMembershipForCustomer(cid)
+    else {
+      setActiveMembership(null)
+    }
   }
 
   async function runCustomerSearch() {
@@ -271,6 +346,7 @@ export default function PosPage() {
     setCustomerHits([])
     setCustomerSearch('')
     toast.success(`Linked · ${hit.full_name}`)
+    refreshMembershipForCustomer(hit.id)
   }
 
   async function checkout() {
@@ -312,6 +388,10 @@ export default function PosPage() {
     }
     if (linkedCustomer?.plate) noteParts.push(`Plate ${linkedCustomer.plate}`)
     if (cart.some((l) => l.is_loyalty_award)) noteParts.push('Includes loyalty award line')
+    if (cart.some((l) => l.is_membership_included)) noteParts.push('Includes membership service')
+    if (cart.some((l) => l.membership_discount_applied) && activeMembership?.name) {
+      noteParts.push(`Member ${activeMembership.name} ${activeMembership.discount_percent}% off`)
+    }
     const { data, error } = await supabase.rpc('complete_pos_sale', {
       payload: buildPosSalePayload({
         branch,
@@ -528,13 +608,15 @@ export default function PosPage() {
                     <p className="font-medium">{line.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {line.quantity} ×{' '}
-                      {line.is_loyalty_award ? (
+                      {line.is_loyalty_award || line.is_membership_included ? (
                         <span className="font-medium text-emerald-600">FREE</span>
                       ) : (
                         formatMoney(line.unit_price_minor)
                       )}{' '}
                       · {line.item_type}
                       {line.is_loyalty_award ? ' · loyalty' : ''}
+                      {line.is_membership_included ? ' · member include' : ''}
+                      {line.membership_discount_applied ? ' · member discount' : ''}
                     </p>
                   </div>
                   <Button
@@ -569,6 +651,17 @@ export default function PosPage() {
                     <p className="text-xs text-muted-foreground">
                       {[linkedCustomer.phone, linkedCustomer.plate].filter(Boolean).join(' · ') || 'Account linked'}
                     </p>
+                    {activeMembership ? (
+                      <p className="mt-1 text-xs font-medium text-primary">
+                        {activeMembership.name}
+                        {activeMembership.discount_percent > 0
+                          ? ` · ${activeMembership.discount_percent}% off services`
+                          : ''}
+                        {(activeMembership.included_services || []).length
+                          ? ` · ${(activeMembership.included_services || []).length} included`
+                          : ''}
+                      </p>
+                    ) : null}
                   </div>
                   <Button type="button" variant="ghost" size="icon" className="min-h-10 min-w-10 shrink-0" onClick={clearCustomerLink} aria-label="Unlink customer">
                     <X className="size-4" />

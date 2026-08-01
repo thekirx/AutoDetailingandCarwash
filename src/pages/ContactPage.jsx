@@ -1,16 +1,24 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 
 export default function ContactPage() {
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
+  const [guard, setGuard] = useState(() => createPublicFormGuard())
   const [form, setForm] = useState({ name: '', phone: '', email: '', subject: '', message: '' })
 
   async function submit(event) {
     event.preventDefault()
     setStatus('loading')
     setError('')
+    const blocked = validatePublicFormGuard(guard)
+    if (blocked) {
+      setError(blocked)
+      setStatus('idle')
+      return
+    }
     const { error: e } = await supabase.from('contact_inquiries').insert({
       name: form.name.trim(),
       phone: form.phone.trim(),
@@ -24,6 +32,7 @@ export default function ContactPage() {
       return
     }
     setStatus('success')
+    setGuard(createPublicFormGuard())
   }
 
   if (status === 'success') {
@@ -55,6 +64,16 @@ export default function ContactPage() {
           <label>Email<input type="email" value={form.email} onChange={update('email')} /></label>
           <label>Subject<input required value={form.subject} onChange={update('subject')} /></label>
           <label>Message<textarea required value={form.message} onChange={update('message')} /></label>
+          {/* honeypot — leave empty */}
+          <label className="sr-only" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }}>
+            Company website
+            <input
+              tabIndex={-1}
+              autoComplete="off"
+              value={guard.honeypot}
+              onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
+            />
+          </label>
           {error && <p className="form-error">{error}</p>}
           <button disabled={status === 'loading'} className="button button-blue">{status === 'loading' ? 'Sending…' : 'Send message'}</button>
         </form>

@@ -104,6 +104,34 @@ describe('ops CRUD validation', () => {
     assert.equal(milestone.threshold_points, 10)
 
     assert.throws(() => validateLoyaltyProgramSettings({ card_slots: '3' }), /between 5 and 50/)
+    assert.throws(
+      () => validateLoyaltyProgramSettings({ card_slots: 15, stamp_earn_mode: 'nope' }),
+      /all_weighted or pay_categories/,
+    )
+    assert.throws(
+      () =>
+        validateLoyaltyProgramSettings({
+          card_slots: 15,
+          stamp_earn_mode: 'pay_categories',
+          stamp_pay_categories: [],
+        }),
+      /at least one pay category/,
+    )
+    const program = validateLoyaltyProgramSettings({
+      card_slots: 12,
+      stamps_enabled: false,
+      points_enabled: true,
+      memberships_enabled: false,
+      stamp_earn_mode: 'pay_categories',
+      stamp_pay_categories: ['wash', 'wash'],
+      apply_membership_multiplier_to_stamps: true,
+      wrap_stamps_at_card: true,
+    })
+    assert.equal(program.card_slots, 12)
+    assert.equal(program.stamps_enabled, false)
+    assert.equal(program.memberships_enabled, false)
+    assert.deepEqual(program.stamp_pay_categories, ['wash'])
+    assert.equal(program.wrap_stamps_at_card, true)
     assert.throws(() => validateServiceLoyaltyWeight('101'), /0 to 100/)
     assert.equal(validateServiceLoyaltyWeight('3'), 3)
   })

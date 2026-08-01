@@ -611,10 +611,22 @@ export async function updateLoyaltyMilestone(id, input) {
   return data
 }
 
+const DEFAULT_LOYALTY_SETTINGS = {
+  id: 1,
+  card_slots: 15,
+  stamps_enabled: true,
+  points_enabled: true,
+  memberships_enabled: true,
+  stamp_earn_mode: 'all_weighted',
+  stamp_pay_categories: ['wash'],
+  apply_membership_multiplier_to_stamps: false,
+  wrap_stamps_at_card: false,
+}
+
 export async function getLoyaltyProgramSettings() {
   const { data, error } = await supabase.from('loyalty_program_settings').select('*').eq('id', 1).maybeSingle()
   if (error) throw mapDbError(error)
-  return data || { id: 1, card_slots: 15 }
+  return { ...DEFAULT_LOYALTY_SETTINGS, ...(data || {}) }
 }
 
 export async function updateLoyaltyProgramSettings(input) {
@@ -629,7 +641,8 @@ export async function updateLoyaltyProgramSettings(input) {
     action: 'update',
     entityType: 'loyalty_program',
     entityId: '1',
-    summary: `Updated loyalty card slots to ${data?.card_slots}`,
+    summary: `Updated loyalty program (slots=${data?.card_slots}, stamps=${data?.stamps_enabled}, points=${data?.points_enabled}, memberships=${data?.memberships_enabled}, earn=${data?.stamp_earn_mode})`,
+    meta: v,
   })
   return data
 }
@@ -719,6 +732,39 @@ export async function listCustomersForMembership(limit = 50) {
     .limit(limit)
   if (error) throw mapDbError(error)
   return data || []
+}
+
+export async function listActiveCustomerMemberships(limit = 100) {
+  const { data, error } = await supabase
+    .from('customer_memberships')
+    .select(
+      'id, customer_id, tier_id, starts_at, ends_at, is_active, customers(full_name, email, phone), membership_tiers(name)',
+    )
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw mapDbError(error)
+  return data || []
+}
+
+export async function revokeCustomerMembership(id) {
+  if (!id) throw new Error('Membership id is required.')
+  const { data, error } = await supabase
+    .from('customer_memberships')
+    .update({ is_active: false })
+    .eq('id', id)
+    .select()
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  if (!data) throw new Error('Membership not found.')
+  await writeAudit({
+    action: 'update',
+    entityType: 'customer_membership',
+    entityId: id,
+    summary: 'Revoked customer membership',
+    meta: { customer_id: data.customer_id, tier_id: data.tier_id },
+  })
+  return data
 }
 
 function stockGroupFromName(name) {

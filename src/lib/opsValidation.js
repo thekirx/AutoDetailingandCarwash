@@ -207,12 +207,50 @@ export function validateLoyaltyMilestoneInput({ threshold_points, reward_label, 
   }
 }
 
-export function validateLoyaltyProgramSettings({ card_slots }) {
-  const slots = Number(card_slots)
+const STAMP_EARN_MODES = new Set(['all_weighted', 'pay_categories'])
+const LOYALTY_PAY_CATEGORIES = new Set(['general', 'detailing', 'wash', 'ppf', 'addon'])
+
+function asBool(value, fallback = true) {
+  if (value === undefined || value === null || value === '') return fallback
+  return Boolean(value)
+}
+
+export function validateLoyaltyProgramSettings(input = {}) {
+  const slots = Number(input.card_slots)
   if (!Number.isFinite(slots) || slots < 5 || slots > 50 || !Number.isInteger(slots)) {
     throw new Error('Card slots must be a whole number between 5 and 50.')
   }
-  return { card_slots: slots }
+
+  const stamp_earn_mode = String(input.stamp_earn_mode || 'all_weighted').trim()
+  if (!STAMP_EARN_MODES.has(stamp_earn_mode)) {
+    throw new Error('Stamp earn mode must be all_weighted or pay_categories.')
+  }
+
+  let stamp_pay_categories = Array.isArray(input.stamp_pay_categories)
+    ? input.stamp_pay_categories.map((c) => String(c).trim()).filter(Boolean)
+    : ['wash']
+  stamp_pay_categories = [...new Set(stamp_pay_categories)]
+  if (stamp_earn_mode === 'pay_categories') {
+    if (!stamp_pay_categories.length) {
+      throw new Error('Select at least one pay category when earn mode is category-limited.')
+    }
+    for (const cat of stamp_pay_categories) {
+      if (!LOYALTY_PAY_CATEGORIES.has(cat)) {
+        throw new Error(`Unknown pay category "${cat}".`)
+      }
+    }
+  }
+
+  return {
+    card_slots: slots,
+    stamps_enabled: asBool(input.stamps_enabled, true),
+    points_enabled: asBool(input.points_enabled, true),
+    memberships_enabled: asBool(input.memberships_enabled, true),
+    stamp_earn_mode,
+    stamp_pay_categories,
+    apply_membership_multiplier_to_stamps: asBool(input.apply_membership_multiplier_to_stamps, false),
+    wrap_stamps_at_card: asBool(input.wrap_stamps_at_card, false),
+  }
 }
 
 export function validateServiceLoyaltyWeight(weight) {

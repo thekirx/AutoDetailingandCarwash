@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Staff — flows · 2026-08-01</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</head>
+<body class="bg-stone-100 text-slate-800 min-h-screen">
+  <header class="border-b border-stone-300 bg-slate-800 text-stone-100">
+    <div class="max-w-5xl mx-auto px-4 py-6">
+      <p class="text-xs uppercase tracking-widest text-stone-400">Full-system audit · 2026-08-01</p>
+      <h1 class="text-2xl font-semibold mt-1">Staff</h1>
+      <p class="text-stone-300 text-sm mt-2">Home <code class="text-emerald-300">/operations/my-tasks</code> · nav: My Tasks only · prior: staff-deep</p>
+      <a href="../index.html" class="inline-block mt-3 text-sm text-emerald-300 hover:underline">← Master dashboard</a>
+    </div>
+  </header>
+  <main class="max-w-5xl mx-auto px-4 py-8 space-y-10">
+    <section>
+      <h2 class="text-lg font-semibold mb-3">Nav graph</h2>
+      <div class="bg-white border border-stone-300 rounded-lg p-4 overflow-x-auto">
+        <pre class="mermaid">
+flowchart LR
+  L[login] --> MT[my-tasks]
+  MT --> P[planning tasks]
+  MT --> Q[queue ack/done]
+  MT --> A[attendance clock]
+  A --> G{geofence}
+  G -->|client only| H1[STF-H1]
+  X[all other ops] -.->|denied| No[No]
+        </pre>
+      </div>
+    </section>
+    <section>
+      <h2 class="text-lg font-semibold mb-3">Pages</h2>
+      <table class="w-full text-sm bg-white border border-stone-300">
+        <thead class="bg-slate-700 text-stone-100"><tr><th class="text-left p-2">Page</th><th class="text-left p-2">Status</th></tr></thead>
+        <tbody class="divide-y divide-stone-200">
+          <tr><td class="p-2">my-tasks</td><td class="p-2"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900">Partial</span> STF-H1</td></tr>
+          <tr><td class="p-2">login</td><td class="p-2"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900">Partial</span></td></tr>
+          <tr><td class="p-2">everything else</td><td class="p-2"><span class="px-2 py-0.5 rounded bg-red-100 text-red-800">No</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2 class="text-lg font-semibold mb-3">Open defects</h2>
+      <ul class="bg-white border border-stone-300 rounded-lg divide-y text-sm">
+        <li class="p-3"><span class="font-mono text-amber-800">STF-H1</span> Client-only geofence</li>
+        <li class="p-3"><span class="font-mono text-red-700">AUTH-P0-1 · PERF-P0-1</span></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -76,6 +76,11 @@ export default function ReportsPage() {
     }
     setServices(aggregateBestSellers(lines.data || [], 8))
 
+    if (expenses.error) toast.error(expenses.error.message)
+    if (crew.error) toast.error(crew.error.message)
+    if (comps.error) toast.error(comps.error.message)
+    if (books.error) toast.error(books.error.message)
+
     const expRows = expenses.data || []
     setExpenseCount(expRows.length)
     setExpenseTotal(expRows.reduce((s, r) => s + Number(r.total_minor || 0), 0))

@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict'
-import { buildHandoffCartLine, buildPosSalePayload } from '../src/lib/posSale.js'
+import {
+  buildHandoffCartLine,
+  buildPosSalePayload,
+  priceCartForMembership,
+  resolveMembershipUnitPrice,
+  serviceMatchesIncluded,
+} from '../src/lib/posSale.js'
 
 const walkIn = buildPosSalePayload({
   branch: 'bacoor',
@@ -66,6 +72,7 @@ assert.equal(orphan.id, null)
 assert.equal(orphan.missing_service, true)
 assert.notEqual(orphan.id, orphan.key)
 assert.equal(orphan.unit_price_minor, 25000)
+assert.equal(orphan.from_handoff, true)
 
 const linked = buildHandoffCartLine({
   handoff: {
@@ -88,5 +95,67 @@ const nullServicePayload = buildPosSalePayload({
   activeHandoff: { id: 'hand-1', booking_id: 'book-1' },
 })
 assert.equal(nullServicePayload.lines[0].service_id, null)
+
+assert.equal(serviceMatchesIncluded('Premium Car Wash', ['premium car wash']), true)
+assert.equal(serviceMatchesIncluded('Detail', ['Wash']), false)
+
+const discounted = resolveMembershipUnitPrice({
+  itemType: 'service',
+  serviceName: 'Wash',
+  listPriceMinor: 10000,
+  membershipsEnabled: true,
+  discountPercent: 10,
+})
+assert.equal(discounted.unit_price_minor, 9000)
+assert.equal(discounted.membership_discount_applied, true)
+
+const included = resolveMembershipUnitPrice({
+  itemType: 'service',
+  serviceName: 'Premium Car Wash',
+  listPriceMinor: 15000,
+  membershipsEnabled: true,
+  includedServices: ['Premium Car Wash'],
+})
+assert.equal(included.unit_price_minor, 0)
+assert.equal(included.is_membership_included, true)
+
+const handoffKept = resolveMembershipUnitPrice({
+  itemType: 'service',
+  serviceName: 'Wash',
+  listPriceMinor: 10000,
+  fromHandoff: true,
+  membershipsEnabled: true,
+  discountPercent: 50,
+})
+assert.equal(handoffKept.unit_price_minor, 10000)
+
+const pricedCart = priceCartForMembership(
+  [
+    { key: '1', item_type: 'service', name: 'Wash', quantity: 1, unit_price_minor: 10000, list_price_minor: 10000 },
+    { key: '2', item_type: 'product', name: 'Wax', quantity: 1, unit_price_minor: 5000, list_price_minor: 5000 },
+  ],
+  { membershipsEnabled: true, discountPercent: 20, includedServices: [] },
+)
+assert.equal(pricedCart[0].unit_price_minor, 8000)
+assert.equal(pricedCart[1].unit_price_minor, 5000)
+
+const memberPayload = buildPosSalePayload({
+  branch: 'bacoor',
+  customerId: 'cust-9',
+  paymentMethod: 'cash',
+  cart: [
+    {
+      item_type: 'service',
+      id: 'svc-1',
+      name: 'Premium Car Wash',
+      quantity: 1,
+      unit_price_minor: 0,
+      is_membership_included: true,
+    },
+  ],
+  activeHandoff: null,
+})
+assert.equal(memberPayload.lines[0].is_membership_included, true)
+assert.equal(memberPayload.lines[0].unit_price_minor, 0)
 
 console.log('posSale.buildPosSalePayload + handoff cart: ok')

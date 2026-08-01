@@ -11,8 +11,8 @@ export default function NotificationBell({ className = '', light = false, homeUr
 
   const load = useCallback(async () => {
     try {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session.session?.user) {
+      const { data: userData } = await supabase.auth.getUser()
+      if (!userData.user) {
         setRows([])
         setUnread(0)
         return

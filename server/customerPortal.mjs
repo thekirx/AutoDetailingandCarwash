@@ -40,7 +40,7 @@ async function requireCustomer(accessToken) {
 export async function loadCustomerPortal({ accessToken }) {
   const { admin, userId, user, customer } = await requireCustomer(accessToken)
 
-  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles] =
+  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow] =
     await Promise.all([
       admin.from('branches').select('slug, name, address, is_active').eq('is_active', true).eq('is_archived', false).order('name'),
       admin
@@ -67,7 +67,13 @@ export async function loadCustomerPortal({ accessToken }) {
         .select('id, branch, status')
         .in('status', ['waiting', 'in_progress', 'final_checking'])
         .eq('is_archived', false),
-      admin.from('loyalty_program_settings').select('card_slots').eq('id', 1).maybeSingle(),
+      admin
+        .from('loyalty_program_settings')
+        .select(
+          'card_slots, stamps_enabled, points_enabled, memberships_enabled, stamp_earn_mode, stamp_pay_categories',
+        )
+        .eq('id', 1)
+        .maybeSingle(),
       admin
         .from('loyalty_milestones')
         .select('id, threshold_points, reward_label, reward_description, sort_order')
@@ -81,6 +87,14 @@ export async function loadCustomerPortal({ accessToken }) {
         .eq('customer_id', userId)
         .eq('is_archived', false)
         .order('plate_number'),
+      admin
+        .from('customer_memberships')
+        .select('id, starts_at, ends_at, membership_tiers(name, discount_percent, loyalty_multiplier)')
+        .eq('customer_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ])
 
   const queueRows = queue.data || []
@@ -93,11 +107,18 @@ export async function loadCustomerPortal({ accessToken }) {
     Object.entries(queueByBranch).map(([slug, rows]) => [slug, getQueueCounts(rows)]),
   )
 
-  const loyalty = buildLoyaltyProgress(
-    customerRow.data?.loyalty_stamps ?? 0,
-    loyaltyMilestones.data || [],
-    loyaltySettings.data?.card_slots ?? 15,
-  )
+  const settings = loyaltySettings.data || {}
+  const stampsEnabled = settings.stamps_enabled !== false
+  const pointsEnabled = settings.points_enabled !== false
+  const membershipsEnabled = settings.memberships_enabled !== false
+
+  const loyalty = stampsEnabled
+    ? buildLoyaltyProgress(
+        customerRow.data?.loyalty_stamps ?? 0,
+        loyaltyMilestones.data || [],
+        settings.card_slots ?? 15,
+      )
+    : null
 
   const activeBookings = (active.data || []).map((row) => ({
     ...row,
@@ -114,6 +135,17 @@ export async function loadCustomerPortal({ accessToken }) {
     role: 'customer',
   }
 
+  const membership = membershipsEnabled && membershipRow.data
+    ? {
+        id: membershipRow.data.id,
+        starts_at: membershipRow.data.starts_at,
+        ends_at: membershipRow.data.ends_at,
+        tier_name: membershipRow.data.membership_tiers?.name || null,
+        discount_percent: membershipRow.data.membership_tiers?.discount_percent ?? null,
+        loyalty_multiplier: membershipRow.data.membership_tiers?.loyalty_multiplier ?? null,
+      }
+    : null
+
   return {
     profile,
     branches: branches.data || [],
@@ -123,9 +155,13 @@ export async function loadCustomerPortal({ accessToken }) {
     vehicles: vehicles.data || [],
     queueCounts,
     loyalty: {
-      ...loyalty,
-      loyaltyPoints: customerRow.data?.loyalty_points ?? 0,
-      milestones: loyaltyMilestones.data || [],
+      ...(loyalty || { cardSlots: settings.card_slots ?? 15, completed: 0, progress: 0, milestones: [], earnedMilestones: [], nextMilestone: null, encouragement: '' }),
+      stampsEnabled,
+      pointsEnabled,
+      membershipsEnabled,
+      loyaltyPoints: pointsEnabled ? (customerRow.data?.loyalty_points ?? 0) : 0,
+      milestones: stampsEnabled ? (loyaltyMilestones.data || []) : [],
+      membership,
     },
   }
 }

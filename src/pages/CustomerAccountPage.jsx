@@ -510,13 +510,37 @@ export default function CustomerAccountPage() {
           {loading ? (
             <Skeleton className="h-48 w-full rounded-[1.5rem]" />
           ) : loyalty ? (
-            <LoyaltyCard
-              variant="hakum"
-              completed={loyalty.completed}
-              cardSlots={loyalty.cardSlots}
-              milestones={loyalty.milestones}
-              encouragement={loyalty.encouragement}
-            />
+            <div className="flex flex-col gap-3">
+              {loyalty.membershipsEnabled && loyalty.membership?.tier_name ? (
+                <div className="rounded-[1.25rem] border border-[#d7e0ff] bg-white/80 px-4 py-3 text-sm">
+                  <p className="text-xs font-bold tracking-[0.18em] text-[#052699] uppercase">Membership</p>
+                  <p className="mt-1 font-semibold text-[#0b1b4a]">{loyalty.membership.tier_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {loyalty.membership.discount_percent != null
+                      ? `${loyalty.membership.discount_percent}% member discount`
+                      : 'Active member'}
+                    {loyalty.membership.ends_at ? ` · ends ${loyalty.membership.ends_at}` : ''}
+                  </p>
+                </div>
+              ) : null}
+              {loyalty.pointsEnabled ? (
+                <div className="rounded-[1.25rem] border border-[#d7e0ff] bg-white/80 px-4 py-3 text-sm">
+                  <p className="text-xs font-bold tracking-[0.18em] text-[#052699] uppercase">Spend points</p>
+                  <p className="mt-1 text-2xl font-semibold text-[#0b1b4a]">{loyalty.loyaltyPoints ?? 0}</p>
+                </div>
+              ) : null}
+              {loyalty.stampsEnabled !== false ? (
+                <LoyaltyCard
+                  variant="hakum"
+                  completed={loyalty.completed}
+                  cardSlots={loyalty.cardSlots}
+                  milestones={loyalty.milestones}
+                  encouragement={loyalty.encouragement}
+                />
+              ) : (
+                <div className="account-empty">Stamp card is paused by the shop right now.</div>
+              )}
+            </div>
           ) : (
             <div className="account-empty">Loyalty stamps appear after your first completed visit.</div>
           )}
