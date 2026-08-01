@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell from '../components/HakumAuthShell'
+import { AuthLegalLinks } from '../components/FormLegalNotice'
 import { usePageMeta } from '../lib/pageMeta'
 import { OPS_LOGIN_ROLES, redirectForRole } from '../auth/permissions'
 
@@ -119,11 +120,14 @@ export default function CustomerSetPasswordPage() {
       title="Secure your account."
       subtitle="Choose a password to sign in and continue in your Hakum portal."
       footerLinks={
-        <p>
-          <Link to="/signin">Customer sign in</Link>
-          {' · '}
-          <Link to="/operations/login">Team sign in</Link>
-        </p>
+        <>
+          <p>
+            <Link to="/signin">Customer sign in</Link>
+            {' · '}
+            <Link to="/operations/login">Team sign in</Link>
+          </p>
+          <AuthLegalLinks />
+        </>
       }
     >
       <h2>Set your password</h2>

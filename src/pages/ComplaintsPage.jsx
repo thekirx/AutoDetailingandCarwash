@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { usePublicBranches } from '@/lib/branches'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
+import FormLegalNotice from '@/components/FormLegalNotice'
 
 export default function ComplaintsPage() {
   const { branches, loading: branchesLoading } = usePublicBranches()
@@ -98,6 +99,7 @@ export default function ComplaintsPage() {
               onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
             />
           </label>
+          <FormLegalNotice id="complaint-legal" />
           {error && <p className="form-error">{error}</p>}
           <button disabled={status === 'loading' || branchesLoading || !form.branch} className="button button-blue">{status === 'loading' ? 'Submitting…' : 'Submit complaint'}</button>
         </form>

@@ -10,11 +10,13 @@ export default function PublicFormPage() {
   const [error, setError] = useState('')
   const [values, setValues] = useState({})
   const [status, setStatus] = useState('idle')
+  const [acceptedLegal, setAcceptedLegal] = useState(false)
 
   useEffect(() => {
     if (!slug) return
     setError('')
     setStatus('idle')
+    setAcceptedLegal(false)
     supabase.rpc('get_public_ops_form', { p_slug: slug }).then(({ data, error: e }) => {
       if (e) setError(e.message)
       else if (!data) setError('This form is closed or not found.')
@@ -24,6 +26,10 @@ export default function PublicFormPage() {
 
   async function onSubmit() {
     if (!form) return
+    if (!acceptedLegal) {
+      setError('Please agree to the Terms of Service and Privacy Policy.')
+      return
+    }
     const fields = normalizeFields(form.fields)
     const errs = validatePayload(fields, values)
     if (errs[0]) {
@@ -45,6 +51,7 @@ export default function PublicFormPage() {
     }
     setStatus('success')
     setValues({})
+    setAcceptedLegal(false)
   }
 
   return (
@@ -60,6 +67,30 @@ export default function PublicFormPage() {
             onSubmit={onSubmit}
             status={form ? status : 'idle'}
             error={error}
+            footerSlot={
+              form ? (
+                <label className="form-legal-notice hakum-form-legal" htmlFor="ops-form-legal">
+                  <input
+                    id="ops-form-legal"
+                    type="checkbox"
+                    checked={acceptedLegal}
+                    onChange={(e) => setAcceptedLegal(e.target.checked)}
+                    required
+                  />
+                  <span>
+                    I agree to the{' '}
+                    <Link to="/terms" target="_blank" rel="noopener noreferrer">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/privacy" target="_blank" rel="noopener noreferrer">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+              ) : null
+            }
           />
         )}
         <p className="hakum-form-footer-links">
@@ -68,6 +99,12 @@ export default function PublicFormPage() {
           <Link to="/contact">Contact</Link>
           <span aria-hidden>·</span>
           <Link to="/book">Book a visit</Link>
+          <span aria-hidden>·</span>
+          <Link to="/terms">Terms</Link>
+          <span aria-hidden>·</span>
+          <Link to="/privacy">Privacy</Link>
+          <span aria-hidden>·</span>
+          <Link to="/cookies">Cookies</Link>
         </p>
       </div>
     </main>

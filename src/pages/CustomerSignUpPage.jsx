@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
+import { AuthLegalLinks } from '../components/FormLegalNotice'
 import { usePageMeta } from '../lib/pageMeta'
 
 export default function CustomerSignUpPage() {
@@ -84,6 +85,7 @@ export default function CustomerSignUpPage() {
           <p>
             <Link to="/">Back to site</Link>
           </p>
+          <AuthLegalLinks />
         </>
       }
     >

@@ -1,12 +1,23 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { needsCookieConsentPrompt, writeCookieConsent } from '@/lib/cookieConsent'
+import {
+  COOKIE_CONSENT_OPEN_EVENT,
+  needsCookieConsentPrompt,
+  openCookieConsentPrompt,
+  writeCookieConsent,
+} from '@/lib/cookieConsent'
 
 export default function CookieConsent() {
   const [visible, setVisible] = useState(() => {
     if (typeof window === 'undefined') return false
     return needsCookieConsentPrompt()
   })
+
+  useEffect(() => {
+    const reopen = () => setVisible(true)
+    window.addEventListener(COOKIE_CONSENT_OPEN_EVENT, reopen)
+    return () => window.removeEventListener(COOKIE_CONSENT_OPEN_EVENT, reopen)
+  }, [])
 
   if (!visible) return null
 
@@ -22,8 +33,11 @@ export default function CookieConsent() {
           <p id="cookie-consent-title" className="cookie-consent-title">We use cookies</p>
           <p id="cookie-consent-copy">
             Hakum uses essential cookies to keep you signed in and remember site preferences.
-            Optional cookies help us understand how the site is used. See our{' '}
-            <Link to="/privacy">Privacy Policy</Link> for details.
+            Optional cookies are reserved for future analytics — none are loaded until we enable them.
+            See our{' '}
+            <Link to="/cookies">Cookie Policy</Link>
+            {' '}and{' '}
+            <Link to="/privacy">Privacy Policy</Link>.
           </p>
         </div>
         <div className="cookie-consent-actions">
@@ -36,5 +50,13 @@ export default function CookieConsent() {
         </div>
       </div>
     </div>
+  )
+}
+
+export function CookiePreferencesButton({ className = 'cookie-prefs-btn' }) {
+  return (
+    <button type="button" className={className} onClick={() => openCookieConsentPrompt()}>
+      Cookie preferences
+    </button>
   )
 }

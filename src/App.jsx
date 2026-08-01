@@ -57,6 +57,10 @@ const PrivacyPage = lazy(() =>
 const TermsPage = lazy(() =>
   import('./pages/LegalPages').then((m) => ({ default: m.TermsPage })),
 )
+const CookiesPage = lazy(() =>
+  import('./pages/LegalPages').then((m) => ({ default: m.CookiesPage })),
+)
+const ForbiddenPage = lazy(() => import('./pages/ForbiddenPage'))
 
 const OperationsDashboardPage = lazy(() =>
   import('./pages/OperationsPages').then((m) => ({ default: m.OperationsDashboardPage })),
@@ -113,9 +117,12 @@ export default function App() {
           <Route path="/f/:slug" element={<PublicFormPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/cookies" element={<CookiesPage />} />
+          <Route path="/403" element={<ForbiddenPage />} />
+          <Route path="/404" element={<NotFoundPage />} />
           <Route
             element={
-              <ProtectedRoute allowedRoles={['customer']} redirectTo="/signin" unauthorizedTo="/signin" />
+              <ProtectedRoute allowedRoles={['customer']} redirectTo="/signin" unauthorizedTo="/403" />
             }
           >
             <Route path="/account" element={<CustomerAccountPage />} />

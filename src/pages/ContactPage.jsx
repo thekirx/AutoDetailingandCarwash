@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
+import FormLegalNotice from '@/components/FormLegalNotice'
 
 export default function ContactPage() {
   const [status, setStatus] = useState('idle')
@@ -74,6 +75,7 @@ export default function ContactPage() {
               onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
             />
           </label>
+          <FormLegalNotice id="contact-legal" />
           {error && <p className="form-error">{error}</p>}
           <button disabled={status === 'loading'} className="button button-blue">{status === 'loading' ? 'Sending…' : 'Send message'}</button>
         </form>

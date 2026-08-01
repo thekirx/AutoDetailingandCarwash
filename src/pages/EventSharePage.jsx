@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { shareFormUrl } from '@/lib/opsForms'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
+import FormLegalNotice from '@/components/FormLegalNotice'
 
 export default function EventSharePage() {
   const { slug } = useParams()
@@ -106,6 +107,7 @@ export default function EventSharePage() {
                     onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
                   />
                 </label>
+                <FormLegalNotice id="event-share-legal" />
                 <button className="button button-blue" disabled={status === 'loading'}>Register</button>
               </form>
             </>

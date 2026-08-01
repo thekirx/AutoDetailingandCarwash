@@ -17,6 +17,8 @@ const PAGE_META = {
   '/events': { title: 'Events', description: 'Hakum Auto Care events and registrations.' },
   '/terms': { title: 'Terms of Service', description: 'Terms of Service for Hakum Auto Care.' },
   '/privacy': { title: 'Privacy Policy', description: 'Privacy Policy for Hakum Auto Care.' },
+  '/cookies': { title: 'Cookie Policy', description: 'Cookie Policy for Hakum Auto Care.' },
+  '/403': { title: 'Access denied', description: 'You do not have access to that Hakum Auto Care page.' },
 }
 
 /** Sets document title / OG tags for public marketing pages. */

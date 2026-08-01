@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
+import FormLegalNotice from '@/components/FormLegalNotice'
 
 export default function EventsPage() {
   const [events, setEvents] = useState([])
@@ -90,6 +91,7 @@ export default function EventsPage() {
                 onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
               />
             </label>
+            <FormLegalNotice id="events-legal" />
             <button className="button button-blue" disabled={status === 'loading'}>Confirm registration</button>
             <button type="button" className="dark-link" onClick={() => setRegisterFor(null)}>Cancel</button>
           </form>

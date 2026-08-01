@@ -1,6 +1,7 @@
 /** Cookie preference storage — localStorage only (no third-party trackers wired yet). */
 export const COOKIE_CONSENT_KEY = 'hakum_cookie_consent'
 export const COOKIE_CONSENT_VERSION = 1
+export const COOKIE_CONSENT_OPEN_EVENT = 'hakum:cookie-consent-open'
 
 export function readCookieConsent() {
   try {
@@ -24,6 +25,18 @@ export function writeCookieConsent(choice) {
   return payload
 }
 
+export function clearCookieConsent() {
+  localStorage.removeItem(COOKIE_CONSENT_KEY)
+}
+
 export function needsCookieConsentPrompt() {
   return readCookieConsent() == null
+}
+
+/** Re-open the cookie banner from footer / cookies policy. */
+export function openCookieConsentPrompt() {
+  clearCookieConsent()
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_OPEN_EVENT))
+  }
 }

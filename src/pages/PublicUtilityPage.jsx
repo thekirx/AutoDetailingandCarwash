@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '../lib/servicePricing'
 import { applyPublicBookPrefill, matchServiceIdByPrefillName } from '../lib/uiDeadControls'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
+import FormLegalNotice from '../components/FormLegalNotice'
 
 function formatPeso(minor) {
   return `₱${(Number(minor || 0) / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`
@@ -241,6 +242,7 @@ export function BookingPage() {
               {branches.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
             </select>
           </label>
+          <FormLegalNotice id="book-legal" />
           {(error || branchesError) && <p className="form-error">{error || branchesError}</p>}
           <button disabled={status === 'loading' || branchesLoading || !form.branch} className="button button-blue">
             {status === 'loading' ? 'Submitting…' : 'Request booking'}

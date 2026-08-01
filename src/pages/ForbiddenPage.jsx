@@ -1,38 +1,37 @@
 import { Link } from 'react-router-dom'
 import { usePageMeta } from '@/lib/pageMeta'
 
-export default function NotFoundPage() {
+export default function ForbiddenPage() {
   usePageMeta({
-    title: 'Page not found',
-    description: 'That Hakum Auto Care page does not exist. Head home or book a service.',
-    path: '/404',
+    title: 'Access denied',
+    description: 'You do not have access to that Hakum Auto Care page.',
+    path: '/403',
   })
 
   return (
     <section className="legal-page not-found-page">
       <div className="public-shell legal-inner">
-        <p className="eyebrow">404</p>
+        <p className="eyebrow">403</p>
         <h1 className="section-title">
-          This lane
+          This bay
           <br />
-          <i>is empty.</i>
+          <i>is restricted.</i>
         </h1>
-        <p className="legal-updated">The page you asked for is not on our site map.</p>
+        <p className="legal-updated">
+          Your account cannot open this page. Sign in with the right role, or continue as a guest.
+        </p>
         <div className="not-found-actions">
           <Link className="button button-blue" to="/">
             Back home
           </Link>
-          <Link className="dark-link" to="/book">
-            Book a service
+          <Link className="dark-link" to="/signin">
+            Customer sign in
           </Link>
-          <Link className="dark-link" to="/queue">
-            Live queue
+          <Link className="dark-link" to="/operations/login">
+            Team portal
           </Link>
           <Link className="dark-link" to="/contact">
             Contact
-          </Link>
-          <Link className="dark-link" to="/terms">
-            Terms
           </Link>
         </div>
       </div>

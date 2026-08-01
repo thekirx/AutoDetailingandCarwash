@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
+import { AuthLegalLinks } from '../components/FormLegalNotice'
 import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
 import { canOfferPasswordEmailReset } from '../lib/uiDeadControls'
 import DemoAccountChips from '../components/DemoAccountChips'
@@ -229,6 +230,7 @@ export default function CustomerSignInPage() {
           <p>
             <Link to="/">Back to site</Link>
           </p>
+          <AuthLegalLinks />
         </>
       }
     >

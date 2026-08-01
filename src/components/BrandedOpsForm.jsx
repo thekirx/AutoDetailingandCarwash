@@ -12,6 +12,7 @@ export default function BrandedOpsForm({
   error = '',
   preview = false,
   className = '',
+  footerSlot = null,
 }) {
   const fields = normalizeFields(form?.fields)
   const kindLabel = String(form?.kind || 'form').replace(/_/g, ' ')
@@ -117,6 +118,8 @@ export default function BrandedOpsForm({
             {!fields.length ? (
               <p className="hakum-form-empty">This form has no fields yet.</p>
             ) : null}
+
+            {footerSlot}
 
             <button
               type={preview ? 'button' : 'submit'}

@@ -1,8 +1,15 @@
 import { Link } from 'react-router-dom'
 import { usePageMeta } from '@/lib/pageMeta'
+import { openCookieConsentPrompt } from '@/lib/cookieConsent'
 
 function LegalShell({ eyebrow, title, updated, path, description, children }) {
   usePageMeta({ title, description, path })
+
+  const peers = [
+    { to: '/terms', label: 'Terms of Service' },
+    { to: '/privacy', label: 'Privacy Policy' },
+    { to: '/cookies', label: 'Cookie Policy' },
+  ].filter((p) => p.to !== path)
 
   return (
     <section className="legal-page">
@@ -15,8 +22,12 @@ function LegalShell({ eyebrow, title, updated, path, description, children }) {
           <Link to="/">Back to home</Link>
           {' · '}
           <Link to="/contact">Contact us</Link>
-          {' · '}
-          <Link to={path === '/terms' ? '/privacy' : '/terms'}>{path === '/terms' ? 'Privacy Policy' : 'Terms of Service'}</Link>
+          {peers.map((p) => (
+            <span key={p.to}>
+              {' · '}
+              <Link to={p.to}>{p.label}</Link>
+            </span>
+          ))}
         </p>
       </div>
     </section>
@@ -155,8 +166,10 @@ export function PrivacyPage() {
       <h2>3. Cookies</h2>
       <p>
         <strong>Essential:</strong> keep you signed in and remember cookie preference.
-        <strong> Optional:</strong> help us understand traffic if you choose &quot;Accept all&quot; on the cookie banner.
-        You can choose &quot;Necessary only&quot; anytime by clearing site data and revisiting. See also our cookie banner on first visit.
+        <strong> Optional:</strong> reserved for future analytics if you choose &quot;Accept all&quot; — we do not load
+        third-party analytics until they are enabled in product.
+        You can change your choice anytime via{' '}
+        <Link to="/cookies">Cookie Policy</Link> or the Cookie preferences link in the site footer.
       </p>
 
       <h2>4. Sharing and processors</h2>
@@ -199,6 +212,62 @@ export function PrivacyPage() {
       </p>
       <p className="legal-note">
         This Policy supports day-to-day operations. Formal NPC registrations or DPIAs, when required, are handled separately by Hakum management.
+      </p>
+    </LegalShell>
+  )
+}
+
+export function CookiesPage() {
+  return (
+    <LegalShell
+      eyebrow="Legal"
+      title="Cookie Policy"
+      updated="August 1, 2026"
+      path="/cookies"
+      description="How Hakum Auto Care uses essential and optional cookies on our website and customer portal."
+    >
+      <p className="legal-lede">
+        This Cookie Policy explains what cookies and similar technologies Hakum Auto Care (&quot;Hakum&quot;, &quot;we&quot;)
+        uses on hakumautocare.com and related customer tools. It works together with our{' '}
+        <Link to="/privacy">Privacy Policy</Link>.
+      </p>
+
+      <h2>1. What cookies are</h2>
+      <p>
+        Cookies are small text files stored on your device. We also use browser storage (localStorage) for preferences
+        that must persist between visits, such as your cookie choice.
+      </p>
+
+      <h2>2. Essential cookies</h2>
+      <ul>
+        <li><strong>Authentication / session:</strong> keep you signed in to the customer portal or operations console.</li>
+        <li><strong>Security:</strong> protect forms and account actions from abuse where applicable.</li>
+        <li><strong>Preferences:</strong> remember theme and cookie consent choice so we do not re-prompt every page load.</li>
+      </ul>
+      <p>Essential cookies are required for the site to work. Choosing &quot;Necessary only&quot; still allows these.</p>
+
+      <h2>3. Optional cookies</h2>
+      <p>
+        If you choose &quot;Accept all&quot;, you consent to optional measurement cookies when we enable them.
+        Today no third-party analytics scripts are loaded — your choice is stored so we can honor it when analytics ship.
+      </p>
+
+      <h2>4. Your choices</h2>
+      <p>
+        Use the first-visit banner, or open Cookie preferences from the site footer / this page anytime.
+        You can also clear site data in your browser to reset the stored preference.
+      </p>
+      <p>
+        <button type="button" className="button button-blue" onClick={() => openCookieConsentPrompt()}>
+          Update cookie preferences
+        </button>
+      </p>
+
+      <h2>5. Contact</h2>
+      <p>
+        Questions: <a href="mailto:admin@hakumautocare.com">admin@hakumautocare.com</a>
+        {' '}· <Link to="/contact">contact form</Link>
+        {' '}· <Link to="/privacy">Privacy Policy</Link>.
       </p>
     </LegalShell>
   )
