@@ -18,9 +18,11 @@
   --color-surface-dark: #101219;
   --color-surface-cinematic: #020a31;
 
-  /* Type families: local brand files can be dropped in without component changes */
+  /* Type families */
   --font-display: "Benzin Semibold", "Montserrat ExtraBold", "Arial Black", sans-serif;
   --font-body: "Gilmer Light", Inter, Roboto, sans-serif;
+  --font-public-display: "Benzin", "Arial Black", sans-serif;
+  --font-public-body: "Gilmer", Arial, sans-serif;
   --font-weight-body: 300;
   --font-weight-medium: 600;
   --font-weight-display: 800;
@@ -72,21 +74,61 @@
   --card-radius: var(--radius-none);
 }
 
-/* Optional local font files. The browser skips these cleanly until assets exist. */
+/* Self-hosted public brand fonts */
 @font-face {
-  font-family: "Benzin Semibold";
-  src: local("Benzin Semibold"), local("Benzin-Semibold");
+  font-family: "Benzin";
+  src: url("/fonts/benzin-medium.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Benzin";
+  src: url("/fonts/benzin-semibold.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "Benzin";
+  src: url("/fonts/benzin-extrabold.woff2") format("woff2");
   font-display: swap;
   font-style: normal;
   font-weight: 800;
 }
 
 @font-face {
-  font-family: "Gilmer Light";
-  src: local("Gilmer Light"), local("Gilmer-Light");
+  font-family: "Gilmer";
+  src: url("/fonts/gilmer-light.woff2") format("woff2");
   font-display: swap;
   font-style: normal;
   font-weight: 300;
+}
+
+@font-face {
+  font-family: "Gilmer";
+  src: url("/fonts/gilmer-regular.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Gilmer";
+  src: url("/fonts/gilmer-medium.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Gilmer";
+  src: url("/fonts/gilmer-bold.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
 }
 
 .hakum-button {

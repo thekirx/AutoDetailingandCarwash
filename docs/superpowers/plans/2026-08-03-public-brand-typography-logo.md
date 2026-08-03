@@ -154,9 +154,9 @@ Set these tokens:
 ```css
 --font-public-display: "Benzin", "Arial Black", sans-serif;
 --font-public-body: "Gilmer", Arial, sans-serif;
---font-display: var(--font-public-display);
---font-body: var(--font-public-body);
 ```
+
+Leave the existing global `--font-display` and `--font-body` tokens unchanged. Reassigning them would leak the new fonts into internal components that also consume those tokens.
 
 - [ ] **Step 3: Run the focused test and confirm the remaining failure**
 
