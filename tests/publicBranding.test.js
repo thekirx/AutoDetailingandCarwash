@@ -47,22 +47,21 @@ describe('Public branding assets and scope', () => {
     assert.equal((layout.match(/aria-label="Hakum Auto Care home"/g) || []).length, 2)
   })
 
-  it('includes the approved hero experience composition', async () => {
+  it('uses the centered legacy experience composition without a feature card', async () => {
     const page = await readFile(projectFile('src/pages/PublicLandingPage.jsx'), 'utf8')
 
-    assert.match(page, /className="hero-experience-layout"/)
-    assert.match(page, /className="hero-experience-card"/)
-    assert.match(page, /<strong>10 Years<\/strong>/)
-    assert.match(page, /Auto Industry<\/span>/)
-    assert.match(page, /Experience Combined<\/span>/)
+    assert.doesNotMatch(page, /hero-experience-layout/)
+    assert.doesNotMatch(page, /hero-experience-card/)
+    assert.match(page, /<div className="hero-experience"[^>]*>\s*<h2 id="experience-heading">Experience<\/h2>/s)
     assert.equal((page.match(/<StatCard key=/g) || []).length, 1)
   })
 
   it('scopes reference alignment to the approved homepage sections', async () => {
     const css = await readFile(projectFile('src/styles.css'), 'utf8')
 
-    assert.match(css, /\.hero-experience-layout\s*\{[^}]*grid-template-columns:/s)
-    assert.match(css, /\.hero-experience-card\s*\{[^}]*border:1px solid #37dfe8/s)
+    assert.match(css, /\.hero-actions\s*\{[^}]*width:max-content[^}]*margin:27px auto 0/s)
+    assert.match(css, /\.hero-experience\s*\{[^}]*text-align:center/s)
+    assert.doesNotMatch(css, /\.hero-experience-card\s*\{/)
     assert.match(css, /\.about-heading \.section-title\s*\{[^}]*font-family:var\(--font-public-display\)/s)
     assert.match(css, /\.about-copy\s*\{[^}]*font-family:var\(--font-public-body\)/s)
     assert.match(css, /\.services-section \.section-title\s*\{[^}]*font-family:var\(--font-public-display\)/s)
@@ -73,7 +72,7 @@ describe('Public branding assets and scope', () => {
   it('provides responsive layouts for the reference-aligned sections', async () => {
     const css = await readFile(projectFile('src/styles.css'), 'utf8')
 
-    assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.hero-experience-layout\s*\{[^}]*grid-template-columns:1fr/)
+    assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.hero-metrics\s*\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.about-layout\s*\{[^}]*grid-template-columns:1fr/)
     assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.service-grid\s*\{[^}]*grid-template-columns:1fr/)
   })
