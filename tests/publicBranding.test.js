@@ -69,4 +69,21 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /\.service-card h3\s*\{[^}]*font-family:var\(--font-public-display\)/s)
     assert.match(css, /\.service-card p\s*\{[^}]*font-family:var\(--font-public-body\)/s)
   })
+
+  it('provides responsive layouts for the reference-aligned sections', async () => {
+    const css = await readFile(projectFile('src/styles.css'), 'utf8')
+
+    assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.hero-experience-layout\s*\{[^}]*grid-template-columns:1fr/)
+    assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.about-layout\s*\{[^}]*grid-template-columns:1fr/)
+    assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.service-grid\s*\{[^}]*grid-template-columns:1fr/)
+  })
+
+  it('keeps the hero hierarchy consistent with the legacy reference', async () => {
+    const css = await readFile(projectFile('src/styles.css'), 'utf8')
+
+    assert.match(css, /\.display-title\s*\{[^}]*font-weight:600/s)
+    assert.match(css, /\.hero-subheading\s*\{[^}]*font-weight:500[^}]*font-style:italic/s)
+    assert.match(css, /\.hero-experience\s*\{[^}]*margin:78px auto 0/s)
+    assert.match(css, /\.hero-metrics \.ui-stat-card>strong>span\s*\{[^}]*font:inherit/s)
+  })
 })
