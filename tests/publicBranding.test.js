@@ -62,6 +62,12 @@ describe('Public branding assets and scope', () => {
     assert.doesNotMatch(page, /hero-experience-card/)
     assert.match(page, /<div className="hero-experience"[^>]*>\s*<h2 id="experience-heading">Experience<\/h2>/s)
     assert.equal((page.match(/<StatCard key=/g) || []).length, 1)
+    assert.match(page, /import \{ aboutImage, services \} from '\.\.\/data\/publicHomeContent'/)
+    assert.match(page, /<img className="about-visual-image" src=\{aboutImage\}/)
+    assert.match(page, /service\.available\s*\?\s*\(\s*<img/s)
+    assert.match(page, /className="service-card-locked"/)
+    assert.match(page, /service\.available\s*&&\s*<Link to="\/book">/)
+    assert.doesNotMatch(page, /--service-position/)
   })
 
   it('scopes reference alignment to the approved homepage sections', async () => {

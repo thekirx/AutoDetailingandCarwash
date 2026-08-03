@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowDown, ArrowRight, Droplets, Gauge, GlassWater, MapPin, Radio, Shield, ShieldCheck, Sparkles, Sun, Truck } from 'lucide-react'
+import { ArrowDown, ArrowRight, LockKeyhole, MapPin, Radio } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PPFVisualizer from '../components/PPFVisualizer'
 import { PrimaryButton, SecondaryButton, StatCard } from '../components/ui'
+import { aboutImage, services } from '../data/publicHomeContent'
 import { usePublicBranches, branchLabel } from '../lib/branches'
 
 const stats = [
@@ -10,17 +11,6 @@ const stats = [
   { value: 3000, suffix: '+', label: 'Growing satisfied clients' },
   { value: 15000, suffix: '+', label: 'Vehicles rejuvenated annually' },
   { value: 26, suffix: '', label: 'Team members' },
-]
-
-const services = [
-  { number: '01', title: 'Carwash', copy: 'A careful exterior clean that brings back a crisp, spotless finish.', icon: Droplets, position: '18% center' },
-  { number: '02', title: 'Interior Detailing', copy: 'Deep cabin care for cleaner surfaces, fresher air, and renewed comfort.', icon: Sparkles, position: '36% center' },
-  { number: '03', title: 'Ceramic Tint', copy: 'Heat-rejecting tint with lasting clarity, comfort, and UV protection.', icon: Sun, position: '52% center' },
-  { number: '04', title: 'Ceramic Coating', copy: 'Long-term gloss and hydrophobic protection for everyday driving.', icon: ShieldCheck, position: '68% center' },
-  { number: '05', title: 'Glass Detailing', copy: 'Polished, decontaminated glass for sharper vision in every condition.', icon: GlassWater, position: '82% center' },
-  { number: '06', title: 'Engine Wash', copy: 'A precise, component-safe clean for a neater engine bay.', icon: Gauge, position: '12% 65%' },
-  { number: '07', title: 'Paint Protection Film', copy: 'Virtually invisible impact protection for the paint that matters most.', icon: Shield, position: '56% 62%' },
-  { number: '08', title: 'Mobile Detailing', copy: 'Premium Hakum car care delivered where it is most convenient.', icon: Truck, position: '90% 60%' },
 ]
 
 const coatingPackages = [
@@ -99,7 +89,8 @@ export default function PublicLandingPage() {
         <h2 className="section-title light">About us</h2>
       </div>
       <div className="public-shell about-layout">
-        <div className="about-visual" role="img" aria-label="Hakum Auto Care precision vehicle detailing">
+        <div className="about-visual">
+          <img className="about-visual-image" src={aboutImage} alt="Hakum Auto Care precision vehicle detailing" />
           <span>Care in every detail</span>
           <strong>01</strong>
         </div>
@@ -115,10 +106,24 @@ export default function PublicLandingPage() {
     <section className="services-section" id="services">
       <div className="public-shell">
         <div className="section-heading-row"><div><p className="eyebrow eyebrow-light">Services</p><h2 className="section-title light">Made to turn<br/>heads.</h2></div><p>From immaculate daily care to long-term paint protection, every service is delivered with obsessive attention to detail.</p></div>
-        <div className="service-grid">{services.map(({ number, title, copy, icon: Icon, position }) => <article className="service-card" key={title}>
-          <div className="service-card-visual" style={{ '--service-position': position }}><span>{number}</span><Icon aria-hidden="true"/></div>
-          <div className="service-card-body"><h3>{title}</h3><p>{copy}</p><Link to="/book">Book now <ArrowRight/></Link></div>
-        </article>)}</div>
+        <div className="service-grid">
+          {services.map((service) => (
+            <article className={`service-card ${service.available ? '' : 'is-locked'}`} key={service.title}>
+              <div className="service-card-visual">
+                {service.available ? (
+                  <img src={service.image} alt={service.imageAlt} loading="lazy" decoding="async" />
+                ) : (
+                  <div className="service-card-locked" aria-hidden="true"><LockKeyhole /></div>
+                )}
+              </div>
+              <div className="service-card-body">
+                <h3>{service.title}</h3>
+                <p>{service.copy}</p>
+                {service.available && <Link to="/book">Book now <ArrowRight /></Link>}
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
 
