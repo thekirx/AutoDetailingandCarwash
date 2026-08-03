@@ -57,4 +57,16 @@ describe('Public branding assets and scope', () => {
     assert.match(page, /Experience Combined<\/span>/)
     assert.equal((page.match(/<StatCard key=/g) || []).length, 1)
   })
+
+  it('scopes reference alignment to the approved homepage sections', async () => {
+    const css = await readFile(projectFile('src/styles.css'), 'utf8')
+
+    assert.match(css, /\.hero-experience-layout\s*\{[^}]*grid-template-columns:/s)
+    assert.match(css, /\.hero-experience-card\s*\{[^}]*border:1px solid #37dfe8/s)
+    assert.match(css, /\.about-heading \.section-title\s*\{[^}]*font-family:var\(--font-public-display\)/s)
+    assert.match(css, /\.about-copy\s*\{[^}]*font-family:var\(--font-public-body\)/s)
+    assert.match(css, /\.services-section \.section-title\s*\{[^}]*font-family:var\(--font-public-display\)/s)
+    assert.match(css, /\.service-card h3\s*\{[^}]*font-family:var\(--font-public-display\)/s)
+    assert.match(css, /\.service-card p\s*\{[^}]*font-family:var\(--font-public-body\)/s)
+  })
 })
