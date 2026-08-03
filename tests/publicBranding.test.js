@@ -46,4 +46,15 @@ describe('Public branding assets and scope', () => {
     assert.doesNotMatch(layout, /<b>H<\/b>/)
     assert.equal((layout.match(/aria-label="Hakum Auto Care home"/g) || []).length, 2)
   })
+
+  it('includes the approved hero experience composition', async () => {
+    const page = await readFile(projectFile('src/pages/PublicLandingPage.jsx'), 'utf8')
+
+    assert.match(page, /className="hero-experience-layout"/)
+    assert.match(page, /className="hero-experience-card"/)
+    assert.match(page, /<strong>10 Years<\/strong>/)
+    assert.match(page, /Auto Industry<\/span>/)
+    assert.match(page, /Experience Combined<\/span>/)
+    assert.equal((page.match(/<StatCard key=/g) || []).length, 1)
+  })
 })

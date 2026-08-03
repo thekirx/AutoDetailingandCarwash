@@ -84,9 +84,18 @@ export default function PublicLandingPage() {
           <SecondaryButton to="/book">Book a service</SecondaryButton>
         </div>
         <div className="hero-experience" aria-labelledby="experience-heading">
-          <h2 id="experience-heading">Experience</h2>
-          <div className="hero-metrics" aria-label="Hakum milestones">
-            {stats.map((stat) => <StatCard key={stat.label} value={<AnimatedNumber value={stat.value} suffix={stat.suffix}/>} label={stat.label}/>)}
+          <div className="hero-experience-layout">
+            <div className="hero-experience-card" aria-label="Ten years of combined auto industry experience">
+              <strong>10 Years</strong>
+              <span>Auto Industry</span>
+              <span>Experience Combined</span>
+            </div>
+            <div>
+              <h2 id="experience-heading">Experience</h2>
+              <div className="hero-metrics" aria-label="Hakum milestones">
+                {stats.map((stat) => <StatCard key={stat.label} value={<AnimatedNumber value={stat.value} suffix={stat.suffix}/>} label={stat.label}/>)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
