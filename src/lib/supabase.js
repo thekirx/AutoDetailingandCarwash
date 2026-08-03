@@ -1,13 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
+import { resolveSupabaseConfig } from './supabaseConfig'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const config = resolveSupabaseConfig({
+  url: import.meta.env.VITE_SUPABASE_URL,
+  key: import.meta.env.VITE_SUPABASE_ANON_KEY,
+  isDev: import.meta.env.DEV,
+})
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(config.url, config.key, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
