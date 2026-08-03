@@ -123,7 +123,7 @@ button { cursor: pointer; }
 .eyebrow-light { color:rgba(255,255,255,.72); }
 .eyebrow svg { display:inline; margin-right:7px; vertical-align:middle; }
 .display-title,.section-title { margin:0; font-family:var(--font-display); font-style:italic; text-transform:uppercase; letter-spacing:var(--tracking-display); line-height:var(--leading-display); }
-.display-title { color:#f1f1f1; font-family:var(--font-public-display); font-size:clamp(3.4rem,5.2vw,5.2rem); font-style:italic; font-weight:600; line-height:.86; letter-spacing:-.035em; text-shadow:0 12px 38px rgba(0,0,0,.25); }
+.display-title { color:#f1f1f1; font-family:var(--font-public-display); font-size:clamp(3rem,4.4vw,4.5rem); font-style:italic; font-weight:600; line-height:.86; letter-spacing:-.035em; text-shadow:0 12px 38px rgba(0,0,0,.25); }
 .display-title .hero-line { display:block; color:#f1f1f1; -webkit-text-stroke:0; white-space:nowrap; }
 .hero-line-one { transform:skewX(-7deg); }
 .hero-line-three { margin-top:.08em; font-size:.92em; transform:skewX(-7deg); }

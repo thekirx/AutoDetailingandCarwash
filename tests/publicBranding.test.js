@@ -81,6 +81,7 @@ describe('Public branding assets and scope', () => {
     const css = await readFile(projectFile('src/styles.css'), 'utf8')
 
     assert.doesNotMatch(css, /\.public-site\s+:is\([^}]*\.display-title[^}]*font-weight:800/s)
+    assert.match(css, /\.display-title\s*\{[^}]*font-size:clamp\(3rem,4\.4vw,4\.5rem\)/s)
     assert.match(css, /\.display-title\s*\{[^}]*font-weight:600/s)
     assert.match(css, /\.hero-subheading\s*\{[^}]*font-weight:500[^}]*font-style:italic/s)
     assert.match(css, /\.hero-experience\s*\{[^}]*margin:78px auto 0/s)
