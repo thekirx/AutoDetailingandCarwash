@@ -29,9 +29,10 @@ The mobile hero may exceed one viewport height to preserve readable spacing. The
 
 ## Typography
 
-- Headline, “Experience,” feature-card value, and milestone values use the self-hosted Benzin family.
-- Headline uses the ExtraBold weight; secondary display text uses Semibold or Medium as appropriate.
-- Location label, description, buttons, feature-card supporting copy, and milestone labels use the self-hosted Gilmer family.
+- Use only the user-supplied Benzin and Gilmer font files already bundled under `public/fonts`; do not use lookalike, system, or externally hosted substitutes.
+- Headline, “Experience,” feature-card value, and milestone values use the supplied Benzin family.
+- Headline uses Benzin ExtraBold; secondary display text uses Benzin Semibold or Medium as appropriate.
+- Location label, description, buttons, feature-card supporting copy, and milestone labels use the supplied Gilmer family, primarily Light, Regular, and Medium.
 - Supporting copy remains visually lighter and smaller than the display typography.
 - The font treatment is scoped to hero selectors and does not modify typography below the hero.
 
