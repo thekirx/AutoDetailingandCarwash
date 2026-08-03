@@ -70,7 +70,7 @@ button { cursor: pointer; }
 /* Public Hakum experience */
 :root { --hakum-blue:var(--color-brand-primary); --hakum-white:var(--color-text-inverse); --hakum-ink:var(--color-text-primary); }
 .public-site { background:var(--color-surface-page); color:var(--color-text-primary); font-family:var(--font-public-body); font-weight:400; }
-.public-site :is(.display-title,.inner-hero h1,.utility-hero h1,.ui-hero-heading h1,.booking-success h1,.public-message h1) { font-family:var(--font-public-display); font-weight:800; }
+.public-site :is(.inner-hero h1,.utility-hero h1,.ui-hero-heading h1,.booking-success h1,.public-message h1) { font-family:var(--font-public-display); font-weight:800; }
 .public-site :is(.section-title,.hero-experience h2,.ui-section-heading h2,.ui-stat-card>strong,.service-card h3,.coating-card h3,.home-branch-grid h3,.footer-pitch h2,.numbered-grid h2,.package-card h2,.branch-grid h2,.ui-service-card h3,.ui-package-card h3,.ui-branch-card h3,.ui-branch-visual strong,.ui-state h3) { font-family:var(--font-public-display); font-weight:600; }
 .public-site :is(.cta-strip a,.portal-gate h1) { font-family:var(--font-public-display); font-weight:500; }
 .public-site :is(.desktop-nav a,.mobile-nav a,.header-actions a,.hero-actions a,.button,.ui-button,label) { font-family:var(--font-public-body); font-weight:700; }

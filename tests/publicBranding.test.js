@@ -80,6 +80,7 @@ describe('Public branding assets and scope', () => {
   it('keeps the hero hierarchy consistent with the legacy reference', async () => {
     const css = await readFile(projectFile('src/styles.css'), 'utf8')
 
+    assert.doesNotMatch(css, /\.public-site\s+:is\([^}]*\.display-title[^}]*font-weight:800/s)
     assert.match(css, /\.display-title\s*\{[^}]*font-weight:600/s)
     assert.match(css, /\.hero-subheading\s*\{[^}]*font-weight:500[^}]*font-style:italic/s)
     assert.match(css, /\.hero-experience\s*\{[^}]*margin:78px auto 0/s)
