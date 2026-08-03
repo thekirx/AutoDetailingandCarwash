@@ -36,10 +36,13 @@ export default function PublicLayout() {
       <header className={`public-header ${open ? 'menu-open' : ''}`}>
         <div className="public-shell header-inner">
           <Link className="wordmark" to="/" aria-label="Hakum Auto Care home">
-            <b>H</b>
-            <span>
-              HAKUM<small>AUTO CARE</small>
-            </span>
+            <img
+              className="wordmark-image"
+              src="/branding/hakum-lw-ow.png"
+              alt=""
+              width="5000"
+              height="5000"
+            />
           </Link>
           <nav className="desktop-nav" aria-label="Primary navigation">
             {navItems.map(([label, to]) => (
@@ -124,11 +127,14 @@ export default function PublicLayout() {
 
         <div className="public-shell footer-details">
           <div className="footer-brand">
-            <Link className="wordmark footer-logo" to="/">
-              <b>H</b>
-              <span>
-                HAKUM<small>AUTO CARE</small>
-              </span>
+            <Link className="wordmark footer-logo" to="/" aria-label="Hakum Auto Care home">
+              <img
+                className="wordmark-image"
+                src="/branding/hakum-lw-ow.png"
+                alt=""
+                width="5000"
+                height="5000"
+              />
             </Link>
             <p>Precision car care, premium protection, and genuine pride in every detail.</p>
             <div className="footer-social">
