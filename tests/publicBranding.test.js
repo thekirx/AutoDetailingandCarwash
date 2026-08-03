@@ -81,6 +81,14 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /\.services-section \.section-title\s*\{[^}]*font-family:var\(--font-public-display\)/s)
     assert.match(css, /\.service-card h3\s*\{[^}]*font-family:var\(--font-public-display\)/s)
     assert.match(css, /\.service-card p\s*\{[^}]*font-family:var\(--font-public-body\)/s)
+    assert.match(css, /\.about-visual-image\s*\{[^}]*object-fit:cover/s)
+    assert.match(css, /\.about-copy \.about-lead\s*\{[^}]*font-style:italic/s)
+    assert.match(css, /\.service-grid\s*\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/s)
+    assert.match(css, /\.service-card-visual\s*\{[^}]*aspect-ratio:4\/3/s)
+    assert.match(css, /\.service-card-visual img\s*\{[^}]*object-fit:cover/s)
+    assert.match(css, /\.service-card-locked\s*\{[^}]*background:#020a31/s)
+    assert.match(css, /@media\(max-width:1100px\)\{[^}]*\.service-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/s)
+    assert.match(css, /@media\(max-width:600px\)\{[^}]*\.service-grid\{grid-template-columns:1fr/s)
   })
 
   it('provides responsive layouts for the reference-aligned sections', async () => {
