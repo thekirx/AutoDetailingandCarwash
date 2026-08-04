@@ -1,20 +1,35 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { Activity, Clock3, Radio, Wifi } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { fetchPublicBranches } from '../lib/branches'
+import { usePageMeta } from '../lib/pageMeta'
 import { ACTIVE_QUEUE_STATUSES, STATUS_LABELS, buildPublicQueueModel } from '../queue/queueLogic'
 import { createCoalescedReload } from '../lib/coalesceReload'
 
-const statCards = [
-  ['waiting', 'Waiting', 'from-blue-500/25 to-blue-950/35'],
-  ['in_progress', 'In Progress', 'from-emerald-400/25 to-emerald-950/35'],
-  ['final_checking', 'For Final Checking', 'from-amber-300/25 to-amber-950/35'],
-  ['total', 'Total Active Queue', 'from-slate-200/15 to-blue-950/35'],
+const STAT_META = [
+  { key: 'waiting', label: 'Waiting', tone: 'wait' },
+  { key: 'in_progress', label: 'In progress', tone: 'work' },
+  { key: 'final_checking', label: 'Final check', tone: 'check' },
+  { key: 'total', label: 'Active total', tone: 'total' },
 ]
+
+const LANE_META = {
+  waiting: { tone: 'wait', hint: 'Ready for bay' },
+  in_progress: { tone: 'work', hint: 'On the floor' },
+  final_checking: { tone: 'check', hint: 'QC pass' },
+}
 
 /** Poll safe public_queue_* views only — never Realtime WAL on bookings (full-row PII). */
 const PUBLIC_QUEUE_POLL_MS = 8_000
+
+function LivePulse({ label = 'Live' }) {
+  return (
+    <span className="lq-pulse">
+      <span className="lq-pulse-dot" aria-hidden />
+      {label}
+    </span>
+  )
+}
 
 export default function PublicQueuePage() {
   const { branch } = useParams()
@@ -25,6 +40,13 @@ export default function PublicQueuePage() {
   const [now, setNow] = useState(() => new Date())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [fallbackSlug, setFallbackSlug] = useState(null)
+
+  usePageMeta({
+    title: branchDetails?.name ? `Live queue · ${branchDetails.name}` : 'Live queue',
+    description: 'Customer-safe live service queue at Hakum Auto Care. Queue numbers and bay status only.',
+    path: branch ? `/queue/${branch}` : '/queue',
+  })
 
   const loadQueue = useCallback(async () => {
     if (!branch) return
@@ -52,7 +74,12 @@ export default function PublicQueuePage() {
     ])
 
     if (branchResult.error || countsResult.error || numbersResult.error) {
-      setError(branchResult.error?.message || countsResult.error?.message || numbersResult.error?.message || 'Unable to load queue.')
+      setError(
+        branchResult.error?.message ||
+          countsResult.error?.message ||
+          numbersResult.error?.message ||
+          'Unable to load queue.',
+      )
       setLoading(false)
       return
     }
@@ -73,7 +100,6 @@ export default function PublicQueuePage() {
     return () => window.clearInterval(timer)
   }, [])
 
-  // CUST-C1: poll safe views only — never subscribe to bookings Realtime (full-row PII).
   useEffect(() => {
     if (!branch || branchValid === false) return undefined
     const scheduleReload = createCoalescedReload(() => loadQueue(), 400)
@@ -84,19 +110,25 @@ export default function PublicQueuePage() {
     }
   }, [branch, loadQueue, branchValid])
 
-  const publicModel = useMemo(() => buildPublicQueueModel(numberRows, branch), [numberRows, branch])
-  const counts = useMemo(() => ({
-    waiting: countsRow?.waiting_count ?? publicModel.counts.waiting,
-    in_progress: countsRow?.in_progress_count ?? publicModel.counts.in_progress,
-    final_checking: countsRow?.final_checking_count ?? publicModel.counts.final_checking,
-    total: countsRow?.total_active_count ?? publicModel.counts.total,
-  }), [countsRow, publicModel])
-
-  const [fallbackSlug, setFallbackSlug] = useState(null)
   useEffect(() => {
     if (!branch) return
-    fetchPublicBranches().then((rows) => setFallbackSlug(rows[0]?.slug || 'bacoor')).catch(() => setFallbackSlug('bacoor'))
+    fetchPublicBranches()
+      .then((rows) => setFallbackSlug(rows[0]?.slug || 'bacoor'))
+      .catch(() => setFallbackSlug('bacoor'))
   }, [branch])
+
+  const publicModel = useMemo(() => buildPublicQueueModel(numberRows, branch), [numberRows, branch])
+  const counts = useMemo(
+    () => ({
+      waiting: countsRow?.waiting_count ?? publicModel.counts.waiting,
+      in_progress: countsRow?.in_progress_count ?? publicModel.counts.in_progress,
+      final_checking: countsRow?.final_checking_count ?? publicModel.counts.final_checking,
+      total: countsRow?.total_active_count ?? publicModel.counts.total,
+    }),
+    [countsRow, publicModel],
+  )
+
+  const timeLabel = now.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
 
   if (!branch) {
     return <Navigate to={fallbackSlug ? `/queue/${fallbackSlug}` : '/queue'} replace />
@@ -106,85 +138,130 @@ export default function PublicQueuePage() {
   }
 
   return (
-    <section className="min-h-screen bg-[#020817] px-4 py-24 text-white sm:px-6 lg:px-10">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(37,99,235,.32),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(14,165,233,.16),transparent_26%),linear-gradient(135deg,#020817_0%,#041a48_48%,#020817_100%)]" />
-      <div className="relative mx-auto max-w-6xl">
-        <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <Link to="/" className="mb-7 inline-flex items-center gap-3 text-white no-underline">
-              <span className="grid h-11 w-14 -skew-x-12 place-items-center border-2 border-white text-xl font-black italic">H</span>
-              <span className="text-sm font-black tracking-[0.18em] uppercase">Hakum Auto Care</span>
-            </Link>
-            <p className="mb-3 flex items-center gap-2 text-xs font-bold tracking-[0.22em] text-blue-200 uppercase"><Radio size={15} /> Live Queue</p>
-            <h1 className="text-4xl font-black tracking-tight sm:text-6xl">{branchDetails?.name || branch}</h1>
-            <p className="mt-3 text-sm text-slate-300">{branchDetails?.address || '—'}</p>
-          </div>
+    <div className="lq-board">
+      <div className="lq-board-bg" aria-hidden />
+      <div className="lq-board-noise" aria-hidden />
 
-          <div className="flex flex-wrap gap-3">
-            <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur-xl">
-              <p className="text-[10px] font-bold tracking-[0.18em] text-slate-400 uppercase">Local time</p>
-              <p className="mt-1 flex items-center gap-2 text-2xl font-semibold tabular-nums"><Clock3 size={18} />{now.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}</p>
+      <div className="lq-board-shell">
+        <header className="lq-board-top">
+          <Link to="/" className="lq-brand" aria-label="Hakum Auto Care home">
+            <img src="/branding/hakum-lw-ow.png" alt="" className="lq-brand-mark" width={148} height={84} />
+          </Link>
+
+          <div className="lq-board-meta">
+            <div className="lq-chip">
+              <span className="lq-chip-label">Local time</span>
+              <strong className="lq-chip-value tabular-nums">{timeLabel}</strong>
             </div>
-            <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-emerald-100 backdrop-blur-xl">
-              <p className="text-[10px] font-bold tracking-[0.18em] uppercase">Status</p>
-              <p className="mt-1 flex items-center gap-2 text-sm font-semibold"><Wifi size={17} /><span className="size-2 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,.8)]" />Online</p>
+            <div className="lq-chip lq-chip-live">
+              <span className="lq-chip-label">Status</span>
+              <strong className="lq-chip-value">
+                <LivePulse label="Online" />
+              </strong>
             </div>
           </div>
         </header>
 
+        <div className="lq-board-intro">
+          <p className="lq-kicker">
+            <LivePulse label="Live queue" />
+          </p>
+          <h1 className="lq-board-title">{branchDetails?.name || branch}</h1>
+          <p className="lq-board-address">{branchDetails?.address || 'Queue numbers update every few seconds.'}</p>
+          <nav className="lq-board-nav" aria-label="Queue links">
+            <Link className="lq-text-link" to="/queue">
+              Change branch
+            </Link>
+            <Link className="lq-text-link" to="/book">
+              Book a service
+            </Link>
+            <Link className="lq-text-link" to="/">
+              Home
+            </Link>
+          </nav>
+        </div>
+
         {error ? (
-          <div className="mt-10 rounded-3xl border border-red-300/20 bg-red-500/10 p-8 text-red-100">
+          <div className="lq-error" role="alert">
             <p>{error}</p>
-            <button type="button" onClick={loadQueue} className="mt-4 font-semibold text-white">Try again</button>
+            <button type="button" className="lq-btn" onClick={loadQueue}>
+              Try again
+            </button>
           </div>
         ) : (
           <>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {statCards.map(([key, label, gradient]) => (
-                <article key={key} className={`rounded-3xl border border-white/10 bg-gradient-to-br ${gradient} p-6 shadow-2xl shadow-black/20 backdrop-blur-xl`}>
-                  <p className="text-xs font-bold tracking-[0.16em] text-slate-300 uppercase">{label}</p>
-                  {loading ? <div className="mt-6 h-12 w-24 animate-pulse rounded-xl bg-white/10" /> : <p className="mt-5 text-5xl font-black tabular-nums">{counts[key]}</p>}
-                  <p className="mt-2 text-sm text-slate-400">{counts[key] === 1 ? 'Vehicle' : 'Vehicles'}</p>
+            <div className="lq-stat-row" aria-label="Queue counts">
+              {STAT_META.map(({ key, label, tone }) => (
+                <article key={key} className={`lq-stat lq-stat-${tone}`}>
+                  <p className="lq-stat-label">{label}</p>
+                  {loading ? (
+                    <div className="lq-skeleton lq-skeleton-num" />
+                  ) : (
+                    <p className="lq-stat-num tabular-nums">{counts[key]}</p>
+                  )}
+                  <p className="lq-stat-sub">{counts[key] === 1 ? 'Vehicle' : 'Vehicles'}</p>
                 </article>
               ))}
             </div>
 
-            <div className="mt-6 rounded-3xl border border-white/10 bg-white/7 p-5 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-7">
-              <div className="mb-6 flex items-center justify-between gap-4">
+            <section className="lq-floor" aria-labelledby="lq-floor-heading">
+              <div className="lq-floor-head">
                 <div>
-                  <p className="text-xs font-bold tracking-[0.18em] text-blue-200 uppercase">Queue Numbers</p>
-                  <h2 className="mt-1 text-2xl font-bold">Now on the floor</h2>
+                  <p className="lq-kicker lq-kicker-tight">Queue numbers</p>
+                  <h2 id="lq-floor-heading" className="lq-floor-title">
+                    Now on the floor
+                  </h2>
                 </div>
-                <Activity className="text-blue-200" />
+                <img src="/branding/hakum-mark-ow.png" alt="" className="lq-floor-mark" width={48} height={48} />
               </div>
 
               {loading ? (
-                <div className="grid gap-3">
-                  {Array.from({ length: 4 }, (_, index) => <div key={index} className="h-16 animate-pulse rounded-2xl bg-white/8" />)}
-                </div>
-              ) : counts.total === 0 ? (
-                <div className="grid min-h-52 place-items-center rounded-2xl border border-dashed border-white/12 text-center text-slate-400">No vehicles currently in queue</div>
-              ) : (
-                <div className="grid gap-5 lg:grid-cols-3">
-                  {ACTIVE_QUEUE_STATUSES.map((status) => (
-                    <section key={status} className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                      <h3 className="mb-4 text-xs font-bold tracking-[0.16em] text-slate-300 uppercase">{STATUS_LABELS[status]}</h3>
-                      <div className="grid gap-2">
-                        {publicModel.groups[status].length ? publicModel.groups[status].map((item) => (
-                          <div key={`${status}-${item.queueNumber}`} className="flex items-center justify-between rounded-xl bg-white/8 px-4 py-3">
-                            <span className="text-2xl font-black tabular-nums">{item.queueNumber}</span>
-                            <span className="size-2 rounded-full bg-blue-300" />
-                          </div>
-                        )) : <p className="rounded-xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-500">No active numbers</p>}
-                      </div>
-                    </section>
+                <div className="lq-floor-skel">
+                  {Array.from({ length: 3 }, (_, i) => (
+                    <div key={i} className="lq-skeleton lq-skeleton-lane" />
                   ))}
                 </div>
+              ) : counts.total === 0 ? (
+                <div className="lq-empty">
+                  <img src="/branding/hakum-wm-ow.png" alt="" className="lq-empty-mark" width={160} height={40} />
+                  <p className="lq-empty-title">This bay is clear</p>
+                  <p className="lq-empty-copy">No vehicles in the live queue right now. Book ahead or check back soon.</p>
+                  <Link className="lq-btn" to="/book">
+                    Book a visit
+                  </Link>
+                </div>
+              ) : (
+                <div className="lq-lanes">
+                  {ACTIVE_QUEUE_STATUSES.map((status) => {
+                    const lane = LANE_META[status]
+                    const items = publicModel.groups[status]
+                    return (
+                      <section key={status} className={`lq-lane lq-lane-${lane.tone}`}>
+                        <header className="lq-lane-head">
+                          <h3>{STATUS_LABELS[status]}</h3>
+                          <span>{lane.hint}</span>
+                        </header>
+                        <ul className="lq-tickets">
+                          {items.length ? (
+                            items.map((item) => (
+                              <li key={`${status}-${item.queueNumber}`} className="lq-ticket">
+                                <span className="lq-ticket-num tabular-nums">{item.queueNumber}</span>
+                                <span className="lq-ticket-dot" aria-hidden />
+                              </li>
+                            ))
+                          ) : (
+                            <li className="lq-lane-empty">No active numbers</li>
+                          )}
+                        </ul>
+                      </section>
+                    )
+                  })}
+                </div>
               )}
-            </div>
+            </section>
           </>
         )}
       </div>
-    </section>
+    </div>
   )
 }

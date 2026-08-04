@@ -1,4 +1,4 @@
-import { MapPin, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { usePublicBranches } from '../lib/branches'
@@ -8,6 +8,7 @@ import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '.
 import { applyPublicBookPrefill, matchServiceIdByPrefillName } from '../lib/uiDeadControls'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import FormLegalNotice from '../components/FormLegalNotice'
+import { usePageMeta } from '../lib/pageMeta'
 
 function formatPeso(minor) {
   return `₱${(Number(minor || 0) / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`
@@ -15,28 +16,63 @@ function formatPeso(minor) {
 
 export function QueuePage() {
   const { branches, loading, error } = usePublicBranches()
+  usePageMeta({
+    title: 'Live queue',
+    description: 'Pick a Hakum Auto Care branch for the customer-safe live service queue.',
+    path: '/queue',
+  })
 
   return (
-    <section className="utility-hero">
-      <div className="public-shell">
-        <p className="eyebrow eyebrow-light">Live service queue</p>
-        <h1 className="display-title">
-          Plan your
-          <br />
-          <span>arrival.</span>
-        </h1>
-        <p className="inner-hero-copy">Choose a branch for a simple, customer-safe view of current service activity.</p>
-        {error && <p className="form-error">{error}</p>}
-        <div className="queue-choice">
-          {loading && <p className="text-slate-400">Loading branches…</p>}
-          {branches.map((b) => (
-            <Link to={`/queue/${b.slug}`} key={b.slug}>
-              <MapPin />
-              <strong>{b.name}</strong>
-              <span>{b.address || b.slug}</span>
+    <section className="lq-picker">
+      <div className="lq-picker-bg" aria-hidden />
+      <div className="lq-picker-noise" aria-hidden />
+      <div className="public-shell lq-picker-inner">
+        <div className="lq-picker-copy">
+          <img src="/branding/hakum-wm-ow.png" alt="Hakum" className="lq-picker-wm" width={180} height={44} />
+          <p className="lq-kicker">
+            <span className="lq-pulse">
+              <span className="lq-pulse-dot" aria-hidden />
+              Live service queue
+            </span>
+          </p>
+          <h1 className="lq-picker-title">
+            Plan your
+            <br />
+            <i>arrival.</i>
+          </h1>
+          <p className="lq-picker-lede">
+            Choose a branch for a simple, customer-safe view of current service activity.
+          </p>
+        </div>
+
+        <div className="lq-picker-lanes" aria-label="Branches">
+          {error ? <p className="lq-picker-error">{error}</p> : null}
+          {loading ? (
+            <>
+              <div className="lq-skeleton lq-skeleton-lane-card" />
+              <div className="lq-skeleton lq-skeleton-lane-card" />
+            </>
+          ) : null}
+          {branches.map((b, index) => (
+            <Link key={b.slug} to={`/queue/${b.slug}`} className="lq-lane-card" style={{ '--i': index }}>
+              <span className="lq-lane-card-shell">
+                <span className="lq-lane-card-core">
+                  <img src="/branding/hakum-mark-ow.png" alt="" className="lq-lane-card-mark" width={40} height={40} />
+                  <span className="lq-lane-card-copy">
+                    <strong>{b.name}</strong>
+                    <span>{b.address || b.slug}</span>
+                  </span>
+                  <span className="lq-lane-card-cta" aria-hidden>
+                    Open
+                    <span className="lq-lane-card-arrow">↗</span>
+                  </span>
+                </span>
+              </span>
             </Link>
           ))}
-          {!loading && !branches.length && <p className="text-slate-400">No active branches yet.</p>}
+          {!loading && !branches.length ? (
+            <p className="lq-picker-empty">No active branches yet.</p>
+          ) : null}
         </div>
       </div>
     </section>
