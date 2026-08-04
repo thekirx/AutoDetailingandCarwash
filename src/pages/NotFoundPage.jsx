@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
 import { usePageMeta } from '@/lib/pageMeta'
+import StatusBayPage from '@/components/StatusBayPage'
 
 export default function NotFoundPage() {
   usePageMeta({
@@ -9,33 +9,18 @@ export default function NotFoundPage() {
   })
 
   return (
-    <section className="legal-page not-found-page">
-      <div className="public-shell legal-inner">
-        <p className="eyebrow">404</p>
-        <h1 className="section-title">
-          This lane
-          <br />
-          <i>is empty.</i>
-        </h1>
-        <p className="legal-updated">The page you asked for is not on our site map.</p>
-        <div className="not-found-actions">
-          <Link className="button button-blue" to="/">
-            Back home
-          </Link>
-          <Link className="dark-link" to="/book">
-            Book a service
-          </Link>
-          <Link className="dark-link" to="/queue">
-            Live queue
-          </Link>
-          <Link className="dark-link" to="/contact">
-            Contact
-          </Link>
-          <Link className="dark-link" to="/terms">
-            Terms
-          </Link>
-        </div>
-      </div>
-    </section>
+    <StatusBayPage
+      code="404"
+      titleLine1="This lane"
+      titleLine2="is empty."
+      message="The page you asked for is not on our site map. Pick a path below to keep moving."
+      primary={{ to: '/', label: 'Back home' }}
+      secondary={[
+        { to: '/book', label: 'Book a service' },
+        { to: '/queue', label: 'Live queue' },
+        { to: '/contact', label: 'Contact' },
+        { to: '/terms', label: 'Terms' },
+      ]}
+    />
   )
 }

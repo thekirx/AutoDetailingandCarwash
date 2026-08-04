@@ -688,6 +688,229 @@ button { cursor: pointer; }
 .legal-back a { color:#052699; font-weight:600; text-decoration:none; }
 .legal-back a:hover { text-decoration:underline; }
 .not-found-actions { margin-top:2rem; display:flex; flex-wrap:wrap; gap:14px 20px; align-items:center; }
+
+/* Status bay — 403 / 404 Soft UI composition (closed garage door) */
+.status-bay {
+  --status-navy: #052699;
+  --status-ink: #101219;
+  --status-mist: #f1f1ed;
+  --status-soft: #e8edff;
+  position: relative;
+  isolation: isolate;
+  min-height: min(100vh, 920px);
+  padding: clamp(7.5rem, 14vw, 9.5rem) 0 clamp(4rem, 9vw, 7rem);
+  background:
+    radial-gradient(ellipse 55% 45% at 88% 18%, rgba(5, 38, 153, 0.08), transparent 60%),
+    radial-gradient(ellipse 40% 35% at 12% 80%, rgba(5, 38, 153, 0.05), transparent 55%),
+    var(--status-mist);
+  overflow: clip;
+}
+.status-bay-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(2rem, 6vw, 5rem);
+  align-items: center;
+}
+.status-bay-copy { max-width: 34rem; }
+.status-bay-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1.35rem;
+  padding: 0.45rem 0.85rem 0.45rem 0.65rem;
+  border-radius: 999px;
+  background: var(--status-soft);
+  border: 1px solid rgba(5, 38, 153, 0.16);
+  color: var(--status-navy);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.status-bay-code-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--status-navy);
+  box-shadow: 0 0 0 4px rgba(5, 38, 153, 0.15);
+}
+.status-bay-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: var(--font-weight-display);
+  font-size: clamp(3rem, 7.2vw, 5.5rem);
+  letter-spacing: var(--tracking-display);
+  line-height: 0.88;
+  text-transform: uppercase;
+  color: var(--status-ink);
+}
+.status-bay-title i {
+  font-style: italic;
+  color: var(--status-navy);
+}
+.status-bay-message {
+  margin: 1.35rem 0 0;
+  max-width: 28rem;
+  color: var(--color-text-secondary);
+  font-size: clamp(0.95rem, 1.6vw, 1.05rem);
+  line-height: 1.65;
+  font-weight: var(--font-weight-body);
+}
+.status-bay-actions {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+}
+.status-bay-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.15rem;
+  align-items: center;
+}
+.status-bay-link {
+  color: var(--status-navy);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+.status-bay-link:hover,
+.status-bay-link:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+.status-bay-visual {
+  position: relative;
+  min-height: clamp(260px, 42vw, 420px);
+  display: grid;
+  place-items: end center;
+  padding-bottom: 0.5rem;
+}
+.status-bay-door {
+  position: relative;
+  width: min(100%, 360px);
+  aspect-ratio: 4 / 5;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  animation: status-bay-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.status-bay-door-track {
+  height: 10px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #1a2a6e, #052699);
+  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.12) inset;
+}
+.status-bay-door-face {
+  position: relative;
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  border: 2px solid #031d78;
+  border-top: 0;
+  background: linear-gradient(180deg, #0a32b8 0%, #052699 45%, #03156b 100%);
+  box-shadow:
+    0 1.5rem 3rem rgba(5, 20, 65, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.status-bay-slat {
+  border-bottom: 1px solid rgba(2, 10, 49, 0.35);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 40%,
+    rgba(0, 0, 0, 0.08) 100%
+  );
+  opacity: 0;
+  animation: status-bay-slat 520ms ease forwards;
+  animation-delay: calc(120ms + var(--i) * 45ms);
+}
+.status-bay-handle {
+  position: absolute;
+  right: 14%;
+  top: 52%;
+  width: 2.75rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(241, 241, 241, 0.88);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transform: translateY(-50%);
+}
+.status-bay-plate {
+  justify-self: center;
+  margin-top: 0.85rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid rgba(5, 38, 153, 0.2);
+  background: #fff;
+  color: var(--status-navy);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  box-shadow: 0 0.5rem 1.25rem rgba(5, 20, 65, 0.08);
+}
+.status-bay-floor {
+  position: absolute;
+  inset: auto 8% 0;
+  height: 28%;
+  background: linear-gradient(180deg, transparent, rgba(16, 18, 25, 0.06));
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes status-bay-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes status-bay-slat {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-bay-door,
+  .status-bay-slat { animation: none; opacity: 1; transform: none; }
+}
+@media (max-width: 900px) {
+  .status-bay-inner {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+  .status-bay-visual {
+    order: -1;
+    min-height: 220px;
+    place-items: center;
+  }
+  .status-bay-door {
+    width: min(100%, 280px);
+  }
+}
+@media (max-width: 560px) {
+  .status-bay {
+    padding-top: 7rem;
+    min-height: auto;
+  }
+  .status-bay-title { font-size: clamp(2.6rem, 12vw, 3.4rem); }
+  .status-bay-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .status-bay-actions .button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+  .status-bay-links {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .status-bay-link {
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+  }
+}
 .branch-location-map { z-index:0; }
 .branch-location-map .leaflet-container { height:100%; width:100%; font: inherit; }
 
