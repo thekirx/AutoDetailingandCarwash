@@ -37,7 +37,11 @@ Replace the 15 public entrypoint files with six domain gateway entrypoints:
 5. `api/finance.js`: finance quotation email.
 6. `api/data-center.js`: Super Admin data-center operations.
 
-The existing URLs remain unchanged. `vercel.json` rewrites each legacy `/api/...` URL to the appropriate gateway with a private dispatch query parameter. The gateway selects the existing handler and supplies the same helper functions each old wrapper supplied. Unknown dispatch values return JSON `404`; unsupported methods continue to be handled by the existing domain handlers.
+The existing URLs remain unchanged. `vercel.json` rewrites each legacy `/api/...` URL to the appropriate gateway and appends a fixed internal `operation` query parameter. Vercel must preserve every original query parameter while adding `operation`; for example, `/api/plate-lookup?plate=ABC123` must reach the bookings gateway with both `operation=plate-lookup` and `plate=ABC123`.
+
+Each gateway uses an explicit, fixed allowlist that maps its supported operation names to statically imported handlers. It must not dynamically import a module or construct a file path from request input. A caller-supplied `operation` value must not select a handler from another gateway. Rewrites set the operation for public legacy routes, and gateway validation rejects missing, duplicate, unknown, or cross-domain operation values with JSON `404`.
+
+The gateway selects the existing handler and supplies the same helper functions each old wrapper supplied. Unsupported methods continue to be handled by the existing domain handlers.
 
 The Vite development middleware keeps mounting the legacy URLs directly. Production and local development therefore retain the same browser-facing contract while sharing the existing server implementations.
 
@@ -56,6 +60,8 @@ The existing Supabase `send-sms` Edge Function is not used as a replacement beca
 ## Error Handling and Compatibility
 
 - Preserve request methods, bodies, query strings, bearer headers, CORS headers, status codes, and JSON response shapes by delegating to the unchanged handlers.
+- Preserve all caller query parameters when a rewrite appends the fixed internal operation value.
+- Reject attempts to override, duplicate, or cross-route the internal operation value.
 - Preserve the original site-origin calculation for customer and staff provisioning.
 - Keep BusyBee authorization in server code rather than exposing provider credentials.
 - Keep all existing frontend `fetch('/api/...')` calls unchanged.
@@ -63,11 +69,12 @@ The existing Supabase `send-sms` Edge Function is not used as a replacement beca
 
 ## Testing and Verification
 
-1. Add tests that assert all 15 legacy routes map to the expected six gateways.
-2. Add gateway dispatch tests that verify each legacy operation selects its existing handler and unknown operations return `404`.
-3. Run the full test suite and lint.
-4. Run `npm run build`.
-5. Run `vercel build --prod` and count `.vercel/output/functions/*.func` directories. The required final count is 6 and must not exceed 12.
+1. Add tests that assert all 15 legacy routes map to the expected six gateways with fixed operation values.
+2. Add rewrite tests proving original query parameters survive alongside the appended operation value.
+3. Add gateway dispatch tests that verify each legacy operation selects only its allowlisted handler and that missing, duplicate, unknown, overridden, and cross-domain operations return `404`.
+4. Run the full test suite and lint.
+5. Run `npm run build`.
+6. Run `vercel build --prod` and count `.vercel/output/functions/*.func` directories. The required final count is 6 and must not exceed 12.
 
 ## Non-Goals
 
