@@ -31,8 +31,8 @@ export async function handlePublicBookRequest(req, res) {
     const customer_name = String(body.customer_name || `${first} ${last}`).trim()
     const customer_phone = String(body.customer_phone || '').trim()
     const vehicle_plate = String(body.vehicle_plate || '').trim().toUpperCase() || null
-    const vehicle_make = String(body.vehicle_make || '').trim() || null
-    const vehicle_model = String(body.vehicle_model || '').trim() || null
+    let vehicle_make = String(body.vehicle_make || '').trim() || null
+    let vehicle_model = String(body.vehicle_model || '').trim() || null
     const service_id = body.service_id
     const branch = String(body.branch || '').trim()
     const scheduled_start = body.scheduled_start ? new Date(body.scheduled_start).toISOString() : null
@@ -43,8 +43,24 @@ export async function handlePublicBookRequest(req, res) {
       return json(res, 400, { error: 'Name, phone, service, branch, and schedule are required.' })
     }
     if (!vehicle_plate) return json(res, 400, { error: 'Plate number is required.' })
+    if (!vehicle_make || !vehicle_model) {
+      return json(res, 400, { error: 'Vehicle brand and model are required.' })
+    }
 
     const db = admin()
+    // Align casing with Super Admin vehicle_catalog when the pair exists (active).
+    const { data: catalogHit } = await db
+      .from('vehicle_catalog')
+      .select('make, model')
+      .eq('is_active', true)
+      .ilike('make', vehicle_make)
+      .ilike('model', vehicle_model)
+      .maybeSingle()
+    if (catalogHit) {
+      vehicle_make = catalogHit.make
+      vehicle_model = catalogHit.model
+    }
+
     const { data: branchRow } = await db
       .from('branches')
       .select('slug, is_active, coming_soon')

@@ -207,7 +207,7 @@ export function BookingPage() {
             makeLabel="Vehicle brand"
             modelLabel="Vehicle model"
           />
-          <label>
+          <label className="booking-span-2">
             Car size
             <select required value={form.vehicle_type} onChange={update('vehicle_type')}>
               {PRICING_SIZES.map((sz) => (
@@ -217,8 +217,8 @@ export function BookingPage() {
               ))}
             </select>
           </label>
-          <label>Preferred date & time<input required type="datetime-local" value={form.scheduled_start} onChange={update('scheduled_start')} /></label>
-          <label>
+          <label className="booking-span-2">Preferred date & time<input required type="datetime-local" value={form.scheduled_start} onChange={update('scheduled_start')} /></label>
+          <label className="booking-span-2">
             Service
             <select required value={form.service_id} onChange={update('service_id')}>
               <option value="">Select service</option>
@@ -235,14 +235,14 @@ export function BookingPage() {
               </span>
             ) : null}
           </label>
-          <label>
+          <label className="booking-span-2">
             Branch
             <select required value={form.branch} onChange={update('branch')} disabled={branchesLoading}>
               <option value="">Select branch</option>
               {branches.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
             </select>
           </label>
-          <FormLegalNotice id="book-legal" />
+          <FormLegalNotice id="book-legal" className="form-legal-notice booking-span-2" />
           {(error || branchesError) && <p className="form-error">{error || branchesError}</p>}
           <button disabled={status === 'loading' || branchesLoading || !form.branch} className="button button-blue">
             {status === 'loading' ? 'Submitting…' : 'Request booking'}
