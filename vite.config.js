@@ -10,6 +10,7 @@ import { handleCustomerPortalRequest } from './server/customerPortal.mjs'
 import { handlePublicBookRequest } from './server/publicBook.mjs'
 import { handleBookingStatusRequest } from './server/bookingStatus.mjs'
 import { handlePushSubscribeRequest, handleSendPushRequest } from './server/pushApi.mjs'
+import { handleBusybeeRequest } from './server/busybeeApi.mjs'
 
 const root = path.dirname(fileURLToPath(import.meta.url))
 
@@ -84,10 +85,7 @@ function provisionApiPlugin() {
         const { handleNotifyBookingRequest } = await import('./server/notifyBookingApi.mjs')
         return handleNotifyBookingRequest(req, res)
       })
-      mount('/api/busybee', async (req, res) => {
-        const mod = await import('./api/busybee.js')
-        return mod.default(req, res)
-      })
+      mount('/api/busybee', (req, res) => handleBusybeeRequest(req, res))
       mount('/api/send-finance-quote', async (req, res, helpers) => {
         const { handleFinanceQuoteRequest } = await import('./server/sendFinanceQuote.mjs')
         return handleFinanceQuoteRequest(req, res, helpers)

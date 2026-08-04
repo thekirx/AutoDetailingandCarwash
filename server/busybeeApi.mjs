@@ -1,8 +1,8 @@
-import { busybeeBalance, busybeeSendSms } from '../server/busybee.mjs'
-import { json, readJsonBody, setCors, bearer, clientIp, rateLimit } from '../server/httpUtil.mjs'
 import { createClient } from '@supabase/supabase-js'
+import { busybeeBalance, busybeeSendSms } from './busybee.mjs'
+import { bearer, clientIp, json, rateLimit, readJsonBody, setCors } from './httpUtil.mjs'
 
-export default async function handler(req, res) {
+export async function handleBusybeeRequest(req, res) {
   setCors(res, 'GET, POST, OPTIONS')
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
@@ -30,8 +30,8 @@ export default async function handler(req, res) {
       }
 
       if (req.method === 'GET') {
-        const bal = await busybeeBalance()
-        return json(res, bal.ok ? 200 : 502, bal)
+        const balance = await busybeeBalance()
+        return json(res, balance.ok ? 200 : 502, balance)
       }
 
       const body = await readJsonBody(req)
