@@ -21,7 +21,6 @@
 ### Task 1: Use the interactive PPF canvas on mobile
 
 **Files:**
-- Create: `tests/mobilePublicExperience.test.js`
 - Modify: `src/components/PPFVisualizer.jsx:193-198`
 - Modify: `src/styles.css:249-262, 409-418`
 
@@ -29,36 +28,25 @@
 - Consumes: Existing `Canvas`, `OrbitControls`, `Car`, package selection state, and `.ppf-canvas-stage` container.
 - Produces: A single `.ppf-canvas-stage` visualization path that remains visible at widths below 500px.
 
-- [ ] **Step 1: Write the failing mobile-viewer regression test**
+- [ ] **Step 1: Define the failing rendered mobile assertion**
+
+At a 430×932 browser viewport, load `/`, scroll `#visualizer` into view, and inspect the live DOM and computed styles. The assertion is:
 
 ```js
-import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
-import { describe, it } from 'node:test'
-
-const projectFile = (path) => new URL(`../${path}`, import.meta.url)
-
-describe('Mobile public experience', () => {
-  it('keeps the interactive PPF canvas on mobile without a flat diagram', async () => {
-    const [component, css] = await Promise.all([
-      readFile(projectFile('src/components/PPFVisualizer.jsx'), 'utf8'),
-      readFile(projectFile('src/styles.css'), 'utf8'),
-    ])
-
-    assert.match(component, /className="ppf-canvas-stage"/)
-    assert.doesNotMatch(component, /ppf-mobile-diagram/)
-    assert.doesNotMatch(css, /\.ppf-canvas-stage\s*\{\s*display:none/)
-    assert.doesNotMatch(css, /\.ppf-mobile-diagram/)
-    assert.match(css, /@media\(max-width:500px\)[\s\S]*?\.ppf-canvas-stage\s*\{[^}]*touch-action:none/)
-  })
+const stage = document.querySelector('.ppf-canvas-stage')
+const diagram = document.querySelector('.ppf-mobile-diagram')
+({
+  stageDisplay: getComputedStyle(stage).display,
+  canvasCount: stage.querySelectorAll('canvas').length,
+  diagramPresent: Boolean(diagram),
 })
 ```
 
-- [ ] **Step 2: Run the focused test and confirm it fails**
+Expected desired value: `{ stageDisplay: 'block', canvasCount: 1, diagramPresent: false }`.
 
-Run: `node --test tests/mobilePublicExperience.test.js`
+- [ ] **Step 2: Run the rendered assertion and confirm it fails**
 
-Expected: FAIL because the component and CSS still contain `ppf-mobile-diagram`, and the mobile rule hides the canvas.
+Expected current value: `stageDisplay` is `none` and `diagramPresent` is `true`. This proves the production behavior is the reported bug.
 
 - [ ] **Step 3: Remove the diagram path and make the canvas touch-interactive**
 
@@ -73,16 +61,14 @@ In `src/styles.css`, delete all base `.ppf-mobile-diagram` and `.ppf-diagram-car
 
 Keep the mobile viewer label, legend, and attribution above the canvas using their existing z-index rules.
 
-- [ ] **Step 4: Run the focused test and confirm it passes**
+- [ ] **Step 4: Run the same rendered assertion and confirm it passes**
 
-Run: `node --test tests/mobilePublicExperience.test.js`
-
-Expected: PASS.
+Expected: `{ stageDisplay: 'block', canvasCount: 1, diagramPresent: false }`. Drag the canvas and confirm its pixels change while the package panel remains usable.
 
 - [ ] **Step 5: Commit the mobile viewer change**
 
 ```bash
-git add tests/mobilePublicExperience.test.js src/components/PPFVisualizer.jsx src/styles.css
+git add src/components/PPFVisualizer.jsx src/styles.css
 git commit -m "fix: keep ppf viewer interactive on mobile"
 ```
 
@@ -91,7 +77,6 @@ git commit -m "fix: keep ppf viewer interactive on mobile"
 ### Task 2: Extend the public header through the iPhone safe area
 
 **Files:**
-- Modify: `tests/mobilePublicExperience.test.js`
 - Modify: `index.html:5`
 - Modify: `src/styles.css:80-82, 374, 388-390`
 
@@ -99,28 +84,19 @@ git commit -m "fix: keep ppf viewer interactive on mobile"
 - Consumes: Existing `.public-header`, `.header-inner`, and `.mobile-nav` layout rules.
 - Produces: `viewport-fit=cover` metadata and top-safe-area-aware header/menu sizing using `env(safe-area-inset-top, 0px)`.
 
-- [ ] **Step 1: Add the failing safe-area regression test**
-
-Append this test inside the existing `describe` block:
+- [ ] **Step 1: Define the failing rendered safe-area assertion**
 
 ```js
-it('extends the Hakum header behind the iPhone status area safely', async () => {
-  const [html, css] = await Promise.all([
-    readFile(projectFile('index.html'), 'utf8'),
-    readFile(projectFile('src/styles.css'), 'utf8'),
-  ])
-
-  assert.match(html, /width=device-width, initial-scale=1\.0, viewport-fit=cover/)
-  assert.match(css, /\.public-header\s*\{[^}]*padding-top:env\(safe-area-inset-top, 0px\)/s)
-  assert.match(css, /\.mobile-nav\s*\{[^}]*safe-area-inset-top/s)
-})
+const viewport = document.querySelector('meta[name="viewport"]')?.content
+const header = document.querySelector('.public-header')
+({ viewport, paddingTop: getComputedStyle(header).paddingTop })
 ```
 
-- [ ] **Step 2: Run the focused test and confirm the new assertion fails**
+Expected desired viewport value: `width=device-width, initial-scale=1.0, viewport-fit=cover`. The header's computed top padding must reflect the browser's safe-area inset on a notched iPhone; desktop remains `0px`.
 
-Run: `node --test tests/mobilePublicExperience.test.js`
+- [ ] **Step 2: Run the rendered assertion and confirm the viewport assertion fails**
 
-Expected: FAIL because the viewport and safe-area CSS are not present.
+Expected: The live viewport content lacks `viewport-fit=cover`.
 
 - [ ] **Step 3: Implement edge-to-edge metadata and header padding**
 
@@ -144,16 +120,14 @@ and in the `max-width:500px` rule:
 
 Do not add safe-area padding to `.header-inner`; the parent padding keeps its existing measured height and places it below the status area.
 
-- [ ] **Step 4: Run the focused test and confirm it passes**
+- [ ] **Step 4: Run the same rendered assertion and confirm it passes**
 
-Run: `node --test tests/mobilePublicExperience.test.js`
-
-Expected: PASS.
+Expected: The live viewport content includes `viewport-fit=cover`; the mobile header screenshot shows blue through the top edge with controls positioned below the safe area; opening the menu leaves it scrollable.
 
 - [ ] **Step 5: Commit the safe-area change**
 
 ```bash
-git add tests/mobilePublicExperience.test.js index.html src/styles.css
+git add index.html src/styles.css
 git commit -m "fix: extend public header through ios safe area"
 ```
 
@@ -173,7 +147,6 @@ git commit -m "fix: extend public header through ios safe area"
 Run:
 
 ```bash
-node --test tests/mobilePublicExperience.test.js
 npm test --if-present
 npm run lint
 npm run build
