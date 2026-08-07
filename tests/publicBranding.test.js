@@ -23,6 +23,10 @@ describe('Public branding assets and scope', () => {
       'src/assets/services/glass-detailing.webp',
       'src/assets/services/engine-wash.webp',
       'src/assets/services/paint-protection-film.webp',
+      'src/assets/services/detailing.webp',
+      'src/assets/services/ceramic-classic.webp',
+      'src/assets/services/ceramic-premium.webp',
+      'src/assets/services/ceramic-platinum.webp',
     ]
 
     await Promise.all(assets.map((path) => access(projectFile(path))))
@@ -62,12 +66,18 @@ describe('Public branding assets and scope', () => {
     assert.doesNotMatch(page, /hero-experience-card/)
     assert.match(page, /<div className="hero-experience"[^>]*>\s*<h2 id="experience-heading">Experience<\/h2>/s)
     assert.equal((page.match(/<StatCard key=/g) || []).length, 1)
-    assert.match(page, /import \{ aboutImage, services \} from '\.\.\/data\/publicHomeContent'/)
+    assert.match(page, /import \{ aboutImage \} from '\.\.\/data\/publicHomeContent'/)
+    assert.match(page, /featuredServices, otherServices/)
+    assert.match(page, /ceramicPackages, ceramicSection/)
     assert.match(page, /<img className="about-visual-image" src=\{aboutImage\}/)
-    assert.match(page, /service\.available\s*\?\s*\(\s*<img/s)
-    assert.match(page, /className="service-card-locked"/)
-    assert.match(page, /service\.available\s*&&\s*<Link to="\/book">/)
-    assert.doesNotMatch(page, /--service-position/)
+    assert.match(page, /featuredServices\.map/)
+    assert.match(page, /className="other-services-trigger"/)
+    assert.match(page, /role="dialog"/)
+    assert.match(page, /aria-modal="true"/)
+    assert.match(page, /otherServices\.map/)
+    assert.match(page, /className="public-shell ceramic-layout"/)
+    assert.doesNotMatch(page, /className="service-card-locked"/)
+    assert.doesNotMatch(page, /Recommended/)
   })
 
   it('scopes reference alignment to the approved homepage sections', async () => {
@@ -78,17 +88,18 @@ describe('Public branding assets and scope', () => {
     assert.doesNotMatch(css, /\.hero-experience-card\s*\{/)
     assert.match(css, /\.about-heading \.section-title\s*\{[^}]*font-family:var\(--font-public-display\)/s)
     assert.match(css, /\.about-copy\s*\{[^}]*font-family:var\(--font-public-body\)/s)
-    assert.match(css, /\.services-section \.section-title\s*\{[^}]*font-family:var\(--font-public-display\)/s)
-    assert.match(css, /\.service-card h3\s*\{[^}]*font-family:var\(--font-public-display\)/s)
-    assert.match(css, /\.service-card p\s*\{[^}]*font-family:var\(--font-public-body\)/s)
+    assert.match(css, /\.services-display-title\s*\{[^}]*font-family:var\(--font-public-display\)/s)
+    assert.match(css, /\.featured-service-copy h3\s*\{[^}]*font-family:var\(--font-public-display\)/s)
+    assert.match(css, /\.featured-service-copy p\s*\{[^}]*font-family:var\(--font-public-body\)/s)
     assert.match(css, /\.about-visual-image\s*\{[^}]*object-fit:cover/s)
     assert.match(css, /\.about-copy \.about-lead\s*\{[^}]*font-style:italic/s)
-    assert.match(css, /\.service-grid\s*\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/s)
-    assert.match(css, /\.service-card-visual\s*\{[^}]*aspect-ratio:4\/3/s)
-    assert.match(css, /\.service-card-visual img\s*\{[^}]*object-fit:cover/s)
-    assert.match(css, /\.service-card-locked\s*\{[^}]*background:#020a31/s)
-    assert.match(css, /@media\(max-width:1100px\)\{[^}]*\.service-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/s)
-    assert.match(css, /@media\(max-width:600px\)\{[^}]*\.service-grid\{grid-template-columns:1fr/s)
+    assert.match(css, /\.featured-services-grid\s*\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/s)
+    assert.match(css, /\.featured-service-card\s*\{[^}]*aspect-ratio:3\/4/s)
+    assert.match(css, /\.featured-service-card img\s*\{[^}]*object-fit:cover/s)
+    assert.match(css, /\.other-services-modal\s*\{[^}]*position:fixed/s)
+    assert.match(css, /\.other-services-grid\s*\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/s)
+    assert.match(css, /\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(0,1fr\) minmax\(0,2fr\)/s)
+    assert.match(css, /\.ceramic-package-name\s*\{[^}]*writing-mode:vertical-rl/s)
   })
 
   it('provides responsive layouts for the reference-aligned sections', async () => {
@@ -96,7 +107,10 @@ describe('Public branding assets and scope', () => {
 
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.hero-metrics\s*\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.about-layout\s*\{[^}]*grid-template-columns:1fr/)
-    assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.service-grid\s*\{[^}]*grid-template-columns:1fr/)
+    assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.other-services-grid\s*\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
+    assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.featured-services-grid\s*\{[^}]*grid-template-columns:1fr/)
+    assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.other-services-grid\s*\{[^}]*grid-template-columns:1fr/)
+    assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(0,1fr\)/)
   })
 
   it('keeps the hero hierarchy consistent with the legacy reference', async () => {
@@ -108,13 +122,13 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /\.hero-subheading\s*\{[^}]*font-weight:400[^}]*font-style:italic/s)
     assert.match(css, /\.hero-metrics \.ui-stat-card>div>span\s*\{[^}]*font-weight:400/s)
     assert.match(css, /\.about-copy p\s*\{[^}]*font-weight:400/s)
-    assert.match(css, /\.services-section \.section-heading-row>p\s*\{[^}]*font-weight:400/s)
-    assert.match(css, /\.service-card p\s*\{[^}]*font-weight:400/s)
+    assert.match(css, /\.services-intro-copy\s*\{[^}]*font-family:var\(--font-public-body\)/s)
+    assert.match(css, /\.featured-service-copy p\s*\{[^}]*font-family:var\(--font-public-body\)/s)
     assert.match(css, /\.about-heading \.section-title\s*\{[^}]*font-style:italic/s)
-    assert.match(css, /\.services-section \.section-title\s*\{[^}]*font-style:italic/s)
+    assert.match(css, /\.services-display-title\s*\{[^}]*font-style:italic/s)
     assert.match(css, /\.hero-metrics \.ui-stat-card>strong\s*\{[^}]*font-style:normal/s)
     assert.match(css, /\.about-copy p\s*\{[^}]*font-style:normal/s)
-    assert.match(css, /\.service-card h3\s*\{[^}]*font-style:normal/s)
+    assert.match(css, /\.featured-service-copy h3\s*\{[^}]*font-style:italic/s)
     assert.match(css, /\.hero-experience\s*\{[^}]*margin:78px auto 0/s)
     assert.match(css, /\.hero-metrics \.ui-stat-card>strong>span\s*\{[^}]*font:inherit/s)
   })

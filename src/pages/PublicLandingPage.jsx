@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowDown, ArrowRight, LockKeyhole, MapPin, Radio } from 'lucide-react'
+import { ArrowDown, ArrowRight, MapPin, Radio, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PPFVisualizer from '../components/PPFVisualizer'
 import { PrimaryButton, SecondaryButton, StatCard } from '../components/ui'
-import { aboutImage, services } from '../data/publicHomeContent'
+import { aboutImage } from '../data/publicHomeContent'
+import { ceramicPackages, ceramicSection, featuredServices, otherServices } from '../data/publicHomeContent'
 import { usePublicBranches, branchLabel } from '../lib/branches'
 
 const stats = [
@@ -11,24 +12,6 @@ const stats = [
   { value: 3000, suffix: '+', label: 'Growing satisfied clients' },
   { value: 15000, suffix: '+', label: 'Vehicles rejuvenated annually' },
   { value: 26, suffix: '', label: 'Team members' },
-]
-
-const coatingPackages = [
-  {
-    number: '01', name: 'Classic',
-    copy: 'Reliable protection and lasting shine that guards against everyday wear at an unbeatable value.',
-    includes: ['1 Layer of Hakum Ceramic Coating', '1 Layer Ceramic Hydrophobic Spray Coating', '2-Year Warranty with Unlimited Recoating for 2 Panels', '2–3 Years of Durable Paint Protection'],
-  },
-  {
-    number: '02', name: 'Premium', recommended: true,
-    copy: 'Superior, long-lasting protection, deeper gloss, and enhanced hydrophobic performance that keeps your car showroom-fresh longer.',
-    includes: ['2 Layers of Hakum Ceramic Coating', '1 Layer Ceramic Hydrophobic Spray Coating', '4-Year Warranty with Unlimited Recoating for 4 Panels', '3–5 Years of Long-Term Paint Protection'],
-  },
-  {
-    number: '03', name: 'Platinum',
-    copy: 'Luxury-grade formula offering multi-year protection, mirror-like shine, and elite resistance to UV, dirt, and chemicals.',
-    includes: ['3 Layers of Intergalactic Graphene Coating', '1 Layer Ceramic Hydrophobic Spray Coating', '6-Year Warranty with Unlimited Recoating for 6 Panels', '5–8 Years of Premium Paint Protection'],
-  },
 ]
 
 function AnimatedNumber({ value, suffix }) {
@@ -54,10 +37,50 @@ function AnimatedNumber({ value, suffix }) {
 }
 
 export default function PublicLandingPage() {
+  const [isOtherServicesOpen, setIsOtherServicesOpen] = useState(false)
+  const otherServicesModalRef = useRef(null)
+  const otherServicesCloseRef = useRef(null)
   const { branches } = usePublicBranches()
   const locationLine = branches.length
     ? branches.map((b) => b.name.replace('Hakum Auto Care ', '')).join(' / ')
     : 'Bacoor / Batangas'
+
+  useEffect(() => {
+    if (!isOtherServicesOpen) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    const previousFocus = document.activeElement
+    const modal = otherServicesModalRef.current
+    document.body.style.overflow = 'hidden'
+    otherServicesCloseRef.current?.focus()
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsOtherServicesOpen(false)
+        return
+      }
+
+      if (event.key !== 'Tab' || !modal) return
+      const focusable = [...modal.querySelectorAll('button, a[href]')].filter((element) => !element.hasAttribute('disabled'))
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+      previousFocus?.focus?.()
+    }
+  }, [isOtherServicesOpen])
 
   return <>
     <section className="hero-stage">
@@ -104,39 +127,87 @@ export default function PublicLandingPage() {
     </section>
 
     <section className="services-section" id="services">
-      <div className="public-shell">
-        <div className="section-heading-row"><div><p className="eyebrow eyebrow-light">Services</p><h2 className="section-title light">Made to turn<br/>heads.</h2></div><p>From immaculate daily care to long-term paint protection, every service is delivered with obsessive attention to detail.</p></div>
-        <div className="service-grid">
-          {services.map((service) => (
-            <article className={`service-card ${service.available ? '' : 'is-locked'}`} key={service.title}>
-              <div className="service-card-visual">
-                {service.available ? (
-                  <img src={service.image} alt={service.imageAlt} loading="lazy" decoding="async" />
-                ) : (
-                  <div className="service-card-locked" aria-hidden="true"><LockKeyhole /></div>
-                )}
-              </div>
-              <div className="service-card-body">
+      <div className="public-shell services-intro">
+        <p className="services-eyebrow">Made to turn heads</p>
+        <h2 className="services-display-title">Services</h2>
+        <p className="services-intro-copy">From immaculate daily care to long-term paint protection, every service is delivered with obsessive attention to detail.</p>
+      </div>
+      <div className="featured-services-grid">
+        {featuredServices.map((service) => (
+          <article className="featured-service-card" key={service.title}>
+            <img src={service.image} alt={service.imageAlt} loading="lazy" decoding="async" />
+            <div className="featured-service-copy">
                 <h3>{service.title}</h3>
                 <p>{service.copy}</p>
-                {service.available && <Link to="/book">Book now <ArrowRight /></Link>}
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="services-footer">
+        <button className="other-services-trigger" type="button" onClick={() => setIsOtherServicesOpen(true)}>
+          Other services <span aria-hidden="true">»</span>
+        </button>
+      </div>
+    </section>
+
+    {isOtherServicesOpen && (
+      <div className="other-services-modal" role="presentation" onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setIsOtherServicesOpen(false)
+      }}>
+        <section
+          className="other-services-dialog"
+          ref={otherServicesModalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="other-services-title"
+        >
+          <header className="other-services-header">
+            <h2 id="other-services-title">Other services <span aria-hidden="true">»</span></h2>
+            <button ref={otherServicesCloseRef} type="button" onClick={() => setIsOtherServicesOpen(false)} aria-label="Close other services">
+              <X aria-hidden="true" />
+            </button>
+          </header>
+          <div className="other-services-grid">
+            {otherServices.map((service) => (
+              <article className="other-service-card" key={service.title}>
+                <img src={service.image} alt={service.imageAlt} loading="lazy" decoding="async" />
+                <div>
+                  <h3>{service.title}</h3>
+                  <p>{service.copy}</p>
+                  <Link to="/book" onClick={() => setIsOtherServicesOpen(false)}>Book now <ArrowRight aria-hidden="true" /></Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    )}
+
+    <section className="coating-section">
+      <div className="public-shell ceramic-layout">
+        <div className="ceramic-intro">
+          <p>{ceramicSection.eyebrow}</p>
+          <h2>{ceramicSection.title.split(' ').map((word) => <span key={word}>{word}</span>)}</h2>
+          <div>{ceramicSection.copy}</div>
+        </div>
+        <div className="ceramic-package-grid">
+          {ceramicPackages.map((item) => (
+            <article className="ceramic-package-panel" key={item.title}>
+              <img src={item.bgImage} alt={`${item.title} ceramic coating package`} loading="lazy" decoding="async" />
+              <div className="ceramic-package-overlay" aria-hidden="true" />
+              <div className="ceramic-package-body">
+                <h3 className="ceramic-package-name">{item.title}</h3>
+                <div className="ceramic-package-content">
+                  <p>{item.copy}</p>
+                  <div className="ceramic-package-inclusions">
+                    <strong>Inclusions:</strong>
+                    <ul>{item.includes.map((feature) => <li key={feature}>{feature}</li>)}</ul>
+                  </div>
+                </div>
               </div>
             </article>
           ))}
         </div>
-      </div>
-    </section>
-
-    <section className="coating-section">
-      <div className="public-shell">
-        <div className="coating-heading"><div><p className="eyebrow">Ceramic coating packages</p><h2 className="section-title">Shine beyond<br/>limits.</h2></div><p>Choose the level of lasting gloss and paint protection that fits how you drive, park, and care for your vehicle.</p></div>
-        <div className="coating-grid">{coatingPackages.map((item) => <article className={`coating-card ${item.recommended ? 'is-recommended' : ''}`} key={item.name}>
-          <div className="coating-card-top"><span>{item.number}</span>{item.recommended && <strong>Recommended</strong>}</div>
-          <h3>{item.name}</h3>
-          <p>{item.copy}</p>
-          <div className="coating-includes"><span>Package includes</span><ul>{item.includes.map((feature) => <li key={feature}>{feature}</li>)}</ul></div>
-          <Link to="/book" aria-label={`Book the ${item.name} ceramic coating package`}>Book now <ArrowRight/></Link>
-        </article>)}</div>
       </div>
     </section>
 
