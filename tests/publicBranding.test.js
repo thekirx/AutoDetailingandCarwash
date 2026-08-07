@@ -75,6 +75,8 @@ describe('Public branding assets and scope', () => {
     assert.match(page, /role="dialog"/)
     assert.match(page, /aria-modal="true"/)
     assert.match(page, /otherServices\.map/)
+    const otherServicesCards = page.match(/otherServices\.map\(\(service\) => \([\s\S]*?\n\s*\)\)\}/)?.[0] || ''
+    assert.doesNotMatch(otherServicesCards, /<Link|Book now/)
     assert.match(page, /className="public-shell ceramic-layout"/)
     assert.doesNotMatch(page, /className="service-card-locked"/)
     assert.doesNotMatch(page, /Recommended/)
@@ -98,6 +100,8 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /\.featured-service-card img\s*\{[^}]*object-fit:cover/s)
     assert.match(css, /\.other-services-modal\s*\{[^}]*position:fixed/s)
     assert.match(css, /\.other-services-grid\s*\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/s)
+    assert.doesNotMatch(css, /\.other-service-card a\s*\{/)
+    assert.match(css, /\.other-service-card>div\s*\{[^}]*min-height:auto/s)
     assert.match(css, /\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(0,1fr\) minmax\(0,2fr\)/s)
     assert.match(css, /\.ceramic-package-name\s*\{[^}]*writing-mode:vertical-rl/s)
   })

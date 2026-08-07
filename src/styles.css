@@ -200,12 +200,9 @@ button { cursor: pointer; }
 .other-service-card>img { width:100%; aspect-ratio:4/3; display:block; object-fit:cover; object-position:center; }
 .other-service-card:nth-child(2)>img { object-position:center 62%; }
 .other-service-card:nth-child(3)>img { object-position:center 42%; }
-.other-service-card>div { min-height:222px; padding:20px 18px 16px; display:flex; flex-direction:column; color:#333; }
+.other-service-card>div { min-height:auto; padding:20px 18px 24px; display:flex; flex-direction:column; color:#333; }
 .other-service-card h3 { min-height:2em; margin:0; font-family:var(--font-public-display); font-size:clamp(15px,1.35vw,20px); font-style:normal; font-weight:600; line-height:.9; letter-spacing:-.025em; text-transform:uppercase; }
-.other-service-card p { margin:17px 0 20px; color:#777; font-family:var(--font-public-body); font-size:10px; line-height:1.55; }
-.other-service-card a { display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:15px; border-top:1px solid #ddd; color:#052699; font-size:8px; font-weight:800; letter-spacing:.14em; text-decoration:none; text-transform:uppercase; }
-.other-service-card a svg { width:15px; transition:transform .2s ease; }
-.other-service-card a:hover svg,.other-service-card a:focus-visible svg { transform:translateX(3px); }
+.other-service-card p { margin:17px 0 0; color:#777; font-family:var(--font-public-body); font-size:10px; line-height:1.55; }
 .coating-section { padding:86px 0; background:#f1f1ed; }
 .ceramic-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); align-items:stretch; }
 .ceramic-intro { padding:clamp(105px,10vw,150px) clamp(30px,4vw,66px) 72px 0; }
@@ -356,7 +353,6 @@ button { cursor: pointer; }
 
 @media(max-width:1000px){
   .other-services-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-  .other-service-card>div { min-height:200px; }
   .ceramic-intro { padding-right:32px; }
   .ceramic-package-body { grid-template-columns:58px minmax(0,1fr); padding-right:14px; }
   .ceramic-package-name { font-size:clamp(3rem,6.2vw,4.7rem); }
@@ -397,7 +393,6 @@ button { cursor: pointer; }
   .other-services-header { padding-bottom:16px; }
   .other-services-grid { grid-template-columns:1fr; gap:12px; }
   .other-service-card>img { aspect-ratio:16/10; }
-  .other-service-card>div { min-height:190px; }
   .ceramic-intro h2 { font-size:clamp(3.5rem,16vw,5.8rem); }
   .ceramic-intro>div { max-width:340px; font-size:13px; }
   .ceramic-package-grid { grid-template-columns:1fr; gap:6px; }

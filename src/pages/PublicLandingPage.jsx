@@ -174,7 +174,6 @@ export default function PublicLandingPage() {
                 <div>
                   <h3>{service.title}</h3>
                   <p>{service.copy}</p>
-                  <Link to="/book" onClick={() => setIsOtherServicesOpen(false)}>Book now <ArrowRight aria-hidden="true" /></Link>
                 </div>
               </article>
             ))}
