@@ -40,8 +40,8 @@ export default function PublicLayout() {
               className="wordmark-image"
               src="/branding/hakum-lw-ow.png"
               alt=""
-              width="5000"
-              height="5000"
+              width="124"
+              height="70"
             />
           </Link>
           <nav className="desktop-nav" aria-label="Primary navigation">
@@ -132,8 +132,8 @@ export default function PublicLayout() {
                 className="wordmark-image"
                 src="/branding/hakum-lw-ow.png"
                 alt=""
-                width="5000"
-                height="5000"
+                width="170"
+                height="96"
               />
             </Link>
             <p>Precision car care, premium protection, and genuine pride in every detail.</p>

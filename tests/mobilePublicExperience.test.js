@@ -28,4 +28,26 @@ describe('Mobile public experience', () => {
     assert.match(css, /\.public-header\s*\{[^}]*padding-top:env\(safe-area-inset-top, 0px\)/s)
     assert.match(css, /\.mobile-nav\s*\{[^}]*100dvh[^}]*safe-area-inset-top/s)
   })
+
+  it('paints Safari browser insets blue before the app stylesheet loads', async () => {
+    const html = await readFile(projectFile('index.html'), 'utf8')
+
+    assert.match(html, /<meta name="theme-color" content="#020a31"/)
+    assert.match(html, /html,body,#root\{min-height:100%;background:#020a31\}/)
+  })
+
+  it('uses safe intrinsic logo dimensions during the initial Safari render', async () => {
+    const layout = await readFile(projectFile('src/layouts/PublicLayout.jsx'), 'utf8')
+
+    assert.doesNotMatch(layout, /width="5000"|height="5000"/)
+    assert.match(layout, /width="124"\s+height="70"/)
+    assert.match(layout, /width="170"\s+height="96"/)
+  })
+
+  it('keeps the PPF heading and description inside the mobile shell', async () => {
+    const css = await readFile(projectFile('src/styles.css'), 'utf8')
+
+    assert.match(css, /\.ppf-heading>div\s*\{[^}]*min-width:0/)
+    assert.match(css, /@media\(max-width:500px\)[\s\S]*?\.ppf-heading \.section-title\s*\{[^}]*11vw[^}]*46px/)
+  })
 })

@@ -46,7 +46,8 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--background); color: var(--foreground); }
+html { min-height:100%; background:#020a31; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background:#020a31; color: var(--foreground); }
 button, input { font: inherit; }
 button { cursor: pointer; }
 
@@ -228,8 +229,9 @@ button { cursor: pointer; }
 .ceramic-package-inclusions li { color:#fff; font-size:clamp(9px,.85vw,12px); line-height:1.4; }
 .visualizer-section { padding:var(--section-space-lg) 0; overflow:hidden; color:#f1f1f1; background:radial-gradient(circle at 18% 30%,#1239a7 0,transparent 36%),#020a31; }
 .ppf-heading { display:grid; grid-template-columns:1.25fr .75fr; gap:70px; align-items:end; margin-bottom:54px; }
+.ppf-heading>div { min-width:0; }
 .ppf-heading .eyebrow { margin-bottom:18px; }
-.ppf-heading>p { max-width:520px; margin:0 0 5px; color:rgba(241,241,241,.7); font-size:14px; line-height:1.8; }
+.ppf-heading>p { min-width:0; max-width:520px; margin:0 0 5px; color:rgba(241,241,241,.7); font-size:14px; line-height:1.8; overflow-wrap:anywhere; }
 .package-tabs { display:grid; grid-template-columns:repeat(3,1fr); margin:0 0 24px; border:1px solid rgba(255,255,255,.16); }
 .package-tabs button { min-height:74px; display:flex; align-items:center; justify-content:center; gap:13px; padding:12px 18px; border:0; border-right:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.035); color:rgba(241,241,241,.62); font-size:10px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; transition:background .2s,color .2s; }
 .package-tabs button:last-child { border-right:0; }
@@ -472,7 +474,7 @@ button { cursor: pointer; }
 }
 
 @media(max-width:500px){
-  .ppf-heading .section-title{font-size:clamp(39px,13vw,54px)}
+  .ppf-heading .section-title{max-width:100%;font-size:clamp(34px,11vw,46px);letter-spacing:-.055em}
   .ppf-heading>p{font-size:12px}
   .visualizer-grid{gap:14px}
   .car-canvas{min-height:385px;height:385px}
