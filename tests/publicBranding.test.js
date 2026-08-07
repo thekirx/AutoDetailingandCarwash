@@ -109,6 +109,7 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /\.ceramic-intro h2\s*\{[^}]*font-size:clamp\(3rem,18cqi,5\.4rem\)/s)
     assert.match(css, /\.ceramic-package-name\s*\{[^}]*writing-mode:vertical-rl/s)
     assert.match(css, /\.ceramic-package-overlay\s*\{[^}]*rgba\(5,38,153,\.3/s)
+    assert.match(css, /\.public-header\s*\{[^}]*padding-top:\s*env\(safe-area-inset-top,\s*0px\)/s)
   })
 
   it('provides responsive layouts for the reference-aligned sections', async () => {
