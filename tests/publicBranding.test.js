@@ -93,17 +93,20 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /\.services-display-title\s*\{[^}]*font-family:var\(--font-public-display\)/s)
     assert.match(css, /\.featured-service-copy h3\s*\{[^}]*font-family:var\(--font-public-display\)/s)
     assert.match(css, /\.featured-service-copy p\s*\{[^}]*font-family:var\(--font-public-body\)/s)
+    assert.match(css, /\.services-eyebrow\s*\{[^}]*font-size:clamp\(/s)
+    assert.match(css, /\.services-intro-copy\s*\{[^}]*font-size:clamp\(/s)
     assert.match(css, /\.about-visual-image\s*\{[^}]*object-fit:cover/s)
     assert.match(css, /\.about-copy \.about-lead\s*\{[^}]*font-style:italic/s)
     assert.match(css, /\.featured-services-grid\s*\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/s)
-    assert.match(css, /\.featured-service-card\s*\{[^}]*aspect-ratio:3\/4/s)
+    assert.match(css, /\.featured-service-card\s*\{[^}]*min-height:clamp\(460px,43vw,680px\)/s)
     assert.match(css, /\.featured-service-card img\s*\{[^}]*object-fit:cover/s)
     assert.match(css, /\.other-services-modal\s*\{[^}]*position:fixed/s)
     assert.match(css, /\.other-services-grid\s*\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/s)
     assert.doesNotMatch(css, /\.other-service-card a\s*\{/)
     assert.match(css, /\.other-service-card>div\s*\{[^}]*min-height:auto/s)
-    assert.match(css, /\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(0,1fr\) minmax\(0,2fr\)/s)
+    assert.match(css, /\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(260px,\.72fr\) minmax\(0,2\.28fr\)/s)
     assert.match(css, /\.ceramic-package-name\s*\{[^}]*writing-mode:vertical-rl/s)
+    assert.match(css, /\.ceramic-package-overlay\s*\{[^}]*rgba\(5,38,153,\.3/s)
   })
 
   it('provides responsive layouts for the reference-aligned sections', async () => {
@@ -115,6 +118,9 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.featured-services-grid\s*\{[^}]*grid-template-columns:1fr/)
     assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.other-services-grid\s*\{[^}]*grid-template-columns:1fr/)
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(0,1fr\)/)
+    assert.match(css, /@media\(max-width:900px\)\{[\s\S]*?\.ceramic-package-grid\s*\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/)
+    assert.match(css, /@media\(max-width:700px\)\{[\s\S]*?\.featured-services-grid\s*\{[^}]*grid-template-columns:1fr/)
+    assert.match(css, /@media\(max-width:700px\)\{[\s\S]*?\.ceramic-package-grid\s*\{[^}]*grid-template-columns:1fr/)
   })
 
   it('keeps the hero hierarchy consistent with the legacy reference', async () => {
