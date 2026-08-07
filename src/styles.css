@@ -246,20 +246,6 @@ button { cursor: pointer; }
 .ppf-panel-tooltip span { color:#8ea7ff; font-size:7px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
 .ppf-panel-tooltip strong { display:block; margin:5px 0; font-family:var(--font-display); font-size:18px; font-style:italic; text-transform:uppercase; }
 .ppf-panel-tooltip p { margin:0; color:rgba(255,255,255,.65); font-size:10px; line-height:1.5; }
-.ppf-mobile-diagram { display:none; }
-.ppf-diagram-car { position:relative; width:220px; height:105px; margin:auto; border:1px solid #445274; border-radius:42% 18% 18% 42%; background:#111a2e; transform:skewX(-4deg); }
-.ppf-diagram-car:before,.ppf-diagram-car:after { content:""; position:absolute; left:42px; right:42px; height:10px; border-radius:8px; background:#05070c; }
-.ppf-diagram-car:before { top:-7px; }.ppf-diagram-car:after { bottom:-7px; }
-.ppf-diagram-car i { position:absolute; display:block; border:1px solid rgba(102,136,255,.5); background:rgba(76,115,255,.58); box-shadow:0 0 16px rgba(76,115,255,.3); }
-.ppf-diagram-car .hood { left:133px; top:14px; width:65px; height:77px; border-radius:7px 28px 28px 7px; }
-.ppf-diagram-car .roof { left:77px; top:18px; width:52px; height:69px; border-radius:8px; }
-.ppf-diagram-car .doors { left:63px; top:7px; width:69px; height:91px; border-radius:7px; }
-.ppf-diagram-car .rear { left:18px; top:15px; width:40px; height:75px; border-radius:26px 5px 5px 26px; }
-.ppf-mobile-diagram:not(.is-full) .roof,.ppf-mobile-diagram:not(.is-full) .rear { background:transparent; border-color:#2c3750; box-shadow:none; }
-.ppf-mobile-diagram.is-heavy .ppf-diagram-car i { background:rgba(164,183,255,.72); border-color:#c3cfff; box-shadow:0 0 20px rgba(139,165,255,.65); }
-.ppf-diagram-car b { position:absolute; z-index:2; inset:0; display:grid; place-items:center; color:#f1f1f1; font:italic 800 13px/1 var(--font-display); letter-spacing:.12em; }
-.ppf-mobile-diagram>p { margin:22px 0 0; color:#f1f1f1; font-size:10px; font-weight:800; letter-spacing:.12em; text-align:center; text-transform:uppercase; }
-.ppf-mobile-diagram>p small { display:block; margin:9px auto 0; color:rgba(255,255,255,.5); font-size:7px; font-weight:500; line-height:1.6; letter-spacing:.08em; }
 .ppf-package-panel { padding:clamp(28px,3vw,42px); border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.055); backdrop-filter:blur(14px); }
 .ppf-panel-head { display:flex; justify-content:space-between; gap:20px; padding-bottom:27px; border-bottom:1px solid rgba(255,255,255,.13); }
 .ppf-panel-head h3 { max-width:370px; margin:9px 0 7px; font-family:var(--font-display); font-size:clamp(27px,2.6vw,40px); font-style:italic; line-height:.95; text-transform:uppercase; }
@@ -410,8 +396,8 @@ button { cursor: pointer; }
   .visualizer-grid{gap:14px}
   .car-canvas{min-height:385px;height:385px}
   .car-canvas>span{display:none}
-  .ppf-canvas-stage{display:none}
-  .ppf-mobile-diagram{position:absolute;inset:80px 16px 56px;display:grid;align-content:center}
+  .ppf-canvas-stage{display:block;touch-action:none}
+  .ppf-canvas-stage canvas{display:block;width:100%!important;height:100%!important}
   .ppf-canvas-label{left:16px;top:16px}
   .ppf-canvas-label strong{font-size:14px}
   .ppf-coverage-legend{left:16px;right:16px;bottom:34px;font-size:6px}
