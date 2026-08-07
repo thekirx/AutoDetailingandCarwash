@@ -105,6 +105,8 @@ describe('Public branding assets and scope', () => {
     assert.doesNotMatch(css, /\.other-service-card a\s*\{/)
     assert.match(css, /\.other-service-card>div\s*\{[^}]*min-height:auto/s)
     assert.match(css, /\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(260px,\.72fr\) minmax\(0,2\.28fr\)/s)
+    assert.match(css, /\.ceramic-intro\s*\{[^}]*container-type:inline-size/s)
+    assert.match(css, /\.ceramic-intro h2\s*\{[^}]*font-size:clamp\(3rem,18cqi,5\.4rem\)/s)
     assert.match(css, /\.ceramic-package-name\s*\{[^}]*writing-mode:vertical-rl/s)
     assert.match(css, /\.ceramic-package-overlay\s*\{[^}]*rgba\(5,38,153,\.3/s)
   })

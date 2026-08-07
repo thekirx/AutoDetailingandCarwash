@@ -206,9 +206,9 @@ button { cursor: pointer; }
 .coating-section { padding:clamp(68px,7vw,108px) 0; background:#f1f1ed; }
 .coating-section .public-shell { width:min(100% - 48px,1500px); }
 .ceramic-layout { display:grid; grid-template-columns:minmax(260px,.72fr) minmax(0,2.28fr); align-items:stretch; }
-.ceramic-intro { min-width:0; padding:clamp(88px,8vw,132px) clamp(24px,3.2vw,50px) 64px 0; }
+.ceramic-intro { min-width:0; container-type:inline-size; padding:clamp(88px,8vw,132px) clamp(24px,3.2vw,50px) 64px 0; }
 .ceramic-intro>p { margin:0 0 14px; color:#052699; font-size:12px; font-weight:700; }
-.ceramic-intro h2 { margin:0; color:#303030; font-family:var(--font-public-display); font-size:clamp(3.45rem,4.6vw,5.4rem); font-style:normal; font-weight:800; line-height:.78; letter-spacing:-.065em; text-transform:uppercase; }
+.ceramic-intro h2 { margin:0; color:#303030; font-family:var(--font-public-display); font-size:clamp(3rem,18cqi,5.4rem); font-style:normal; font-weight:800; line-height:.78; letter-spacing:-.065em; text-transform:uppercase; }
 .ceramic-intro h2 span { display:block; }
 .ceramic-intro>div { max-width:300px; margin-top:34px; color:#474747; font-family:var(--font-public-body); font-size:14px; line-height:1.45; }
 .ceramic-package-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
