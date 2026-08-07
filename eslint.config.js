@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist', '.worktrees', 'public/push-sw.js', 'dev-dist'] },
+  { ignores: ['dist', '.vercel', '.worktrees', 'public/push-sw.js', 'dev-dist'] },
   js.configs.recommended,
   react.configs.flat.recommended,
   react.configs.flat['jsx-runtime'],

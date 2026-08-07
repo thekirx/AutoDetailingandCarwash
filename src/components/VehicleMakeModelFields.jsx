@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import SuggestInput from './SuggestInput'
-import { filterVehicleMakes, filterVehicleModels, PH_VEHICLE_MAKES, modelsForMake } from '../lib/phVehicles'
+import {
+  catalogMakes,
+  catalogRowsToMap,
+  filterCatalogMakes,
+  filterCatalogModels,
+  modelsForCatalogMake,
+  resolveCatalogMake,
+} from '../lib/vehicleCatalog'
 import { supabase } from '../lib/supabase'
 
 const FLOOR_INPUT =
   'mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white outline-none focus:border-blue-300/60'
 const PUBLIC_INPUT = undefined
+const SUGGEST_LIMIT = 40
 
 let cachedCatalog = null
 let catalogPromise = null
@@ -20,15 +28,12 @@ async function loadCatalogMap() {
       .order('make')
       .order('sort_order')
       .then(({ data, error }) => {
-        if (error || !data?.length) {
+        if (error) {
           cachedCatalog = null
-          return null
+          throw error
         }
-        const map = {}
-        for (const row of data) {
-          if (!map[row.make]) map[row.make] = []
-          if (!map[row.make].includes(row.model)) map[row.make].push(row.model)
-        }
+        // Same source as Super Admin Cars (active rows only). Empty = empty picker — no static fork.
+        const map = catalogRowsToMap(data || [])
         cachedCatalog = map
         return map
       })
@@ -39,14 +44,9 @@ async function loadCatalogMap() {
   return catalogPromise
 }
 
-function makesFromMap(map) {
-  return Object.keys(map || {}).sort((a, b) => a.localeCompare(b))
-}
-
 /**
- * Brand + model smart search for PH market.
- * Prefers Super Admin vehicle_catalog when present; else static PH_VEHICLE_CATALOG.
- * Subscribes to realtime so TL/floor pickers see BossMich catalog edits without refresh.
+ * Brand + model smart search.
+ * Source of truth: Super Admin `vehicle_catalog` (is_active). No static PH fallback.
  */
 export default function VehicleMakeModelFields({
   make,
@@ -59,19 +59,28 @@ export default function VehicleMakeModelFields({
   modelLabel = 'Vehicle model',
 }) {
   const [dbMap, setDbMap] = useState(cachedCatalog)
+  const [loadState, setLoadState] = useState(cachedCatalog ? 'ready' : 'loading')
 
   useEffect(() => {
     let alive = true
     function apply(map) {
-      if (alive) setDbMap(map)
+      if (!alive) return
+      setDbMap(map)
+      setLoadState(Object.keys(map || {}).length ? 'ready' : 'empty')
     }
-    loadCatalogMap().then(apply)
+    function fail() {
+      if (!alive) return
+      setDbMap(null)
+      setLoadState('error')
+    }
+    setLoadState((s) => (s === 'ready' && cachedCatalog ? 'ready' : 'loading'))
+    loadCatalogMap().then(apply).catch(fail)
 
     const channel = supabase
       .channel(`vehicle-catalog-picker:${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicle_catalog' }, () => {
         clearVehicleCatalogCache()
-        loadCatalogMap().then(apply)
+        loadCatalogMap().then(apply).catch(fail)
       })
       .subscribe()
 
@@ -81,32 +90,24 @@ export default function VehicleMakeModelFields({
     }
   }, [])
 
-  const makeList = useMemo(() => {
-    if (dbMap) return makesFromMap(dbMap)
-    return PH_VEHICLE_MAKES
-  }, [dbMap])
+  const makeList = useMemo(() => catalogMakes(dbMap), [dbMap])
 
-  const makeOptions = useMemo(() => {
-    const q = String(make || '').trim().toLowerCase()
-    if (!q) return makeList.slice(0, 14)
-    return makeList.filter((m) => m.toLowerCase().includes(q)).slice(0, 14)
-  }, [make, makeList])
+  const makeOptions = useMemo(
+    () => (dbMap ? filterCatalogMakes(dbMap, make, SUGGEST_LIMIT) : []),
+    [dbMap, make],
+  )
 
-  const modelOptions = useMemo(() => {
-    if (dbMap) {
-      const key = makeList.find((m) => m.toLowerCase() === String(make || '').trim().toLowerCase())
-      const models = key ? dbMap[key] || [] : []
-      const q = String(model || '').trim().toLowerCase()
-      if (!q) return models.slice(0, 14)
-      return models.filter((m) => m.toLowerCase().includes(q)).slice(0, 14)
-    }
-    const known = modelsForMake(make)
-    if (known.length) return filterVehicleModels(make, model, 14)
-    return filterVehicleModels(make, model, 14)
-  }, [make, model, dbMap, makeList])
+  const modelOptions = useMemo(
+    () => (dbMap ? filterCatalogModels(dbMap, make, model, SUGGEST_LIMIT) : []),
+    [dbMap, make, model],
+  )
 
   const inputClass =
-    variant === 'floor' ? FLOOR_INPUT : variant === 'crm' ? 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none' : PUBLIC_INPUT
+    variant === 'floor'
+      ? FLOOR_INPUT
+      : variant === 'crm'
+        ? 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none'
+        : PUBLIC_INPUT
 
   const labelClass =
     variant === 'floor'
@@ -115,21 +116,30 @@ export default function VehicleMakeModelFields({
         ? 'flex flex-col gap-2 text-sm font-medium'
         : ''
 
+  const statusHint =
+    loadState === 'loading'
+      ? 'Loading brand list from Cars catalog…'
+      : loadState === 'error'
+        ? 'Could not load Cars catalog. Refresh and try again.'
+        : loadState === 'empty'
+          ? 'Cars catalog is empty. Super Admin can add brands under Operations → Cars.'
+          : null
+
   return (
     <>
       <SuggestInput
         label={makeLabel}
         value={make}
         required={required}
-        placeholder="Toyota, Mitsubishi…"
-        options={makeOptions.length ? makeOptions : makeList.slice(0, 12)}
+        placeholder={loadState === 'ready' ? 'Toyota, Mitsubishi…' : 'Loading brands…'}
+        options={makeOptions.length ? makeOptions : makeList.slice(0, SUGGEST_LIMIT)}
         className={labelClass}
         inputClassName={inputClass}
+        disabled={loadState === 'loading'}
         onChange={(next) => {
-          onMakeChange(next)
-          const allowed = dbMap
-            ? (dbMap[makeList.find((m) => m.toLowerCase() === String(next || '').trim().toLowerCase())] || [])
-            : modelsForMake(next)
+          const canonical = resolveCatalogMake(dbMap, next)
+          onMakeChange(canonical || next)
+          const allowed = modelsForCatalogMake(dbMap, canonical || next)
           if (model && allowed.length && !allowed.some((m) => m.toLowerCase() === model.toLowerCase())) {
             onModelChange('')
           }
@@ -143,12 +153,23 @@ export default function VehicleMakeModelFields({
         options={modelOptions}
         className={labelClass}
         inputClassName={inputClass}
-        onChange={onModelChange}
+        disabled={loadState === 'loading' || !make}
+        onChange={(next) => {
+          const models = modelsForCatalogMake(dbMap, make)
+          const hit = models.find((m) => m.toLowerCase() === String(next || '').trim().toLowerCase())
+          onModelChange(hit || next)
+        }}
       />
+      {statusHint && variant === 'public' ? (
+        <p className="field-hint booking-span-2" role="status">
+          {statusHint}
+        </p>
+      ) : null}
     </>
   )
 }
 
 export function clearVehicleCatalogCache() {
   cachedCatalog = null
+  catalogPromise = null
 }

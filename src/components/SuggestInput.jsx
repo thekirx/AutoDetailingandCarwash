@@ -24,10 +24,9 @@ export default function SuggestInput({
   const [active, setActive] = useState(0)
 
   const filtered = useMemo(() => {
-    const q = String(value || '').trim().toLowerCase()
-    if (!q) return options.slice(0, 12)
-    return options.filter((o) => String(o).toLowerCase().includes(q)).slice(0, 12)
-  }, [options, value])
+    // Options are already filtered/limited by the catalog caller (Super Admin source).
+    return options.slice(0, 40)
+  }, [options])
 
   const pick = (next) => {
     onChange(next)

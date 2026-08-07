@@ -3,6 +3,21 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/api/booking-status", "destination": "/api/bookings?operation=booking-status" },
+    { "source": "/api/busybee", "destination": "/api/notifications?operation=busybee" },
+    { "source": "/api/customer-auth-lookup", "destination": "/api/customer?operation=customer-auth-lookup" },
+    { "source": "/api/customer-portal", "destination": "/api/customer?operation=customer-portal" },
+    { "source": "/api/customer-signup", "destination": "/api/customer?operation=customer-signup" },
+    { "source": "/api/data-center", "destination": "/api/data-center?operation=data-center" },
+    { "source": "/api/notify-booking", "destination": "/api/notifications?operation=notify-booking" },
+    { "source": "/api/plate-lookup", "destination": "/api/bookings?operation=plate-lookup" },
+    { "source": "/api/provision-customer", "destination": "/api/customer?operation=provision-customer" },
+    { "source": "/api/provision-staff", "destination": "/api/staff?operation=provision-staff" },
+    { "source": "/api/public-book", "destination": "/api/bookings?operation=public-book" },
+    { "source": "/api/push-subscribe", "destination": "/api/notifications?operation=push-subscribe" },
+    { "source": "/api/send-finance-quote", "destination": "/api/finance?operation=send-finance-quote" },
+    { "source": "/api/send-push", "destination": "/api/notifications?operation=send-push" },
+    { "source": "/api/update-staff", "destination": "/api/staff?operation=update-staff" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [

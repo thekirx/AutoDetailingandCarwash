@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import { access } from 'node:fs/promises'
 import { describe, it } from 'node:test'
-import { aboutImage, services } from '../src/data/publicHomeContent.js'
+import {
+  aboutImage,
+  ceramicPackages,
+  featuredServices,
+  otherServices,
+  services,
+} from '../src/data/publicHomeContent.js'
 
 describe('Public homepage content assets', () => {
   it('maps seven available services to local images', async () => {
@@ -35,5 +41,32 @@ describe('Public homepage content assets', () => {
   it('maps the dedicated About Us image', async () => {
     assert.match(new URL(aboutImage).pathname, /about-hkm-21\.webp$/)
     await access(new URL(aboutImage))
+  })
+
+  it('maps the approved featured and ceramic WebP assets', async () => {
+    assert.deepEqual(featuredServices.map(({ title, image }) => [title, new URL(image).pathname.split('/').at(-1)]), [
+      ['PAINT PROTECTION FILM', 'paint-protection-film.webp'],
+      ['CERAMIC COATING', 'ceramic-coating.webp'],
+      ['DETAILING', 'detailing.webp'],
+    ])
+    assert.deepEqual(ceramicPackages.map(({ title, bgImage }) => [title, new URL(bgImage).pathname.split('/').at(-1)]), [
+      ['CLASSIC', 'ceramic-classic.webp'],
+      ['PREMIUM', 'ceramic-premium.webp'],
+      ['PLATINUM', 'ceramic-platinum.webp'],
+    ])
+    await Promise.all([
+      ...featuredServices.map(({ image }) => access(new URL(image))),
+      ...ceramicPackages.map(({ bgImage }) => access(new URL(bgImage))),
+    ])
+  })
+
+  it('keeps exactly four bookable other services with local images', async () => {
+    assert.deepEqual(otherServices.map(({ title }) => title), [
+      'CARWASH',
+      'INTERIOR DETAILING',
+      'GLASS DETAILING',
+      'ENGINE WASH',
+    ])
+    await Promise.all(otherServices.map(({ image }) => access(new URL(image))))
   })
 })
