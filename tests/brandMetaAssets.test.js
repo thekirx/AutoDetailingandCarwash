@@ -52,4 +52,14 @@ describe('Browser and social brand assets', () => {
       { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ])
   })
+
+  it('supports iPhone Home Screen fullscreen safe areas', async () => {
+    const html = await readFile(projectFile('index.html'), 'utf8')
+    const manifest = JSON.parse(await readFile(projectFile('public/manifest.webmanifest'), 'utf8'))
+
+    assert.match(html, /content="width=device-width, initial-scale=1\.0, viewport-fit=cover"/)
+    assert.match(html, /<meta name="apple-mobile-web-app-capable" content="yes"/)
+    assert.match(html, /<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/)
+    assert.equal(manifest.display, 'standalone')
+  })
 })
