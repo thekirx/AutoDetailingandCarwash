@@ -29,11 +29,11 @@ describe('Mobile public experience', () => {
     assert.match(css, /\.mobile-nav\s*\{[^}]*100dvh[^}]*safe-area-inset-top/s)
   })
 
-  it('matches the Safari browser inset to the translucent header surface', async () => {
+  it('uses the closest stable Hakum blue for the Safari browser inset', async () => {
     const html = await readFile(projectFile('index.html'), 'utf8')
 
-    assert.match(html, /<meta name="theme-color" content="rgb\(74, 81, 110\)"/)
-    assert.match(html, /html,body,#root\{min-height:100%;background:rgb\(74 81 110\)\}/)
+    assert.match(html, /<meta name="theme-color" content="rgb\(2, 10, 49\)"/)
+    assert.match(html, /html,body,#root\{min-height:100%;background:rgb\(2 10 49\)\}/)
   })
 
   it('uses safe intrinsic logo dimensions during the initial Safari render', async () => {
