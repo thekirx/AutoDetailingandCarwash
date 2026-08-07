@@ -46,8 +46,8 @@
 }
 
 * { box-sizing: border-box; }
-html { min-height:100%; background:#020a31; }
-body { margin: 0; min-width: 320px; min-height: 100vh; background:#020a31; color: var(--foreground); }
+html { min-height:100%; background:rgb(74 81 110); }
+body { margin: 0; min-width: 320px; min-height: 100vh; background:rgb(74 81 110); color: var(--foreground); }
 button, input { font: inherit; }
 button { cursor: pointer; }
 
