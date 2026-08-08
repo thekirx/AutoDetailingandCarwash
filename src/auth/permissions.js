@@ -366,8 +366,8 @@ export function getTeamLeadDock(profile) {
   const canEdit = canEditQueueOperations(profile)
   const canBook = canAccessBookingBoard(profile)
   const dock = []
-  if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
   if (canQueue) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
+  if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
   if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
   if (canQueue) dock.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
   if (canBook) dock.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
@@ -402,7 +402,7 @@ export function redirectForRole(role) {
   }
   if (role === ROLES.ADMIN) return '/operations/pos'
   if (role === ROLES.STAFF) return '/operations/my-tasks'
-  if (role === ROLES.TEAM_LEAD) return '/operations/dashboard'
+  if (role === ROLES.TEAM_LEAD) return '/operations/queue'
   if (role === ROLES.MARKETING) return '/operations/crm'
   // legacy
   if (role === DEPRECATED_ROLES.CASHIER || role === DEPRECATED_ROLES.SALES) return '/operations/pos'

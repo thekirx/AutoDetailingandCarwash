@@ -63,8 +63,9 @@ describe('Team Lead capability matrix', () => {
     assert.equal(canOverrideAttendance(p), false)
     assert.equal(canEditAttendanceSettings(p), false)
     assert.equal(canCreateBranches(p), false)
-    assert.equal(redirectForRole(ROLES.TEAM_LEAD), '/operations/dashboard')
+    assert.equal(redirectForRole(ROLES.TEAM_LEAD), '/operations/queue')
     assert.ok(getTeamLeadDock(p).some((i) => i.to === '/operations/queue/new'))
+    assert.equal(getTeamLeadDock(p)[0].to, '/operations/queue')
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/pos'))
   })
 

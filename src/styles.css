@@ -2428,6 +2428,343 @@ html:not(.dark) .floor-dock-item-active {
   cursor: pointer;
 }
 
+/* Team Lead Queue Manager — mobile-first legacy port (cars only) */
+.qmgr {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-bottom: 1.25rem;
+}
+.qmgr-header { padding-top: 0.15rem; }
+.qmgr-title {
+  margin: 0;
+  font-size: clamp(1.55rem, 5.5vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+.qmgr-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted-foreground);
+}
+.qmgr-cars-only { display: flex; }
+.qmgr-cars-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.9rem;
+  background: color-mix(in oklab, var(--color-brand-primary, #052699) 88%, black);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.qmgr-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.15rem;
+  width: 100%;
+  border-radius: 0.95rem;
+  background: var(--color-brand-primary, #052699);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s;
+}
+.qmgr-add-btn:active { transform: scale(0.98); }
+.qmgr-panel {
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+  padding: 0.9rem;
+}
+.qmgr-showing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+.qmgr-search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.85rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: var(--background);
+  color: var(--muted-foreground);
+}
+.qmgr-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.95rem;
+  outline: none;
+}
+.qmgr-filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+.qmgr-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.6rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  background: color-mix(in oklab, var(--muted) 55%, transparent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.qmgr-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.qmgr-history-btn {
+  min-height: 2.4rem;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: color-mix(in oklab, var(--color-brand-primary, #052699) 92%, white);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.qmgr-history-btn:disabled { opacity: 0.6; cursor: wait; }
+.qmgr-history-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.65rem;
+  align-items: center;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+.qmgr-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+.qmgr-status-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-height: 4.5rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.95rem;
+  background: color-mix(in oklab, var(--card) 90%, transparent);
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.qmgr-status-card:active { transform: scale(0.98); }
+.qmgr-status-card-active {
+  border-color: transparent;
+  background: var(--color-brand-primary, #052699);
+  color: #fff;
+}
+.qmgr-status-card-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.qmgr-status-card-value {
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.qmgr-status-card-total {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #34d399;
+}
+.qmgr-status-card-active .qmgr-status-card-total { color: #a7f3d0; }
+.qmgr-list {
+  display: grid;
+  gap: 0.7rem;
+}
+.qmgr-card {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--card) 94%, transparent);
+  overflow: hidden;
+}
+.qmgr-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.9rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.qmgr-plate {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.6rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-brand-primary, #052699) 85%, white);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.qmgr-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.55rem;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, #34d399 40%, transparent);
+  color: #6ee7b7;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.qmgr-status-waiting { border-color: color-mix(in oklab, #60a5fa 40%, transparent); color: #93c5fd; }
+.qmgr-status-in_progress { border-color: color-mix(in oklab, #34d399 40%, transparent); color: #6ee7b7; }
+.qmgr-status-final_checking { border-color: color-mix(in oklab, #fbbf24 40%, transparent); color: #fcd34d; }
+.qmgr-status-completed { border-color: color-mix(in oklab, #34d399 40%, transparent); color: #6ee7b7; }
+.qmgr-status-cancelled { border-color: color-mix(in oklab, #f87171 40%, transparent); color: #fca5a5; }
+.qmgr-chevron {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted) 60%, transparent);
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+.qmgr-card-body {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 0.9rem 0.95rem;
+  border-top: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  padding-top: 0.85rem;
+}
+.qmgr-meta-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.qmgr-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem 0.85rem;
+}
+.qmgr-meta-value {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.qmgr-meta-money { color: #34d399; font-variant-numeric: tabular-nums; }
+.qmgr-service-pill {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid color-mix(in oklab, var(--color-brand-primary, #052699) 45%, transparent);
+  border-radius: 999px;
+  color: #93c5fd;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.qmgr-crew-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.qmgr-open-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.85rem;
+  width: 100%;
+  border: 1px solid color-mix(in oklab, var(--color-brand-primary, #052699) 50%, transparent);
+  border-radius: 0.85rem;
+  background: color-mix(in oklab, var(--color-brand-primary, #052699) 14%, transparent);
+  color: #bfdbfe;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.qmgr-empty {
+  display: grid;
+  place-items: center;
+  gap: 0.45rem;
+  min-height: 10rem;
+  padding: 1.5rem;
+  border: 1px dashed var(--border);
+  border-radius: 1rem;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+.qmgr-empty-link {
+  margin-top: 0.35rem;
+  color: #93c5fd;
+  font-weight: 700;
+  text-decoration: none;
+}
+@media (min-width: 768px) {
+  .qmgr-status-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .qmgr-meta-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .qmgr { max-width: 52rem; }
+}
+
 /* Brand / model suggest (floor + booking) */
 .suggest-field {
   position: relative;

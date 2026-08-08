@@ -231,6 +231,41 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
   }
 }
 
+/**
+ * Team Lead Queue Manager day board: active floor lanes + same-day completed/cancelled
+ * for status tiles, peso totals, and plate history (legacy QueueList port, cars only).
+ */
+export async function fetchTeamLeadDayBoard(profile, { branchFilter = 'all', day = null } = {}) {
+  const snapshot = await fetchOperationsSnapshot(profile, { branchFilter })
+  const dayKey = day || getTodayDate()
+  if (requiresTeamLeadBranchSetup(profile)) {
+    return { ...snapshot, dayTickets: [], completedTotalMinor: 0 }
+  }
+
+  const branchScope = resolveBranchFilter(profile, branchFilter)
+  let dayQuery = supabase
+    .from('operations_queue_board')
+    .select(QUEUE_BOARD_SELECT)
+    .in('status', ['completed', 'cancelled'])
+    .eq('queue_date', dayKey)
+    .order('created_at', { ascending: false })
+    .limit(300)
+  dayQuery = scopedQuery(dayQuery, branchScope)
+  const { data, error } = await dayQuery
+  if (error) throw formatQueueActionError(error)
+
+  const dayTickets = data || []
+  const completedTotalMinor = dayTickets
+    .filter((row) => row.status === 'completed')
+    .reduce((sum, row) => sum + Number(row.final_price_minor ?? row.base_price_minor ?? 0), 0)
+
+  return {
+    ...snapshot,
+    dayTickets,
+    completedTotalMinor,
+  }
+}
+
 const EMPTY_SALES_SUMMARY = aggregateDailySalesSummary([])
 
 /** Branch-scoped sales totals + recent paid rows for Floor board (TL/Admin viewers). */

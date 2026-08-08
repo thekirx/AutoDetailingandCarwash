@@ -27,6 +27,7 @@ import { splitCustomerName } from '../lib/phVehicles'
 import { canAccessPos, canEditAttendanceRoles, canEditAttendanceSettings, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES } from '../auth/permissions'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import QueueTicketEditor from '../components/QueueTicketEditor'
+import TeamLeadQueuePage from './TeamLeadQueuePage'
 import {
   formatQueueNumber,
   getBranchScope,
@@ -592,6 +593,13 @@ export function OperationsDashboardPage() {
 }
 
 export function OperationsQueuePage() {
+  const { profile } = useAuth()
+  // Team Lead gets the dedicated mobile-first Queue Manager (legacy port).
+  if (profile?.role === 'team_lead') return <TeamLeadQueuePage />
+  return <OperationsQueueBoardPage />
+}
+
+function OperationsQueueBoardPage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
   const seeAll = canSeeAllBranches(profile)
   const seeRedo = canViewRedoLane(profile)

@@ -129,7 +129,7 @@ function FloorOpsShell({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-black tracking-[0.14em]">{brand.title}</p>
+            <p className="truncate text-sm font-black tracking-[0.06em] sm:tracking-[0.14em]">{brand.title}</p>
             <span className="floor-live-pill" aria-live="polite">
               <span className="floor-live-dot" aria-hidden />
               LIVE
@@ -250,9 +250,9 @@ function TeamLeadFloorShell({ profile, signOut }) {
       profile={profile}
       signOut={signOut}
       brand={{
-        title: 'HAKUM FLOOR',
+        title: 'Hakum Auto Care',
         fallbackName: 'Team Lead',
-        icon: <ClipboardList size={18} />,
+        icon: <span className="font-black italic tracking-tight">H</span>,
       }}
       dock={dock}
       more={more}
