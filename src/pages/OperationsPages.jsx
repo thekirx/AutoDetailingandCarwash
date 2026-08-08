@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   UserPlus,
   Users,
+  Wallet,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
@@ -43,6 +44,7 @@ import {
   DASHBOARD_DATE_PRESETS,
   STATUS_LABELS,
 } from '../queue/queueLogic'
+import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import {
   addStaffMember,
   acknowledgeQueueAssignment,
@@ -50,6 +52,7 @@ import {
   createQueueTicket,
   deactivateCrewStaffMember,
   fetchBranches,
+  fetchBranchSalesBoard,
   fetchOperationsSnapshot,
   fetchServices,
   formatMoney,
@@ -233,10 +236,13 @@ export function OperationsDashboardPage() {
     if (Array.isArray(scopeList) && scopeList[0]) return scopeList[0]
     return getBranchScope(profile) || 'all'
   })
-  const [datePreset, setDatePreset] = useState('3mo')
+  const [datePreset, setDatePreset] = useState('today')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const [branches, setBranches] = useState([])
+  const [salesBoard, setSalesBoard] = useState({ summary: null, recentSales: [] })
+  const [salesError, setSalesError] = useState('')
+  const [salesLoading, setSalesLoading] = useState(true)
   const { activeQueue, availableStaff, busyStaff, events, handoffs, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter)
   const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
   const visibleQueue = useMemo(
@@ -245,6 +251,8 @@ export function OperationsDashboardPage() {
   )
   const counts = useMemo(() => getQueueCounts(visibleQueue, { includeRedo: seeRedo }), [visibleQueue, seeRedo])
   const range = useMemo(() => getDashboardDateRange(datePreset, customStart, customEnd), [datePreset, customStart, customEnd])
+  const rangeStartDate = useMemo(() => getLocalCalendarDate(range.start), [range.start])
+  const rangeEndDate = useMemo(() => getLocalCalendarDate(range.end), [range.end])
   const filteredEvents = useMemo(
     () => (events || []).filter((e) => {
       const t = new Date(e.created_at).getTime()
@@ -265,15 +273,49 @@ export function OperationsDashboardPage() {
     () => visibleQueue.filter((t) => isSuspiciousTiming(t, timingWarnings)),
     [visibleQueue, timingWarnings],
   )
+  const salesSummary = salesBoard.summary || {
+    total_sales_minor: 0,
+    cash_sales_minor: 0,
+    online_sales_minor: 0,
+    paid_count: 0,
+    average_ticket_minor: 0,
+  }
+
+  const loadSales = useCallback(async () => {
+    setSalesError('')
+    setSalesLoading(true)
+    try {
+      const data = await fetchBranchSalesBoard(profile, {
+        branchFilter,
+        startDate: rangeStartDate,
+        endDate: rangeEndDate,
+      })
+      setSalesBoard(data)
+    } catch (err) {
+      setSalesError(err.message || 'Unable to load sales')
+      setSalesBoard({ summary: null, recentSales: [] })
+    } finally {
+      setSalesLoading(false)
+    }
+  }, [profile, branchFilter, rangeStartDate, rangeEndDate])
+
+  useEffect(() => {
+    loadSales()
+  }, [loadSales])
 
   useEffect(() => {
     if (!seeAll && !(Array.isArray(scopeList) && scopeList.length > 1)) return
     fetchBranches().then(setBranches).catch(() => setBranches([]))
   }, [seeAll, scopeList])
 
+  const refreshAll = useCallback(() => {
+    reload()
+    loadSales()
+  }, [reload, loadSales])
+
   if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
-  if (error) return <ErrorState error={error} onRetry={reload} />
+  if (error) return <ErrorState error={error} onRetry={refreshAll} />
 
   const scopedBranchRows = Array.isArray(scopeList)
     ? branches.filter((b) => scopeList.includes(b.slug))
@@ -289,6 +331,12 @@ export function OperationsDashboardPage() {
         ]
       : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
 
+  const branchLabel = !seeAll && branchOptions.length <= 1
+    ? (getBranchScope(profile) || 'unassigned')
+    : branchFilter === 'all'
+      ? (seeAll ? 'All branches' : 'All my branches')
+      : branchFilter
+
   return (
     <section>
       <PageHeader
@@ -297,10 +345,10 @@ export function OperationsDashboardPage() {
         description={
           profile?.role === 'admin'
             ? 'Watch waiting cars and tickets ready for POS.'
-            : 'Track queue volume, crew availability, and handoffs ready for POS checkout.'
+            : 'Queue volume, crew, handoffs, and paid sales for your branch.'
         }
         live={live}
-        action={<RefreshButton loading={loading} onClick={reload} />}
+        action={<RefreshButton loading={loading || salesLoading} onClick={refreshAll} />}
       />
       <div className="mt-4 flex flex-col gap-3 sm:mt-5 sm:flex-row sm:flex-wrap sm:items-end">
         {(seeAll || branchOptions.length > 1) && (
@@ -312,7 +360,7 @@ export function OperationsDashboardPage() {
           </label>
         )}
         {!seeAll && branchOptions.length <= 1 && (
-          <p className="rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground">Branch · {getBranchScope(profile) || 'unassigned'}</p>
+          <p className="rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground">Branch · {branchLabel}</p>
         )}
         <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
           Date range
@@ -340,6 +388,31 @@ export function OperationsDashboardPage() {
         {seeRedo ? <MetricCard label="Redo" value={counts.redo} icon={ShieldAlert} tone="amber" /> : null}
         <MetricCard label="Total Active" value={counts.total} icon={ClipboardList} />
       </div>
+      <div className="mt-3 grid gap-3 grid-cols-2 sm:mt-4 sm:gap-4 xl:grid-cols-4">
+        <MetricCard
+          label="Sales total"
+          value={salesLoading && !salesBoard.summary ? '…' : formatMoney(salesSummary.total_sales_minor)}
+          icon={Wallet}
+          tone="green"
+        />
+        <MetricCard label="Paid sales" value={salesSummary.paid_count} icon={CheckCircle2} />
+        <MetricCard
+          label="Cash"
+          value={formatMoney(salesSummary.cash_sales_minor)}
+          icon={Wallet}
+        />
+        <MetricCard
+          label="Online / card"
+          value={formatMoney(salesSummary.online_sales_minor)}
+          icon={Wallet}
+          tone="amber"
+        />
+      </div>
+      {salesError ? (
+        <p className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-950 dark:text-red-100" role="alert">
+          {salesError}
+        </p>
+      ) : null}
       {timingFlags.length > 0 && (
         <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
           <ShieldAlert size={16} aria-hidden />
@@ -395,6 +468,54 @@ export function OperationsDashboardPage() {
           </div>
         </Panel>
       </div>
+      <Panel title={`Paid sales · ${branchLabel}`} icon={Wallet} className="mt-4 sm:mt-5">
+        <p className="mb-3 text-sm text-muted-foreground">
+          {formatMoney(salesSummary.total_sales_minor)} across {salesSummary.paid_count} paid sale
+          {salesSummary.paid_count === 1 ? '' : 's'}
+          {salesSummary.paid_count > 0 ? ` · avg ${formatMoney(salesSummary.average_ticket_minor)}` : ''}
+          {' · '}
+          {rangeStartDate === rangeEndDate ? rangeStartDate : `${rangeStartDate} → ${rangeEndDate}`}
+        </p>
+        <div className="grid max-h-72 gap-3 overflow-y-auto sm:max-h-96">
+          {salesLoading && !salesBoard.recentSales?.length ? (
+            Array.from({ length: 3 }, (_, i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted" />)
+          ) : salesBoard.recentSales?.length ? (
+            salesBoard.recentSales.map((sale) => {
+              const booking = sale.bookings || {}
+              const customer = sale.customers || {}
+              const name = booking.customer_name || customer.full_name || 'Customer'
+              const plate = booking.vehicle_plate || '—'
+              const service = booking.services?.name || sale.notes || 'Sale'
+              const qNum = booking.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : null
+              return (
+                <div key={sale.id} className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">
+                        {name}
+                        {qNum ? ` · ${qNum}` : ''}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {sale.branch} · {plate} · {service}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {(sale.payment_method || 'paid').replace(/_/g, ' ')}
+                        {' · '}
+                        {sale.occurred_at ? new Date(sale.occurred_at).toLocaleString() : '—'}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-base font-semibold tabular-nums text-foreground sm:text-lg">
+                      {formatMoney(sale.total_minor)}
+                    </p>
+                  </div>
+                </div>
+              )
+            })
+          ) : (
+            <EmptyLine text="No paid sales in this range for your branch." />
+          )}
+        </div>
+      </Panel>
       <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
         <div className="grid max-h-64 gap-3 overflow-y-auto sm:max-h-80">
           {filteredEvents.length ? filteredEvents.slice(0, 20).map((event) => (

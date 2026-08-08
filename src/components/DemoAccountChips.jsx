@@ -1,6 +1,8 @@
-/** Compact demo account chips for ops / customer login — never in production builds. */
+import { isDemoLoginEnabled } from '../lib/demoLogin'
+
+/** Compact demo account chips for ops / customer login — DEV, Vercel preview, or VITE_ENABLE_DEMO_LOGIN. */
 export default function DemoAccountChips({ accounts, onPick, title = 'Demo accounts' }) {
-  if (!import.meta.env.DEV) return null
+  if (!isDemoLoginEnabled()) return null
   if (!accounts?.length) return null
   return (
     <div className="hakum-demo">

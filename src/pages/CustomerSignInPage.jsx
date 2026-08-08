@@ -9,6 +9,7 @@ import { AuthLegalLinks } from '../components/FormLegalNotice'
 import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
 import { canOfferPasswordEmailReset } from '../lib/uiDeadControls'
 import DemoAccountChips from '../components/DemoAccountChips'
+import { isDemoLoginEnabled } from '../lib/demoLogin'
 import { usePageMeta } from '../lib/pageMeta'
 
 async function authLookup(identifier, action = 'lookup') {
@@ -45,7 +46,7 @@ export default function CustomerSignInPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!import.meta.env.DEV) return undefined
+    if (!isDemoLoginEnabled()) return undefined
     let cancelled = false
     import('../lib/demoAccounts').then((m) => {
       if (!cancelled) setDemoCustomer(m.CUSTOMER_DEMO_ACCOUNT)

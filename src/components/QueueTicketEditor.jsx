@@ -15,9 +15,9 @@ import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, s
 import { supabase } from '../lib/supabase'
 import {
   formatQueueNumber,
+  getQueueTicketActionFlags,
   isSuspiciousTiming,
   parsePesoInputToMinor,
-  REDO_FROM_STATUSES,
   STATUS_LABELS,
 } from '../queue/queueLogic'
 import {
@@ -164,9 +164,10 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const showEditActions = showQueueTicketEditActions(canManageQueue)
   const showRedoBtn = showQueueRedoAction(canViewRedoLane(profile))
   const canOpenPos = canAccessPos(profile)
-  const canSendToPayment = canManageQueue && ticket.status === 'final_checking'
-  const canRedo = canManageQueue && showRedoBtn && REDO_FROM_STATUSES.includes(ticket.status)
-  const canRestartFromRedo = canManageQueue && showRedoBtn && ticket.status === 'redo'
+  const actions = getQueueTicketActionFlags(ticket.status, {
+    canManageQueue,
+    canViewRedoLane: showRedoBtn,
+  })
   const timingWarn = isSuspiciousTiming(ticket)
   const parsedPrice = Number(String(price).replace(/,/g, '').trim())
   const showLowPriceWarning = Number.isFinite(parsedPrice) && parsedPrice > 0 && parsedPrice < 50
@@ -247,21 +248,21 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
             <Panel title="Status Actions" icon={ArrowRight} className={variant === 'modal' ? 'shadow-none' : ''}>
               <div className="grid gap-2.5">
                 <ActionButton
-                  disabled={ticket.status !== 'waiting' && !canRestartFromRedo}
+                  disabled={!actions.canStart}
                   loading={saving === 'start'}
                   onClick={() => runAction('start', () => updateTicketStatus(ticket, 'in_progress'))}
                 >
                   Start Service
                 </ActionButton>
                 <ActionButton
-                  disabled={ticket.status !== 'in_progress'}
+                  disabled={!actions.canFinalCheck}
                   loading={saving === 'check'}
                   onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}
                 >
                   {finalCheckActionLabel(canOpenPos)}
                 </ActionButton>
                 <ActionButton
-                  disabled={!canSendToPayment}
+                  disabled={!actions.canSendToPayment}
                   loading={saving === 'payment'}
                   onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}
                 >
@@ -269,7 +270,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   {sendToPaymentActionLabel(canOpenPos)}
                 </ActionButton>
                 {showRedoBtn ? (
-                  <ActionButton disabled={!canRedo} loading={saving === 'redo'} onClick={() => runAction('redo', runRedo)}>
+                  <ActionButton disabled={!actions.canMarkRedo} loading={saving === 'redo'} onClick={() => runAction('redo', runRedo)}>
                     <ShieldAlert size={17} aria-hidden />
                     Mark redo
                   </ActionButton>

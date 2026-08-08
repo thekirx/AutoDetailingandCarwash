@@ -8,6 +8,7 @@ import { safeAuthReturnPath } from '../auth/authRedirect'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
+import { isDemoLoginEnabled } from '../lib/demoLogin'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -24,7 +25,7 @@ export default function LoginPage() {
   const returnPath = safeAuthReturnPath(location.state?.from?.pathname)
 
   useEffect(() => {
-    if (!import.meta.env.DEV) return undefined
+    if (!isDemoLoginEnabled()) return undefined
     let cancelled = false
     import('../lib/demoAccounts').then((m) => {
       if (!cancelled) setDemoAccounts(m.OPS_DEMO_ACCOUNTS)

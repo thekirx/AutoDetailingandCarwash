@@ -83,6 +83,43 @@ export function getOpsBoardStatuses(profile) {
   return canViewRedoLane(profile) ? OPS_BOARD_STATUSES : ACTIVE_QUEUE_STATUSES
 }
 
+/**
+ * Allowed direct status updates via updateTicketStatus (not redo RPC / POS complete).
+ * final_checking → for_payment is send_queue_ticket_to_payment (auto after final check).
+ */
+export const QUEUE_STATUS_TRANSITIONS = {
+  waiting: ['in_progress'],
+  in_progress: ['final_checking'],
+  final_checking: [],
+  for_payment: [],
+  redo: ['in_progress'],
+  completed: [],
+  cancelled: [],
+}
+
+export function canTransitionQueueStatus(fromStatus, toStatus) {
+  const from = String(fromStatus || '')
+  const to = String(toStatus || '')
+  return (QUEUE_STATUS_TRANSITIONS[from] || []).includes(to)
+}
+
+/**
+ * Which TL/editor ticket buttons are enabled for the current status.
+ * @param {string} status
+ * @param {{ canManageQueue?: boolean, canViewRedoLane?: boolean }} caps
+ */
+export function getQueueTicketActionFlags(status, { canManageQueue = false, canViewRedoLane: seeRedo = false } = {}) {
+  const s = String(status || '')
+  const edit = Boolean(canManageQueue)
+  return {
+    canStart: edit && (s === 'waiting' || (seeRedo && s === 'redo')),
+    canFinalCheck: edit && s === 'in_progress',
+    /** Stuck at final_checking (auto-handoff failed) or retry before POS. */
+    canSendToPayment: edit && s === 'final_checking',
+    canMarkRedo: edit && seeRedo && REDO_FROM_STATUSES.includes(s),
+  }
+}
+
 export function getQueueCounts(rows = [], { includeRedo = true } = {}) {
   const counts = { waiting: 0, in_progress: 0, final_checking: 0, redo: 0, total: 0 }
   const allowed = includeRedo ? OPS_BOARD_STATUSES : ACTIVE_QUEUE_STATUSES
@@ -166,6 +203,27 @@ export function filterPeopleForProfile(people = [], profile) {
         : []
     return slugs.some((s) => allowed.has(s))
   })
+}
+
+/** Sum daily_sales_summary rows (already branch-scoped by the query). */
+export function aggregateDailySalesSummary(rows = []) {
+  let total_sales_minor = 0
+  let cash_sales_minor = 0
+  let online_sales_minor = 0
+  let paid_count = 0
+  for (const row of rows) {
+    total_sales_minor += Number(row.total_sales_minor || 0)
+    cash_sales_minor += Number(row.cash_sales_minor || 0)
+    online_sales_minor += Number(row.online_sales_minor || 0)
+    paid_count += Number(row.paid_count || 0)
+  }
+  return {
+    total_sales_minor,
+    cash_sales_minor,
+    online_sales_minor,
+    paid_count,
+    average_ticket_minor: paid_count > 0 ? Math.round(total_sales_minor / paid_count) : 0,
+  }
 }
 
 export function getDashboardDateRange(preset, customStart, customEnd, now = new Date()) {

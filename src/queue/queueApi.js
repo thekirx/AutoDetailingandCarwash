@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase'
 import { getAccessTokenFresh } from '../lib/authToken'
 import {
+  aggregateDailySalesSummary,
+  canTransitionQueueStatus,
   DEFAULT_TIMING_WARNINGS,
   OPS_BOARD_STATUSES,
   REDO_FROM_STATUSES,
@@ -222,6 +224,55 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
     events: events.data || [],
     handoffs: handoffs.data || [],
     timingWarnings,
+  }
+}
+
+const EMPTY_SALES_SUMMARY = aggregateDailySalesSummary([])
+
+/** Branch-scoped sales totals + recent paid rows for Floor board (TL/Admin viewers). */
+export async function fetchBranchSalesBoard(profile, { branchFilter = 'all', startDate, endDate } = {}) {
+  if (requiresTeamLeadBranchSetup(profile)) {
+    return { summary: EMPTY_SALES_SUMMARY, daily: [], recentSales: [] }
+  }
+
+  const branchScope = resolveBranchFilter(profile, branchFilter)
+  if (branchScope === NO_BRANCH_SCOPE) {
+    return { summary: EMPTY_SALES_SUMMARY, daily: [], recentSales: [] }
+  }
+
+  const start = startDate || getLocalCalendarDate()
+  const end = endDate || start
+  const startIso = `${start}T00:00:00+08:00`
+  const endIso = `${end}T23:59:59.999+08:00`
+
+  let dailyQuery = supabase
+    .from('daily_sales_summary')
+    .select('branch, sale_date, paid_count, total_sales_minor, cash_sales_minor, online_sales_minor, average_ticket_minor')
+    .gte('sale_date', start)
+    .lte('sale_date', end)
+  dailyQuery = scopedQuery(dailyQuery, branchScope)
+
+  let recentQuery = supabase
+    .from('sales')
+    .select(
+      'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, queue_number, services(name))',
+    )
+    .eq('status', 'paid')
+    .gte('occurred_at', startIso)
+    .lte('occurred_at', endIso)
+    .order('occurred_at', { ascending: false })
+    .limit(24)
+  recentQuery = scopedQuery(recentQuery, branchScope)
+
+  const [dailyRes, recentRes] = await Promise.all([dailyQuery, recentQuery])
+  if (dailyRes.error) throw dailyRes.error
+  if (recentRes.error) throw recentRes.error
+
+  const daily = dailyRes.data || []
+  return {
+    summary: aggregateDailySalesSummary(daily),
+    daily,
+    recentSales: recentRes.data || [],
   }
 }
 
@@ -668,6 +719,11 @@ async function notifyBookingClient(bookingId, status) {
 }
 
 export async function updateTicketStatus(ticket, nextStatus) {
+  if (!canTransitionQueueStatus(ticket?.status, nextStatus)) {
+    throw new Error(
+      `Cannot move ticket from ${ticket?.status || 'unknown'} to ${nextStatus}. Refresh and try the next valid step.`,
+    )
+  }
   const profile = await getCurrentProfile({ required: false })
   const now = new Date().toISOString()
   const patch = { status: nextStatus }
