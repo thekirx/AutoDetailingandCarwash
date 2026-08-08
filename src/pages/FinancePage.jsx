@@ -155,9 +155,9 @@ export default function FinancePage() {
     [expenses],
   )
 
-  if (!canAccessFinance(profile)) return <Navigate to="/operations/access-denied" replace />
-
   const writableBranches = useMemo(() => filterBranchesForProfile(branches, profile), [branches, profile])
+
+  if (!canAccessFinance(profile)) return <Navigate to="/operations/access-denied" replace />
 
   const branchOptions = canSeeAllBranches(profile)
     ? [{ slug: 'all', name: 'All branches' }, ...branches]

@@ -163,6 +163,7 @@ export function mergeAttendancePeople(primaryRows = [], assignedRows = []) {
 export { format, addDays }
 
 // ponytail: self-check for merge + table flatten (ceiling: tiny assert; upgrade → vitest)
+// eslint-disable-next-line no-undef -- Node self-check only; absent in the browser bundle
 if (typeof process !== 'undefined' && process.env?.ATTENDANCE_SELF_CHECK === '1') {
   const merged = mergeAttendancePeople(
     [{ id: 'a', full_name: 'Staff A', role: 'staff' }],

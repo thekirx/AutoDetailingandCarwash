@@ -169,6 +169,7 @@ export default function VehicleMakeModelFields({
   )
 }
 
+/* eslint-disable-next-line react-refresh/only-export-components -- cache reset helper for tests/forms */
 export function clearVehicleCatalogCache() {
   cachedCatalog = null
   catalogPromise = null

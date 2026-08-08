@@ -104,7 +104,7 @@ for (const t of rlsTables) {
 results.push(`db.part_tables_readable: ok (${rlsTables.length})`)
 
 // Enum / columns: bookings redo + visit_group
-const { data: bookCols, error: bookErr } = await admin.from('bookings').select('id, visit_group_id, status').limit(1)
+const { error: bookErr } = await admin.from('bookings').select('id, visit_group_id, status').limit(1)
 assert(!bookErr, `bookings cols: ${bookErr?.message}`)
 results.push('db.bookings.visit_group: ok')
 

@@ -212,7 +212,10 @@ export default function CustomerSignInPage() {
   }
 
   const idKind = classifyIdentifier(identifier.trim())
-  const offerEmailReset = idKind === 'email' && canOfferPasswordEmailReset(identifier.trim())
+  // Plate/phone login can still receive mail when CRM has a real email (lookupEmail).
+  const offerEmailReset =
+    (idKind === 'email' && canOfferPasswordEmailReset(identifier.trim())) ||
+    canOfferPasswordEmailReset(lookupEmail)
 
   return (
     <HakumAuthShell
@@ -313,14 +316,13 @@ export default function CustomerSignInPage() {
             type="button"
             className="hakum-auth-text-btn"
             onClick={handleForgot}
-            disabled={sendingReset || !identifier.trim() || (idKind !== 'email' && idKind !== 'unknown')}
-            title={idKind === 'phone' || idKind === 'plate' ? 'Password reset needs a real email on file' : undefined}
+            disabled={sendingReset || !identifier.trim()}
           >
             {sendingReset ? 'Sending reset…' : 'Forgot password?'}
           </button>
         </div>
-        {(idKind === 'phone' || idKind === 'plate') ? (
-          <p className="hakum-auth-hint">Forgot password works with your email. Ask the shop to add one if you only use phone/plate.</p>
+        {(idKind === 'phone' || idKind === 'plate') && lookupEmail && !canOfferPasswordEmailReset(lookupEmail) ? (
+          <p className="hakum-auth-hint">This account has no real email on file, so reset mail cannot be sent. Ask the shop to add one.</p>
         ) : null}
         <button type="submit" className="hakum-auth-submit" disabled={submitting || setupStatus === 'needs_invite'}>
           {submitting ? 'Signing in…' : 'Sign in'}

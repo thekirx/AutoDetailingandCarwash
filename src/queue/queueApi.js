@@ -1,7 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { getAccessTokenFresh } from '../lib/authToken'
 import {
-  ACTIVE_QUEUE_STATUSES,
   DEFAULT_TIMING_WARNINGS,
   OPS_BOARD_STATUSES,
   REDO_FROM_STATUSES,
@@ -22,6 +21,11 @@ import { writeAudit } from '../lib/audit'
 import { resolveServicePriceMinor } from '../lib/servicePricing'
 import { createTtlCache } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
+import { isDetailingPayCategory, isTicketOnTodayFloor } from '../lib/serviceKinds'
+import {
+  resolveQueueCustomerDisplayName,
+  validateQueueTicketIdentity,
+} from '../lib/queueCustomerName'
 
 const timingWarningsCache = createTtlCache(120_000)
 
@@ -59,7 +63,8 @@ export const QUEUE_BOARD_SELECT = `
   in_progress_at,
   final_checking_at,
   redo_at,
-  redo_reason
+  redo_reason,
+  service_pay_category
 `
 
 function getTodayDate() {
@@ -200,9 +205,17 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
     ...(timingValue || cachedTiming || {}),
   }
 
+  const today = getTodayDate()
+  const queueRows = queue.data || []
+  // Same-day services/packages: waiting tickets from prior days drop off the floor.
+  // Detailing (and started work) stay until finished.
+  const activeQueue = queueRows.filter(
+    (ticket) => OPS_BOARD_STATUSES.includes(ticket.status) && isTicketOnTodayFloor(ticket, today),
+  )
+
   return {
-    queue: queue.data || [],
-    activeQueue: (queue.data || []).filter((ticket) => OPS_BOARD_STATUSES.includes(ticket.status)),
+    queue: queueRows,
+    activeQueue,
     staffPool: crewModel.staffPool,
     availableStaff: crewModel.availableStaff,
     busyStaff: crewModel.busyStaff,
@@ -255,7 +268,7 @@ export async function fetchTicket(bookingId, profile) {
 export async function fetchServices() {
   const services = await supabase
     .from('services')
-    .select('id, name, price_minor, duration_minutes, service_size_prices(size_slug, price_minor)')
+    .select('id, name, slug, price_minor, duration_minutes, pay_category, service_size_prices(size_slug, price_minor)')
     .eq('is_active', true)
     .eq('is_archived', false)
     .order('display_order')
@@ -456,13 +469,20 @@ export async function searchPosCustomer(query, profile) {
   return results
 }
 
-async function ensureCustomer(form) {
+async function ensureCustomer(form, displayName) {
   const phone = form.customer_phone?.trim()
   if (!phone) throw new Error('Phone number is required.')
   const first = form.customer_first_name?.trim() || ''
   const last = form.customer_last_name?.trim() || ''
-  const fullName = form.customer_name?.trim() || `${first} ${last}`.trim()
-  if (!fullName) throw new Error('Customer name is required.')
+  const fullName =
+    displayName ||
+    resolveQueueCustomerDisplayName({
+      customer_name: form.customer_name,
+      customer_first_name: first,
+      customer_last_name: last,
+      vehicle_plate: form.vehicle_plate,
+      customer_phone: phone,
+    })
 
   // Provision auth account (set-password invite) via server — creates customers row + notifies
   const accessToken = await getAccessTokenFresh()
@@ -482,18 +502,25 @@ async function ensureCustomer(form) {
       customer_name: fullName,
       customer_email: form.customer_email?.trim() || null,
       vehicle_plate: form.vehicle_plate || null,
+      allow_walk_in_name: true,
       site_origin: window.location.origin,
     }),
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(payload.error || 'Unable to create customer account.')
-  return payload.customer_id
+  return { customerId: payload.customer_id, displayName: payload.full_name || fullName }
 }
 
 export async function createQueueTicket(form) {
   if (!form.branch) throw new Error('Your Team Lead account has no assigned branch. Please contact an admin.')
+  const identityError = validateQueueTicketIdentity(form)
+  if (identityError) throw new Error(identityError)
+
   const profile = await getCurrentProfile({ required: true })
-  const customerId = await ensureCustomer(form)
+  const displayName = resolveQueueCustomerDisplayName(form)
+  const { customerId, displayName: resolvedName } = await ensureCustomer(form, displayName)
+  // Server may keep an existing CRM name when walk-in placeholder would overwrite it
+  const customerName = resolvedName || displayName
   let vehicleId = form.vehicle_id || null
   const normalizedPlate = normalizePlate(form.vehicle_plate || '')
   const vehicleType = normalizeVehicleType(form.vehicle_type)
@@ -503,8 +530,8 @@ export async function createQueueTicket(form) {
       .from('vehicles')
       .update({
         customer_id: customerId,
-        vehicle_make: form.vehicle_make.trim(),
-        vehicle_model: form.vehicle_model.trim(),
+        vehicle_make: form.vehicle_make?.trim() || '',
+        vehicle_model: form.vehicle_model?.trim() || '',
         vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
         color: form.vehicle_color?.trim() || null,
         vehicle_type: vehicleType,
@@ -521,8 +548,8 @@ export async function createQueueTicket(form) {
         customer_id: customerId,
         plate_number: form.vehicle_plate.trim().toUpperCase(),
         normalized_plate_number: normalizedPlate,
-        vehicle_make: form.vehicle_make.trim(),
-        vehicle_model: form.vehicle_model.trim(),
+        vehicle_make: form.vehicle_make?.trim() || '',
+        vehicle_model: form.vehicle_model?.trim() || '',
         vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
         color: form.vehicle_color?.trim() || null,
         vehicle_type: vehicleType,
@@ -535,6 +562,8 @@ export async function createQueueTicket(form) {
     vehicleId = vehicle.id
   }
 
+  if (!vehicleId) throw new Error('Plate number is required.')
+
   const serviceIds = Array.isArray(form.service_ids) && form.service_ids.length
     ? [...new Set(form.service_ids.filter(Boolean))]
     : form.service_id
@@ -546,13 +575,13 @@ export async function createQueueTicket(form) {
   const shared = {
     customer_id: customerId,
     vehicle_id: vehicleId,
-    customer_name: form.customer_name.trim(),
+    customer_name: customerName,
     customer_email: form.customer_email?.trim() || null,
     customer_phone: form.customer_phone.trim(),
-    vehicle_make: form.vehicle_make.trim(),
-    vehicle_model: form.vehicle_model.trim(),
+    vehicle_make: form.vehicle_make?.trim() || '',
+    vehicle_model: form.vehicle_model?.trim() || '',
     vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
-    vehicle_plate: form.vehicle_plate.trim().toUpperCase() || null,
+    vehicle_plate: form.vehicle_plate.trim().toUpperCase(),
     vehicle_type: vehicleType,
     scheduled_start: new Date().toISOString(),
     branch: form.branch,
@@ -566,6 +595,24 @@ export async function createQueueTicket(form) {
 
   let primaryId = null
   let sharedQueueNumber = null
+
+  // If any line is detailing, pin one persistent number for the whole visit
+  // (daily reset must not apply even when a same-day add-on is selected too).
+  const visitHasDetailing = serviceIds.some((id) => {
+    const svc = form.services?.find((item) => item.id === id)
+    return isDetailingPayCategory(svc?.pay_category)
+  })
+  if (visitHasDetailing) {
+    const { data: persistentNumber, error: persistentError } = await supabase.rpc(
+      'assign_persistent_queue_number',
+      { p_branch: form.branch },
+    )
+    if (persistentError) {
+      console.error('Unable to assign detailing queue number', persistentError)
+      throw formatQueueActionError(persistentError)
+    }
+    sharedQueueNumber = persistentNumber
+  }
 
   for (let i = 0; i < serviceIds.length; i += 1) {
     const serviceId = serviceIds[i]

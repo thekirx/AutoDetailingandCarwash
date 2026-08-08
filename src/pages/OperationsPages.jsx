@@ -20,10 +20,12 @@ import { supabase } from '../lib/supabase'
 import { listVehicleSizes } from '../lib/adminApi'
 import { resolveServicePriceMinor } from '../lib/servicePricing'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
+import ServiceKindPicker from '../components/ServiceKindPicker'
+import { serviceKindFromPayCategory } from '../lib/serviceKinds'
 import { CrewAttendancePanel, CrewSettingsPanel } from './crew/CrewAttendancePanels'
 import { splitCustomerName } from '../lib/phVehicles'
 import { canAccessPos, canEditAttendanceRoles, canEditAttendanceSettings, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES } from '../auth/permissions'
-import { finalCheckActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
+import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
 import {
   formatQueueNumber,
   getBranchScope,
@@ -128,17 +130,19 @@ function MetricCard({ label, value, icon: Icon, tone = 'blue' }) {
 function TicketCard({ ticket, timingWarnings }) {
   const warn = isSuspiciousTiming(ticket, timingWarnings)
   const linked = (ticket.linked_booking_ids?.length || 1) > 1
+  const kind = serviceKindFromPayCategory(ticket.service_pay_category)
   return (
     <Link to={`/operations/queue/${ticket.booking_id}`} className="floor-ticket queue-ticket-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xl font-black tabular-nums text-foreground sm:text-2xl">{formatQueueNumber(ticket.queue_number)}</p>
+          <p className="text-xl font-black tabular-nums text-foreground sm:text-2xl">{formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}</p>
           <p className="mt-1 truncate text-sm font-semibold text-foreground">{ticket.customer_name}</p>
         </div>
         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusTone[ticket.status] || statusTone.completed}`}>{STATUS_LABELS[ticket.status] || ticket.status}</span>
       </div>
       <div className="mt-3 grid gap-0.5 text-xs text-muted-foreground">
         <span className="truncate font-medium text-foreground/80">{ticket.branch || '—'}</span>
+        <span className="truncate capitalize">{kind === 'detailing' ? 'Detailing · multi-day' : kind}</span>
         <span className="truncate">{[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'}</span>
         <span className="truncate">{ticket.vehicle_plate || 'No plate'} · {ticket.service_name || 'Service'}</span>
         <span className="truncate">{ticket.assigned_staff_name || 'No staff assigned'}</span>
@@ -213,6 +217,7 @@ export function OperationsDashboardPage() {
   const { profile, canViewQueueOperations } = useAuth()
   const seeAll = canSeeAllBranches(profile)
   const seeRedo = canViewRedoLane(profile)
+  const canOpenPos = canAccessPos(profile)
   const scopeList = getBranchScopeList(profile)
   const [branchFilter, setBranchFilter] = useState(() => {
     if (seeAll) return 'all'
@@ -310,10 +315,16 @@ export function OperationsDashboardPage() {
           </>
         )}
       </div>
-      <div className={`mt-4 grid gap-3 grid-cols-2 sm:mt-6 sm:gap-4 ${seeRedo ? 'xl:grid-cols-5' : 'xl:grid-cols-4'}`}>
+      <div className={`mt-4 grid gap-3 grid-cols-2 sm:mt-6 sm:gap-4 ${seeRedo ? 'xl:grid-cols-6' : 'xl:grid-cols-5'}`}>
         <MetricCard label="Waiting" value={counts.waiting} icon={Clock3} />
         <MetricCard label="In Progress" value={counts.in_progress} icon={CarFront} tone="green" />
         <MetricCard label="Final Checking" value={counts.final_checking} icon={BadgeCheck} tone="amber" />
+        <MetricCard
+          label="For Payment"
+          value={filteredHandoffs.filter((h) => h.status === 'pending').length}
+          icon={Send}
+          tone="amber"
+        />
         {seeRedo ? <MetricCard label="Redo" value={counts.redo} icon={ShieldAlert} tone="amber" /> : null}
         <MetricCard label="Total Active" value={counts.total} icon={ClipboardList} />
       </div>
@@ -347,12 +358,28 @@ export function OperationsDashboardPage() {
         </Panel>
         <Panel title="Recently Sent To Payment" icon={Send}>
           <div className="grid gap-3">
-            {filteredHandoffs.length ? filteredHandoffs.slice(0, 8).map((handoff) => (
-              <Link key={handoff.id} to="/operations/pos" className="rounded-2xl border border-border bg-card p-4 no-underline transition hover:border-blue-300/40">
-                <p className="font-semibold text-foreground">{handoff.branch} · {formatMoney(handoff.amount_minor)}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{handoff.status} · {handoff.handed_off_at ? new Date(handoff.handed_off_at).toLocaleString() : 'Pending'} · Open POS</p>
-              </Link>
-            )) : <EmptyLine text="No payment handoffs in this range." />}
+            {filteredHandoffs.length ? filteredHandoffs.slice(0, 8).map((handoff) => {
+              const body = (
+                <>
+                  <p className="font-semibold text-foreground">{handoff.branch} · {formatMoney(handoff.amount_minor)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {handoff.status}
+                    {' · '}
+                    {handoff.handed_off_at ? new Date(handoff.handed_off_at).toLocaleString() : 'Pending'}
+                    {canOpenPos ? ' · Open POS' : ' · Waiting for Admin / ASA at POS'}
+                  </p>
+                </>
+              )
+              return canOpenPos ? (
+                <Link key={handoff.id} to="/operations/pos" className="rounded-2xl border border-border bg-card p-4 no-underline transition hover:border-blue-300/40">
+                  {body}
+                </Link>
+              ) : (
+                <div key={handoff.id} className="rounded-2xl border border-border bg-card p-4">
+                  {body}
+                </div>
+              )
+            }) : <EmptyLine text="No payment handoffs in this range." />}
           </div>
         </Panel>
       </div>
@@ -428,8 +455,28 @@ export function OperationsQueuePage() {
           : 'Active tickets until payment — waiting, in progress, and final checking.'}
         live={live}
         action={(
-          <div className="flex gap-2 sm:gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <RefreshButton loading={loading} onClick={reload} />
+            {branchFilter && branchFilter !== 'all' ? (
+              <>
+                <Link
+                  to={`/queue/${branchFilter}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline"
+                >
+                  Customer kiosk
+                </Link>
+                <Link
+                  to={`/queue/${branchFilter}/tv`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline"
+                >
+                  Shop TV
+                </Link>
+              </>
+            ) : null}
             {canManageQueue && (
               <Link to="/operations/queue/new" className="floor-touch-btn inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 font-semibold text-primary-foreground no-underline transition hover:opacity-90 sm:px-5">
                 <Plus size={18} aria-hidden />
@@ -595,9 +642,9 @@ export function QueueTicketPage() {
 
   return (
     <section>
-      <PageHeader eyebrow="Queue Ticket" title={`${formatQueueNumber(ticket.queue_number)} · ${ticket.customer_name}`} description={`${ticket.branch} · ${STATUS_LABELS[ticket.status] || ticket.status}`} action={<Link to="/operations/queue" className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline">Back to queue</Link>} />
+      <PageHeader eyebrow="Queue Ticket" title={`${formatQueueNumber(ticket.queue_number, ticket.service_pay_category)} · ${ticket.customer_name}`} description={`${ticket.branch} · ${STATUS_LABELS[ticket.status] || ticket.status}${ticket.service_pay_category === 'detailing' ? ' · Multi-day detailing' : ''}`} action={<Link to="/operations/queue" className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline">Back to queue</Link>} />
       {actionError && <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100" role="alert">{actionError}</p>}
-      {!showEditActions && <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">View only — Team Lead or Super Admin manages floor actions on this ticket.</p>}
+      {!showEditActions && <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">View only — Team Lead (or ASA/SA with queue access) manages floor actions. After final check, open POS to collect payment.</p>}
       {timingWarn && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4 text-sm text-amber-100"><ShieldAlert size={16} aria-hidden />Suspicious timing: in progress → final check was under the configured threshold.</p>}
       <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_360px] sm:mt-6 sm:gap-5">
         <Panel title="Ticket Details" icon={CarFront}>
@@ -621,13 +668,13 @@ export function QueueTicketPage() {
                 <div className="grid gap-2.5">
                   <ActionButton disabled={ticket.status !== 'waiting' && !canRestartFromRedo} loading={saving === 'start'} onClick={() => runAction('start', () => updateTicketStatus(ticket, 'in_progress'))}>Start Service</ActionButton>
                   <ActionButton disabled={ticket.status !== 'in_progress'} loading={saving === 'check'} onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}>{finalCheckActionLabel(canOpenPos)}</ActionButton>
-                  <ActionButton disabled={!canSendToPayment} loading={saving === 'payment'} onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}><Send size={17} aria-hidden />{canOpenPos ? 'Retry send to payment' : 'Send to cashier / payment'}</ActionButton>
+                  <ActionButton disabled={!canSendToPayment} loading={saving === 'payment'} onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}><Send size={17} aria-hidden />{sendToPaymentActionLabel(canOpenPos)}</ActionButton>
                   {showRedoBtn ? (
                     <ActionButton disabled={!canRedo} loading={saving === 'redo'} onClick={() => runAction('redo', runRedo)}><ShieldAlert size={17} aria-hidden />Mark redo</ActionButton>
                   ) : null}
                 </div>
                 {!canOpenPos ? (
-                  <p className="mt-3 text-xs text-slate-400">Cashier opens POS to collect payment after you send the handoff.</p>
+                  <p className="mt-3 text-xs text-slate-400">Branch Admin or ASA opens POS to collect payment after you send the handoff.</p>
                 ) : null}
               </Panel>
             </div>
@@ -722,7 +769,6 @@ export function NewQueueTicketPage() {
       listVehicleSizes({ activeOnly: true }).catch(() => []),
     ])
       .then(([serviceRows, branchRows, sizes]) => {
-        const firstService = serviceRows[0]
         setServices(serviceRows)
         setBranches(
           Array.isArray(scopeList) && scopeList.length > 1 && !canOverrideQueueBranches(profile)
@@ -735,16 +781,12 @@ export function NewQueueTicketPage() {
         const defaultSize = sizes?.some((s) => s.slug === 'medium')
           ? 'medium'
           : sizes?.[0]?.slug || 'medium'
-        const ids = firstService ? [firstService.id] : []
         setForm((current) => ({
           ...current,
           branch: assignedBranch || current.branch || branchRows[0]?.slug || '',
           services: serviceRows,
-          service_ids: ids.length ? ids : current.service_ids,
+          service_ids: current.service_ids || [],
           vehicle_type: defaultSize,
-          final_price: ids.length
-            ? String(sumSelectedPrices(serviceRows, ids, defaultSize) / 100)
-            : current.final_price,
         }))
       })
       .catch((err) => setError(err.message))
@@ -817,17 +859,14 @@ export function NewQueueTicketPage() {
       }
     })
   }
-  const updateServiceToggle = (serviceId) => {
+  const updateServiceIds = (ids) => {
     setForm((current) => {
-      const selected = new Set(current.service_ids || [])
-      if (selected.has(serviceId)) selected.delete(serviceId)
-      else selected.add(serviceId)
-      const ids = [...selected]
-      const total = sumSelectedPrices(services, ids, current.vehicle_type)
+      const nextIds = Array.isArray(ids) ? ids : []
+      const total = sumSelectedPrices(services, nextIds, current.vehicle_type)
       return {
         ...current,
-        service_ids: ids,
-        final_price: ids.length ? String(total / 100) : current.final_price,
+        service_ids: nextIds,
+        final_price: nextIds.length ? String(total / 100) : current.final_price,
       }
     })
   }
@@ -840,13 +879,17 @@ export function NewQueueTicketPage() {
     setSubmitting(true)
     setError('')
     try {
-      if (!form.service_ids?.length) throw new Error('Select at least one service.')
+      const phoneDigits = String(form.customer_phone || '').replace(/\D/g, '')
+      if (phoneDigits.length < 10) throw new Error('Phone number is required (at least 10 digits).')
+      if (!String(form.vehicle_plate || '').trim()) throw new Error('Plate number is required.')
+      if (!form.service_ids?.length) throw new Error('Select at least one service, package, or detailing service.')
       if (showFormLowPriceWarning && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) {
         setSubmitting(false)
         return
       }
       const ticket = await createQueueTicket({
         ...form,
+        customer_name: `${form.customer_first_name || ''} ${form.customer_last_name || ''}`.trim(),
         branch: canChooseBranch ? form.branch : assignedBranch,
         vehicle_type: normalizeVehicleType(form.vehicle_type),
         service_ids: form.service_ids,
@@ -868,21 +911,22 @@ export function NewQueueTicketPage() {
 
   return (
     <section>
-      <PageHeader eyebrow="Create Queue Ticket" title="Add vehicle to queue" description="Search existing customer and vehicle records, or create a walk-in ticket without building the full CRM yet." />
+      <PageHeader eyebrow="Create Queue Ticket" title="Add vehicle to queue" description="Required: plate, phone, and at least one Service / Package / Detailing. Name is optional for fast walk-ins." />
       {error && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{error}</p>}
       <div className="mt-8">
         <Panel title="Ticket Form" icon={Plus}>
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Plate Number<input value={form.vehicle_plate} onChange={update('vehicle_plate')} required autoFocus placeholder="ABC 1234" className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
+            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Plate number *<input value={form.vehicle_plate} onChange={update('vehicle_plate')} required autoFocus placeholder="ABC 1234" className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
             {form.vehicle_plate.trim().length >= 2 && plateLookupState !== 'idle' && (
               <p className={`sm:col-span-2 rounded-2xl border px-4 py-3 text-sm ${plateLookupState === 'found' ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100' : 'border-amber-300/20 bg-amber-400/10 text-amber-100'}`}>
                 {plateLookupState === 'loading' ? 'Checking plate number...' : getPlateLookupStatus(form.vehicle_plate, Boolean(plateMatch))}
               </p>
             )}
-            <FormField label="First name" value={form.customer_first_name} onChange={update('customer_first_name')} required />
-            <FormField label="Last name" value={form.customer_last_name} onChange={update('customer_last_name')} required />
-            <FormField label="Phone number" value={form.customer_phone} onChange={update('customer_phone')} required />
+            <FormField label="Phone number *" value={form.customer_phone} onChange={update('customer_phone')} required />
             <FormField label="Email (optional)" value={form.customer_email} onChange={update('customer_email')} type="email" />
+            <FormField label="First name (optional)" value={form.customer_first_name} onChange={update('customer_first_name')} />
+            <FormField label="Last name (optional)" value={form.customer_last_name} onChange={update('customer_last_name')} />
+            <p className="sm:col-span-2 text-xs text-slate-400">No name yet? Ticket shows as Walk-in · plate. CRM can fill the name later.</p>
             <VehicleMakeModelFields
               make={form.vehicle_make}
               model={form.vehicle_model}
@@ -893,24 +937,13 @@ export function NewQueueTicketPage() {
             <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
             <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
             <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Car size (pricing)<select value={form.vehicle_type} onChange={updateVehicleType} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-            <fieldset className="sm:col-span-2 space-y-2">
-              <legend className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Services (multi-select · one visit)</legend>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {services.map((service) => {
-                  const checked = (form.service_ids || []).includes(service.id)
-                  const sized = resolveServicePriceMinor(service, form.vehicle_type)
-                  return (
-                    <label key={service.id} className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${checked ? 'border-blue-300/40 bg-blue-500/10' : 'border-white/10 bg-white/5'}`}>
-                      <span>{service.name}</span>
-                      <span className="flex items-center gap-3 tabular-nums text-slate-300">
-                        {formatMoney(sized)}
-                        <input type="checkbox" className="size-4 accent-blue-500" checked={checked} onChange={() => updateServiceToggle(service.id)} />
-                      </span>
-                    </label>
-                  )
-                })}
-              </div>
-            </fieldset>
+            <ServiceKindPicker
+              services={services}
+              selectedIds={form.service_ids}
+              vehicleType={form.vehicle_type}
+              onChange={updateServiceIds}
+              disabled={submitting}
+            />
             {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
             <FormField label="Final Price in Pesos" value={form.final_price} onChange={update('final_price')} type="number" min="0" step="0.01" required />
             {showFormLowPriceWarning && <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}

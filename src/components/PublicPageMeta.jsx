@@ -10,7 +10,7 @@ const PAGE_META = {
   '/services': { title: 'Services', description: 'Car wash, interior detailing, paint correction, ceramic coating, and PPF at Hakum Auto Care.' },
   '/packages': { title: 'Packages', description: 'Ceramic coating and paint protection film packages from Hakum Auto Care.' },
   '/book': { title: 'Book a service', description: 'Book a Hakum Auto Care visit at Bacoor or Batangas.' },
-  '/queue': { title: 'Live queue', description: 'Check live queue counts at Hakum Auto Care branches.' },
+  '/queue': { title: 'Live queue', description: 'Customer count board or shop TV floor board at Hakum Auto Care branches.' },
   '/branches': { title: 'Branches', description: 'Find Hakum Auto Care branches in Bacoor and Batangas.' },
   '/contact': { title: 'Contact', description: 'Contact Hakum Auto Care for bookings, services, and branch questions.' },
   '/complaints': { title: 'Complaints', description: 'Submit a complaint or feedback to Hakum Auto Care.' },

@@ -63,8 +63,8 @@ export default function ContactPage() {
           <label>Name<input required value={form.name} onChange={update('name')} /></label>
           <label>Phone<input required value={form.phone} onChange={update('phone')} /></label>
           <label>Email<input type="email" value={form.email} onChange={update('email')} /></label>
-          <label>Subject<input required value={form.subject} onChange={update('subject')} /></label>
-          <label>Message<textarea required value={form.message} onChange={update('message')} /></label>
+          <label className="booking-span-2">Subject<input required value={form.subject} onChange={update('subject')} /></label>
+          <label className="booking-span-2">Message<textarea required rows={4} value={form.message} onChange={update('message')} /></label>
           {/* honeypot — leave empty */}
           <label className="sr-only" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }}>
             Company website
@@ -75,7 +75,7 @@ export default function ContactPage() {
               onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
             />
           </label>
-          <FormLegalNotice id="contact-legal" />
+          <FormLegalNotice id="contact-legal" className="form-legal-notice booking-span-2" />
           {error && <p className="form-error">{error}</p>}
           <button disabled={status === 'loading'} className="button button-blue">{status === 'loading' ? 'Sending…' : 'Send message'}</button>
         </form>

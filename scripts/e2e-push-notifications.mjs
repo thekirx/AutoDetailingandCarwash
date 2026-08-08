@@ -157,7 +157,6 @@ try {
   results.push(`sendWebPush: sent=${send.sent} pruned=${send.pruned} subs=${send.subscriptions}`)
 
   // 5) Full notify path (inbox + push attempt)
-  const bookingId = crypto.randomUUID?.() || `${stamp}-booking`
   // use real uuid format
   const { randomUUID } = await import('node:crypto')
   const bid = randomUUID()

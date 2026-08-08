@@ -89,7 +89,7 @@ export default function ComplaintsPage() {
               <option>Other</option>
             </select>
           </label>
-          <label>Description<textarea required value={form.description} onChange={update('description')} /></label>
+          <label className="booking-span-2">Description<textarea required rows={4} value={form.description} onChange={update('description')} /></label>
           <label className="sr-only" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }}>
             Company website
             <input
@@ -99,7 +99,7 @@ export default function ComplaintsPage() {
               onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
             />
           </label>
-          <FormLegalNotice id="complaint-legal" />
+          <FormLegalNotice id="complaint-legal" className="form-legal-notice booking-span-2" />
           {error && <p className="form-error">{error}</p>}
           <button disabled={status === 'loading' || branchesLoading || !form.branch} className="button button-blue">{status === 'loading' ? 'Submitting…' : 'Submit complaint'}</button>
         </form>

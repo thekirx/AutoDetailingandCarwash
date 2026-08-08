@@ -11,6 +11,9 @@ import OpsIndexRedirect from './pages/OpsIndexRedirect'
 
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'))
 const PublicQueuePage = lazy(() => import('./pages/PublicQueuePage'))
+const PublicQueueTvPage = lazy(() =>
+  import('./pages/PublicQueuePage').then((m) => ({ default: m.PublicQueueTvPage })),
+)
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
@@ -136,6 +139,7 @@ export default function App() {
         <Route path="/account/set-password" element={<CustomerSetPasswordPage />} />
 
         <Route path="/queue/:branch" element={<PublicQueuePage />} />
+        <Route path="/queue/:branch/tv" element={<PublicQueueTvPage />} />
         <Route path="/admin" element={<Navigate to="/operations/login" replace />} />
         <Route path="/admin/dashboard" element={<Navigate to="/operations/console" replace />} />
         <Route path="/admin/customers" element={<Navigate to="/operations/crm" replace />} />

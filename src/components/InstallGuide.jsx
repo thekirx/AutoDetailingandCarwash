@@ -85,8 +85,6 @@ export default function InstallGuide({
   variant = 'panel',
   audience = 'customer',
   autoPopup = false,
-  surface = 'auto',
-  className = '',
   onDismiss,
 }) {
   const [platform, setPlatform] = useState(() => getInstallPlatform())

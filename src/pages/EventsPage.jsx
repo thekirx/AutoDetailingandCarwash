@@ -66,7 +66,7 @@ export default function EventsPage() {
           {!events.length && !error && <p>No published events yet. Check back soon.</p>}
           {events.map((item, index) => (
             <article key={item.id}>
-              <span>0{index + 1}</span>
+              <span>{String(index + 1).padStart(2, '0')}</span>
               <h2>{item.title}</h2>
               <p>{item.description}</p>
               <p>{item.branch} · {new Date(item.starts_at).toLocaleString()}</p>
@@ -91,7 +91,7 @@ export default function EventsPage() {
                 onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
               />
             </label>
-            <FormLegalNotice id="events-legal" />
+            <FormLegalNotice id="events-legal" className="form-legal-notice booking-span-2" />
             <button className="button button-blue" disabled={status === 'loading'}>Confirm registration</button>
             <button type="button" className="dark-link" onClick={() => setRegisterFor(null)}>Cancel</button>
           </form>

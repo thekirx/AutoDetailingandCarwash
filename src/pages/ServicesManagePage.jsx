@@ -15,14 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 import VehicleSizesPanel from '@/components/VehicleSizesPanel'
+import { PAY_CATEGORY_OPTIONS, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 
-const PAY_CATEGORIES = [
-  { value: 'general', label: 'General' },
-  { value: 'detailing', label: 'Detailing' },
-  { value: 'wash', label: 'Wash' },
-  { value: 'ppf', label: 'PPF / Film' },
-  { value: 'addon', label: 'Add-on' },
-]
+const PAY_CATEGORIES = PAY_CATEGORY_OPTIONS
 
 const empty = {
   name: '',
@@ -160,7 +155,7 @@ export default function ServicesManagePage({ embedded = false }) {
           <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Catalog</p>
           <h1 className="text-3xl font-semibold tracking-tight">Service management</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Category, name, and prices by car size (Small · Medium · Large · Extra Large). Super Admin and Assistant Super Admin.
+            Add Services, Packages, or Detailing (multi-day). Same-day kinds reset queue numbers daily; detailing keeps its number until finished.
           </p>
         </div>
       )}
@@ -171,8 +166,10 @@ export default function ServicesManagePage({ embedded = false }) {
       )}
       <Card>
         <CardHeader>
-          <CardTitle>Add service</CardTitle>
-          <CardDescription>Required: pricing by car size for Small, Medium, Large, and Extra Large.</CardDescription>
+          <CardTitle>Add catalog item</CardTitle>
+          <CardDescription>
+            Choose category carefully. Detailing (multi-day) stays on the floor across days and uses a D- queue number.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onCreate} className="grid gap-4 md:grid-cols-2">
@@ -198,6 +195,9 @@ export default function ServicesManagePage({ embedded = false }) {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Team Lead form groups these as Service / Package / Detailing.
+              </p>
             </div>
             <SizePriceFields
               value={form.size_prices}
@@ -232,7 +232,12 @@ export default function ServicesManagePage({ embedded = false }) {
                     <div className="text-xs text-muted-foreground">{s.slug}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{s.pay_category || 'general'}</Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant="outline">{PAY_CATEGORIES.find((c) => c.value === (s.pay_category || 'general'))?.label || s.pay_category}</Badge>
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {serviceKindFromPayCategory(s.pay_category)}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm tabular-nums">{formatSizePriceRange(s, formatMoney)}</div>

@@ -107,7 +107,7 @@ export default function EventSharePage() {
                     onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
                   />
                 </label>
-                <FormLegalNotice id="event-share-legal" />
+                <FormLegalNotice id="event-share-legal" className="form-legal-notice booking-span-2" />
                 <button className="button button-blue" disabled={status === 'loading'}>Register</button>
               </form>
             </>

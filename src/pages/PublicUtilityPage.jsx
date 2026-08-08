@@ -18,7 +18,7 @@ export function QueuePage() {
   const { branches, loading, error } = usePublicBranches()
   usePageMeta({
     title: 'Live queue',
-    description: 'Pick a Hakum Auto Care branch for the customer-safe live service queue.',
+    description: 'Pick a Hakum Auto Care branch for the customer count board or shop TV floor board.',
     path: '/queue',
   })
 
@@ -41,7 +41,7 @@ export function QueuePage() {
             <i>arrival.</i>
           </h1>
           <p className="lq-picker-lede">
-            Choose a branch for a simple, customer-safe view of current service activity.
+            Customer view shows counts only. Shop TV shows plate and service for the floor display.
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export function QueuePage() {
             </>
           ) : null}
           {branches.map((b, index) => (
-            <Link key={b.slug} to={`/queue/${b.slug}`} className="lq-lane-card" style={{ '--i': index }}>
+            <article key={b.slug} className="lq-lane-card lq-lane-card-split" style={{ '--i': index }}>
               <span className="lq-lane-card-shell">
                 <span className="lq-lane-card-core">
                   <img src="/branding/hakum-mark-ow.png" alt="" className="lq-lane-card-mark" width={40} height={40} />
@@ -62,13 +62,17 @@ export function QueuePage() {
                     <strong>{b.name}</strong>
                     <span>{b.address || b.slug}</span>
                   </span>
-                  <span className="lq-lane-card-cta" aria-hidden>
-                    Open
-                    <span className="lq-lane-card-arrow">↗</span>
-                  </span>
+                </span>
+                <span className="lq-lane-card-actions">
+                  <Link to={`/queue/${b.slug}`} className="lq-lane-card-cta">
+                    Customer
+                  </Link>
+                  <Link to={`/queue/${b.slug}/tv`} className="lq-lane-card-cta lq-lane-card-cta-tv">
+                    Shop TV
+                  </Link>
                 </span>
               </span>
-            </Link>
+            </article>
           ))}
           {!loading && !branches.length ? (
             <p className="lq-picker-empty">No active branches yet.</p>

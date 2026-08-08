@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { notifyBookingStatus } from './notifyBooking.mjs'
 import { canStaffUpdateBookingStatus } from './bookingStatusAccess.mjs'
+import { canEnterPaymentHandoff, isPaymentHandoffStatus } from './queuePaymentHandoff.mjs'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 
 function admin() {
@@ -10,11 +11,22 @@ function admin() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
+function userClient(token) {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+  if (!url || !anon) throw new Error('Missing SUPABASE_URL or anon key')
+  return createClient(url, anon, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  })
+}
+
 const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'team_lead', 'assistant_super_admin'])
 
 /**
  * Ops updates booking status + triggers BusyBee SMS / push.
  * Body: { booking_id, status }
+ * for_payment always goes through send_queue_ticket_to_payment (creates pos_handoffs).
  */
 export async function handleBookingStatusRequest(req, res) {
   setCors(res, 'POST, OPTIONS')
@@ -71,6 +83,56 @@ export async function handleBookingStatusRequest(req, res) {
       )
     ) {
       return json(res, 403, { error: 'Not allowed to update this booking' })
+    }
+
+    // for_payment must create a POS handoff — never bare-update status
+    if (isPaymentHandoffStatus(status)) {
+      if (!canEnterPaymentHandoff(existing.status)) {
+        return json(res, 400, {
+          error: 'Move the ticket to In Progress or Final Checking before sending to payment',
+        })
+      }
+
+      if (existing.status === 'in_progress') {
+        const now = new Date().toISOString()
+        const { error: checkErr } = await db
+          .from('bookings')
+          .update({
+            status: 'final_checking',
+            final_checking_at: now,
+            final_checked_by: staff.id,
+            updated_at: now,
+          })
+          .eq('id', bookingId)
+        if (checkErr) return json(res, 400, { error: checkErr.message })
+      }
+
+      const asUser = userClient(token)
+      const { data: handoff, error: handoffErr } = await asUser.rpc('send_queue_ticket_to_payment', {
+        input_booking_id: bookingId,
+      })
+      if (handoffErr) return json(res, 400, { error: handoffErr.message })
+
+      const { data: booking, error: reloadErr } = await db
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .single()
+      if (reloadErr) return json(res, 400, { error: reloadErr.message })
+
+      let notify = null
+      try {
+        notify = await notifyBookingStatus(booking, 'for_payment')
+      } catch (err) {
+        notify = { error: String(err.message || err) }
+      }
+
+      return json(res, 200, {
+        ok: true,
+        booking: { id: booking.id, status: booking.status },
+        handoff,
+        notify,
+      })
     }
 
     const { data: booking, error } = await db

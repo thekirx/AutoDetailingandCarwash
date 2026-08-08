@@ -100,6 +100,10 @@ export function validateServiceInput({ name, slug, price, duration_minutes, disp
   if (!Number.isFinite(order) || order < 0) errors.push('Display order must be 0 or greater.')
 
   const category = String(pay_category || 'general').trim().toLowerCase() || 'general'
+  const ALLOWED_PAY_CATEGORIES = new Set(['general', 'wash', 'addon', 'package', 'ppf', 'detailing'])
+  if (!ALLOWED_PAY_CATEGORIES.has(category)) {
+    errors.push('Category must be service, package, or detailing (general/wash/addon/package/ppf/detailing).')
+  }
 
   if (errors.length) throw new Error(errors[0])
   return {

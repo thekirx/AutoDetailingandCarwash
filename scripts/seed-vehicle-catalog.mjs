@@ -41,7 +41,7 @@ for (let i = 0; i < rows.length; i += chunk) {
     is_active: true,
     updated_at: new Date().toISOString(),
   }))
-  const { error, count } = await admin
+  const { error } = await admin
     .from('vehicle_catalog')
     .upsert(slice, { onConflict: 'make,model', count: 'exact' })
   if (error) {

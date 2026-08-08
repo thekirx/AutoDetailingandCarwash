@@ -7,7 +7,6 @@ import {
   LogOut,
   MapPin,
   Navigation,
-  Plus,
   Radio,
   Receipt,
   CalendarPlus,

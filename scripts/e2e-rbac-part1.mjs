@@ -45,8 +45,8 @@ results.push('matrix.helpers: ok')
 
 const admin = createClient(url, service, { auth: { autoRefreshToken: false, persistSession: false } })
 
-const { data: roles, error: roleErr } = await admin.rpc('is_assistant_super_admin').then(() => ({ data: true, error: null })).catch((e) => ({ data: null, error: e }))
 // prove enum + columns via SQL-ish REST
+
 const { data: cols, error: colErr } = await admin.from('staff_profiles').select('id, role, permission_grants').limit(1)
 assert(!colErr, `staff_profiles.permission_grants: ${colErr?.message}`)
 assert(cols, 'staff_profiles readable')
@@ -93,6 +93,5 @@ assert(!bossErr, bossErr?.message)
 results.push('login.boss: ok')
 await boss.auth.signOut()
 
-void roles
 console.log(results.map((r) => `✔ ${r}`).join('\n'))
 console.log('e2e-rbac-part1: ok')

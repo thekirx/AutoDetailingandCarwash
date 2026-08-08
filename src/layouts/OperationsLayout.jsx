@@ -94,7 +94,7 @@ function formatScope(profile) {
   return profile?.branch_slug || 'No branch'
 }
 
-function TeamLeadFloorShell({ profile, user, signOut }) {
+function TeamLeadFloorShell({ profile, signOut }) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -313,7 +313,7 @@ export default function OperationsLayout() {
   const isTeamLead = profile?.role === ROLES.TEAM_LEAD
 
   if (isTeamLead) {
-    return <TeamLeadFloorShell profile={profile} user={user} signOut={signOut} />
+    return <TeamLeadFloorShell profile={profile} signOut={signOut} />
   }
 
   return (

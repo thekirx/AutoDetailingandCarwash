@@ -4,6 +4,10 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { authCreateUserIdForCrm, buildProvisionInviteMessage } from './provisionSms.mjs'
+import {
+  mergeCustomerDisplayName,
+  resolveQueueCustomerDisplayName,
+} from '../src/lib/queueCustomerName.js'
 
 /** Queue walk-in provision: SA / Admin / ASA / Team Lead (TL forced to own branch at ticket create). */
 export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin', 'team_lead'])
@@ -74,23 +78,37 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
   const phone = String(body.customer_phone || body.phone || '').trim()
   const first = String(body.customer_first_name || body.first_name || '').trim()
   const last = String(body.customer_last_name || body.last_name || '').trim()
-  const fullName = String(body.customer_name || body.full_name || `${first} ${last}`).trim()
   const emailRaw = String(body.customer_email || body.email || '').trim().toLowerCase()
   const email = emailRaw || null
   const plate = String(body.vehicle_plate || body.plate || '').trim().toUpperCase() || null
+  const allowWalkInName = body.allow_walk_in_name === true || body.allow_walk_in_name === 'true'
 
   if (!phone) throw Object.assign(new Error('Phone number is required.'), { status: 400 })
-  if (!fullName) throw Object.assign(new Error('Customer name is required.'), { status: 400 })
+
+  // Queue walk-ins may omit name; other callers still require a real name.
+  let fullName = String(body.customer_name || body.full_name || `${first} ${last}`).trim()
+  if (!fullName) {
+    if (!allowWalkInName) {
+      throw Object.assign(new Error('Customer name is required.'), { status: 400 })
+    }
+    fullName = resolveQueueCustomerDisplayName({
+      customer_first_name: first,
+      customer_last_name: last,
+      vehicle_plate: plate,
+      customer_phone: phone,
+    })
+  }
 
   const loginEmail = email || phoneLoginEmail(phone)
   const redirectTo = `${siteOrigin.replace(/\/$/, '')}/account/set-password`
 
   // Prefer existing CRM row by phone
   let customerId = body.customer_id || null
+  let existingFullName = null
   if (!customerId) {
     const { data: byPhone } = await admin
       .from('customers')
-      .select('id, email, phone, full_name')
+      .select('id, email, phone, full_name, first_name, last_name')
       .eq('role', 'customer')
       .eq('phone', phone)
       .eq('is_archived', false)
@@ -98,7 +116,17 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
       .limit(1)
       .maybeSingle()
     customerId = byPhone?.id || null
+    existingFullName = byPhone?.full_name || null
+  } else {
+    const { data: byId } = await admin
+      .from('customers')
+      .select('full_name, first_name, last_name')
+      .eq('id', customerId)
+      .maybeSingle()
+    existingFullName = byId?.full_name || null
   }
+
+  fullName = mergeCustomerDisplayName(fullName, existingFullName)
 
   let authUser = null
   let createdAuth = false
@@ -174,17 +202,16 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
     })
     customerId = authUser.id
   } else if (customerId) {
-    await admin
-      .from('customers')
-      .update({
-        first_name: first || null,
-        last_name: last || null,
-        full_name: fullName,
-        phone,
-        email: email || loginEmail,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', customerId)
+    const customerPatch = {
+      full_name: fullName,
+      phone,
+      email: email || loginEmail,
+      updated_at: new Date().toISOString(),
+    }
+    // Keep prior first/last when TL leaves name blank on a returning plate/phone
+    if (first) customerPatch.first_name = first
+    if (last) customerPatch.last_name = last
+    await admin.from('customers').update(customerPatch).eq('id', customerId)
   } else {
     customerId = authUser.id
     const { error: upsertError } = await admin.from('customers').upsert(
@@ -215,6 +242,7 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
     customer_id: customerId,
     auth_user_id: authUser.id,
     login_email: authUser.email || loginEmail,
+    full_name: fullName,
     created: createdAuth,
     created_auth: createdAuth,
     notified: true,

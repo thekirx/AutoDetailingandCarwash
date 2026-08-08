@@ -8,7 +8,12 @@ import {
   canViewRedoLane,
   getBranchScopeList,
 } from '../auth/permissions.js'
+import {
+  formatQueueNumberForKind as formatQueueNumber,
+  serviceKindFromPayCategory,
+} from '../lib/serviceKinds.js'
 
+export { formatQueueNumber }
 export { getBranchScopeList }
 
 export const ACTIVE_QUEUE_STATUSES = ['waiting', 'in_progress', 'final_checking']
@@ -232,16 +237,11 @@ export function validateCrewUsername(value) {
   return username
 }
 
-export function formatQueueNumber(queueNumber) {
-  if (queueNumber === null || queueNumber === undefined || queueNumber === '') return 'Q---'
-  return `Q-${String(queueNumber).padStart(3, '0')}`
-}
-
 export function buildPublicQueueModel(rows = [], branch) {
   const safeRows = rows
     .filter((row) => (!branch || row.branch === branch) && isActiveQueueStatus(row.status))
     .map((row) => ({
-      queueNumber: formatQueueNumber(row.queue_number),
+      queueNumber: formatQueueNumber(row.queue_number, row.service_pay_category),
       status: row.status,
     }))
 
@@ -251,6 +251,32 @@ export function buildPublicQueueModel(rows = [], branch) {
   return {
     counts: getQueueCounts(safeRows),
     groups,
+  }
+}
+
+/** Shop TV kiosk model: plate + service kind/name (no phone / name). */
+export function buildPublicFloorModel(rows = [], branch) {
+  const safeRows = rows
+    .filter((row) => (!branch || row.branch === branch) && isActiveQueueStatus(row.status))
+    .map((row) => {
+      const kind = serviceKindFromPayCategory(row.service_pay_category)
+      return {
+        queueNumber: formatQueueNumber(row.queue_number, row.service_pay_category),
+        status: row.status,
+        plate: String(row.vehicle_plate || '').trim().toUpperCase() || '-',
+        serviceName: row.service_name || 'Service',
+        kind,
+        kindLabel: kind === 'detailing' ? 'Detailing' : kind === 'package' ? 'Package' : 'Service',
+      }
+    })
+
+  const groups = Object.fromEntries(ACTIVE_QUEUE_STATUSES.map((status) => [status, []]))
+  for (const row of safeRows) groups[row.status].push(row)
+
+  return {
+    counts: getQueueCounts(safeRows),
+    groups,
+    rows: safeRows,
   }
 }
 
