@@ -21,13 +21,18 @@ import { createCoalescedReload } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { supabase } from '../lib/supabase'
 import {
+  DURATION_FILTERS,
+  QUEUE_DATE_PRESETS,
   formatQueueNumber,
   getBranchScope,
   getOpsBoardStatuses,
   groupVisitTickets,
+  matchesDurationFilter,
+  matchesTicketSearch,
   normalizePlate,
   requiresTeamLeadBranchSetup,
   STATUS_LABELS,
+  ticketElapsedMinutes,
 } from '../queue/queueLogic'
 import { fetchTeamLeadDayBoard, formatMoney } from '../queue/queueApi'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
@@ -55,23 +60,6 @@ function formatDuration(mins) {
   const h = Math.floor(mins / 60)
   const m = mins % 60
   return m ? `${h}h ${m}m` : `${h}h`
-}
-
-function ticketMatchesSearch(ticket, q) {
-  if (!q) return true
-  const hay = [
-    ticket.vehicle_plate,
-    ticket.vehicle_make,
-    ticket.vehicle_model,
-    ticket.service_name,
-    ticket.customer_name,
-    ticket.customer_phone,
-    ...(ticket.service_names || []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-  return hay.includes(q)
 }
 
 function QueueManagerCard({ ticket, expanded, onToggle, onOpen }) {
@@ -210,6 +198,8 @@ export default function TeamLeadQueuePage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('waiting')
+  const [datePreset, setDatePreset] = useState('today')
+  const [durationFilter, setDurationFilter] = useState('all')
   const [historyPlate, setHistoryPlate] = useState('')
   const [historyRows, setHistoryRows] = useState(null)
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -280,7 +270,6 @@ export default function TeamLeadQueuePage() {
   }, [boardTickets, dayGrouped])
 
   const listTickets = useMemo(() => {
-    const q = search.trim().toLowerCase()
     let rows = []
     if (statusFilter === 'all') {
       rows = [...boardTickets, ...dayGrouped]
@@ -291,8 +280,37 @@ export default function TeamLeadQueuePage() {
     } else {
       rows = boardTickets
     }
-    return rows.filter((t) => ticketMatchesSearch(t, q))
-  }, [boardTickets, dayGrouped, statusFilter, search, boardStatuses])
+    const todayKey = today
+    if (datePreset === 'today') {
+      rows = rows.filter((t) => {
+        if (['waiting', 'in_progress', 'final_checking'].includes(t.status)) {
+          // Same-day services reset daily; detailing stays via isTicketOnTodayFloor upstream.
+          return true
+        }
+        return t.queue_date === todayKey || String(t.created_at || '').slice(0, 10) === todayKey
+      })
+    } else if (datePreset === 'yesterday') {
+      const y = new Date(`${todayKey}T12:00:00+08:00`)
+      y.setDate(y.getDate() - 1)
+      const yKey = y.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+      rows = rows.filter((t) => t.queue_date === yKey || String(t.created_at || '').slice(0, 10) === yKey)
+    } else if (datePreset === 'week') {
+      const end = new Date(`${todayKey}T12:00:00+08:00`)
+      const start = new Date(end)
+      start.setDate(start.getDate() - 6)
+      rows = rows.filter((t) => {
+        const key = t.queue_date || String(t.created_at || '').slice(0, 10)
+        if (!key) return false
+        const d = new Date(`${key}T12:00:00+08:00`)
+        return d >= start && d <= end
+      })
+    }
+    return rows.filter(
+      (t) =>
+        matchesTicketSearch(t, search) &&
+        matchesDurationFilter(ticketElapsedMinutes(t), durationFilter),
+    )
+  }, [boardTickets, dayGrouped, statusFilter, search, boardStatuses, datePreset, durationFilter, today])
 
   const runHistory = async () => {
     const plate = normalizePlate(historyPlate)
@@ -335,7 +353,9 @@ export default function TeamLeadQueuePage() {
       <header className="qmgr-toolbar">
         <div className="qmgr-toolbar-text">
           <h1 className="qmgr-title">Queue</h1>
-          <p className="qmgr-sub">Today · cars</p>
+          <p className="qmgr-sub">
+            {QUEUE_DATE_PRESETS.find((p) => p.key === datePreset)?.label || 'Today'} · cars + detailing
+          </p>
         </div>
         <div className="qmgr-toolbar-actions">
           <button
@@ -364,10 +384,29 @@ export default function TeamLeadQueuePage() {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Plate, model, service…"
+          placeholder="Plate, phone, service, detailing…"
           enterKeyHint="search"
         />
       </label>
+
+      <div className="qmgr-filter-row">
+        <label className="qmgr-filter">
+          <span>Date</span>
+          <select value={datePreset} onChange={(e) => setDatePreset(e.target.value)}>
+            {QUEUE_DATE_PRESETS.filter((p) => p.key !== 'custom').map((p) => (
+              <option key={p.key} value={p.key}>{p.label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="qmgr-filter">
+          <span>Duration</span>
+          <select value={durationFilter} onChange={(e) => setDurationFilter(e.target.value)}>
+            {DURATION_FILTERS.map((p) => (
+              <option key={p.key} value={p.key}>{p.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <details
         className="qmgr-history"

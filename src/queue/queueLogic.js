@@ -55,6 +55,41 @@ export const DASHBOARD_DATE_PRESETS = [
   { key: 'custom', label: 'Custom', months: null },
 ]
 
+/** Queue / Queue View date axis — daily default only on those surfaces (not Bookings). */
+export const QUEUE_DATE_PRESETS = [
+  { key: 'today', label: 'Today', dailyDefault: true },
+  { key: 'yesterday', label: 'Yesterday' },
+  { key: 'week', label: 'This week' },
+  { key: 'all', label: 'All dates' },
+  { key: 'custom', label: 'Custom' },
+]
+
+export const DURATION_FILTERS = [
+  { key: 'all', label: 'Any duration' },
+  { key: 'under_30', label: 'Under 30m', maxExclusive: 30 },
+  { key: '30_60', label: '30-60m', minInclusive: 30, maxExclusive: 60 },
+  { key: '60_120', label: '1-2h', minInclusive: 60, maxExclusive: 120 },
+  { key: 'over_120', label: 'Over 2h', minInclusive: 120 },
+]
+
+/** Public/form appointment statuses — Bookings board for TL (no floor queueing). */
+export const FORM_BOOKING_STATUSES = ['pending', 'confirmed']
+
+export const CANCEL_REASON_PRESETS = [
+  "Customer can't wait any longer",
+  "Customer doesn't want the service anymore",
+  'Customer needs to be somewhere',
+  'Others',
+]
+
+export const CANCELABLE_STATUSES = [
+  'pending',
+  'confirmed',
+  'waiting',
+  'in_progress',
+  'final_checking',
+]
+
 export const VISIT_PROGRESS_STEPS = ['waiting', 'in_progress', 'final_checking', 'for_payment']
 
 /** Customer-facing visit stepper — public status only, no internal ops data. */
@@ -94,12 +129,14 @@ export function getOpsBoardStatuses(profile) {
 
 /**
  * Allowed direct status updates via updateTicketStatus (not redo RPC / POS complete).
- * UI "final_checking" maps to send_queue_ticket_to_payment → booking becomes for_payment.
+ * for_payment is Admin/POS via sendTicketToPayment — never a TL transition.
  */
 export const QUEUE_STATUS_TRANSITIONS = {
-  waiting: ['in_progress'],
-  in_progress: ['final_checking'],
-  final_checking: [],
+  pending: ['confirmed', 'waiting', 'cancelled'],
+  confirmed: ['waiting', 'cancelled'],
+  waiting: ['in_progress', 'cancelled'],
+  in_progress: ['final_checking', 'cancelled'],
+  final_checking: ['cancelled'],
   for_payment: [],
   redo: ['in_progress'],
   completed: [],
@@ -110,6 +147,83 @@ export function canTransitionQueueStatus(fromStatus, toStatus) {
   const from = String(fromStatus || '')
   const to = String(toStatus || '')
   return (QUEUE_STATUS_TRANSITIONS[from] || []).includes(to)
+}
+
+export function canCancelQueueStatus(status) {
+  return CANCELABLE_STATUSES.includes(String(status || ''))
+}
+
+export function isFormBookingStatus(status) {
+  return FORM_BOOKING_STATUSES.includes(String(status || ''))
+}
+
+/** TL Bookings = form appointments only. Admin/SA see floor lanes too. */
+export function getBookingBoardStatuses(profile) {
+  if (profile?.role === ROLES.TEAM_LEAD) return [...FORM_BOOKING_STATUSES]
+  return [
+    ...FORM_BOOKING_STATUSES,
+    'waiting',
+    'in_progress',
+    'final_checking',
+    ...(canSeeForPaymentLane(profile) ? ['for_payment'] : []),
+    'completed',
+    'cancelled',
+  ]
+}
+
+export function validateCancellationReason(reason) {
+  const text = String(reason || '').trim()
+  if (text.length < 3) return { ok: false, error: 'Cancel reason must be at least 3 characters.' }
+  if (text.length > 500) return { ok: false, error: 'Cancel reason must be 500 characters or fewer.' }
+  return { ok: true, reason: text }
+}
+
+export function matchesTicketSearch(ticket, query) {
+  const q = String(query || '').trim().toLowerCase()
+  if (!q) return true
+  if (!ticket) return false
+  const hay = [
+    ticket.vehicle_plate,
+    ticket.vehicle_make,
+    ticket.vehicle_model,
+    ticket.service_name,
+    ticket.customer_name,
+    ticket.customer_phone,
+    ticket.status,
+    ticket.service_pay_category,
+    ...(ticket.service_names || []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return hay.includes(q)
+}
+
+export function ticketElapsedMinutes(ticket, nowMs = Date.now()) {
+  if (!ticket?.created_at) return null
+  const start = new Date(ticket.created_at).getTime()
+  if (!Number.isFinite(start)) return null
+  const endCandidates = [
+    ticket.completed_at,
+    ticket.cancelled_at,
+    ticket.actual_end,
+    ticket.final_checking_at,
+  ]
+    .map((iso) => (iso ? new Date(iso).getTime() : NaN))
+    .filter(Number.isFinite)
+  const end = endCandidates.length ? Math.min(...endCandidates) : nowMs
+  if (end < start) return 0
+  return Math.max(0, Math.round((end - start) / 60_000))
+}
+
+export function matchesDurationFilter(minutes, filterKey) {
+  const key = String(filterKey || 'all')
+  if (key === 'all' || minutes == null) return key === 'all' ? true : false
+  const rule = DURATION_FILTERS.find((row) => row.key === key)
+  if (!rule) return true
+  if (rule.minInclusive != null && minutes < rule.minInclusive) return false
+  if (rule.maxExclusive != null && minutes >= rule.maxExclusive) return false
+  return true
 }
 
 /**
@@ -129,17 +243,21 @@ export function getAdminOverrideTargets(status) {
 /**
  * Which TL/editor ticket buttons are enabled for the current status.
  * @param {string} status
- * @param {{ canManageQueue?: boolean, canViewRedoLane?: boolean }} caps
+ * @param {{ canManageQueue?: boolean, canViewRedoLane?: boolean, canSeePayment?: boolean }} caps
  */
-export function getQueueTicketActionFlags(status, { canManageQueue = false, canViewRedoLane: seeRedo = false } = {}) {
+export function getQueueTicketActionFlags(
+  status,
+  { canManageQueue = false, canViewRedoLane: seeRedo = false, canSeePayment = false } = {},
+) {
   const s = String(status || '')
   const edit = Boolean(canManageQueue)
   return {
     canStart: edit && (s === 'waiting' || (seeRedo && s === 'redo')),
     canFinalCheck: edit && s === 'in_progress',
-    /** Stuck at final_checking (auto-handoff failed) or retry before POS. */
-    canSendToPayment: edit && s === 'final_checking',
+    /** Admin / SA / ASA only — TL never sends to payment. */
+    canSendToPayment: edit && Boolean(canSeePayment) && s === 'final_checking',
     canMarkRedo: edit && seeRedo && REDO_FROM_STATUSES.includes(s),
+    canCancel: edit && canCancelQueueStatus(s),
   }
 }
 

@@ -104,7 +104,7 @@ function PageHeader({ eyebrow, title, description, action, live = false }) {
               Live
             </span>
           ) : null}
-        </div>
+      </div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
         {description && <p className="floor-desc mt-2 max-w-2xl text-muted-foreground">{description}</p>}
       </div>
@@ -366,11 +366,11 @@ export function OperationsDashboardPage() {
     <section>
       <PageHeader
         eyebrow={profile?.role === 'admin' ? 'Branch Admin' : 'Team Lead'}
-        title={profile?.role === 'admin' ? 'Floor' : 'Active floor control'}
+        title={profile?.role === 'admin' ? 'Queue View' : 'Queue View'}
         description={
           profile?.role === 'admin'
-            ? 'Watch waiting cars and tickets ready for POS.'
-            : 'Queue volume, crew, handoffs, and paid sales for your branch.'
+            ? 'High-level floor summary — waiting cars, detailing, and tickets ready for POS.'
+            : 'Branch summary of queue volume, detailing jobs, crew, and handoffs. Open Queue for the full detail board.'
         }
         live={live}
         action={<RefreshButton loading={loading || salesLoading} onClick={refreshAll} />}
@@ -524,7 +524,7 @@ export function OperationsDashboardPage() {
               ) : (
                 <div key={handoff.id} className="rounded-2xl border border-border bg-card p-4">
                   {body}
-                </div>
+              </div>
               )
             }) : <EmptyLine text="No payment handoffs in this range." />}
           </div>
@@ -565,7 +565,7 @@ export function OperationsDashboardPage() {
                         {' · '}
                         {sale.occurred_at ? new Date(sale.occurred_at).toLocaleString() : '—'}
                       </p>
-                    </div>
+            </div>
                     <p className="shrink-0 text-base font-semibold tabular-nums text-foreground sm:text-lg">
                       {formatMoney(sale.total_minor)}
                     </p>
@@ -752,7 +752,7 @@ function OperationsQueueBoardPage() {
               Branch · {getBranchScope(profile) || 'unassigned'}
             </p>
           )}
-        </div>
+            </div>
         <div
           className="floor-status-chips flex w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
           role="toolbar"
@@ -855,8 +855,8 @@ function OperationsQueueBoardPage() {
                       />
                     ))
                     : <EmptyLine text="No tickets in this lane." />}
-              </div>
-            </section>
+            </div>
+          </section>
           )
         })}
       </div>
@@ -1028,7 +1028,7 @@ export function NewQueueTicketPage() {
       const ids = current.service_ids || []
       const total = sumSelectedPrices(services, ids, vehicle_type)
       return {
-        ...current,
+      ...current,
         vehicle_type,
         final_price: ids.length ? String(total / 100) : current.final_price,
       }
@@ -1275,12 +1275,12 @@ export function CrewPage() {
                     </label>
                   )}
                   <label className="md:col-span-2 flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-foreground">
-                    <input type="checkbox" checked={form.present_today} onChange={(event) => setForm((current) => ({ ...current, present_today: event.target.checked }))} />
-                    Mark as attended today
-                  </label>
+                <input type="checkbox" checked={form.present_today} onChange={(event) => setForm((current) => ({ ...current, present_today: event.target.checked }))} />
+                Mark as attended today
+              </label>
                   <button disabled={saving === 'add-staff'} className="md:col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60">{saving === 'add-staff' ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}Add crew member</button>
-                </form>
-              )}
+            </form>
+          )}
               <StaffPoolList
                 rows={staffPool}
                 canManage={canManageCrew}
@@ -1294,7 +1294,7 @@ export function CrewPage() {
                   return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
                 }}
               />
-            </Panel>
+        </Panel>
           )}
           {crewTab === 'present' && (
             <div className="mt-5 grid gap-6 xl:grid-cols-2">
@@ -1314,7 +1314,7 @@ export function CrewPage() {
                 />
               </Panel>
               <Panel title="Deployable (not on a ticket)" icon={Users}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
-            </div>
+      </div>
           )}
           {crewTab === 'busy' && (
             <Panel title="Busy Staff" icon={Users} className="mt-5"><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
@@ -1341,9 +1341,9 @@ export function MyTasksPage() {
     setLoading(true)
     const [queueRes, planRes] = await Promise.all([
       supabase
-        .from('queue_assignments')
+      .from('queue_assignments')
         .select('id, booking_id, task_name, task_notes, status, started_at, completed_at, released_at, created_at, bookings(vehicle_plate, branch, status, queue_number)')
-        .eq('staff_id', user.id)
+      .eq('staff_id', user.id)
         .in('status', ['active', 'pending'])
         .order('created_at', { ascending: false }),
       supabase
@@ -1499,7 +1499,7 @@ export function MyTasksPage() {
             const booking = row.bookings
             return (
               <article key={row.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-lg font-semibold">{row.task_name || 'Queue service task'}</p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -1508,7 +1508,7 @@ export function MyTasksPage() {
                       {booking?.queue_number ? ` · #${formatQueueNumber(booking.queue_number)}` : ''}
                     </p>
                     <p className="mt-1 text-xs capitalize text-slate-400">{row.status}{booking?.status ? ` · ticket ${booking.status}` : ''}</p>
-                  </div>
+              </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     {row.booking_id && !isStaff && (
                       <Link to={`/operations/queue/${row.booking_id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 no-underline">
@@ -1536,12 +1536,12 @@ export function MyTasksPage() {
                       </button>
                     )}
                   </div>
-                </div>
-                {row.task_notes && <p className="mt-4 text-sm text-slate-400">{row.task_notes}</p>}
-              </article>
+            </div>
+            {row.task_notes && <p className="mt-4 text-sm text-slate-400">{row.task_notes}</p>}
+          </article>
             )
           }) : <EmptyLine text={loading ? 'Loading…' : empty ? 'No assigned tasks right now.' : 'No queue assignments.'} />}
-        </div>
+      </div>
       </Panel>
     </section>
   )

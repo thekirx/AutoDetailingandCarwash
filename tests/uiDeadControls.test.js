@@ -26,9 +26,9 @@ describe('Queue ticket dead controls (OPS-H1/H2/H3)', () => {
     assert.equal(showQueueRedoAction(true), true)
   })
 
-  it('labels final check without POS for non-POS roles', () => {
-    assert.equal(finalCheckActionLabel(false), 'Final check → payment')
-    assert.equal(finalCheckActionLabel(true), 'Final check → POS')
+  it('labels final check without implying payment handoff', () => {
+    assert.equal(finalCheckActionLabel(false), 'Final check')
+    assert.equal(finalCheckActionLabel(true), 'Final check')
   })
 })
 

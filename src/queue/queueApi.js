@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase'
 import { getAccessTokenFresh } from '../lib/authToken'
 import {
   aggregateDailySalesSummary,
+  canCancelQueueStatus,
   canTransitionQueueStatus,
   crewRequiredForPayCategory,
   DEFAULT_TIMING_WARNINGS,
@@ -21,6 +22,7 @@ import {
   parsePesoInputToMinor,
   requiresTeamLeadBranchSetup,
   resolveBranchFilter,
+  validateCancellationReason,
   validateCrewUsername,
 } from './queueLogic'
 import { writeAudit } from '../lib/audit'
@@ -798,12 +800,8 @@ export async function updateTicketStatus(ticket, nextStatus) {
     )
   }
 
-  // Final check → payment is one RPC: in_progress (or stuck final_checking) → for_payment.
-  // Never write status=final_checking first — that left tickets stuck on the TL board.
-  // The RPC is visit-group aware: it sums every line into one handoff.
-  if (nextStatus === 'final_checking') {
-    await sendTicketToPayment(ticket.booking_id)
-    return
+  if (nextStatus === 'cancelled') {
+    throw new Error('Use cancelQueueTicket with a cancellation reason.')
   }
 
   const profile = await getCurrentProfile({ required: false })
@@ -826,9 +824,12 @@ export async function updateTicketStatus(ticket, nextStatus) {
       }
     }
   }
+  if (nextStatus === 'final_checking') {
+    patch.final_checking_at = now
+    if (profile?.id) patch.final_checked_by = profile.id
+  }
   if (nextStatus === 'for_payment') patch.for_payment_at = now
   if (nextStatus === 'completed') patch.completed_at = now
-  if (nextStatus === 'cancelled') patch.cancelled_at = now
   if (nextStatus === 'redo') {
     patch.redo_at = now
     if (profile?.id) patch.redo_by = profile.id
@@ -844,6 +845,31 @@ export async function updateTicketStatus(ticket, nextStatus) {
     await notifyBookingClient(ticket.booking_id, nextStatus)
   } catch {
     /* ignore */
+  }
+}
+
+/** Cancel open ticket/booking with required reason (TL may cancel; never hard-delete). */
+export async function cancelQueueTicket(ticket, reason) {
+  if (!canCancelQueueStatus(ticket?.status)) {
+    throw new Error(`Cannot cancel a ticket in ${ticket?.status || 'unknown'} status.`)
+  }
+  const checked = validateCancellationReason(reason)
+  if (!checked.ok) throw new Error(checked.error)
+
+  await getCurrentProfile({ required: true })
+  const now = new Date().toISOString()
+  const lineIds = await getVisitLineIds(ticket)
+  const { error } = await supabase
+    .from('bookings')
+    .update({
+      status: 'cancelled',
+      cancelled_at: now,
+      cancellation_reason: checked.reason,
+    })
+    .in('id', lineIds)
+  if (error) {
+    console.error('Unable to cancel queue ticket', error)
+    throw formatQueueActionError(error)
   }
 }
 

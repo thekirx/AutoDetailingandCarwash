@@ -298,7 +298,7 @@ export function getOperationsNav(profile) {
   if (isBranchAdmin(profile)) {
     return [
       { label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' },
-      { label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' },
+      { label: 'Queue View', to: '/operations/dashboard', icon: 'Gauge' },
       { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
     ]
   }
@@ -329,7 +329,7 @@ export function getOperationsNav(profile) {
 
   if (canViewQueueOperations(profile)) {
     items.push(
-      { label: isAdmin(profile) ? 'Floor board' : 'Dashboard', to: '/operations/dashboard', icon: 'Gauge' },
+      { label: isAdmin(profile) ? 'Queue View' : 'Dashboard', to: '/operations/dashboard', icon: 'Gauge' },
       { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
       { label: 'Crew', to: '/operations/crew', icon: 'Users' },
       { label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' },
@@ -367,7 +367,7 @@ export function getTeamLeadDock(profile) {
   const canBook = canAccessBookingBoard(profile)
   const dock = []
   if (canQueue) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
-  if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
+  if (canQueue) dock.push({ label: 'Queue View', to: '/operations/dashboard', icon: 'Gauge' })
   if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
   if (canQueue) dock.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
   if (canBook) dock.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
@@ -385,7 +385,7 @@ export function getTeamLeadMore(profile) {
 export function getBranchAdminDock(profile) {
   if (!isBranchAdmin(profile)) return []
   const dock = []
-  if (canViewQueueOperations(profile)) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
+  if (canViewQueueOperations(profile)) dock.push({ label: 'Queue View', to: '/operations/dashboard', icon: 'Gauge' })
   if (canViewQueueOperations(profile)) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
   if (canAccessPos(profile)) dock.push({ label: 'POS', to: '/operations/pos', icon: 'ShoppingCart', primary: true })
   return dock

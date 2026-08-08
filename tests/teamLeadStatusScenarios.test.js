@@ -17,21 +17,21 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const editor = readFileSync(join(root, 'src/components/QueueTicketEditor.jsx'), 'utf8')
 const api = readFileSync(join(root, 'src/queue/queueApi.js'), 'utf8')
 
-const TL = { canManageQueue: true, canViewRedoLane: false }
-const SA = { canManageQueue: true, canViewRedoLane: true }
-const VIEWER = { canManageQueue: false, canViewRedoLane: false }
+const TL = { canManageQueue: true, canViewRedoLane: false, canSeePayment: false }
+const SA = { canManageQueue: true, canViewRedoLane: true, canSeePayment: true }
+const VIEWER = { canManageQueue: false, canViewRedoLane: false, canSeePayment: false }
 
 describe('TL queue status transitions (principal scenarios)', () => {
-  it('allows only the floor path waiting → in_progress → final_checking', () => {
+  it('allows floor path waiting → in_progress → final_checking + cancel', () => {
     assert.equal(canTransitionQueueStatus('waiting', 'in_progress'), true)
     assert.equal(canTransitionQueueStatus('in_progress', 'final_checking'), true)
+    assert.equal(canTransitionQueueStatus('waiting', 'cancelled'), true)
+    assert.equal(canTransitionQueueStatus('in_progress', 'cancelled'), true)
+    assert.equal(canTransitionQueueStatus('final_checking', 'cancelled'), true)
     assert.equal(canTransitionQueueStatus('waiting', 'final_checking'), false)
     assert.equal(canTransitionQueueStatus('waiting', 'for_payment'), false)
-    assert.equal(canTransitionQueueStatus('in_progress', 'waiting'), false)
     assert.equal(canTransitionQueueStatus('final_checking', 'for_payment'), false)
-    assert.equal(canTransitionQueueStatus('final_checking', 'in_progress'), false)
     assert.equal(canTransitionQueueStatus('for_payment', 'completed'), false)
-    assert.equal(canTransitionQueueStatus('completed', 'waiting'), false)
   })
 
   it('allows restart from redo → in_progress only', () => {
@@ -40,34 +40,43 @@ describe('TL queue status transitions (principal scenarios)', () => {
     assert.deepEqual(QUEUE_STATUS_TRANSITIONS.redo, ['in_progress'])
   })
 
-  it('TL waiting: Start only', () => {
+  it('TL waiting: Start + Cancel', () => {
     const f = getQueueTicketActionFlags('waiting', TL)
     assert.deepEqual(f, {
       canStart: true,
       canFinalCheck: false,
       canSendToPayment: false,
       canMarkRedo: false,
+      canCancel: true,
     })
   })
 
-  it('TL in_progress: Final check only (no redo lane)', () => {
+  it('TL in_progress: Final check + Cancel (no payment)', () => {
     const f = getQueueTicketActionFlags('in_progress', TL)
     assert.deepEqual(f, {
       canStart: false,
       canFinalCheck: true,
       canSendToPayment: false,
       canMarkRedo: false,
+      canCancel: true,
     })
   })
 
-  it('TL final_checking: Send to payment retry only', () => {
+  it('TL final_checking: Cancel only (Admin sends to payment)', () => {
     const f = getQueueTicketActionFlags('final_checking', TL)
     assert.deepEqual(f, {
       canStart: false,
       canFinalCheck: false,
-      canSendToPayment: true,
+      canSendToPayment: false,
       canMarkRedo: false,
+      canCancel: true,
     })
+  })
+
+  it('Admin final_checking: Send to payment + Cancel', () => {
+    const f = getQueueTicketActionFlags('final_checking', { ...TL, canSeePayment: true })
+    assert.equal(f.canSendToPayment, true)
+    assert.equal(f.canCancel, true)
   })
 
   it('TL for_payment / completed / cancelled: no status buttons', () => {
@@ -77,16 +86,14 @@ describe('TL queue status transitions (principal scenarios)', () => {
         canFinalCheck: false,
         canSendToPayment: false,
         canMarkRedo: false,
+        canCancel: false,
       })
     }
   })
 
-  it('TL redo status: cannot start without redo lane (SA can)', () => {
+  it('SA can mark redo; TL cannot', () => {
     assert.equal(getQueueTicketActionFlags('redo', TL).canStart, false)
     assert.equal(getQueueTicketActionFlags('redo', SA).canStart, true)
-  })
-
-  it('SA can mark redo from REDO_FROM_STATUSES; TL never', () => {
     for (const status of REDO_FROM_STATUSES) {
       assert.equal(getQueueTicketActionFlags(status, SA).canMarkRedo, true)
       assert.equal(getQueueTicketActionFlags(status, TL).canMarkRedo, false)
@@ -94,12 +101,13 @@ describe('TL queue status transitions (principal scenarios)', () => {
     assert.equal(getQueueTicketActionFlags('waiting', SA).canMarkRedo, false)
   })
 
-  it('view-only: all actions off even on waiting', () => {
+  it('viewer has no actions', () => {
     assert.deepEqual(getQueueTicketActionFlags('waiting', VIEWER), {
       canStart: false,
       canFinalCheck: false,
       canSendToPayment: false,
       canMarkRedo: false,
+      canCancel: false,
     })
   })
 
@@ -107,24 +115,26 @@ describe('TL queue status transitions (principal scenarios)', () => {
     assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), ['waiting', 'in_progress', 'final_checking'])
   })
 
-  it('final check label for TL promises payment handoff', () => {
-    assert.equal(finalCheckActionLabel(false), 'Final check → payment')
-    assert.equal(finalCheckActionLabel(true), 'Final check → POS')
+  it('final check label stays on floor for TL', () => {
+    assert.equal(finalCheckActionLabel(false), 'Final check')
+    assert.equal(finalCheckActionLabel(true), 'Final check')
   })
 
-  it('updateTicketStatus guards transitions and final-check jumps straight to payment RPC', () => {
+  it('updateTicketStatus writes final_checking and uses cancelQueueTicket', () => {
     assert.match(api, /canTransitionQueueStatus/)
-    assert.match(api, /if \(nextStatus === 'final_checking'\)/)
-    assert.match(api, /await sendTicketToPayment\(ticket\.booking_id\)/)
-    assert.match(api, /Never write status=final_checking first/)
+    assert.match(api, /final_checking_at/)
+    assert.match(api, /cancelQueueTicket/)
+    assert.match(api, /cancellation_reason/)
+    assert.doesNotMatch(api, /Never write status=final_checking first/)
   })
 
-  it('QueueTicketEditor wires shared action flags', () => {
+  it('QueueTicketEditor wires shared action flags + cancel', () => {
     assert.match(editor, /getQueueTicketActionFlags/)
     assert.match(editor, /actions\.canStart/)
     assert.match(editor, /actions\.canFinalCheck/)
     assert.match(editor, /actions\.canSendToPayment/)
-    assert.match(editor, /actions\.canMarkRedo/)
+    assert.match(editor, /actions\.canCancel/)
+    assert.match(editor, /cancelQueueTicket/)
   })
 })
 

@@ -12,9 +12,9 @@ export function showQueueRedoAction(canViewRedoLane) {
   return Boolean(canViewRedoLane)
 }
 
-/** Final-check CTA: advances to final_checking then auto-sends to payment handoff. */
+/** Final-check CTA: TL stays on final_checking; Admin may then send to payment. */
 export function finalCheckActionLabel(canOpenPos) {
-  return canOpenPos ? 'Final check → POS' : 'Final check → payment'
+  return canOpenPos ? 'Final check' : 'Final check'
 }
 
 /** Payment handoff CTA: TL hands off to branch Admin / ASA POS — not a cashier role. */

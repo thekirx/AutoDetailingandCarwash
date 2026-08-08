@@ -12,8 +12,9 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
-import { canAccessPos, canOverrideQueueStatus, canViewRedoLane } from '../auth/permissions'
+import { canAccessPos, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane } from '../auth/permissions'
 import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
+import CancellationReasonDialog from './CancellationReasonDialog'
 import { supabase } from '../lib/supabase'
 import {
   formatQueueNumber,
@@ -28,6 +29,7 @@ import {
   addServiceToVisit,
   adminOverrideTicketStatus,
   assignStaff,
+  cancelQueueTicket,
   fetchServices,
   fetchTicket,
   fetchVisitLines,
@@ -93,6 +95,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const [saving, setSaving] = useState('')
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
+  const [cancelOpen, setCancelOpen] = useState(false)
 
   const load = useCallback(async () => {
     if (!bookingId) return
@@ -195,9 +198,11 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const showEditActions = showQueueTicketEditActions(canManageQueue)
   const showRedoBtn = showQueueRedoAction(canViewRedoLane(profile))
   const canOpenPos = canAccessPos(profile)
+  const canSeePayment = canSeeForPaymentLane(profile)
   const actions = getQueueTicketActionFlags(ticket.status, {
     canManageQueue,
     canViewRedoLane: showRedoBtn,
+    canSeePayment,
   })
   const overrideTargets = canOverrideQueueStatus(profile) ? getAdminOverrideTargets(ticket.status) : []
   const canAddService = showEditActions && ['waiting', 'in_progress'].includes(ticket.status)
@@ -354,26 +359,42 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                 >
                   {finalCheckActionLabel(canOpenPos)}
                 </ActionButton>
-                <ActionButton
-                  disabled={!actions.canSendToPayment}
-                  loading={saving === 'payment'}
-                  onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}
-                >
-                  <Send size={17} aria-hidden />
-                  {sendToPaymentActionLabel(canOpenPos)}
-                </ActionButton>
+                {canSeePayment ? (
+                  <ActionButton
+                    disabled={!actions.canSendToPayment}
+                    loading={saving === 'payment'}
+                    onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}
+                  >
+                    <Send size={17} aria-hidden />
+                    {sendToPaymentActionLabel(canOpenPos)}
+                  </ActionButton>
+                ) : null}
                 {showRedoBtn ? (
                   <ActionButton disabled={!actions.canMarkRedo} loading={saving === 'redo'} onClick={() => runAction('redo', runRedo)}>
                     <ShieldAlert size={17} aria-hidden />
                     Mark redo
                   </ActionButton>
                 ) : null}
+                {actions.canCancel ? (
+                  <button
+                    type="button"
+                    className="floor-touch-btn inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 px-5 py-3 font-semibold text-destructive transition disabled:opacity-40"
+                    disabled={saving === 'cancel'}
+                    onClick={() => setCancelOpen(true)}
+                  >
+                    Cancel ticket
+                  </button>
+                ) : null}
               </div>
-              {!canOpenPos ? (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Branch Admin or ASA opens POS to collect payment after you send the handoff.
+              {canSeePayment ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Payment collection stays on POS after Send to payment.
                 </p>
-              ) : null}
+              ) : (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Final check keeps the car on your board. Branch Admin sends it to payment / POS.
+                </p>
+              )}
             </Panel>
           </div>
         ) : null}
@@ -557,6 +578,19 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
           </Link>
         </p>
       ) : null}
+
+      <CancellationReasonDialog
+        open={cancelOpen}
+        title="Cancel ticket"
+        loading={saving === 'cancel'}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={(reason) => {
+          runAction('cancel', async () => {
+            await cancelQueueTicket(ticket, reason)
+            setCancelOpen(false)
+          })
+        }}
+      />
     </div>
   )
 }

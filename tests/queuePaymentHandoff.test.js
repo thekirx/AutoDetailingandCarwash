@@ -41,15 +41,14 @@ describe('Queue payment handoff contract', () => {
     assert.match(src, /send_queue_ticket_to_payment/)
   })
 
-  it('queue client final-check calls payment RPC without lingering in final_checking', async () => {
+  it('queue client final-check writes final_checking; payment is a separate Admin RPC', async () => {
     const api = await readFile(projectFile('src/queue/queueApi.js'), 'utf8')
-    assert.match(api, /if \(nextStatus === 'final_checking'\)/)
-    assert.match(api, /await sendTicketToPayment\(ticket\.booking_id\)/)
-    assert.match(api, /Never write status=final_checking first/)
-    assert.match(api, /send_queue_ticket_to_payment/)
+    assert.match(api, /final_checking_at/)
+    assert.match(api, /sendTicketToPayment|send_queue_ticket_to_payment/)
+    assert.match(api, /cancelQueueTicket/)
     assert.doesNotMatch(
       api,
-      /patch\.final_checking_at[\s\S]*await sendTicketToPayment/,
+      /if \(nextStatus === 'final_checking'\) \{\s*await sendTicketToPayment/,
     )
   })
 
@@ -63,11 +62,11 @@ describe('Queue payment handoff contract', () => {
     assert.match(sql, /set status = 'for_payment'/)
   })
 
-  it('TL UI labels handoff to Admin/ASA not cashier', async () => {
+  it('TL UI keeps payment as Admin/ASA action', async () => {
     const editor = await readFile(projectFile('src/components/QueueTicketEditor.jsx'), 'utf8')
     const controls = await readFile(projectFile('src/lib/uiDeadControls.js'), 'utf8')
     assert.match(controls, /Send to payment \(Admin \/ ASA\)/)
-    assert.match(editor, /Branch Admin or ASA opens POS/)
+    assert.match(editor, /Branch Admin sends it to payment/)
     assert.doesNotMatch(editor, /Cashier opens POS/)
   })
 

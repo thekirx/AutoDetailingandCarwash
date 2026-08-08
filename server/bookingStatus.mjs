@@ -135,9 +135,27 @@ export async function handleBookingStatusRequest(req, res) {
       })
     }
 
+    if (status === 'cancelled') {
+      const reason = String(body.cancellation_reason || body.reason || '').trim()
+      if (reason.length < 3) {
+        return json(res, 400, { error: 'Cancel reason must be at least 3 characters.' })
+      }
+    }
+
+    const now = new Date().toISOString()
     const { data: booking, error } = await db
       .from('bookings')
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({
+        status,
+        updated_at: now,
+        ...(status === 'cancelled'
+          ? {
+              cancelled_at: now,
+              cancellation_reason: String(body.cancellation_reason || body.reason || '').trim(),
+            }
+          : {}),
+        ...(status === 'waiting' ? { waiting_at: now } : {}),
+      })
       .eq('id', bookingId)
       .select('*')
       .single()

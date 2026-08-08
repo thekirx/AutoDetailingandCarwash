@@ -12,6 +12,7 @@ import {
   canSeeAllBranches,
   canSeeForPaymentLane,
   getBranchScopeList,
+  ROLES,
 } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
@@ -19,6 +20,7 @@ import { applyBranchScope } from '@/lib/crmInsights'
 import { supabase } from '@/lib/supabase'
 import {
   BOOKING_PRIMARY_ACTION_LABELS,
+  getBookingBoardStatuses,
   getBookingPrimaryNextStatus,
   getDashboardDateRange,
   requiresTeamLeadBranchSetup,
@@ -26,7 +28,8 @@ import {
   filterBranchesForProfile,
   pickDefaultBranchSlug,
 } from '@/queue/queueLogic'
-import { assignStaff, fetchPresentAssignableStaff } from '@/queue/queueApi'
+import { assignStaff, cancelQueueTicket, fetchPresentAssignableStaff } from '@/queue/queueApi'
+import CancellationReasonDialog from '@/components/CancellationReasonDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -88,6 +91,7 @@ export default function BookingBoardPage() {
   const { profile } = useAuth()
   const canEdit = canEditBookings(profile)
   const canCreate = canCreateBookings(profile)
+  const isTeamLead = profile?.role === ROLES.TEAM_LEAD
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = BOOKING_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'board'
   const [bookings, setBookings] = useState([])
@@ -105,10 +109,13 @@ export default function BookingBoardPage() {
   const [crewOptions, setCrewOptions] = useState([])
   const [crewSelected, setCrewSelected] = useState([])
   const [crewLoading, setCrewLoading] = useState(false)
+  const [cancelTarget, setCancelTarget] = useState(null)
+  const [cancelLoading, setCancelLoading] = useState(false)
   const canSeePayment = canSeeForPaymentLane(profile)
+  const boardStatuses = useMemo(() => getBookingBoardStatuses(profile), [profile])
   const visibleColumns = useMemo(
-    () => (canSeePayment ? COLUMNS : COLUMNS.filter((c) => c.id !== 'for_payment')),
-    [canSeePayment],
+    () => COLUMNS.filter((c) => boardStatuses.includes(c.id)),
+    [boardStatuses],
   )
 
   const range = useMemo(() => {
@@ -130,8 +137,9 @@ export default function BookingBoardPage() {
     const endIso = `${range.end}T23:59:59.999+08:00`
     let query = supabase
       .from('bookings')
-      .select('id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id')
+      .select('id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id, services(name, pay_category)')
       .eq('is_archived', false)
+      .in('status', boardStatuses)
       .gte('scheduled_start', startIso)
       .lte('scheduled_start', endIso)
       .order('scheduled_start', { ascending: true })
@@ -140,7 +148,7 @@ export default function BookingBoardPage() {
     const { data, error } = await query
     if (error) toast.error(error.message)
     setBookings(data || [])
-  }, [branchScope, range.start, range.end])
+  }, [branchScope, range.start, range.end, boardStatuses])
 
   useEffect(() => {
     listBranches().then((rows) => {
@@ -341,6 +349,10 @@ export default function BookingBoardPage() {
   }
 
   async function archiveBooking(booking) {
+    if (isTeamLead) {
+      toast.error('Team Lead can cancel with a reason — archive is Admin only.')
+      return
+    }
     if (!canEdit || !window.confirm('Archive this booking?')) return
     const { error } = await supabase.from('bookings').update({ is_archived: true }).eq('id', booking.id).select('id').single()
     if (error) toast.error(error.message)
@@ -382,7 +394,11 @@ export default function BookingBoardPage() {
             <p className="bk-hero-kicker">Hakum Auto Care</p>
             <h1 className="bk-hero-title">Bookings</h1>
             <p className="bk-hero-sub">
-              {range.start === range.end ? range.start : `${range.start} → ${range.end}`}
+              {isTeamLead
+                ? 'Form appointments only · send to waiting when the car is in the shop'
+                : range.start === range.end
+                  ? range.start
+                  : `${range.start} → ${range.end}`}
             </p>
           </div>
         </div>
@@ -582,7 +598,12 @@ export default function BookingBoardPage() {
                       <TableCell><Badge variant="secondary">{b.status}</Badge></TableCell>
                       <TableCell className="flex flex-wrap gap-1">
                         {canEdit && <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(b)}>Edit</Button>}
-                        {canEdit && <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => archiveBooking(b)}>Archive</Button>}
+                        {canEdit && !isTeamLead ? (
+                          <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => archiveBooking(b)}>Archive</Button>
+                        ) : null}
+                        {canEdit && isTeamLead ? (
+                          <Button size="sm" variant="ghost" className="cursor-pointer text-destructive" onClick={() => setCancelTarget(b)}>Cancel</Button>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -736,6 +757,27 @@ export default function BookingBoardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CancellationReasonDialog
+        open={Boolean(cancelTarget)}
+        title="Cancel booking"
+        loading={cancelLoading}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={async (reason) => {
+          if (!cancelTarget) return
+          setCancelLoading(true)
+          try {
+            await cancelQueueTicket({ booking_id: cancelTarget.id, status: cancelTarget.status }, reason)
+            toast.success('Booking cancelled')
+            setCancelTarget(null)
+            load()
+          } catch (err) {
+            toast.error(err.message || 'Unable to cancel')
+          } finally {
+            setCancelLoading(false)
+          }
+        }}
+      />
     </section>
   )
 }

@@ -83,7 +83,7 @@ describe('RBAC Part 1 matrix', () => {
     )
   })
 
-  it('Admin keeps planning capability but nav is POS/Floor/Queue only', () => {
+  it('Admin keeps planning capability but nav is POS/Queue View/Queue only', () => {
     const p = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor', 'imus'] }
     assert.equal(canViewPlanning(p), true)
     assert.equal(canEditPlanning(p), false)

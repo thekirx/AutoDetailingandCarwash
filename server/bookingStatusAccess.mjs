@@ -43,7 +43,10 @@ export function canStaffUpdateBookingStatus(staff, booking, opts = {}) {
   }
 
   if (staff.role === 'team_lead') {
-    return Boolean(staff.branch_slug) && staff.branch_slug === branch
+    if (!staff.branch_slug || staff.branch_slug !== branch) return false
+    // Payment handoff is Admin / POS — TL stops at final_checking.
+    if (String(opts.nextStatus || '') === 'for_payment') return false
+    return true
   }
 
   if (staff.role === 'admin') {
