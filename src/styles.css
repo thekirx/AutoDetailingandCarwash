@@ -2268,10 +2268,33 @@ html:not(.dark) .floor-dock-item-active {
   box-shadow: none;
 }
 
+/* Floor metric cards — touch-friendly status jump links */
+.floor-metric-card-link {
+  display: block;
+  min-height: 5.5rem;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.floor-metric-card-link:active {
+  transform: scale(0.99);
+}
+.floor-status-chip {
+  min-width: 4.75rem;
+  min-height: 2.75rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Queue board — high-contrast lanes on light/dark ops shell */
 .queue-lane {
   border-top: 3px solid var(--border);
   background: color-mix(in oklab, var(--muted) 70%, var(--card));
+  transition: opacity 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+.queue-lane-focused {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 55%, transparent);
+}
+.queue-lane-dimmed {
+  opacity: 0.42;
 }
 .queue-lane[data-status='waiting'] {
   border-top-color: #2563eb;

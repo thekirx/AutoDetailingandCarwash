@@ -120,6 +120,25 @@ export function getQueueTicketActionFlags(status, { canManageQueue = false, canV
   }
 }
 
+/** Valid ?lane= values for Floor → Queue deep links (board statuses only). */
+export function parseQueueLaneParam(value) {
+  const lane = String(value || '').trim().toLowerCase()
+  if (OPS_BOARD_STATUSES.includes(lane)) return lane
+  if (lane === 'all' || lane === 'total') return null
+  return null
+}
+
+/** Build /operations/queue href with optional lane + branch filters. */
+export function operationsQueueHref({ lane, branch } = {}) {
+  const params = new URLSearchParams()
+  const parsedLane = parseQueueLaneParam(lane)
+  if (parsedLane) params.set('lane', parsedLane)
+  const branchSlug = String(branch || '').trim()
+  if (branchSlug && branchSlug !== 'all') params.set('branch', branchSlug)
+  const qs = params.toString()
+  return qs ? `/operations/queue?${qs}` : '/operations/queue'
+}
+
 export function getQueueCounts(rows = [], { includeRedo = true } = {}) {
   const counts = { waiting: 0, in_progress: 0, final_checking: 0, redo: 0, total: 0 }
   const allowed = includeRedo ? OPS_BOARD_STATUSES : ACTIVE_QUEUE_STATUSES

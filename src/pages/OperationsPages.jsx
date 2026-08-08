@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   BadgeCheck,
   CarFront,
@@ -38,6 +38,8 @@ import {
   groupVisitTickets,
   isSuspiciousTiming,
   normalizeVehicleType,
+  operationsQueueHref,
+  parseQueueLaneParam,
   queueByBranchCounts,
   requiresTeamLeadBranchSetup,
   canOverrideQueueBranches,
@@ -109,15 +111,36 @@ function PageHeader({ eyebrow, title, description, action, live = false }) {
   )
 }
 
-function MetricCard({ label, value, icon: Icon, tone = 'blue' }) {
+function MetricCard({ label, value, icon: Icon, tone = 'blue', to, hint }) {
   const colors = tone === 'green' ? 'text-emerald-700 bg-emerald-500/15 dark:text-emerald-200 dark:bg-emerald-400/10' : tone === 'amber' ? 'text-amber-800 bg-amber-500/15 dark:text-amber-200 dark:bg-amber-400/10' : 'text-primary bg-primary/10'
-  return (
-    <article className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <p className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">{label}</p>
-        <span className={`grid size-9 place-items-center rounded-xl ${colors}`}><Icon size={16} aria-hidden /></span>
+        <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${colors}`}><Icon size={16} aria-hidden /></span>
       </div>
       <p className="mt-3 text-2xl font-semibold tabular-nums text-foreground sm:mt-4 sm:text-3xl">{value}</p>
+      {to ? (
+        <p className="mt-2 text-[11px] font-medium text-primary">
+          {hint || 'Open queue'}
+        </p>
+      ) : null}
+    </>
+  )
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className="floor-metric-card floor-metric-card-link rounded-2xl border border-border bg-card p-4 shadow-sm no-underline transition hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-5"
+        aria-label={`${label}: ${value}. ${hint || 'Open queue'}`}
+      >
+        {body}
+      </Link>
+    )
+  }
+  return (
+    <article className="floor-metric-card rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      {body}
     </article>
   )
 }
@@ -376,17 +399,54 @@ export function OperationsDashboardPage() {
         )}
       </div>
       <div className={`mt-4 grid gap-3 grid-cols-2 sm:mt-6 sm:gap-4 ${seeRedo ? 'xl:grid-cols-6' : 'xl:grid-cols-5'}`}>
-        <MetricCard label="Waiting" value={counts.waiting} icon={Clock3} />
-        <MetricCard label="In Progress" value={counts.in_progress} icon={CarFront} tone="green" />
-        <MetricCard label="Final Checking" value={counts.final_checking} icon={BadgeCheck} tone="amber" />
+        <MetricCard
+          label="Waiting"
+          value={counts.waiting}
+          icon={Clock3}
+          to={operationsQueueHref({ lane: 'waiting', branch: branchFilter })}
+          hint="Jump to waiting lane"
+        />
+        <MetricCard
+          label="In Progress"
+          value={counts.in_progress}
+          icon={CarFront}
+          tone="green"
+          to={operationsQueueHref({ lane: 'in_progress', branch: branchFilter })}
+          hint="Jump to in progress"
+        />
+        <MetricCard
+          label="Final Checking"
+          value={counts.final_checking}
+          icon={BadgeCheck}
+          tone="amber"
+          to={operationsQueueHref({ lane: 'final_checking', branch: branchFilter })}
+          hint="Jump to final check"
+        />
         <MetricCard
           label="For Payment"
           value={filteredHandoffs.filter((h) => h.status === 'pending').length}
           icon={Send}
           tone="amber"
+          to={canOpenPos ? '/operations/pos' : operationsQueueHref({ branch: branchFilter })}
+          hint={canOpenPos ? 'Open POS checkout' : 'Open queue board'}
         />
-        {seeRedo ? <MetricCard label="Redo" value={counts.redo} icon={ShieldAlert} tone="amber" /> : null}
-        <MetricCard label="Total Active" value={counts.total} icon={ClipboardList} />
+        {seeRedo ? (
+          <MetricCard
+            label="Redo"
+            value={counts.redo}
+            icon={ShieldAlert}
+            tone="amber"
+            to={operationsQueueHref({ lane: 'redo', branch: branchFilter })}
+            hint="Jump to redo lane"
+          />
+        ) : null}
+        <MetricCard
+          label="Total Active"
+          value={counts.total}
+          icon={ClipboardList}
+          to={operationsQueueHref({ branch: branchFilter })}
+          hint="Open full board"
+        />
       </div>
       <div className="mt-3 grid gap-3 grid-cols-2 sm:mt-4 sm:gap-4 xl:grid-cols-4">
         <MetricCard
@@ -535,7 +595,11 @@ export function OperationsQueuePage() {
   const seeAll = canSeeAllBranches(profile)
   const seeRedo = canViewRedoLane(profile)
   const scopeList = getBranchScopeList(profile)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedLane = parseQueueLaneParam(searchParams.get('lane'))
+  const branchFromUrl = String(searchParams.get('branch') || '').trim()
   const [branchFilter, setBranchFilter] = useState(() => {
+    if (branchFromUrl) return branchFromUrl
     if (seeAll) return 'all'
     if (Array.isArray(scopeList) && scopeList.length > 1) return 'all'
     if (Array.isArray(scopeList) && scopeList[0]) return scopeList[0]
@@ -555,6 +619,42 @@ export function OperationsQueuePage() {
     [boardTickets, boardStatuses],
   )
   const counts = useMemo(() => getQueueCounts(visibleQueue, { includeRedo: seeRedo }), [visibleQueue, seeRedo])
+  const focusLane = requestedLane && boardStatuses.includes(requestedLane) ? requestedLane : null
+
+  useEffect(() => {
+    if (!branchFromUrl || branchFromUrl === branchFilter) return
+    setBranchFilter(branchFromUrl)
+  }, [branchFromUrl, branchFilter])
+
+  useEffect(() => {
+    if (!focusLane) return undefined
+    const id = window.requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-status="${focusLane}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [focusLane, loading, boardTickets.length])
+
+  const setLaneFilter = useCallback((lane) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (!lane) next.delete('lane')
+      else next.set('lane', lane)
+      if (branchFilter && branchFilter !== 'all') next.set('branch', branchFilter)
+      else next.delete('branch')
+      return next
+    }, { replace: true })
+  }, [branchFilter, setSearchParams])
+
+  const onBranchChange = useCallback((slug) => {
+    setBranchFilter(slug)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (slug && slug !== 'all') next.set('branch', slug)
+      else next.delete('branch')
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
 
   useEffect(() => {
     if (!seeAll && !(Array.isArray(scopeList) && scopeList.length > 1)) return
@@ -625,14 +725,14 @@ export function OperationsQueuePage() {
         )}
       />
 
-      <div className="queue-board-toolbar mt-3 flex flex-wrap items-end justify-between gap-3">
+      <div className="queue-board-toolbar mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="flex flex-wrap items-end gap-3">
           {(seeAll || branchOptions.length > 1) ? (
             <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
               Branch
               <select
                 value={branchFilter}
-                onChange={(e) => setBranchFilter(e.target.value)}
+                onChange={(e) => onBranchChange(e.target.value)}
                 className="mt-2 block min-h-11 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground sm:w-52"
               >
                 {branchOptions.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
@@ -644,11 +744,47 @@ export function OperationsQueuePage() {
             </p>
           )}
         </div>
-        {/* Lane counts live on column headers — avoid a second summary strip */}
-        <p className="rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground">
-          <span className="tabular-nums text-primary">{counts.total}</span>
-          <span className="ml-1.5 text-muted-foreground font-medium">active on board</span>
-        </p>
+        <div
+          className="floor-status-chips flex w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
+          role="toolbar"
+          aria-label="Filter queue by status"
+        >
+          <button
+            type="button"
+            className={`floor-status-chip floor-touch-btn shrink-0 rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition ${
+              !focusLane
+                ? 'border-primary bg-primary/10 text-foreground'
+                : 'border-border bg-card text-foreground hover:border-primary/40'
+            }`}
+            aria-pressed={!focusLane}
+            onClick={() => setLaneFilter(null)}
+          >
+            <span className="block text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">All</span>
+            <span className="tabular-nums text-primary">{counts.total}</span>
+          </button>
+          {boardStatuses.map((status) => {
+            const active = focusLane === status
+            const n = (grouped[status] || []).length
+            return (
+              <button
+                key={status}
+                type="button"
+                className={`floor-status-chip floor-touch-btn shrink-0 rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition ${
+                  active
+                    ? 'border-primary bg-primary/10 text-foreground'
+                    : 'border-border bg-card text-foreground hover:border-primary/40'
+                }`}
+                aria-pressed={active}
+                onClick={() => setLaneFilter(active ? null : status)}
+              >
+                <span className="block text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+                  {STATUS_LABELS[status]}
+                </span>
+                <span className="tabular-nums text-primary">{n}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div
@@ -660,10 +796,24 @@ export function OperationsQueuePage() {
           const meta = LANE_META[status] || LANE_META.waiting
           const Icon = meta.icon
           const tickets = grouped[status] || []
+          const laneFocused = focusLane === status
+          const laneDimmed = Boolean(focusLane) && !laneFocused
           return (
-            <section key={status} className="floor-lane queue-lane" data-status={status} aria-label={STATUS_LABELS[status]}>
+            <section
+              key={status}
+              id={`queue-lane-${status}`}
+              className={`floor-lane queue-lane ${laneFocused ? 'queue-lane-focused' : ''} ${laneDimmed ? 'queue-lane-dimmed' : ''}`}
+              data-status={status}
+              aria-label={STATUS_LABELS[status]}
+              aria-current={laneFocused ? 'true' : undefined}
+            >
               <div className="queue-lane-head mb-3 flex items-start justify-between gap-2">
-                <div className="min-w-0">
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  onClick={() => setLaneFilter(laneFocused ? null : status)}
+                  aria-pressed={laneFocused}
+                >
                   <div className="flex items-center gap-2">
                     <span className="queue-lane-icon" aria-hidden>
                       <Icon size={14} />
@@ -671,8 +821,16 @@ export function OperationsQueuePage() {
                     <h2 className="queue-lane-title text-xs font-bold tracking-[0.14em] uppercase">{STATUS_LABELS[status]}</h2>
                   </div>
                   <p className="queue-lane-hint mt-1 text-[11px]">{meta.hint}</p>
-                </div>
-                <span className="queue-lane-count shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums">{tickets.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className="queue-lane-count floor-touch-btn shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums"
+                  onClick={() => setLaneFilter(laneFocused ? null : status)}
+                  aria-label={`${STATUS_LABELS[status]}: ${tickets.length} tickets`}
+                  aria-pressed={laneFocused}
+                >
+                  {tickets.length}
+                </button>
               </div>
               <div className="floor-lane-body">
                 {loading
