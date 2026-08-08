@@ -87,6 +87,14 @@ function vehicleLine(booking) {
   return booking.vehicle_plate || car || 'No vehicle details'
 }
 
+function serviceLine(booking) {
+  const name = booking.services?.name || booking.service_name
+  const kind = booking.services?.pay_category || booking.service_pay_category
+  if (!name && !kind) return null
+  if (kind === 'detailing') return name ? `${name} · Detailing` : 'Detailing'
+  return name || null
+}
+
 export default function BookingBoardPage() {
   const { profile } = useAuth()
   const canEdit = canEditBookings(profile)
@@ -480,6 +488,9 @@ export default function BookingBoardPage() {
                     )}
                   </div>
                   <p className="mt-1 text-sm text-foreground/85">{vehicleLine(booking)}</p>
+                  {serviceLine(booking) ? (
+                    <p className="mt-1 text-xs font-semibold text-primary">{serviceLine(booking)}</p>
+                  ) : null}
                   <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
                     {booking.branch}
                     {' · '}
