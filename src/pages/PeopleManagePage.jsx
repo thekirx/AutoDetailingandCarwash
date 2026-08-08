@@ -35,6 +35,7 @@ const ROLE_LABELS = {
   assistant_super_admin: 'Assistant Super Admin',
   team_lead: 'Team Lead',
   staff: 'Staff',
+  sales: 'Sales',
   marketing: 'Marketing',
   BossMich: 'Super Admin',
 }
@@ -53,7 +54,7 @@ function usesMultiBranch(role, grants) {
 }
 
 function showBranchPicker(role, grants) {
-  if (['admin', 'team_lead', 'staff', 'marketing'].includes(role)) return true
+  if (['admin', 'team_lead', 'staff', 'marketing', 'sales'].includes(role)) return true
   if (role === 'assistant_super_admin' && grants && grants.branches_all === false) return true
   return false
 }
@@ -93,6 +94,7 @@ export default function PeopleManagePage() {
         { value: 'admin', label: 'Admin (multi-branch)' },
         { value: 'assistant_super_admin', label: 'Assistant Super Admin' },
         ...base,
+        { value: 'sales', label: 'Sales (form bookings)' },
         { value: 'marketing', label: 'Marketing' },
       ]
     }

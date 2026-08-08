@@ -1,18 +1,18 @@
 /**
- * Seed BossMich, Admin, Team Lead, staff, and demo customer with known passwords.
+ * Seed BossMich, Admin, Team Lead, Sales, staff, and demo customer with known passwords.
  * Run: node scripts/seed-floor-accounts.mjs
  *
  * Default passwords (change after first login):
  *   bossmich@hakumautocare.com     → HakumBoss2026!
  *   admin@hakumautocare.com        → HakumAdmin2026!
  *   teamlead@hakumautocare.com     → HakumTL2026!
+ *   sales@hakumautocare.com        → HakumSales2026!
  *   staff1@hakumautocare.com       → HakumStaff2026!
  *   marketing@hakumautocare.com    → HakumMkt2026!
  *   assistant@hakumautocare.com    → HakumAsa2026!
  *   demo.customer@…                → HakumCustomer2026!
  *
- * (sales/cashier demos removed — Part 9)
- *   demo.customer@hakumautocare.com → HakumCustomer2026!
+ * (cashier demos removed — Part 9)
  */
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
@@ -43,6 +43,63 @@ const admin = createClient(url, key, { auth: { autoRefreshToken: false, persistS
 
 const BRANCH = 'bacoor'
 const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+
+const DETAILING_SERVICES = [
+  {
+    id: '11111111-1111-4111-8111-111111111111',
+    name: 'Ceramic Coating',
+    slug: 'ceramic-coating',
+    price_minor: 1_500_000,
+    duration_minutes: 480,
+    display_order: 10,
+    description: 'Multi-day ceramic coating. Crew required.',
+  },
+  {
+    id: '22222222-2222-4222-8222-222222222222',
+    name: 'Nano Ceramic Tint',
+    slug: 'nano-ceramic-tint',
+    price_minor: 800_000,
+    duration_minutes: 360,
+    display_order: 20,
+    description: 'Multi-day nano ceramic window tint. Crew required.',
+  },
+  {
+    id: '33333333-3333-4333-8333-333333333333',
+    name: 'Paint Protection Film (PPF)',
+    slug: 'paint-protection-film',
+    price_minor: 2_500_000,
+    duration_minutes: 720,
+    display_order: 30,
+    description: 'Multi-day PPF install. Crew required.',
+  },
+]
+
+async function seedFloorDetailingServices() {
+  for (const svc of DETAILING_SERVICES) {
+    const { error } = await admin.from('services').upsert(
+      {
+        ...svc,
+        pay_category: 'detailing',
+        is_active: true,
+        is_archived: false,
+      },
+      { onConflict: 'slug' },
+    )
+    if (error) throw error
+    const sizes = [
+      { size_slug: 'small', price_minor: Math.round(svc.price_minor * 0.85) },
+      { size_slug: 'medium', price_minor: svc.price_minor },
+      { size_slug: 'large', price_minor: Math.round(svc.price_minor * 1.2) },
+      { size_slug: 'extra_large', price_minor: Math.round(svc.price_minor * 1.4) },
+    ]
+    const { error: sizeErr } = await admin.from('service_size_prices').upsert(
+      sizes.map((row) => ({ service_id: svc.id, ...row })),
+      { onConflict: 'service_id,size_slug' },
+    )
+    if (sizeErr) throw sizeErr
+    console.log('Detailing service', svc.slug)
+  }
+}
 
 async function ensureAuthUser({ email, password, full_name, user_metadata = {} }) {
   const { data: created, error } = await admin.auth.admin.createUser({
@@ -126,6 +183,8 @@ async function archiveOrphanStaff(keepIds) {
 async function main() {
   console.log('Seeding floor accounts for', TODAY, BRANCH)
 
+  await seedFloorDetailingServices()
+
   const boss = await ensureAuthUser({
     email: 'bossmich@hakumautocare.com',
     password: 'HakumBoss2026!',
@@ -155,10 +214,25 @@ async function main() {
   await upsertStaffProfile(tlUser, { full_name: 'TL Test Account', role: 'team_lead', branch_slug: BRANCH })
   console.log('Team Lead', tlUser.id)
 
+  const salesUser = await ensureAuthUser({
+    email: 'sales@hakumautocare.com',
+    password: 'HakumSales2026!',
+    full_name: 'Sales Desk',
+  })
+  await upsertStaffProfile(salesUser, {
+    full_name: 'Sales Desk',
+    role: 'sales',
+    branch_slug: BRANCH,
+    phone: '09170000015',
+  })
+  await admin.from('staff_branch_assignments').delete().eq('staff_id', salesUser.id)
+  await admin.from('staff_branch_assignments').insert({ staff_id: salesUser.id, branch_slug: BRANCH })
+  console.log('Sales', salesUser.id)
+
   const staffDefs = [
-    { email: 'staff1@hakumautocare.com', full_name: 'Staff One', phone: '09170001111' },
-    { email: 'staff2@hakumautocare.com', full_name: 'Staff Two', phone: '09170002222' },
-    { email: 'staff3@hakumautocare.com', full_name: 'Staff Three', phone: '09170003333' },
+    { email: 'staff1@hakumautocare.com', full_name: 'Crew One', phone: '09170001111' },
+    { email: 'staff2@hakumautocare.com', full_name: 'Crew Two', phone: '09170002222' },
+    { email: 'staff3@hakumautocare.com', full_name: 'Crew Three', phone: '09170003333' },
   ]
   const staffIds = new Set()
   for (const def of staffDefs) {
@@ -207,8 +281,6 @@ async function main() {
   })
   console.log('Assistant Super Admin', asa.id)
 
-  // Part 9: do not seed sales/cashier demos — roles removed from app RBAC
-
   const demo = await ensureAuthUser({
     email: 'demo.customer@hakumautocare.com',
     password: 'HakumCustomer2026!',
@@ -241,7 +313,8 @@ async function main() {
         bossmich: 'bossmich@hakumautocare.com / HakumBoss2026!',
         admin: 'admin@hakumautocare.com / HakumAdmin2026!',
         teamlead: 'teamlead@hakumautocare.com / HakumTL2026!',
-        staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026!',
+        sales: 'sales@hakumautocare.com / HakumSales2026!',
+        staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026! (Crew 1–3 · present on Bacoor)',
         marketing: 'marketing@hakumautocare.com / HakumMkt2026!',
         assistant: 'assistant@hakumautocare.com / HakumAsa2026!',
         customer: 'demo.customer@hakumautocare.com / HakumCustomer2026!',

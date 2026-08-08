@@ -72,9 +72,13 @@ assert(getOperationsNav(mkt).every((i) => i.to === '/operations/crm'))
 assert(!getOperationsNav(boss).some((i) => i.to === '/operations/services' || i.to === '/operations/sms'))
 assert(getOperationsNav(boss).some((i) => i.to === '/operations/cars'))
 
+assert(OPS_DEMO_ACCOUNTS.some((d) => d.id === 'sales' && d.email === 'sales@hakumautocare.com'))
 for (const demo of OPS_DEMO_ACCOUNTS) {
-  assert(!/sales|cashier/i.test(demo.id + demo.label + demo.email), `demo still sales/cashier: ${demo.email}`)
+  assert(!/cashier/i.test(demo.id + demo.label + demo.email), `demo still cashier: ${demo.email}`)
 }
+const salesProfile = { role: ROLES.SALES, branch_slug: 'bacoor' }
+assert(allowRoute(salesProfile, 'bookings') && !allowRoute(salesProfile, 'pos') && !allowRoute(salesProfile, 'queue'))
+assert(getOperationsNav(salesProfile).every((i) => i.to === '/operations/bookings'))
 results.push('matrix.static: ok')
 
 // --- Live DB ---
@@ -83,10 +87,10 @@ const adminClient = createClient(url, service, { auth: { autoRefreshToken: false
 const { count: deadRoles, error: deadErr } = await adminClient
   .from('staff_profiles')
   .select('id', { count: 'exact', head: true })
-  .in('role', ['sales', 'cashier'])
+  .eq('role', 'cashier')
 assert(!deadErr, deadErr?.message)
-assert((deadRoles ?? 0) === 0, `sales/cashier rows remain: ${deadRoles}`)
-results.push('db.no_sales_cashier: ok')
+assert((deadRoles ?? 0) === 0, `cashier rows remain: ${deadRoles}`)
+results.push('db.no_cashier: ok')
 
 const partTables = [
   'vehicle_catalog',

@@ -108,11 +108,12 @@ describe('RBAC Part 1 matrix', () => {
     )
   })
 
-  it('homes and deprecated sales redirect', () => {
+  it('homes and sales redirect to bookings', () => {
     assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/console')
     assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
     assert.equal(redirectForRole(ROLES.STAFF), '/operations/my-tasks')
-    assert.equal(redirectForRole('sales'), '/operations/pos')
+    assert.equal(redirectForRole(ROLES.SALES), '/operations/bookings')
+    assert.equal(redirectForRole('cashier'), '/operations/pos')
   })
 
   it('Team Lead dock is derived from the same allowRoute matrix', () => {

@@ -22,6 +22,7 @@ import {
   parsePesoInputToMinor,
   requiresTeamLeadBranchSetup,
   resolveBranchFilter,
+  getQueueCounts,
   validateCancellationReason,
   validateCrewUsername,
 } from './queueLogic'
@@ -30,6 +31,8 @@ import { resolveServicePriceMinor } from '../lib/servicePricing'
 import { createTtlCache } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { isDetailingPayCategory, isTicketOnTodayFloor } from '../lib/serviceKinds'
+import { aggregateSalesFinancials } from '../lib/paymentMethods'
+import { averageCycleMinutes, failedQaCount, totalWaitMinutes } from '../lib/kpiPart8'
 import {
   resolveQueueCustomerDisplayName,
   validateQueueTicketIdentity,
@@ -229,6 +232,11 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
     staffPool: crewModel.staffPool,
     availableStaff: crewModel.availableStaff,
     busyStaff: crewModel.busyStaff,
+    absentStaff: crewModel.absentStaff || [],
+    presentCount: crewModel.presentCount || 0,
+    availableCount: crewModel.availableCount ?? (crewModel.availableStaff?.length || 0),
+    absentCount: crewModel.absentCount ?? 0,
+    onBayCount: crewModel.onBayCount ?? (crewModel.busyStaff?.length || 0),
     events: events.data || [],
     handoffs: handoffs.data || [],
     timingWarnings,
@@ -316,6 +324,178 @@ export async function fetchBranchSalesBoard(profile, { branchFilter = 'all', sta
     summary: aggregateDailySalesSummary(daily),
     daily,
     recentSales: recentRes.data || [],
+  }
+}
+
+const EMPTY_FINANCIALS = aggregateSalesFinancials([])
+
+/** Super Admin / network floor: lanes + crew + financials + KPI for branch + date range. */
+export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all', startDate, endDate } = {}) {
+  const snapshot = await fetchOperationsSnapshot(profile, { branchFilter })
+  const branchScope = resolveBranchFilter(profile, branchFilter)
+  const start = startDate || getLocalCalendarDate()
+  const end = endDate || start
+  const startIso = `${start}T00:00:00+08:00`
+  const endIso = `${end}T23:59:59.999+08:00`
+
+  const boardStatuses = getOpsBoardStatuses(profile)
+  const liveCounts = getQueueCounts(snapshot.activeQueue || [], { statuses: boardStatuses })
+
+  if (branchScope === NO_BRANCH_SCOPE) {
+    return {
+      ...snapshot,
+      laneCounts: {
+        waiting: 0,
+        in_progress: 0,
+        final_checking: 0,
+        for_payment: 0,
+        redo: 0,
+        completed: 0,
+        cancelled: 0,
+        total: 0,
+      },
+      periodJobs: [],
+      financials: { ...EMPTY_FINANCIALS, cancel_loss_minor: 0 },
+      kpi: { total_wait_minutes: 0, avg_service_minutes: null, failed_qa_count: 0 },
+      recentSales: [],
+    }
+  }
+
+  const periodSelect =
+    'id, branch, status, queue_number, customer_name, vehicle_plate, vehicle_make, vehicle_model, service_id, final_price_minor, price_minor, waiting_at, in_progress_at, final_checking_at, for_payment_at, completed_at, cancelled_at, redo_at, created_at, notes, services(name, pay_category)'
+
+  let completedQuery = supabase
+    .from('bookings')
+    .select(periodSelect)
+    .eq('is_archived', false)
+    .eq('status', 'completed')
+    .gte('completed_at', startIso)
+    .lte('completed_at', endIso)
+    .order('completed_at', { ascending: false })
+    .limit(400)
+  completedQuery = scopedQuery(completedQuery, branchScope)
+
+  let cancelledQuery = supabase
+    .from('bookings')
+    .select(periodSelect)
+    .eq('is_archived', false)
+    .eq('status', 'cancelled')
+    .gte('cancelled_at', startIso)
+    .lte('cancelled_at', endIso)
+    .order('cancelled_at', { ascending: false })
+    .limit(400)
+  cancelledQuery = scopedQuery(cancelledQuery, branchScope)
+
+  let redoQuery = supabase
+    .from('bookings')
+    .select(periodSelect)
+    .eq('is_archived', false)
+    .not('redo_at', 'is', null)
+    .gte('redo_at', startIso)
+    .lte('redo_at', endIso)
+    .order('redo_at', { ascending: false })
+    .limit(400)
+  redoQuery = scopedQuery(redoQuery, branchScope)
+
+  // KPI wait/service sample: tickets that left waiting in range (started service)
+  let startedQuery = supabase
+    .from('bookings')
+    .select(periodSelect)
+    .eq('is_archived', false)
+    .not('in_progress_at', 'is', null)
+    .gte('in_progress_at', startIso)
+    .lte('in_progress_at', endIso)
+    .limit(500)
+  startedQuery = scopedQuery(startedQuery, branchScope)
+
+  let salesQuery = supabase
+    .from('sales')
+    .select(
+      'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, queue_number, services(name))',
+    )
+    .eq('status', 'paid')
+    .gte('occurred_at', startIso)
+    .lte('occurred_at', endIso)
+    .order('occurred_at', { ascending: false })
+    .limit(2000)
+  salesQuery = scopedQuery(salesQuery, branchScope)
+
+  const [completedRes, cancelledRes, redoRes, startedRes, salesRes] = await Promise.all([
+    completedQuery,
+    cancelledQuery,
+    redoQuery,
+    startedQuery,
+    salesQuery,
+  ])
+  if (completedRes.error) throw completedRes.error
+  if (cancelledRes.error) throw cancelledRes.error
+  if (redoRes.error) throw redoRes.error
+  if (startedRes.error) throw startedRes.error
+  if (salesRes.error) throw salesRes.error
+
+  const toJob = (row) => ({
+    booking_id: row.id,
+    branch: row.branch,
+    status: row.status,
+    queue_number: row.queue_number,
+    customer_name: row.customer_name,
+    vehicle_plate: row.vehicle_plate,
+    vehicle_make: row.vehicle_make,
+    vehicle_model: row.vehicle_model,
+    service_name: row.services?.name || null,
+    service_pay_category: row.services?.pay_category || null,
+    final_price_minor: row.final_price_minor ?? row.price_minor,
+    waiting_at: row.waiting_at,
+    in_progress_at: row.in_progress_at,
+    final_checking_at: row.final_checking_at,
+    for_payment_at: row.for_payment_at,
+    completed_at: row.completed_at,
+    cancelled_at: row.cancelled_at,
+    redo_at: row.redo_at,
+    created_at: row.created_at,
+    notes: row.notes,
+  })
+
+  const completedJobs = (completedRes.data || []).map(toJob)
+  const cancelledJobs = (cancelledRes.data || []).map(toJob)
+  const redoJobs = (redoRes.data || []).map(toJob)
+  const startedJobs = (startedRes.data || []).map(toJob)
+  const salesRows = salesRes.data || []
+
+  const financials = {
+    ...aggregateSalesFinancials(salesRows),
+    cancel_loss_minor: cancelledJobs.reduce(
+      (sum, row) => sum + Number(row.final_price_minor || 0),
+      0,
+    ),
+  }
+
+  const cycleSample = [...completedJobs, ...startedJobs.filter((j) => j.for_payment_at || j.completed_at || j.final_checking_at)]
+  const avg = averageCycleMinutes(cycleSample)
+  const kpi = {
+    total_wait_minutes: Math.round(totalWaitMinutes(startedJobs)),
+    avg_service_minutes: avg == null ? null : Math.round(avg),
+    failed_qa_count: failedQaCount(redoJobs),
+  }
+
+  const forPaymentLive = liveCounts.for_payment || 0
+
+  return {
+    ...snapshot,
+    laneCounts: {
+      waiting: liveCounts.waiting || 0,
+      in_progress: liveCounts.in_progress || 0,
+      final_checking: liveCounts.final_checking || 0,
+      for_payment: forPaymentLive,
+      redo: liveCounts.redo || 0,
+      completed: completedJobs.length,
+      cancelled: cancelledJobs.length,
+      total: liveCounts.total || 0,
+    },
+    periodJobs: [...completedJobs.slice(0, 40), ...cancelledJobs.slice(0, 20)],
+    financials,
+    kpi,
+    recentSales: salesRows.slice(0, 40),
   }
 }
 
@@ -1058,6 +1238,47 @@ export async function updateTicketPrice(ticket, amountMinor, reason, userId) {
   if (error) {
     console.error('Unable to update queue ticket price', error)
     throw formatQueueActionError(error)
+  }
+}
+
+/** Update car size (pricing tier) on the ticket + linked vehicle; recalc catalog price when not overridden. */
+export async function updateTicketVehicleType(ticket, vehicleType, { servicesCatalog = [] } = {}) {
+  await getCurrentProfile({ required: true })
+  const type = normalizeVehicleType(vehicleType)
+  if (!type) throw new Error('Pick a car size.')
+
+  const lineIds = await getVisitLineIds(ticket)
+  const patch = { vehicle_type: type }
+  const svc =
+    (servicesCatalog || []).find((row) => row.id === ticket.service_id) ||
+    (servicesCatalog || []).find((row) => row.id === ticket.services?.id)
+  if (svc) {
+    const sized = resolveServicePriceMinor(svc, type)
+    patch.base_price_minor = sized
+    const currentFinal = Number(ticket.final_price_minor ?? 0)
+    const currentBase = Number(ticket.base_price_minor ?? 0)
+    // Keep manual overrides; otherwise follow size pricing.
+    if (!currentFinal || currentFinal === currentBase) {
+      patch.final_price_minor = sized
+      patch.price_minor = sized
+    }
+  }
+
+  const { error } = await supabase.from('bookings').update(patch).in('id', lineIds)
+  if (error) {
+    console.error('Unable to update ticket vehicle type', error)
+    throw formatQueueActionError(error)
+  }
+
+  if (ticket.vehicle_id) {
+    const { error: vehicleErr } = await supabase
+      .from('vehicles')
+      .update({ vehicle_type: type })
+      .eq('id', ticket.vehicle_id)
+    if (vehicleErr) {
+      console.error('Unable to sync vehicle size on masterlist', vehicleErr)
+      // ponytail: booking size is source of truth for pricing; masterlist sync is best-effort
+    }
   }
 }
 

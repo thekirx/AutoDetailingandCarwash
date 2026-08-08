@@ -56,13 +56,22 @@ const { data: assigns, error: aErr } = await admin.from('staff_branch_assignment
 assert(!aErr, `assignments: ${aErr?.message}`)
 results.push(`db.staff_branch_assignments: ${assigns?.length ?? 0} rows sample`)
 
-const { count: salesLeft, error: sErr } = await admin
+const { count: cashierLeft, error: sErr } = await admin
   .from('staff_profiles')
   .select('id', { count: 'exact', head: true })
-  .in('role', ['sales', 'cashier'])
+  .eq('role', 'cashier')
 assert(!sErr, sErr?.message)
-assert((salesLeft ?? 0) === 0, `sales/cashier still present: ${salesLeft}`)
-results.push('db.no_sales_cashier: ok')
+assert((cashierLeft ?? 0) === 0, `cashier still present: ${cashierLeft}`)
+results.push('db.no_cashier: ok')
+
+const { count: salesCount, error: salesErr } = await admin
+  .from('staff_profiles')
+  .select('id', { count: 'exact', head: true })
+  .eq('role', 'sales')
+  .eq('is_active', true)
+assert(!salesErr, salesErr?.message)
+assert((salesCount ?? 0) >= 1, 'sales demo role missing in DB')
+results.push(`db.sales_active: ok (${salesCount})`)
 
 const client = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
 const { data: login, error: loginErr } = await client.auth.signInWithPassword({

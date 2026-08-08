@@ -50,6 +50,8 @@ export const STATUS_LABELS = {
 
 export const DASHBOARD_DATE_PRESETS = [
   { key: 'today', label: 'Today', months: 0 },
+  { key: 'week', label: 'This week', months: null },
+  { key: 'month', label: 'This month', months: null },
   { key: '3mo', label: '3 months', months: 3 },
   { key: '6mo', label: '6 months', months: 6 },
   { key: 'custom', label: 'Custom', months: null },
@@ -157,9 +159,11 @@ export function isFormBookingStatus(status) {
   return FORM_BOOKING_STATUSES.includes(String(status || ''))
 }
 
-/** TL Bookings = form appointments only. Admin/SA see floor lanes too. */
+/** TL/Sales Bookings = form appointments only. Admin/SA see floor lanes too. */
 export function getBookingBoardStatuses(profile) {
-  if (profile?.role === ROLES.TEAM_LEAD) return [...FORM_BOOKING_STATUSES]
+  if (profile?.role === ROLES.TEAM_LEAD || profile?.role === ROLES.SALES) {
+    return [...FORM_BOOKING_STATUSES]
+  }
   return [
     ...FORM_BOOKING_STATUSES,
     'waiting',
@@ -272,10 +276,10 @@ export function crewRequiredForPayCategory(payCategory) {
 }
 
 /** One primary next step for mobile booking cards (avoids six outline buttons). */
-export function getBookingPrimaryNextStatus(status, { canSeePayment = true } = {}) {
+export function getBookingPrimaryNextStatus(status, { canSeePayment = true, canCheckIn = true } = {}) {
   const s = String(status || '')
   if (s === 'pending') return 'confirmed'
-  if (s === 'confirmed') return 'waiting'
+  if (s === 'confirmed') return canCheckIn ? 'waiting' : null
   if (s === 'waiting' || s === 'redo') return 'in_progress'
   if (s === 'in_progress') return 'final_checking'
   if (s === 'final_checking' && canSeePayment) return 'for_payment'
@@ -554,14 +558,17 @@ export function normalizeVehicleType(value) {
 }
 
 export function hasValidTeamLeadBranch(profile) {
-  if (profile?.role !== 'team_lead') return true
+  if (profile?.role !== 'team_lead' && profile?.role !== 'sales') return true
   const list = getBranchScopeList(profile)
   if (Array.isArray(list) && list.length > 0) return true
   return Boolean(profile.branch_slug)
 }
 
 export function requiresTeamLeadBranchSetup(profile) {
-  return profile?.role === 'team_lead' && !hasValidTeamLeadBranch(profile)
+  return (
+    (profile?.role === 'team_lead' || profile?.role === 'sales') &&
+    !hasValidTeamLeadBranch(profile)
+  )
 }
 
 export function getBranchScope(profile) {
@@ -638,32 +645,51 @@ export function getCrewAttendanceModel({ staffPool = [], attendance = [], busySt
     .filter((member) => member.role === 'staff' && member.is_active !== false && member.is_archived !== true)
     .sort((left, right) => String(left.full_name || '').localeCompare(String(right.full_name || '')))
   const attendanceByStaffId = new Map(attendance.map((row) => [row.staff_id, row]))
-  const presentIds = new Set(
+  // On-site for bay work: timed-in present or late (matches assignable crew).
+  const onSiteIds = new Set(
     attendance
-      .filter((row) => row.status === 'present')
+      .filter((row) => row.status === 'present' || row.status === 'late')
       .map((row) => row.staff_id),
   )
-  const activeBusy = busyStaff.filter((row) => presentIds.has(row.staff_id) && isActiveQueueStatus(row.booking_status))
+  const markedAbsentIds = new Set(
+    attendance.filter((row) => row.status === 'absent').map((row) => row.staff_id),
+  )
+  const activeBusy = busyStaff.filter((row) => onSiteIds.has(row.staff_id) && isActiveQueueStatus(row.booking_status))
   const busyIds = new Set(activeBusy.map((row) => row.staff_id))
+  const availableStaff = activeStaff
+    .filter((member) => onSiteIds.has(member.id) && !busyIds.has(member.id))
+    .map((member) => ({
+      staff_id: member.id,
+      full_name: member.full_name,
+      role: member.role,
+      branch_slug: member.branch_slug,
+      phone: member.phone,
+    }))
+  const absentStaff = activeStaff
+    .filter((member) => markedAbsentIds.has(member.id) || !onSiteIds.has(member.id))
+    .map((member) => ({
+      staff_id: member.id,
+      full_name: member.full_name,
+      role: member.role,
+      branch_slug: member.branch_slug,
+      phone: member.phone,
+      attendance_status: attendanceByStaffId.get(member.id)?.status || 'not_checked_in',
+    }))
 
   return {
     staffPool: activeStaff.map((member) => ({
       ...member,
       attendance: attendanceByStaffId.get(member.id) || null,
-      is_present_today: presentIds.has(member.id),
+      is_present_today: onSiteIds.has(member.id),
       is_busy_today: busyIds.has(member.id),
     })),
-    availableStaff: activeStaff
-      .filter((member) => presentIds.has(member.id) && !busyIds.has(member.id))
-      .map((member) => ({
-        staff_id: member.id,
-        full_name: member.full_name,
-        role: member.role,
-        branch_slug: member.branch_slug,
-        phone: member.phone,
-      })),
+    availableStaff,
     busyStaff: activeBusy,
-    presentCount: presentIds.size,
+    absentStaff,
+    presentCount: onSiteIds.size,
+    availableCount: availableStaff.length,
+    absentCount: absentStaff.length,
+    onBayCount: busyIds.size,
   }
 }
 

@@ -22,13 +22,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { PAYMENT_METHODS } from '@/lib/paymentMethods'
 
-const PAYMENT_OPTIONS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'gcash', label: 'GCash' },
-  { value: 'card', label: 'Card' },
-  { value: 'online', label: 'Online transfer' },
-]
+const PAYMENT_OPTIONS = PAYMENT_METHODS
 
 export default function PosPage() {
   const { profile } = useAuth()

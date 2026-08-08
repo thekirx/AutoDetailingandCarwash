@@ -69,10 +69,10 @@ results.push('static.nav_matrix: ok')
 const { count: dead, error: deadErr } = await admin
   .from('staff_profiles')
   .select('id', { count: 'exact', head: true })
-  .in('role', ['sales', 'cashier'])
+  .eq('role', 'cashier')
 assert(!deadErr, deadErr?.message)
-assert((dead ?? 0) === 0, `dead roles remain: ${dead}`)
-results.push('db.no_sales_cashier: ok')
+assert((dead ?? 0) === 0, `cashier roles remain: ${dead}`)
+results.push('db.no_cashier: ok')
 
 const { data: grantProbe, error: grantErr } = await admin
   .from('staff_profiles')

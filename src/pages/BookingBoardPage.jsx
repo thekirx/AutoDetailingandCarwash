@@ -7,11 +7,13 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessBookingBoard,
+  canCheckInFormBooking,
   canCreateBookings,
   canEditBookings,
   canSeeAllBranches,
   canSeeForPaymentLane,
   getBranchScopeList,
+  isFormBookingsOnlyRole,
   ROLES,
 } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
@@ -28,7 +30,8 @@ import {
   filterBranchesForProfile,
   pickDefaultBranchSlug,
 } from '@/queue/queueLogic'
-import { assignStaff, cancelQueueTicket, fetchPresentAssignableStaff } from '@/queue/queueApi'
+import { assignStaff, fetchPresentAssignableStaff, fetchServices } from '@/queue/queueApi'
+import { filterFloorDetailingServices } from '@/lib/serviceKinds'
 import CancellationReasonDialog from '@/components/CancellationReasonDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -70,6 +73,7 @@ const emptyBooking = {
   customer_phone: '',
   branch: '',
   scheduled_start: '',
+  service_id: '',
   vehicle_plate: '',
   vehicle_make: '',
   vehicle_model: '',
@@ -100,10 +104,14 @@ export default function BookingBoardPage() {
   const canEdit = canEditBookings(profile)
   const canCreate = canCreateBookings(profile)
   const isTeamLead = profile?.role === ROLES.TEAM_LEAD
+  const formBookingsOnly = isFormBookingsOnlyRole(profile)
+  const canCheckIn = canCheckInFormBooking(profile)
+  const canCancelForm = canEdit && formBookingsOnly
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = BOOKING_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'board'
   const [bookings, setBookings] = useState([])
   const [branches, setBranches] = useState([])
+  const [services, setServices] = useState([])
   const [branchFilter, setBranchFilter] = useState(canSeeAllBranches(profile) ? 'all' : (getBranchScopeList(profile)?.[0] || 'all'))
   const [datePreset, setDatePreset] = useState('week')
   const [customStart, setCustomStart] = useState('')
@@ -120,6 +128,10 @@ export default function BookingBoardPage() {
   const [cancelTarget, setCancelTarget] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
   const canSeePayment = canSeeForPaymentLane(profile)
+  const formServices = useMemo(
+    () => (formBookingsOnly ? filterFloorDetailingServices(services) : services),
+    [services, formBookingsOnly],
+  )
   const boardStatuses = useMemo(() => getBookingBoardStatuses(profile), [profile])
   const visibleColumns = useMemo(
     () => COLUMNS.filter((c) => boardStatuses.includes(c.id)),
@@ -167,6 +179,9 @@ export default function BookingBoardPage() {
         branch: f.branch || pickDefaultBranchSlug(profile, scoped),
       }))
     }).catch(() => {})
+    fetchServices()
+      .then((rows) => setServices(rows || []))
+      .catch(() => setServices([]))
   }, [profile])
 
   useEffect(() => {
@@ -240,7 +255,7 @@ export default function BookingBoardPage() {
     await applyStatusMove(booking, status)
   }
 
-  async function applyStatusMove(booking, status) {
+  async function applyStatusMove(booking, status, extra = {}) {
     const token = await getAccessTokenFresh()
     if (!token) {
       toast.error('Sign in required')
@@ -252,15 +267,20 @@ export default function BookingBoardPage() {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ booking_id: booking.id, status }),
+      body: JSON.stringify({ booking_id: booking.id, status, ...extra }),
     })
     const body = await res.json().catch(() => ({}))
     if (!res.ok) {
       toast.error(body.error || 'Unable to update booking')
-      return
+      return false
     }
-    toast.success(`Moved to ${status}${body.notify?.sms?.ok ? ' · SMS sent' : ''}`)
+    toast.success(
+      status === 'cancelled'
+        ? 'Booking cancelled'
+        : `Moved to ${status}${body.notify?.sms?.ok ? ' · SMS sent' : ''}`,
+    )
     load()
+    return true
   }
 
   async function confirmCrewStart() {
@@ -279,7 +299,7 @@ export default function BookingBoardPage() {
         {
           booking_id: crewDialog.id,
           status: crewDialog.status,
-          service_pay_category: null,
+          service_pay_category: crewDialog.services?.pay_category || 'detailing',
         },
         freeIds,
       )
@@ -307,6 +327,9 @@ export default function BookingBoardPage() {
     setForm({
       ...emptyBooking,
       branch: defaultBranch,
+      service_id: (formBookingsOnly
+        ? filterFloorDetailingServices(services)
+        : services)[0]?.id || '',
       scheduled_start: `${todayISO()}T10:00`,
     })
     setFormOpen(true)
@@ -319,6 +342,7 @@ export default function BookingBoardPage() {
       customer_phone: booking.customer_phone || '',
       branch: booking.branch || '',
       scheduled_start: booking.scheduled_start ? booking.scheduled_start.slice(0, 16) : '',
+      service_id: booking.service_id || '',
       vehicle_plate: booking.vehicle_plate || '',
       vehicle_make: booking.vehicle_make || '',
       vehicle_model: booking.vehicle_model || '',
@@ -331,18 +355,40 @@ export default function BookingBoardPage() {
   async function saveBooking(event) {
     event.preventDefault()
     if (editing ? !canEdit : !canCreate) return
+    const make = form.vehicle_make.trim()
+    const model = form.vehicle_model.trim()
+    const serviceId = form.service_id
+    if (!serviceId) {
+      toast.error('Pick a service.')
+      return
+    }
+    if (formBookingsOnly && !formServices.some((s) => s.id === serviceId)) {
+      toast.error('Pick a detailing service: Ceramic Coating, Nano Ceramic Tint, or PPF.')
+      return
+    }
+    if (!make || !model) {
+      toast.error('Vehicle make and model are required.')
+      return
+    }
+    if (!editing && formBookingsOnly && !['pending', 'confirmed'].includes(form.status)) {
+      toast.error('Form bookings stay New or Confirmed only.')
+      return
+    }
     setSaving(true)
     const payload = {
       customer_name: form.customer_name.trim(),
       customer_phone: form.customer_phone.trim() || null,
       branch: form.branch,
       scheduled_start: new Date(form.scheduled_start).toISOString(),
+      service_id: serviceId,
       vehicle_plate: form.vehicle_plate.trim().toUpperCase() || null,
-      vehicle_make: form.vehicle_make.trim() || null,
-      vehicle_model: form.vehicle_model.trim() || null,
+      vehicle_make: make,
+      vehicle_model: model,
       notes: form.notes.trim() || null,
-      status: form.status,
     }
+    // Status changes write queue_events (can_manage_branch). Sales is not a queue manager —
+    // create may set pending/confirmed; edits keep status and use Confirm / Cancel actions.
+    if (!editing) payload.status = form.status
     const { error } = editing
       ? await supabase.from('bookings').update(payload).eq('id', editing.id).select('id').single()
       : await supabase.from('bookings').insert(payload).select('id').single()
@@ -357,8 +403,8 @@ export default function BookingBoardPage() {
   }
 
   async function archiveBooking(booking) {
-    if (isTeamLead) {
-      toast.error('Team Lead can cancel with a reason — archive is Admin only.')
+    if (formBookingsOnly) {
+      toast.error('Cancel with a reason — archive is Admin only.')
       return
     }
     if (!canEdit || !window.confirm('Archive this booking?')) return
@@ -374,7 +420,7 @@ export default function BookingBoardPage() {
   if (requiresTeamLeadBranchSetup(profile)) {
     return (
       <section className="rounded-2xl border border-amber-600/30 bg-amber-500/10 p-6 text-amber-950 dark:text-amber-100" role="alert">
-        Branch setup required before viewing bookings.
+        Branch setup required before viewing bookings. Ask Super Admin to assign your branch.
       </section>
     )
   }
@@ -402,8 +448,10 @@ export default function BookingBoardPage() {
             <p className="bk-hero-kicker">Hakum Auto Care</p>
             <h1 className="bk-hero-title">Bookings</h1>
             <p className="bk-hero-sub">
-              {isTeamLead
-                ? 'Form appointments only · send to waiting when the car is in the shop'
+              {formBookingsOnly
+                ? isTeamLead
+                  ? 'Form appointments only · send to waiting when the car is in the shop'
+                  : 'Form appointments only · confirm or cancel — Team Lead checks cars in'
                 : range.start === range.end
                   ? range.start
                   : `${range.start} → ${range.end}`}
@@ -476,7 +524,7 @@ export default function BookingBoardPage() {
 
           <div className="bk-card-list md:hidden" aria-label={`${boardFilter} bookings`}>
             {(grouped[boardFilter] || []).map((booking) => {
-              const next = getBookingPrimaryNextStatus(booking.status, { canSeePayment })
+              const next = getBookingPrimaryNextStatus(booking.status, { canSeePayment, canCheckIn })
               return (
                 <article key={booking.id} className="bk-card">
                   <div className="flex items-start justify-between gap-2">
@@ -510,6 +558,16 @@ export default function BookingBoardPage() {
                       {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
                     </Button>
                   ) : null}
+                  {canCancelForm ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="mt-2 min-h-11 w-full cursor-pointer text-destructive"
+                      onClick={() => setCancelTarget(booking)}
+                    >
+                      Cancel booking
+                    </Button>
+                  ) : null}
                 </article>
               )
             })}
@@ -529,7 +587,7 @@ export default function BookingBoardPage() {
                 </div>
                 <div className="floor-lane-body">
                   {grouped[col.id].map((booking) => {
-                    const next = getBookingPrimaryNextStatus(booking.status, { canSeePayment })
+                    const next = getBookingPrimaryNextStatus(booking.status, { canSeePayment, canCheckIn })
                     return (
                       <article
                         key={booking.id}
@@ -562,6 +620,17 @@ export default function BookingBoardPage() {
                             onClick={() => move(booking, next)}
                           >
                             {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
+                          </Button>
+                        ) : null}
+                        {canCancelForm ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="mt-2 min-h-10 w-full cursor-pointer text-destructive"
+                            onClick={() => setCancelTarget(booking)}
+                          >
+                            Cancel
                           </Button>
                         ) : null}
                       </article>
@@ -609,10 +678,10 @@ export default function BookingBoardPage() {
                       <TableCell><Badge variant="secondary">{b.status}</Badge></TableCell>
                       <TableCell className="flex flex-wrap gap-1">
                         {canEdit && <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(b)}>Edit</Button>}
-                        {canEdit && !isTeamLead ? (
+                        {canEdit && !formBookingsOnly ? (
                           <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => archiveBooking(b)}>Archive</Button>
                         ) : null}
-                        {canEdit && isTeamLead ? (
+                        {canCancelForm ? (
                           <Button size="sm" variant="ghost" className="cursor-pointer text-destructive" onClick={() => setCancelTarget(b)}>Cancel</Button>
                         ) : null}
                       </TableCell>
@@ -671,6 +740,22 @@ export default function BookingBoardPage() {
               </Select>
             </div>
             <div className="flex flex-col gap-2">
+              <Label>Service</Label>
+              <Select value={form.service_id} onValueChange={(service_id) => setForm({ ...form, service_id })}>
+                <SelectTrigger className="cursor-pointer" aria-label="Service">
+                  <SelectValue placeholder={formServices.length ? 'Select detailing service' : 'No detailing services loaded'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {formServices.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(formBookingsOnly) ? (
+                <p className="text-xs text-muted-foreground">Detailing only · Ceramic Coating, Nano Ceramic Tint, PPF</p>
+              ) : null}
+            </div>
+            <div className="flex flex-col gap-2">
               <Label htmlFor="bk-start">Scheduled start</Label>
               <Input id="bk-start" type="datetime-local" required value={form.scheduled_start} onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />
             </div>
@@ -681,21 +766,30 @@ export default function BookingBoardPage() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="bk-make">Make</Label>
-                <Input id="bk-make" value={form.vehicle_make} onChange={(e) => setForm({ ...form, vehicle_make: e.target.value })} />
+                <Input id="bk-make" required value={form.vehicle_make} onChange={(e) => setForm({ ...form, vehicle_make: e.target.value })} />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="bk-model">Model</Label>
-                <Input id="bk-model" value={form.vehicle_model} onChange={(e) => setForm({ ...form, vehicle_model: e.target.value })} />
+                <Input id="bk-model" required value={form.vehicle_model} onChange={(e) => setForm({ ...form, vehicle_model: e.target.value })} />
               </div>
             </div>
             <div className="flex flex-col gap-2">
               <Label>Status</Label>
-              <Select value={form.status} onValueChange={(status) => setForm({ ...form, status })}>
-                <SelectTrigger className="cursor-pointer"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {visibleColumns.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {editing && formBookingsOnly ? (
+                <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm capitalize text-foreground">
+                  {form.status}
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Use Confirm or Cancel on the board to change status.
+                  </span>
+                </p>
+              ) : (
+                <Select value={form.status} onValueChange={(status) => setForm({ ...form, status })}>
+                  <SelectTrigger className="cursor-pointer"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {visibleColumns.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="bk-notes">Notes</Label>
@@ -778,10 +872,12 @@ export default function BookingBoardPage() {
           if (!cancelTarget) return
           setCancelLoading(true)
           try {
-            await cancelQueueTicket({ booking_id: cancelTarget.id, status: cancelTarget.status }, reason)
-            toast.success('Booking cancelled')
-            setCancelTarget(null)
-            load()
+            // Form editors (Sales/TL) cancel via booking-status API — client status
+            // updates hit queue_events RLS (can_manage_branch), which Sales lacks.
+            const ok = await applyStatusMove(cancelTarget, 'cancelled', {
+              cancellation_reason: reason,
+            })
+            if (ok) setCancelTarget(null)
           } catch (err) {
             toast.error(err.message || 'Unable to cancel')
           } finally {

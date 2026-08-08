@@ -42,6 +42,13 @@ export function canStaffUpdateBookingStatus(staff, booking, opts = {}) {
     return Boolean(staff.branch_slug) && staff.branch_slug === branch
   }
 
+  // Sales: form appointments only (confirm / cancel) — never floor or payment.
+  if (staff.role === 'sales') {
+    const next = opts.nextStatus
+    if (!next || !isCrmSafeBookingStatus(next)) return false
+    return Boolean(staff.branch_slug) && staff.branch_slug === branch
+  }
+
   if (staff.role === 'team_lead') {
     if (!staff.branch_slug || staff.branch_slug !== branch) return false
     // Payment handoff is Admin / POS — TL stops at final_checking.

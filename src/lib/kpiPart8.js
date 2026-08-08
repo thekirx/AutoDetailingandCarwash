@@ -8,10 +8,36 @@ export function bookingCycleMinutes(booking) {
   return (end - start) / 60_000
 }
 
+/** Waiting bay time: waiting_at → in_progress_at (minutes). */
+export function bookingWaitMinutes(booking) {
+  const start = booking?.waiting_at ? new Date(booking.waiting_at).getTime() : NaN
+  const end = booking?.in_progress_at ? new Date(booking.in_progress_at).getTime() : NaN
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null
+  return (end - start) / 60_000
+}
+
+export function totalWaitMinutes(bookings = []) {
+  return bookings
+    .map(bookingWaitMinutes)
+    .filter((n) => Number.isFinite(n) && n >= 0)
+    .reduce((a, b) => a + b, 0)
+}
+
+export function averageWaitMinutes(bookings = []) {
+  const mins = bookings.map(bookingWaitMinutes).filter((n) => Number.isFinite(n) && n >= 0)
+  if (!mins.length) return null
+  return mins.reduce((a, b) => a + b, 0) / mins.length
+}
+
 export function averageCycleMinutes(bookings = []) {
   const mins = bookings.map(bookingCycleMinutes).filter((n) => Number.isFinite(n) && n >= 0)
   if (!mins.length) return null
   return mins.reduce((a, b) => a + b, 0) / mins.length
+}
+
+/** Failed QA = tickets that entered redo (redo_at set) in the sample. */
+export function failedQaCount(bookings = []) {
+  return bookings.filter((b) => b?.redo_at || String(b?.status || '') === 'redo').length
 }
 
 export function compareBranchesByCompleted(rows = []) {

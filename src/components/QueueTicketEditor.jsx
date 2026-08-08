@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../auth/AuthProvider'
 import { canAccessPos, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane } from '../auth/permissions'
 import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
+import { PRICING_SIZES } from '../lib/servicePricing'
 import CancellationReasonDialog from './CancellationReasonDialog'
 import { supabase } from '../lib/supabase'
 import {
@@ -21,6 +22,7 @@ import {
   getAdminOverrideTargets,
   getQueueTicketActionFlags,
   isSuspiciousTiming,
+  normalizeVehicleType,
   parsePesoInputToMinor,
   STATUS_LABELS,
   crewRequiredForPayCategory,
@@ -38,6 +40,7 @@ import {
   sendTicketToPayment,
   updateTicketPrice,
   updateTicketStatus,
+  updateTicketVehicleType,
 } from '../queue/queueApi'
 
 function Panel({ title, icon: Icon, children, className = '' }) {
@@ -96,6 +99,9 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [vehicleTypeDraft, setVehicleTypeDraft] = useState('medium')
+  const [priceOpen, setPriceOpen] = useState(false)
+  const crewPanelRef = useRef(null)
 
   const load = useCallback(async () => {
     if (!bookingId) return
@@ -108,6 +114,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
       setSelectedStaff(data.assignments.filter((a) => a.status === 'active').map((a) => a.staff_id))
       setPrice(String(((data.ticket?.final_price_minor ?? data.ticket?.base_price_minor ?? 0) / 100) || ''))
       setPriceReason('')
+      setVehicleTypeDraft(normalizeVehicleType(data.ticket?.vehicle_type || 'medium'))
       if (data.ticket) {
         const lines = await fetchVisitLines(data.ticket).catch(() => [])
         setVisitLines(lines)
@@ -214,6 +221,12 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const parsedPrice = Number(String(price).replace(/,/g, '').trim())
   const showLowPriceWarning = Number.isFinite(parsedPrice) && parsedPrice > 0 && parsedPrice < 50
   const qLabel = formatQueueNumber(ticket.queue_number, ticket.service_pay_category)
+  const needCrewToStart = crewRequiredForPayCategory(ticket.service_pay_category || ticket.pay_category)
+  const freeSelectedCrew = selectedStaff.filter((id) => {
+    const row = staff.find((m) => m.id === id)
+    return row && !row.is_busy_today
+  })
+  const startBlockedByCrew = Boolean(actions.canStart && needCrewToStart && !freeSelectedCrew.length)
 
   const savePrice = () => {
     const amountMinor = parsePesoInputToMinor(price)
@@ -222,6 +235,8 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
     }
     return updateTicketPrice(ticket, amountMinor, priceReason, user.id)
   }
+  const saveVehicleType = () =>
+    updateTicketVehicleType(ticket, vehicleTypeDraft, { servicesCatalog: services })
   const runRedo = () => {
     const reason = window.prompt('Redo reason (visible to owner in audit)', ticket.redo_reason || '')
     if (reason === null) return Promise.resolve()
@@ -239,6 +254,20 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
     const reason = window.prompt(`Move this ticket back to ${STATUS_LABELS[target]}? Reason (visible in audit):`, '')
     if (reason === null) return Promise.resolve()
     return adminOverrideTicketStatus(ticket, target, reason)
+  }
+  const runStart = async () => {
+    if (startBlockedByCrew) {
+      crewPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      throw new Error('Assign present crew first (checkboxes above), then tap Start Service.')
+    }
+    if (freeSelectedCrew.length) {
+      await assignStaff(ticket, freeSelectedCrew)
+      if (ticket.status !== 'waiting') {
+        await updateTicketStatus({ ...ticket, status: ticket.status }, 'in_progress')
+      }
+    } else {
+      await updateTicketStatus(ticket, 'in_progress')
+    }
   }
 
   return (
@@ -319,39 +348,89 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
         </Panel>
       ) : null}
 
-      <div className={`grid gap-3 ${variant === 'modal' ? '' : 'xl:grid-cols-[1fr_360px] sm:gap-5'}`}>
+      <div className="grid gap-3">
         {showEditActions ? (
-          <div className={variant === 'modal' ? 'floor-actions-sticky order-first' : 'order-2 xl:order-2'}>
-            <Panel title="Status Actions" icon={ArrowRight} className={variant === 'modal' ? 'shadow-none' : ''}>
+          <div ref={crewPanelRef} className={variant === 'modal' ? 'order-first' : 'order-1'}>
+            <Panel title="1 · Assign crew" icon={UserPlus}>
+              <p className="mb-3 text-sm text-muted-foreground">
+                {needCrewToStart
+                  ? 'Required before Start Service. Only staff timed in today (present or late). Busy crew stay locked.'
+                  : 'Optional for packages. Only staff timed in today (present or late).'}
+              </p>
+              <div className={`grid gap-4 ${variant === 'modal' ? '' : 'lg:grid-cols-[1fr_280px]'}`}>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {staff.map((member) => {
+                    const active = selectedStaff.includes(member.id)
+                    const busy = Boolean(member.is_busy_today)
+                    return (
+                      <label
+                        key={member.id}
+                        className={`flex min-h-14 items-center justify-between gap-3 rounded-2xl border p-4 transition ${!busy ? 'cursor-pointer' : ''} ${active ? 'border-primary/40 bg-primary/10' : 'border-border bg-muted/20'} ${busy ? 'opacity-55' : ''}`}
+                      >
+                        <span>
+                          <span className="block font-medium text-foreground">{member.full_name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {busy ? 'Busy on another job' : member.branch_slug || 'Timed in'}
+                          </span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          className="size-5 accent-blue-500"
+                          checked={active}
+                          disabled={busy}
+                          onChange={(event) =>
+                            setSelectedStaff((current) =>
+                              event.target.checked ? [...current, member.id] : current.filter((idValue) => idValue !== member.id),
+                            )
+                          }
+                        />
+                      </label>
+                    )
+                  })}
+                  {!staff.length && (
+                    <p className="text-sm text-muted-foreground">
+                      No present crew for this branch. Have staff time in inside the 20m geofence first.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <ActionButton loading={saving === 'assign'} onClick={() => runAction('assign', () => assignStaff(ticket, selectedStaff))}>
+                    Save crew
+                  </ActionButton>
+                  <div className="mt-4 grid gap-2 text-sm text-muted-foreground">
+                    {assignments.length ? (
+                      assignments.map((assignment) => (
+                        <p key={assignment.id}>
+                          {staffById.get(assignment.staff_id)?.full_name || assignment.staff_id}:{' '}
+                          <span className="capitalize text-foreground">{assignment.status}</span>
+                        </p>
+                      ))
+                    ) : (
+                      <p>No assignment history yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Panel>
+          </div>
+        ) : null}
+
+        {showEditActions ? (
+          <div className={variant === 'modal' ? 'floor-actions-sticky order-2' : 'order-2'}>
+            <Panel title="2 · Status actions" icon={ArrowRight} className={variant === 'modal' ? 'shadow-none' : ''}>
               <div className="grid gap-2.5">
                 <ActionButton
                   disabled={!actions.canStart}
                   loading={saving === 'start'}
-                      onClick={() =>
-                    runAction('start', async () => {
-                      const needCrew = crewRequiredForPayCategory(
-                        ticket.service_pay_category || ticket.pay_category,
-                      )
-                      const freeIds = selectedStaff.filter((id) => {
-                        const row = staff.find((m) => m.id === id)
-                        return row && !row.is_busy_today
-                      })
-                      if (needCrew && !freeIds.length) {
-                        throw new Error('Select at least one present crew member who is not busy, then start.')
-                      }
-                      if (freeIds.length) {
-                        await assignStaff(ticket, freeIds)
-                        if (ticket.status !== 'waiting') {
-                          await updateTicketStatus({ ...ticket, status: ticket.status }, 'in_progress')
-                        }
-                      } else {
-                        await updateTicketStatus(ticket, 'in_progress')
-                      }
-                    })
-                  }
+                  onClick={() => runAction('start', runStart)}
                 >
-                  Start Service
+                  {startBlockedByCrew ? 'Select crew above, then Start' : 'Start Service'}
                 </ActionButton>
+                {startBlockedByCrew ? (
+                  <p className="text-xs text-amber-800 dark:text-amber-100">
+                    Tick at least one present crew member in Assign crew, then Start.
+                  </p>
+                ) : null}
                 <ActionButton
                   disabled={!actions.canFinalCheck}
                   loading={saving === 'check'}
@@ -399,7 +478,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
           </div>
         ) : null}
 
-        <Panel title="Ticket Details" icon={CarFront} className={variant === 'modal' ? '' : 'order-1'}>
+        <Panel title="Ticket details" icon={CarFront} className="order-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <Info label="Customer" value={ticket.customer_name} />
             <Info label="Contact" value={ticket.customer_phone || 'No contact'} />
@@ -411,13 +490,123 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
             <Info label="Notes" value={ticket.notes || 'No internal notes'} />
             {ticket.redo_reason && <Info label="Redo reason" value={ticket.redo_reason} />}
           </div>
+          {showEditActions ? (
+            <div className="mt-4 grid gap-3 rounded-2xl border border-border bg-muted/20 p-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                Car size (pricing)
+                <select
+                  value={vehicleTypeDraft}
+                  onChange={(event) => setVehicleTypeDraft(normalizeVehicleType(event.target.value))}
+                  className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
+                >
+                  {PRICING_SIZES.map((size) => (
+                    <option key={size.slug} value={size.slug}>
+                      {size.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <ActionButton
+                loading={saving === 'size'}
+                disabled={vehicleTypeDraft === normalizeVehicleType(ticket.vehicle_type || 'medium')}
+                onClick={() => runAction('size', saveVehicleType)}
+              >
+                Save car size
+              </ActionButton>
+              <p className="sm:col-span-2 text-xs text-muted-foreground">
+                Changes Small / Medium / Large / Extra Large for size-based pricing (e.g. Fortuner → Large).
+              </p>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Car size:{' '}
+              <span className="font-semibold capitalize text-foreground">
+                {String(ticket.vehicle_type || 'medium').replace(/_/g, ' ')}
+              </span>
+            </p>
+          )}
+        </Panel>
+
+        <Panel title="Services on this visit" icon={Layers} className="order-4">
+          <p className="mb-3 text-sm text-muted-foreground">
+            Line items billed for this car today. Add another service here if the customer upsels on the floor.
+          </p>
+          <div className="grid gap-2">
+            {visitLines.map((line) => (
+              <div
+                key={line.booking_id}
+                className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-border bg-muted/20 px-4 py-3"
+              >
+                <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                  {line.service_name || 'Service'}
+                </span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                  {formatMoney(line.final_price_minor ?? line.base_price_minor ?? 0)}
+                </span>
+              </div>
+            ))}
+            {!visitLines.length && <p className="text-sm text-muted-foreground">No service lines found for this visit.</p>}
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
+              <span className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Visit total</span>
+              <span className="text-base font-semibold tabular-nums text-foreground">{formatMoney(visitTotalMinor)}</span>
+            </div>
+          </div>
+          {canAddService ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
+              <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                Add service
+                <select
+                  value={addServiceId}
+                  onChange={(event) => setAddServiceId(event.target.value)}
+                  className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
+                >
+                  <option value="">Pick a service…</option>
+                  {services.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                Price (optional)
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={addServicePrice}
+                  onChange={(event) => setAddServicePrice(event.target.value)}
+                  placeholder="Auto by size"
+                  className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
+                />
+              </label>
+              <ActionButton loading={saving === 'add-service'} onClick={() => runAction('add-service', runAddService)}>
+                Add to visit
+              </ActionButton>
+            </div>
+          ) : showEditActions ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Services can be added while the ticket is waiting or in progress.
+            </p>
+          ) : null}
         </Panel>
 
         {showEditActions ? (
-          <Panel title="Edit Price" icon={BadgeCheck}>
-            <div className="grid gap-3">
+          <details
+            className="order-5 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-5"
+            open={priceOpen}
+            onToggle={(event) => setPriceOpen(event.currentTarget.open)}
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-3 font-semibold text-foreground">
+              <BadgeCheck className="text-primary" size={18} aria-hidden />
+              Adjust price (optional)
+            </summary>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Price is already set when you create the ticket. Only open this to override — reason is optional.
+            </p>
+            <div className="mt-3 grid gap-3">
               <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-                Final Price in Pesos
+                Final price in pesos
                 <input
                   type="number"
                   min="0"
@@ -433,143 +622,21 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                 </p>
               )}
               <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-                Reason
+                Reason (optional)
                 <input
                   value={priceReason}
                   onChange={(event) => setPriceReason(event.target.value)}
+                  placeholder="Why the price changed"
                   className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground outline-none focus:border-primary/60"
                 />
               </label>
               <ActionButton loading={saving === 'price'} onClick={() => runAction('price', savePrice)}>
-                Save Price
+                Save price
               </ActionButton>
             </div>
-          </Panel>
+          </details>
         ) : null}
       </div>
-
-      <Panel title="Visit Services" icon={Layers} className="mt-3 sm:mt-4">
-        <div className="grid gap-2">
-          {visitLines.map((line) => (
-            <div
-              key={line.booking_id}
-              className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-border bg-muted/20 px-4 py-3"
-            >
-              <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                {line.service_name || 'Service'}
-              </span>
-              <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                {formatMoney(line.final_price_minor ?? line.base_price_minor ?? 0)}
-              </span>
-            </div>
-          ))}
-          {!visitLines.length && <p className="text-sm text-muted-foreground">No service lines found for this visit.</p>}
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
-            <span className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Visit total</span>
-            <span className="text-base font-semibold tabular-nums text-foreground">{formatMoney(visitTotalMinor)}</span>
-          </div>
-        </div>
-        {canAddService ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
-            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-              Add service
-              <select
-                value={addServiceId}
-                onChange={(event) => setAddServiceId(event.target.value)}
-                className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
-              >
-                <option value="">Pick a service…</option>
-                {services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-              Price (optional)
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={addServicePrice}
-                onChange={(event) => setAddServicePrice(event.target.value)}
-                placeholder="Auto by size"
-                className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
-              />
-            </label>
-            <ActionButton loading={saving === 'add-service'} onClick={() => runAction('add-service', runAddService)}>
-              Add to visit
-            </ActionButton>
-          </div>
-        ) : showEditActions ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Services can be added while the ticket is waiting or in progress.
-          </p>
-        ) : null}
-      </Panel>
-
-      <Panel title="Staff Assignment" icon={UserPlus} className="mt-3 sm:mt-4">
-        <p className="mb-3 text-sm text-muted-foreground">
-          Only staff timed in today (present or late) can be assigned. Busy crew on another job are locked.
-        </p>
-        <div className={`grid gap-4 ${variant === 'modal' ? '' : 'lg:grid-cols-[1fr_280px]'}`}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {staff.map((member) => {
-              const active = selectedStaff.includes(member.id)
-              const busy = Boolean(member.is_busy_today)
-              return (
-                <label
-                  key={member.id}
-                  className={`flex min-h-14 items-center justify-between gap-3 rounded-2xl border p-4 transition ${showEditActions && !busy ? 'cursor-pointer' : ''} ${active ? 'border-primary/40 bg-primary/10' : 'border-border bg-muted/20'} ${busy ? 'opacity-55' : ''}`}
-                >
-                  <span>
-                    <span className="block font-medium text-foreground">{member.full_name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {busy ? 'Busy on another job' : member.branch_slug || 'Timed in'}
-                    </span>
-                  </span>
-                  <input
-                    type="checkbox"
-                    className="size-5 accent-blue-500"
-                    checked={active}
-                    disabled={!showEditActions || busy}
-                    onChange={(event) =>
-                      setSelectedStaff((current) =>
-                        event.target.checked ? [...current, member.id] : current.filter((idValue) => idValue !== member.id),
-                      )
-                    }
-                  />
-                </label>
-              )
-            })}
-            {!staff.length && (
-              <p className="text-sm text-muted-foreground">
-                No present crew for this branch. Have staff time in inside the 20m geofence first.
-              </p>
-            )}
-          </div>
-          <div>
-            {showEditActions ? (
-              <ActionButton loading={saving === 'assign'} onClick={() => runAction('assign', () => assignStaff(ticket, selectedStaff))}>
-                Save Assignments
-              </ActionButton>
-            ) : null}
-            <div className={`grid gap-2 text-sm text-muted-foreground ${showEditActions ? 'mt-4' : ''}`}>
-              {assignments.length ? (
-                assignments.map((assignment) => (
-                  <p key={assignment.id}>
-                    {staffById.get(assignment.staff_id)?.full_name || assignment.staff_id}:{' '}
-                    <span className="capitalize text-foreground">{assignment.status}</span>
-                  </p>
-                ))
-              ) : (
-                <p>No assignment history yet.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </Panel>
 
       {variant === 'modal' && showEditActions ? (
         <p className="mt-3 text-center text-xs text-muted-foreground">

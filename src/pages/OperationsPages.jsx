@@ -28,6 +28,7 @@ import { canAccessPos, canEditAttendanceRoles, canEditAttendanceSettings, canSee
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import QueueTicketEditor from '../components/QueueTicketEditor'
 import TeamLeadQueuePage from './TeamLeadQueuePage'
+import SuperAdminFloorBoard from './SuperAdminFloorBoard'
 import {
   formatQueueNumber,
   getBranchScope,
@@ -251,8 +252,18 @@ function useOperationsSnapshot(branchFilter = 'all') {
 
 export function OperationsDashboardPage() {
   const { profile, canViewQueueOperations } = useAuth()
+  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
+  if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
+  // Network floor for BossMich / ASA with all-branch scope
+  if (canSeeAllBranches(profile)) return <SuperAdminFloorBoard />
+  return <ScopedFloorDashboard />
+}
+
+function ScopedFloorDashboard() {
+  const { profile, canViewQueueOperations } = useAuth()
+  const isTeamLeadFloor = profile?.role === ROLES.TEAM_LEAD
   const seeAll = canSeeAllBranches(profile)
-  const seeRedo = canViewRedoLane(profile)
+  const seeRedo = canViewRedoLane(profile) && !isTeamLeadFloor
   const canOpenPos = canAccessPos(profile)
   const scopeList = getBranchScopeList(profile)
   const [branchFilter, setBranchFilter] = useState(() => {
@@ -362,15 +373,23 @@ export function OperationsDashboardPage() {
       ? (seeAll ? 'All branches' : 'All my branches')
       : branchFilter
 
+  const queueMetricCols = isTeamLeadFloor
+    ? 'xl:grid-cols-4'
+    : seeRedo
+      ? 'xl:grid-cols-6'
+      : 'xl:grid-cols-5'
+
   return (
     <section>
       <PageHeader
         eyebrow={profile?.role === 'admin' ? 'Branch Admin' : 'Team Lead'}
-        title={profile?.role === 'admin' ? 'Queue View' : 'Queue View'}
+        title={isTeamLeadFloor ? 'Floor' : 'Queue View'}
         description={
           profile?.role === 'admin'
             ? 'High-level floor summary — waiting cars, detailing, and tickets ready for POS.'
-            : 'Branch summary of queue volume, detailing jobs, crew, and handoffs. Open Queue for the full detail board.'
+            : isTeamLeadFloor
+              ? `Jobs on your branch · ${branchLabel}. Open Queue to assign crew and run tickets.`
+              : 'Branch summary of queue volume, detailing jobs, crew, and handoffs. Open Queue for the full detail board.'
         }
         live={live}
         action={<RefreshButton loading={loading || salesLoading} onClick={refreshAll} />}
@@ -400,7 +419,7 @@ export function OperationsDashboardPage() {
           </>
         )}
       </div>
-      <div className={`mt-4 grid gap-3 grid-cols-2 sm:mt-6 sm:gap-4 ${seeRedo ? 'xl:grid-cols-6' : 'xl:grid-cols-5'}`}>
+      <div className={`mt-4 grid gap-3 grid-cols-2 sm:mt-6 sm:gap-4 ${queueMetricCols}`}>
         <MetricCard
           label="Waiting"
           value={counts.waiting}
@@ -424,14 +443,16 @@ export function OperationsDashboardPage() {
           to={operationsQueueHref({ lane: 'final_checking', branch: branchFilter })}
           hint="Jump to final check"
         />
-        <MetricCard
-          label="For Payment"
-          value={filteredHandoffs.filter((h) => h.status === 'pending').length}
-          icon={Send}
-          tone="amber"
-          to={canOpenPos ? '/operations/pos' : operationsQueueHref({ branch: branchFilter })}
-          hint={canOpenPos ? 'Open POS checkout' : 'Open queue board'}
-        />
+        {!isTeamLeadFloor ? (
+          <MetricCard
+            label="For Payment"
+            value={filteredHandoffs.filter((h) => h.status === 'pending').length}
+            icon={Send}
+            tone="amber"
+            to={canOpenPos ? '/operations/pos' : operationsQueueHref({ branch: branchFilter })}
+            hint={canOpenPos ? 'Open POS checkout' : 'Open queue board'}
+          />
+        ) : null}
         {seeRedo ? (
           <MetricCard
             label="Redo"
@@ -475,7 +496,7 @@ export function OperationsDashboardPage() {
           {salesError}
         </p>
       ) : null}
-      {timingFlags.length > 0 && (
+      {!isTeamLeadFloor && timingFlags.length > 0 && (
         <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
           <ShieldAlert size={16} aria-hidden />
           {timingFlags.length} ticket(s) reached final check faster than {timingWarnings?.min_seconds_in_progress ?? 120}s — review for QC shortcuts.
@@ -496,40 +517,42 @@ export function OperationsDashboardPage() {
           </div>
         </Panel>
       )}
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr] sm:mt-5 sm:gap-5">
-        <Panel title="Crew Availability" icon={Users}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CrewList title="Available" rows={availableStaff} empty="No available staff" />
-            <CrewList title="Busy" rows={busyStaff} empty="No busy staff" busy />
-          </div>
-        </Panel>
-        <Panel title="Recently Sent To Payment" icon={Send}>
-          <div className="grid gap-3">
-            {filteredHandoffs.length ? filteredHandoffs.slice(0, 8).map((handoff) => {
-              const body = (
-                <>
-                  <p className="font-semibold text-foreground">{handoff.branch} · {formatMoney(handoff.amount_minor)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {handoff.status}
-                    {' · '}
-                    {handoff.handed_off_at ? new Date(handoff.handed_off_at).toLocaleString() : 'Pending'}
-                    {canOpenPos ? ' · Open POS' : ' · Waiting for Admin / ASA at POS'}
-                  </p>
-                </>
-              )
-              return canOpenPos ? (
-                <Link key={handoff.id} to="/operations/pos" className="rounded-2xl border border-border bg-card p-4 no-underline transition hover:border-blue-300/40">
-                  {body}
-                </Link>
-              ) : (
-                <div key={handoff.id} className="rounded-2xl border border-border bg-card p-4">
-                  {body}
-              </div>
-              )
-            }) : <EmptyLine text="No payment handoffs in this range." />}
-          </div>
-        </Panel>
-      </div>
+      {!isTeamLeadFloor ? (
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr] sm:mt-5 sm:gap-5">
+          <Panel title="Crew Availability" icon={Users}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <CrewList title="Available" rows={availableStaff} empty="No available staff" />
+              <CrewList title="Busy" rows={busyStaff} empty="No busy staff" busy />
+            </div>
+          </Panel>
+          <Panel title="Recently Sent To Payment" icon={Send}>
+            <div className="grid gap-3">
+              {filteredHandoffs.length ? filteredHandoffs.slice(0, 8).map((handoff) => {
+                const body = (
+                  <>
+                    <p className="font-semibold text-foreground">{handoff.branch} · {formatMoney(handoff.amount_minor)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {handoff.status}
+                      {' · '}
+                      {handoff.handed_off_at ? new Date(handoff.handed_off_at).toLocaleString() : 'Pending'}
+                      {canOpenPos ? ' · Open POS' : ' · Waiting for Admin / ASA at POS'}
+                    </p>
+                  </>
+                )
+                return canOpenPos ? (
+                  <Link key={handoff.id} to="/operations/pos" className="rounded-2xl border border-border bg-card p-4 no-underline transition hover:border-blue-300/40">
+                    {body}
+                  </Link>
+                ) : (
+                  <div key={handoff.id} className="rounded-2xl border border-border bg-card p-4">
+                    {body}
+                </div>
+                )
+              }) : <EmptyLine text="No payment handoffs in this range." />}
+            </div>
+          </Panel>
+        </div>
+      ) : null}
       <Panel title={`Paid sales · ${branchLabel}`} icon={Wallet} className="mt-4 sm:mt-5">
         <p className="mb-3 text-sm text-muted-foreground">
           {formatMoney(salesSummary.total_sales_minor)} across {salesSummary.paid_count} paid sale
@@ -578,16 +601,18 @@ export function OperationsDashboardPage() {
           )}
         </div>
       </Panel>
-      <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
-        <div className="grid max-h-64 gap-3 overflow-y-auto sm:max-h-80">
-          {filteredEvents.length ? filteredEvents.slice(0, 20).map((event) => (
-            <div key={event.id} className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-sm text-foreground">{event.old_status || 'created'} to {event.new_status}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{event.branch} · {event.notes || 'Status update'} · {new Date(event.created_at).toLocaleString()}</p>
-            </div>
-          )) : <EmptyLine text="No queue activity in this range." />}
-        </div>
-      </Panel>
+      {!isTeamLeadFloor ? (
+        <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
+          <div className="grid max-h-64 gap-3 overflow-y-auto sm:max-h-80">
+            {filteredEvents.length ? filteredEvents.slice(0, 20).map((event) => (
+              <div key={event.id} className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-sm text-foreground">{event.old_status || 'created'} to {event.new_status}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{event.branch} · {event.notes || 'Status update'} · {new Date(event.created_at).toLocaleString()}</p>
+              </div>
+            )) : <EmptyLine text="No queue activity in this range." />}
+          </div>
+        </Panel>
+      ) : null}
     </section>
   )
 }
@@ -961,7 +986,9 @@ export function NewQueueTicketPage() {
           branch: assignedBranch || current.branch || branchRows[0]?.slug || '',
           services: serviceRows,
           service_ids: current.service_ids || [],
-          vehicle_type: defaultSize,
+          // Only seed default size once — never clobber a TL pick on re-fetch.
+          vehicle_type: current._sizeReady ? current.vehicle_type : defaultSize,
+          _sizeReady: true,
         }))
       })
       .catch((err) => setError(err.message))
@@ -1003,6 +1030,7 @@ export function NewQueueTicketPage() {
             vehicle_year: match.vehicle_year || current.vehicle_year,
             vehicle_color: match.vehicle_color || current.vehicle_color,
             vehicle_type: normalizeVehicleType(match.vehicle_type || current.vehicle_type),
+            _sizeReady: true,
           }))
         })
         .catch((err) => setError(err.message))
@@ -1028,8 +1056,9 @@ export function NewQueueTicketPage() {
       const ids = current.service_ids || []
       const total = sumSelectedPrices(services, ids, vehicle_type)
       return {
-      ...current,
+        ...current,
         vehicle_type,
+        _sizeReady: true,
         final_price: ids.length ? String(total / 100) : current.final_price,
       }
     })
@@ -1072,7 +1101,7 @@ export function NewQueueTicketPage() {
         services,
         created_by: user.id,
       })
-      navigate(`/operations/queue/${ticket.id}`)
+      navigate(`/operations/queue?open=${ticket.id}`)
     } catch (err) {
       setError(err.message)
     } finally {

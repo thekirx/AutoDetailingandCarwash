@@ -3081,6 +3081,11 @@ html:not(.dark) .floor-shell .floor-alert-error {
   text-decoration: none;
   cursor: pointer;
 }
+.qmgr-open-btn-primary {
+  border-color: transparent;
+  background: var(--color-brand-primary, #052699);
+  color: #fff;
+}
 .qmgr-empty {
   display: grid;
   place-items: center;

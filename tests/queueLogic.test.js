@@ -268,6 +268,8 @@ describe('queue logic', () => {
     assert.deepEqual(model.availableStaff.map((row) => row.staff_id), ['a'])
     assert.deepEqual(model.busyStaff.map((row) => row.staff_id), ['b'])
     assert.equal(model.presentCount, 2)
+    assert.equal(model.availableCount, 1)
+    assert.equal(model.onBayCount, 1)
   })
 
   it('groups multi-service visit tickets into one board card', () => {

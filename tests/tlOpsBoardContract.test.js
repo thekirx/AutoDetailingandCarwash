@@ -127,8 +127,9 @@ describe('TL ops contract — cancel, payment gate, form bookings', () => {
     assert.match(tlQueue, /QUEUE_DATE_PRESETS|matchesDurationFilter|matchesTicketSearch/)
   })
 
-  it('renames Floor dock to Queue View for TL', () => {
-    assert.match(permissions, /label: 'Queue View'/)
+  it('renames Queue View dock to Floor for TL', () => {
+    assert.match(permissions, /label: 'Floor'/)
     assert.match(permissions, /to: '\/operations\/dashboard'/)
+    assert.match(permissions, /export function getTeamLeadDock/)
   })
 })

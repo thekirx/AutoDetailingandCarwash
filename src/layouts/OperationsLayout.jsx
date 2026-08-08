@@ -33,10 +33,13 @@ import {
   getBranchAdminDock,
   getBranchAdminMore,
   getOperationsNav,
+  getSalesDock,
+  getSalesMore,
   getTeamLeadDock,
   getTeamLeadMore,
   isAdmin,
   isBranchAdmin,
+  isSalesRole,
   ROLES,
   canSeeAllBranches,
   redirectForRole,
@@ -265,6 +268,35 @@ function TeamLeadFloorShell({ profile, signOut }) {
   )
 }
 
+function SalesFloorShell({ profile, signOut }) {
+  const dock = useMemo(() => getSalesDock(profile), [profile])
+  const more = useMemo(() => getSalesMore(), [])
+  return (
+    <FloorOpsShell
+      profile={profile}
+      signOut={signOut}
+      brand={{
+        title: 'Hakum Auto Care',
+        fallbackName: 'Sales',
+        icon: (
+          <img
+            src="/branding/hakum-mark-ow.png"
+            alt=""
+            width={28}
+            height={28}
+            className="size-7 object-contain"
+            decoding="async"
+          />
+        ),
+      }}
+      dock={dock}
+      more={more}
+      homeUrl="/operations/bookings"
+      homeLabel="Open bookings"
+    />
+  )
+}
+
 function BranchAdminFloorShell({ profile, signOut }) {
   const dock = useMemo(() => getBranchAdminDock(profile), [profile])
   const more = useMemo(() => getBranchAdminMore(), [])
@@ -385,6 +417,10 @@ export default function OperationsLayout() {
 
   if (isTeamLead) {
     return <TeamLeadFloorShell profile={profile} signOut={signOut} />
+  }
+
+  if (isSalesRole(profile)) {
+    return <SalesFloorShell profile={profile} signOut={signOut} />
   }
 
   if (isBranchAdmin(profile)) {

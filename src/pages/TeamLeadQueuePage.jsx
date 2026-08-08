@@ -4,7 +4,7 @@
  * phones, Hakum navy brand language, leaning toward existing floor-shell tokens.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   ChevronDown,
   ChevronUp,
@@ -62,7 +62,7 @@ function formatDuration(mins) {
   return m ? `${h}h ${m}m` : `${h}h`
 }
 
-function QueueManagerCard({ ticket, expanded, onToggle, onOpen }) {
+function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage }) {
   const status = ticket.status
   const kind = serviceKindFromPayCategory(ticket.service_pay_category)
   const services = (ticket.service_names?.length
@@ -84,6 +84,7 @@ function QueueManagerCard({ ticket, expanded, onToggle, onOpen }) {
   const vehicleLabel = [ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ')
     || ticket.vehicle_model
     || 'Vehicle'
+  const canStartHere = canManage && status === 'waiting'
 
   return (
     <article className="qmgr-card">
@@ -166,20 +167,33 @@ function QueueManagerCard({ ticket, expanded, onToggle, onOpen }) {
                     </span>
                   ))
               ) : (
-                <span className="text-sm text-muted-foreground">Unassigned</span>
+                <span className="text-sm text-muted-foreground">
+                  {canStartHere ? 'Unassigned — open ticket to assign, then Start' : 'Unassigned'}
+                </span>
               )}
             </div>
           </div>
 
-          {onOpen && ['waiting', 'in_progress', 'final_checking'].includes(status) ? (
-            <button type="button" className="qmgr-open-btn" onClick={() => onOpen(ticket.booking_id)}>
-              Open ticket
-            </button>
-          ) : (
-            <Link to={`/operations/queue/${ticket.booking_id}`} className="qmgr-open-btn">
-              View ticket
-            </Link>
-          )}
+          <div className="grid gap-2">
+            {canStartHere && onOpen ? (
+              <button
+                type="button"
+                className="qmgr-open-btn qmgr-open-btn-primary"
+                onClick={() => onOpen(ticket.booking_id)}
+              >
+                Assign crew &amp; start
+              </button>
+            ) : null}
+            {onOpen && ['waiting', 'in_progress', 'final_checking'].includes(status) ? (
+              <button type="button" className="qmgr-open-btn" onClick={() => onOpen(ticket.booking_id)}>
+                {canStartHere ? 'Open ticket' : status === 'in_progress' ? 'Final check / manage' : 'Open ticket'}
+              </button>
+            ) : (
+              <Link to={`/operations/queue/${ticket.booking_id}`} className="qmgr-open-btn">
+                View ticket
+              </Link>
+            )}
+          </div>
         </div>
       ) : null}
     </article>
@@ -188,6 +202,7 @@ function QueueManagerCard({ ticket, expanded, onToggle, onOpen }) {
 
 export default function TeamLeadQueuePage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const branch = getBranchScope(profile) || 'all'
   const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
 
@@ -208,6 +223,17 @@ export default function TeamLeadQueuePage() {
   const [editBookingId, setEditBookingId] = useState(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const today = getLocalCalendarDate()
+
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (!openId || !canManageQueue) return
+    setEditBookingId(openId)
+    setExpandedId(openId)
+    setStatusFilter('waiting')
+    const next = new URLSearchParams(searchParams)
+    next.delete('open')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams, canManageQueue])
 
   const load = useCallback(async () => {
     setError('')
@@ -506,6 +532,7 @@ export default function TeamLeadQueuePage() {
               expanded={expandedId === ticket.booking_id}
               onToggle={() => setExpandedId((id) => (id === ticket.booking_id ? null : ticket.booking_id))}
               onOpen={canManageQueue ? setEditBookingId : undefined}
+              canManage={canManageQueue}
             />
           ))
         ) : (

@@ -4,6 +4,13 @@
  * Detailing is multi-day: queue numbers do not reset with the Manila calendar day.
  */
 
+/** TL/Sales form bookings: Ceramic Coating, Nano Ceramic Tint, PPF only. */
+export const FLOOR_DETAILING_SERVICE_SLUGS = [
+  'ceramic-coating',
+  'nano-ceramic-tint',
+  'paint-protection-film',
+]
+
 export const SERVICE_KINDS = [
   {
     id: 'service',
@@ -60,6 +67,21 @@ export function isSameDayQueueKind(kindOrPayCategory) {
 
 export function filterServicesByKind(services, kindId) {
   return (services || []).filter((svc) => serviceKindFromPayCategory(svc.pay_category) === kindId)
+}
+
+/** Prefer the three floor detailing SKUs; fall back to any active detailing row. */
+export function filterFloorDetailingServices(services) {
+  const rows = services || []
+  const preferred = new Set(FLOOR_DETAILING_SERVICE_SLUGS)
+  const named = rows.filter((svc) => preferred.has(String(svc.slug || '').toLowerCase()))
+  if (named.length) {
+    return [...named].sort((a, b) => {
+      const ai = FLOOR_DETAILING_SERVICE_SLUGS.indexOf(String(a.slug || '').toLowerCase())
+      const bi = FLOOR_DETAILING_SERVICE_SLUGS.indexOf(String(b.slug || '').toLowerCase())
+      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
+    })
+  }
+  return filterServicesByKind(rows, 'detailing')
 }
 
 export function searchServices(services, query) {

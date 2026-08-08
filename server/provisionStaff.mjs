@@ -13,7 +13,7 @@ const TEAM_LEAD = 'team_lead'
 /** Roles a caller may assign. */
 export function creatableRolesFor(callerRole) {
   if (callerRole === SUPER) {
-    return ['admin', 'assistant_super_admin', 'team_lead', 'staff', 'marketing']
+    return ['admin', 'assistant_super_admin', 'team_lead', 'staff', 'marketing', 'sales']
   }
   if (callerRole === ADMIN || callerRole === ASSISTANT) {
     return ['team_lead', 'staff']
@@ -114,7 +114,7 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
     branchSlugs.push(caller.branch_slug)
   }
 
-  if (['admin', 'team_lead', 'staff', 'marketing'].includes(role) && !branchSlug && !branchSlugs.length) {
+  if (['admin', 'team_lead', 'staff', 'marketing', 'sales'].includes(role) && !branchSlug && !branchSlugs.length) {
     throw Object.assign(new Error('Branch is required for this role.'), { status: 400 })
   }
   if (!branchSlug && branchSlugs.length) branchSlug = branchSlugs[0]
@@ -182,7 +182,7 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
   )
   if (profileError) throw Object.assign(new Error(profileError.message), { status: 400 })
 
-  if (role === ADMIN || role === 'team_lead' || role === 'staff' || role === 'marketing') {
+  if (role === ADMIN || role === 'team_lead' || role === 'staff' || role === 'marketing' || role === 'sales') {
     const slugs = branchSlugs.length ? branchSlugs : branchSlug ? [branchSlug] : []
     await admin.from('staff_branch_assignments').delete().eq('staff_id', authUser.id)
     if (slugs.length) {
@@ -328,7 +328,7 @@ export async function updateStaffAccount({ accessToken, body }) {
   if (error) throw Object.assign(new Error(error.message), { status: 400 })
   if (!data) throw Object.assign(new Error('Staff not found.'), { status: 404 })
 
-  if (patch.branch_slug && ['admin', 'team_lead', 'staff', 'marketing'].includes(data.role)) {
+  if (patch.branch_slug && ['admin', 'team_lead', 'staff', 'marketing', 'sales'].includes(data.role)) {
     await admin.from('staff_branch_assignments').delete().eq('staff_id', id)
     await admin.from('staff_branch_assignments').insert({ staff_id: id, branch_slug: patch.branch_slug })
   }

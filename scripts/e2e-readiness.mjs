@@ -37,9 +37,12 @@ assert(process.env.VITE_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY, 'VAPID
 assert(process.env.VAPID_PRIVATE_KEY, 'VAPID_PRIVATE_KEY missing')
 results.push('env.supabase+vapid: ok')
 
-// Part 9: demo chips must not include removed sales/cashier roles
-assert(!OPS_DEMO_ACCOUNTS.some((a) => /sales|cashier/i.test(a.email + a.id)), 'demoAccounts still has sales/cashier')
-results.push('demo.no_sales_cashier: ok')
+// Part 9+: cashier removed; sales is an active form-bookings demo role
+assert(OPS_DEMO_ACCOUNTS.some((a) => a.id === 'sales' && a.email === 'sales@hakumautocare.com'), 'sales demo missing')
+assert(!OPS_DEMO_ACCOUNTS.some((a) => /cashier/i.test(a.email + a.id)), 'demoAccounts still has cashier')
+results.push('demo.sales_ok_no_cashier: ok')
+assert(redirectForRole(ROLES.SALES) === '/operations/bookings', 'sales home')
+results.push('rbac.sales_home: ok')
 
 if (process.env.BUSYBEE_API_KEY && process.env.BUSYBEE_CLIENT_ID) {
   results.push('env.busybee: present')
@@ -51,7 +54,8 @@ const accounts = [
   { email: 'demo.customer@hakumautocare.com', password: 'HakumCustomer2026!', role: 'customer', home: '/account' },
   { email: 'bossmich@hakumautocare.com', password: 'HakumBoss2026!', role: ROLES.SUPER_ADMIN, home: '/operations/console' },
   { email: 'admin@hakumautocare.com', password: 'HakumAdmin2026!', role: ROLES.ADMIN, home: '/operations/pos' },
-  { email: 'teamlead@hakumautocare.com', password: 'HakumTL2026!', role: ROLES.TEAM_LEAD, home: '/operations/dashboard' },
+  { email: 'teamlead@hakumautocare.com', password: 'HakumTL2026!', role: ROLES.TEAM_LEAD, home: '/operations/queue' },
+  { email: 'sales@hakumautocare.com', password: 'HakumSales2026!', role: ROLES.SALES, home: '/operations/bookings' },
   { email: 'staff1@hakumautocare.com', password: 'HakumStaff2026!', role: ROLES.STAFF, home: '/operations/my-tasks' },
   { email: 'marketing@hakumautocare.com', password: 'HakumMkt2026!', role: ROLES.MARKETING, home: '/operations/crm' },
 ]
@@ -92,6 +96,9 @@ for (const a of accounts) {
     const profile = { role: staff.role }
     if (a.role === ROLES.MARKETING) {
       assert(canAccessCrm(profile) && !canAccessFinance(profile), 'marketing CRM only')
+    }
+    if (a.role === ROLES.SALES) {
+      assert(!canAccessPos(profile) && !canAccessFinance(profile), 'sales no POS/finance')
     }
     if (a.role === ROLES.STAFF) {
       assert(!canAccessCrm(profile) && !canAccessPos(profile), 'staff scoped')

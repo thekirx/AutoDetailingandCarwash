@@ -46,5 +46,6 @@ describe('Floor board sales totals', () => {
     assert.match(page, /fetchBranchSalesBoard/)
     assert.match(page, /Sales total/)
     assert.match(page, /Paid sales ·/)
+    assert.match(page, /isTeamLeadFloor/)
   })
 })

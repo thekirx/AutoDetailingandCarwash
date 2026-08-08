@@ -21,7 +21,7 @@ function userClient(token) {
   })
 }
 
-const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'team_lead', 'assistant_super_admin'])
+const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'sales', 'team_lead', 'assistant_super_admin'])
 
 /**
  * Ops updates booking status + triggers BusyBee SMS / push.

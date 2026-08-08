@@ -5,6 +5,7 @@ export const ROLES = {
   ASSISTANT_SUPER_ADMIN: 'assistant_super_admin',
   ADMIN: 'admin',
   TEAM_LEAD: 'team_lead',
+  SALES: 'sales',
   STAFF: 'staff',
   MARKETING: 'marketing',
 }
@@ -12,7 +13,6 @@ export const ROLES = {
 /** @deprecated enum values may still exist in DB; do not assign in app */
 export const DEPRECATED_ROLES = {
   CASHIER: 'cashier',
-  SALES: 'sales',
 }
 
 /** Defaults when assistant has empty permission_grants. BossMich can override per user. */
@@ -60,6 +60,7 @@ export const QUEUE_VIEWER_ROLES = [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.SUPER_ADM
 export const OPS_LOGIN_ROLES = [
   ROLES.STAFF,
   ROLES.TEAM_LEAD,
+  ROLES.SALES,
   ROLES.ADMIN,
   ROLES.SUPER_ADMIN,
   ROLES.ASSISTANT_SUPER_ADMIN,
@@ -209,11 +210,11 @@ export function canAccessConsole(profile) {
 }
 
 export function canEditBookings(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD])
+  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD, ROLES.SALES])
 }
 
 export function canCreateBookings(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD])
+  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD, ROLES.SALES])
 }
 
 export function canAccessCrm(profile) {
@@ -226,7 +227,23 @@ export function canAccessMarketing(profile) {
 }
 
 export function canAccessBookingBoard(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD])
+  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD, ROLES.SALES])
+}
+
+/** Form-appointments editors: Sales (details only) and TL (can check-in to waiting). */
+export function isSalesRole(profile) {
+  return profile?.role === ROLES.SALES
+}
+
+export function isFormBookingsOnlyRole(profile) {
+  return profile?.role === ROLES.TEAM_LEAD || profile?.role === ROLES.SALES
+}
+
+/** Sales may confirm/cancel form bookings; only TL/Admin check the car into waiting. */
+export function canCheckInFormBooking(profile) {
+  if (!profile) return false
+  if (profile.role === ROLES.SALES) return false
+  return canEditBookings(profile)
 }
 
 export function canViewPlanning(profile) {
@@ -294,6 +311,10 @@ export function getOperationsNav(profile) {
     return [{ label: 'CRM', to: '/operations/crm', icon: 'Contact' }]
   }
 
+  if (profile?.role === ROLES.SALES) {
+    return [{ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' }]
+  }
+
   // Branch Admin: tablet dock surface — keep sidebar/nav identical if shell falls back.
   if (isBranchAdmin(profile)) {
     return [
@@ -329,7 +350,16 @@ export function getOperationsNav(profile) {
 
   if (canViewQueueOperations(profile)) {
     items.push(
-      { label: isAdmin(profile) ? 'Queue View' : 'Dashboard', to: '/operations/dashboard', icon: 'Gauge' },
+      {
+        label:
+          profile?.role === ROLES.TEAM_LEAD || isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
+            ? 'Floor'
+            : isAdmin(profile)
+              ? 'Queue View'
+              : 'Dashboard',
+        to: '/operations/dashboard',
+        icon: 'Gauge',
+      },
       { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
       { label: 'Crew', to: '/operations/crew', icon: 'Users' },
       { label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' },
@@ -367,7 +397,7 @@ export function getTeamLeadDock(profile) {
   const canBook = canAccessBookingBoard(profile)
   const dock = []
   if (canQueue) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
-  if (canQueue) dock.push({ label: 'Queue View', to: '/operations/dashboard', icon: 'Gauge' })
+  if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
   if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
   if (canQueue) dock.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
   if (canBook) dock.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
@@ -396,6 +426,16 @@ export function getBranchAdminMore() {
   return []
 }
 
+/** Sales thumb dock — form bookings only (Hakum floor shell). */
+export function getSalesDock(profile) {
+  if (!isSalesRole(profile)) return []
+  return [{ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban', primary: true, end: true }]
+}
+
+export function getSalesMore() {
+  return []
+}
+
 export function redirectForRole(role) {
   if (role === ROLES.SUPER_ADMIN || role === ROLES.ASSISTANT_SUPER_ADMIN) {
     return '/operations/console'
@@ -403,9 +443,10 @@ export function redirectForRole(role) {
   if (role === ROLES.ADMIN) return '/operations/pos'
   if (role === ROLES.STAFF) return '/operations/my-tasks'
   if (role === ROLES.TEAM_LEAD) return '/operations/queue'
+  if (role === ROLES.SALES) return '/operations/bookings'
   if (role === ROLES.MARKETING) return '/operations/crm'
-  // legacy
-  if (role === DEPRECATED_ROLES.CASHIER || role === DEPRECATED_ROLES.SALES) return '/operations/pos'
+  // legacy cashier still lands on POS
+  if (role === DEPRECATED_ROLES.CASHIER) return '/operations/pos'
   return '/operations/dashboard'
 }
 
