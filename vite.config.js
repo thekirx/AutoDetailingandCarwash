@@ -113,8 +113,10 @@ export default defineConfig({
       manifest: false,
       workbox: {
         importScripts: ['/push-sw.js'],
+        cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        // Missing hashed assets must 404, not fall back to index.html (MIME text/html breaks modules).
+        navigateFallbackDenylist: [/^\/api\//, /^\/assets\//],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [

@@ -46,9 +46,25 @@ describe('Vercel API rewrite contract', () => {
 
   it('keeps the SPA fallback after all exact API rewrites', () => {
     assert.deepEqual(config.rewrites.at(-1), {
-      source: '/((?!api/).*)',
+      source: '/((?!api/|assets/).*)',
       destination: '/index.html',
     })
+  })
+
+  it('allows Three.js wasm + blob under CSP and keeps assets off the SPA rewrite', () => {
+    const csp = config.headers
+      .flatMap((block) => block.headers)
+      .find((header) => header.key === 'Content-Security-Policy')
+      ?.value
+    assert.match(csp, /wasm-unsafe-eval/)
+    assert.match(csp, /connect-src[^;]*blob:/)
+    assert.match(csp, /worker-src 'self' blob:/)
+
+    const geo = config.headers
+      .flatMap((block) => block.headers)
+      .find((header) => header.key === 'Permissions-Policy')
+      ?.value
+    assert.match(geo, /geolocation=\(self\)/)
   })
 
   it('preserves plate lookup query parameters beside the fixed operation', () => {

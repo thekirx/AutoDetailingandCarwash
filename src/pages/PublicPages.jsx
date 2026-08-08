@@ -1,6 +1,8 @@
+import { lazy, Suspense } from 'react'
 import { ArrowRight, ShieldCheck, Sparkles, Waves } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import PPFVisualizer from '../components/PPFVisualizer'
+
+const PPFVisualizer = lazy(() => import('../components/PPFVisualizer'))
 import { usePublicBranches, branchLabel } from '../lib/branches'
 import { usePageMeta } from '../lib/pageMeta'
 
@@ -69,7 +71,9 @@ export function PackagesPage() {
           <Package title="Paint protection film" icon={ShieldCheck} plans={['Essential front', 'Signature full front', 'Ultimate full body']} />
         </div>
       </section>
-      <PPFVisualizer />
+      <Suspense fallback={null}>
+        <PPFVisualizer />
+      </Suspense>
     </>
   )
 }

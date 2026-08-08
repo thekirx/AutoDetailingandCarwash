@@ -9,6 +9,27 @@ import CookieConsent from '@/components/CookieConsent'
 import { Toaster } from '@/components/ui/sonner'
 import './styles.css'
 
+// After a deploy, a stale tab/SW can request deleted hashed chunks. Reload once so the new index wins.
+const PRELOAD_RELOAD_KEY = 'hakum-preload-reload'
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+  try {
+    if (sessionStorage.getItem(PRELOAD_RELOAD_KEY) === '1') return
+    sessionStorage.setItem(PRELOAD_RELOAD_KEY, '1')
+  } catch {
+    window.location.reload()
+    return
+  }
+  window.location.reload()
+})
+window.setTimeout(() => {
+  try {
+    sessionStorage.removeItem(PRELOAD_RELOAD_KEY)
+  } catch {
+    /* private mode */
+  }
+}, 8000)
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="hakum-theme" disableTransitionOnChange>
