@@ -29,7 +29,18 @@ import {
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
-import { getOperationsNav, getTeamLeadDock, getTeamLeadMore, isAdmin, ROLES, canSeeAllBranches, redirectForRole } from '../auth/permissions'
+import {
+  getBranchAdminDock,
+  getBranchAdminMore,
+  getOperationsNav,
+  getTeamLeadDock,
+  getTeamLeadMore,
+  isAdmin,
+  isBranchAdmin,
+  ROLES,
+  canSeeAllBranches,
+  redirectForRole,
+} from '../auth/permissions'
 import NotificationBell from '@/components/NotificationBell'
 import UserSettingsModal from '@/components/UserSettingsModal'
 import { OpsInstallPopup } from '@/components/InstallGuide'
@@ -94,34 +105,43 @@ function formatScope(profile) {
   return profile?.branch_slug || 'No branch'
 }
 
-function TeamLeadFloorShell({ profile, signOut }) {
+/** Shared thumb-dock shell for Team Lead + Branch Admin (phone / tablet first). */
+function FloorOpsShell({
+  profile,
+  signOut,
+  brand,
+  dock,
+  more,
+  homeUrl,
+  homeLabel,
+  shellClass = '',
+}) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const branch = formatScope(profile)
-  const dock = useMemo(() => getTeamLeadDock(profile), [profile])
-  const more = useMemo(() => getTeamLeadMore(profile), [profile])
 
   return (
-    <div className="floor-shell flex h-svh max-h-svh w-full flex-col overflow-hidden bg-background text-foreground">
+    <div className={`floor-shell flex h-svh max-h-svh w-full flex-col overflow-hidden bg-background text-foreground ${shellClass}`.trim()}>
       <header className="floor-topbar z-30 flex shrink-0 items-center gap-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur-xl sm:px-4">
         <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--color-brand-primary)] text-white" aria-hidden>
-          <ClipboardList size={18} />
+          {brand.icon}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-black tracking-[0.14em]">HAKUM FLOOR</p>
+            <p className="truncate text-sm font-black tracking-[0.14em]">{brand.title}</p>
             <span className="floor-live-pill" aria-live="polite">
               <span className="floor-live-dot" aria-hidden />
               LIVE
             </span>
           </div>
           <p className="truncate text-xs text-muted-foreground">
-            {profile?.full_name || 'Team Lead'} · <span className="font-semibold text-primary uppercase tracking-wide">{branch}</span>
+            {profile?.full_name || brand.fallbackName} ·{' '}
+            <span className="font-semibold text-primary uppercase tracking-wide">{branch}</span>
           </p>
         </div>
         <div className="flex items-center gap-1">
-          <NotificationBell light homeUrl="/operations/queue" homeLabel="Open floor" />
+          <NotificationBell light homeUrl={homeUrl} homeLabel={homeLabel} />
         </div>
         <button
           type="button"
@@ -143,7 +163,7 @@ function TeamLeadFloorShell({ profile, signOut }) {
           id="floor-more-panel"
           className="z-20 flex shrink-0 flex-wrap gap-2 border-b border-border bg-muted/40 px-3 py-3 sm:px-4"
           role="navigation"
-          aria-label="More floor tools"
+          aria-label="More tools"
         >
           {more.map(({ label, to, icon }) => {
             const Icon = iconMap[icon] || ClipboardList
@@ -185,8 +205,11 @@ function TeamLeadFloorShell({ profile, signOut }) {
       <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
       <OpsInstallPopup />
 
-      <nav className="floor-dock z-30 shrink-0 border-t border-border bg-background/98 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl" aria-label="Floor navigation">
-        <ul className={`mx-auto grid max-w-3xl gap-1 px-1 py-1.5 sm:gap-2 sm:px-2 ${dock.length >= 5 ? 'grid-cols-5' : `grid-cols-${Math.max(dock.length, 1)}`}`} style={{ gridTemplateColumns: `repeat(${Math.max(dock.length, 1)}, minmax(0, 1fr))` }}>
+      <nav className="floor-dock z-30 shrink-0 border-t border-border bg-background/98 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl" aria-label="Primary navigation">
+        <ul
+          className="mx-auto grid max-w-3xl gap-1 px-1 py-1.5 sm:gap-2 sm:px-2"
+          style={{ gridTemplateColumns: `repeat(${Math.max(dock.length, 1)}, minmax(0, 1fr))` }}
+        >
           {dock.map(({ label, to, icon, primary, end }) => {
             const Icon = iconMap[icon] || ClipboardList
             return (
@@ -196,7 +219,11 @@ function TeamLeadFloorShell({ profile, signOut }) {
                   end={Boolean(end)}
                   className={({ isActive }) => {
                     const onQueueBoard = to === '/operations/queue' && location.pathname === '/operations/queue'
-                    const active = primary ? location.pathname === to : end ? onQueueBoard : isActive || location.pathname.startsWith(to)
+                    const active = primary
+                      ? location.pathname === to || location.pathname.startsWith(`${to}/`)
+                      : end
+                        ? onQueueBoard
+                        : isActive || location.pathname.startsWith(to)
                     if (primary) {
                       return `floor-dock-fab ${active ? 'floor-dock-fab-active' : ''}`
                     }
@@ -212,6 +239,47 @@ function TeamLeadFloorShell({ profile, signOut }) {
         </ul>
       </nav>
     </div>
+  )
+}
+
+function TeamLeadFloorShell({ profile, signOut }) {
+  const dock = useMemo(() => getTeamLeadDock(profile), [profile])
+  const more = useMemo(() => getTeamLeadMore(profile), [profile])
+  return (
+    <FloorOpsShell
+      profile={profile}
+      signOut={signOut}
+      brand={{
+        title: 'HAKUM FLOOR',
+        fallbackName: 'Team Lead',
+        icon: <ClipboardList size={18} />,
+      }}
+      dock={dock}
+      more={more}
+      homeUrl="/operations/queue"
+      homeLabel="Open floor"
+    />
+  )
+}
+
+function BranchAdminFloorShell({ profile, signOut }) {
+  const dock = useMemo(() => getBranchAdminDock(profile), [profile])
+  const more = useMemo(() => getBranchAdminMore(), [])
+  return (
+    <FloorOpsShell
+      profile={profile}
+      signOut={signOut}
+      brand={{
+        title: 'HAKUM BRANCH',
+        fallbackName: 'Admin',
+        icon: <ShoppingCart size={18} />,
+      }}
+      dock={dock}
+      more={more}
+      homeUrl="/operations/pos"
+      homeLabel="Open POS"
+      shellClass="floor-shell-branch"
+    />
   )
 }
 
@@ -309,11 +377,15 @@ function AdminOpsShell({ profile, user, signOut, navigation, adminShell }) {
 export default function OperationsLayout() {
   const { profile, user, signOut } = useAuth()
   const navigation = useMemo(() => getOperationsNav(profile), [profile])
-  const adminShell = isAdmin(profile)
+  const adminShell = isAdmin(profile) && !isBranchAdmin(profile)
   const isTeamLead = profile?.role === ROLES.TEAM_LEAD
 
   if (isTeamLead) {
     return <TeamLeadFloorShell profile={profile} signOut={signOut} />
+  }
+
+  if (isBranchAdmin(profile)) {
+    return <BranchAdminFloorShell profile={profile} signOut={signOut} />
   }
 
   return (

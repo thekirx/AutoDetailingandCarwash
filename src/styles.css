@@ -1868,7 +1868,7 @@ button { cursor: pointer; }
 .branch-location-map { z-index:0; }
 .branch-location-map .leaflet-container { height:100%; width:100%; font: inherit; }
 
-/* Team Lead tablet floor shell — full viewport, large touch, live branch ops */
+/* Team Lead / Branch Admin tablet floor shell — full viewport, large touch, live branch ops */
 .floor-shell {
   --floor-touch: 3rem;
   --floor-accent: #3b82f6;
@@ -1876,6 +1876,24 @@ button { cursor: pointer; }
   background:
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(5, 38, 153, 0.35), transparent),
     #070b12;
+}
+/* Branch Admin: POS-first dock — emerald checkout fab, same Hakum navy field */
+.floor-shell-branch {
+  --floor-accent: #059669;
+  --floor-accent-soft: rgba(5, 150, 105, 0.16);
+}
+.floor-shell-branch .floor-dock-fab {
+  background: linear-gradient(160deg, #10b981, #047857);
+  box-shadow: 0 0.6rem 1.4rem rgba(4, 120, 87, 0.4);
+}
+@media (min-width: 768px) {
+  .floor-shell-branch .floor-dock-item,
+  .floor-shell-branch .floor-dock-fab {
+    min-height: 4rem;
+  }
+  .floor-shell-branch .floor-dock-item {
+    font-size: 0.7rem;
+  }
 }
 /* Theme tokens: light mode follows hakum-theme (next-themes) */
 html:not(.dark) .floor-shell {

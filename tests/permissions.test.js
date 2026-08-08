@@ -83,14 +83,17 @@ describe('RBAC Part 1 matrix', () => {
     )
   })
 
-  it('Admin views planning, no reports; POS yes', () => {
+  it('Admin keeps planning capability but nav is POS/Floor/Queue only', () => {
     const p = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor', 'imus'] }
     assert.equal(canViewPlanning(p), true)
     assert.equal(canEditPlanning(p), false)
     assert.equal(canAccessReports(p), false)
     assert.equal(canAccessPos(p), true)
     assert.deepEqual(getBranchScopeList(p), ['bacoor', 'imus'])
-    assert.ok(getOperationsNav(p).some((i) => i.to === '/operations/planning'))
+    assert.deepEqual(
+      getOperationsNav(p).map((i) => i.to),
+      ['/operations/pos', '/operations/dashboard', '/operations/queue'],
+    )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
   })
 

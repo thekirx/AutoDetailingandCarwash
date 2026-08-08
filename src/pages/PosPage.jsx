@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, canManageServices, canSeeAllBranches, getBranchScopeList, isAdmin } from '@/auth/permissions'
+import { canAccessPos, canManageServices, canSeeAllBranches, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
@@ -446,19 +446,33 @@ export default function PosPage() {
     setSearchParams(next === 'checkout' ? {} : { tab: next }, { replace: true })
   }
 
+  const branchAdmin = isBranchAdmin(profile)
+
   return (
-    <section className="flex flex-col gap-6">
-      <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-        <div>
-          <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Point of sale</p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">POS hub</h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
-            <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
-            <span>
-              Checkout, services catalog, and merch inventory
-              {branchLocked ? ' · your assigned branch' : ' · all branches'}
-            </span>
+    <section className={`flex flex-col ${branchAdmin ? 'gap-4' : 'gap-6'}`}>
+      <div className="floor-compact-header flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0">
+          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">
+            {branchAdmin ? 'Branch Admin' : 'Point of sale'}
           </p>
+          <h1 className={`font-semibold tracking-tight ${branchAdmin ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'}`}>
+            {branchAdmin ? 'POS' : 'POS hub'}
+          </h1>
+          {!branchAdmin && (
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
+              <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+              <span>
+                Checkout, services catalog, and merch inventory
+                {branchLocked ? ' · your assigned branch' : ' · all branches'}
+              </span>
+            </p>
+          )}
+          {branchAdmin && (
+            <p className="floor-desc mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
+              <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+              <span>Checkout · {branchLocked ? 'your branch' : 'all branches'}</span>
+            </p>
+          )}
         </div>
         {shellTab === 'checkout' && (
           <Button onClick={() => setCartOpen(true)} className="min-h-11 gap-2">

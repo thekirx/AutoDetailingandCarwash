@@ -284,9 +284,13 @@ export function OperationsDashboardPage() {
   return (
     <section>
       <PageHeader
-        eyebrow={profile?.role === 'admin' ? 'Branch Admin Dashboard' : 'Team Lead Dashboard'}
-        title="Active floor control"
-        description="Track queue volume, crew availability, and handoffs ready for POS checkout."
+        eyebrow={profile?.role === 'admin' ? 'Branch Admin' : 'Team Lead'}
+        title={profile?.role === 'admin' ? 'Floor' : 'Active floor control'}
+        description={
+          profile?.role === 'admin'
+            ? 'Watch waiting cars and tickets ready for POS.'
+            : 'Track queue volume, crew availability, and handoffs ready for POS checkout.'
+        }
         live={live}
         action={<RefreshButton loading={loading} onClick={reload} />}
       />
@@ -448,11 +452,15 @@ export function OperationsQueuePage() {
   return (
     <section className="queue-board flex min-h-0 flex-col">
       <PageHeader
-        eyebrow="Queue Board"
-        title="Today on the floor"
-        description={seeRedo
-          ? 'Active tickets until payment. Redo is the owner QC lane — customers never see it.'
-          : 'Active tickets until payment — waiting, in progress, and final checking.'}
+        eyebrow={profile?.role === 'admin' ? 'Branch Admin' : 'Queue Board'}
+        title={profile?.role === 'admin' ? 'Queue' : 'Today on the floor'}
+        description={
+          profile?.role === 'admin'
+            ? 'View tickets and open POS when payment is ready.'
+            : seeRedo
+              ? 'Active tickets until payment. Redo is the owner QC lane - customers never see it.'
+              : 'Active tickets until payment - waiting, in progress, and final checking.'
+        }
         live={live}
         action={(
           <div className="flex flex-wrap gap-2 sm:gap-3">
@@ -644,7 +652,11 @@ export function QueueTicketPage() {
     <section>
       <PageHeader eyebrow="Queue Ticket" title={`${formatQueueNumber(ticket.queue_number, ticket.service_pay_category)} · ${ticket.customer_name}`} description={`${ticket.branch} · ${STATUS_LABELS[ticket.status] || ticket.status}${ticket.service_pay_category === 'detailing' ? ' · Multi-day detailing' : ''}`} action={<Link to="/operations/queue" className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline">Back to queue</Link>} />
       {actionError && <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100" role="alert">{actionError}</p>}
-      {!showEditActions && <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">View only — Team Lead (or ASA/SA with queue access) manages floor actions. After final check, open POS to collect payment.</p>}
+      {!showEditActions && (
+        <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+          View only. Team Lead runs floor status. Use POS to take payment after final check.
+        </p>
+      )}
       {timingWarn && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4 text-sm text-amber-100"><ShieldAlert size={16} aria-hidden />Suspicious timing: in progress → final check was under the configured threshold.</p>}
       <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_360px] sm:mt-6 sm:gap-5">
         <Panel title="Ticket Details" icon={CarFront}>

@@ -270,10 +270,24 @@ export function canAccessDataCenter(profile) {
   return isSuperAdmin(profile)
 }
 
+/** Branch Admin day-of ops — POS + floor watch + queue view only. */
+export function isBranchAdmin(profile) {
+  return profile?.role === ROLES.ADMIN
+}
+
 /** Nav items for the shared ops shell — filtered by role + grants. */
 export function getOperationsNav(profile) {
   if (profile?.role === ROLES.MARKETING) {
     return [{ label: 'CRM', to: '/operations/crm', icon: 'Contact' }]
+  }
+
+  // Branch Admin: tablet dock surface — keep sidebar/nav identical if shell falls back.
+  if (isBranchAdmin(profile)) {
+    return [
+      { label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' },
+      { label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' },
+      { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
+    ]
   }
 
   const items = []
@@ -354,10 +368,26 @@ export function getTeamLeadMore(profile) {
   return more
 }
 
+/** Branch Admin thumb dock — POS primary (checkout), Floor + Queue for oversight. */
+export function getBranchAdminDock(profile) {
+  if (!isBranchAdmin(profile)) return []
+  const dock = []
+  if (canViewQueueOperations(profile)) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
+  if (canViewQueueOperations(profile)) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
+  if (canAccessPos(profile)) dock.push({ label: 'POS', to: '/operations/pos', icon: 'ShoppingCart', primary: true })
+  return dock
+}
+
+/** Optional overflow for Branch Admin (public kiosk links live on the queue page). */
+export function getBranchAdminMore() {
+  return []
+}
+
 export function redirectForRole(role) {
-  if (role === ROLES.SUPER_ADMIN || role === ROLES.ASSISTANT_SUPER_ADMIN || role === ROLES.ADMIN) {
+  if (role === ROLES.SUPER_ADMIN || role === ROLES.ASSISTANT_SUPER_ADMIN) {
     return '/operations/console'
   }
+  if (role === ROLES.ADMIN) return '/operations/pos'
   if (role === ROLES.STAFF) return '/operations/my-tasks'
   if (role === ROLES.TEAM_LEAD) return '/operations/dashboard'
   if (role === ROLES.MARKETING) return '/operations/crm'
