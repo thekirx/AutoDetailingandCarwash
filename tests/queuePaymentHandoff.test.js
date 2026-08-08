@@ -41,11 +41,26 @@ describe('Queue payment handoff contract', () => {
     assert.match(src, /send_queue_ticket_to_payment/)
   })
 
-  it('queue client auto-handoffs after final_checking and exposes sendTicketToPayment', async () => {
+  it('queue client final-check calls payment RPC without lingering in final_checking', async () => {
     const api = await readFile(projectFile('src/queue/queueApi.js'), 'utf8')
     assert.match(api, /if \(nextStatus === 'final_checking'\)/)
-    assert.match(api, /sendTicketToPayment/)
+    assert.match(api, /await sendTicketToPayment\(ticket\.booking_id\)/)
+    assert.match(api, /Never write status=final_checking first/)
     assert.match(api, /send_queue_ticket_to_payment/)
+    assert.doesNotMatch(
+      api,
+      /patch\.final_checking_at[\s\S]*await sendTicketToPayment/,
+    )
+  })
+
+  it('RPC migration accepts in_progress and lands on for_payment', async () => {
+    const sql = await readFile(
+      projectFile('supabase/migrations/20260808150000_final_check_atomic_to_payment.sql'),
+      'utf8',
+    )
+    assert.match(sql, /'in_progress', 'final_checking', 'for_payment', 'completed'/)
+    assert.match(sql, /from_status in \('in_progress', 'final_checking'\)/)
+    assert.match(sql, /set status = 'for_payment'/)
   })
 
   it('TL UI labels handoff to Admin/ASA not cashier', async () => {

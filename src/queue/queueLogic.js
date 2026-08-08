@@ -85,7 +85,7 @@ export function getOpsBoardStatuses(profile) {
 
 /**
  * Allowed direct status updates via updateTicketStatus (not redo RPC / POS complete).
- * final_checking → for_payment is send_queue_ticket_to_payment (auto after final check).
+ * UI "final_checking" maps to send_queue_ticket_to_payment → booking becomes for_payment.
  */
 export const QUEUE_STATUS_TRANSITIONS = {
   waiting: ['in_progress'],

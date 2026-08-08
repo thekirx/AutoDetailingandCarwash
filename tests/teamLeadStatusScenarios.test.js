@@ -112,10 +112,11 @@ describe('TL queue status transitions (principal scenarios)', () => {
     assert.equal(finalCheckActionLabel(true), 'Final check → POS')
   })
 
-  it('updateTicketStatus guards transitions and auto-handoffs after final check', () => {
+  it('updateTicketStatus guards transitions and final-check jumps straight to payment RPC', () => {
     assert.match(api, /canTransitionQueueStatus/)
     assert.match(api, /if \(nextStatus === 'final_checking'\)/)
     assert.match(api, /await sendTicketToPayment\(ticket\.booking_id\)/)
+    assert.match(api, /Never write status=final_checking first/)
   })
 
   it('QueueTicketEditor wires shared action flags', () => {

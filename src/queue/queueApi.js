@@ -724,6 +724,14 @@ export async function updateTicketStatus(ticket, nextStatus) {
       `Cannot move ticket from ${ticket?.status || 'unknown'} to ${nextStatus}. Refresh and try the next valid step.`,
     )
   }
+
+  // Final check → payment is one RPC: in_progress (or stuck final_checking) → for_payment.
+  // Never write status=final_checking first — that left tickets stuck on the TL board.
+  if (nextStatus === 'final_checking') {
+    await sendTicketToPayment(ticket.booking_id)
+    return
+  }
+
   const profile = await getCurrentProfile({ required: false })
   const now = new Date().toISOString()
   const patch = { status: nextStatus }
@@ -731,10 +739,6 @@ export async function updateTicketStatus(ticket, nextStatus) {
   if (nextStatus === 'in_progress') {
     patch.in_progress_at = now
     if (!ticket.actual_start) patch.actual_start = now
-  }
-  if (nextStatus === 'final_checking') {
-    patch.final_checking_at = now
-    if (profile?.id) patch.final_checked_by = profile.id
   }
   if (nextStatus === 'for_payment') patch.for_payment_at = now
   if (nextStatus === 'completed') patch.completed_at = now
@@ -749,20 +753,10 @@ export async function updateTicketStatus(ticket, nextStatus) {
     console.error('Unable to update queue ticket status', error)
     throw formatQueueActionError(error)
   }
-  // Part 2: final checking → POS pending payment handoff (idempotent RPC)
-  if (nextStatus === 'final_checking') {
-    try {
-      await sendTicketToPayment(ticket.booking_id)
-    } catch (handoffErr) {
-      console.error('Auto payment handoff after final_checking failed', handoffErr)
-      throw handoffErr
-    }
-  } else {
-    try {
-      await notifyBookingClient(ticket.booking_id, nextStatus)
-    } catch {
-      /* ignore */
-    }
+  try {
+    await notifyBookingClient(ticket.booking_id, nextStatus)
+  } catch {
+    /* ignore */
   }
 }
 
