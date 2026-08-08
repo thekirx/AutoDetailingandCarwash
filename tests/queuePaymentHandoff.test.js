@@ -49,11 +49,11 @@ describe('Queue payment handoff contract', () => {
   })
 
   it('TL UI labels handoff to Admin/ASA not cashier', async () => {
-    const page = await readFile(projectFile('src/pages/OperationsPages.jsx'), 'utf8')
+    const editor = await readFile(projectFile('src/components/QueueTicketEditor.jsx'), 'utf8')
     const controls = await readFile(projectFile('src/lib/uiDeadControls.js'), 'utf8')
     assert.match(controls, /Send to payment \(Admin \/ ASA\)/)
-    assert.match(page, /Branch Admin or ASA opens POS/)
-    assert.doesNotMatch(page, /Cashier opens POS/)
+    assert.match(editor, /Branch Admin or ASA opens POS/)
+    assert.doesNotMatch(editor, /Cashier opens POS/)
   })
 
   it('payment handoff helpers gate for_payment correctly', async () => {

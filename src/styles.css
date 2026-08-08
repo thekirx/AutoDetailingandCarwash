@@ -1868,6 +1868,26 @@ button { cursor: pointer; }
 .branch-location-map { z-index:0; }
 .branch-location-map .leaflet-container { height:100%; width:100%; font: inherit; }
 
+/* Queue board ticket edit modal — tablet-friendly, scroll inside dialog */
+.queue-ticket-dialog {
+  border-radius: 1.25rem;
+  background: var(--popover, #0f172a);
+}
+.floor-shell .queue-ticket-dialog {
+  max-width: min(42rem, calc(100vw - 1rem));
+}
+.queue-ticket-editor-modal .floor-actions-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: -0.25rem 0 0.5rem;
+  padding-bottom: 0.25rem;
+  background: linear-gradient(to bottom, var(--popover, #0f172a) 70%, transparent);
+}
+html:not(.dark) .queue-ticket-editor-modal .floor-actions-sticky {
+  background: linear-gradient(to bottom, #ffffff 70%, transparent);
+}
+
 /* Team Lead / Branch Admin tablet floor shell — full viewport, large touch, live branch ops */
 .floor-shell {
   --floor-touch: 3rem;

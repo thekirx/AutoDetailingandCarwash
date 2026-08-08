@@ -51,6 +51,7 @@ assert.equal(
   true,
 )
 assert.equal(canManageServices({ role: 'BossMich' }), true)
+assert.equal(canManageServices({ role: 'admin' }), false)
 assert.equal(canManageServices({ role: 'staff' }), false)
 
 console.log('servicePricing: ok')

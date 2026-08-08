@@ -138,10 +138,11 @@ export function canAccessReports(profile) {
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'reports')
 }
 
+/** Catalog CRUD (services + merch stock). Branch Admin is checkout-only — no manage tabs. */
 export function canManageServices(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'services_merch') || hasGrant(profile, 'pos')
-  return profile?.role === ROLES.ADMIN
+  return false
 }
 
 export function canManageCrew(profile) {

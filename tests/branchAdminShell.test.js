@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   ROLES,
+  canManageServices,
+  canAccessPos,
   getBranchAdminDock,
   getOperationsNav,
   redirectForRole,
@@ -37,5 +39,25 @@ describe('Branch Admin simplified shell', () => {
     )
     assert.equal(dock.find((i) => i.to === '/operations/pos')?.primary, true)
     assert.equal(getBranchAdminDock({ role: ROLES.TEAM_LEAD }).length, 0)
+  })
+
+  it('POS checkout allowed but cannot manage services/merch catalog', () => {
+    assert.equal(canAccessPos(p), true)
+    assert.equal(canManageServices(p), false)
+    assert.equal(canManageServices({ role: ROLES.SUPER_ADMIN }), true)
+  })
+})
+
+describe('Branch Admin POS UI is checkout-only', () => {
+  it('hides manage tabs and service catalog browse for branch admin', async () => {
+    const { readFile } = await import('node:fs/promises')
+    const { fileURLToPath } = await import('node:url')
+    const { dirname, join } = await import('node:path')
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+    const src = await readFile(join(root, 'src/pages/PosPage.jsx'), 'utf8')
+    assert.match(src, /canManageCatalog/)
+    assert.match(src, /Queue payment \+ merch/)
+    assert.match(src, /branchAdmin \? \(/)
+    assert.doesNotMatch(src, /canManageServices\(profile\) && <TabsTrigger value="services">Manage services/)
   })
 })

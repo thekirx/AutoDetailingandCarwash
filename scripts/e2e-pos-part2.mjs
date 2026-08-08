@@ -33,7 +33,8 @@ const results = []
 
 // Matrix: POS tabs owned by Admin+; no standalone services/products nav
 assert(allowRoute({ role: ROLES.ADMIN }, 'pos'), 'admin pos')
-assert(canManageServices({ role: ROLES.ADMIN }), 'admin manage services')
+assert(!canManageServices({ role: ROLES.ADMIN }), 'branch admin checkout-only (no manage services)')
+assert(canManageServices({ role: ROLES.SUPER_ADMIN }), 'super admin manage services')
 assert(!getOperationsNav({ role: ROLES.SUPER_ADMIN }).some((i) => i.to === '/operations/services'), 'no services nav')
 assert(!getOperationsNav({ role: ROLES.SUPER_ADMIN }).some((i) => i.to === '/operations/products'), 'no products nav')
 results.push('matrix.pos_shell: ok')

@@ -33,9 +33,13 @@ const PAYMENT_OPTIONS = [
 export default function PosPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const shellTab = ['checkout', 'services', 'merch'].includes(searchParams.get('tab'))
+  const branchAdmin = isBranchAdmin(profile)
+  const canManageCatalog = canManageServices(profile)
+  const requestedShellTab = ['checkout', 'services', 'merch'].includes(searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'checkout'
+  // Branch Admin (and anyone without catalog CRUD) stays on checkout — ignore manage deep links.
+  const shellTab = canManageCatalog ? requestedShellTab : 'checkout'
   const scopeList = getBranchScopeList(profile)
   const canPickPosBranch = canSeeAllBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
   const branchLocked = !canPickPosBranch
@@ -45,7 +49,18 @@ export default function PosPage() {
   const [services, setServices] = useState([])
   const [products, setProducts] = useState([])
   const [query, setQuery] = useState('')
-  const [tab, setTab] = useState('services')
+  // Branch Admin sells merch + pays queue tickets only — not freeform service catalog.
+  const [tab, setTab] = useState(() => (isBranchAdmin(profile) ? 'merch' : 'services'))
+
+  useEffect(() => {
+    if (branchAdmin && tab !== 'merch') setTab('merch')
+  }, [branchAdmin, tab])
+
+  useEffect(() => {
+    if (!canManageCatalog && searchParams.get('tab')) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [canManageCatalog, searchParams, setSearchParams])
   const [cart, setCart] = useState([])
   const [branch, setBranch] = useState(assignedBranch)
   const [branches, setBranches] = useState([])
@@ -441,62 +456,15 @@ export default function PosPage() {
   if (!canAccessPos(profile)) return <Navigate to="/operations/access-denied" replace />
 
   const catalog = tab === 'services' ? serviceItems : merchItems
+  const catalogTab = branchAdmin ? 'merch' : tab
 
   function setShellTab(next) {
+    if (!canManageCatalog && next !== 'checkout') return
     setSearchParams(next === 'checkout' ? {} : { tab: next }, { replace: true })
   }
 
-  const branchAdmin = isBranchAdmin(profile)
-
-  return (
-    <section className={`flex flex-col ${branchAdmin ? 'gap-4' : 'gap-6'}`}>
-      <div className="floor-compact-header flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div className="min-w-0">
-          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">
-            {branchAdmin ? 'Branch Admin' : 'Point of sale'}
-          </p>
-          <h1 className={`font-semibold tracking-tight ${branchAdmin ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'}`}>
-            {branchAdmin ? 'POS' : 'POS hub'}
-          </h1>
-          {!branchAdmin && (
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
-              <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
-              <span>
-                Checkout, services catalog, and merch inventory
-                {branchLocked ? ' · your assigned branch' : ' · all branches'}
-              </span>
-            </p>
-          )}
-          {branchAdmin && (
-            <p className="floor-desc mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
-              <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
-              <span>Checkout · {branchLocked ? 'your branch' : 'all branches'}</span>
-            </p>
-          )}
-        </div>
-        {shellTab === 'checkout' && (
-          <Button onClick={() => setCartOpen(true)} className="min-h-11 gap-2">
-            <ShoppingCart data-icon="inline-start" />
-            Cart · {cart.length} · {formatMoney(cartTotal)}
-          </Button>
-        )}
-      </div>
-
-      <Tabs value={shellTab} onValueChange={setShellTab}>
-        <TabsList className="flex h-auto flex-wrap gap-1">
-          <TabsTrigger value="checkout">Checkout</TabsTrigger>
-          {canManageServices(profile) && <TabsTrigger value="services">Manage services</TabsTrigger>}
-          {canManageServices(profile) && <TabsTrigger value="merch">Manage merch</TabsTrigger>}
-        </TabsList>
-
-        <TabsContent value="services" className="mt-6">
-          <ServicesManagePage embedded />
-        </TabsContent>
-        <TabsContent value="merch" className="mt-6">
-          <ProductsManagePage embedded />
-        </TabsContent>
-
-        <TabsContent value="checkout" className="mt-6 flex flex-col gap-6">
+  const checkoutBody = (
+    <div className="mt-6 flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Sales today" value={formatMoney(todayStats?.total_sales_minor || 0)} />
         <Stat label="Paid" value={todayStats?.paid_count ?? 0} />
@@ -508,7 +476,11 @@ export default function PosPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Waiting for payment</CardTitle>
-            <p className="text-sm text-muted-foreground">Tickets from the floor — open one to close the visit.</p>
+            <p className="text-sm text-muted-foreground">
+              {branchAdmin
+                ? 'Cars from the queue — open one to take payment.'
+                : 'Tickets from the floor — open one to close the visit.'}
+            </p>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {handoffs.map((row) => {
@@ -540,12 +512,12 @@ export default function PosPage() {
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="min-h-11 pl-9"
-            placeholder={tab === 'services' ? 'Search services' : 'Search merch / items'}
+            placeholder={branchAdmin || catalogTab === 'merch' ? 'Search merch / items' : 'Search services'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        {tab === 'services' && (
+        {!branchAdmin && catalogTab === 'services' && (
           <Select value={carSize} onValueChange={setCarSize}>
             <SelectTrigger className="min-h-11 w-full sm:w-48">
               <SelectValue placeholder="Car size" />
@@ -580,24 +552,94 @@ export default function PosPage() {
         )}
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="services" className="min-h-10">
-            Services ({serviceItems.length})
-          </TabsTrigger>
-          <TabsTrigger value="merch" className="min-h-10">
+      {branchAdmin ? (
+        <div>
+          <p className="mb-3 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
             Merch / items ({merchItems.length})
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="services" className="mt-4">
-          <CatalogGrid items={catalog} onAdd={addToCart} empty="No services match." />
-        </TabsContent>
-        <TabsContent value="merch" className="mt-4">
-          <CatalogGrid items={catalog} onAdd={addToCart} empty="No merch items. Add stock under Manage merch." />
-        </TabsContent>
-      </Tabs>
-        </TabsContent>
-      </Tabs>
+          </p>
+          <CatalogGrid
+            items={merchItems}
+            onAdd={addToCart}
+            empty="No merch items for this branch yet."
+          />
+        </div>
+      ) : (
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="services" className="min-h-10">
+              Services ({serviceItems.length})
+            </TabsTrigger>
+            <TabsTrigger value="merch" className="min-h-10">
+              Merch / items ({merchItems.length})
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="services" className="mt-4">
+            <CatalogGrid items={catalog} onAdd={addToCart} empty="No services match." />
+          </TabsContent>
+          <TabsContent value="merch" className="mt-4">
+            <CatalogGrid items={catalog} onAdd={addToCart} empty="No merch items. Add stock under Manage merch." />
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  )
+
+  return (
+    <section className={`flex flex-col ${branchAdmin ? 'gap-4' : 'gap-6'}`}>
+      <div className="floor-compact-header flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0">
+          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">
+            {branchAdmin ? 'Branch Admin' : 'Point of sale'}
+          </p>
+          <h1 className={`font-semibold tracking-tight ${branchAdmin ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'}`}>
+            {branchAdmin ? 'POS' : 'POS hub'}
+          </h1>
+          {!branchAdmin && (
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
+              <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+              <span>
+                Checkout, services catalog, and merch inventory
+                {branchLocked ? ' · your assigned branch' : ' · all branches'}
+              </span>
+            </p>
+          )}
+          {branchAdmin && (
+            <p className="floor-desc mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
+              <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+              <span>Queue payment + merch · {branchLocked ? 'your branch' : 'all branches'}</span>
+            </p>
+          )}
+        </div>
+        {shellTab === 'checkout' && (
+          <Button onClick={() => setCartOpen(true)} className="min-h-11 gap-2">
+            <ShoppingCart data-icon="inline-start" />
+            Cart · {cart.length} · {formatMoney(cartTotal)}
+          </Button>
+        )}
+      </div>
+
+      {canManageCatalog ? (
+        <Tabs value={shellTab} onValueChange={setShellTab}>
+          <TabsList className="flex h-auto flex-wrap gap-1">
+            <TabsTrigger value="checkout">Checkout</TabsTrigger>
+            <TabsTrigger value="services">Manage services</TabsTrigger>
+            <TabsTrigger value="merch">Manage merch</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="services" className="mt-6">
+            <ServicesManagePage embedded />
+          </TabsContent>
+          <TabsContent value="merch" className="mt-6">
+            <ProductsManagePage embedded />
+          </TabsContent>
+
+          <TabsContent value="checkout" className="mt-0">
+            {checkoutBody}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        checkoutBody
+      )}
 
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
         <SheetContent className="pos-checkout-sheet flex w-full flex-col gap-0 border-l-0 p-0 sm:max-w-md">

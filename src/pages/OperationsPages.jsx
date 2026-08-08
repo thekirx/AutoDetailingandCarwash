@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowRight,
   BadgeCheck,
   CarFront,
   CheckCircle2,
@@ -25,7 +24,8 @@ import { serviceKindFromPayCategory } from '../lib/serviceKinds'
 import { CrewAttendancePanel, CrewSettingsPanel } from './crew/CrewAttendancePanels'
 import { splitCustomerName } from '../lib/phVehicles'
 import { canAccessPos, canEditAttendanceRoles, canEditAttendanceSettings, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES } from '../auth/permissions'
-import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
+import QueueTicketEditModal from '../components/QueueTicketEditModal'
+import QueueTicketEditor from '../components/QueueTicketEditor'
 import {
   formatQueueNumber,
   getBranchScope,
@@ -37,33 +37,25 @@ import {
   groupVisitTickets,
   isSuspiciousTiming,
   normalizeVehicleType,
-  parsePesoInputToMinor,
   queueByBranchCounts,
   requiresTeamLeadBranchSetup,
   canOverrideQueueBranches,
   DASHBOARD_DATE_PRESETS,
-  REDO_FROM_STATUSES,
   STATUS_LABELS,
 } from '../queue/queueLogic'
 import {
   addStaffMember,
   acknowledgeQueueAssignment,
-  assignStaff,
   completeQueueAssignment,
   createQueueTicket,
   deactivateCrewStaffMember,
   fetchBranches,
   fetchOperationsSnapshot,
   fetchServices,
-  fetchTicket,
   formatMoney,
   lookupPlate,
-  markTicketRedo,
-  sendTicketToPayment,
   setStaffAttendance,
   updateCrewStaffMember,
-  updateTicketPrice,
-  updateTicketStatus,
 } from '../queue/queueApi'
 import { geoTimeIn, geoTimeOut, readBrowserPosition } from '../queue/attendanceApi'
 import { allowedStaffPlanAssigneePatch } from '../queue/staffTaskLogic'
@@ -127,12 +119,12 @@ function MetricCard({ label, value, icon: Icon, tone = 'blue' }) {
   )
 }
 
-function TicketCard({ ticket, timingWarnings }) {
+function TicketCard({ ticket, timingWarnings, onOpen }) {
   const warn = isSuspiciousTiming(ticket, timingWarnings)
   const linked = (ticket.linked_booking_ids?.length || 1) > 1
   const kind = serviceKindFromPayCategory(ticket.service_pay_category)
-  return (
-    <Link to={`/operations/queue/${ticket.booking_id}`} className="floor-ticket queue-ticket-card">
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xl font-black tabular-nums text-foreground sm:text-2xl">{formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}</p>
@@ -149,6 +141,22 @@ function TicketCard({ ticket, timingWarnings }) {
         {linked && <span className="font-medium text-primary">{ticket.linked_booking_ids.length} services · one visit</span>}
         {warn && <span className="flex items-center gap-1 font-medium text-amber-700 dark:text-amber-200"><ShieldAlert size={12} aria-hidden />Fast in-progress → check</span>}
       </div>
+    </>
+  )
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(ticket.booking_id)}
+        className="floor-ticket queue-ticket-card w-full text-left"
+      >
+        {body}
+      </button>
+    )
+  }
+  return (
+    <Link to={`/operations/queue/${ticket.booking_id}`} className="floor-ticket queue-ticket-card">
+      {body}
     </Link>
   )
 }
@@ -413,6 +421,7 @@ export function OperationsQueuePage() {
     return getBranchScope(profile) || 'all'
   })
   const [branches, setBranches] = useState([])
+  const [editBookingId, setEditBookingId] = useState(null)
   const { activeQueue, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter)
   const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
   const visibleQueue = useMemo(
@@ -548,186 +557,51 @@ export function OperationsQueuePage() {
                 {loading
                   ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-muted" />)
                   : tickets.length
-                    ? tickets.map((ticket) => <TicketCard key={ticket.booking_id} ticket={ticket} timingWarnings={timingWarnings} />)
+                    ? tickets.map((ticket) => (
+                      <TicketCard
+                        key={ticket.booking_id}
+                        ticket={ticket}
+                        timingWarnings={timingWarnings}
+                        onOpen={canManageQueue ? setEditBookingId : undefined}
+                      />
+                    ))
                     : <EmptyLine text="No tickets in this lane." />}
               </div>
             </section>
           )
         })}
       </div>
+
+      {canManageQueue ? (
+        <QueueTicketEditModal
+          bookingId={editBookingId}
+          open={Boolean(editBookingId)}
+          onOpenChange={(next) => {
+            if (!next) setEditBookingId(null)
+          }}
+          onUpdated={reload}
+        />
+      ) : null}
     </section>
   )
 }
 
 export function QueueTicketPage() {
   const { id } = useParams()
-  const { user, profile, canManageQueue, canViewQueueOperations } = useAuth()
-  const [ticket, setTicket] = useState(null)
-  const [assignments, setAssignments] = useState([])
-  const [staff, setStaff] = useState([])
-  const [selectedStaff, setSelectedStaff] = useState([])
-  const [price, setPrice] = useState('')
-  const [priceReason, setPriceReason] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState('')
-  const [loadError, setLoadError] = useState('')
-  const [actionError, setActionError] = useState('')
-
-  const load = useCallback(async () => {
-    setLoadError('')
-    try {
-      const data = await fetchTicket(id, profile)
-      setTicket(data.ticket)
-      setAssignments(data.assignments)
-      setStaff(data.staff)
-      setSelectedStaff(data.assignments.filter((assignment) => assignment.status === 'active').map((assignment) => assignment.staff_id))
-      setPrice(String(((data.ticket?.final_price_minor ?? data.ticket?.base_price_minor ?? 0) / 100) || ''))
-      setPriceReason('')
-    } catch (err) {
-      setLoadError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [id, profile])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  useEffect(() => {
-    if (!id) return undefined
-    const channel = supabase
-      .channel(`queue-ticket-${id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `id=eq.${id}` }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments', filter: `booking_id=eq.${id}` }, load)
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [id, load])
-
-  const runAction = async (label, action) => {
-    setSaving(label)
-    setActionError('')
-    try {
-      await action()
-      await load()
-    } catch (err) {
-      console.error('Queue action failed', err)
-      setActionError(err.message)
-    } finally {
-      setSaving('')
-    }
-  }
+  const { profile, canViewQueueOperations } = useAuth()
+  const navigate = useNavigate()
 
   if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
-  if (loading) return <LoadingPanel />
-  if (loadError) return <ErrorState error={loadError} onRetry={load} />
-  if (!ticket) return <Navigate to="/operations/queue" replace />
-
-  const staffById = new Map(staff.map((item) => [item.id, item]))
-  const showEditActions = showQueueTicketEditActions(canManageQueue)
-  const showRedoBtn = showQueueRedoAction(canViewRedoLane(profile))
-  const canOpenPos = canAccessPos(profile)
-  const canSendToPayment = canManageQueue && ticket.status === 'final_checking'
-  // Redo lane is SA/ASA-only — TL must not mark redo (ticket vanishes from their board)
-  const canRedo = canManageQueue && showRedoBtn && REDO_FROM_STATUSES.includes(ticket.status)
-  const canRestartFromRedo = canManageQueue && showRedoBtn && ticket.status === 'redo'
-  const timingWarn = isSuspiciousTiming(ticket)
-  const parsedPrice = Number(String(price).replace(/,/g, '').trim())
-  const showLowPriceWarning = Number.isFinite(parsedPrice) && parsedPrice > 0 && parsedPrice < 50
-  const savePrice = () => {
-    const amountMinor = parsePesoInputToMinor(price)
-    if (amountMinor < 5000 && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) return Promise.resolve()
-    return updateTicketPrice(ticket, amountMinor, priceReason, user.id)
-  }
-  const runRedo = () => {
-    const reason = window.prompt('Redo reason (visible to owner in audit)', ticket.redo_reason || '')
-    if (reason === null) return Promise.resolve()
-    return markTicketRedo(ticket, reason)
-  }
+  if (!id) return <Navigate to="/operations/queue" replace />
 
   return (
     <section>
-      <PageHeader eyebrow="Queue Ticket" title={`${formatQueueNumber(ticket.queue_number, ticket.service_pay_category)} · ${ticket.customer_name}`} description={`${ticket.branch} · ${STATUS_LABELS[ticket.status] || ticket.status}${ticket.service_pay_category === 'detailing' ? ' · Multi-day detailing' : ''}`} action={<Link to="/operations/queue" className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline">Back to queue</Link>} />
-      {actionError && <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100" role="alert">{actionError}</p>}
-      {!showEditActions && (
-        <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
-          View only. Team Lead runs floor status. Use POS to take payment after final check.
-        </p>
-      )}
-      {timingWarn && <p className="mt-4 flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4 text-sm text-amber-100"><ShieldAlert size={16} aria-hidden />Suspicious timing: in progress → final check was under the configured threshold.</p>}
-      <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_360px] sm:mt-6 sm:gap-5">
-        <Panel title="Ticket Details" icon={CarFront}>
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-            <Info label="Customer" value={ticket.customer_name} />
-            <Info label="Contact" value={ticket.customer_phone || 'No contact'} />
-            <Info label="Plate" value={ticket.vehicle_plate || 'No plate'} />
-            <Info label="Vehicle" value={[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ')} />
-            <Info label="Service" value={ticket.service_name || 'Service'} />
-            <Info label="Price" value={formatMoney(ticket.final_price_minor ?? ticket.base_price_minor)} />
-            <Info label="Created" value={new Date(ticket.created_at).toLocaleString()} />
-            <Info label="Notes" value={ticket.notes || 'No internal notes'} />
-            {ticket.redo_reason && <Info label="Redo reason" value={ticket.redo_reason} />}
-          </div>
-        </Panel>
-
-        {showEditActions ? (
-          <div className="grid gap-4 sm:gap-5">
-            <div className="floor-actions-sticky xl:static xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none">
-              <Panel title="Status Actions" icon={ArrowRight} className="shadow-none xl:shadow-xl">
-                <div className="grid gap-2.5">
-                  <ActionButton disabled={ticket.status !== 'waiting' && !canRestartFromRedo} loading={saving === 'start'} onClick={() => runAction('start', () => updateTicketStatus(ticket, 'in_progress'))}>Start Service</ActionButton>
-                  <ActionButton disabled={ticket.status !== 'in_progress'} loading={saving === 'check'} onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}>{finalCheckActionLabel(canOpenPos)}</ActionButton>
-                  <ActionButton disabled={!canSendToPayment} loading={saving === 'payment'} onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}><Send size={17} aria-hidden />{sendToPaymentActionLabel(canOpenPos)}</ActionButton>
-                  {showRedoBtn ? (
-                    <ActionButton disabled={!canRedo} loading={saving === 'redo'} onClick={() => runAction('redo', runRedo)}><ShieldAlert size={17} aria-hidden />Mark redo</ActionButton>
-                  ) : null}
-                </div>
-                {!canOpenPos ? (
-                  <p className="mt-3 text-xs text-slate-400">Branch Admin or ASA opens POS to collect payment after you send the handoff.</p>
-                ) : null}
-              </Panel>
-            </div>
-
-            <Panel title="Edit Price" icon={BadgeCheck}>
-              <div className="grid gap-3">
-                <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Final Price in Pesos<input type="number" min="0" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white outline-none focus:border-blue-300/60" /></label>
-                {showLowPriceWarning && <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
-                <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Reason<input value={priceReason} onChange={(event) => setPriceReason(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white outline-none focus:border-blue-300/60" /></label>
-                <ActionButton loading={saving === 'price'} onClick={() => runAction('price', savePrice)}>Save Price</ActionButton>
-              </div>
-            </Panel>
-          </div>
-        ) : null}
-      </div>
-
-      <Panel title="Staff Assignment" icon={UserPlus} className="mt-4 sm:mt-5">
-        <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {staff.map((member) => {
-              const active = selectedStaff.includes(member.id)
-              return (
-                <label key={member.id} className={`flex min-h-14 items-center justify-between gap-3 rounded-2xl border p-4 transition ${showEditActions ? 'cursor-pointer' : ''} ${active ? 'border-blue-300/40 bg-blue-500/10' : 'border-white/10 bg-white/[0.035]'}`}>
-                  <span><span className="block font-medium">{member.full_name}</span><span className="text-xs text-slate-500">{member.branch_slug || 'All branches'}</span></span>
-                  <input type="checkbox" className="size-5 accent-blue-500" checked={active} disabled={!showEditActions} onChange={(event) => setSelectedStaff((current) => event.target.checked ? [...current, member.id] : current.filter((idValue) => idValue !== member.id))} />
-                </label>
-              )
-            })}
-          </div>
-          <div>
-            {showEditActions ? (
-              <ActionButton loading={saving === 'assign'} onClick={() => runAction('assign', () => assignStaff(ticket, selectedStaff))}>Save Assignments</ActionButton>
-            ) : null}
-            <div className={`grid gap-2 text-sm text-slate-400 ${showEditActions ? 'mt-4' : ''}`}>
-              {assignments.length ? assignments.map((assignment) => (
-                <p key={assignment.id}>{staffById.get(assignment.staff_id)?.full_name || assignment.staff_id}: <span className="capitalize text-slate-200">{assignment.status}</span></p>
-              )) : <p>No assignment history yet.</p>}
-            </div>
-          </div>
-        </div>
-      </Panel>
+      <QueueTicketEditor
+        bookingId={id}
+        variant="page"
+        onClose={() => navigate('/operations/queue')}
+      />
     </section>
   )
 }
@@ -1636,14 +1510,6 @@ function RefreshButton({ loading, onClick }) {
       Refresh
     </button>
   )
-}
-
-function ActionButton({ children, loading, disabled, onClick }) {
-  return <button type="button" disabled={disabled || loading} onClick={onClick} className="floor-touch-btn inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40">{loading ? <LoaderCircle className="animate-spin" size={17} aria-hidden /> : null}{children}</button>
-}
-
-function Info({ label, value }) {
-  return <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-3.5 sm:p-4"><p className="text-[10px] font-bold tracking-[0.16em] text-slate-500 uppercase">{label}</p><p className="mt-2 text-sm text-slate-100">{value || '-'}</p></div>
 }
 
 function FormField({ label, value, onChange, type = 'text', required = false, min, step }) {
