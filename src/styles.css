@@ -2386,6 +2386,7 @@ html:not(.dark) .floor-dock-item-active {
 .dark .queue-lane[data-status='in_progress'] .queue-lane-icon { color: #6ee7b7; }
 .dark .queue-lane[data-status='final_checking'] .queue-lane-icon { color: #fcd34d; }
 .dark .queue-lane[data-status='redo'] .queue-lane-icon { color: #fda4af; }
+.dark .queue-lane[data-status='for_payment'] .queue-lane-icon { color: #c4b5fd; }
 @media (min-width: 1100px) {
   .queue-lane-board-active {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2395,6 +2396,13 @@ html:not(.dark) .floor-dock-item-active {
   }
   .queue-lane-board-redo {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-flow: unset;
+    grid-auto-columns: unset;
+    overflow-x: visible;
+  }
+  /* Role-aware boards: lane count comes from --queue-lane-count (TL 3, admin 4, SA 5). */
+  .queue-lane-board-fluid {
+    grid-template-columns: repeat(var(--queue-lane-count, 3), minmax(0, 1fr));
     grid-auto-flow: unset;
     grid-auto-columns: unset;
     overflow-x: visible;

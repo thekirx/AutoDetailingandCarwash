@@ -153,6 +153,16 @@ export default function CustomerSignInPage() {
         )
       }
 
+      // First-login welcome SMS (download the app) — server dedupes to once ever.
+      const accessToken = data.session?.access_token
+      if (accessToken) {
+        fetch('/api/lifecycle-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ kind: 'welcome', site_origin: window.location.origin }),
+        }).catch(() => {})
+      }
+
       if (data.user.user_metadata?.must_set_password) {
         navigate('/account/set-password', { replace: true })
         return

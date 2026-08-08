@@ -85,6 +85,10 @@ function provisionApiPlugin() {
         const { handleNotifyBookingRequest } = await import('./server/notifyBookingApi.mjs')
         return handleNotifyBookingRequest(req, res)
       })
+      mount('/api/lifecycle-sms', async (req, res) => {
+        const { handleLifecycleSmsRequest } = await import('./server/lifecycleSmsApi.mjs')
+        return handleLifecycleSmsRequest(req, res)
+      })
       mount('/api/busybee', (req, res) => handleBusybeeRequest(req, res))
       mount('/api/send-finance-quote', async (req, res, helpers) => {
         const { handleFinanceQuoteRequest } = await import('./server/sendFinanceQuote.mjs')

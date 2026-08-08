@@ -18,7 +18,7 @@ export function assertAcceptedTerms(body) {
   }
 }
 
-export async function signupCustomer({ body }) {
+export async function signupCustomer({ body, requestOrigin = '' }) {
   const fullName = String(body.full_name || '').trim()
   const phone = String(body.phone || '').trim()
   const emailRaw = String(body.email || '').trim().toLowerCase()
@@ -71,6 +71,19 @@ export async function signupCustomer({ body }) {
     throw Object.assign(new Error(profileError.message), { status: 400 })
   }
 
+  // First-account welcome: download-the-app instructions (best-effort, idempotent).
+  try {
+    const { sendLifecycleSms } = await import('./lifecycleSms.mjs')
+    await sendLifecycleSms(admin, {
+      kind: 'welcome_app',
+      customerId: created.user.id,
+      phone,
+      appUrl: requestOrigin,
+    })
+  } catch {
+    /* never block signup on SMS */
+  }
+
   return { user_id: created.user.id, email, login_hint: emailRaw ? email : phone }
 }
 
@@ -89,7 +102,8 @@ export async function handleCustomerSignupRequest(req, res, { getBody }) {
     }
     rateLimit({ key: `customer-signup:${clientIp(req)}`, limit: 8, windowMs: 15 * 60_000 })
     const body = await getBody()
-    const result = await signupCustomer({ body })
+    const origin = String(req.headers?.origin || '').trim()
+    const result = await signupCustomer({ body, requestOrigin: /^https?:\/\//.test(origin) ? origin : '' })
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify(result))

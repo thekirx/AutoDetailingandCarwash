@@ -440,6 +440,19 @@ export default function PosPage() {
         toast.warning(err.message || 'Sale saved — customer notify failed')
       }
     }
+    // Loyalty claim thank-you SMS — fire and forget, server dedupes per sale.
+    if (resolvedCustomerId && cart.some((l) => l.is_loyalty_award)) {
+      getAccessTokenFresh()
+        .then((token) => {
+          if (!token) return null
+          return fetch('/api/lifecycle-sms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ kind: 'loyalty_claim', customer_id: resolvedCustomerId, sale_id: data?.sale_id || '' }),
+          })
+        })
+        .catch(() => {})
+    }
     const loyalty = data?.loyalty_awarded || data?.stamps_awarded
     toast.success(
       handoff

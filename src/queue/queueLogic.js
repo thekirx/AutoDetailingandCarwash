@@ -3,7 +3,9 @@ import {
   QUEUE_EDITOR_ROLES as PERM_QUEUE_EDITOR_ROLES,
   QUEUE_VIEWER_ROLES as PERM_QUEUE_VIEWER_ROLES,
   canEditQueueOperations as permCanEditQueue,
+  canOverrideQueueStatus,
   canSeeAllBranches,
+  canSeeForPaymentLane,
   canViewQueueOperations as permCanViewQueue,
   canViewRedoLane,
   getBranchScopeList,
@@ -78,9 +80,16 @@ export function isOpsBoardStatus(status) {
   return OPS_BOARD_STATUSES.includes(status)
 }
 
-/** Board columns for this profile. Customers / TL / Admin: active lanes only. SA + ASA: + Redo. */
+/**
+ * Board columns for this profile.
+ * TL: active lanes only (never For Payment — legacy port rule).
+ * Branch Admin / SA / ASA: + For Payment. SA / ASA: + Redo.
+ */
 export function getOpsBoardStatuses(profile) {
-  return canViewRedoLane(profile) ? OPS_BOARD_STATUSES : ACTIVE_QUEUE_STATUSES
+  const lanes = [...ACTIVE_QUEUE_STATUSES]
+  if (canSeeForPaymentLane(profile)) lanes.push('for_payment')
+  if (canViewRedoLane(profile)) lanes.push('redo')
+  return lanes
 }
 
 /**
@@ -104,6 +113,20 @@ export function canTransitionQueueStatus(fromStatus, toStatus) {
 }
 
 /**
+ * Admin override lane targets (mirrors admin_override_queue_status RPC):
+ * any open ticket can be pulled back to waiting / in progress / final checking.
+ * Leaving for_payment cancels its pending handoff server-side (never deleted).
+ */
+export const ADMIN_OVERRIDE_TARGET_STATUSES = ['waiting', 'in_progress', 'final_checking']
+const ADMIN_OVERRIDE_FROM_STATUSES = new Set([...ACTIVE_QUEUE_STATUSES, 'for_payment', 'redo'])
+
+export function getAdminOverrideTargets(status) {
+  const s = String(status || '')
+  if (!ADMIN_OVERRIDE_FROM_STATUSES.has(s)) return []
+  return ADMIN_OVERRIDE_TARGET_STATUSES.filter((target) => target !== s)
+}
+
+/**
  * Which TL/editor ticket buttons are enabled for the current status.
  * @param {string} status
  * @param {{ canManageQueue?: boolean, canViewRedoLane?: boolean }} caps
@@ -123,7 +146,7 @@ export function getQueueTicketActionFlags(status, { canManageQueue = false, canV
 /** Valid ?lane= values for Floor → Queue deep links (board statuses only). */
 export function parseQueueLaneParam(value) {
   const lane = String(value || '').trim().toLowerCase()
-  if (OPS_BOARD_STATUSES.includes(lane)) return lane
+  if (OPS_BOARD_STATUSES.includes(lane) || lane === 'for_payment') return lane
   if (lane === 'all' || lane === 'total') return null
   return null
 }
@@ -139,12 +162,13 @@ export function operationsQueueHref({ lane, branch } = {}) {
   return qs ? `/operations/queue?${qs}` : '/operations/queue'
 }
 
-export function getQueueCounts(rows = [], { includeRedo = true } = {}) {
-  const counts = { waiting: 0, in_progress: 0, final_checking: 0, redo: 0, total: 0 }
-  const allowed = includeRedo ? OPS_BOARD_STATUSES : ACTIVE_QUEUE_STATUSES
+export function getQueueCounts(rows = [], { includeRedo = true, statuses = null } = {}) {
+  const counts = { waiting: 0, in_progress: 0, final_checking: 0, for_payment: 0, redo: 0, total: 0 }
+  const allowed = statuses || (includeRedo ? OPS_BOARD_STATUSES : ACTIVE_QUEUE_STATUSES)
 
   for (const row of rows) {
     if (!allowed.includes(row.status)) continue
+    if (counts[row.status] == null) counts[row.status] = 0
     counts[row.status] += 1
     counts.total += 1
   }
@@ -300,7 +324,7 @@ export function queueByBranchCounts(rows = []) {
   const out = {}
   for (const row of rows) {
     const key = row.branch || 'unknown'
-    if (!out[key]) out[key] = { waiting: 0, in_progress: 0, final_checking: 0, redo: 0, total: 0 }
+    if (!out[key]) out[key] = { waiting: 0, in_progress: 0, final_checking: 0, for_payment: 0, redo: 0, total: 0 }
     if (out[key][row.status] != null) out[key][row.status] += 1
     if (isOpsBoardStatus(row.status)) out[key].total += 1
   }
@@ -418,7 +442,7 @@ export function canViewQueueOperations(profile) {
   return permCanViewQueue(profile)
 }
 
-export { canViewRedoLane }
+export { canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane }
 
 export function canOverrideQueueBranches(profile) {
   return canSeeAllBranches(profile)

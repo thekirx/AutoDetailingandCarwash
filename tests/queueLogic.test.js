@@ -41,6 +41,7 @@ describe('queue logic', () => {
       waiting: 2,
       in_progress: 1,
       final_checking: 1,
+      for_payment: 0,
       redo: 0,
       total: 4,
     })
@@ -105,10 +106,11 @@ describe('queue logic', () => {
     assert.equal(canViewRedoLane({ role: 'team_lead' }), false)
     assert.equal(canViewRedoLane({ role: 'staff' }), false)
     assert.equal(canViewRedoLane(null), false)
-    assert.deepEqual(getOpsBoardStatuses({ role: 'BossMich' }), OPS_BOARD_STATUSES)
-    assert.deepEqual(getOpsBoardStatuses({ role: 'assistant_super_admin' }), OPS_BOARD_STATUSES)
+    // Console-tier roles get the for_payment lane; team lead never sees it (legacy port).
+    assert.deepEqual(getOpsBoardStatuses({ role: 'BossMich' }), [...ACTIVE_QUEUE_STATUSES, 'for_payment', 'redo'])
+    assert.deepEqual(getOpsBoardStatuses({ role: 'assistant_super_admin' }), [...ACTIVE_QUEUE_STATUSES, 'for_payment', 'redo'])
     assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), ACTIVE_QUEUE_STATUSES)
-    assert.deepEqual(getOpsBoardStatuses({ role: 'admin' }), ACTIVE_QUEUE_STATUSES)
+    assert.deepEqual(getOpsBoardStatuses({ role: 'admin' }), [...ACTIVE_QUEUE_STATUSES, 'for_payment'])
     assert.ok(!ACTIVE_QUEUE_STATUSES.includes('redo'))
     assert.ok(OPS_BOARD_STATUSES.includes('redo'))
   })
@@ -124,6 +126,7 @@ describe('queue logic', () => {
       waiting: 1,
       in_progress: 1,
       final_checking: 1,
+      for_payment: 0,
       redo: 0,
       total: 3,
     })
@@ -131,6 +134,7 @@ describe('queue logic', () => {
       waiting: 1,
       in_progress: 1,
       final_checking: 1,
+      for_payment: 0,
       redo: 1,
       total: 4,
     })

@@ -12,6 +12,7 @@ const expected = {
   '/api/customer-portal': '/api/customer?operation=customer-portal',
   '/api/customer-signup': '/api/customer?operation=customer-signup',
   '/api/data-center': '/api/data-center?operation=data-center',
+  '/api/lifecycle-sms': '/api/notifications?operation=lifecycle-sms',
   '/api/notify-booking': '/api/notifications?operation=notify-booking',
   '/api/plate-lookup': '/api/bookings?operation=plate-lookup',
   '/api/provision-customer': '/api/customer?operation=provision-customer',

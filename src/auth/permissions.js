@@ -257,6 +257,18 @@ export function canViewRedoLane(profile) {
   return isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
 }
 
+/** Legacy TL port: Team Lead never sees the For Payment lane; console tier does. */
+export function canSeeForPaymentLane(profile) {
+  return isAdmin(profile)
+}
+
+/** Branch Admin / Super Admin / ASA(queue_all) may pull tickets back to earlier lanes. */
+export function canOverrideQueueStatus(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
+  return profile?.role === ROLES.ADMIN
+}
+
 export function canViewAssignedTasks(profile) {
   return has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN])
 }

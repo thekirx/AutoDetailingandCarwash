@@ -4,8 +4,10 @@ import {
   aggregateDailySalesSummary,
   canTransitionQueueStatus,
   DEFAULT_TIMING_WARNINGS,
-  OPS_BOARD_STATUSES,
+  getAdminOverrideTargets,
+  getOpsBoardStatuses,
   REDO_FROM_STATUSES,
+  STATUS_LABELS,
   formatQueueActionError,
   getBranchScope,
   getBranchScopeFilter,
@@ -149,9 +151,11 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
   }
 
   const branchScope = resolveBranchFilter(profile, branchFilter)
-  // Active floor only — keeps TL/ASA snapshot payloads small under concurrent load
+  // Active floor only — keeps TL/ASA snapshot payloads small under concurrent load.
+  // Lanes are role-aware: TL never fetches for_payment; console tier does.
+  const boardStatuses = getOpsBoardStatuses(profile)
   const queueQuery = scopedQuery(
-    supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).in('status', OPS_BOARD_STATUSES),
+    supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).in('status', boardStatuses),
     branchScope,
   )
   const staffPoolQuery = scopedStaffQuery(
@@ -212,7 +216,7 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
   // Same-day services/packages: waiting tickets from prior days drop off the floor.
   // Detailing (and started work) stay until finished.
   const activeQueue = queueRows.filter(
-    (ticket) => OPS_BOARD_STATUSES.includes(ticket.status) && isTicketOnTodayFloor(ticket, today),
+    (ticket) => boardStatuses.includes(ticket.status) && isTicketOnTodayFloor(ticket, today),
   )
 
   return {
@@ -718,6 +722,22 @@ async function notifyBookingClient(bookingId, status) {
   return res.json().catch(() => ({}))
 }
 
+/** All open booking ids for the ticket's visit group (multi-service moves as one). */
+async function getVisitLineIds(ticket) {
+  if (Array.isArray(ticket?.linked_booking_ids) && ticket.linked_booking_ids.length) {
+    return ticket.linked_booking_ids
+  }
+  if (!ticket?.visit_group_id) return [ticket.booking_id]
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('visit_group_id', ticket.visit_group_id)
+    .eq('status', ticket.status)
+    .eq('is_archived', false)
+  if (error || !data?.length) return [ticket.booking_id]
+  return data.map((row) => row.id)
+}
+
 export async function updateTicketStatus(ticket, nextStatus) {
   if (!canTransitionQueueStatus(ticket?.status, nextStatus)) {
     throw new Error(
@@ -727,6 +747,7 @@ export async function updateTicketStatus(ticket, nextStatus) {
 
   // Final check → payment is one RPC: in_progress (or stuck final_checking) → for_payment.
   // Never write status=final_checking first — that left tickets stuck on the TL board.
+  // The RPC is visit-group aware: it sums every line into one handoff.
   if (nextStatus === 'final_checking') {
     await sendTicketToPayment(ticket.booking_id)
     return
@@ -748,7 +769,8 @@ export async function updateTicketStatus(ticket, nextStatus) {
     if (profile?.id) patch.redo_by = profile.id
   }
 
-  const { error } = await supabase.from('bookings').update(patch).eq('id', ticket.booking_id)
+  const lineIds = await getVisitLineIds(ticket)
+  const { error } = await supabase.from('bookings').update(patch).in('id', lineIds)
   if (error) {
     console.error('Unable to update queue ticket status', error)
     throw formatQueueActionError(error)
@@ -760,6 +782,139 @@ export async function updateTicketStatus(ticket, nextStatus) {
   }
 }
 
+/**
+ * Branch Admin / SA / ASA override: pull a ticket (whole visit) back to an
+ * earlier lane. Server RPC cancels pending handoffs when leaving for_payment.
+ */
+export async function adminOverrideTicketStatus(ticket, nextStatus, reason = '') {
+  if (!getAdminOverrideTargets(ticket?.status).includes(nextStatus)) {
+    throw new Error(`Cannot override from ${STATUS_LABELS[ticket?.status] || ticket?.status} to ${STATUS_LABELS[nextStatus] || nextStatus}.`)
+  }
+  await getCurrentProfile({ required: true })
+  const note = String(reason || '').trim()
+  const { data, error } = await supabase.rpc('admin_override_queue_status', {
+    input_booking_id: ticket.booking_id,
+    input_next_status: nextStatus,
+    input_reason: note || null,
+  })
+  if (error) {
+    console.error('Unable to override queue ticket status', error)
+    throw formatQueueActionError(error)
+  }
+  await writeAudit({
+    action: 'override',
+    entityType: 'booking',
+    entityId: ticket.booking_id,
+    summary: `Admin override ${ticket.status} → ${nextStatus} for ${ticket.queue_number || ticket.booking_id}`,
+    meta: {
+      from: ticket.status,
+      to: nextStatus,
+      branch: ticket.branch,
+      reason: note || null,
+      visit_group_id: ticket.visit_group_id || null,
+    },
+  })
+  try {
+    await notifyBookingClient(ticket.booking_id, nextStatus)
+  } catch {
+    /* ignore */
+  }
+  return data
+}
+
+/** Every service line in this ticket's visit (single ticket = one line). */
+export async function fetchVisitLines(ticket) {
+  if (!ticket?.visit_group_id) {
+    return [{
+      booking_id: ticket?.booking_id,
+      service_id: ticket?.service_id,
+      service_name: ticket?.service_name,
+      final_price_minor: ticket?.final_price_minor ?? ticket?.base_price_minor ?? 0,
+      status: ticket?.status,
+    }]
+  }
+  const { data, error } = await supabase
+    .from('operations_queue_board')
+    .select('booking_id, service_id, service_name, final_price_minor, base_price_minor, status, created_at')
+    .eq('visit_group_id', ticket.visit_group_id)
+    .order('created_at')
+  if (error) throw formatQueueActionError(error)
+  return data || []
+}
+
+/**
+ * TL upsell: add a service line to an open ticket (waiting / in progress).
+ * The new line joins the visit group at the same lane + queue number; the
+ * payment RPC auto-sums every line into one handoff at final check.
+ */
+export async function addServiceToVisit(ticket, service, { priceMinor = null } = {}) {
+  if (!['waiting', 'in_progress'].includes(ticket?.status)) {
+    throw new Error('Services can only be added while the ticket is waiting or in progress.')
+  }
+  if (!service?.id) throw new Error('Pick a service to add.')
+
+  const profile = await getCurrentProfile({ required: true })
+
+  let visitGroupId = ticket.visit_group_id
+  if (!visitGroupId) {
+    visitGroupId = crypto.randomUUID()
+    const { error: groupError } = await supabase
+      .from('bookings')
+      .update({ visit_group_id: visitGroupId })
+      .eq('id', ticket.booking_id)
+    if (groupError) throw formatQueueActionError(groupError)
+  }
+
+  const sizedPrice = resolveServicePriceMinor(service, ticket.vehicle_type)
+  const linePrice = Number.isFinite(priceMinor) && priceMinor > 0 ? priceMinor : sizedPrice || service.price_minor || 0
+  const now = new Date().toISOString()
+  const row = {
+    customer_id: ticket.customer_id,
+    vehicle_id: ticket.vehicle_id,
+    customer_name: ticket.customer_name,
+    customer_email: ticket.customer_email || null,
+    customer_phone: ticket.customer_phone || null,
+    vehicle_make: ticket.vehicle_make || '',
+    vehicle_model: ticket.vehicle_model || '',
+    vehicle_year: ticket.vehicle_year || null,
+    vehicle_plate: ticket.vehicle_plate,
+    vehicle_type: ticket.vehicle_type,
+    branch: ticket.branch,
+    service_id: service.id,
+    status: ticket.status,
+    queue_number: ticket.queue_number,
+    visit_group_id: visitGroupId,
+    scheduled_start: now,
+    waiting_at: now,
+    in_progress_at: ticket.status === 'in_progress' ? now : null,
+    actual_start: ticket.status === 'in_progress' ? now : null,
+    final_price_minor: linePrice,
+    price_minor: linePrice,
+    team_lead_id: profile.id,
+    created_by: profile.id,
+  }
+
+  const { data, error } = await supabase.from('bookings').insert(row).select('id').single()
+  if (error) {
+    console.error('Unable to add service to visit', error)
+    throw formatQueueActionError(error)
+  }
+  await writeAudit({
+    action: 'update',
+    entityType: 'booking',
+    entityId: ticket.booking_id,
+    summary: `Added service ${service.name || service.id} to ticket ${ticket.queue_number || ticket.booking_id}`,
+    meta: {
+      added_booking_id: data.id,
+      service_id: service.id,
+      price_minor: linePrice,
+      visit_group_id: visitGroupId,
+      branch: ticket.branch,
+    },
+  })
+  return { id: data.id, visit_group_id: visitGroupId }
+}
+
 export async function markTicketRedo(ticket, reason = '') {
   if (!REDO_FROM_STATUSES.includes(ticket.status)) {
     throw new Error('Redo is only available from in progress, final checking, or for payment.')
@@ -767,6 +922,7 @@ export async function markTicketRedo(ticket, reason = '') {
   const profile = await getCurrentProfile({ required: true })
   const note = String(reason || '').trim()
   const now = new Date().toISOString()
+  const lineIds = await getVisitLineIds(ticket)
   const { error } = await supabase
     .from('bookings')
     .update({
@@ -775,7 +931,7 @@ export async function markTicketRedo(ticket, reason = '') {
       redo_by: profile.id,
       redo_reason: note || null,
     })
-    .eq('id', ticket.booking_id)
+    .in('id', lineIds)
   if (error) throw formatQueueActionError(error)
   await writeAudit({
     action: 'redo',

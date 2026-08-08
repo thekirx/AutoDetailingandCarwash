@@ -54,7 +54,18 @@ export async function handleNotifyBookingRequest(req, res) {
     } catch (err) {
       notify = { error: String(err.message || err) }
     }
-    return json(res, 200, { ok: true, notify })
+
+    // Visit milestones (4th / 10th) fire once the visit is fully paid+completed.
+    let milestone = null
+    if (status === 'completed' && booking.customer_id) {
+      try {
+        const { runVisitMilestoneSms } = await import('./lifecycleSms.mjs')
+        milestone = await runVisitMilestoneSms(db, booking)
+      } catch (err) {
+        milestone = { error: String(err.message || err) }
+      }
+    }
+    return json(res, 200, { ok: true, notify, milestone })
   } catch (err) {
     return json(res, err.status || 500, { error: String(err.message || err) })
   }

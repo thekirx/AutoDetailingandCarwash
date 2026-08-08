@@ -4,25 +4,32 @@ import {
   ArrowRight,
   BadgeCheck,
   CarFront,
+  Layers,
   LoaderCircle,
   Send,
   ShieldAlert,
+  Undo2,
   UserPlus,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
-import { canAccessPos, canViewRedoLane } from '../auth/permissions'
+import { canAccessPos, canOverrideQueueStatus, canViewRedoLane } from '../auth/permissions'
 import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
 import { supabase } from '../lib/supabase'
 import {
   formatQueueNumber,
+  getAdminOverrideTargets,
   getQueueTicketActionFlags,
   isSuspiciousTiming,
   parsePesoInputToMinor,
   STATUS_LABELS,
 } from '../queue/queueLogic'
 import {
+  addServiceToVisit,
+  adminOverrideTicketStatus,
   assignStaff,
+  fetchServices,
   fetchTicket,
+  fetchVisitLines,
   formatMoney,
   markTicketRedo,
   sendTicketToPayment,
@@ -77,6 +84,10 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const [selectedStaff, setSelectedStaff] = useState([])
   const [price, setPrice] = useState('')
   const [priceReason, setPriceReason] = useState('')
+  const [visitLines, setVisitLines] = useState([])
+  const [services, setServices] = useState([])
+  const [addServiceId, setAddServiceId] = useState('')
+  const [addServicePrice, setAddServicePrice] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
   const [loadError, setLoadError] = useState('')
@@ -93,6 +104,12 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
       setSelectedStaff(data.assignments.filter((a) => a.status === 'active').map((a) => a.staff_id))
       setPrice(String(((data.ticket?.final_price_minor ?? data.ticket?.base_price_minor ?? 0) / 100) || ''))
       setPriceReason('')
+      if (data.ticket) {
+        const lines = await fetchVisitLines(data.ticket).catch(() => [])
+        setVisitLines(lines)
+      } else {
+        setVisitLines([])
+      }
     } catch (err) {
       setLoadError(err.message)
       setTicket(null)
@@ -100,6 +117,19 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
       setLoading(false)
     }
   }, [bookingId, profile])
+
+  useEffect(() => {
+    if (!canManageQueue) return undefined
+    let cancelled = false
+    fetchServices()
+      .then((rows) => {
+        if (!cancelled) setServices(rows)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [canManageQueue])
 
   useEffect(() => {
     setLoading(true)
@@ -168,6 +198,12 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
     canManageQueue,
     canViewRedoLane: showRedoBtn,
   })
+  const overrideTargets = canOverrideQueueStatus(profile) ? getAdminOverrideTargets(ticket.status) : []
+  const canAddService = showEditActions && ['waiting', 'in_progress'].includes(ticket.status)
+  const visitTotalMinor = visitLines.reduce(
+    (sum, line) => sum + Number(line.final_price_minor ?? line.base_price_minor ?? 0),
+    0,
+  )
   const timingWarn = isSuspiciousTiming(ticket)
   const parsedPrice = Number(String(price).replace(/,/g, '').trim())
   const showLowPriceWarning = Number.isFinite(parsedPrice) && parsedPrice > 0 && parsedPrice < 50
@@ -184,6 +220,19 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
     const reason = window.prompt('Redo reason (visible to owner in audit)', ticket.redo_reason || '')
     if (reason === null) return Promise.resolve()
     return markTicketRedo(ticket, reason)
+  }
+  const runAddService = async () => {
+    const service = services.find((item) => item.id === addServiceId)
+    if (!service) throw new Error('Pick a service to add.')
+    const override = addServicePrice.trim() ? parsePesoInputToMinor(addServicePrice) : null
+    await addServiceToVisit(ticket, service, { priceMinor: override })
+    setAddServiceId('')
+    setAddServicePrice('')
+  }
+  const runOverride = (target) => {
+    const reason = window.prompt(`Move this ticket back to ${STATUS_LABELS[target]}? Reason (visible in audit):`, '')
+    if (reason === null) return Promise.resolve()
+    return adminOverrideTicketStatus(ticket, target, reason)
   }
 
   return (
@@ -241,6 +290,28 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
           Suspicious timing: in progress → final check was under the configured threshold.
         </p>
       )}
+
+      {overrideTargets.length ? (
+        <Panel title="Admin Override" icon={Undo2} className="mb-3">
+          <p className="text-sm text-muted-foreground">
+            Move this ticket back to an earlier lane. Leaving For Payment cancels the pending POS handoff.
+          </p>
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
+            {overrideTargets.map((target) => (
+              <button
+                key={target}
+                type="button"
+                disabled={Boolean(saving)}
+                onClick={() => runAction(`override-${target}`, () => runOverride(target))}
+                className="floor-touch-btn inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-muted/30 px-4 py-3 text-sm font-semibold text-foreground transition hover:border-primary/50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {saving === `override-${target}` ? <LoaderCircle className="animate-spin" size={16} aria-hidden /> : null}
+                Back to {STATUS_LABELS[target]}
+              </button>
+            ))}
+          </div>
+        </Panel>
+      ) : null}
 
       <div className={`grid gap-3 ${variant === 'modal' ? '' : 'xl:grid-cols-[1fr_360px] sm:gap-5'}`}>
         {showEditActions ? (
@@ -333,6 +404,67 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
           </Panel>
         ) : null}
       </div>
+
+      <Panel title="Visit Services" icon={Layers} className="mt-3 sm:mt-4">
+        <div className="grid gap-2">
+          {visitLines.map((line) => (
+            <div
+              key={line.booking_id}
+              className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-border bg-muted/20 px-4 py-3"
+            >
+              <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                {line.service_name || 'Service'}
+              </span>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                {formatMoney(line.final_price_minor ?? line.base_price_minor ?? 0)}
+              </span>
+            </div>
+          ))}
+          {!visitLines.length && <p className="text-sm text-muted-foreground">No service lines found for this visit.</p>}
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
+            <span className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Visit total</span>
+            <span className="text-base font-semibold tabular-nums text-foreground">{formatMoney(visitTotalMinor)}</span>
+          </div>
+        </div>
+        {canAddService ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
+            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+              Add service
+              <select
+                value={addServiceId}
+                onChange={(event) => setAddServiceId(event.target.value)}
+                className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
+              >
+                <option value="">Pick a service…</option>
+                {services.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+              Price (optional)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={addServicePrice}
+                onChange={(event) => setAddServicePrice(event.target.value)}
+                placeholder="Auto by size"
+                className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
+              />
+            </label>
+            <ActionButton loading={saving === 'add-service'} onClick={() => runAction('add-service', runAddService)}>
+              Add to visit
+            </ActionButton>
+          </div>
+        ) : showEditActions ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Services can be added while the ticket is waiting or in progress.
+          </p>
+        ) : null}
+      </Panel>
 
       <Panel title="Staff Assignment" icon={UserPlus} className="mt-3 sm:mt-4">
         <div className={`grid gap-4 ${variant === 'modal' ? '' : 'lg:grid-cols-[1fr_280px]'}`}>

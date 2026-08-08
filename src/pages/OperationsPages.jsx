@@ -80,6 +80,7 @@ const LANE_META = {
   waiting: { icon: Clock3, hint: 'Ready to start' },
   in_progress: { icon: CarFront, hint: 'On the bay' },
   final_checking: { icon: BadgeCheck, hint: 'QC before payment' },
+  for_payment: { icon: Send, hint: 'Collect at POS' },
   redo: { icon: ShieldAlert, hint: 'Owner QC fail lane' },
 }
 
@@ -272,7 +273,7 @@ export function OperationsDashboardPage() {
     () => (activeQueue || []).filter((ticket) => boardStatuses.includes(ticket.status)),
     [activeQueue, boardStatuses],
   )
-  const counts = useMemo(() => getQueueCounts(visibleQueue, { includeRedo: seeRedo }), [visibleQueue, seeRedo])
+  const counts = useMemo(() => getQueueCounts(visibleQueue, { statuses: boardStatuses }), [visibleQueue, boardStatuses])
   const range = useMemo(() => getDashboardDateRange(datePreset, customStart, customEnd), [datePreset, customStart, customEnd])
   const rangeStartDate = useMemo(() => getLocalCalendarDate(range.start), [range.start])
   const rangeEndDate = useMemo(() => getLocalCalendarDate(range.end), [range.end])
@@ -618,7 +619,7 @@ export function OperationsQueuePage() {
     () => Object.fromEntries(boardStatuses.map((status) => [status, boardTickets.filter((ticket) => ticket.status === status)])),
     [boardTickets, boardStatuses],
   )
-  const counts = useMemo(() => getQueueCounts(visibleQueue, { includeRedo: seeRedo }), [visibleQueue, seeRedo])
+  const counts = useMemo(() => getQueueCounts(visibleQueue, { statuses: boardStatuses }), [visibleQueue, boardStatuses])
   const focusLane = requestedLane && boardStatuses.includes(requestedLane) ? requestedLane : null
 
   useEffect(() => {
@@ -788,7 +789,8 @@ export function OperationsQueuePage() {
       </div>
 
       <div
-        className={`floor-lane-board queue-lane-board mt-3 sm:mt-4 ${seeRedo ? 'queue-lane-board-redo' : 'queue-lane-board-active'}`}
+        className="floor-lane-board queue-lane-board queue-lane-board-fluid mt-3 sm:mt-4"
+        style={{ '--queue-lane-count': boardStatuses.length }}
         role="region"
         aria-label="Active queue lanes"
       >
