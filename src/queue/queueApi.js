@@ -3,9 +3,11 @@ import { getAccessTokenFresh } from '../lib/authToken'
 import {
   aggregateDailySalesSummary,
   canTransitionQueueStatus,
+  crewRequiredForPayCategory,
   DEFAULT_TIMING_WARNINGS,
   getAdminOverrideTargets,
   getOpsBoardStatuses,
+  isActiveQueueStatus,
   REDO_FROM_STATUSES,
   STATUS_LABELS,
   formatQueueActionError,
@@ -327,10 +329,14 @@ export async function fetchTicket(bookingId, profile) {
     .from('staff_attendance')
     .select('staff_id, branch_slug, attendance_date, status')
     .eq('attendance_date', getTodayDate())
-    .eq('status', 'present')
+    .in('status', ['present', 'late'])
   attendanceQuery = scopedStaffQuery(attendanceQuery, branchScope)
   const staffQuery = supabase.from('staff_profiles').select('id, full_name, role, branch_slug, is_active').eq('role', 'staff').eq('is_active', true)
-  const [ticketResult, assignmentsResult, staffResult] = await Promise.all([
+  let busyQuery = supabase
+    .from('busy_staff_view')
+    .select('staff_id, booking_id, booking_status')
+  busyQuery = scopedStaffQuery(busyQuery, branchScope)
+  const [ticketResult, assignmentsResult, staffResult, busyResult] = await Promise.all([
     ticketQuery.maybeSingle(),
     supabase
       .from('queue_assignments')
@@ -338,6 +344,7 @@ export async function fetchTicket(bookingId, profile) {
       .eq('booking_id', bookingId)
       .order('created_at', { ascending: false }),
     scopedStaffQuery(staffQuery, branchScope).order('full_name'),
+    busyQuery.limit(200),
   ])
 
   const error = ticketResult.error || assignmentsResult.error || staffResult.error
@@ -348,10 +355,21 @@ export async function fetchTicket(bookingId, profile) {
     return { ticket: ticketResult.data, assignments: assignmentsResult.data || [], staff: [] }
   }
   const presentIds = new Set((attendanceResult.data || []).map((row) => row.staff_id))
+  const busyIds = new Set(
+    (busyResult.error ? [] : busyResult.data || [])
+      .filter((row) => row.booking_id !== bookingId && isActiveQueueStatus(row.booking_status))
+      .map((row) => row.staff_id),
+  )
   return {
     ticket: ticketResult.data,
     assignments: assignmentsResult.data || [],
-    staff: (staffResult.data || []).filter((member) => presentIds.has(member.id)),
+    staff: (staffResult.data || [])
+      .filter((member) => presentIds.has(member.id))
+      .map((member) => ({
+        ...member,
+        is_present_today: true,
+        is_busy_today: busyIds.has(member.id),
+      })),
   }
 }
 
@@ -795,6 +813,18 @@ export async function updateTicketStatus(ticket, nextStatus) {
   if (nextStatus === 'in_progress') {
     patch.in_progress_at = now
     if (!ticket.actual_start) patch.actual_start = now
+    if (crewRequiredForPayCategory(ticket.service_pay_category || ticket.pay_category)) {
+      const { data: activeCrew, error: crewError } = await supabase
+        .from('queue_assignments')
+        .select('id')
+        .eq('booking_id', ticket.booking_id)
+        .eq('status', 'active')
+        .limit(1)
+      if (crewError) throw formatQueueActionError(crewError)
+      if (!activeCrew?.length) {
+        throw new Error('Assign at least one present crew member before starting service.')
+      }
+    }
   }
   if (nextStatus === 'for_payment') patch.for_payment_at = now
   if (nextStatus === 'completed') patch.completed_at = now
@@ -1008,6 +1038,9 @@ export async function updateTicketPrice(ticket, amountMinor, reason, userId) {
 export async function assignStaff(ticket, staffIds) {
   await getCurrentProfile({ required: true })
   const ids = (staffIds || []).filter(Boolean)
+  if (!ids.length && crewRequiredForPayCategory(ticket?.service_pay_category || ticket?.pay_category)) {
+    throw new Error('Pick at least one present crew member.')
+  }
   const { error } = await supabase.rpc('sync_queue_assignments', {
     input_booking_id: ticket.booking_id,
     input_staff_ids: ids,
@@ -1016,6 +1049,49 @@ export async function assignStaff(ticket, staffIds) {
     console.error('Unable to sync queue assignments', error)
     throw formatQueueActionError(error)
   }
+  // Legacy: assigning crew on waiting auto-promotes to in_progress.
+  if (ids.length && ticket?.status === 'waiting') {
+    await updateTicketStatus(ticket, 'in_progress')
+  }
+}
+
+/** Present (+ late) staff for a branch — used by booking Start · assign crew. */
+export async function fetchPresentAssignableStaff(profile, branchSlug) {
+  if (requiresTeamLeadBranchSetup(profile)) return []
+  const branchScope = branchSlug && branchSlug !== 'all' ? branchSlug : getBranchScopeFilter(profile)
+  let attendanceQuery = supabase
+    .from('staff_attendance')
+    .select('staff_id, status')
+    .eq('attendance_date', getTodayDate())
+    .in('status', ['present', 'late'])
+  attendanceQuery = scopedStaffQuery(attendanceQuery, branchScope)
+  const staffQuery = supabase
+    .from('staff_profiles')
+    .select('id, full_name, role, branch_slug, is_active')
+    .eq('role', 'staff')
+    .eq('is_active', true)
+  let busyQuery = supabase.from('busy_staff_view').select('staff_id, booking_id, booking_status')
+  busyQuery = scopedStaffQuery(busyQuery, branchScope)
+  const [attendanceResult, staffResult, busyResult] = await Promise.all([
+    attendanceQuery,
+    scopedStaffQuery(staffQuery, branchScope).order('full_name'),
+    busyQuery.limit(200),
+  ])
+  if (attendanceResult.error || staffResult.error) {
+    throw attendanceResult.error || staffResult.error
+  }
+  const presentIds = new Set((attendanceResult.data || []).map((row) => row.staff_id))
+  const busyIds = new Set(
+    (busyResult.error ? [] : busyResult.data || [])
+      .filter((row) => isActiveQueueStatus(row.booking_status))
+      .map((row) => row.staff_id),
+  )
+  return (staffResult.data || [])
+    .filter((member) => presentIds.has(member.id))
+    .map((member) => ({
+      ...member,
+      is_busy_today: busyIds.has(member.id),
+    }))
 }
 
 export async function sendTicketToPayment(bookingId) {

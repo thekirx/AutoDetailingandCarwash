@@ -10,13 +10,23 @@ import {
   canCreateBookings,
   canEditBookings,
   canSeeAllBranches,
+  canSeeForPaymentLane,
   getBranchScopeList,
 } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope } from '@/lib/crmInsights'
 import { supabase } from '@/lib/supabase'
-import { getDashboardDateRange, requiresTeamLeadBranchSetup, resolveBranchFilter, filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
+import {
+  BOOKING_PRIMARY_ACTION_LABELS,
+  getBookingPrimaryNextStatus,
+  getDashboardDateRange,
+  requiresTeamLeadBranchSetup,
+  resolveBranchFilter,
+  filterBranchesForProfile,
+  pickDefaultBranchSlug,
+} from '@/queue/queueLogic'
+import { assignStaff, fetchPresentAssignableStaff } from '@/queue/queueApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -90,6 +100,16 @@ export default function BookingBoardPage() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyBooking)
   const [saving, setSaving] = useState(false)
+  const [boardFilter, setBoardFilter] = useState('pending')
+  const [crewDialog, setCrewDialog] = useState(null)
+  const [crewOptions, setCrewOptions] = useState([])
+  const [crewSelected, setCrewSelected] = useState([])
+  const [crewLoading, setCrewLoading] = useState(false)
+  const canSeePayment = canSeeForPaymentLane(profile)
+  const visibleColumns = useMemo(
+    () => (canSeePayment ? COLUMNS : COLUMNS.filter((c) => c.id !== 'for_payment')),
+    [canSeePayment],
+  )
 
   const range = useMemo(() => {
     if (datePreset === 'today' || datePreset === 'day') {
@@ -186,6 +206,25 @@ export default function BookingBoardPage() {
 
   async function move(booking, status) {
     if (!canEdit) return
+    if (status === 'in_progress') {
+      setCrewLoading(true)
+      setCrewDialog(booking)
+      setCrewSelected([])
+      try {
+        const rows = await fetchPresentAssignableStaff(profile, booking.branch)
+        setCrewOptions(rows)
+      } catch (err) {
+        toast.error(err.message || 'Unable to load present crew')
+        setCrewDialog(null)
+      } finally {
+        setCrewLoading(false)
+      }
+      return
+    }
+    await applyStatusMove(booking, status)
+  }
+
+  async function applyStatusMove(booking, status) {
     const token = await getAccessTokenFresh()
     if (!token) {
       toast.error('Sign in required')
@@ -206,6 +245,40 @@ export default function BookingBoardPage() {
     }
     toast.success(`Moved to ${status}${body.notify?.sms?.ok ? ' · SMS sent' : ''}`)
     load()
+  }
+
+  async function confirmCrewStart() {
+    if (!crewDialog) return
+    const freeIds = crewSelected.filter((id) => {
+      const row = crewOptions.find((m) => m.id === id)
+      return row && !row.is_busy_today
+    })
+    if (!freeIds.length) {
+      toast.error('Select at least one present crew member who is not busy.')
+      return
+    }
+    setCrewLoading(true)
+    try {
+      await assignStaff(
+        {
+          booking_id: crewDialog.id,
+          status: crewDialog.status,
+          service_pay_category: null,
+        },
+        freeIds,
+      )
+      if (crewDialog.status !== 'waiting') {
+        await applyStatusMove(crewDialog, 'in_progress')
+      } else {
+        toast.success('Crew assigned · service started')
+        load()
+      }
+      setCrewDialog(null)
+    } catch (err) {
+      toast.error(err.message || 'Unable to assign crew')
+    } finally {
+      setCrewLoading(false)
+    }
   }
 
   function openCreate() {
@@ -294,19 +367,29 @@ export default function BookingBoardPage() {
       }))
 
   return (
-    <section className="flex min-h-0 flex-col gap-5">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div className="floor-compact-header">
-          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">Operations</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Bookings</h1>
-          <p className="floor-desc mt-1 text-sm text-muted-foreground">
-            Board, table, and calendar · {range.start} → {range.end}
-          </p>
+    <section className="bk-page flex min-h-0 flex-col gap-4 sm:gap-5">
+      <header className="bk-hero">
+        <div className="bk-hero-brand">
+          <img
+            src="/branding/hakum-mark-blue.png"
+            alt=""
+            width={40}
+            height={40}
+            className="bk-hero-logo"
+            decoding="async"
+          />
+          <div className="min-w-0">
+            <p className="bk-hero-kicker">Hakum Auto Care</p>
+            <h1 className="bk-hero-title">Bookings</h1>
+            <p className="bk-hero-sub">
+              {range.start === range.end ? range.start : `${range.start} → ${range.end}`}
+            </p>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="bk-hero-actions">
           {(canSeeAllBranches(profile) || branchOptions.length > 1) && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger className="min-h-11 w-44 cursor-pointer" aria-label="Filter by branch">
+              <SelectTrigger className="min-h-11 w-full cursor-pointer sm:w-44" aria-label="Filter by branch">
                 <SelectValue placeholder="Branch" />
               </SelectTrigger>
               <SelectContent>
@@ -315,7 +398,7 @@ export default function BookingBoardPage() {
             </Select>
           )}
           <Select value={datePreset} onValueChange={setDatePreset}>
-            <SelectTrigger className="min-h-11 w-40 cursor-pointer" aria-label="Date range">
+            <SelectTrigger className="min-h-11 w-full cursor-pointer sm:w-40" aria-label="Date range">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -328,73 +411,135 @@ export default function BookingBoardPage() {
           </Select>
           {datePreset === 'custom' && (
             <>
-              <Input type="date" className="min-h-11 w-36" aria-label="Start date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
-              <Input type="date" className="min-h-11 w-36" aria-label="End date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
+              <Input type="date" className="min-h-11 w-full sm:w-36" aria-label="Start date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
+              <Input type="date" className="min-h-11 w-full sm:w-36" aria-label="End date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
             </>
           )}
           {canCreate && (
-            <Button type="button" className="min-h-11 cursor-pointer" onClick={openCreate}>New booking</Button>
+            <Button type="button" className="min-h-11 w-full cursor-pointer sm:w-auto" onClick={openCreate}>
+              New booking
+            </Button>
           )}
         </div>
-      </div>
+      </header>
 
       <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'board' ? {} : { tab: next }, { replace: true })}>
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 sm:w-auto">
-          <TabsTrigger value="board" className="cursor-pointer">Board</TabsTrigger>
-          <TabsTrigger value="table" className="cursor-pointer">Table</TabsTrigger>
-          <TabsTrigger value="calendar" className="cursor-pointer">Calendar</TabsTrigger>
+        <TabsList className="bk-tabs flex h-auto w-full justify-stretch gap-1 p-1">
+          <TabsTrigger value="board" className="min-h-11 flex-1 cursor-pointer">Board</TabsTrigger>
+          <TabsTrigger value="table" className="min-h-11 flex-1 cursor-pointer">Table</TabsTrigger>
+          <TabsTrigger value="calendar" className="min-h-11 flex-1 cursor-pointer">Calendar</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="board" className="mt-4">
-          <div className="floor-lane-board" role="region" aria-label="Booking columns">
-            {COLUMNS.map((col) => (
+        <TabsContent value="board" className="mt-4 space-y-4">
+          <div className="bk-status-strip" role="toolbar" aria-label="Filter bookings by status">
+            {visibleColumns.map((col) => {
+              const active = boardFilter === col.id
+              const n = grouped[col.id]?.length || 0
+              return (
+                <button
+                  key={col.id}
+                  type="button"
+                  className={cn('bk-status-chip', active && 'bk-status-chip-active')}
+                  aria-pressed={active}
+                  onClick={() => setBoardFilter(col.id)}
+                >
+                  <span>{col.label}</span>
+                  <span className="bk-status-chip-count">{n}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="bk-card-list md:hidden" aria-label={`${boardFilter} bookings`}>
+            {(grouped[boardFilter] || []).map((booking) => {
+              const next = getBookingPrimaryNextStatus(booking.status, { canSeePayment })
+              return (
+                <article key={booking.id} className="bk-card">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-foreground">{booking.customer_name}</p>
+                    {canEdit && (
+                      <Button size="sm" variant="ghost" className="h-9 shrink-0 cursor-pointer px-2" onClick={() => openEdit(booking)}>
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-foreground/85">{vehicleLine(booking)}</p>
+                  <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
+                    {booking.branch}
+                    {' · '}
+                    {new Date(booking.scheduled_start).toLocaleString([], {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                  {canEdit && next ? (
+                    <Button
+                      type="button"
+                      className="mt-3 min-h-11 w-full cursor-pointer"
+                      onClick={() => move(booking, next)}
+                    >
+                      {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
+                    </Button>
+                  ) : null}
+                </article>
+              )
+            })}
+            {!(grouped[boardFilter] || []).length && (
+              <p className="rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center text-sm text-muted-foreground">
+                No {visibleColumns.find((c) => c.id === boardFilter)?.label?.toLowerCase() || boardFilter} bookings
+              </p>
+            )}
+          </div>
+
+          <div className="floor-lane-board hidden md:grid" role="region" aria-label="Booking columns">
+            {visibleColumns.map((col) => (
               <section key={col.id} className="floor-lane" aria-label={`${col.label} column`}>
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h2 className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">{col.label}</h2>
                   <Badge variant="secondary" className="tabular-nums">{grouped[col.id].length}</Badge>
                 </div>
                 <div className="floor-lane-body">
-                  {grouped[col.id].map((booking) => (
-                    <article
-                      key={booking.id}
-                      className={cn('floor-ticket !cursor-default border-l-4', col.tone)}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-foreground">{booking.customer_name}</p>
-                        {canEdit && (
-                          <Button size="sm" variant="ghost" className="h-8 shrink-0 cursor-pointer px-2" onClick={() => openEdit(booking)}>
-                            Edit
-                          </Button>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm text-foreground/80">{vehicleLine(booking)}</p>
-                      <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
-                        {booking.branch}
-                        {' · '}
-                        {new Date(booking.scheduled_start).toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                      {canEdit && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {COLUMNS.filter((c) => c.id !== booking.status).slice(0, 6).map((c) => (
-                            <Button
-                              key={c.id}
-                              size="sm"
-                              variant="outline"
-                              className="min-h-10 cursor-pointer"
-                              onClick={() => move(booking, c.id)}
-                            >
-                              {c.label}
+                  {grouped[col.id].map((booking) => {
+                    const next = getBookingPrimaryNextStatus(booking.status, { canSeePayment })
+                    return (
+                      <article
+                        key={booking.id}
+                        className={cn('floor-ticket !cursor-default border-l-4', col.tone)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-semibold text-foreground">{booking.customer_name}</p>
+                          {canEdit && (
+                            <Button size="sm" variant="ghost" className="h-8 shrink-0 cursor-pointer px-2" onClick={() => openEdit(booking)}>
+                              Edit
                             </Button>
-                          ))}
+                          )}
                         </div>
-                      )}
-                    </article>
-                  ))}
+                        <p className="mt-1 text-sm text-foreground/80">{vehicleLine(booking)}</p>
+                        <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
+                          {booking.branch}
+                          {' · '}
+                          {new Date(booking.scheduled_start).toLocaleString([], {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                        {canEdit && next ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="mt-3 min-h-10 w-full cursor-pointer"
+                            onClick={() => move(booking, next)}
+                          >
+                            {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
+                          </Button>
+                        ) : null}
+                      </article>
+                    )
+                  })}
                   {!grouped[col.id].length && (
                     <p className="rounded-2xl border border-dashed border-border bg-background/50 p-5 text-center text-sm text-muted-foreground">
                       No {col.label.toLowerCase()} bookings
@@ -516,7 +661,7 @@ export default function BookingBoardPage() {
               <Select value={form.status} onValueChange={(status) => setForm({ ...form, status })}>
                 <SelectTrigger className="cursor-pointer"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {COLUMNS.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                  {visibleColumns.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -529,6 +674,66 @@ export default function BookingBoardPage() {
               <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(crewDialog)} onOpenChange={(open) => !open && setCrewDialog(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign present crew</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Start requires crew timed in today. Busy staff on another job stay locked.
+          </p>
+          {crewLoading && !crewOptions.length ? (
+            <p className="py-6 text-sm text-muted-foreground">Loading present crew…</p>
+          ) : (
+            <div className="grid gap-2 py-2">
+              {crewOptions.map((member) => {
+                const checked = crewSelected.includes(member.id)
+                const busy = Boolean(member.is_busy_today)
+                return (
+                  <label
+                    key={member.id}
+                    className={cn(
+                      'flex min-h-12 items-center justify-between gap-3 rounded-xl border px-3 py-3',
+                      checked ? 'border-primary/40 bg-primary/10' : 'border-border',
+                      busy && 'opacity-55',
+                    )}
+                  >
+                    <span>
+                      <span className="block font-medium">{member.full_name}</span>
+                      <span className="text-xs text-muted-foreground">{busy ? 'Busy on another job' : 'Present'}</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      className="size-5 accent-blue-600"
+                      checked={checked}
+                      disabled={busy || crewLoading}
+                      onChange={(e) =>
+                        setCrewSelected((cur) =>
+                          e.target.checked ? [...cur, member.id] : cur.filter((id) => id !== member.id),
+                        )
+                      }
+                    />
+                  </label>
+                )
+              })}
+              {!crewOptions.length ? (
+                <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                  No present crew. Have staff time in inside the 20m branch geofence first.
+                </p>
+              ) : null}
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setCrewDialog(null)}>
+              Cancel
+            </Button>
+            <Button type="button" className="cursor-pointer" disabled={crewLoading || !crewOptions.length} onClick={confirmCrewStart}>
+              {crewLoading ? 'Starting…' : 'Assign & start'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </section>

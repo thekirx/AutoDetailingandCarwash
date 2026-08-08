@@ -124,17 +124,11 @@ function FloorOpsShell({
   return (
     <div className={`floor-shell flex h-svh max-h-svh w-full flex-col overflow-hidden bg-background text-foreground ${shellClass}`.trim()}>
       <header className="floor-topbar z-30 flex shrink-0 items-center gap-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur-xl sm:px-4">
-        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--color-brand-primary)] text-white" aria-hidden>
+        <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-[var(--color-brand-primary)]" aria-hidden>
           {brand.icon}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-black tracking-[0.06em] sm:tracking-[0.14em]">{brand.title}</p>
-            <span className="floor-live-pill" aria-live="polite">
-              <span className="floor-live-dot" aria-hidden />
-              LIVE
-            </span>
-          </div>
+          <p className="truncate text-sm font-black tracking-[0.06em] sm:tracking-[0.14em]">{brand.title}</p>
           <p className="truncate text-xs text-muted-foreground">
             {profile?.full_name || brand.fallbackName} ·{' '}
             <span className="font-semibold text-primary uppercase tracking-wide">{branch}</span>
@@ -252,7 +246,16 @@ function TeamLeadFloorShell({ profile, signOut }) {
       brand={{
         title: 'Hakum Auto Care',
         fallbackName: 'Team Lead',
-        icon: <span className="font-black italic tracking-tight">H</span>,
+        icon: (
+          <img
+            src="/branding/hakum-mark-ow.png"
+            alt=""
+            width={28}
+            height={28}
+            className="size-7 object-contain"
+            decoding="async"
+          />
+        ),
       }}
       dock={dock}
       more={more}

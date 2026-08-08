@@ -10,8 +10,7 @@ import {
 } from '../lib/vehicleCatalog'
 import { supabase } from '../lib/supabase'
 
-const FLOOR_INPUT =
-  'mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white outline-none focus:border-blue-300/60'
+const FLOOR_INPUT = 'floor-control'
 const PUBLIC_INPUT = undefined
 const SUGGEST_LIMIT = 40
 

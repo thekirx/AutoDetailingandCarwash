@@ -6,11 +6,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  CalendarDays,
-  CarFront,
   ChevronDown,
   ChevronUp,
-  Filter,
   History,
   LoaderCircle,
   Plus,
@@ -211,7 +208,6 @@ export default function TeamLeadQueuePage() {
   const [completedTotalMinor, setCompletedTotalMinor] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [live, setLive] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('waiting')
   const [historyPlate, setHistoryPlate] = useState('')
@@ -220,6 +216,7 @@ export default function TeamLeadQueuePage() {
   const [historyError, setHistoryError] = useState('')
   const [expandedId, setExpandedId] = useState(null)
   const [editBookingId, setEditBookingId] = useState(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const today = getLocalCalendarDate()
 
   const load = useCallback(async () => {
@@ -252,9 +249,8 @@ export default function TeamLeadQueuePage() {
       .channel(`tl-queue-manager-${branch}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, scheduleReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments' }, scheduleReload)
-      .subscribe((status) => setLive(status === 'SUBSCRIBED'))
+      .subscribe()
     return () => {
-      setLive(false)
       scheduleReload.cancel()
       supabase.removeChannel(channel)
     }
@@ -336,12 +332,12 @@ export default function TeamLeadQueuePage() {
 
   return (
     <section className="qmgr">
-      <header className="qmgr-header">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="qmgr-title">Queue Manager</h1>
-            <p className="qmgr-sub">Manage your service queue for cars</p>
-          </div>
+      <header className="qmgr-toolbar">
+        <div className="qmgr-toolbar-text">
+          <h1 className="qmgr-title">Queue</h1>
+          <p className="qmgr-sub">Today · cars</p>
+        </div>
+        <div className="qmgr-toolbar-actions">
           <button
             type="button"
             className="floor-icon-btn"
@@ -353,109 +349,83 @@ export default function TeamLeadQueuePage() {
           >
             {loading ? <LoaderCircle className="animate-spin" size={18} /> : <RefreshCw size={18} />}
           </button>
+          {canManageQueue ? (
+            <Link to="/operations/queue/new" className="qmgr-add-btn qmgr-add-btn-inline">
+              <Plus size={18} aria-hidden />
+              Add
+            </Link>
+          ) : null}
         </div>
-        {live ? (
-          <span className="floor-live-pill mt-3 inline-flex" aria-live="polite">
-            <span className="floor-live-dot" aria-hidden />
-            Live
-          </span>
-        ) : null}
       </header>
 
-      <div className="qmgr-cars-only" aria-label="Vehicle type">
-        <span className="qmgr-cars-pill">
-          <CarFront size={16} aria-hidden />
-          Cars
-        </span>
-      </div>
+      <label className="qmgr-search">
+        <Search size={16} aria-hidden />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Plate, model, service…"
+          enterKeyHint="search"
+        />
+      </label>
 
-      {canManageQueue ? (
-        <Link to="/operations/queue/new" className="qmgr-add-btn">
-          <Plus size={20} aria-hidden />
-          Add Car
-        </Link>
-      ) : null}
-
-      <div className="qmgr-panel">
-        <p className="qmgr-showing">
-          <CarFront size={14} aria-hidden />
-          Showing Cars
-        </p>
-        <label className="qmgr-search">
-          <Search size={16} aria-hidden />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search car plate, model, service…"
-            enterKeyHint="search"
-          />
-        </label>
-        <div className="qmgr-filter-row">
-          <div className="qmgr-filter-chip">
-            <CalendarDays size={14} aria-hidden />
-            <span>Today</span>
-          </div>
-          <div className="qmgr-filter-chip">
-            <Filter size={14} aria-hidden />
-            <span>{STATUS_FILTERS.find((s) => s.key === statusFilter)?.label || 'Waiting'}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="qmgr-panel">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="qmgr-section-title">
-            <History size={16} aria-hidden />
-            Vehicle History Search
-          </h2>
+      <details
+        className="qmgr-history"
+        open={historyOpen}
+        onToggle={(e) => setHistoryOpen(e.currentTarget.open)}
+      >
+        <summary className="qmgr-history-summary">
+          <History size={15} aria-hidden />
+          Plate history
+        </summary>
+        <div className="qmgr-history-body">
+          <label className="qmgr-search">
+            <Search size={16} aria-hidden />
+            <input
+              type="search"
+              value={historyPlate}
+              onChange={(e) => setHistoryPlate(e.target.value.toUpperCase())}
+              placeholder="Plate number…"
+              enterKeyHint="search"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  runHistory()
+                }
+              }}
+            />
+          </label>
           <button
             type="button"
             className="qmgr-history-btn"
             disabled={historyLoading}
             onClick={runHistory}
           >
-            {historyLoading ? 'Searching…' : 'Show History'}
+            {historyLoading ? 'Searching…' : 'Search'}
           </button>
+          {historyError ? <p className="qmgr-history-error" role="alert">{historyError}</p> : null}
+          {historyRows ? (
+            <div className="qmgr-history-results">
+              {historyRows.length ? historyRows.map((row) => (
+                <button
+                  key={row.booking_id}
+                  type="button"
+                  className="qmgr-history-row"
+                  onClick={() => setEditBookingId(row.booking_id)}
+                >
+                  <span className="font-semibold">{row.vehicle_plate}</span>
+                  <span className="text-muted-foreground">{STATUS_LABELS[row.status] || row.status}</span>
+                  <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
+                    {formatMoney(row.final_price_minor ?? row.base_price_minor ?? 0)}
+                  </span>
+                </button>
+              )) : (
+                <p className="text-sm text-muted-foreground">No history for that plate.</p>
+              )}
+            </div>
+          ) : null}
         </div>
-        <label className="qmgr-search mt-3">
-          <Search size={16} aria-hidden />
-          <input
-            type="search"
-            value={historyPlate}
-            onChange={(e) => setHistoryPlate(e.target.value.toUpperCase())}
-            placeholder="Search plate number for full history…"
-            enterKeyHint="search"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                runHistory()
-              }
-            }}
-          />
-        </label>
-        {historyError ? <p className="mt-2 text-sm text-red-400" role="alert">{historyError}</p> : null}
-        {historyRows ? (
-          <div className="mt-3 grid gap-2">
-            {historyRows.length ? historyRows.map((row) => (
-              <button
-                key={row.booking_id}
-                type="button"
-                className="qmgr-history-row"
-                onClick={() => setEditBookingId(row.booking_id)}
-              >
-                <span className="font-semibold">{row.vehicle_plate}</span>
-                <span className="text-muted-foreground">{STATUS_LABELS[row.status] || row.status}</span>
-                <span className="tabular-nums text-emerald-400">
-                  {formatMoney(row.final_price_minor ?? row.base_price_minor ?? 0)}
-                </span>
-              </button>
-            )) : (
-              <p className="text-sm text-muted-foreground">No history for that plate.</p>
-            )}
-          </div>
-        ) : null}
-      </div>
+      </details>
 
       <div className="qmgr-status-grid" role="toolbar" aria-label="Filter by status">
         {STATUS_FILTERS.map((item) => {
@@ -473,7 +443,7 @@ export default function TeamLeadQueuePage() {
               <span className="qmgr-status-card-label">{item.label}</span>
               <span className="qmgr-status-card-value">{n}</span>
               {showTotal ? (
-                <span className="qmgr-status-card-total">{formatMoney(completedTotalMinor)} total</span>
+                <span className="qmgr-status-card-total">{formatMoney(completedTotalMinor)}</span>
               ) : null}
             </button>
           )
@@ -481,15 +451,13 @@ export default function TeamLeadQueuePage() {
       </div>
 
       {error ? (
-        <p className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100" role="alert">
-          {error}
-        </p>
+        <p className="qmgr-error" role="alert">{error}</p>
       ) : null}
 
       <div className="qmgr-list" aria-live="polite">
         {loading && !listTickets.length ? (
-          Array.from({ length: 3 }, (_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl bg-muted/40" />
+          Array.from({ length: 2 }, (_, i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-muted/40" />
           ))
         ) : listTickets.length ? (
           listTickets.map((ticket) => (
@@ -503,7 +471,6 @@ export default function TeamLeadQueuePage() {
           ))
         ) : (
           <div className="qmgr-empty">
-            <CarFront size={28} aria-hidden />
             <p>No cars in this filter.</p>
             {canManageQueue ? (
               <Link to="/operations/queue/new" className="qmgr-empty-link">Add a car</Link>

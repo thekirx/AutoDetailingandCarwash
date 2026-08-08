@@ -23,15 +23,23 @@ describe('attendance geo helpers', () => {
       userLng: 120.9291,
       branchLat: 14.459,
       branchLng: 120.929,
-      radiusM: 150,
+      radiusM: 20,
     })
     assert.equal(near.ok, true)
+    const edge = isInsideGeofence({
+      userLat: 14.459,
+      userLng: 120.929,
+      branchLat: 14.459,
+      branchLng: 120.929,
+      radiusM: 20,
+    })
+    assert.equal(edge.ok, true)
     const far = isInsideGeofence({
       userLat: 14.5,
       userLng: 121.0,
       branchLat: 14.459,
       branchLng: 120.929,
-      radiusM: 150,
+      radiusM: 20,
     })
     assert.equal(far.ok, false)
   })

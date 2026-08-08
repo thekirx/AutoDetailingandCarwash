@@ -1087,13 +1087,13 @@ export function NewQueueTicketPage() {
   return (
     <section>
       <PageHeader eyebrow="Create Queue Ticket" title="Add vehicle to queue" description="Required: plate, phone, and at least one Service / Package / Detailing. Name is optional for fast walk-ins." />
-      {error && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{error}</p>}
+      {error && <p className="floor-alert floor-alert-error mt-5">{error}</p>}
       <div className="mt-8">
         <Panel title="Ticket Form" icon={Plus}>
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Plate number *<input value={form.vehicle_plate} onChange={update('vehicle_plate')} required autoFocus placeholder="ABC 1234" className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
+            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Plate number *<input value={form.vehicle_plate} onChange={update('vehicle_plate')} required autoFocus placeholder="ABC 1234" className="floor-control" /></label>
             {form.vehicle_plate.trim().length >= 2 && plateLookupState !== 'idle' && (
-              <p className={`sm:col-span-2 rounded-2xl border px-4 py-3 text-sm ${plateLookupState === 'found' ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100' : 'border-amber-300/20 bg-amber-400/10 text-amber-100'}`}>
+              <p className={`sm:col-span-2 floor-alert ${plateLookupState === 'found' ? 'floor-alert-ok' : 'floor-alert-warn'}`}>
                 {plateLookupState === 'loading' ? 'Checking plate number...' : getPlateLookupStatus(form.vehicle_plate, Boolean(plateMatch))}
               </p>
             )}
@@ -1111,7 +1111,7 @@ export function NewQueueTicketPage() {
             />
             <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
             <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
-            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Car size (pricing)<select value={form.vehicle_type} onChange={updateVehicleType} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Car size (pricing)<select value={form.vehicle_type} onChange={updateVehicleType} className="floor-control">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <ServiceKindPicker
               services={services}
               selectedIds={form.service_ids}
@@ -1119,11 +1119,11 @@ export function NewQueueTicketPage() {
               onChange={updateServiceIds}
               disabled={submitting}
             />
-            {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="mt-2 w-full rounded-xl border border-white/10 bg-[#101a2a] px-4 py-3 text-sm text-white outline-none">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
+            {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="floor-control">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
             <FormField label="Final Price in Pesos" value={form.final_price} onChange={update('final_price')} type="number" min="0" step="0.01" required />
-            {showFormLowPriceWarning && <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
-            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Notes<textarea value={form.notes} onChange={update('notes')} className="mt-2 min-h-28 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-300/60" /></label>
-            <button disabled={submitting} className="floor-touch-btn sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 text-base font-semibold text-white transition hover:bg-blue-400 disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} aria-hidden /> : <Plus size={18} aria-hidden />}Create Queue Ticket</button>
+            {showFormLowPriceWarning && <p className="floor-alert floor-alert-warn">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
+            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Notes<textarea value={form.notes} onChange={update('notes')} className="floor-control floor-control-area" /></label>
+            <button disabled={submitting} className="floor-touch-btn sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-[#052699] px-5 py-3.5 text-base font-semibold text-white shadow-[0_8px_20px_rgba(5,38,153,0.28)] transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} aria-hidden /> : <Plus size={18} aria-hidden />}Create Queue Ticket</button>
           </form>
         </Panel>
       </div>
@@ -1802,5 +1802,18 @@ function RefreshButton({ loading, onClick }) {
 }
 
 function FormField({ label, value, onChange, type = 'text', required = false, min, step }) {
-  return <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">{label}<input type={type} value={value} onChange={onChange} required={required} min={min} step={step} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white outline-none focus:border-blue-300/60" /></label>
+  return (
+    <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+      {label}
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        required={required}
+        min={min}
+        step={step}
+        className="floor-control"
+      />
+    </label>
+  )
 }

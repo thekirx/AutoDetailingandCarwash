@@ -143,6 +143,35 @@ export function getQueueTicketActionFlags(status, { canManageQueue = false, canV
   }
 }
 
+/** On-site for crew assign: timed-in present or late (not absent). */
+export function isAssignableAttendanceStatus(status) {
+  return status === 'present' || status === 'late'
+}
+
+/** Legacy: packages skip mandatory crew; services/detailing require it. */
+export function crewRequiredForPayCategory(payCategory) {
+  return serviceKindFromPayCategory(payCategory) !== 'package'
+}
+
+/** One primary next step for mobile booking cards (avoids six outline buttons). */
+export function getBookingPrimaryNextStatus(status, { canSeePayment = true } = {}) {
+  const s = String(status || '')
+  if (s === 'pending') return 'confirmed'
+  if (s === 'confirmed') return 'waiting'
+  if (s === 'waiting' || s === 'redo') return 'in_progress'
+  if (s === 'in_progress') return 'final_checking'
+  if (s === 'final_checking' && canSeePayment) return 'for_payment'
+  return null
+}
+
+export const BOOKING_PRIMARY_ACTION_LABELS = {
+  confirmed: 'Confirm',
+  waiting: 'Send to waiting',
+  in_progress: 'Start · assign crew',
+  final_checking: 'Final check',
+  for_payment: 'Send to payment',
+}
+
 /** Valid ?lane= values for Floor → Queue deep links (board statuses only). */
 export function parseQueueLaneParam(value) {
   const lane = String(value || '').trim().toLowerCase()

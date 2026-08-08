@@ -22,7 +22,7 @@ export const SERVICE_KINDS = [
   {
     id: 'detailing',
     label: 'Detailing services',
-    shortLabel: 'Detailing',
+    shortLabel: 'Detail',
     hint: 'Multi-day jobs. Queue numbers stay until the ticket finishes.',
     categories: ['detailing'],
   },

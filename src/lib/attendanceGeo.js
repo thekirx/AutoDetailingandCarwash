@@ -15,7 +15,7 @@ export function haversineMeters(lat1, lng1, lat2, lng2) {
 export function isInsideGeofence({ userLat, userLng, branchLat, branchLng, radiusM }) {
   if (![userLat, userLng, branchLat, branchLng].every((n) => Number.isFinite(Number(n)))) return false
   const dist = haversineMeters(userLat, userLng, branchLat, branchLng)
-  return { ok: dist <= Number(radiusM || 150), distanceM: Math.round(dist) }
+  return { ok: dist <= Number(radiusM || 20), distanceM: Math.round(dist) }
 }
 
 /** @param {'daily'|'weekly'|'monthly'} period */

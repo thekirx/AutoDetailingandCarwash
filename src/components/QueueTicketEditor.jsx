@@ -22,6 +22,7 @@ import {
   isSuspiciousTiming,
   parsePesoInputToMinor,
   STATUS_LABELS,
+  crewRequiredForPayCategory,
 } from '../queue/queueLogic'
 import {
   addServiceToVisit,
@@ -321,7 +322,28 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                 <ActionButton
                   disabled={!actions.canStart}
                   loading={saving === 'start'}
-                  onClick={() => runAction('start', () => updateTicketStatus(ticket, 'in_progress'))}
+                      onClick={() =>
+                    runAction('start', async () => {
+                      const needCrew = crewRequiredForPayCategory(
+                        ticket.service_pay_category || ticket.pay_category,
+                      )
+                      const freeIds = selectedStaff.filter((id) => {
+                        const row = staff.find((m) => m.id === id)
+                        return row && !row.is_busy_today
+                      })
+                      if (needCrew && !freeIds.length) {
+                        throw new Error('Select at least one present crew member who is not busy, then start.')
+                      }
+                      if (freeIds.length) {
+                        await assignStaff(ticket, freeIds)
+                        if (ticket.status !== 'waiting') {
+                          await updateTicketStatus({ ...ticket, status: ticket.status }, 'in_progress')
+                        }
+                      } else {
+                        await updateTicketStatus(ticket, 'in_progress')
+                      }
+                    })
+                  }
                 >
                   Start Service
                 </ActionButton>
@@ -467,24 +489,30 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
       </Panel>
 
       <Panel title="Staff Assignment" icon={UserPlus} className="mt-3 sm:mt-4">
+        <p className="mb-3 text-sm text-muted-foreground">
+          Only staff timed in today (present or late) can be assigned. Busy crew on another job are locked.
+        </p>
         <div className={`grid gap-4 ${variant === 'modal' ? '' : 'lg:grid-cols-[1fr_280px]'}`}>
           <div className="grid gap-3 sm:grid-cols-2">
             {staff.map((member) => {
               const active = selectedStaff.includes(member.id)
+              const busy = Boolean(member.is_busy_today)
               return (
                 <label
                   key={member.id}
-                  className={`flex min-h-14 items-center justify-between gap-3 rounded-2xl border p-4 transition ${showEditActions ? 'cursor-pointer' : ''} ${active ? 'border-primary/40 bg-primary/10' : 'border-border bg-muted/20'}`}
+                  className={`flex min-h-14 items-center justify-between gap-3 rounded-2xl border p-4 transition ${showEditActions && !busy ? 'cursor-pointer' : ''} ${active ? 'border-primary/40 bg-primary/10' : 'border-border bg-muted/20'} ${busy ? 'opacity-55' : ''}`}
                 >
                   <span>
                     <span className="block font-medium text-foreground">{member.full_name}</span>
-                    <span className="text-xs text-muted-foreground">{member.branch_slug || 'All branches'}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {busy ? 'Busy on another job' : member.branch_slug || 'Timed in'}
+                    </span>
                   </span>
                   <input
                     type="checkbox"
                     className="size-5 accent-blue-500"
                     checked={active}
-                    disabled={!showEditActions}
+                    disabled={!showEditActions || busy}
                     onChange={(event) =>
                       setSelectedStaff((current) =>
                         event.target.checked ? [...current, member.id] : current.filter((idValue) => idValue !== member.id),
@@ -494,7 +522,11 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                 </label>
               )
             })}
-            {!staff.length && <p className="text-sm text-muted-foreground">No staff available for this branch.</p>}
+            {!staff.length && (
+              <p className="text-sm text-muted-foreground">
+                No present crew for this branch. Have staff time in inside the 20m geofence first.
+              </p>
+            )}
           </div>
           <div>
             {showEditActions ? (

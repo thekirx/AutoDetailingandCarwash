@@ -520,7 +520,7 @@ export function CrewSettingsPanel({ profile }) {
   const canRoles = canEditAttendanceRoles(profile)
   const [branches, setBranches] = useState([])
   const [slug, setSlug] = useState(profile?.branch_slug || '')
-  const [form, setForm] = useState({ geofence_radius_m: 150, shift_start: '08:00', shift_end: '18:00' })
+  const [form, setForm] = useState({ geofence_radius_m: 20, shift_start: '08:00', shift_end: '18:00' })
   const [meta, setMeta] = useState(null)
   const [saving, setSaving] = useState(false)
   const [roleDraft, setRoleDraft] = useState([...DEFAULT_ATTENDANCE_ROLES])
@@ -532,7 +532,7 @@ export function CrewSettingsPanel({ profile }) {
     const row = await fetchBranchAttendanceSettings(nextSlug)
     setMeta(row)
     setForm({
-      geofence_radius_m: row?.geofence_radius_m ?? 150,
+      geofence_radius_m: row?.geofence_radius_m ?? 20,
       shift_start: shiftTimeToLabel(row?.shift_start) || '08:00',
       shift_end: shiftTimeToLabel(row?.shift_end) || '18:00',
     })
@@ -706,12 +706,13 @@ export function CrewSettingsPanel({ profile }) {
                 <Label>Geofence radius (meters)</Label>
                 <Input
                   type="number"
-                  min={30}
+                  min={20}
                   max={5000}
                   required
                   value={form.geofence_radius_m}
                   onChange={(e) => setForm((f) => ({ ...f, geofence_radius_m: e.target.value }))}
                 />
+                <p className="text-xs text-muted-foreground">Shop floor default is 20m. Staff must time in inside this radius.</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">

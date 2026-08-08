@@ -172,10 +172,10 @@ export async function geoTimeIn({ profile, coords }) {
     userLng: coords.longitude,
     branchLat: branch.latitude,
     branchLng: branch.longitude,
-    radiusM: branch.geofence_radius_m ?? 150,
+    radiusM: branch.geofence_radius_m ?? 20,
   })
   if (!fence.ok) {
-    throw new Error(`Outside geofence (${fence.distanceM}m away; allowed ${branch.geofence_radius_m || 150}m). Move closer to ${branch.name}.`)
+    throw new Error(`Outside geofence (${fence.distanceM}m away; allowed ${branch.geofence_radius_m || 20}m). Move closer to ${branch.name}.`)
   }
 
   const late = isLateVsShift(branch.shift_start)
