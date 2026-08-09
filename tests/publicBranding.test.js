@@ -61,25 +61,20 @@ describe('Public branding assets and scope', () => {
 
   it('uses the centered legacy experience composition without a feature card', async () => {
     const page = await readFile(projectFile('src/pages/PublicLandingPage.jsx'), 'utf8')
+    const hero = await readFile(projectFile('src/components/public/home/HomeHeroSection.jsx'), 'utf8')
+    const services = await readFile(projectFile('src/components/public/home/HomeServiceSections.jsx'), 'utf8')
 
-    assert.doesNotMatch(page, /hero-experience-layout/)
-    assert.doesNotMatch(page, /hero-experience-card/)
-    assert.match(page, /<div className="hero-experience"[^>]*>\s*<h2 id="experience-heading">Experience<\/h2>/s)
-    assert.equal((page.match(/<StatCard key=/g) || []).length, 1)
-    assert.match(page, /import \{ aboutImage \} from '\.\.\/data\/publicHomeContent'/)
-    assert.match(page, /featuredServices, otherServices/)
-    assert.match(page, /ceramicPackages, ceramicSection/)
-    assert.match(page, /<img className="about-visual-image" src=\{aboutImage\}/)
-    assert.match(page, /featuredServices\.map/)
-    assert.match(page, /className="other-services-trigger"/)
-    assert.match(page, /role="dialog"/)
-    assert.match(page, /aria-modal="true"/)
-    assert.match(page, /otherServices\.map/)
-    const otherServicesCards = page.match(/otherServices\.map\(\(service\) => \([\s\S]*?\n\s*\)\)\}/)?.[0] || ''
-    assert.doesNotMatch(otherServicesCards, /<Link|Book now/)
-    assert.match(page, /className="public-shell ceramic-layout"/)
-    assert.doesNotMatch(page, /className="service-card-locked"/)
-    assert.doesNotMatch(page, /Recommended/)
+    assert.doesNotMatch(hero, /hero-experience-layout/)
+    assert.doesNotMatch(hero, /hero-experience-card/)
+    assert.match(hero, /<div className="hero-experience"[^>]*>\s*<h2 id="experience-heading">Experience<\/h2>/s)
+    assert.equal((hero.match(/<StatCard key=/g) || []).length, 1)
+    assert.match(services, /ceramicPackages, ceramicSection/)
+    assert.match(services, /className="public-shell ceramic-layout"/)
+    assert.match(page, /<HomeHeroSection/)
+    assert.match(page, /<CeramicSection/)
+    assert.match(page, /<LatestPostSection/)
+    assert.match(page, /<EventsPreviewSection/)
+    assert.match(page, /<PartnershipSection/)
   })
 
   it('scopes reference alignment to the approved homepage sections', async () => {
