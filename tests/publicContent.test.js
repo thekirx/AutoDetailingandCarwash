@@ -6,6 +6,25 @@ import {
   selectLatestPublishedPost,
   selectNextPublishedEvent,
 } from '../src/lib/publicContent.js'
+import { HOME_SECTION_IDS } from '../src/data/publicHomeContent.js'
+
+describe('preferred homepage composition', () => {
+  it('stays in the approved order', () => {
+    assert.deepEqual(HOME_SECTION_IDS, [
+      'hero',
+      'ceramic',
+      'ppf-information',
+      'ppf-packages',
+      'nano-ceramic-tint',
+      'media-gallery',
+      'latest-post',
+      'events',
+      'partnership',
+      'queue',
+      'branches',
+    ])
+  })
+})
 
 describe('public managed content', () => {
   it('selects the newest published post and excludes non-public states', () => {

@@ -1,5 +1,33 @@
 export const aboutImage = new URL('../assets/about/about-hkm-21.webp', import.meta.url).href
 
+export const HOME_SECTION_IDS = [
+  'hero',
+  'ceramic',
+  'ppf-information',
+  'ppf-packages',
+  'nano-ceramic-tint',
+  'media-gallery',
+  'latest-post',
+  'events',
+  'partnership',
+  'queue',
+  'branches',
+]
+
+export const ppfInformation = {
+  image: new URL('../assets/services/paint-protection-film.webp', import.meta.url).href,
+  imageAlt: 'Paint Protection Film installation at Hakum Auto Care',
+  title: 'Protection you barely see.',
+  copy: 'Paint Protection Film is a clear, precision-applied layer that helps defend your vehicle from stone chips, light scratches, road debris, and daily wear while preserving the original finish.',
+}
+
+export const nanoCeramicTint = {
+  image: new URL('../assets/services/ceramic-tint.webp', import.meta.url).href,
+  imageAlt: 'Nano ceramic tint installed at Hakum Auto Care',
+  title: 'Cooler cabin. Clearer drive.',
+  copy: 'Nano ceramic tint helps reduce heat and UV exposure without sacrificing visibility, giving every drive a more comfortable and refined feel.',
+}
+
 export const services = [
   { number: '01', title: 'Carwash', copy: 'A careful exterior clean that brings back a crisp, spotless finish.', image: new URL('../assets/services/carwash.webp', import.meta.url).href, imageAlt: 'Carwash service at Hakum Auto Care', available: true },
   { number: '02', title: 'Interior Detailing', copy: 'Deep cabin care for cleaner surfaces, fresher air, and renewed comfort.', image: new URL('../assets/services/interior-detailing.webp', import.meta.url).href, imageAlt: 'Interior Detailing service at Hakum Auto Care', available: true },
@@ -99,4 +127,10 @@ export const otherServices = [
     image: new URL('../assets/services/engine-wash.webp', import.meta.url).href,
     imageAlt: 'Engine Wash service at Hakum Auto Care',
   },
+]
+
+export const mediaGallery = [
+  featuredServices[2],
+  featuredServices[0],
+  featuredServices[1],
 ]

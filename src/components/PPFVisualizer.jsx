@@ -185,8 +185,8 @@ export default function PPFVisualizer() {
     : data.coverageAreas.filter(area => ['Full exterior','Trims','Headlights','All four doors','Roof','Rocker panels','Additional high-impact areas where applicable'].includes(area))
   const selectPackage = (id) => { setSelected(id); setInspected(null) }
 
-  return <section className="visualizer-section" id="visualizer" aria-labelledby="ppf-heading"><div className="public-shell">
-    <header className="ppf-heading"><div><p className="eyebrow eyebrow-light">Invisible armor · Visible confidence</p><h2 className="section-title light" id="ppf-heading">Paint Protection<br/>Film Packages</h2></div><p>Paint Protection Film is an invisible, clear layer applied to your vehicle’s paint to protect it from damage. Think of it like a mobile phone screen protector, but for your car’s exterior.</p></header>
+  return <section className="visualizer-section" id="ppf-packages" aria-labelledby="ppf-heading" data-motion-section="ppf-packages"><div className="public-shell">
+    <header className="ppf-heading" data-motion="heading"><div><p className="eyebrow eyebrow-light">Invisible armor · Visible confidence</p><h2 className="section-title light" id="ppf-heading">Paint Protection<br/>Film Packages</h2></div><p>Paint Protection Film is an invisible, clear layer applied to your vehicle’s paint to protect it from damage. Think of it like a mobile phone screen protector, but for your car’s exterior.</p></header>
     <div className="package-tabs" role="tablist" aria-label="Paint protection film packages">{PPF_PACKAGES.map((item,index) => <button key={item.id} id={`ppf-tab-${item.id}`} role="tab" aria-selected={selected===item.id} aria-controls="ppf-package-panel" onClick={() => selectPackage(item.id)}><span>0{index+1}</span>{item.title}{item.recommendedLabel && <small>{item.recommendedLabel}</small>}</button>)}</div>
     <div className="visualizer-grid">
       <div className="car-canvas">
