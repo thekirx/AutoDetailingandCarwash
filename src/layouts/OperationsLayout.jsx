@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  Newspaper,
   Package,
   Plus,
   ScrollText,
@@ -88,6 +89,7 @@ const iconMap = {
   CarFront,
   Plus,
   Database,
+  Newspaper,
 }
 
 function formatRole(role) {
@@ -97,6 +99,7 @@ function formatRole(role) {
   if (role === 'admin') return 'Admin'
   if (role === 'staff') return 'Crew'
   if (role === 'marketing') return 'Marketing'
+  if (role === 'content_marketing') return 'Marketing Content'
   return role || 'Ops'
 }
 

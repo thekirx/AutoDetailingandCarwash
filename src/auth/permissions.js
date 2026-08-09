@@ -8,6 +8,7 @@ export const ROLES = {
   SALES: 'sales',
   STAFF: 'staff',
   MARKETING: 'marketing',
+  CONTENT_MARKETING: 'content_marketing',
 }
 
 /** @deprecated enum values may still exist in DB; do not assign in app */
@@ -65,6 +66,7 @@ export const OPS_LOGIN_ROLES = [
   ROLES.SUPER_ADMIN,
   ROLES.ASSISTANT_SUPER_ADMIN,
   ROLES.MARKETING,
+  ROLES.CONTENT_MARKETING,
 ]
 
 const has = (profile, roles) => roles.includes(profile?.role)
@@ -221,6 +223,18 @@ export function canAccessCrm(profile) {
   return has(profile, [...ADMIN_ROLES, ROLES.MARKETING])
 }
 
+export function canAccessContent(profile) {
+  return has(profile, [ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN, ROLES.CONTENT_MARKETING])
+}
+
+export function canManagePosts(profile) {
+  return canAccessContent(profile)
+}
+
+export function canManageEvents(profile) {
+  return canAccessContent(profile)
+}
+
 /** @deprecated SMS lives under CRM; kept for redirects */
 export function canAccessMarketing(profile) {
   return canAccessCrm(profile)
@@ -307,6 +321,10 @@ export function isBranchAdmin(profile) {
 
 /** Nav items for the shared ops shell — filtered by role + grants. */
 export function getOperationsNav(profile) {
+  if (profile?.role === ROLES.CONTENT_MARKETING) {
+    return [{ label: 'Content', to: '/operations/content', icon: 'Newspaper' }]
+  }
+
   if (profile?.role === ROLES.MARKETING) {
     return [{ label: 'CRM', to: '/operations/crm', icon: 'Contact' }]
   }
@@ -445,6 +463,7 @@ export function redirectForRole(role) {
   if (role === ROLES.TEAM_LEAD) return '/operations/queue'
   if (role === ROLES.SALES) return '/operations/bookings'
   if (role === ROLES.MARKETING) return '/operations/crm'
+  if (role === ROLES.CONTENT_MARKETING) return '/operations/content'
   // legacy cashier still lands on POS
   if (role === DEPRECATED_ROLES.CASHIER) return '/operations/pos'
   return '/operations/dashboard'
@@ -469,6 +488,7 @@ export function allowRoute(profile, key) {
     pos: canAccessPos,
     finance: canAccessFinance,
     crm: canAccessCrm,
+    content: canAccessContent,
     bookings: canAccessBookingBoard,
     reports: canAccessReports,
     memberships: canAccessMemberships,

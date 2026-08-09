@@ -33,6 +33,7 @@ const DataCenterPage = lazy(() => import('./pages/DataCenterPage'))
 const PosPage = lazy(() => import('./pages/PosPage'))
 const FinancePage = lazy(() => import('./pages/FinancePage'))
 const CrmPage = lazy(() => import('./pages/CrmPage'))
+const ContentManagePage = lazy(() => import('./pages/ContentManagePage'))
 const BookingBoardPage = lazy(() => import('./pages/BookingBoardPage'))
 const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
@@ -169,6 +170,7 @@ export default function App() {
             <Route path="pos" element={gate('pos', <PosPage />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
+            <Route path="content" element={gate('content', <ContentManagePage />)} />
             <Route path="services" element={gate('pos', <Navigate to="/operations/pos?tab=services" replace />)} />
             <Route path="products" element={gate('pos', <Navigate to="/operations/pos?tab=merch" replace />)} />
             <Route path="sms" element={gate('crm', <Navigate to="/operations/crm?tab=sms" replace />)} />
