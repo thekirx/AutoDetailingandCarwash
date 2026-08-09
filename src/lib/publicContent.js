@@ -5,6 +5,20 @@ function timeValue(value) {
   return Number.isFinite(time) ? time : 0
 }
 
+function safeExternalUrl(value) {
+  if (!value) return ''
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : ''
+  } catch {
+    return ''
+  }
+}
+
+function safeDateValue(value) {
+  return value && timeValue(value) ? value : null
+}
+
 export function selectLatestPublishedPost(rows) {
   if (!Array.isArray(rows)) return null
   return rows
@@ -28,10 +42,10 @@ export function mapPostToHybridCard(row) {
     title: row.title,
     excerpt: row.excerpt || '',
     mediaUrl: row.media_url || '',
-    href: row.source_url || '',
+    href: safeExternalUrl(row.source_url),
     platform: row.platform || 'external',
     ctaLabel: row.cta_label || 'View original post',
-    date: row.published_at || row.created_at || null,
+    date: safeDateValue(row.published_at || row.created_at),
   }
 }
 
@@ -39,7 +53,7 @@ export function mapEventToHybridCard(row) {
   if (!row) return null
   const href = row.slug
     ? `/events/${row.slug}`
-    : row.registration_url || row.source_url || '/events'
+    : safeExternalUrl(row.registration_url || row.source_url) || '/events'
   return {
     id: row.id,
     kind: 'event',
@@ -49,7 +63,7 @@ export function mapEventToHybridCard(row) {
     href,
     platform: row.platform || 'external',
     ctaLabel: row.cta_label || 'Event details',
-    date: row.starts_at || null,
+    date: safeDateValue(row.starts_at),
   }
 }
 

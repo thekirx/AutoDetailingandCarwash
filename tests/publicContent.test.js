@@ -89,4 +89,38 @@ describe('public managed content', () => {
       },
     )
   })
+
+  it('removes unsafe external links and invalid dates from Post cards', () => {
+    assert.deepEqual(
+      mapPostToHybridCard({
+        id: 'unsafe-post',
+        title: 'Unsafe link',
+        source_url: 'javascript:alert(1)',
+        published_at: 'not-a-date',
+      }),
+      {
+        id: 'unsafe-post',
+        kind: 'post',
+        title: 'Unsafe link',
+        excerpt: '',
+        mediaUrl: '',
+        href: '',
+        platform: 'external',
+        ctaLabel: 'View original post',
+        date: null,
+      },
+    )
+  })
+
+  it('falls back to the Events page when an Event has no safe destination', () => {
+    const card = mapEventToHybridCard({
+      id: 'unsafe-event',
+      title: 'Unsafe event',
+      registration_url: 'data:text/html,unsafe',
+      starts_at: 'not-a-date',
+    })
+
+    assert.equal(card.href, '/events')
+    assert.equal(card.date, null)
+  })
 })
