@@ -50,7 +50,6 @@ describe('Public homepage content assets', () => {
       ['DETAILING', 'detailing.webp'],
     ])
     assert.deepEqual(ceramicPackages.map(({ title, bgImage }) => [title, new URL(bgImage).pathname.split('/').at(-1)]), [
-      ['CLASSIC', 'ceramic-classic.webp'],
       ['PREMIUM', 'ceramic-premium.webp'],
       ['PLATINUM', 'ceramic-platinum.webp'],
     ])

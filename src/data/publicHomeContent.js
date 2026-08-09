@@ -17,8 +17,26 @@ export const HOME_SECTION_IDS = [
 export const ppfInformation = {
   image: new URL('../assets/services/paint-protection-film.webp', import.meta.url).href,
   imageAlt: 'Paint Protection Film installation at Hakum Auto Care',
-  title: 'Protection you barely see.',
+  title: 'Protection engineered for every drive.',
   copy: 'Paint Protection Film is a clear, precision-applied layer that helps defend your vehicle from stone chips, light scratches, road debris, and daily wear while preserving the original finish.',
+  features: [
+    {
+      title: 'Clarity',
+      copy: 'A clear, smooth finish designed to preserve the depth, color, and gloss of your paint.',
+    },
+    {
+      title: 'Stretch',
+      copy: 'Flexible film follows complex curves and body lines for precise, edge-to-edge coverage.',
+    },
+    {
+      title: 'Adhesion',
+      copy: 'Professional installation helps the film settle securely around panels, corners, and contours.',
+    },
+    {
+      title: 'Warranty',
+      copy: 'Coverage details are explained before installation so you know how your selected film is supported.',
+    },
+  ],
 }
 
 export const nanoCeramicTint = {
@@ -67,17 +85,6 @@ export const ceramicSection = {
 }
 
 export const ceramicPackages = [
-  {
-    title: 'CLASSIC',
-    bgImage: new URL('../assets/services/ceramic-classic.webp', import.meta.url).href,
-    copy: 'Essential ceramic protection for everyday vehicles, adding lasting gloss and an easier-to-maintain finish.',
-    includes: [
-      'Ceramic paint protection',
-      'Enhanced gloss and shine',
-      'Hydrophobic surface finish',
-      'Easier regular maintenance',
-    ],
-  },
   {
     title: 'PREMIUM',
     bgImage: new URL('../assets/services/ceramic-premium.webp', import.meta.url).href,

@@ -6,7 +6,11 @@ import {
   selectLatestPublishedPost,
   selectNextPublishedEvent,
 } from '../src/lib/publicContent.js'
-import { HOME_SECTION_IDS } from '../src/data/publicHomeContent.js'
+import {
+  ceramicPackages,
+  HOME_SECTION_IDS,
+  ppfInformation,
+} from '../src/data/publicHomeContent.js'
 
 describe('preferred homepage composition', () => {
   it('stays in the approved order', () => {
@@ -23,6 +27,18 @@ describe('preferred homepage composition', () => {
       'queue',
       'branches',
     ])
+  })
+
+  it('offers only the approved Premium and Platinum ceramic tiers', () => {
+    assert.deepEqual(ceramicPackages.map((item) => item.title), ['PREMIUM', 'PLATINUM'])
+  })
+
+  it('uses safe PPF messaging and the four approved product qualities', () => {
+    assert.equal(ppfInformation.title, 'Protection engineered for every drive.')
+    assert.deepEqual(
+      ppfInformation.features.map((feature) => feature.title),
+      ['Clarity', 'Stretch', 'Adhesion', 'Warranty'],
+    )
   })
 })
 

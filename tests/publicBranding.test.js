@@ -75,6 +75,9 @@ describe('Public branding assets and scope', () => {
     assert.match(page, /<LatestPostSection/)
     assert.match(page, /<EventsPreviewSection/)
     assert.match(page, /<PartnershipSection/)
+    assert.match(services, /className="ppf-information-stage"/)
+    assert.match(services, /ppfInformation\.features\.map/)
+    assert.match(services, /data-motion-section="ppf-information"/)
   })
 
   it('scopes reference alignment to the approved homepage sections', async () => {
@@ -116,7 +119,7 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.featured-services-grid\s*\{[^}]*grid-template-columns:1fr/)
     assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.other-services-grid\s*\{[^}]*grid-template-columns:1fr/)
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(0,1fr\)/)
-    assert.match(css, /@media\(max-width:900px\)\{[\s\S]*?\.ceramic-package-grid\s*\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/)
+    assert.match(css, /@media\(max-width:900px\)\{[\s\S]*?\.ceramic-package-grid\s*\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
     assert.match(css, /@media\(max-width:700px\)\{[\s\S]*?\.featured-services-grid\s*\{[^}]*grid-template-columns:1fr/)
     assert.match(css, /@media\(max-width:700px\)\{[\s\S]*?\.ceramic-package-grid\s*\{[^}]*grid-template-columns:1fr/)
   })

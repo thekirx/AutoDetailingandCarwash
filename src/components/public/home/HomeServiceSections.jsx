@@ -50,7 +50,31 @@ function SplitFeature({ id, eyebrow, item, reverse = false }) {
 }
 
 export function PpfInformationSection() {
-  return <SplitFeature id="ppf-information" eyebrow="Paint protection film · The essentials" item={ppfInformation} />
+  return (
+    <section id="ppf-information" className="ppf-information-stage" data-motion-section="ppf-information">
+      <div className="public-shell ppf-information-heading" data-motion="heading">
+        <p>Superior protection, edge to edge</p>
+        <h2>{ppfInformation.title}</h2>
+        <span>{ppfInformation.copy}</span>
+      </div>
+      <div className="public-shell ppf-information-features" data-motion="cards">
+        {ppfInformation.features.map((feature, index) => (
+          <article className="ppf-information-callout" key={feature.title} data-motion-item>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <h3>{feature.title}</h3>
+            <p>{feature.copy}</p>
+          </article>
+        ))}
+      </div>
+      <div className="ppf-information-visual" data-motion="media">
+        <img src={ppfInformation.image} alt={ppfInformation.imageAlt} loading="lazy" decoding="async" />
+        <div className="ppf-information-film" aria-hidden="true" />
+        <div className="ppf-information-linework" aria-hidden="true">
+          <i /><i /><i /><i />
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export function NanoCeramicTintSection() {
