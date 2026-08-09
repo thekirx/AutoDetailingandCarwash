@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
-import { OPS_LOGIN_ROLES, redirectForRole } from '../auth/permissions'
-import { safeAuthReturnPath } from '../auth/authRedirect'
+import { OPS_LOGIN_ROLES } from '../auth/permissions'
+import { resolvePostLoginPath, safeAuthReturnPath } from '../auth/authRedirect'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
@@ -19,10 +19,11 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [demoAccounts, setDemoAccounts] = useState([])
-  const { user, profile, loading, signOut } = useAuth()
+  const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const returnPath = safeAuthReturnPath(location.state?.from?.pathname)
+  const missingProfileTries = useRef(0)
 
   useEffect(() => {
     if (!isDemoLoginEnabled()) return undefined
@@ -35,9 +36,26 @@ export default function LoginPage() {
     }
   }, [])
 
+  // Only sign out after repeated failed profile hydrations — never on the first paint after login.
   useEffect(() => {
-    if (!loading && user && !profile) signOut()
-  }, [loading, user, profile, signOut])
+    if (loading || !user || profile || location.state?.signedOut || submitting) {
+      missingProfileTries.current = 0
+      return undefined
+    }
+    const t = window.setTimeout(async () => {
+      missingProfileTries.current += 1
+      try {
+        const next = await refreshProfile()
+        if (next) return
+      } catch {
+        /* retry below */
+      }
+      if (missingProfileTries.current >= 3) {
+        signOut().catch(() => {})
+      }
+    }, 400)
+    return () => window.clearTimeout(t)
+  }, [loading, user, profile, location.state?.signedOut, submitting, refreshProfile, signOut])
 
   useEffect(() => {
     if (!loading && location.state?.signedOut && user) {
@@ -45,10 +63,12 @@ export default function LoginPage() {
     }
   }, [loading, location.state?.signedOut, user, signOut])
 
-  if (loading) return <LoadingScreen />
+  if (loading || submitting) {
+    return <LoadingScreen label={submitting ? 'Opening your floor…' : undefined} />
+  }
   // After explicit sign-out from access-denied, stay on the form even if session briefly lingers
   if (user && profile && !location.state?.signedOut) {
-    return <Navigate to={returnPath || redirectForRole(profile.role)} replace />
+    return <Navigate to={resolvePostLoginPath(profile, returnPath)} replace />
   }
 
   const handleSubmit = async (event) => {
@@ -56,6 +76,7 @@ export default function LoginPage() {
     setError('')
     setInfo('')
     setSubmitting(true)
+    missingProfileTries.current = 0
 
     const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
     if (authError) {
@@ -74,10 +95,16 @@ export default function LoginPage() {
     if (profileError) {
       await supabase.auth.signOut()
       const rls = /42501|permission|policy|row-level/i.test(profileError.message || '')
-      setError(rls ? 'Unable to verify your role (permissions). Try again or contact Super Admin.' : 'Unable to load your staff profile. Try again.')
+      setError(
+        rls
+          ? 'Unable to verify your role (permissions). Try again or contact Super Admin.'
+          : 'Unable to load your staff profile. Try again.',
+      )
       setSubmitting(false)
       return
     }
+
+    let role = staffProfile?.role || null
 
     if (!staffProfile) {
       const { data: legacyProfile, error: legacyError } = await supabase
@@ -101,13 +128,27 @@ export default function LoginPage() {
         setSubmitting(false)
         return
       }
-
-      navigate(returnPath || redirectForRole(legacyProfile.role), { replace: true })
-      setSubmitting(false)
-      return
+      role = legacyProfile.role
     }
 
-    navigate(returnPath || redirectForRole(staffProfile.role), { replace: true })
+    // Wait for AuthProvider profile so ProtectedRoute never sees user-without-profile.
+    let hydrated = null
+    try {
+      hydrated = await refreshProfile()
+    } catch {
+      hydrated = null
+    }
+    if (!hydrated) {
+      await new Promise((r) => setTimeout(r, 250))
+      try {
+        hydrated = await refreshProfile()
+      } catch {
+        hydrated = null
+      }
+    }
+
+    const dest = resolvePostLoginPath(hydrated || { role }, returnPath)
+    navigate(dest, { replace: true })
     setSubmitting(false)
   }
 
@@ -200,7 +241,7 @@ export default function LoginPage() {
           </div>
         </label>
         <button type="submit" className="hakum-auth-submit" disabled={submitting}>
-          {submitting ? 'Verifying…' : 'Sign in'}
+          {submitting ? 'Opening your floor…' : 'Sign in'}
         </button>
       </form>
 

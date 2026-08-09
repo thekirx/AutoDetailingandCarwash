@@ -10,13 +10,14 @@ export default function ProtectedRoute({
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
-  if (loading) return <LoadingScreen />
+  // Session without profile yet = still hydrating (never treat as unauthorized).
+  if (loading || (user && !profile)) return <LoadingScreen />
 
   if (!user) {
     return <Navigate to={redirectTo} replace state={{ from: location }} />
   }
 
-  if (allowedRoles?.length && !allowedRoles.includes(profile?.role)) {
+  if (allowedRoles?.length && !allowedRoles.includes(profile.role)) {
     return <Navigate to={unauthorizedTo} replace state={{ from: location, unauthorized: true }} />
   }
 

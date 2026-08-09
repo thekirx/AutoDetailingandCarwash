@@ -77,7 +77,7 @@ describe('sales role — form bookings only', () => {
   })
 
   it('board is form-only; confirm yes, waiting no', () => {
-    assert.deepEqual(getBookingBoardStatuses(sales), ['pending', 'confirmed'])
+    assert.deepEqual(getBookingBoardStatuses(sales), ['pending', 'confirmed', 'cancelled'])
     assert.equal(getBookingPrimaryNextStatus('pending', { canCheckIn: false }), 'confirmed')
     assert.equal(getBookingPrimaryNextStatus('confirmed', { canCheckIn: false }), null)
     assert.equal(getBookingPrimaryNextStatus('confirmed', { canCheckIn: true }), 'waiting')

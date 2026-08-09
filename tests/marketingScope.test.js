@@ -20,18 +20,18 @@ import { CRM_SAFE_BOOKING_STATUSES, isCrmSafeBookingStatus } from '../server/crm
 describe('Marketing capability matrix', () => {
   const p = { role: ROLES.MARKETING, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
 
-  it('allows CRM only; denies floor queue POS finance console bookings my-tasks', () => {
+  it('allows CRM + readonly Bookings; denies floor queue POS finance console my-tasks', () => {
     assert.equal(canAccessCrm(p), true)
     assert.equal(allowRoute(p, 'crm'), true)
     assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/crm'],
+      ['/operations/crm', '/operations/bookings'],
     )
     assert.equal(canAccessPos(p), false)
     assert.equal(canAccessFinance(p), false)
     assert.equal(canAccessConsole(p), false)
-    assert.equal(canAccessBookingBoard(p), false)
+    assert.equal(canAccessBookingBoard(p), true)
     assert.equal(canViewQueueOperations(p), false)
     assert.equal(canEditQueueOperations(p), false)
     assert.equal(canViewAssignedTasks(p), false)
@@ -39,7 +39,7 @@ describe('Marketing capability matrix', () => {
     assert.equal(allowRoute(p, 'pos'), false)
     assert.equal(allowRoute(p, 'finance'), false)
     assert.equal(allowRoute(p, 'console'), false)
-    assert.equal(allowRoute(p, 'bookings'), false)
+    assert.equal(allowRoute(p, 'bookings'), true)
     assert.equal(allowRoute(p, 'my-tasks'), false)
     assert.equal(allowRoute(p, 'people'), false)
   })

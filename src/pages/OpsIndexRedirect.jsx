@@ -5,7 +5,8 @@ import LoadingScreen from '@/components/LoadingScreen'
 
 /** Role-aware landing inside /operations. */
 export default function OpsIndexRedirect() {
-  const { profile, loading } = useAuth()
-  if (loading) return <LoadingScreen />
-  return <Navigate to={redirectForRole(profile?.role)} replace />
+  const { user, profile, loading } = useAuth()
+  if (loading || (user && !profile)) return <LoadingScreen />
+  if (!profile?.role) return <Navigate to="/operations/login" replace />
+  return <Navigate to={redirectForRole(profile.role)} replace />
 }

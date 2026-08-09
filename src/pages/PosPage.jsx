@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams, Link } from 'react-router-dom'
 import { Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessPos, canManageServices, canSeeAllBranches, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
@@ -11,8 +11,6 @@ import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange } from '@
 import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
-import ServicesManagePage from '@/pages/ServicesManagePage'
-import ProductsManagePage from '@/pages/ProductsManagePage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -23,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { PAYMENT_METHODS } from '@/lib/paymentMethods'
+import { accumulatePosCategoryTotals, emptyPosCategoryTotals, productIsPosSellable } from '@/lib/posSellables'
 
 const PAYMENT_OPTIONS = PAYMENT_METHODS
 
@@ -72,6 +71,8 @@ export default function PosPage() {
   const [cartOpen, setCartOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [todayStats, setTodayStats] = useState(null)
+  const [categoryTotals, setCategoryTotals] = useState(emptyPosCategoryTotals())
+  const [dailyReportOpen, setDailyReportOpen] = useState(false)
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
   const [activeMembership, setActiveMembership] = useState(null)
@@ -94,13 +95,19 @@ export default function PosPage() {
   const load = useCallback(async () => {
     if (!branch) return
     const today = getLocalCalendarDate()
-    const [svc, prod, stats, handoffRes] = await Promise.all([
+    const startIso = `${today}T00:00:00+08:00`
+    const endIso = `${today}T23:59:59.999+08:00`
+    const [svc, prod, stats, handoffRes, salesRes] = await Promise.all([
       supabase
         .from('services')
-        .select('id, name, price_minor, service_size_prices(size_slug, price_minor)')
+        .select('id, name, slug, pay_category, price_minor, service_size_prices(size_slug, price_minor)')
         .eq('is_active', true)
         .eq('is_archived', false),
-      supabase.from('products').select('id, name, price_minor, category, stock_qty, sku').eq('is_active', true).eq('is_archived', false),
+      supabase
+        .from('products')
+        .select('id, name, price_minor, category, stock_qty, sku, tags')
+        .eq('is_active', true)
+        .eq('is_archived', false),
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
       supabase
         .from('pos_handoffs')
@@ -108,21 +115,52 @@ export default function PosPage() {
         .eq('status', 'pending')
         .eq('branch', branch)
         .order('created_at', { ascending: true }),
+      supabase
+        .from('sales')
+        .select(
+          'id, total_minor, payment_method, booking_id, sale_line_items(item_type, line_total_minor, service_id, product_id, services(name, slug, pay_category))',
+        )
+        .eq('status', 'paid')
+        .eq('branch', branch)
+        .gte('occurred_at', startIso)
+        .lte('occurred_at', endIso)
+        .limit(500),
     ])
     if (svc.error) toast.error(svc.error.message)
     if (prod.error) toast.error(prod.error.message)
     if (stats.error) toast.error(stats.error.message)
     if (handoffRes.error) toast.error(handoffRes.error.message)
+    if (salesRes.error) toast.error(salesRes.error.message)
     setServices(
       (svc.data || []).map((row) => ({
         ...row,
         size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
       })),
     )
-    setProducts(prod.data || [])
+    const productRows = (prod.data || []).filter((p) => (branchAdmin ? productIsPosSellable(p) : true))
+    setProducts(productRows)
     setTodayStats(stats.data)
     setHandoffs(handoffRes.data || [])
-  }, [branch])
+
+    const catRows = []
+    for (const sale of salesRes.data || []) {
+      const lines = sale.sale_line_items || []
+      if (!lines.length) {
+        catRows.push({ total_minor: sale.total_minor, itemType: sale.booking_id ? 'service' : 'product' })
+        continue
+      }
+      for (const line of lines) {
+        catRows.push({
+          total_minor: line.line_total_minor,
+          itemType: line.item_type,
+          serviceSlug: line.services?.slug,
+          serviceName: line.services?.name,
+          payCategory: line.services?.pay_category,
+        })
+      }
+    }
+    setCategoryTotals(accumulatePosCategoryTotals(catRows))
+  }, [branch, branchAdmin])
 
   useEffect(() => {
     listBranches()
@@ -480,6 +518,22 @@ export default function PosPage() {
         <Stat label="Queue to pay" value={handoffs.length} />
         <Stat label="Avg ticket" value={formatMoney(todayStats?.average_ticket_minor || 0)} />
       </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="Car wash jobs" value={formatMoney(categoryTotals.car_wash)} />
+        <Stat label="Ceramic coating" value={formatMoney(categoryTotals.ceramic_coating)} />
+        <Stat label="Nano ceramic tint" value={formatMoney(categoryTotals.nano_tint)} />
+        <Stat label="PPF jobs" value={formatMoney(categoryTotals.ppf)} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
+          Daily sales report
+        </Button>
+        {canManageCatalog ? (
+          <Button type="button" variant="secondary" className="min-h-11" asChild>
+            <Link to="/operations/inventory">Inventory Management</Link>
+          </Button>
+        ) : null}
+      </div>
 
       {handoffs.length > 0 && (
         <Card>
@@ -627,28 +681,44 @@ export default function PosPage() {
         )}
       </div>
 
-      {canManageCatalog ? (
-        <Tabs value={shellTab} onValueChange={setShellTab}>
-          <TabsList className="flex h-auto flex-wrap gap-1">
-            <TabsTrigger value="checkout">Checkout</TabsTrigger>
-            <TabsTrigger value="services">Manage services</TabsTrigger>
-            <TabsTrigger value="merch">Manage merch</TabsTrigger>
-          </TabsList>
+      {checkoutBody}
 
-          <TabsContent value="services" className="mt-6">
-            <ServicesManagePage embedded />
-          </TabsContent>
-          <TabsContent value="merch" className="mt-6">
-            <ProductsManagePage embedded />
-          </TabsContent>
-
-          <TabsContent value="checkout" className="mt-0">
-            {checkoutBody}
-          </TabsContent>
-        </Tabs>
-      ) : (
-        checkoutBody
-      )}
+      <Sheet open={dailyReportOpen} onOpenChange={setDailyReportOpen}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Daily sales report · {branchLabel}</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              Auto-filled from today’s paid sales. Payment modes: Cash, GCash, Credit Cards.
+            </p>
+            <div className="rounded-xl border border-border p-3">
+              <p className="font-semibold">Payment totals</p>
+              <p className="mt-1">All sales · {formatMoney(todayStats?.total_sales_minor || 0)}</p>
+              <p>Cash · {formatMoney(todayStats?.cash_sales_minor || 0)}</p>
+              <p>GCash · {formatMoney(todayStats?.gcash_sales_minor || 0)}</p>
+              <p>Credit Cards · {formatMoney(todayStats?.card_sales_minor || 0)}</p>
+              <p className="mt-2 text-xs text-muted-foreground">Paid count · {todayStats?.paid_count ?? 0}</p>
+            </div>
+            <div className="rounded-xl border border-border p-3">
+              <p className="font-semibold">By job type</p>
+              <p>Car wash · {formatMoney(categoryTotals.car_wash)}</p>
+              <p>Ceramic coating · {formatMoney(categoryTotals.ceramic_coating)}</p>
+              <p>Nano ceramic tint · {formatMoney(categoryTotals.nano_tint)}</p>
+              <p>PPF · {formatMoney(categoryTotals.ppf)}</p>
+              <p>Sellables · {formatMoney(categoryTotals.sellables)}</p>
+            </div>
+            <p className="text-muted-foreground">
+              Dictate expenses in Finance — they go directly into the finance cashflow.
+            </p>
+            <Button type="button" className="min-h-11 w-full" asChild>
+              <Link to="/operations/finance?tab=expenses" onClick={() => setDailyReportOpen(false)}>
+                Open Finance · expenses
+              </Link>
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
         <SheetContent className="pos-checkout-sheet flex w-full flex-col gap-0 border-l-0 p-0 sm:max-w-md">

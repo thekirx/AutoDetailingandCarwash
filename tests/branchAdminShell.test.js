@@ -32,13 +32,13 @@ describe('Branch Admin simplified shell', () => {
     assert.ok(getOperationsNav(p).some((i) => i.label === 'Queue View'))
   })
 
-  it('dock is Queue View, Queue, POS (POS primary)', () => {
+  it('dock is Floor, Wash, Detail, POS (POS primary)', () => {
     const dock = getBranchAdminDock(p)
     assert.deepEqual(
       dock.map((i) => i.to),
-      ['/operations/dashboard', '/operations/queue', '/operations/pos'],
+      ['/operations/dashboard', '/operations/queue', '/operations/queue?family=detailing', '/operations/pos'],
     )
-    assert.equal(dock[0].label, 'Queue View')
+    assert.equal(dock[0].label, 'Floor')
     assert.equal(dock.find((i) => i.to === '/operations/pos')?.primary, true)
     assert.equal(getBranchAdminDock({ role: ROLES.TEAM_LEAD }).length, 0)
   })

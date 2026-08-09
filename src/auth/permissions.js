@@ -146,6 +146,11 @@ export function canManageServices(profile) {
   return false
 }
 
+/** Inventory Management area (services + merch) — same gate as catalog CRUD. */
+export function canAccessInventory(profile) {
+  return canManageServices(profile)
+}
+
 export function canManageCrew(profile) {
   return isAdmin(profile) || has(profile, [ROLES.TEAM_LEAD])
 }
@@ -184,6 +189,11 @@ export function canAccessAudit(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+/** Settings hub (branches / people / audit / permissions). */
+export function canAccessSettings(profile) {
+  return canManageBranches(profile) || canManagePeople(profile) || canAccessAudit(profile) || canAccessConsole(profile)
+}
+
 /** Super Admin only — master make/model catalog for TL picker */
 export function canManageVehicleCatalog(profile) {
   return isSuperAdmin(profile)
@@ -210,11 +220,12 @@ export function canAccessConsole(profile) {
 }
 
 export function canEditBookings(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD, ROLES.SALES])
+  // Bookings service/price edits: Sales + Super Admin only (client rule).
+  return isSuperAdmin(profile) || profile?.role === ROLES.SALES
 }
 
 export function canCreateBookings(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD, ROLES.SALES])
+  return isSuperAdmin(profile) || profile?.role === ROLES.SALES
 }
 
 export function canAccessCrm(profile) {
@@ -226,7 +237,15 @@ export function canAccessMarketing(profile) {
   return canAccessCrm(profile)
 }
 
+/** Bookings view: Sales, Super Admin/ASA, Marketing (readonly). TL/Admin use Queue status board. */
 export function canAccessBookingBoard(profile) {
+  if (profile?.role === ROLES.MARKETING) return true
+  if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile)) return true
+  return profile?.role === ROLES.SALES
+}
+
+/** Advance detailing board status without editing services (TL / Branch Admin / SA). */
+export function canAdvanceBookingStatus(profile) {
   return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD, ROLES.SALES])
 }
 
@@ -236,14 +255,14 @@ export function isSalesRole(profile) {
 }
 
 export function isFormBookingsOnlyRole(profile) {
-  return profile?.role === ROLES.TEAM_LEAD || profile?.role === ROLES.SALES
+  return profile?.role === ROLES.SALES
 }
 
-/** Sales may confirm/cancel form bookings; only TL/Admin check the car into waiting. */
+/** Sales may confirm/cancel form bookings; floor intake is Queue (TL/Admin). */
 export function canCheckInFormBooking(profile) {
   if (!profile) return false
-  if (profile.role === ROLES.SALES) return false
-  return canEditBookings(profile)
+  if (profile.role === ROLES.SALES || profile.role === ROLES.MARKETING) return false
+  return canAdvanceBookingStatus(profile)
 }
 
 export function canViewPlanning(profile) {
@@ -308,7 +327,10 @@ export function isBranchAdmin(profile) {
 /** Nav items for the shared ops shell — filtered by role + grants. */
 export function getOperationsNav(profile) {
   if (profile?.role === ROLES.MARKETING) {
-    return [{ label: 'CRM', to: '/operations/crm', icon: 'Contact' }]
+    return [
+      { label: 'CRM', to: '/operations/crm', icon: 'Contact' },
+      { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' },
+    ]
   }
 
   if (profile?.role === ROLES.SALES) {
@@ -329,8 +351,11 @@ export function getOperationsNav(profile) {
   if (canAccessConsole(profile)) {
     items.push({ label: 'Console', to: '/operations/console', icon: 'LayoutDashboard' })
   }
+  if (canAccessSettings(profile)) {
+    items.push({ label: 'Settings', to: '/operations/settings', icon: 'Settings' })
+  }
   if (canViewPlanning(profile)) {
-    items.push({ label: 'Planning', to: '/operations/planning', icon: 'Columns3' })
+    items.push({ label: 'Hakum Planner', to: '/operations/planning', icon: 'Columns3' })
   }
   if (canManagePeople(profile)) {
     items.push({ label: 'People', to: '/operations/people', icon: 'UserPlus' })
@@ -351,16 +376,18 @@ export function getOperationsNav(profile) {
   if (canViewQueueOperations(profile)) {
     items.push(
       {
-        label:
-          profile?.role === ROLES.TEAM_LEAD || isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
-            ? 'Floor'
-            : isAdmin(profile)
-              ? 'Queue View'
+        label: isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
+          ? 'Floor Board'
+          : isAdmin(profile)
+            ? 'Queue View'
+            : profile?.role === ROLES.TEAM_LEAD
+              ? 'Floor'
               : 'Dashboard',
         to: '/operations/dashboard',
         icon: 'Gauge',
       },
-      { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
+      { label: 'Car Wash Queue', to: '/operations/queue', icon: 'ClipboardList' },
+      { label: 'Detailing Queue', to: '/operations/queue?family=detailing', icon: 'Layers' },
       { label: 'Crew', to: '/operations/crew', icon: 'Users' },
       { label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' },
     )
@@ -370,6 +397,9 @@ export function getOperationsNav(profile) {
   }
   if (canAccessPos(profile)) {
     items.push({ label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' })
+  }
+  if (canAccessInventory(profile)) {
+    items.push({ label: 'Inventory', to: '/operations/inventory', icon: 'Package' })
   }
   if (canAccessFinance(profile)) {
     items.push({ label: 'Finance', to: '/operations/finance', icon: 'Wallet' })
@@ -394,13 +424,12 @@ export function getOperationsNav(profile) {
 export function getTeamLeadDock(profile) {
   const canQueue = canViewQueueOperations(profile)
   const canEdit = canEditQueueOperations(profile)
-  const canBook = canAccessBookingBoard(profile)
   const dock = []
-  if (canQueue) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
-  if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
+  if (canQueue) dock.push({ label: 'Wash', to: '/operations/queue', icon: 'ClipboardList', end: true })
+  if (canQueue) dock.push({ label: 'Detail', to: '/operations/queue?family=detailing', icon: 'Layers' })
   if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
+  if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
   if (canQueue) dock.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
-  if (canBook) dock.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
   return dock.slice(0, 5)
 }
 
@@ -415,8 +444,9 @@ export function getTeamLeadMore(profile) {
 export function getBranchAdminDock(profile) {
   if (!isBranchAdmin(profile)) return []
   const dock = []
-  if (canViewQueueOperations(profile)) dock.push({ label: 'Queue View', to: '/operations/dashboard', icon: 'Gauge' })
-  if (canViewQueueOperations(profile)) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
+  if (canViewQueueOperations(profile)) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
+  if (canViewQueueOperations(profile)) dock.push({ label: 'Wash', to: '/operations/queue', icon: 'ClipboardList', end: true })
+  if (canViewQueueOperations(profile)) dock.push({ label: 'Detail', to: '/operations/queue?family=detailing', icon: 'Layers' })
   if (canAccessPos(profile)) dock.push({ label: 'POS', to: '/operations/pos', icon: 'ShoppingCart', primary: true })
   return dock
 }
@@ -467,11 +497,13 @@ export function allowRoute(profile, key) {
     kpi: canViewQueueOperations,
     'my-tasks': canViewAssignedTasks,
     pos: canAccessPos,
+    inventory: canAccessInventory,
     finance: canAccessFinance,
     crm: canAccessCrm,
     bookings: canAccessBookingBoard,
     reports: canAccessReports,
     memberships: canAccessMemberships,
+    settings: canAccessSettings,
   }
   const fn = map[key]
   return fn ? fn(profile) : false

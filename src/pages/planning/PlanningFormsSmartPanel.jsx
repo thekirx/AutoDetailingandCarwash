@@ -328,7 +328,14 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
           description: formatFormPayloadDescription(payload),
           due_at: calendarAt,
           position: Date.now() % 1_000_000,
-          labels: activeForm.kind === 'complaint' ? [{ name: 'Ops', color: '#38bdf8' }] : [],
+          labels:
+            activeForm.kind === 'complaint'
+              ? [{ name: 'Complaint', color: '#38bdf8' }]
+              : activeForm.kind === 'equipment_repair'
+                ? [{ name: 'Equipment', color: '#f59e0b' }]
+                : activeForm.kind === 'cash_advance'
+                  ? [{ name: 'Cash advance', color: '#22c55e' }]
+                  : [],
         })
         .select('id')
         .single()

@@ -15,7 +15,7 @@ const assistant = { role: ROLES.ASSISTANT_SUPER_ADMIN, permission_grants: {} }
 
 assert.equal(canAccessCrm(marketing), true)
 assert.equal(canAccessPos(marketing), false)
-assert.equal(canAccessBookingBoard(marketing), false)
+assert.equal(canAccessBookingBoard(marketing), true)
 assert.equal(canAccessPos(admin), true)
 assert.equal(canAccessReports(admin), false)
 assert.equal(canAccessReports(assistant), true)
@@ -23,7 +23,7 @@ assert.equal(canAccessReports(assistant), true)
 const mNav = getOperationsNav(marketing)
 assert.deepEqual(
   mNav.map((i) => i.to),
-  ['/operations/crm'],
+  ['/operations/crm', '/operations/bookings'],
 )
 
 assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')

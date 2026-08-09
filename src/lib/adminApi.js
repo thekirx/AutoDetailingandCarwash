@@ -774,10 +774,20 @@ function stockGroupFromName(name) {
     .replace(/\s+/g, ' ')
 }
 
+function normalizeProductTags(raw) {
+  if (Array.isArray(raw)) {
+    return [...new Set(raw.map((t) => String(t || '').trim().toLowerCase()).filter(Boolean))]
+  }
+  return String(raw || '')
+    .split(/[,\s]+/)
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean)
+}
+
 export async function listProducts({ includeArchived = false } = {}) {
   let q = supabase
     .from('products')
-    .select('id, name, sku, category, price_minor, stock_qty, stock_group, branch_slug, is_active, is_archived, updated_at')
+    .select('id, name, sku, category, price_minor, stock_qty, stock_group, branch_slug, tags, is_active, is_archived, updated_at')
     .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
@@ -790,6 +800,7 @@ export async function createProduct(payload) {
   if (!name) throw new Error('Product name is required.')
   const price = Number(payload.price)
   if (!Number.isFinite(price) || price < 0) throw new Error('Price must be a valid number.')
+  const tags = normalizeProductTags(payload.tags)
   const row = {
     name,
     sku: String(payload.sku || '').trim() || null,
@@ -798,6 +809,7 @@ export async function createProduct(payload) {
     stock_qty: Math.max(0, Number(payload.stock_qty) || 0),
     stock_group: stockGroupFromName(payload.stock_group || name),
     branch_slug: payload.branch_slug || null,
+    tags: tags.length ? tags : ['sellable', 'merch'],
     is_active: payload.is_active !== false,
     is_archived: false,
   }
@@ -827,6 +839,7 @@ export async function updateProduct(id, payload) {
     stock_qty: Math.max(0, Number(payload.stock_qty) || 0),
     stock_group: stockGroupFromName(payload.stock_group || name),
     branch_slug: payload.branch_slug || null,
+    tags: normalizeProductTags(payload.tags),
     is_active: payload.is_active !== false,
     updated_at: new Date().toISOString(),
   }

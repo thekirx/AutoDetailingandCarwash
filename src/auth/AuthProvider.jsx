@@ -95,20 +95,23 @@ export function AuthProvider({ children }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return
-      setSession(nextSession)
 
       if (!shouldReloadProfile(event)) {
+        setSession(nextSession)
         if (event === 'SIGNED_OUT' || !nextSession?.user) setProfile(null)
         return
       }
 
       if (event === 'SIGNED_OUT') {
+        setSession(null)
         setProfile(null)
         setLoading(false)
         return
       }
 
+      // Mark loading before session so ProtectedRoute never sees user+!profile+!loading.
       setLoading(true)
+      setSession(nextSession)
       queueMicrotask(() => {
         loadProfile(nextSession?.user)
           .catch((err) => {
@@ -173,8 +176,12 @@ export function AuthProvider({ children }) {
   }, [session?.user?.id, session?.user, loadProfile])
 
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut({ scope: 'local' })
-    if (error) throw error
+    // Global clears refresh token server-side so other tabs/devices drop the session.
+    const { error } = await supabase.auth.signOut({ scope: 'global' })
+    if (error) {
+      const local = await supabase.auth.signOut({ scope: 'local' })
+      if (local.error) throw local.error
+    }
     setSession(null)
     setProfile(null)
   }, [])

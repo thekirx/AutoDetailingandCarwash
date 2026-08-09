@@ -25,7 +25,7 @@ describe('payment methods + SA financials', () => {
       PAYMENT_METHODS.map((m) => m.value),
       ['cash', 'gcash', 'card'],
     )
-    assert.equal(paymentMethodLabel('card'), 'Credit / Debit')
+    assert.equal(paymentMethodLabel('card'), 'Credit Cards')
     assert.equal(normalizePaymentMethod('online'), 'card')
     assert.equal(normalizePaymentMethod('gcash'), 'gcash')
   })
@@ -112,7 +112,7 @@ describe('Super Admin floor wiring', () => {
     assert.match(api, /export async function fetchSuperAdminFloorBoard/)
     assert.match(pos, /PAYMENT_METHODS/)
     const payLib = readFileSync(join(root, 'src/lib/paymentMethods.js'), 'utf8')
-    assert.match(payLib, /Credit \/ Debit/)
+    assert.match(payLib, /Credit Cards/)
     assert.ok(!/Online transfer/.test(pos))
   })
 })

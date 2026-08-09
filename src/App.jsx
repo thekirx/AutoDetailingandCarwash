@@ -31,10 +31,13 @@ const CarsCatalogPage = lazy(() => import('./pages/CarsCatalogPage'))
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'))
 const DataCenterPage = lazy(() => import('./pages/DataCenterPage'))
 const PosPage = lazy(() => import('./pages/PosPage'))
+const InventoryPage = lazy(() => import('./pages/InventoryPage'))
 const FinancePage = lazy(() => import('./pages/FinancePage'))
 const CrmPage = lazy(() => import('./pages/CrmPage'))
 const BookingBoardPage = lazy(() => import('./pages/BookingBoardPage'))
 const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
+const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
+const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
 const KpiPage = lazy(() => import('./pages/KpiPage'))
@@ -82,9 +85,6 @@ const CrewPage = lazy(() =>
 )
 const MyTasksPage = lazy(() =>
   import('./pages/OperationsPages').then((m) => ({ default: m.MyTasksPage })),
-)
-const AccessDeniedPage = lazy(() =>
-  import('./pages/OperationsPages').then((m) => ({ default: m.AccessDeniedPage })),
 )
 
 const opsRoles = OPS_LOGIN_ROLES
@@ -167,13 +167,15 @@ export default function App() {
             <Route path="kpi" element={gate('kpi', <KpiPage />)} />
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />
             <Route path="pos" element={gate('pos', <PosPage />)} />
+            <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
-            <Route path="services" element={gate('pos', <Navigate to="/operations/pos?tab=services" replace />)} />
-            <Route path="products" element={gate('pos', <Navigate to="/operations/pos?tab=merch" replace />)} />
+            <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory?tab=services" replace />)} />
+            <Route path="products" element={gate('inventory', <Navigate to="/operations/inventory?tab=merch" replace />)} />
             <Route path="sms" element={gate('crm', <Navigate to="/operations/crm?tab=sms" replace />)} />
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />
             <Route path="planning" element={gate('planning', <PlanningBoardPage />)} />
+            <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
             <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
           </Route>

@@ -17,6 +17,12 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { serviceKindFromPayCategory } from '../lib/serviceKinds'
+import {
+  filterTicketsByFamily,
+  parseQueueFamilyParam,
+  QUEUE_FAMILIES,
+  QUEUE_FAMILY_DETAILING,
+} from '../lib/queueFamilies'
 import { createCoalescedReload } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { supabase } from '../lib/supabase'
@@ -37,13 +43,18 @@ import {
 import { fetchTeamLeadDayBoard, formatMoney } from '../queue/queueApi'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 
-const STATUS_FILTERS = [
+const BASE_STATUS_FILTERS = [
   { key: 'waiting', label: 'Waiting' },
   { key: 'in_progress', label: 'In Progress' },
   { key: 'final_checking', label: 'Final Check' },
   { key: 'completed', label: 'Completed' },
   { key: 'cancelled', label: 'Cancelled' },
   { key: 'all', label: 'All' },
+]
+
+const DETAIL_STATUS_FILTERS = [
+  { key: 'confirmed', label: 'Assigned' },
+  ...BASE_STATUS_FILTERS,
 ]
 
 function minutesBetween(startIso, endIso) {
@@ -203,8 +214,10 @@ function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage }) {
 export default function TeamLeadQueuePage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
+  const queueFamily = parseQueueFamilyParam(searchParams.get('family'))
+  const familyMeta = QUEUE_FAMILIES.find((f) => f.id === queueFamily) || QUEUE_FAMILIES[0]
   const branch = getBranchScope(profile) || 'all'
-  const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
+  const boardStatuses = useMemo(() => getOpsBoardStatuses(profile, { family: queueFamily }), [profile, queueFamily])
 
   const [activeQueue, setActiveQueue] = useState([])
   const [dayTickets, setDayTickets] = useState([])
@@ -212,7 +225,7 @@ export default function TeamLeadQueuePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('waiting')
+  const [statusFilter, setStatusFilter] = useState(queueFamily === QUEUE_FAMILY_DETAILING ? 'confirmed' : 'waiting')
   const [datePreset, setDatePreset] = useState('today')
   const [durationFilter, setDurationFilter] = useState('all')
   const [historyPlate, setHistoryPlate] = useState('')
@@ -225,29 +238,33 @@ export default function TeamLeadQueuePage() {
   const today = getLocalCalendarDate()
 
   useEffect(() => {
+    setStatusFilter(queueFamily === QUEUE_FAMILY_DETAILING ? 'confirmed' : 'waiting')
+  }, [queueFamily])
+
+  useEffect(() => {
     const openId = searchParams.get('open')
     if (!openId || !canManageQueue) return
     setEditBookingId(openId)
     setExpandedId(openId)
-    setStatusFilter('waiting')
+    setStatusFilter(queueFamily === QUEUE_FAMILY_DETAILING ? 'confirmed' : 'waiting')
     const next = new URLSearchParams(searchParams)
     next.delete('open')
     setSearchParams(next, { replace: true })
-  }, [searchParams, setSearchParams, canManageQueue])
+  }, [searchParams, setSearchParams, canManageQueue, queueFamily])
 
   const load = useCallback(async () => {
     setError('')
     try {
-      const data = await fetchTeamLeadDayBoard(profile, { branchFilter: branch, day: today })
-      setActiveQueue(data.activeQueue || [])
-      setDayTickets(data.dayTickets || [])
+      const data = await fetchTeamLeadDayBoard(profile, { branchFilter: branch, day: today, family: queueFamily })
+      setActiveQueue(filterTicketsByFamily(data.activeQueue || [], queueFamily))
+      setDayTickets(filterTicketsByFamily(data.dayTickets || [], queueFamily))
       setCompletedTotalMinor(data.completedTotalMinor || 0)
     } catch (err) {
       setError(err.message || 'Unable to load queue')
     } finally {
       setLoading(false)
     }
-  }, [profile, branch, today])
+  }, [profile, branch, today, queueFamily])
 
   const loadRef = useRef(load)
   loadRef.current = load
@@ -275,8 +292,11 @@ export default function TeamLeadQueuePage() {
   const boardTickets = useMemo(() => groupVisitTickets(activeQueue), [activeQueue])
   const dayGrouped = useMemo(() => groupVisitTickets(dayTickets), [dayTickets])
 
+  const statusFilters = queueFamily === QUEUE_FAMILY_DETAILING ? DETAIL_STATUS_FILTERS : BASE_STATUS_FILTERS
+
   const counts = useMemo(() => {
     const out = {
+      confirmed: 0,
       waiting: 0,
       in_progress: 0,
       final_checking: 0,
@@ -291,7 +311,8 @@ export default function TeamLeadQueuePage() {
       if (t.status === 'completed') out.completed += 1
       if (t.status === 'cancelled') out.cancelled += 1
     }
-    out.all = out.waiting + out.in_progress + out.final_checking + out.completed + out.cancelled
+    out.all =
+      out.confirmed + out.waiting + out.in_progress + out.final_checking + out.completed + out.cancelled
     return out
   }, [boardTickets, dayGrouped])
 
@@ -378,10 +399,30 @@ export default function TeamLeadQueuePage() {
     <section className="qmgr">
       <header className="qmgr-toolbar">
         <div className="qmgr-toolbar-text">
-          <h1 className="qmgr-title">Queue</h1>
+          <h1 className="qmgr-title">{familyMeta.label}</h1>
           <p className="qmgr-sub">
-            {QUEUE_DATE_PRESETS.find((p) => p.key === datePreset)?.label || 'Today'} · cars + detailing
+            {QUEUE_DATE_PRESETS.find((p) => p.key === datePreset)?.label || 'Today'}
+            {queueFamily === QUEUE_FAMILY_DETAILING ? ' · Bookings → Assigned to Branch' : ' · same-day wash'}
           </p>
+          <div className="mt-2 flex gap-1">
+            {QUEUE_FAMILIES.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
+                  queueFamily === f.id ? 'bg-primary text-primary-foreground' : 'border border-border'
+                }`}
+                onClick={() => {
+                  const next = new URLSearchParams(searchParams)
+                  if (f.id === QUEUE_FAMILY_DETAILING) next.set('family', 'detailing')
+                  else next.delete('family')
+                  setSearchParams(next, { replace: true })
+                }}
+              >
+                {f.shortLabel}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="qmgr-toolbar-actions">
           <button
@@ -493,7 +534,7 @@ export default function TeamLeadQueuePage() {
       </details>
 
       <div className="qmgr-status-grid" role="toolbar" aria-label="Filter by status">
-        {STATUS_FILTERS.map((item) => {
+        {statusFilters.map((item) => {
           const active = statusFilter === item.key
           const n = counts[item.key] ?? 0
           const showTotal = item.key === 'completed' && completedTotalMinor > 0

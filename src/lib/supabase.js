@@ -12,7 +12,8 @@ export const supabase = createClient(config.url, config.key, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    // Standard SPA auth flow; keep default storageKey so existing sessions are not wiped
+    // Explicit localStorage (not memory) so reloads keep the ops session.
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     flowType: 'pkce',
   },
 })

@@ -71,12 +71,12 @@ describe('TL ops contract — cancel, payment gate, form bookings', () => {
     )
   })
 
-  it('TL booking board is form-only; waiting means on-site queue', () => {
+  it('TL booking board helper stays form-only; Bookings route is Sales/Marketing', () => {
     assert.deepEqual(FORM_BOOKING_STATUSES, ['pending', 'confirmed'])
     assert.equal(isFormBookingStatus('pending'), true)
     assert.equal(isFormBookingStatus('waiting'), false)
     assert.deepEqual(getBookingBoardStatuses({ role: 'team_lead' }), ['pending', 'confirmed'])
-    assert.ok(getBookingBoardStatuses({ role: 'admin' }).includes('waiting'))
+    assert.ok(getBookingBoardStatuses({ role: 'BossMich' }).includes('waiting'))
     assert.equal(getBookingPrimaryNextStatus('confirmed', { canSeePayment: false }), 'waiting')
     assert.equal(getBookingPrimaryNextStatus('final_checking', { canSeePayment: false }), null)
     assert.match(bookingBoard, /getBookingBoardStatuses|FORM_BOOKING_STATUSES|isTeamLead/)

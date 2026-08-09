@@ -5,8 +5,8 @@ import LoadingScreen from '@/components/LoadingScreen'
 
 /** Gates an ops page by allowRoute key (permissions matrix). */
 export default function OpsRoleGate({ routeKey, children }) {
-  const { profile, loading } = useAuth()
-  if (loading) return <LoadingScreen />
+  const { user, profile, loading } = useAuth()
+  if (loading || (user && !profile)) return <LoadingScreen />
   if (!allowRoute(profile, routeKey)) {
     return <Navigate to="/operations/access-denied" replace />
   }

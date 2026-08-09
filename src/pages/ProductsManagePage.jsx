@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 
-const empty = { name: '', sku: '', category: 'merch', price: '', stock_qty: '0', branch_slug: '' }
+const empty = { name: '', sku: '', category: 'merch', price: '', stock_qty: '0', branch_slug: '', tags: 'sellable,merch' }
 
 export default function ProductsManagePage({ embedded = false }) {
   const { profile } = useAuth()
@@ -91,6 +91,7 @@ export default function ProductsManagePage({ embedded = false }) {
         price: Number(row.price_minor) / 100,
         stock_qty: row.stock_qty,
         branch_slug: row.branch_slug,
+        tags: row.tags || [],
         is_active: !row.is_active,
       })
       toast.success(row.is_active ? 'Item deactivated' : 'Item activated')
@@ -159,6 +160,17 @@ export default function ProductsManagePage({ embedded = false }) {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex flex-col gap-2">
+                <Label>Sellable tags</Label>
+                <Input
+                  value={form.tags}
+                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                  placeholder="sellable, merch, coffee, scents"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Branch Admin POS only sells tagged items (sellable, coffee, accessories, scents…).
+                </p>
+              </div>
               <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save item'}</Button>
             </form>
           </CardContent>
@@ -175,6 +187,7 @@ export default function ProductsManagePage({ embedded = false }) {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>SKU</TableHead>
+                  <TableHead>Tags</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>Status</TableHead>
@@ -186,6 +199,9 @@ export default function ProductsManagePage({ embedded = false }) {
                   <TableRow key={row.id}>
                     <TableCell className="font-medium">{row.name}</TableCell>
                     <TableCell className="text-muted-foreground">{row.sku || '—'}</TableCell>
+                    <TableCell className="max-w-[10rem] truncate text-xs text-muted-foreground">
+                      {(row.tags || []).join(', ') || '—'}
+                    </TableCell>
                     <TableCell className="tabular-nums">{formatMoney(row.price_minor)}</TableCell>
                     <TableCell className="tabular-nums">{row.stock_qty}</TableCell>
                     <TableCell><Badge variant={row.is_active ? 'secondary' : 'outline'}>{row.is_active ? 'Active' : 'Off'}</Badge></TableCell>
@@ -198,6 +214,7 @@ export default function ProductsManagePage({ embedded = false }) {
                         price: String(Number(row.price_minor) / 100),
                         stock_qty: String(row.stock_qty ?? 0),
                         branch_slug: row.branch_slug || '',
+                        tags: Array.isArray(row.tags) ? row.tags.join(',') : '',
                         is_active: row.is_active,
                       })}>Edit</Button>
                       <Button size="sm" variant="ghost" onClick={() => toggleActive(row)}>{row.is_active ? 'Deactivate' : 'Activate'}</Button>
@@ -206,7 +223,7 @@ export default function ProductsManagePage({ embedded = false }) {
                   </TableRow>
                 ))}
                 {!products.length && (
-                  <TableRow><TableCell colSpan={6} className="text-muted-foreground">No merch items yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-muted-foreground">No merch items yet.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -227,6 +244,14 @@ export default function ProductsManagePage({ embedded = false }) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-2"><Label>Price (₱)</Label><Input required type="number" min="0" step="0.01" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} /></div>
                 <div className="flex flex-col gap-2"><Label>Stock</Label><Input required type="number" min="0" value={editing.stock_qty} onChange={(e) => setEditing({ ...editing, stock_qty: e.target.value })} /></div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Sellable tags</Label>
+                <Input
+                  value={editing.tags || ''}
+                  onChange={(e) => setEditing({ ...editing, tags: e.target.value })}
+                  placeholder="sellable, merch, coffee"
+                />
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>

@@ -2,6 +2,8 @@
 
 export const FORM_KINDS = [
   { value: 'complaint', label: 'Complaint' },
+  { value: 'equipment_repair', label: 'Equipment repair' },
+  { value: 'cash_advance', label: 'Employee cash advance' },
   { value: 'event', label: 'Event / RSVP' },
   { value: 'booking', label: 'Booking request' },
   { value: 'survey', label: 'Survey' },
@@ -89,6 +91,24 @@ export function templateFields(kind) {
       { key: 'branch', label: 'Branch', type: 'select', required: true, options: ['bacoor', 'batangas'] },
       { key: 'category', label: 'Category', type: 'select', required: true, options: ['Service quality', 'Wait time', 'Damage', 'Staff', 'Other'] },
       { key: 'description', label: 'Description', type: 'textarea', required: true },
+    ])
+  }
+  if (kind === 'equipment_repair') {
+    return normalizeFields([
+      { key: 'reporter', label: 'Reported by', type: 'text', required: true },
+      { key: 'branch', label: 'Branch', type: 'select', required: true, options: ['bacoor', 'batangas'] },
+      { key: 'equipment', label: 'Equipment', type: 'text', required: true },
+      { key: 'urgency', label: 'Urgency', type: 'select', required: true, options: ['Low', 'Medium', 'High', 'Critical'] },
+      { key: 'description', label: 'Issue description', type: 'textarea', required: true },
+    ])
+  }
+  if (kind === 'cash_advance') {
+    return normalizeFields([
+      { key: 'employee_name', label: 'Employee name', type: 'text', required: true },
+      { key: 'branch', label: 'Branch', type: 'select', required: true, options: ['bacoor', 'batangas'] },
+      { key: 'amount', label: 'Amount (₱)', type: 'number', required: true },
+      { key: 'needed_by', label: 'Needed by', type: 'date', required: true },
+      { key: 'reason', label: 'Reason', type: 'textarea', required: true },
     ])
   }
   if (kind === 'event') {

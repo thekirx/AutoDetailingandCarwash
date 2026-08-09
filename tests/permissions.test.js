@@ -97,14 +97,14 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
   })
 
-  it('marketing CRM only', () => {
+  it('marketing CRM + readonly Bookings', () => {
     const p = { role: ROLES.MARKETING }
     assert.equal(canAccessCrm(p), true)
     assert.equal(canAccessFinance(p), false)
     assert.equal(canAccessPos(p), false)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/crm'],
+      ['/operations/crm', '/operations/bookings'],
     )
   })
 
@@ -120,7 +120,8 @@ describe('RBAC Part 1 matrix', () => {
     const dock = getTeamLeadDock({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' })
     assert.ok(dock.some((i) => i.to === '/operations/queue'))
     assert.ok(dock.some((i) => i.to === '/operations/queue/new'))
-    assert.ok(dock.some((i) => i.to === '/operations/bookings'))
+    assert.ok(dock.some((i) => i.to === '/operations/crew'))
+    assert.equal(dock.some((i) => i.to === '/operations/bookings'), false)
     assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 0)
   })
 })

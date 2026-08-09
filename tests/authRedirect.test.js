@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { safeAuthReturnPath } from '../src/auth/authRedirect.js'
+import {
+  opsRouteKeyFromPath,
+  resolvePostLoginPath,
+  safeAuthReturnPath,
+} from '../src/auth/authRedirect.js'
+import { ROLES } from '../src/auth/permissions.js'
 
 describe('safeAuthReturnPath', () => {
   it('blocks access-denied and auth pages so Back to login cannot bounce into a session loop', () => {
@@ -10,5 +15,26 @@ describe('safeAuthReturnPath', () => {
     assert.equal(safeAuthReturnPath('/operations/queue'), '/operations/queue')
     assert.equal(safeAuthReturnPath('/operations/dashboard?x=1'), '/operations/dashboard')
     assert.equal(safeAuthReturnPath(undefined, { fallback: '/operations/console' }), '/operations/console')
+  })
+})
+
+describe('resolvePostLoginPath', () => {
+  it('maps ops paths to allowRoute keys', () => {
+    assert.equal(opsRouteKeyFromPath('/operations/queue'), 'queue')
+    assert.equal(opsRouteKeyFromPath('/operations/queue/new'), 'queue-new')
+    assert.equal(opsRouteKeyFromPath('/operations/queue/abc'), 'queue')
+    assert.equal(opsRouteKeyFromPath('/operations/settings'), 'settings')
+    assert.equal(opsRouteKeyFromPath('/operations/access-denied'), null)
+  })
+
+  it('ignores deep-links the role cannot open (avoids login → access-denied)', () => {
+    const sales = { role: ROLES.SALES, branch_slug: 'bacoor' }
+    assert.equal(resolvePostLoginPath(sales, '/operations/console'), '/operations/bookings')
+    assert.equal(resolvePostLoginPath(sales, '/operations/bookings'), '/operations/bookings')
+    assert.equal(resolvePostLoginPath(sales, '/operations/access-denied'), '/operations/bookings')
+  })
+
+  it('sends Super Admin to console home when no return path', () => {
+    assert.equal(resolvePostLoginPath({ role: ROLES.SUPER_ADMIN }, null), '/operations/console')
   })
 })

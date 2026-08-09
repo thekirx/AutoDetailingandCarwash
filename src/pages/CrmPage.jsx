@@ -2,10 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { Car, Contact, MessageSquare, Pencil, Plus, Search, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessCrm, canViewQueueOperations, getBranchScopeList, isAdmin } from '@/auth/permissions'
+import { canAccessCrm, canWriteFinance, canViewQueueOperations, getBranchScopeList, isAdmin } from '@/auth/permissions'
 import { listBranches, listMembershipTiers } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope } from '@/lib/crmInsights'
+import {
+  CRM_SMART_GROUP_PRESETS,
+  deleteSavedSmartGroup,
+  filterCustomersBySmartGroup,
+  loadSavedSmartGroups,
+  saveSmartGroup,
+} from '@/lib/crmSmartGroups'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
@@ -22,7 +29,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 
-const CRM_TABS = ['directory', 'insights', 'sms']
+const CRM_TABS = ['directory', 'groups', 'insights', 'sms']
 const emptyForm = { first_name: '', last_name: '', phone: '', email: '', plate: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan' }
 const emptyVehicle = { plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan', color: '' }
 
@@ -64,6 +71,12 @@ export default function CrmPage() {
   const [messageForm, setMessageForm] = useState({ title: '', body: '', sendSms: true })
   const [saving, setSaving] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const [visitRows, setVisitRows] = useState([])
+  const [activeGroupId, setActiveGroupId] = useState('visited_30d')
+  const [savedGroups, setSavedGroups] = useState([])
+  const [customGroupName, setCustomGroupName] = useState('')
+  const [expenseCats, setExpenseCats] = useState([])
+  const [newExpenseCat, setNewExpenseCat] = useState({ name: '', kind: 'general' })
 
   const loadCustomers = useCallback(async () => {
     const scope = getBranchScopeList(profile)
@@ -290,6 +303,42 @@ export default function CrmPage() {
     }
   }
 
+  useEffect(() => {
+    if (!canAccessCrm(profile)) return
+    setSavedGroups(loadSavedSmartGroups(profile?.id))
+    let q = supabase
+      .from('bookings')
+      .select('customer_id, created_at, scheduled_start, completed_at, branch')
+      .eq('is_archived', false)
+      .not('customer_id', 'is', null)
+      .limit(4000)
+    const scope = getBranchScopeList(profile)
+    if (Array.isArray(scope)) q = applyBranchScope(q, scope)
+    q.then(({ data, error }) => {
+      if (error) toast.error(error.message)
+      else setVisitRows(data || [])
+    })
+    if (canWriteFinance(profile)) {
+      supabase
+        .from('expense_categories')
+        .select('id, name, kind, is_active')
+        .order('name')
+        .then(({ data, error }) => {
+          if (!error) setExpenseCats(data || [])
+        })
+    }
+  }, [profile])
+
+  const activeGroup =
+    CRM_SMART_GROUP_PRESETS.find((g) => g.id === activeGroupId) ||
+    savedGroups.find((g) => g.id === activeGroupId) ||
+    CRM_SMART_GROUP_PRESETS[1]
+
+  const smartGroupCustomers = useMemo(
+    () => filterCustomersBySmartGroup(customers, visitRows, activeGroup),
+    [customers, visitRows, activeGroup],
+  )
+
   if (!canAccessCrm(profile)) return <Navigate to="/operations/access-denied" replace />
 
   const branchName = (slug) => branches.find((b) => b.slug === slug)?.name || slug
@@ -299,9 +348,9 @@ export default function CrmPage() {
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">CRM</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Marketing & directory</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Customer CRM</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Accounts come from Admin/POS. Insights show sales hours and peaks; SMS lives here.
+            Directory, smart visit groups, behavior insights, and SMS. Expense categories can be created here when you have Finance write access.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -321,9 +370,177 @@ export default function CrmPage() {
       <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'directory' ? {} : { tab: next }, { replace: true })}>
         <TabsList className="flex h-auto flex-wrap gap-1">
           <TabsTrigger value="directory">Directory</TabsTrigger>
+          <TabsTrigger value="groups">Smart groups</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
           <TabsTrigger value="sms">SMS</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="groups" className="mt-6 flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Smart groups</CardTitle>
+              <CardDescription>
+                Filter customers who visited Hakum in different timelines. Presets + your saved groups.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-2">
+                {CRM_SMART_GROUP_PRESETS.map((g) => (
+                  <Button
+                    key={g.id}
+                    type="button"
+                    size="sm"
+                    variant={activeGroupId === g.id ? 'default' : 'outline'}
+                    onClick={() => setActiveGroupId(g.id)}
+                  >
+                    {g.label}
+                  </Button>
+                ))}
+                {savedGroups.map((g) => (
+                  <Button
+                    key={g.id}
+                    type="button"
+                    size="sm"
+                    variant={activeGroupId === g.id ? 'default' : 'secondary'}
+                    onClick={() => setActiveGroupId(g.id)}
+                  >
+                    {g.name}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="flex min-w-[12rem] flex-1 flex-col gap-1">
+                  <Label>Save current filter as</Label>
+                  <Input
+                    value={customGroupName}
+                    onChange={(e) => setCustomGroupName(e.target.value)}
+                    placeholder="VIP 30-day visitors"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const preset = CRM_SMART_GROUP_PRESETS.find((g) => g.id === activeGroupId) || activeGroup
+                    const saved = saveSmartGroup(profile?.id, {
+                      name: customGroupName || preset.label || 'Custom group',
+                      mode: preset.mode,
+                      days: preset.days,
+                    })
+                    setSavedGroups(loadSavedSmartGroups(profile?.id))
+                    setActiveGroupId(saved.id)
+                    setCustomGroupName('')
+                    toast.success('Smart group saved')
+                  }}
+                >
+                  Save group
+                </Button>
+                {savedGroups.some((g) => g.id === activeGroupId) ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setSavedGroups(deleteSavedSmartGroup(profile?.id, activeGroupId))
+                      setActiveGroupId('visited_30d')
+                      toast.success('Group removed')
+                    }}
+                  >
+                    Delete saved
+                  </Button>
+                ) : null}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {smartGroupCustomers.length} customer(s) in “{activeGroup.label || activeGroup.name}”
+              </p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead className="text-right">Open</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {smartGroupCustomers.slice(0, 100).map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-medium">{row.full_name}</TableCell>
+                      <TableCell>{row.phone || '—'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => { setSearchParams({}, { replace: true }); openCustomer(row) }}>
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!smartGroupCustomers.length && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-muted-foreground">No customers in this group.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {canWriteFinance(profile) ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Expense categories</CardTitle>
+                <CardDescription>
+                  Categories used by Finance. Also editable under Finance → Categories.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <form
+                  className="flex flex-wrap items-end gap-2"
+                  onSubmit={async (e) => {
+                    e.preventDefault()
+                    const name = newExpenseCat.name.trim()
+                    if (!name) return toast.error('Name required')
+                    const { error } = await supabase.from('expense_categories').insert({
+                      name,
+                      kind: newExpenseCat.kind || 'general',
+                      is_active: true,
+                    })
+                    if (error) return toast.error(error.message)
+                    toast.success('Category created')
+                    setNewExpenseCat({ name: '', kind: 'general' })
+                    const { data } = await supabase.from('expense_categories').select('id, name, kind, is_active').order('name')
+                    setExpenseCats(data || [])
+                  }}
+                >
+                  <div className="flex flex-col gap-1">
+                    <Label>Name</Label>
+                    <Input value={newExpenseCat.name} onChange={(e) => setNewExpenseCat({ ...newExpenseCat, name: e.target.value })} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label>Kind</Label>
+                    <Select value={newExpenseCat.kind} onValueChange={(kind) => setNewExpenseCat({ ...newExpenseCat, kind })}>
+                      <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {['general', 'payroll', 'marketing', 'utilities', 'chemicals', 'equipment'].map((k) => (
+                          <SelectItem key={k} value={k}>{k}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button type="submit">Add category</Button>
+                  <Button type="button" variant="outline" asChild>
+                    <Link to="/operations/finance?tab=categories">Open Finance</Link>
+                  </Button>
+                </form>
+                <ul className="text-sm text-muted-foreground">
+                  {expenseCats.map((c) => (
+                    <li key={c.id}>{c.name} · {c.kind}{c.is_active ? '' : ' (off)'}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Expense categories live in Finance. Ask Super Admin for finance write access to create them here.
+            </p>
+          )}
+        </TabsContent>
 
         <TabsContent value="directory" className="mt-6 flex flex-col gap-6">
           <Card>

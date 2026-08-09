@@ -152,7 +152,7 @@ export async function getCurrentProfile({ required = true } = {}) {
   return data ? { ...data, branch_slug: null, source: 'customers' } : null
 }
 
-export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } = {}) {
+export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', family = 'wash' } = {}) {
   if (requiresTeamLeadBranchSetup(profile)) {
     return { queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [], timingWarnings: DEFAULT_TIMING_WARNINGS }
   }
@@ -160,7 +160,8 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
   const branchScope = resolveBranchFilter(profile, branchFilter)
   // Active floor only — keeps TL/ASA snapshot payloads small under concurrent load.
   // Lanes are role-aware: TL never fetches for_payment; console tier does.
-  const boardStatuses = getOpsBoardStatuses(profile)
+  // Detailing family includes confirmed (Assigned to Branch from Bookings).
+  const boardStatuses = getOpsBoardStatuses(profile, { family })
   const queueQuery = scopedQuery(
     supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT).in('status', boardStatuses),
     branchScope,
@@ -247,8 +248,8 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all' } 
  * Team Lead Queue Manager day board: active floor lanes + same-day completed/cancelled
  * for status tiles, peso totals, and plate history (legacy QueueList port, cars only).
  */
-export async function fetchTeamLeadDayBoard(profile, { branchFilter = 'all', day = null } = {}) {
-  const snapshot = await fetchOperationsSnapshot(profile, { branchFilter })
+export async function fetchTeamLeadDayBoard(profile, { branchFilter = 'all', day = null, family = 'wash' } = {}) {
+  const snapshot = await fetchOperationsSnapshot(profile, { branchFilter, family })
   const dayKey = day || getTodayDate()
   if (requiresTeamLeadBranchSetup(profile)) {
     return { ...snapshot, dayTickets: [], completedTotalMinor: 0 }

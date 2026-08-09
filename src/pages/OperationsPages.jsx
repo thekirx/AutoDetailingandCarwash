@@ -22,6 +22,12 @@ import { resolveServicePriceMinor } from '../lib/servicePricing'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import ServiceKindPicker from '../components/ServiceKindPicker'
 import { serviceKindFromPayCategory } from '../lib/serviceKinds'
+import {
+  filterTicketsByFamily,
+  parseQueueFamilyParam,
+  QUEUE_FAMILIES,
+  QUEUE_FAMILY_DETAILING,
+} from '../lib/queueFamilies'
 import { CrewAttendancePanel, CrewSettingsPanel } from './crew/CrewAttendancePanels'
 import { splitCustomerName } from '../lib/phVehicles'
 import { canAccessPos, canEditAttendanceRoles, canEditAttendanceSettings, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES } from '../auth/permissions'
@@ -70,6 +76,7 @@ import { createCoalescedReload } from '../lib/coalesceReload'
 import { toast } from 'sonner'
 
 const statusTone = {
+  confirmed: 'queue-status-pill queue-status-waiting',
   waiting: 'queue-status-pill queue-status-waiting',
   in_progress: 'queue-status-pill queue-status-progress',
   final_checking: 'queue-status-pill queue-status-check',
@@ -79,6 +86,7 @@ const statusTone = {
 }
 
 const LANE_META = {
+  confirmed: { icon: ClipboardList, hint: 'Assigned from Bookings' },
   waiting: { icon: Clock3, hint: 'Ready to start' },
   in_progress: { icon: CarFront, hint: 'On the bay' },
   final_checking: { icon: BadgeCheck, hint: 'QC before payment' },
@@ -190,7 +198,7 @@ function TicketCard({ ticket, timingWarnings, onOpen }) {
   )
 }
 
-function useOperationsSnapshot(branchFilter = 'all') {
+function useOperationsSnapshot(branchFilter = 'all', family = 'wash') {
   const { profile } = useAuth()
   const [snapshot, setSnapshot] = useState({ queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [], timingWarnings: null })
   const [loading, setLoading] = useState(true)
@@ -200,13 +208,13 @@ function useOperationsSnapshot(branchFilter = 'all') {
   const load = useCallback(async () => {
     setError('')
     try {
-      setSnapshot(await fetchOperationsSnapshot(profile, { branchFilter }))
+      setSnapshot(await fetchOperationsSnapshot(profile, { branchFilter, family }))
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [profile, branchFilter])
+  }, [profile, branchFilter, family])
 
   const loadRef = useRef(load)
   loadRef.current = load
@@ -630,6 +638,8 @@ function OperationsQueueBoardPage() {
   const seeRedo = canViewRedoLane(profile)
   const scopeList = getBranchScopeList(profile)
   const [searchParams, setSearchParams] = useSearchParams()
+  const queueFamily = parseQueueFamilyParam(searchParams.get('family'))
+  const familyMeta = QUEUE_FAMILIES.find((f) => f.id === queueFamily) || QUEUE_FAMILIES[0]
   const requestedLane = parseQueueLaneParam(searchParams.get('lane'))
   const branchFromUrl = String(searchParams.get('branch') || '').trim()
   const [branchFilter, setBranchFilter] = useState(() => {
@@ -641,11 +651,12 @@ function OperationsQueueBoardPage() {
   })
   const [branches, setBranches] = useState([])
   const [editBookingId, setEditBookingId] = useState(null)
-  const { activeQueue, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter)
-  const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
+  const { activeQueue, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter, queueFamily)
+  const boardStatuses = useMemo(() => getOpsBoardStatuses(profile, { family: queueFamily }), [profile, queueFamily])
+  const familyQueue = useMemo(() => filterTicketsByFamily(activeQueue || [], queueFamily), [activeQueue, queueFamily])
   const visibleQueue = useMemo(
-    () => (activeQueue || []).filter((ticket) => boardStatuses.includes(ticket.status)),
-    [activeQueue, boardStatuses],
+    () => familyQueue.filter((ticket) => boardStatuses.includes(ticket.status)),
+    [familyQueue, boardStatuses],
   )
   const boardTickets = useMemo(() => groupVisitTickets(visibleQueue), [visibleQueue])
   const grouped = useMemo(
@@ -674,18 +685,32 @@ function OperationsQueueBoardPage() {
       const next = new URLSearchParams(prev)
       if (!lane) next.delete('lane')
       else next.set('lane', lane)
+      if (queueFamily === QUEUE_FAMILY_DETAILING) next.set('family', 'detailing')
+      else next.delete('family')
       if (branchFilter && branchFilter !== 'all') next.set('branch', branchFilter)
       else next.delete('branch')
       return next
     }, { replace: true })
-  }, [branchFilter, setSearchParams])
+  }, [branchFilter, queueFamily, setSearchParams])
 
   const onBranchChange = useCallback((slug) => {
     setBranchFilter(slug)
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
+      if (queueFamily === QUEUE_FAMILY_DETAILING) next.set('family', 'detailing')
+      else next.delete('family')
       if (slug && slug !== 'all') next.set('branch', slug)
       else next.delete('branch')
+      return next
+    }, { replace: true })
+  }, [queueFamily, setSearchParams])
+
+  const setQueueFamily = useCallback((nextFamily) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (parseQueueFamilyParam(nextFamily) === QUEUE_FAMILY_DETAILING) next.set('family', 'detailing')
+      else next.delete('family')
+      next.delete('lane')
       return next
     }, { replace: true })
   }, [setSearchParams])
@@ -716,18 +741,34 @@ function OperationsQueueBoardPage() {
   return (
     <section className="queue-board flex min-h-0 flex-col">
       <PageHeader
-        eyebrow={profile?.role === 'admin' ? 'Branch Admin' : 'Queue Board'}
-        title={profile?.role === 'admin' ? 'Queue' : 'Today on the floor'}
+        eyebrow={profile?.role === 'admin' ? 'Branch Admin' : familyMeta.label}
+        title={familyMeta.label}
         description={
-          profile?.role === 'admin'
-            ? 'View tickets and open POS when payment is ready.'
-            : seeRedo
-              ? 'Active tickets until payment. Redo is the owner QC lane - customers never see it.'
-              : 'Active tickets until payment - waiting, in progress, and final checking.'
+          queueFamily === QUEUE_FAMILY_DETAILING
+            ? 'Detailing jobs from Bookings (Assigned to Branch) through release. Same lane logic as car wash.'
+            : profile?.role === 'admin'
+              ? 'Car wash / same-day tickets — open POS when payment is ready.'
+              : seeRedo
+                ? 'Same-day wash & package tickets until payment. Redo is the owner QC lane.'
+                : 'Same-day wash & package tickets — waiting, in progress, and final checking.'
         }
         live={live}
         action={(
           <div className="flex flex-wrap gap-2 sm:gap-3">
+            <div className="flex rounded-2xl border border-white/10 p-1">
+              {QUEUE_FAMILIES.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setQueueFamily(f.id)}
+                  className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                    queueFamily === f.id ? 'bg-primary text-primary-foreground' : 'text-slate-300'
+                  }`}
+                >
+                  {f.shortLabel}
+                </button>
+              ))}
+            </div>
             <RefreshButton loading={loading} onClick={reload} />
             {branchFilter && branchFilter !== 'all' ? (
               <>
@@ -1576,60 +1617,7 @@ export function MyTasksPage() {
   )
 }
 
-export function AccessDeniedPage() {
-  const { profile, signOut } = useAuth()
-  const navigate = useNavigate()
-  const [busy, setBusy] = useState(false)
-
-  const goLogin = async () => {
-    setBusy(true)
-    try {
-      await signOut()
-    } catch (err) {
-      console.warn('[auth] sign out from access denied failed', err?.message || err)
-      try {
-        await supabase.auth.signOut({ scope: 'local' })
-      } catch {
-        /* still navigate */
-      }
-    } finally {
-      navigate('/operations/login', { replace: true, state: { signedOut: true } })
-      setBusy(false)
-    }
-  }
-
-  const home = profile?.role ? redirectForRole(profile.role) : '/operations/login'
-
-  return (
-    <section className="grid min-h-[60vh] place-items-center px-4">
-      <div className="max-w-md rounded-3xl border border-border bg-card p-8 text-center text-card-foreground shadow-sm">
-        <ShieldAlert className="mx-auto text-amber-600 dark:text-amber-200" size={42} />
-        <h1 className="mt-5 text-3xl font-semibold text-foreground">Access denied</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Your account does not have access to this operations area.
-        </p>
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          {profile?.role ? (
-            <Link
-              to={home}
-              className="inline-flex items-center justify-center rounded-2xl border border-border bg-background px-5 py-3 font-semibold text-foreground no-underline"
-            >
-              Go to my home
-            </Link>
-          ) : null}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={goLogin}
-            className="inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 font-semibold text-primary-foreground disabled:opacity-60"
-          >
-            {busy ? 'Signing out…' : 'Sign out & back to login'}
-          </button>
-        </div>
-      </div>
-    </section>
-  )
-}
+export { default as AccessDeniedPage } from './AccessDeniedPage'
 
 function Panel({ title, icon: Icon, children, className = '' }) {
   return (

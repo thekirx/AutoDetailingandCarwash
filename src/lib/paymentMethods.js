@@ -3,7 +3,7 @@
 export const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
   { value: 'gcash', label: 'GCash' },
-  { value: 'card', label: 'Credit / Debit' },
+  { value: 'card', label: 'Credit Cards' },
 ]
 
 /** @deprecated alias — prefer PAYMENT_METHODS */

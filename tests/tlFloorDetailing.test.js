@@ -41,10 +41,10 @@ describe('TL floor + detailing catalog', () => {
     )
   })
 
-  it('TL dock uses Floor label and bookings route', () => {
+  it('TL dock uses Floor label — bookings stay Sales/Marketing', () => {
     const dock = getTeamLeadDock({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' })
     assert.ok(dock.some((i) => i.label === 'Floor' && i.to === '/operations/dashboard'))
-    assert.ok(dock.some((i) => i.to === '/operations/bookings'))
+    assert.equal(dock.some((i) => i.to === '/operations/bookings'), false)
     assert.ok(dock.some((i) => i.to === '/operations/queue'))
   })
 

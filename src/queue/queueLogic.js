@@ -38,14 +38,25 @@ export const DEFAULT_TIMING_WARNINGS = { enabled: true, min_seconds_in_progress:
 export const NO_BRANCH_SCOPE = '__none__'
 
 export const STATUS_LABELS = {
-  waiting: 'Waiting',
-  in_progress: 'In Progress',
-  final_checking: 'For Final Checking',
+  waiting: 'Intake Started',
+  in_progress: 'Vehicle Inspection',
+  final_checking: 'Ready for Release',
   for_payment: 'For Payment',
   redo: 'Redo',
+  completed: 'Successful Release',
+  cancelled: 'Cancelled',
+  pending: 'Booking Placeholder',
+  confirmed: 'Assigned to Branch',
+}
+
+/** Customer-facing visit stepper labels (keep simple; ops board uses STATUS_LABELS). */
+export const CUSTOMER_VISIT_LABELS = {
+  waiting: 'Waiting',
+  in_progress: 'In Progress',
+  final_checking: 'Final Checking',
+  for_payment: 'For Payment',
   completed: 'Completed',
   cancelled: 'Cancelled',
-  pending: 'Pending',
 }
 
 export const DASHBOARD_DATE_PRESETS = [
@@ -100,9 +111,9 @@ export function buildVisitProgress(status) {
   const idx = VISIT_PROGRESS_STEPS.indexOf(normalized)
   const currentIndex = idx >= 0 ? idx : normalized === 'completed' ? VISIT_PROGRESS_STEPS.length : 0
   return {
-    steps: VISIT_PROGRESS_STEPS.map((key) => ({ key, label: STATUS_LABELS[key] || key })),
+    steps: VISIT_PROGRESS_STEPS.map((key) => ({ key, label: CUSTOMER_VISIT_LABELS[key] || key })),
     currentIndex,
-    label: STATUS_LABELS[normalized] || normalized,
+    label: CUSTOMER_VISIT_LABELS[normalized] || STATUS_LABELS[normalized] || normalized,
     isComplete: normalized === 'completed',
   }
 }
@@ -121,11 +132,16 @@ export function isOpsBoardStatus(status) {
  * Board columns for this profile.
  * TL: active lanes only (never For Payment — legacy port rule).
  * Branch Admin / SA / ASA: + For Payment. SA / ASA: + Redo.
+ * Detailing family also shows confirmed (Assigned to Branch from Bookings).
  */
-export function getOpsBoardStatuses(profile) {
+export function getOpsBoardStatuses(profile, { family } = {}) {
   const lanes = [...ACTIVE_QUEUE_STATUSES]
   if (canSeeForPaymentLane(profile)) lanes.push('for_payment')
   if (canViewRedoLane(profile)) lanes.push('redo')
+  // Lazy import avoided — keep family helper colocated via string check
+  if (String(family || '').toLowerCase() === 'detailing') {
+    return ['confirmed', ...lanes.filter((s) => s !== 'confirmed')]
+  }
   return lanes
 }
 
@@ -159,9 +175,13 @@ export function isFormBookingStatus(status) {
   return FORM_BOOKING_STATUSES.includes(String(status || ''))
 }
 
-/** TL/Sales Bookings = form appointments only. Admin/SA see floor lanes too. */
+/** Sales / Marketing Bookings = form appointments. SA/ASA see detailing floor lanes too. */
 export function getBookingBoardStatuses(profile) {
-  if (profile?.role === ROLES.TEAM_LEAD || profile?.role === ROLES.SALES) {
+  if (profile?.role === ROLES.SALES || profile?.role === ROLES.MARKETING) {
+    return [...FORM_BOOKING_STATUSES, 'cancelled']
+  }
+  // TL no longer uses Bookings view (Queue owns status). Defensive form-only if called.
+  if (profile?.role === ROLES.TEAM_LEAD) {
     return [...FORM_BOOKING_STATUSES]
   }
   return [

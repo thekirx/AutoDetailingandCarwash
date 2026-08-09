@@ -136,6 +136,15 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
     }
     setAssignees((prev) => [...prev, data])
     toast.success(`Assigned ${staff.full_name}`)
+    const { error: notifyErr } = await supabase.from('user_notifications').insert({
+      user_id: staff.id,
+      kind: 'planner_task',
+      title: 'Planner task assigned',
+      body: card.title || 'You have a new Hakum Planner task',
+      url: '/operations/my-tasks',
+      tag: `plan-card:${card.id}`,
+    })
+    if (notifyErr) console.warn('planner notify', notifyErr.message)
   }
 
   const save = async () => {
@@ -427,6 +436,7 @@ export default function PlanningBoardPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = PLAN_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'board'
   const [board, setBoard] = useState(null)
+  const [boards, setBoards] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeCard, setActiveCard] = useState(null)
   const [dragCardId, setDragCardId] = useState(null)
@@ -439,11 +449,31 @@ export default function PlanningBoardPage() {
   const [calExtra, setCalExtra] = useState({ formSubs: [], meetEvents: [], bookings: [] })
 
   const load = useCallback(async () => {
+    const { data: boardRows, error: boardsErr } = await supabase
+      .from('plan_boards')
+      .select('id, name, created_at')
+      .order('created_at', { ascending: true })
+    if (boardsErr) {
+      toast.error(boardsErr.message)
+      setBoard(null)
+      setBoards([])
+      setLoading(false)
+      return
+    }
+    setBoards(boardRows || [])
+    const wanted =
+      boardRows?.find((b) => b.id === searchParams.get('board')) ||
+      boardRows?.find((b) => b.name === searchParams.get('board')) ||
+      boardRows?.[0]
+    if (!wanted) {
+      setBoard(null)
+      setLoading(false)
+      return
+    }
     const { data, error } = await supabase
       .from('plan_boards')
       .select(BOARD_SELECT)
-      .order('created_at', { ascending: true })
-      .limit(1)
+      .eq('id', wanted.id)
       .maybeSingle()
     if (error) {
       toast.error(error.message)
@@ -452,7 +482,7 @@ export default function PlanningBoardPage() {
       setBoard(data)
     }
     setLoading(false)
-  }, [])
+  }, [searchParams])
 
   const loadCatalogs = useCallback(async () => {
     const [lab, tmpl] = await Promise.all([
@@ -634,7 +664,22 @@ export default function PlanningBoardPage() {
   }
 
   function setTab(next) {
-    setSearchParams(next === 'board' ? {} : { tab: next }, { replace: true })
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev)
+      if (next === 'board') params.delete('tab')
+      else params.set('tab', next)
+      if (board?.id) params.set('board', board.id)
+      return params
+    }, { replace: true })
+  }
+
+  function selectBoard(boardId) {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev)
+      params.set('board', boardId)
+      params.delete('tab')
+      return params
+    }, { replace: true })
   }
 
   if (!canViewPlanning(profile)) return <Navigate to="/operations/access-denied" replace />
@@ -650,7 +695,7 @@ export default function PlanningBoardPage() {
   if (!board) {
     return (
       <section className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-6 text-amber-100">
-        No planning board found. Ask Super Admin to seed Hakum Planning (migration).
+        No planning board found. Ask Super Admin to seed Hakum Planner (migration).
       </section>
     )
   }
@@ -659,14 +704,30 @@ export default function PlanningBoardPage() {
     <section className="planning-shell flex min-h-0 flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
         <div>
-          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">Planning</p>
+          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">Hakum Planner</p>
           <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             <Columns3 className="size-7 text-primary" />
             {board.name}
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            {canEdit ? 'Full edit' : 'View only'} — board, calendar, smart forms with share links, and events. Labels and lists sync live from Supabase.
+            {canEdit ? 'Full edit' : 'View only'} — Complaints, Equipment Repairs, Cash Advance, and general tasks. Assignments notify in-app.
           </p>
+          {boards.length > 1 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {boards.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => selectBoard(b.id)}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
+                    board.id === b.id ? 'bg-primary text-primary-foreground' : 'border border-border'
+                  }`}
+                >
+                  {b.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
         <Badge variant={canEdit ? 'default' : 'secondary'} className="min-h-8 px-3">
           {canEdit ? 'Editor' : 'Viewer'}

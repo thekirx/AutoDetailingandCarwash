@@ -35,6 +35,7 @@ import {
 } from '@/queue/attendanceApi'
 import { fetchBranches } from '@/queue/queueApi'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
+import { attendanceRowsToCsv, downloadTextFile } from '@/lib/attendanceExport'
 
 /** Client page size — swap load() to server range when row volume needs it. */
 const ATTENDANCE_PAGE_SIZE = 25
@@ -299,6 +300,20 @@ export function CrewAttendancePanel({ profile, canManage }) {
                   {key}
                 </Button>
               ))}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-10"
+                disabled={!filteredRows.length}
+                onClick={() => {
+                  const csv = attendanceRowsToCsv(filteredRows)
+                  downloadTextFile(`attendance-${branchSlug || 'branch'}-${getLocalCalendarDate()}.csv`, csv)
+                  toast.success(`Exported ${filteredRows.length} row(s)`)
+                }}
+              >
+                Export CSV
+              </Button>
             </div>
           </div>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">

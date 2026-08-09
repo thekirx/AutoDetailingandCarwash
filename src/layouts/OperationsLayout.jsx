@@ -9,6 +9,7 @@ import {
   Database,
   Gauge,
   Kanban,
+  Layers,
   LayoutDashboard,
   LineChart,
   ListChecks,
@@ -88,6 +89,8 @@ const iconMap = {
   CarFront,
   Plus,
   Database,
+  Layers,
+  Settings,
 }
 
 function formatRole(role) {
