@@ -3,6 +3,7 @@ import {
   Building2,
   CarFront,
   ClipboardList,
+  Clock,
   Columns3,
   Contact,
   Crown,
@@ -95,6 +96,7 @@ const iconMap = {
   Settings,
   Bell,
   History,
+  Clock,
 }
 
 function formatRole(role) {

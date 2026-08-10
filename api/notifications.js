@@ -5,6 +5,7 @@ import { handleNotifyBookingRequest } from '../server/notifyBookingApi.mjs'
 import { handlePushSubscribeRequest, handleSendPushRequest } from '../server/pushApi.mjs'
 import { handleNotificationSettingsRequest } from '../server/notificationSettingsApi.mjs'
 import { handleNotificationBroadcastRequest } from '../server/notificationBroadcastApi.mjs'
+import { handleNotificationBroadcastKindsRequest } from '../server/notificationBroadcastKindsApi.mjs'
 
 export const operations = Object.freeze({
   busybee: handleBusybeeRequest,
@@ -14,6 +15,7 @@ export const operations = Object.freeze({
   'send-push': handleSendPushRequest,
   'notification-settings': handleNotificationSettingsRequest,
   'notification-broadcast': handleNotificationBroadcastRequest,
+  'notification-broadcast-kinds': handleNotificationBroadcastKindsRequest,
 })
 
 export default createGateway(operations)

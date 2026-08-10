@@ -41,6 +41,7 @@ const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
 const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
 const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
+const AttendancePage = lazy(() => import('./pages/AttendancePage'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const BroadcastPage = lazy(() => import('./pages/BroadcastPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
@@ -172,6 +173,7 @@ export default function App() {
             <Route path="queue/new" element={gate('queue-new', <NewQueueTicketPage />)} />
             <Route path="queue/:id" element={gate('queue', <QueueTicketPage />)} />
             <Route path="crew" element={gate('crew', <CrewPage />)} />
+            <Route path="attendance" element={gate('attendance', <AttendancePage />)} />
             <Route path="kpi" element={gate('kpi', <KpiPage />)} />
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />
             <Route path="pos" element={gate('pos', <PosPage />)} />

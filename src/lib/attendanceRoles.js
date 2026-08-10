@@ -9,9 +9,9 @@ export const ATTENDANCE_ROLE_OPTIONS = [
   { value: 'marketing', label: 'Marketing' },
 ]
 
-export const DEFAULT_ATTENDANCE_ROLES = ATTENDANCE_ROLE_OPTIONS.map((o) => o.value)
+export const DEFAULT_ATTENDANCE_ROLES = ['staff', 'team_lead', 'admin']
 
-const KNOWN = new Set(DEFAULT_ATTENDANCE_ROLES)
+const KNOWN = new Set(ATTENDANCE_ROLE_OPTIONS.map((o) => o.value))
 
 /**
  * Normalize stored/API input into a unique ordered list of known roles.

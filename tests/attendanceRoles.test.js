@@ -16,7 +16,8 @@ describe('attendance role config (SA-owned)', () => {
     assert.ok(keys.includes('team_lead'))
     assert.ok(keys.includes('admin'))
     assert.ok(keys.includes('BossMich'))
-    assert.equal(keys.length, DEFAULT_ATTENDANCE_ROLES.length)
+    assert.equal(keys.length, 6)
+    assert.deepEqual(DEFAULT_ATTENDANCE_ROLES, ['staff', 'team_lead', 'admin'])
   })
 
   it('normalizeAttendanceRoles drops unknown + empties, dedupes, keeps order', () => {

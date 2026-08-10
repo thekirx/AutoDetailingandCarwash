@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Bell, Megaphone, ShieldCheck, Trash2 } from 'lucide-react'
+import { Bell, Megaphone, Pencil, ShieldCheck, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import {
@@ -11,8 +11,10 @@ import {
 import { getAccessTokenFresh } from '@/lib/authToken'
 import {
   BUSYBEE_SMS_SINGLE_MAX,
+  MESSAGE_TOKENS,
   NOTIFICATION_SCOPES,
   busybeeSmsSegments,
+  insertMessageToken,
   messageMaxForChannel,
   notificationScopeLabel,
   titleMaxForChannel,
@@ -144,8 +146,42 @@ export default function NotificationsPage() {
       </div>
 
       {tab === 'reminders' && canReminders ? <ReminderRulesPanel /> : null}
-      {tab === 'broadcast' && canBroadcast ? <BroadcastPanel /> : null}
+      {tab === 'broadcast' && canBroadcast ? (
+        <BroadcastPanel canManageKinds={canReminders} />
+      ) : null}
     </section>
+  )
+}
+
+/** Clickable {name}/{plate}/… chips — insert at caret to avoid typos. */
+function MessageTokenChips({ value, onChange, inputId, className }) {
+  function insert(token) {
+    const el = typeof document !== 'undefined' ? document.getElementById(inputId) : null
+    const caret = el && typeof el.selectionStart === 'number' ? el.selectionStart : null
+    const { value: next, caret: nextCaret } = insertMessageToken(value, token, caret)
+    onChange(next)
+    requestAnimationFrame(() => {
+      const field = document.getElementById(inputId)
+      if (!field || typeof field.setSelectionRange !== 'function') return
+      field.focus()
+      field.setSelectionRange(nextCaret, nextCaret)
+    })
+  }
+
+  return (
+    <div className={cn('flex flex-wrap gap-1.5', className)} role="group" aria-label="Insert message tokens">
+      {MESSAGE_TOKENS.map((row) => (
+        <button
+          key={row.token}
+          type="button"
+          title={row.hint}
+          className="min-h-9 cursor-pointer rounded-lg border border-border bg-muted/50 px-2.5 text-xs font-semibold text-foreground transition hover:border-primary/50 hover:bg-primary/10"
+          onClick={() => insert(row.token)}
+        >
+          {row.token}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -280,12 +316,12 @@ function ReminderRulesPanel() {
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
       <Card className="border-border/80 shadow-none">
-        <CardHeader className="space-y-1">
+          <CardHeader className="space-y-1">
           <CardTitle className="text-lg">Reminder rule</CardTitle>
           <CardDescription>
-            Scope: whole network, one branch, one service, or service × branch. Tokens:{' '}
-            {'{name}'} {'{plate}'} {'{service}'} {'{branch}'}. Prefer{' '}
-            <strong className="font-medium text-foreground">Paint Maintenance</strong> for Ceramic/PPF cycles.
+            Scope: whole network, one branch, one service, or service × branch. Tap tokens to insert into title or
+            message. Prefer <strong className="font-medium text-foreground">Paint Maintenance</strong> for Ceramic/PPF
+            cycles. SMS uses each customer&apos;s mobile on file.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -403,6 +439,11 @@ function ReminderRulesPanel() {
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 required
               />
+              <MessageTokenChips
+                inputId="ns-title"
+                value={draft.title}
+                onChange={(title) => setDraft({ ...draft, title: title.slice(0, titleMax) })}
+              />
             </div>
 
             <div className="flex flex-col gap-2 sm:col-span-2">
@@ -423,10 +464,15 @@ function ReminderRulesPanel() {
                 onChange={(e) => setDraft({ ...draft, message: e.target.value })}
                 required
               />
+              <MessageTokenChips
+                inputId="ns-message"
+                value={draft.message}
+                onChange={(message) => setDraft({ ...draft, message: message.slice(0, messageMax) })}
+              />
               <p className="text-xs text-muted-foreground">
                 {draft.channel === 'push'
                   ? 'Push body capped at 200 characters.'
-                  : `BusyBee single SMS is ${BUSYBEE_SMS_SINGLE_MAX} characters.`}
+                  : `BusyBee single SMS is ${BUSYBEE_SMS_SINGLE_MAX} characters · sent to the customer mobile.`}
               </p>
             </div>
 
@@ -507,8 +553,9 @@ function ReminderRulesPanel() {
   )
 }
 
-function BroadcastPanel() {
+function BroadcastPanel({ canManageKinds = false }) {
   const [branches, setBranches] = useState([])
+  const [kinds, setKinds] = useState([])
   const [history, setHistory] = useState([])
   const [sending, setSending] = useState(false)
   const [form, setForm] = useState({
@@ -521,10 +568,30 @@ function BroadcastPanel() {
     branch_slug: '',
   })
 
+  const loadKinds = useCallback(async () => {
+    const token = await getAccessTokenFresh()
+    const qs = canManageKinds ? '?all=1' : ''
+    const res = await fetch(`/api/notification-broadcast-kinds${qs}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      setKinds([
+        { slug: 'promo', label: 'Promo', is_active: true },
+        { slug: 'we_missed', label: 'We missed you', is_active: true },
+        { slug: 'reminder', label: 'Reminder', is_active: true },
+        { slug: 'custom', label: 'Custom', is_active: true },
+      ])
+      return
+    }
+    setKinds(data.kinds || [])
+  }, [canManageKinds])
+
   useEffect(() => {
     supabase.from('branches').select('slug, name').order('name').then(({ data }) => setBranches(data || []))
     loadHistory()
-  }, [])
+    loadKinds()
+  }, [loadKinds])
 
   async function loadHistory() {
     const { data } = await supabase
@@ -533,6 +600,29 @@ function BroadcastPanel() {
       .order('sent_at', { ascending: false })
       .limit(20)
     setHistory(data || [])
+  }
+
+  const activeKinds = useMemo(
+    () => (kinds.length ? kinds.filter((k) => k.is_active !== false) : kinds),
+    [kinds],
+  )
+  const kindItems = activeKinds.map((k) => ({ value: k.slug, label: k.label }))
+
+  useEffect(() => {
+    if (!activeKinds.length) return
+    if (!activeKinds.some((k) => k.slug === form.kind)) {
+      setForm((f) => ({ ...f, kind: activeKinds[0].slug }))
+    }
+  }, [activeKinds, form.kind])
+
+  function applyKindDefaults(slug) {
+    const row = kinds.find((k) => k.slug === slug)
+    setForm((f) => ({
+      ...f,
+      kind: slug,
+      title: row?.default_title || f.title,
+      body: row?.default_body || f.body,
+    }))
   }
 
   const titleMax = titleMaxForChannel(form.channel)
@@ -587,182 +677,422 @@ function BroadcastPanel() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
-      <Card className="border-border/80 shadow-none">
-        <CardHeader>
-          <CardTitle className="text-lg">Compose broadcast</CardTitle>
-          <CardDescription>Push and/or SMS to customers — promos, we-missed-you, deals.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={send} className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="bc-kind">Kind</Label>
-                <Select
-                  value={form.kind}
-                  onValueChange={(v) => setForm({ ...form, kind: v })}
-                  items={[
-                    { value: 'promo', label: 'Promo' },
-                    { value: 'we_missed', label: 'We missed you' },
-                    { value: 'reminder', label: 'Reminder' },
-                    { value: 'custom', label: 'Custom' },
-                  ]}
-                >
-                  <SelectTrigger id="bc-kind" className="min-h-11 cursor-pointer">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="promo">Promo</SelectItem>
-                    <SelectItem value="we_missed">We missed you</SelectItem>
-                    <SelectItem value="reminder">Reminder</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="bc-channel">Channel</Label>
-                <Select
-                  value={form.channel}
-                  onValueChange={(v) => setForm({ ...form, channel: v })}
-                  items={[
-                    { value: 'push', label: 'Push' },
-                    { value: 'sms', label: 'SMS' },
-                    { value: 'both', label: 'Push + SMS' },
-                  ]}
-                >
-                  <SelectTrigger id="bc-channel" className="min-h-11 cursor-pointer">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="push">Push</SelectItem>
-                    <SelectItem value="sms">SMS</SelectItem>
-                    <SelectItem value="both">Push + SMS</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="bc-audience">Audience</Label>
-                <Select
-                  value={form.target_audience}
-                  onValueChange={(v) => setForm({ ...form, target_audience: v })}
-                  items={[
-                    { value: 'all', label: 'All customers' },
-                    { value: 'detailing', label: 'Detailing customers' },
-                    { value: 'wash', label: 'Wash customers' },
-                    { value: 'branch', label: 'One branch' },
-                  ]}
-                >
-                  <SelectTrigger id="bc-audience" className="min-h-11 cursor-pointer">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All customers</SelectItem>
-                    <SelectItem value="detailing">Detailing customers</SelectItem>
-                    <SelectItem value="wash">Wash customers</SelectItem>
-                    <SelectItem value="branch">One branch</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {form.target_audience === 'branch' ? (
+    <div className="grid gap-5">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
+        <Card className="border-border/80 shadow-none">
+          <CardHeader>
+            <CardTitle className="text-lg">Compose broadcast</CardTitle>
+            <CardDescription>
+              Push and/or SMS — SMS goes to each customer&apos;s mobile on file. Tap tokens to insert.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={send} className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="bc-branch">Branch</Label>
+                  <Label htmlFor="bc-kind">Kind</Label>
                   <Select
-                    value={form.branch_slug}
-                    onValueChange={(v) => setForm({ ...form, branch_slug: v })}
-                    items={branches.map((b) => ({ value: b.slug, label: b.name }))}
+                    value={form.kind}
+                    onValueChange={applyKindDefaults}
+                    items={kindItems.length ? kindItems : [{ value: form.kind, label: form.kind }]}
                   >
-                    <SelectTrigger id="bc-branch" className="min-h-11 cursor-pointer">
-                      <SelectValue placeholder="Pick branch" />
+                    <SelectTrigger id="bc-kind" className="min-h-11 cursor-pointer">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {branches.map((b) => (
-                        <SelectItem key={b.slug} value={b.slug}>
-                          {b.name}
+                      {(activeKinds.length ? activeKinds : [{ slug: form.kind, label: form.kind }]).map((k) => (
+                        <SelectItem key={k.slug} value={k.slug}>
+                          {k.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <Label htmlFor="bc-title">Title</Label>
-                <span
-                  className={`text-xs tabular-nums ${form.title.length > titleMax ? 'text-destructive' : 'text-muted-foreground'}`}
-                >
-                  {form.title.length}/{titleMax}
-                </span>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="bc-channel">Channel</Label>
+                  <Select
+                    value={form.channel}
+                    onValueChange={(v) => setForm({ ...form, channel: v })}
+                    items={[
+                      { value: 'push', label: 'Push' },
+                      { value: 'sms', label: 'SMS (customer mobile)' },
+                      { value: 'both', label: 'Push + SMS' },
+                    ]}
+                  >
+                    <SelectTrigger id="bc-channel" className="min-h-11 cursor-pointer">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="push">Push</SelectItem>
+                      <SelectItem value="sms">SMS (customer mobile)</SelectItem>
+                      <SelectItem value="both">Push + SMS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="bc-audience">Audience</Label>
+                  <Select
+                    value={form.target_audience}
+                    onValueChange={(v) => setForm({ ...form, target_audience: v })}
+                    items={[
+                      { value: 'all', label: 'All customers' },
+                      { value: 'detailing', label: 'Detailing customers' },
+                      { value: 'wash', label: 'Wash customers' },
+                      { value: 'branch', label: 'One branch' },
+                    ]}
+                  >
+                    <SelectTrigger id="bc-audience" className="min-h-11 cursor-pointer">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All customers</SelectItem>
+                      <SelectItem value="detailing">Detailing customers</SelectItem>
+                      <SelectItem value="wash">Wash customers</SelectItem>
+                      <SelectItem value="branch">One branch</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.target_audience === 'branch' ? (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bc-branch">Branch</Label>
+                    <Select
+                      value={form.branch_slug}
+                      onValueChange={(v) => setForm({ ...form, branch_slug: v })}
+                      items={branches.map((b) => ({ value: b.slug, label: b.name }))}
+                    >
+                      <SelectTrigger id="bc-branch" className="min-h-11 cursor-pointer">
+                        <SelectValue placeholder="Pick branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branches.map((b) => (
+                          <SelectItem key={b.slug} value={b.slug}>
+                            {b.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
               </div>
-              <Input
-                id="bc-title"
-                className="min-h-11"
-                required
-                value={form.title}
-                maxLength={titleMax}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <Label htmlFor="bc-body">Message</Label>
-                <span
-                  className={`text-xs tabular-nums ${form.body.length > messageMax ? 'text-destructive' : 'text-muted-foreground'}`}
-                >
-                  {form.body.length}/{messageMax}
-                  {form.channel !== 'push' ? ` · BusyBee ${BUSYBEE_SMS_SINGLE_MAX} · ~${smsCredits} SMS` : ''}
-                </span>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <Label htmlFor="bc-title">Title</Label>
+                  <span
+                    className={`text-xs tabular-nums ${form.title.length > titleMax ? 'text-destructive' : 'text-muted-foreground'}`}
+                  >
+                    {form.title.length}/{titleMax}
+                  </span>
+                </div>
+                <Input
+                  id="bc-title"
+                  className="min-h-11"
+                  required
+                  value={form.title}
+                  maxLength={titleMax}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+                <MessageTokenChips
+                  inputId="bc-title"
+                  value={form.title}
+                  onChange={(title) => setForm({ ...form, title: title.slice(0, titleMax) })}
+                />
               </div>
-              <Textarea
-                id="bc-body"
-                required
-                rows={4}
-                value={form.body}
-                maxLength={messageMax}
-                onChange={(e) => setForm({ ...form, body: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bc-url">Tap URL</Label>
-              <Input
-                id="bc-url"
-                className="min-h-11"
-                value={form.url}
-                onChange={(e) => setForm({ ...form, url: e.target.value })}
-              />
-            </div>
-            <Button type="submit" disabled={sending} className="min-h-11 w-full sm:w-fit">
-              {sending ? 'Sending…' : 'Send broadcast'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <Label htmlFor="bc-body">Message</Label>
+                  <span
+                    className={`text-xs tabular-nums ${form.body.length > messageMax ? 'text-destructive' : 'text-muted-foreground'}`}
+                  >
+                    {form.body.length}/{messageMax}
+                    {form.channel !== 'push' ? ` · BusyBee ${BUSYBEE_SMS_SINGLE_MAX} · ~${smsCredits} SMS` : ''}
+                  </span>
+                </div>
+                <Textarea
+                  id="bc-body"
+                  required
+                  rows={4}
+                  value={form.body}
+                  maxLength={messageMax}
+                  onChange={(e) => setForm({ ...form, body: e.target.value })}
+                />
+                <MessageTokenChips
+                  inputId="bc-body"
+                  value={form.body}
+                  onChange={(body) => setForm({ ...form, body: body.slice(0, messageMax) })}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="bc-url">Tap URL</Label>
+                <Input
+                  id="bc-url"
+                  className="min-h-11"
+                  value={form.url}
+                  onChange={(e) => setForm({ ...form, url: e.target.value })}
+                />
+              </div>
+              <Button type="submit" disabled={sending} className="min-h-11 w-full sm:w-fit">
+                {sending ? 'Sending…' : 'Send broadcast'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      <Card className="border-border/80 shadow-none">
-        <CardHeader>
-          <CardTitle className="text-lg">Recent broadcasts</CardTitle>
-          <CardDescription>Last 20 sends.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No broadcasts yet.</p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {history.map((h) => (
-                <li key={h.id} className="py-3">
-                  <p className="text-sm font-semibold">{h.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {h.kind} · {h.channel} · {h.target_audience}
-                    {h.branch_slug ? ` · ${h.branch_slug}` : ''} · sent {h.sent_count} · failed{' '}
-                    {h.failed_count}
-                  </p>
-                  {h.body ? <p className="mt-1 text-sm text-muted-foreground">{h.body}</p> : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+        <Card className="border-border/80 shadow-none">
+          <CardHeader>
+            <CardTitle className="text-lg">Recent broadcasts</CardTitle>
+            <CardDescription>Last 20 sends.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {history.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No broadcasts yet.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {history.map((h) => (
+                  <li key={h.id} className="py-3">
+                    <p className="text-sm font-semibold">{h.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {h.kind} · {h.channel} · {h.target_audience}
+                      {h.branch_slug ? ` · ${h.branch_slug}` : ''} · sent {h.sent_count} · failed{' '}
+                      {h.failed_count}
+                    </p>
+                    {h.body ? <p className="mt-1 text-sm text-muted-foreground">{h.body}</p> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {canManageKinds ? <BroadcastKindsManager kinds={kinds} onChanged={loadKinds} /> : null}
     </div>
   )
 }
+
+function BroadcastKindsManager({ kinds, onChanged }) {
+  const empty = {
+    id: '',
+    slug: '',
+    label: '',
+    description: '',
+    default_title: '',
+    default_body: '',
+    display_order: 100,
+    is_active: true,
+  }
+  const [draft, setDraft] = useState(empty)
+  const [saving, setSaving] = useState(false)
+  const editing = Boolean(draft.id)
+
+  async function save(e) {
+    e.preventDefault()
+    if (!draft.label.trim()) {
+      toast.error('Label is required.')
+      return
+    }
+    setSaving(true)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/notification-broadcast-kinds', {
+        method: editing ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(
+          editing
+            ? {
+                id: draft.id,
+                label: draft.label.trim(),
+                slug: draft.slug.trim() || undefined,
+                description: draft.description,
+                default_title: draft.default_title,
+                default_body: draft.default_body,
+                display_order: Number(draft.display_order) || 0,
+                is_active: draft.is_active,
+              }
+            : {
+                label: draft.label.trim(),
+                slug: draft.slug.trim() || undefined,
+                description: draft.description,
+                default_title: draft.default_title,
+                default_body: draft.default_body,
+                display_order: Number(draft.display_order) || 100,
+              },
+        ),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || 'Save failed')
+        return
+      }
+      toast.success(editing ? 'Kind updated' : 'Kind created')
+      setDraft(empty)
+      onChanged?.()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function deactivate(id) {
+    const token = await getAccessTokenFresh()
+    const res = await fetch(`/api/notification-broadcast-kinds?id=${id}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast.error(data.error || 'Delete failed')
+      return
+    }
+    toast.success('Kind archived')
+    if (draft.id === id) setDraft(empty)
+    onChanged?.()
+  }
+
+  return (
+    <Card className="border-border/80 shadow-none">
+      <CardHeader>
+        <CardTitle className="text-lg">Broadcast kinds</CardTitle>
+        <CardDescription>Create, edit, or archive kinds used in the compose dropdown (SA / ASA).</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <form onSubmit={save} className="grid gap-3">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="kind-label">Label</Label>
+            <Input
+              id="kind-label"
+              className="min-h-11"
+              required
+              value={draft.label}
+              onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+              placeholder="e.g. Weekend promo"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="kind-slug">Slug (optional)</Label>
+            <Input
+              id="kind-slug"
+              className="min-h-11"
+              value={draft.slug}
+              onChange={(e) => setDraft({ ...draft, slug: e.target.value })}
+              placeholder="auto from label"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="kind-desc">Description</Label>
+            <Input
+              id="kind-desc"
+              className="min-h-11"
+              value={draft.description}
+              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="kind-title">Default title</Label>
+            <Input
+              id="kind-title"
+              className="min-h-11"
+              value={draft.default_title}
+              onChange={(e) => setDraft({ ...draft, default_title: e.target.value })}
+            />
+            <MessageTokenChips
+              inputId="kind-title"
+              value={draft.default_title}
+              onChange={(default_title) => setDraft({ ...draft, default_title })}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="kind-body">Default message</Label>
+            <Textarea
+              id="kind-body"
+              rows={3}
+              value={draft.default_body}
+              onChange={(e) => setDraft({ ...draft, default_body: e.target.value })}
+            />
+            <MessageTokenChips
+              inputId="kind-body"
+              value={draft.default_body}
+              onChange={(default_body) => setDraft({ ...draft, default_body })}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={draft.is_active}
+                onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })}
+              />
+              Active
+            </label>
+            <Button type="submit" disabled={saving} className="min-h-11">
+              {saving ? 'Saving…' : editing ? 'Update kind' : 'Add kind'}
+            </Button>
+            {editing ? (
+              <Button type="button" variant="ghost" className="min-h-11" onClick={() => setDraft(empty)}>
+                Cancel edit
+              </Button>
+            ) : null}
+          </div>
+        </form>
+
+        <ul className="divide-y divide-border rounded-xl border border-border">
+          {kinds.length === 0 ? (
+            <li className="p-4 text-sm text-muted-foreground">No kinds yet.</li>
+          ) : (
+            kinds.map((k) => (
+              <li key={k.id || k.slug} className="flex items-start justify-between gap-3 p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">
+                    {k.label}{' '}
+                    <span className="font-normal text-muted-foreground">· {k.slug}</span>
+                    {!k.is_active ? (
+                      <span className="ml-2 text-xs font-medium text-amber-700 dark:text-amber-300">archived</span>
+                    ) : null}
+                  </p>
+                  {k.description ? <p className="mt-0.5 text-xs text-muted-foreground">{k.description}</p> : null}
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="size-10 cursor-pointer"
+                    aria-label={`Edit ${k.label}`}
+                    onClick={() =>
+                      setDraft({
+                        id: k.id,
+                        slug: k.slug || '',
+                        label: k.label || '',
+                        description: k.description || '',
+                        default_title: k.default_title || '',
+                        default_body: k.default_body || '',
+                        display_order: k.display_order ?? 100,
+                        is_active: k.is_active !== false,
+                      })
+                    }
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  {k.is_active !== false && k.id ? (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="size-10 cursor-pointer text-destructive"
+                      aria-label={`Archive ${k.label}`}
+                      onClick={() => deactivate(k.id)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  ) : null}
+                </div>
+              </li>
+            ))
+          )}
+        </ul>
+      </CardContent>
+    </Card>
+  )
+}
+

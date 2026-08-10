@@ -5,6 +5,7 @@ import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import {
   BUSYBEE_SMS_SINGLE_MAX,
   messageMaxForChannel,
+  renderNotificationMessage,
   titleMaxForChannel,
 } from '../src/lib/notificationCopy.js'
 
@@ -132,10 +133,17 @@ export async function handleNotificationBroadcastRequest(req, res) {
   }
 
   if (channel === 'sms' || channel === 'both') {
+    // SMS always targets each customer's phone on the customer profile.
     for (const c of customers || []) {
-      if (!c.phone) continue
+      if (!c.phone) {
+        failed += 1
+        continue
+      }
       try {
-        await busybeeSendSms({ phone: c.phone, message: `${title}\n${message}` })
+        const personalized = renderNotificationMessage(`${title}\n${message}`, {
+          name: c.full_name || 'there',
+        }, { keepMissing: true })
+        await busybeeSendSms({ phone: c.phone, message: personalized })
         sent += 1
       } catch {
         failed += 1

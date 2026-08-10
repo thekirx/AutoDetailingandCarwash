@@ -91,12 +91,20 @@ export function buildHistoryTimeline({ bookings = [], maintenance = [], sales = 
       branch: b.branch,
       plate: b.vehicle_plate,
       phone: b.customer_phone,
+      customerName: b.customer_name || null,
+      vehicleMake: b.vehicle_make || null,
+      vehicleModel: b.vehicle_model || null,
       amountMinor: b.final_price_minor ?? b.price_minor ?? null,
       payCategory: b.services?.pay_category || null,
       serviceSlug: b.services?.slug || null,
       notes: b.notes || null,
       bookingId: b.id,
       customerId: b.customer_id || null,
+      startedAt: b.scheduled_start || null,
+      endedAt: b.completed_at || b.scheduled_end || null,
+      statusAt: b.updated_at || b.completed_at || b.scheduled_start || b.created_at || null,
+      createdAt: b.created_at || null,
+      scheduledEnd: b.scheduled_end || null,
     })
   }
 
@@ -113,6 +121,7 @@ export function buildHistoryTimeline({ bookings = [], maintenance = [], sales = 
       branch: m.branch_slug,
       plate: m.plate_number,
       phone: m.customer_phone,
+      customerName: m.customer_name || null,
       amountMinor: null,
       nextDueAt: m.next_due_at,
       coatedAt: m.coated_at,
@@ -121,6 +130,11 @@ export function buildHistoryTimeline({ bookings = [], maintenance = [], sales = 
       programKey: m.program_key,
       bookingId: m.booking_id,
       customerId: m.customer_id || null,
+      startedAt: m.coated_at || null,
+      endedAt: m.last_maintenance_at || null,
+      statusAt: m.last_notified_at || m.updated_at || m.next_due_at || null,
+      createdAt: m.created_at || null,
+      notes: m.notes || null,
     })
   }
 
@@ -141,6 +155,11 @@ export function buildHistoryTimeline({ bookings = [], maintenance = [], sales = 
       bookingId: s.booking_id,
       customerId: s.customer_id || null,
       saleId: s.id,
+      startedAt: s.occurred_at || s.created_at || null,
+      endedAt: s.occurred_at || s.created_at || null,
+      statusAt: s.occurred_at || s.created_at || null,
+      createdAt: s.created_at || null,
+      notes: s.notes || null,
     })
   }
 

@@ -92,7 +92,13 @@ describe('RBAC Part 1 matrix', () => {
     assert.deepEqual(getBranchScopeList(p), ['bacoor', 'imus'])
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/pos', '/operations/dashboard', '/operations/queue', '/operations/history'],
+      [
+        '/operations/pos',
+        '/operations/dashboard',
+        '/operations/queue',
+        '/operations/attendance',
+        '/operations/history',
+      ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
   })
@@ -111,7 +117,7 @@ describe('RBAC Part 1 matrix', () => {
   it('homes and sales redirect to bookings', () => {
     assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/console')
     assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
-    assert.equal(redirectForRole(ROLES.STAFF), '/operations/my-tasks')
+    assert.equal(redirectForRole(ROLES.STAFF), '/operations/attendance')
     assert.equal(redirectForRole(ROLES.SALES), '/operations/bookings')
     assert.equal(redirectForRole('cashier'), '/operations/pos')
   })
@@ -120,7 +126,7 @@ describe('RBAC Part 1 matrix', () => {
     const dock = getTeamLeadDock({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' })
     assert.ok(dock.some((i) => i.to === '/operations/queue'))
     assert.ok(dock.some((i) => i.to === '/operations/queue/new'))
-    assert.ok(dock.some((i) => i.to === '/operations/crew'))
+    assert.ok(dock.some((i) => i.to === '/operations/attendance'))
     assert.equal(dock.some((i) => i.to === '/operations/bookings'), false)
     assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 0)
   })

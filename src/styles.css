@@ -2316,6 +2316,60 @@ html:not(.dark) .floor-shell .floor-alert-error {
   scroll-snap-type: x proximity;
   min-height: min(62svh, 36rem);
 }
+
+/* Bookings board: all statuses on one screen — no horizontal scroll. */
+.booking-lane-board {
+  display: grid;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  grid-template-columns: repeat(var(--bk-cols, 6), minmax(0, 1fr));
+  min-height: min(58svh, 34rem);
+  align-items: stretch;
+}
+.booking-lane-board .floor-lane {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.45rem;
+  border-radius: 0.85rem;
+  max-height: calc(100svh - 12.5rem);
+  scroll-snap-align: none;
+}
+.booking-lane-board .floor-lane-title {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  white-space: normal;
+  hyphens: auto;
+}
+.booking-lane-board .floor-lane-body {
+  gap: 0.45rem;
+}
+.booking-lane-board .floor-ticket {
+  padding: 0.55rem 0.55rem;
+  min-height: 0;
+  border-radius: 0.7rem;
+}
+.booking-lane-board .floor-ticket p {
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+.booking-lane-board .floor-ticket .bk-meta {
+  font-size: 0.65rem;
+}
+@media (min-width: 1280px) {
+  .booking-lane-board {
+    gap: 0.5rem;
+  }
+  .booking-lane-board .floor-lane {
+    padding: 0.55rem;
+  }
+  .booking-lane-board .floor-lane-title {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+  }
+}
 /* Planning: always horizontal scroll so custom lists aren't forced into 3 cols */
 .planning-lane-board {
   display: grid;
@@ -2613,6 +2667,53 @@ html:not(.dark) .floor-shell .floor-alert-error {
     grid-auto-flow: unset;
     grid-auto-columns: unset;
     overflow-x: visible;
+  }
+}
+
+/* SA/ASA queue: all lanes on one screen (desktop); mobile uses chip + list. */
+.queue-lane-board-fit {
+  display: grid;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  grid-template-columns: repeat(var(--queue-lane-count, 5), minmax(0, 1fr));
+  min-height: min(58svh, 34rem);
+  align-items: stretch;
+}
+.queue-lane-board-fit .floor-lane {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.45rem;
+  border-radius: 0.85rem;
+  max-height: calc(100svh - 12.5rem);
+  scroll-snap-align: none;
+}
+.queue-lane-board-fit .queue-lane-title {
+  white-space: normal;
+  line-height: 1.2;
+}
+.queue-lane-board-fit .queue-lane-hint {
+  display: none;
+}
+.queue-lane-board-fit .floor-lane-body {
+  gap: 0.4rem;
+}
+.queue-ticket-compact {
+  padding: 0.55rem;
+  min-height: 0;
+  border-radius: 0.7rem;
+}
+.queue-card-list {
+  display: grid;
+  gap: 0.75rem;
+}
+@media (min-width: 1280px) {
+  .queue-lane-board-fit {
+    gap: 0.5rem;
+  }
+  .queue-lane-board-fit .queue-lane-hint {
+    display: block;
   }
 }
 .floor-actions-sticky {

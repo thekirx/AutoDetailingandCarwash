@@ -16,7 +16,11 @@ import {
   isFormBookingsOnlyRole,
   ROLES,
 } from '@/auth/permissions'
-import { DETAILING_BOARD_STATUSES, detailingBoardStatusLabel } from '@/lib/detailingBoardStatuses'
+import {
+  DETAILING_BOARD_STATUSES,
+  detailingBoardStatusLabel,
+  isOpenBookingStatus,
+} from '@/lib/detailingBoardStatuses'
 import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope } from '@/lib/crmInsights'
@@ -52,8 +56,14 @@ import { createCoalescedReload } from '@/lib/coalesceReload'
 
 const BOOKING_TABS = ['board', 'table', 'calendar']
 const COLUMNS = [
-  ...DETAILING_BOARD_STATUSES.map((s) => ({ id: s.id, label: s.label, tone: s.tone, hint: s.hint })),
-  { id: 'cancelled', label: 'Cancelled', tone: 'border-l-red-500', hint: 'Cancelled with reason' },
+  ...DETAILING_BOARD_STATUSES.map((s) => ({
+    id: s.id,
+    label: s.label,
+    shortLabel: s.shortLabel || s.label,
+    tone: s.tone,
+    hint: s.hint,
+  })),
+  { id: 'cancelled', label: 'Cancelled', shortLabel: 'Cancelled', tone: 'border-l-red-500', hint: 'Cancelled with reason' },
 ]
 
 const localizer = dateFnsLocalizer({
@@ -95,6 +105,20 @@ function serviceLine(booking) {
   if (!name && !kind) return null
   if (kind === 'detailing') return name ? `${name} · Detailing` : 'Detailing'
   return name || null
+}
+
+function formatBookingStamp(iso) {
+  if (!iso) return null
+  try {
+    return new Date(iso).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return null
+  }
 }
 
 /** Prefer live ops shops (Bacoor / Batangas) over test / Dasmarinas audit slugs. */
@@ -182,22 +206,54 @@ export default function BookingBoardPage() {
   const branchScope = useMemo(() => resolveBranchFilter(profile, branchFilter), [profile, branchFilter])
 
   const load = useCallback(async () => {
-    let query = supabase
+    const select =
+      'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id, final_price_minor, price_minor, services(name, pay_category)'
+    // Open pipeline stays on board/calendar until released/cancelled — date filter only gates terminal rows.
+    const openStatuses = boardStatuses.filter((s) => isOpenBookingStatus(s))
+    const closedStatuses = boardStatuses.filter((s) => !isOpenBookingStatus(s))
+
+    let openQ = supabase
       .from('bookings')
-      .select('id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id, final_price_minor, price_minor, services(name, pay_category)')
+      .select(select)
       .eq('is_archived', false)
-      .in('status', boardStatuses)
+      .in('status', openStatuses.length ? openStatuses : ['pending'])
       .order('scheduled_start', { ascending: true })
-      .limit(datePreset === 'all' ? 800 : 400)
-    if (range.start && range.end) {
-      query = query
-        .gte('scheduled_start', `${range.start}T00:00:00+08:00`)
-        .lte('scheduled_start', `${range.end}T23:59:59.999+08:00`)
+      .limit(500)
+    openQ = applyBranchScope(openQ, branchScope)
+
+    let closedQ = null
+    if (closedStatuses.length) {
+      closedQ = supabase
+        .from('bookings')
+        .select(select)
+        .eq('is_archived', false)
+        .in('status', closedStatuses)
+        .order('scheduled_start', { ascending: true })
+        .limit(datePreset === 'all' ? 400 : 200)
+      if (range.start && range.end) {
+        closedQ = closedQ
+          .gte('scheduled_start', `${range.start}T00:00:00+08:00`)
+          .lte('scheduled_start', `${range.end}T23:59:59.999+08:00`)
+      }
+      closedQ = applyBranchScope(closedQ, branchScope)
     }
-    query = applyBranchScope(query, branchScope)
-    const { data, error } = await query
-    if (error) toast.error(error.message)
-    setBookings(data || [])
+
+    const [openRes, closedRes] = await Promise.all([
+      openQ,
+      closedQ || Promise.resolve({ data: [], error: null }),
+    ])
+    if (openRes.error) toast.error(openRes.error.message)
+    else if (closedRes.error) toast.error(closedRes.error.message)
+
+    const byId = new Map()
+    for (const row of [...(openRes.data || []), ...(closedRes.data || [])]) {
+      byId.set(row.id, row)
+    }
+    setBookings(
+      [...byId.values()].sort(
+        (a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime(),
+      ),
+    )
   }, [branchScope, range.start, range.end, boardStatuses, datePreset])
 
   useEffect(() => {
@@ -722,20 +778,23 @@ export default function BookingBoardPage() {
                   aria-pressed={active}
                   onClick={() => setBoardFilter(col.id)}
                 >
-                  <span>{col.label}</span>
+                  <span>{col.shortLabel || col.label}</span>
                   <span className="bk-status-chip-count">{n}</span>
                 </button>
               )
             })}
           </div>
 
-          <div className="bk-card-list md:hidden" aria-label={`${boardFilter} bookings`}>
+          <div className="bk-card-list xl:hidden" aria-label={`${boardFilter} bookings`}>
             {(grouped[boardFilter] || []).map((booking) => {
               const next = getBookingPrimaryNextStatus(booking.status, {
                 canSeePayment,
                 canCheckIn,
                 detailingPipeline: true,
               })
+              const statusAt = formatBookingStamp(booking.updated_at || booking.scheduled_start)
+              const startAt = formatBookingStamp(booking.scheduled_start)
+              const endAt = booking.status === 'completed' ? formatBookingStamp(booking.completed_at || booking.scheduled_end) : null
               return (
                 <article key={booking.id} className="bk-card">
                   <div className="flex items-start justify-between gap-2">
@@ -752,14 +811,12 @@ export default function BookingBoardPage() {
                   ) : null}
                   <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
                     {branchNameBySlug[booking.branch] || booking.branch}
-                    {' · '}
-                    {new Date(booking.scheduled_start).toLocaleString([], {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
                   </p>
+                  <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground tabular-nums">
+                    {statusAt ? <p>Status · {statusAt}</p> : null}
+                    {startAt ? <p>Start · {startAt}</p> : null}
+                    {endAt ? <p>End · {endAt}</p> : null}
+                  </div>
                   {canAdvanceStatus && next ? (
                     <Button
                       type="button"
@@ -789,12 +846,19 @@ export default function BookingBoardPage() {
             )}
           </div>
 
-          <div className="floor-lane-board hidden md:grid" role="region" aria-label="Booking columns">
+          <div
+            className="booking-lane-board hidden xl:grid"
+            role="region"
+            aria-label="Booking columns"
+            style={{ ['--bk-cols']: String(visibleColumns.length) }}
+          >
             {visibleColumns.map((col) => (
               <section key={col.id} className="floor-lane" aria-label={`${col.label} column`}>
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <h2 className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">{col.label}</h2>
-                  <Badge variant="secondary" className="tabular-nums">{grouped[col.id].length}</Badge>
+                <div className="mb-2 flex items-start justify-between gap-1">
+                  <h2 className="floor-lane-title font-bold text-muted-foreground uppercase" title={col.label}>
+                    {col.shortLabel || col.label}
+                  </h2>
+                  <Badge variant="secondary" className="shrink-0 tabular-nums text-[10px]">{grouped[col.id].length}</Badge>
                 </div>
                 <div className="floor-lane-body">
                   {grouped[col.id].map((booking) => {
@@ -803,38 +867,39 @@ export default function BookingBoardPage() {
                       canCheckIn,
                       detailingPipeline: true,
                     })
+                    const statusAt = formatBookingStamp(booking.updated_at || booking.scheduled_start)
+                    const startAt = formatBookingStamp(booking.scheduled_start)
+                    const endAt = booking.status === 'completed' ? formatBookingStamp(booking.completed_at || booking.scheduled_end) : null
                     return (
                       <article
                         key={booking.id}
                         className={cn('floor-ticket !cursor-default border-l-4', col.tone)}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="font-semibold text-foreground">{booking.customer_name}</p>
+                        <div className="flex items-start justify-between gap-1">
+                          <p className="font-semibold text-foreground leading-snug">{booking.customer_name}</p>
                           {canEditServicePrice && (
-                            <Button size="sm" variant="ghost" className="h-8 shrink-0 cursor-pointer px-2" onClick={() => openEdit(booking)}>
+                            <Button size="sm" variant="ghost" className="h-7 shrink-0 cursor-pointer px-1.5 text-xs" onClick={() => openEdit(booking)}>
                               Edit
                             </Button>
                           )}
                         </div>
-                        <p className="mt-1 text-sm text-foreground/80">{vehicleLine(booking)}</p>
+                        <p className="mt-1 text-foreground/80 leading-snug">{vehicleLine(booking)}</p>
                         {serviceLine(booking) ? (
-                          <p className="mt-1 text-xs font-semibold text-primary">{serviceLine(booking)}</p>
+                          <p className="mt-0.5 font-semibold text-primary leading-snug">{serviceLine(booking)}</p>
                         ) : null}
-                        <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
+                        <p className="bk-meta mt-1 font-medium capitalize text-muted-foreground">
                           {branchNameBySlug[booking.branch] || booking.branch}
-                          {' · '}
-                          {new Date(booking.scheduled_start).toLocaleString([], {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
                         </p>
+                        <div className="bk-meta mt-1.5 space-y-0.5 text-muted-foreground tabular-nums">
+                          {statusAt ? <p>Status · {statusAt}</p> : null}
+                          {startAt ? <p>Start · {startAt}</p> : null}
+                          {endAt ? <p className="font-medium text-foreground">End · {endAt}</p> : null}
+                        </div>
                         {canAdvanceStatus && next ? (
                           <Button
                             type="button"
                             size="sm"
-                            className="mt-3 min-h-10 w-full cursor-pointer"
+                            className="mt-2 min-h-9 w-full cursor-pointer text-xs"
                             onClick={() => move(booking, next)}
                           >
                             {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
@@ -845,7 +910,7 @@ export default function BookingBoardPage() {
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="mt-2 min-h-10 w-full cursor-pointer text-destructive"
+                            className="mt-1 min-h-8 w-full cursor-pointer text-xs text-destructive"
                             onClick={() => setCancelTarget(booking)}
                           >
                             Cancel
@@ -855,8 +920,8 @@ export default function BookingBoardPage() {
                     )
                   })}
                   {!grouped[col.id].length && (
-                    <p className="rounded-2xl border border-dashed border-border bg-background/50 p-5 text-center text-sm text-muted-foreground">
-                      No {col.label.toLowerCase()} bookings
+                    <p className="rounded-xl border border-dashed border-border bg-background/50 p-3 text-center text-[11px] text-muted-foreground">
+                      Empty
                     </p>
                   )}
                 </div>
@@ -1025,12 +1090,17 @@ export default function BookingBoardPage() {
         <TabsContent value="calendar" className="mt-4">
           <Card className="overflow-hidden">
             <CardContent className="p-3 sm:p-4">
-              <div className="booking-calendar min-h-[28rem] text-foreground [&_.rbc-toolbar]:mb-3 [&_.rbc-toolbar_button]:min-h-10 [&_.rbc-toolbar_button]:cursor-pointer [&_.rbc-toolbar_button]:rounded-md [&_.rbc-toolbar_button]:border [&_.rbc-toolbar_button]:border-border [&_.rbc-toolbar_button]:bg-background [&_.rbc-toolbar_button]:px-3 [&_.rbc-toolbar_button]:text-foreground [&_.rbc-month-view]:rounded-xl [&_.rbc-month-view]:border [&_.rbc-month-view]:border-border [&_.rbc-header]:border-border [&_.rbc-header]:bg-muted/50 [&_.rbc-header]:py-2 [&_.rbc-header]:text-xs [&_.rbc-header]:font-semibold [&_.rbc-header]:text-muted-foreground [&_.rbc-off-range-bg]:bg-muted/30 [&_.rbc-today]:bg-primary/5 [&_.rbc-event]:border-0 [&_.rbc-event]:bg-primary [&_.rbc-event]:text-primary-foreground [&_.rbc-time-content]:border-border [&_.rbc-timeslot-group]:border-border [&_.rbc-day-bg]:border-border [&_.rbc-month-row]:border-border">
+              <div className="booking-calendar planning-calendar min-h-[28rem] text-foreground [&_.rbc-toolbar]:mb-3 [&_.rbc-toolbar_button]:min-h-10 [&_.rbc-toolbar_button]:cursor-pointer [&_.rbc-toolbar_button]:rounded-md [&_.rbc-toolbar_button]:border [&_.rbc-toolbar_button]:border-border [&_.rbc-toolbar_button]:bg-background [&_.rbc-toolbar_button]:px-3 [&_.rbc-toolbar_button]:text-foreground [&_.rbc-month-view]:rounded-xl [&_.rbc-month-view]:border [&_.rbc-month-view]:border-border [&_.rbc-time-header]:min-h-12 [&_.rbc-time-header-content_.rbc-header]:min-h-11 [&_.rbc-time-header-content_.rbc-header]:flex [&_.rbc-time-header-content_.rbc-header]:items-center [&_.rbc-time-header-content_.rbc-header]:justify-center [&_.rbc-header]:border-border [&_.rbc-header]:bg-muted/50 [&_.rbc-header]:py-2 [&_.rbc-header]:text-xs [&_.rbc-header]:font-semibold [&_.rbc-header]:text-foreground [&_.rbc-off-range-bg]:bg-muted/30 [&_.rbc-today]:bg-primary/5 [&_.rbc-event]:border-0 [&_.rbc-event]:bg-primary [&_.rbc-event]:text-primary-foreground [&_.rbc-time-content]:border-border [&_.rbc-timeslot-group]:border-border [&_.rbc-day-bg]:border-border [&_.rbc-month-row]:border-border [&_.rbc-label]:text-muted-foreground">
                 <BigCalendar
                   localizer={localizer}
                   events={calendarEvents}
                   defaultView={Views.WEEK}
                   views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
+                  dayLayoutAlgorithm="no-overlap"
+                  formats={{
+                    dayFormat: (date, culture, loc) => loc.format(date, 'EEE M/d', culture),
+                    dayHeaderFormat: (date, culture, loc) => loc.format(date, 'EEE MMM d', culture),
+                  }}
                   style={{ minHeight: 420 }}
                   onSelectEvent={(ev) => canEdit && openEdit(ev.resource)}
                 />

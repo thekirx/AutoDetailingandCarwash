@@ -7,6 +7,7 @@ import {
   BUSYBEE_SMS_SINGLE_MAX,
   busybeeSmsSegments,
   clampNotificationCopy,
+  insertMessageToken,
   messageMaxForChannel,
   notificationScopeLabel,
   renderNotificationMessage,
@@ -75,6 +76,17 @@ describe('custom message tokens', () => {
     })
     assert.equal(out, 'Hi Ana, ABC-123 needs Ceramic Coating at bacoor.')
   })
+
+  it('insertMessageToken places token at caret', () => {
+    const { value, caret } = insertMessageToken('Hi  there', '{name}', 3)
+    assert.equal(value, 'Hi {name} there')
+    assert.equal(caret, 9)
+  })
+
+  it('keepMissing leaves unresolved tokens for SMS drafts', () => {
+    const out = renderNotificationMessage('Hi {name}, {plate}', { name: 'Ana' }, { keepMissing: true })
+    assert.equal(out, 'Hi Ana, {plate}')
+  })
 })
 
 describe('settings page + migration contract', () => {
@@ -83,8 +95,10 @@ describe('settings page + migration contract', () => {
     assert.match(jsx, /filterFloorDetailingServices/)
     assert.match(jsx, /NOTIFICATION_SCOPES/)
     assert.match(jsx, /BUSYBEE_SMS_SINGLE_MAX/)
+    assert.match(jsx, /MessageTokenChips/)
     assert.match(jsx, /\{plate\}/)
     assert.match(jsx, /Paint Maintenance/)
+    assert.match(jsx, /BroadcastKindsManager/)
   })
 
   it('migration adds scope title message + unique scope index', async () => {
@@ -97,6 +111,19 @@ describe('settings page + migration contract', () => {
     assert.match(sql, /add column if not exists message/)
     assert.match(sql, /notification_settings_scope_uidx/)
     assert.match(sql, /per_service_branch/)
+  })
+
+  it('broadcast kinds migration + API exist', async () => {
+    const sql = await readFile(
+      resolve(root, 'supabase/migrations/20260810170000_notification_broadcast_kinds.sql'),
+      'utf8',
+    )
+    assert.match(sql, /notification_broadcast_kinds/)
+    const api = await readFile(resolve(root, 'server/notificationBroadcastKindsApi.mjs'), 'utf8')
+    assert.match(api, /Only Super Admin can manage kinds/)
+    const sms = await readFile(resolve(root, 'server/notificationBroadcastApi.mjs'), 'utf8')
+    assert.match(sms, /c\.phone/)
+    assert.match(sms, /renderNotificationMessage/)
   })
 
   it('API requires custom message and detailing service', async () => {

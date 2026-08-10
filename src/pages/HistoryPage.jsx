@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import {
   CalendarRange,
   CarFront,
+  ChevronRight,
   History,
   Loader2,
   Phone,
@@ -20,8 +21,9 @@ import {
   normalizeHistoryPlate,
   normalizeHistoryPhone,
 } from '@/lib/customerHistory'
-import { DETAILING_BOARD_STATUSES } from '@/lib/detailingBoardStatuses'
+import { DETAILING_BOARD_STATUSES, detailingBoardStatusLabel } from '@/lib/detailingBoardStatuses'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -83,6 +85,7 @@ export default function HistoryPage() {
   const [branch, setBranch] = useState('all')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [selected, setSelected] = useState(null)
 
   if (!canAccessHistory(profile)) {
     return <Navigate to="/operations/access-denied" replace />
@@ -108,9 +111,8 @@ export default function HistoryPage() {
     return ['all', ...[...set].sort()]
   }, [result])
 
-  const search = useCallback(async (e) => {
-    e?.preventDefault?.()
-    const query = q.trim()
+  const runSearch = useCallback(async (queryRaw) => {
+    const query = String(queryRaw || '').trim()
     if (query.length < 3) {
       toast.error('Enter at least 3 characters of a plate or mobile number.')
       return
@@ -144,7 +146,15 @@ export default function HistoryPage() {
     } finally {
       setLoading(false)
     }
-  }, [q])
+  }, [])
+
+  const search = useCallback(
+    async (e) => {
+      e?.preventDefault?.()
+      await runSearch(q)
+    },
+    [q, runSearch],
+  )
 
   function toggleKind(id) {
     setKinds((prev) => {
@@ -417,6 +427,10 @@ export default function HistoryPage() {
             <ol className="relative space-y-0 border-l border-border/80 pl-0 sm:ml-2">
               {timeline.map((ev) => {
                 const amount = formatPhpMinor(ev.amountMinor)
+                const statusLabel =
+                  detailingBoardStatusLabel(ev.status) ||
+                  String(ev.status || '').replace(/_/g, ' ')
+                const isComplete = ev.status === 'completed' || ev.kind === 'sale'
                 return (
                   <li key={ev.id} className="relative pb-5 pl-6 last:pb-0 sm:pl-8">
                     <span
@@ -430,7 +444,11 @@ export default function HistoryPage() {
                       )}
                       aria-hidden
                     />
-                    <article className="rounded-xl border border-border/90 bg-card/80 p-3.5 sm:p-4">
+                    <button
+                      type="button"
+                      className="group w-full cursor-pointer rounded-xl border border-border/90 bg-card/80 p-3.5 text-left transition hover:border-primary/40 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4"
+                      onClick={() => setSelected(ev)}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -442,39 +460,125 @@ export default function HistoryPage() {
                             >
                               {ev.kind === 'maintenance' ? 'Maintenance' : ev.kind === 'sale' ? 'POS' : 'Booking'}
                             </span>
-                            {ev.status ? (
-                              <span className="text-xs text-muted-foreground capitalize">{String(ev.status).replace(/_/g, ' ')}</span>
+                            {statusLabel ? (
+                              <span className="text-xs capitalize text-muted-foreground">{statusLabel}</span>
                             ) : null}
                           </div>
-                          <h2 className="mt-1.5 text-base font-semibold tracking-tight">{ev.title}</h2>
+                          <h2 className="mt-1.5 text-base font-semibold tracking-tight group-hover:text-primary">
+                            {ev.title}
+                          </h2>
                           {ev.subtitle ? (
                             <p className="mt-0.5 text-sm text-muted-foreground">{ev.subtitle}</p>
                           ) : null}
                         </div>
-                        <time className="shrink-0 text-xs text-muted-foreground tabular-nums" dateTime={ev.at || undefined}>
-                          {formatWhen(ev.at)}
-                        </time>
+                        <span className="inline-flex shrink-0 items-center gap-1 text-xs text-primary">
+                          Details
+                          <ChevronRight className="size-3.5" aria-hidden />
+                        </span>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <div className="mt-3 grid gap-1 text-xs text-muted-foreground tabular-nums sm:grid-cols-2">
+                        {ev.statusAt ? <p>Status · {formatWhen(ev.statusAt)}</p> : null}
+                        {ev.startedAt ? <p>Start · {formatWhen(ev.startedAt)}</p> : null}
+                        {isComplete && ev.endedAt ? (
+                          <p className="font-medium text-foreground">End · {formatWhen(ev.endedAt)}</p>
+                        ) : null}
+                        {ev.nextDueAt ? (
+                          <p className="inline-flex items-center gap-1 text-amber-800 dark:text-amber-200">
+                            <Wrench className="size-3.5" aria-hidden />
+                            Next due {ev.nextDueAt}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         {ev.branch ? <span>Branch · {ev.branch}</span> : null}
                         {ev.plate ? <span className="font-mono tracking-wide">{ev.plate}</span> : null}
                         {amount ? <span className="font-medium text-foreground">{amount}</span> : null}
-                        {ev.nextDueAt ? (
-                          <span className="inline-flex items-center gap-1 text-amber-800 dark:text-amber-200">
-                            <Wrench className="size-3.5" aria-hidden />
-                            Next due {ev.nextDueAt}
-                          </span>
-                        ) : null}
                       </div>
-                      {ev.notes ? (
-                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{ev.notes}</p>
-                      ) : null}
-                    </article>
+                    </button>
                   </li>
                 )
               })}
             </ol>
           )}
+
+          <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{selected?.title || 'Event details'}</DialogTitle>
+              </DialogHeader>
+              {selected ? (
+                <div className="grid gap-3 text-sm">
+                  <div className="flex flex-wrap gap-2">
+                    <span className={cn('rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase', kindTone(selected.kind))}>
+                      {selected.kind}
+                    </span>
+                    {selected.status ? (
+                      <span className="rounded-md border border-border px-2 py-0.5 text-xs capitalize">
+                        {detailingBoardStatusLabel(selected.status) || String(selected.status).replace(/_/g, ' ')}
+                      </span>
+                    ) : null}
+                  </div>
+                  <dl className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      ['Customer', selected.customerName || selected.subtitle],
+                      ['Plate', selected.plate],
+                      ['Phone', selected.phone],
+                      ['Branch', selected.branch],
+                      ['Vehicle', [selected.vehicleMake, selected.vehicleModel].filter(Boolean).join(' ')],
+                      ['Amount', formatPhpMinor(selected.amountMinor)],
+                      ['Status time', selected.statusAt ? formatWhen(selected.statusAt) : null],
+                      ['Start', selected.startedAt ? formatWhen(selected.startedAt) : null],
+                      [
+                        'End',
+                        selected.status === 'completed' || selected.kind === 'sale'
+                          ? selected.endedAt
+                            ? formatWhen(selected.endedAt)
+                            : null
+                          : null,
+                      ],
+                      ['Created', selected.createdAt ? formatWhen(selected.createdAt) : null],
+                      ['Coated', selected.coatedAt],
+                      ['Last maintenance', selected.lastMaintenanceAt],
+                      ['Next due', selected.nextDueAt],
+                      ['Last notified', selected.lastNotifiedAt ? formatWhen(selected.lastNotifiedAt) : null],
+                      ['Booking ID', selected.bookingId],
+                      ['Sale ID', selected.saleId],
+                    ]
+                      .filter(([, v]) => v)
+                      .map(([label, value]) => (
+                        <div key={label} className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2">
+                          <dt className="text-[10px] font-bold tracking-wide text-muted-foreground uppercase">{label}</dt>
+                          <dd className="mt-0.5 break-all font-medium">{value}</dd>
+                        </div>
+                      ))}
+                  </dl>
+                  {selected.notes ? (
+                    <p className="rounded-lg border border-border bg-background px-3 py-2 text-muted-foreground">{selected.notes}</p>
+                  ) : null}
+                </div>
+              ) : null}
+              <DialogFooter className="flex-col gap-2 sm:flex-row">
+                {selected?.plate || selected?.phone ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11 w-full cursor-pointer sm:w-auto"
+                    onClick={() => {
+                      const nextQ = selected.plate || selected.phone
+                      setSelected(null)
+                      setQ(nextQ)
+                      runSearch(nextQ)
+                    }}
+                  >
+                    Full history for this {selected?.plate ? 'plate' : 'number'}
+                  </Button>
+                ) : null}
+                <Button type="button" className="min-h-11 w-full cursor-pointer sm:w-auto" onClick={() => setSelected(null)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       ) : searched && !loading ? (
         <div className="rounded-2xl border border-dashed border-border px-4 py-14 text-center">

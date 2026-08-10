@@ -232,19 +232,36 @@ export function canManageVehicleCatalog(profile) {
 }
 
 export function canOverrideAttendance(profile) {
+  // SA / ASA / Branch Admin may correct register rows. TL clocks in but does not override.
   return isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || profile?.role === ROLES.ADMIN
 }
 
-/** Branch geofence + shift settings (Admin / BossMich / ASA with people or branches). */
+/**
+ * Geofence + shift hours — Super Admin (and ASA with branches grant).
+ * Values apply network-wide (same for every branch).
+ */
 export function canEditAttendanceSettings(profile) {
   if (isSuperAdmin(profile)) return true
-  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'branches') || hasGrant(profile, 'people')
-  return profile?.role === ROLES.ADMIN
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'branches')
+  return false
 }
 
 /** Which employee roles appear on the attendance register — Super Admin only. */
 export function canEditAttendanceRoles(profile) {
   return isSuperAdmin(profile)
+}
+
+/** Dedicated Attendance page: clock (BA/Crew/TL) and/or register/settings (SA/BA). */
+export function canAccessAttendance(profile) {
+  if (!profile) return false
+  if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile)) return true
+  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF].includes(profile.role)
+}
+
+/** Personal geofenced time in / time out — Branch Admin, Crew, Team Lead only. */
+export function canUseAttendanceClock(profile) {
+  if (!profile) return false
+  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF].includes(profile.role)
 }
 
 export function canAccessConsole(profile) {
@@ -386,7 +403,16 @@ export function getOperationsNav(profile) {
       { label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' },
       { label: 'Queue View', to: '/operations/dashboard', icon: 'Gauge' },
       { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
+      { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
       { label: 'History', to: '/operations/history', icon: 'History' },
+    ]
+  }
+
+  // Crew (staff): clock + assigned work only.
+  if (profile?.role === ROLES.STAFF) {
+    return [
+      { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
+      { label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
     ]
   }
 
@@ -438,11 +464,15 @@ export function getOperationsNav(profile) {
       },
       { label: 'Car Wash Queue', to: '/operations/queue', icon: 'ClipboardList' },
       { label: 'Detailing Queue', to: '/operations/queue?family=detailing', icon: 'Layers' },
+      { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
       { label: 'Crew', to: '/operations/crew', icon: 'Users' },
       { label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' },
     )
   }
-  if (canViewAssignedTasks(profile)) {
+  if (canAccessAttendance(profile) && !canViewQueueOperations(profile) && profile?.role !== ROLES.STAFF) {
+    items.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
+  }
+  if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF) {
     items.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
   }
   if (canAccessPos(profile)) {
@@ -479,6 +509,7 @@ export function getTeamLeadDock(profile) {
   if (canQueue) dock.push({ label: 'Detail', to: '/operations/queue?family=detailing', icon: 'Layers' })
   if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
   if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
+  if (canQueue) dock.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
   if (canQueue) dock.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
   return dock.slice(0, 5)
 }
@@ -487,17 +518,18 @@ export function getTeamLeadMore(profile) {
   const more = []
   if (canAccessHistory(profile)) more.push({ label: 'History', to: '/operations/history', icon: 'History' })
   if (canViewQueueOperations(profile)) more.push({ label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' })
+  if (canViewQueueOperations(profile)) more.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
   if (canViewAssignedTasks(profile)) more.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
   return more
 }
 
-/** Branch Admin thumb dock — POS primary (checkout), Floor + Queue for oversight. */
+/** Branch Admin thumb dock — POS primary (checkout), Floor + Queue + Attendance. */
 export function getBranchAdminDock(profile) {
   if (!isBranchAdmin(profile)) return []
   const dock = []
   if (canViewQueueOperations(profile)) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
   if (canViewQueueOperations(profile)) dock.push({ label: 'Wash', to: '/operations/queue', icon: 'ClipboardList', end: true })
-  if (canViewQueueOperations(profile)) dock.push({ label: 'Detail', to: '/operations/queue?family=detailing', icon: 'Layers' })
+  if (canAccessAttendance(profile)) dock.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
   if (canAccessPos(profile)) dock.push({ label: 'POS', to: '/operations/pos', icon: 'ShoppingCart', primary: true })
   return dock
 }
@@ -505,10 +537,14 @@ export function getBranchAdminDock(profile) {
 /** Optional overflow for Branch Admin (public kiosk links live on the queue page). */
 export function getBranchAdminMore(profile) {
   if (!isBranchAdmin(profile)) return []
-  if (canAccessHistory(profile)) {
-    return [{ label: 'History', to: '/operations/history', icon: 'History' }]
+  const more = []
+  if (canViewQueueOperations(profile)) {
+    more.push({ label: 'Detail', to: '/operations/queue?family=detailing', icon: 'Layers' })
   }
-  return []
+  if (canAccessHistory(profile)) {
+    more.push({ label: 'History', to: '/operations/history', icon: 'History' })
+  }
+  return more
 }
 
 /** Sales thumb dock — form bookings only (Hakum floor shell). */
@@ -530,7 +566,7 @@ export function redirectForRole(role) {
     return '/operations/console'
   }
   if (role === ROLES.ADMIN) return '/operations/pos'
-  if (role === ROLES.STAFF) return '/operations/my-tasks'
+  if (role === ROLES.STAFF) return '/operations/attendance'
   if (role === ROLES.TEAM_LEAD) return '/operations/queue'
   if (role === ROLES.SALES) return '/operations/bookings'
   if (role === ROLES.MARKETING) return '/operations/crm'
@@ -553,6 +589,7 @@ export function allowRoute(profile, key) {
     queue: canViewQueueOperations,
     'queue-new': canEditQueueOperations,
     crew: canViewQueueOperations,
+    attendance: canAccessAttendance,
     kpi: canViewQueueOperations,
     'my-tasks': canViewAssignedTasks,
     pos: canAccessPos,

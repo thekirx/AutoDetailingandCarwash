@@ -33,7 +33,9 @@ describe('customer history search helpers', () => {
           branch: 'bacoor',
           vehicle_plate: 'ABC123',
           created_at: '2026-01-01T00:00:00Z',
+          scheduled_start: '2026-01-01T08:00:00Z',
           completed_at: '2026-01-02T00:00:00Z',
+          updated_at: '2026-01-02T00:00:00Z',
           final_price_minor: 150000,
           services: { name: 'Ceramic Coating', pay_category: 'detailing', slug: 'ceramic-coating' },
         },
@@ -62,6 +64,10 @@ describe('customer history search helpers', () => {
     })
     assert.equal(timeline.length, 3)
     assert.equal(timeline[0].kind, 'sale')
+    const bookingEv = timeline.find((e) => e.kind === 'booking')
+    assert.equal(bookingEv.startedAt, '2026-01-01T08:00:00Z')
+    assert.equal(bookingEv.endedAt, '2026-01-02T00:00:00Z')
+    assert.ok(bookingEv.statusAt)
 
     const onlyMaint = filterHistoryTimeline(timeline, { kinds: ['maintenance'] })
     assert.equal(onlyMaint.length, 1)

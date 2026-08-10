@@ -21,10 +21,11 @@ import {
 describe('Staff capability matrix', () => {
   const p = { role: ROLES.STAFF, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
 
-  it('allows only my-tasks; denies floor queue POS finance console crew bookings', () => {
+  it('allows attendance + my-tasks; denies floor queue POS finance console crew bookings', () => {
     assert.equal(canViewAssignedTasks(p), true)
     assert.equal(allowRoute(p, 'my-tasks'), true)
-    assert.equal(redirectForRole(ROLES.STAFF), '/operations/my-tasks')
+    assert.equal(allowRoute(p, 'attendance'), true)
+    assert.equal(redirectForRole(ROLES.STAFF), '/operations/attendance')
     assert.equal(canViewQueueOperations(p), false)
     assert.equal(canEditQueueOperations(p), false)
     assert.equal(allowRoute(p, 'dashboard'), false)
@@ -43,7 +44,7 @@ describe('Staff capability matrix', () => {
     assert.equal(canManageCrew(p), false)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/my-tasks'],
+      ['/operations/attendance', '/operations/my-tasks'],
     )
   })
 })

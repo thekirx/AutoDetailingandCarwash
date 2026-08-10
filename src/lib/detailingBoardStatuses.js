@@ -1,12 +1,12 @@
 /** Detailing / coating board status labels (client pipeline). Maps to booking_status enum. */
 
 export const DETAILING_BOARD_STATUSES = [
-  { id: 'pending', label: 'Booking Placeholder', hint: 'Hold / draft booking', tone: 'border-l-blue-500' },
-  { id: 'confirmed', label: 'Assigned to Branch', hint: 'Sent to the shop', tone: 'border-l-emerald-500' },
-  { id: 'waiting', label: 'In Take Started', hint: 'Car received on floor', tone: 'border-l-violet-500' },
-  { id: 'in_progress', label: 'Vehicle Inspection', hint: 'Work / inspection in progress', tone: 'border-l-amber-500' },
-  { id: 'final_checking', label: 'Ready for Release', hint: 'QC passed · ready to release', tone: 'border-l-cyan-500' },
-  { id: 'completed', label: 'Successful Release', hint: 'Released to customer', tone: 'border-l-slate-400' },
+  { id: 'pending', label: 'Booking Placeholder', shortLabel: 'Placeholder', hint: 'Hold / draft booking', tone: 'border-l-blue-500' },
+  { id: 'confirmed', label: 'Assigned to Branch', shortLabel: 'Assigned', hint: 'Sent to the shop', tone: 'border-l-emerald-500' },
+  { id: 'waiting', label: 'In Take Started', shortLabel: 'In Take', hint: 'Car received on floor', tone: 'border-l-violet-500' },
+  { id: 'in_progress', label: 'Vehicle Inspection', shortLabel: 'Inspection', hint: 'Work / inspection in progress', tone: 'border-l-amber-500' },
+  { id: 'final_checking', label: 'Ready for Release', shortLabel: 'Ready', hint: 'QC passed · ready to release', tone: 'border-l-cyan-500' },
+  { id: 'completed', label: 'Successful Release', shortLabel: 'Released', hint: 'Released to customer', tone: 'border-l-slate-400' },
 ]
 
 /** Statuses Sales may set on the Bookings board (API + RLS). */
@@ -33,4 +33,11 @@ export function nextDetailingBoardStatus(status) {
 
 export function isSalesBoardStatus(status) {
   return SALES_BOARD_STATUSES.includes(String(status || ''))
+}
+
+/** Done / cancelled — date filters apply; open pipeline stays visible until released. */
+export const BOOKING_TERMINAL_STATUSES = Object.freeze(['completed', 'cancelled'])
+
+export function isOpenBookingStatus(status) {
+  return !BOOKING_TERMINAL_STATUSES.includes(String(status || ''))
 }

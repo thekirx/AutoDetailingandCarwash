@@ -34,11 +34,12 @@ import { QUEUE_PROVISION_ROLES } from '../server/provisionCustomer.mjs'
 describe('Team Lead capability matrix', () => {
   const p = { role: ROLES.TEAM_LEAD, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
 
-  it('allows floor queue crew kpi my-tasks queue-new; denies bookings console POS finance CRM people cars reports', () => {
+  it('allows floor queue crew kpi attendance my-tasks queue-new; denies bookings console POS finance CRM people cars reports', () => {
     assert.equal(allowRoute(p, 'dashboard'), true)
     assert.equal(allowRoute(p, 'queue'), true)
     assert.equal(allowRoute(p, 'queue-new'), true)
     assert.equal(allowRoute(p, 'crew'), true)
+    assert.equal(allowRoute(p, 'attendance'), true)
     assert.equal(allowRoute(p, 'kpi'), true)
     assert.equal(allowRoute(p, 'bookings'), false)
     assert.equal(allowRoute(p, 'my-tasks'), true)

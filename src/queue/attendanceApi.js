@@ -1,4 +1,4 @@
-import { canEditAttendanceRoles } from '../auth/permissions'
+import { canEditAttendanceRoles, canEditAttendanceSettings } from '../auth/permissions'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { supabase } from '../lib/supabase'
 import {
@@ -103,6 +103,38 @@ export async function updateBranchAttendanceSettings(branchSlug, patch) {
     .single()
   if (error) throw formatQueueActionError(error)
   return data
+}
+
+/**
+ * Super Admin / ASA(branches): same geofence + shifts on every branch.
+ * Branch map pins stay per-branch; only radius and hours are network policy.
+ */
+export async function applyNetworkAttendanceSettings(patch, profile) {
+  if (!canEditAttendanceSettings(profile)) {
+    throw new Error('Only Super Admin can set network geofence and shifts.')
+  }
+  const radius = Number(patch.geofence_radius_m)
+  if (!Number.isFinite(radius) || radius < 20 || radius > 5000) {
+    throw new Error('Geofence radius must be between 20 and 5000 meters.')
+  }
+  const shift_start = String(patch.shift_start || '').trim()
+  const shift_end = String(patch.shift_end || '').trim()
+  if (!shift_start || !shift_end) {
+    throw new Error('Shift start and end are required.')
+  }
+
+  const { data, error } = await supabase
+    .from('branches')
+    .update({
+      geofence_radius_m: radius,
+      shift_start,
+      shift_end,
+      updated_at: new Date().toISOString(),
+    })
+    .not('slug', 'is', null)
+    .select('slug')
+  if (error) throw formatQueueActionError(error)
+  return { updated: (data || []).length, geofence_radius_m: radius, shift_start, shift_end }
 }
 
 export async function fetchAttendanceMatrix({ branchSlug, period, anchor }) {

@@ -69,18 +69,46 @@ export function resolveNotificationScope({ scope, service_id, branch_slug } = {}
   return { ok: true, scope: s, service_id: svc, branch_slug: br }
 }
 
+/** Clickable insert tokens for reminder / broadcast composers. */
+export const MESSAGE_TOKENS = [
+  { token: '{name}', label: 'Name', hint: 'Customer first/full name' },
+  { token: '{plate}', label: 'Plate', hint: 'Vehicle plate' },
+  { token: '{service}', label: 'Service', hint: 'Service name' },
+  { token: '{branch}', label: 'Branch', hint: 'Branch name' },
+]
+
 /**
- * Substitute smart tokens in a custom reminder message.
- * Tokens: {plate} {service} {name} {branch}
+ * Insert a token into a string at a caret index (defaults to end).
+ * Returns { value, caret } so the UI can restore selection.
  */
-export function renderNotificationMessage(template, vars = {}) {
+export function insertMessageToken(text, token, caret = null) {
+  const src = String(text || '')
+  const t = String(token || '')
+  if (!t) return { value: src, caret: src.length }
+  const at = caret == null || caret < 0 || caret > src.length ? src.length : caret
+  const value = `${src.slice(0, at)}${t}${src.slice(at)}`
+  return { value, caret: at + t.length }
+}
+
+/**
+ * Substitute smart tokens in a custom reminder / SMS message.
+ * Tokens: {plate} {service} {name} {branch}
+ * Missing vars keep the token when keepMissing is true (broadcast draft preview);
+ * reminders use defaults for a finished SMS.
+ */
+export function renderNotificationMessage(template, vars = {}, { keepMissing = false } = {}) {
   const fallback = `Hakum Auto Care: ${vars.plate || 'your vehicle'} is due for its ${vars.service || 'detailing'} maintenance. Book at hakumautocare.com/book.`
   const raw = String(template || '').trim() || fallback
+  const pick = (key, def) => {
+    const v = vars[key]
+    if (v != null && String(v).trim() !== '') return String(v)
+    return keepMissing ? `{${key}}` : def
+  }
   return raw
-    .replaceAll('{plate}', vars.plate || 'your vehicle')
-    .replaceAll('{service}', vars.service || 'detailing')
-    .replaceAll('{name}', vars.name || 'there')
-    .replaceAll('{branch}', vars.branch || 'Hakum')
+    .replaceAll('{plate}', pick('plate', 'your vehicle'))
+    .replaceAll('{service}', pick('service', 'detailing'))
+    .replaceAll('{name}', pick('name', 'there'))
+    .replaceAll('{branch}', pick('branch', 'Hakum'))
 }
 
 export function clampNotificationCopy({ channel, title, message } = {}) {

@@ -28,9 +28,8 @@ import {
   QUEUE_FAMILIES,
   QUEUE_FAMILY_DETAILING,
 } from '../lib/queueFamilies'
-import { CrewAttendancePanel, CrewSettingsPanel } from './crew/CrewAttendancePanels'
 import { splitCustomerName } from '../lib/phVehicles'
-import { canAccessPos, canEditAttendanceRoles, canEditAttendanceSettings, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES } from '../auth/permissions'
+import { canAccessPos, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES } from '../auth/permissions'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import QueueTicketEditor from '../components/QueueTicketEditor'
 import TeamLeadQueuePage from './TeamLeadQueuePage'
@@ -53,6 +52,7 @@ import {
   canOverrideQueueBranches,
   DASHBOARD_DATE_PRESETS,
   STATUS_LABELS,
+  statusShortLabel,
 } from '../queue/queueLogic'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import {
@@ -70,7 +70,6 @@ import {
   setStaffAttendance,
   updateCrewStaffMember,
 } from '../queue/queueApi'
-import { geoTimeIn, geoTimeOut, readBrowserPosition } from '../queue/attendanceApi'
 import { allowedStaffPlanAssigneePatch } from '../queue/staffTaskLogic'
 import { createCoalescedReload } from '../lib/coalesceReload'
 import { toast } from 'sonner'
@@ -156,27 +155,44 @@ function MetricCard({ label, value, icon: Icon, tone = 'blue', to, hint }) {
   )
 }
 
-function TicketCard({ ticket, timingWarnings, onOpen }) {
+function TicketCard({ ticket, timingWarnings, onOpen, compact = false }) {
   const warn = isSuspiciousTiming(ticket, timingWarnings)
   const linked = (ticket.linked_booking_ids?.length || 1) > 1
   const kind = serviceKindFromPayCategory(ticket.service_pay_category)
   const body = (
     <>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xl font-black tabular-nums text-foreground sm:text-2xl">{formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}</p>
-          <p className="mt-1 truncate text-sm font-semibold text-foreground">{ticket.customer_name}</p>
+          <p className={`font-black tabular-nums text-foreground ${compact ? 'text-base' : 'text-xl sm:text-2xl'}`}>
+            {formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}
+          </p>
+          <p className={`mt-1 font-semibold text-foreground ${compact ? 'text-xs leading-snug break-words' : 'truncate text-sm'}`}>
+            {ticket.customer_name}
+          </p>
         </div>
-        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusTone[ticket.status] || statusTone.completed}`}>{STATUS_LABELS[ticket.status] || ticket.status}</span>
+        {!compact ? (
+          <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusTone[ticket.status] || statusTone.completed}`}>
+            {statusShortLabel(ticket.status)}
+          </span>
+        ) : null}
       </div>
-      <div className="mt-3 grid gap-0.5 text-xs text-muted-foreground">
-        <span className="truncate font-medium text-foreground/80">{ticket.branch || '—'}</span>
-        <span className="truncate capitalize">{kind === 'detailing' ? 'Detailing · multi-day' : kind}</span>
-        <span className="truncate">{[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'}</span>
-        <span className="truncate">{ticket.vehicle_plate || 'No plate'} · {ticket.service_name || 'Service'}</span>
-        <span className="truncate">{ticket.assigned_staff_name || 'No staff assigned'}</span>
+      <div className={`mt-2 grid gap-0.5 text-muted-foreground ${compact ? 'text-[11px] leading-snug' : 'mt-3 text-xs'}`}>
+        <span className="font-medium break-words text-foreground/80">{ticket.branch || '—'}</span>
+        <span className="capitalize">{kind === 'detailing' ? 'Detailing · multi-day' : kind}</span>
+        <span className="break-words">
+          {[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'}
+        </span>
+        <span className="break-words">
+          {ticket.vehicle_plate || 'No plate'} · {ticket.service_name || 'Service'}
+        </span>
+        {!compact ? <span className="truncate">{ticket.assigned_staff_name || 'No staff assigned'}</span> : null}
         {linked && <span className="font-medium text-primary">{ticket.linked_booking_ids.length} services · one visit</span>}
-        {warn && <span className="flex items-center gap-1 font-medium text-amber-700 dark:text-amber-200"><ShieldAlert size={12} aria-hidden />Fast in-progress → check</span>}
+        {warn && (
+          <span className="flex items-center gap-1 font-medium text-amber-700 dark:text-amber-200">
+            <ShieldAlert size={12} aria-hidden />
+            Fast in-progress → check
+          </span>
+        )}
       </div>
     </>
   )
@@ -185,14 +201,14 @@ function TicketCard({ ticket, timingWarnings, onOpen }) {
       <button
         type="button"
         onClick={() => onOpen(ticket.booking_id)}
-        className="floor-ticket queue-ticket-card w-full text-left"
+        className={`floor-ticket queue-ticket-card w-full text-left ${compact ? 'queue-ticket-compact' : ''}`}
       >
         {body}
       </button>
     )
   }
   return (
-    <Link to={`/operations/queue/${ticket.booking_id}`} className="floor-ticket queue-ticket-card">
+    <Link to={`/operations/queue/${ticket.booking_id}`} className={`floor-ticket queue-ticket-card ${compact ? 'queue-ticket-compact' : ''}`}>
       {body}
     </Link>
   )
@@ -853,7 +869,7 @@ function OperationsQueueBoardPage() {
                 onClick={() => setLaneFilter(active ? null : status)}
               >
                 <span className="block text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">
-                  {STATUS_LABELS[status]}
+                  {statusShortLabel(status)}
                 </span>
                 <span className="tabular-nums text-primary">{n}</span>
               </button>
@@ -862,8 +878,29 @@ function OperationsQueueBoardPage() {
         </div>
       </div>
 
+      {/* Mobile / tablet: one readable list driven by smart status chips */}
+      <div className="queue-card-list mt-3 xl:hidden" aria-label="Queue tickets">
+        {loading ? (
+          Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="h-28 animate-pulse rounded-2xl bg-muted" />
+          ))
+        ) : (focusLane ? grouped[focusLane] || [] : boardTickets).length ? (
+          (focusLane ? grouped[focusLane] || [] : boardTickets).map((ticket) => (
+            <TicketCard
+              key={ticket.booking_id}
+              ticket={ticket}
+              timingWarnings={timingWarnings}
+              onOpen={canManageQueue ? setEditBookingId : undefined}
+            />
+          ))
+        ) : (
+          <EmptyLine text={focusLane ? 'No tickets in this lane.' : 'No active tickets.'} />
+        )}
+      </div>
+
+      {/* Desktop: all lanes on one screen */}
       <div
-        className="floor-lane-board queue-lane-board queue-lane-board-fluid mt-3 sm:mt-4"
+        className="queue-lane-board-fit mt-3 hidden xl:grid sm:mt-4"
         style={{ '--queue-lane-count': boardStatuses.length }}
         role="region"
         aria-label="Active queue lanes"
@@ -874,7 +911,7 @@ function OperationsQueueBoardPage() {
           const tickets = grouped[status] || []
           const laneFocused = focusLane === status
           const laneDimmed = Boolean(focusLane) && !laneFocused
-              return (
+          return (
             <section
               key={status}
               id={`queue-lane-${status}`}
@@ -883,49 +920,54 @@ function OperationsQueueBoardPage() {
               aria-label={STATUS_LABELS[status]}
               aria-current={laneFocused ? 'true' : undefined}
             >
-              <div className="queue-lane-head mb-3 flex items-start justify-between gap-2">
+              <div className="queue-lane-head mb-2 flex items-start justify-between gap-1">
                 <button
                   type="button"
                   className="min-w-0 flex-1 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   onClick={() => setLaneFilter(laneFocused ? null : status)}
                   aria-pressed={laneFocused}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="queue-lane-icon" aria-hidden>
-                      <Icon size={14} />
+                      <Icon size={12} />
                     </span>
-                    <h2 className="queue-lane-title text-xs font-bold tracking-[0.14em] uppercase">{STATUS_LABELS[status]}</h2>
-          </div>
-                  <p className="queue-lane-hint mt-1 text-[11px]">{meta.hint}</p>
+                    <h2 className="queue-lane-title text-[10px] font-bold tracking-[0.08em] uppercase">
+                      {statusShortLabel(status)}
+                    </h2>
+                  </div>
+                  <p className="queue-lane-hint mt-0.5 text-[10px] leading-snug">{meta.hint}</p>
                 </button>
                 <button
                   type="button"
-                  className="queue-lane-count floor-touch-btn shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums"
+                  className="queue-lane-count floor-touch-btn shrink-0 rounded-full px-2 py-1 text-[11px] font-bold tabular-nums"
                   onClick={() => setLaneFilter(laneFocused ? null : status)}
                   aria-label={`${STATUS_LABELS[status]}: ${tickets.length} tickets`}
                   aria-pressed={laneFocused}
                 >
                   {tickets.length}
                 </button>
-            </div>
+              </div>
               <div className="floor-lane-body">
                 {loading
-                  ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-muted" />)
+                  ? Array.from({ length: 2 }, (_, index) => (
+                      <div key={index} className="h-20 animate-pulse rounded-xl bg-muted" />
+                    ))
                   : tickets.length
                     ? tickets.map((ticket) => (
-                      <TicketCard
-                        key={ticket.booking_id}
-                        ticket={ticket}
-                        timingWarnings={timingWarnings}
-                        onOpen={canManageQueue ? setEditBookingId : undefined}
-                      />
-                    ))
-                    : <EmptyLine text="No tickets in this lane." />}
-          </div>
-          </section>
+                        <TicketCard
+                          key={ticket.booking_id}
+                          ticket={ticket}
+                          timingWarnings={timingWarnings}
+                          onOpen={canManageQueue ? setEditBookingId : undefined}
+                          compact
+                        />
+                      ))
+                    : <EmptyLine text="Empty" />}
+              </div>
+            </section>
           )
         })}
-        </div>
+      </div>
 
       {canManageQueue ? (
         <QueueTicketEditModal
@@ -1203,7 +1245,6 @@ export function NewQueueTicketPage() {
 
 export function CrewPage() {
   const { profile, canManageCrew, canViewQueueOperations } = useAuth()
-  const canSettings = canEditAttendanceSettings(profile) || canEditAttendanceRoles(profile)
   const { staffPool, availableStaff, busyStaff, loading, error, reload } = useOperationsSnapshot()
   const [form, setForm] = useState({
     full_name: '',
@@ -1217,7 +1258,6 @@ export function CrewPage() {
   const [branches, setBranches] = useState([])
   const [saving, setSaving] = useState('')
   const [actionError, setActionError] = useState('')
-  const [mainTab, setMainTab] = useState('attendance')
   const [crewTab, setCrewTab] = useState('pool')
   const presentCount = staffPool.filter((member) => member.is_present_today).length
   const presentRows = useMemo(() => staffPool.filter((m) => m.is_present_today), [staffPool])
@@ -1262,57 +1302,45 @@ export function CrewPage() {
     <section>
       <PageHeader
         eyebrow="Crew"
-        title="Crew & attendance"
-        description="Geofenced clock-in for every floor role, attendance heatmap, and crew pool."
-        action={<RefreshButton loading={loading} onClick={reload} />}
+        title="Crew pool"
+        description="Present crew only can be assigned to jobs. Time in / out lives on Attendance."
+        action={(
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/operations/attendance"
+              className="floor-touch-btn inline-flex items-center rounded-2xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground no-underline"
+            >
+              Open Attendance
+            </Link>
+            <RefreshButton loading={loading} onClick={reload} />
+          </div>
+        )}
       />
       {actionError && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{actionError}</p>}
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-6 mb-4 grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground">
+        <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{staffPool.length}</strong>Pool</span>
+        <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{presentCount}</strong>Present</span>
+        <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{availableStaff.length}</strong>Deployable</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
         {[
-          { key: 'attendance', label: 'Attendance' },
-          { key: 'crew', label: 'Crew' },
-          ...(canSettings ? [{ key: 'settings', label: 'Settings' }] : []),
+          { key: 'pool', label: `Pool (${staffPool.length})` },
+          { key: 'present', label: `Present (${presentCount})` },
+          { key: 'busy', label: `Busy (${busyStaff.length})` },
         ].map((tab) => (
           <button
             key={tab.key}
             type="button"
-            onClick={() => setMainTab(tab.key)}
-            className={`min-h-10 rounded-2xl px-4 text-sm font-semibold transition ${mainTab === tab.key ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:bg-muted'}`}
+            onClick={() => setCrewTab(tab.key)}
+            className={`min-h-10 rounded-2xl px-4 text-sm font-semibold transition ${crewTab === tab.key ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:bg-muted'}`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {mainTab === 'attendance' && <CrewAttendancePanel profile={profile} canManage={canManageCrew} />}
-      {mainTab === 'settings' && canSettings && <CrewSettingsPanel profile={profile} />}
-
-      {mainTab === 'crew' && (
-        <>
-          <div className="mt-6 mb-4 grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground">
-            <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{staffPool.length}</strong>Pool</span>
-            <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{presentCount}</strong>Present</span>
-            <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{availableStaff.length}</strong>Deployable</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { key: 'pool', label: `Pool (${staffPool.length})` },
-              { key: 'present', label: `Present (${presentCount})` },
-              { key: 'busy', label: `Busy (${busyStaff.length})` },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setCrewTab(tab.key)}
-                className={`min-h-10 rounded-2xl px-4 text-sm font-semibold transition ${crewTab === tab.key ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:bg-muted'}`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {crewTab === 'pool' && (
+      {crewTab === 'pool' && (
             <Panel title="Staff Pool" icon={UserPlus} className="mt-5">
               {canManageCrew && (
                 <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-2">
@@ -1389,8 +1417,6 @@ export function CrewPage() {
           {crewTab === 'busy' && (
             <Panel title="Busy Staff" icon={Users} className="mt-5"><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
           )}
-        </>
-      )}
     </section>
   )
 }
@@ -1487,54 +1513,29 @@ export function MyTasksPage() {
     else load()
   }
 
-  const runClock = async (kind) => {
-    setSaving(`clock-${kind}`)
-    try {
-      const coords = await readBrowserPosition()
-      if (kind === 'in') {
-        await geoTimeIn({ profile, coords })
-        toast.success('Timed in')
-      } else {
-        await geoTimeOut({ profile, coords })
-        toast.success('Timed out')
-      }
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setSaving('')
-    }
-  }
-
   if (error) return <ErrorState error={error} onRetry={load} />
   const empty = !loading && !queueRows.length && !planRows.length
   const isStaff = profile?.role === ROLES.STAFF
   return (
     <section className="px-1 sm:px-0">
-      <PageHeader eyebrow="My Tasks" title="Assigned work" description="Queue floor jobs and planning cards assigned to you." action={<RefreshButton loading={loading} onClick={load} />} />
-
-      {isStaff && (
-        <Panel title="Attendance" icon={Clock3} className="mt-6">
-          <p className="mb-4 text-sm text-slate-400">Time in inside the branch geofence. Late is flagged vs shift start.</p>
+      <PageHeader
+        eyebrow="My Tasks"
+        title="Assigned work"
+        description="Queue floor jobs and planning cards assigned to you."
+        action={(
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={Boolean(saving)}
-              onClick={() => runClock('in')}
-              className="min-h-11 rounded-2xl bg-emerald-600 px-4 text-sm font-semibold text-white disabled:opacity-40"
-            >
-              {saving === 'clock-in' ? 'Locating…' : 'Time in'}
-            </button>
-            <button
-              type="button"
-              disabled={Boolean(saving)}
-              onClick={() => runClock('out')}
-              className="min-h-11 rounded-2xl border border-white/10 px-4 text-sm font-semibold text-slate-200 disabled:opacity-40"
-            >
-              {saving === 'clock-out' ? 'Saving…' : 'Time out'}
-            </button>
+            {isStaff ? (
+              <Link
+                to="/operations/attendance"
+                className="floor-touch-btn inline-flex items-center rounded-2xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground no-underline"
+              >
+                Attendance
+              </Link>
+            ) : null}
+            <RefreshButton loading={loading} onClick={load} />
           </div>
-        </Panel>
-      )}
+        )}
+      />
 
       <Panel title="Planning assignments" icon={ClipboardList} className="mt-6">
         <div className="grid gap-4">

@@ -16,6 +16,7 @@ const expected = {
   '/api/lifecycle-sms': '/api/notifications?operation=lifecycle-sms',
   '/api/notify-booking': '/api/notifications?operation=notify-booking',
   '/api/notification-broadcast': '/api/notifications?operation=notification-broadcast',
+  '/api/notification-broadcast-kinds': '/api/notifications?operation=notification-broadcast-kinds',
   '/api/notification-settings': '/api/notifications?operation=notification-settings',
   '/api/plate-lookup': '/api/bookings?operation=plate-lookup',
   '/api/provision-customer': '/api/customer?operation=provision-customer',

@@ -111,7 +111,7 @@ export async function handleCustomerHistoryRequest(req, res) {
     }
 
     const bookingSelect =
-      'id, customer_id, customer_name, customer_phone, vehicle_plate, vehicle_make, vehicle_model, branch, status, scheduled_start, completed_at, created_at, final_price_minor, price_minor, notes, service_id, services(name, slug, pay_category)'
+      'id, customer_id, customer_name, customer_phone, vehicle_plate, vehicle_make, vehicle_model, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, final_price_minor, price_minor, notes, service_id, services(name, slug, pay_category)'
 
     // Broad candidate pull (ilike), then normalize-match in process — keeps PostgREST simple + indexed.
     let candidateQ = db.from('bookings').select(bookingSelect).order('created_at', { ascending: false }).limit(80)

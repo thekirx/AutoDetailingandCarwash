@@ -24,19 +24,25 @@ describe('Branch Admin simplified shell', () => {
     assert.equal(redirectForRole(ROLES.SUPER_ADMIN), '/operations/console')
   })
 
-  it('nav is POS + Queue View + Queue + History', () => {
+  it('nav is POS + Queue View + Queue + Attendance + History', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/pos', '/operations/dashboard', '/operations/queue', '/operations/history'],
+      [
+        '/operations/pos',
+        '/operations/dashboard',
+        '/operations/queue',
+        '/operations/attendance',
+        '/operations/history',
+      ],
     )
     assert.ok(getOperationsNav(p).some((i) => i.label === 'Queue View'))
   })
 
-  it('dock is Floor, Wash, Detail, POS (POS primary)', () => {
+  it('dock is Floor, Wash, Attendance, POS (POS primary)', () => {
     const dock = getBranchAdminDock(p)
     assert.deepEqual(
       dock.map((i) => i.to),
-      ['/operations/dashboard', '/operations/queue', '/operations/queue?family=detailing', '/operations/pos'],
+      ['/operations/dashboard', '/operations/queue', '/operations/attendance', '/operations/pos'],
     )
     assert.equal(dock[0].label, 'Floor')
     assert.equal(dock.find((i) => i.to === '/operations/pos')?.primary, true)

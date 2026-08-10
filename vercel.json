@@ -14,6 +14,7 @@
     { "source": "/api/notify-booking", "destination": "/api/notifications?operation=notify-booking" },
     { "source": "/api/notification-settings", "destination": "/api/notifications?operation=notification-settings" },
     { "source": "/api/notification-broadcast", "destination": "/api/notifications?operation=notification-broadcast" },
+    { "source": "/api/notification-broadcast-kinds", "destination": "/api/notifications?operation=notification-broadcast-kinds" },
     { "source": "/api/plate-lookup", "destination": "/api/bookings?operation=plate-lookup" },
     { "source": "/api/provision-customer", "destination": "/api/customer?operation=provision-customer" },
     { "source": "/api/provision-staff", "destination": "/api/staff?operation=provision-staff" },

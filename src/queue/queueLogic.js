@@ -50,6 +50,24 @@ export const STATUS_LABELS = {
   confirmed: 'Assigned to Branch',
 }
 
+/** Compact lane / chip labels for dense one-screen boards. */
+export const STATUS_SHORT_LABELS = {
+  waiting: 'In Take',
+  in_progress: 'Inspection',
+  final_checking: 'Ready',
+  for_payment: 'Payment',
+  redo: 'Redo',
+  completed: 'Released',
+  cancelled: 'Cancelled',
+  pending: 'Placeholder',
+  confirmed: 'Assigned',
+}
+
+export function statusShortLabel(status) {
+  const key = String(status || '')
+  return STATUS_SHORT_LABELS[key] || STATUS_LABELS[key] || key
+}
+
 /** Customer-facing visit stepper labels (keep simple; ops board uses STATUS_LABELS). */
 export const CUSTOMER_VISIT_LABELS = {
   waiting: 'Waiting',

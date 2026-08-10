@@ -23,6 +23,7 @@ import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
 import {
   adminOverrideAttendance,
+  applyNetworkAttendanceSettings,
   fetchAttendanceMatrix,
   fetchAttendanceRoleSettings,
   fetchBranchAttendanceSettings,
@@ -31,7 +32,6 @@ import {
   readBrowserPosition,
   resetAttendanceRoleSettings,
   updateAttendanceRoleSettings,
-  updateBranchAttendanceSettings,
 } from '@/queue/attendanceApi'
 import { fetchBranches } from '@/queue/queueApi'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
@@ -69,7 +69,7 @@ function roleLabel(role) {
   return ROLE_LABELS[role] || role || '—'
 }
 
-export function CrewAttendancePanel({ profile, canManage }) {
+export function CrewAttendancePanel({ profile, canManage, showClock = true, showRegister = true }) {
   const [period, setPeriod] = useState('weekly')
   const [branchSlug, setBranchSlug] = useState(profile?.branch_slug || '')
   const [branches, setBranches] = useState([])
@@ -237,12 +237,14 @@ export function CrewAttendancePanel({ profile, canManage }) {
 
   return (
     <div className="mt-4 flex flex-col gap-4">
+      {showClock ? (
       <Card>
         <CardHeader className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <CardTitle>Geofenced time clock</CardTitle>
             <CardDescription>
-              Time in inside the branch radius. Late is flagged vs shift start — works for every floor role.
+              Time in inside the branch radius. Late is flagged vs shift start. You must be present (or late) before
+              anyone can assign you to a job.
             </CardDescription>
             {myToday && (
               <p className={`mt-2 text-sm font-medium capitalize ${statusBadge(myToday.status)}`}>
@@ -262,7 +264,9 @@ export function CrewAttendancePanel({ profile, canManage }) {
           </div>
         </CardHeader>
       </Card>
+      ) : null}
 
+      {showRegister ? (
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -464,6 +468,7 @@ export function CrewAttendancePanel({ profile, canManage }) {
           </div>
         </CardContent>
       </Card>
+      ) : null}
 
       {override && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" role="dialog" aria-modal="true">
@@ -589,8 +594,8 @@ export function CrewSettingsPanel({ profile }) {
     return (
       <Card className="mt-5">
         <CardContent className="pt-6 text-sm text-muted-foreground">
-          Only Admin / Super Admin / Assistant Super Admin (branches grant) can edit geofence and shifts.
-          Which roles appear on attendance is Super Admin only.
+          Only Super Admin can set network geofence, shifts, and which roles appear on attendance.
+          Branch Admin can override attendance rows on the Attendance page.
         </CardContent>
       </Card>
     )
@@ -630,13 +635,16 @@ export function CrewSettingsPanel({ profile }) {
     e.preventDefault()
     setSaving(true)
     try {
-      await updateBranchAttendanceSettings(slug, {
-        geofence_radius_m: Number(form.geofence_radius_m),
-        shift_start: form.shift_start,
-        shift_end: form.shift_end,
-      })
-      toast.success('Branch attendance settings saved')
-      await load(slug)
+      const result = await applyNetworkAttendanceSettings(
+        {
+          geofence_radius_m: Number(form.geofence_radius_m),
+          shift_start: form.shift_start,
+          shift_end: form.shift_end,
+        },
+        profile,
+      )
+      toast.success(`Applied to ${result.updated} branches (same geofence & shifts network-wide)`)
+      if (slug) await load(slug)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -652,7 +660,7 @@ export function CrewSettingsPanel({ profile }) {
             <CardTitle>Attendance roles</CardTitle>
             <CardDescription>
               Super Admin only. Choose which employee roles appear on the attendance register and heatmap.
-              Unchecked roles are excluded company-wide.
+              Defaults are Staff, Team Lead, and Branch Admin (clock roles).
             </CardDescription>
           </CardHeader>
           <CardContent className="grid max-w-xl gap-4">
@@ -699,24 +707,20 @@ export function CrewSettingsPanel({ profile }) {
       {canEdit ? (
         <Card>
           <CardHeader>
-            <CardTitle>Branch geofence & shifts</CardTitle>
-            <CardDescription>Geofence radius and shift window per branch. Time-in uses the branch map pin.</CardDescription>
+            <CardTitle>Network geofence & shifts</CardTitle>
+            <CardDescription>
+              Same radius and shift hours for every branch. Map pins stay per branch (set under Branches).
+              Staff / Team Lead / Branch Admin must time in inside the radius before they can be assigned.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={save} className="grid max-w-xl gap-4">
-              <div className="grid gap-2">
-                <Label>Branch</Label>
-                <select value={slug} onChange={(e) => setSlug(e.target.value)} className="flex h-11 rounded-md border border-input bg-transparent px-3 text-sm">
-                  {branches.map((b) => (
-                    <option key={b.slug} value={b.slug}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
-              {meta && (
+              {slug && meta ? (
                 <p className="text-xs text-muted-foreground">
-                  Pin: {meta.latitude != null ? `${meta.latitude}, ${meta.longitude}` : 'missing — set in Branches first'}
+                  Preview from {meta.name || slug}: pin{' '}
+                  {meta.latitude != null ? `${meta.latitude}, ${meta.longitude}` : 'missing — set in Branches first'}
                 </p>
-              )}
+              ) : null}
               <div className="grid gap-2">
                 <Label>Geofence radius (meters)</Label>
                 <Input
@@ -727,7 +731,7 @@ export function CrewSettingsPanel({ profile }) {
                   value={form.geofence_radius_m}
                   onChange={(e) => setForm((f) => ({ ...f, geofence_radius_m: e.target.value }))}
                 />
-                <p className="text-xs text-muted-foreground">Shop floor default is 20m. Staff must time in inside this radius.</p>
+                <p className="text-xs text-muted-foreground">Shop floor default is 20m. Applies to all branches when you save.</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
@@ -739,8 +743,8 @@ export function CrewSettingsPanel({ profile }) {
                   <Input type="time" required value={form.shift_end} onChange={(e) => setForm((f) => ({ ...f, shift_end: e.target.value }))} />
                 </div>
               </div>
-              <Button type="submit" disabled={saving} className="w-fit">
-                {saving ? 'Saving…' : 'Save branch settings'}
+              <Button type="submit" disabled={saving} className="w-fit min-h-11">
+                {saving ? 'Saving…' : 'Apply to all branches'}
               </Button>
             </form>
           </CardContent>

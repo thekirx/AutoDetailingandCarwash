@@ -94,6 +94,18 @@ function provisionApiPlugin() {
         return handleLifecycleSmsRequest(req, res)
       })
       mount('/api/busybee', (req, res) => handleBusybeeRequest(req, res))
+      mount('/api/notification-settings', async (req, res) => {
+        const { handleNotificationSettingsRequest } = await import('./server/notificationSettingsApi.mjs')
+        return handleNotificationSettingsRequest(req, res)
+      })
+      mount('/api/notification-broadcast', async (req, res) => {
+        const { handleNotificationBroadcastRequest } = await import('./server/notificationBroadcastApi.mjs')
+        return handleNotificationBroadcastRequest(req, res)
+      })
+      mount('/api/notification-broadcast-kinds', async (req, res) => {
+        const { handleNotificationBroadcastKindsRequest } = await import('./server/notificationBroadcastKindsApi.mjs')
+        return handleNotificationBroadcastKindsRequest(req, res)
+      })
       mount('/api/send-finance-quote', async (req, res, helpers) => {
         const { handleFinanceQuoteRequest } = await import('./server/sendFinanceQuote.mjs')
         return handleFinanceQuoteRequest(req, res, helpers)
