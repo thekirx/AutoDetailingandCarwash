@@ -12,7 +12,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
-import { canAccessPos, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane } from '../auth/permissions'
+import { canAccessPos, canModifyBookingServicePrice, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane } from '../auth/permissions'
 import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
 import { PRICING_SIZES } from '../lib/servicePricing'
 import CancellationReasonDialog from './CancellationReasonDialog'
@@ -84,6 +84,7 @@ function Info({ label, value }) {
  */
 export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdated, onClose }) {
   const { user, profile, canManageQueue, canViewQueueOperations } = useAuth()
+  const canEditServicePrice = canModifyBookingServicePrice(profile)
   const [ticket, setTicket] = useState(null)
   const [assignments, setAssignments] = useState([])
   const [staff, setStaff] = useState([])
@@ -212,7 +213,8 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
     canSeePayment,
   })
   const overrideTargets = canOverrideQueueStatus(profile) ? getAdminOverrideTargets(ticket.status) : []
-  const canAddService = showEditActions && ['waiting', 'in_progress'].includes(ticket.status)
+  const canAddService =
+    showEditActions && canEditServicePrice && ['waiting', 'in_progress'].includes(ticket.status)
   const visitTotalMinor = visitLines.reduce(
     (sum, line) => sum + Number(line.final_price_minor ?? line.base_price_minor ?? 0),
     0,
@@ -490,7 +492,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
             <Info label="Notes" value={ticket.notes || 'No internal notes'} />
             {ticket.redo_reason && <Info label="Redo reason" value={ticket.redo_reason} />}
           </div>
-          {showEditActions ? (
+          {showEditActions && canEditServicePrice ? (
             <div className="mt-4 grid gap-3 rounded-2xl border border-border bg-muted/20 p-3 sm:grid-cols-[1fr_auto] sm:items-end">
               <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
                 Car size (pricing)
@@ -523,13 +525,19 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
               <span className="font-semibold capitalize text-foreground">
                 {String(ticket.vehicle_type || 'medium').replace(/_/g, ' ')}
               </span>
+              {showEditActions && !canEditServicePrice ? (
+                <span className="mt-1 block text-xs">Service and price changes go through Sales.</span>
+              ) : null}
             </p>
           )}
         </Panel>
 
         <Panel title="Services on this visit" icon={Layers} className="order-4">
           <p className="mb-3 text-sm text-muted-foreground">
-            Line items billed for this car today. Add another service here if the customer upsels on the floor.
+            Line items billed for this car today.
+            {canEditServicePrice
+              ? ' Add another service here if the customer upsels on the floor.'
+              : ' Additional services must be added by Sales.'}
           </p>
           <div className="grid gap-2">
             {visitLines.map((line) => (
@@ -591,7 +599,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
           ) : null}
         </Panel>
 
-        {showEditActions ? (
+        {showEditActions && canEditServicePrice ? (
           <details
             className="order-5 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-5"
             open={priceOpen}

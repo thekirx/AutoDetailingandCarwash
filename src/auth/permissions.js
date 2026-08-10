@@ -99,6 +99,8 @@ export function getBranchScopeList(profile) {
   if (!profile) return []
   if (isSuperAdmin(profile)) return null
   if (isAssistantSuperAdmin(profile) && hasGrant(profile, 'branches_all')) return null
+  // Sales is assigned to all branches — sees every booking, can assign to any branch.
+  if (profile?.role === ROLES.SALES) return null
   const multi = Array.isArray(profile.branch_slugs) ? profile.branch_slugs.filter(Boolean) : []
   if (multi.length) return multi
   if (profile.branch_slug) return [profile.branch_slug]
@@ -189,9 +191,28 @@ export function canAccessAudit(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
-/** Settings hub (branches / people / audit / permissions). */
+/** Settings hub (branches / people / audit / permissions / notifications). */
 export function canAccessSettings(profile) {
-  return canManageBranches(profile) || canManagePeople(profile) || canAccessAudit(profile) || canAccessConsole(profile)
+  return (
+    canManageBranches(profile) ||
+    canManagePeople(profile) ||
+    canAccessAudit(profile) ||
+    canAccessConsole(profile) ||
+    canManageNotifications(profile)
+  )
+}
+
+/** Super Admin / ASA — configure automated reminders and broadcast pushes. */
+export function canManageNotifications(profile) {
+  if (isSuperAdmin(profile)) return true
+  return isAssistantSuperAdmin(profile)
+}
+
+/** Super Admin / ASA / Marketing — send broadcast marketing pushes. */
+export function canSendBroadcast(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return true
+  return profile?.role === ROLES.MARKETING
 }
 
 /** Super Admin only — master make/model catalog for TL picker */
@@ -258,11 +279,17 @@ export function isFormBookingsOnlyRole(profile) {
   return profile?.role === ROLES.SALES
 }
 
-/** Sales may confirm/cancel form bookings; floor intake is Queue (TL/Admin). */
+/** Sales may advance the full detailing board; Marketing is read-only. */
 export function canCheckInFormBooking(profile) {
   if (!profile) return false
-  if (profile.role === ROLES.SALES || profile.role === ROLES.MARKETING) return false
+  if (profile.role === ROLES.MARKETING) return false
+  if (profile.role === ROLES.SALES || isSuperAdmin(profile)) return true
   return canAdvanceBookingStatus(profile)
+}
+
+/** Service / price changes: Sales + Super Admin only (TL/Admin status-only). */
+export function canModifyBookingServicePrice(profile) {
+  return canEditBookings(profile)
 }
 
 export function canViewPlanning(profile) {

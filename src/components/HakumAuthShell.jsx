@@ -13,7 +13,7 @@ export default function HakumAuthShell({
   return (
     <div className="hakum-auth">
       <aside className="hakum-auth-brand">
-        <Link className="hakum-auth-wordmark" to="/" aria-label="Hakum Auto Care home">
+        <Link className="hakum-auth-wordmark" to="/home" aria-label="Hakum Auto Care home">
           <b>H</b>
           <span>
             HAKUM<small>AUTO CARE</small>

@@ -61,5 +61,6 @@ describe('Browser and social brand assets', () => {
     assert.match(html, /<meta name="apple-mobile-web-app-capable" content="yes"/)
     assert.match(html, /<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/)
     assert.equal(manifest.display, 'standalone')
+    assert.equal(manifest.start_url, '/app')
   })
 })

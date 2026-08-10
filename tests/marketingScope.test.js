@@ -57,20 +57,20 @@ describe('Marketing booking-status gate (MKT-C1)', () => {
     )
   })
 
-  it('allows Marketing CRM-safe status on own branch only', () => {
+  it('allows Marketing Bookings view as read-only (no status writes)', () => {
     assert.equal(
       canStaffUpdateBookingStatus(
         { role: 'marketing', branch_slug: 'bacoor' },
         { branch: 'bacoor', status: 'pending' },
         { nextStatus: 'cancelled' },
       ),
-      true,
+      false,
     )
     assert.equal(
       canStaffUpdateBookingStatus(
         { role: 'marketing', branch_slug: 'bacoor' },
-        { branch: 'imus', status: 'pending' },
-        { nextStatus: 'cancelled' },
+        { branch: 'bacoor', status: 'pending' },
+        { nextStatus: 'confirmed' },
       ),
       false,
     )

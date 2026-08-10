@@ -46,4 +46,15 @@ describe('Team Lead Queue Manager mobile port', () => {
     assert.doesNotMatch(page, /Showing cars/)
     assert.doesNotMatch(page, /Manage your service queue for cars/)
   })
+
+  it('clears Dynamic Island / status bar with safe-area insets on floor chrome', () => {
+    assert.match(layout, /floor-topbar/)
+    assert.match(css, /\.floor-topbar\s*\{[^}]*safe-area-inset-top/s)
+    assert.match(css, /\.floor-topbar\s*\{[^}]*safe-area-inset-left/s)
+    assert.match(css, /\.floor-topbar\s*\{[^}]*safe-area-inset-right/s)
+    assert.match(css, /\.floor-dock\s*\{[^}]*safe-area-inset-bottom/s)
+    assert.match(css, /\.ops-inset-topbar\s*\{[^}]*safe-area-inset-top/s)
+    assert.match(css, /\.qmgr-filter\s*\{[^}]*min-width:\s*0/s)
+    assert.match(css, /\.qmgr-filter select\s*\{[^}]*width:\s*100%/s)
+  })
 })

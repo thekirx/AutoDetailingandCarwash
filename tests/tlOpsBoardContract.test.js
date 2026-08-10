@@ -71,15 +71,26 @@ describe('TL ops contract — cancel, payment gate, form bookings', () => {
     )
   })
 
-  it('TL booking board helper stays form-only; Bookings route is Sales/Marketing', () => {
+  it('TL booking board helper lists detailing pipeline; Bookings route is Sales/Marketing', () => {
     assert.deepEqual(FORM_BOOKING_STATUSES, ['pending', 'confirmed'])
     assert.equal(isFormBookingStatus('pending'), true)
     assert.equal(isFormBookingStatus('waiting'), false)
-    assert.deepEqual(getBookingBoardStatuses({ role: 'team_lead' }), ['pending', 'confirmed'])
+    assert.deepEqual(getBookingBoardStatuses({ role: 'team_lead' }), [
+      'pending',
+      'confirmed',
+      'waiting',
+      'in_progress',
+      'final_checking',
+      'completed',
+    ])
     assert.ok(getBookingBoardStatuses({ role: 'BossMich' }).includes('waiting'))
     assert.equal(getBookingPrimaryNextStatus('confirmed', { canSeePayment: false }), 'waiting')
     assert.equal(getBookingPrimaryNextStatus('final_checking', { canSeePayment: false }), null)
-    assert.match(bookingBoard, /getBookingBoardStatuses|FORM_BOOKING_STATUSES|isTeamLead/)
+    assert.equal(
+      getBookingPrimaryNextStatus('final_checking', { detailingPipeline: true }),
+      'completed',
+    )
+    assert.match(bookingBoard, /getBookingBoardStatuses|FORM_BOOKING_STATUSES|DETAILING_BOARD/)
     assert.doesNotMatch(bookingBoard, /archiveBooking\(b\)[\s\S]{0,80}team_lead/)
   })
 

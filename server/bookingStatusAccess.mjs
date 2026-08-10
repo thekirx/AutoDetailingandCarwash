@@ -2,7 +2,7 @@
  * Pure gate for /api/booking-status — service role bypasses bookings RLS,
  * so callers must enforce branch scope here.
  */
-import { isCrmSafeBookingStatus } from './crmBookingStatus.mjs'
+import { isCrmSafeBookingStatus, isSalesBoardBookingStatus } from './crmBookingStatus.mjs'
 
 function hasAsaGrant(staff, key) {
   const grants = staff?.permission_grants
@@ -36,22 +36,19 @@ export function canStaffUpdateBookingStatus(staff, booking, opts = {}) {
     return hasAsaGrant(staff, 'queue_all')
   }
 
-  if (staff.role === 'marketing') {
-    const next = opts.nextStatus
-    if (!next || !isCrmSafeBookingStatus(next)) return false
-    return Boolean(staff.branch_slug) && staff.branch_slug === branch
-  }
+  // Marketing: Bookings view is read-only.
+  if (staff.role === 'marketing') return false
 
-  // Sales: form appointments only (confirm / cancel) — never floor or payment.
+  // Sales: assigned to all branches — full detailing board pipeline, any branch.
   if (staff.role === 'sales') {
     const next = opts.nextStatus
-    if (!next || !isCrmSafeBookingStatus(next)) return false
-    return Boolean(staff.branch_slug) && staff.branch_slug === branch
+    if (!next || !isSalesBoardBookingStatus(next)) return false
+    return true
   }
 
   if (staff.role === 'team_lead') {
     if (!staff.branch_slug || staff.branch_slug !== branch) return false
-    // Payment handoff is Admin / POS — TL stops at final_checking.
+    // Payment handoff is Admin / POS — TL stops at final_checking / completed release.
     if (String(opts.nextStatus || '') === 'for_payment') return false
     return true
   }

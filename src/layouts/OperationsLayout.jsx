@@ -129,7 +129,7 @@ function FloorOpsShell({
 
   return (
     <div className={`floor-shell flex h-svh max-h-svh w-full flex-col overflow-hidden bg-background text-foreground ${shellClass}`.trim()}>
-      <header className="floor-topbar z-30 flex shrink-0 items-center gap-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur-xl sm:px-4">
+      <header className="floor-topbar z-30 flex shrink-0 items-center gap-2 border-b border-border bg-background/95 backdrop-blur-xl sm:gap-3">
         <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-[var(--color-brand-primary)]" aria-hidden>
           {brand.icon}
         </div>
@@ -140,7 +140,7 @@ function FloorOpsShell({
             <span className="font-semibold text-primary uppercase tracking-wide">{branch}</span>
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <NotificationBell light homeUrl={homeUrl} homeLabel={homeLabel} />
         </div>
         <button
@@ -161,7 +161,7 @@ function FloorOpsShell({
       {moreOpen && (
         <div
           id="floor-more-panel"
-          className="z-20 flex shrink-0 flex-wrap gap-2 border-b border-border bg-muted/40 px-3 py-3 sm:px-4"
+          className="floor-more-panel z-20 flex shrink-0 flex-wrap gap-2 border-b border-border bg-muted/40 py-3"
           role="navigation"
           aria-label="More tools"
         >
@@ -198,7 +198,7 @@ function FloorOpsShell({
         </div>
       )}
 
-      <main className="floor-main min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-3 sm:px-4 sm:py-4">
+      <main className="floor-main min-h-0 flex-1 overflow-y-auto overscroll-y-contain py-3 sm:py-4">
         <Outlet />
       </main>
 
@@ -388,7 +388,7 @@ function AdminOpsShell({ profile, user, signOut, navigation, adminShell }) {
         </Sidebar>
 
         <SidebarInset>
-          <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-xl">
+          <header className="ops-inset-topbar sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/90 backdrop-blur-xl">
             <SidebarTrigger />
             <Separator orientation="vertical" className="h-5" />
             <div className="min-w-0 flex-1">

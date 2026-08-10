@@ -32,7 +32,9 @@ describe('client ops fixes batch', () => {
   it('detailing board labels and progression', () => {
     assert.equal(STATUS_LABELS.pending, 'Booking Placeholder')
     assert.equal(STATUS_LABELS.confirmed, 'Assigned to Branch')
-    assert.equal(STATUS_LABELS.waiting, 'Intake Started')
+    assert.equal(STATUS_LABELS.waiting, 'In Take Started')
+    assert.equal(STATUS_LABELS.in_progress, 'Vehicle Inspection')
+    assert.equal(STATUS_LABELS.final_checking, 'Ready for Release')
     assert.equal(STATUS_LABELS.completed, 'Successful Release')
     assert.equal(nextDetailingBoardStatus('pending'), 'confirmed')
     assert.equal(DETAILING_BOARD_STATUSES.length, 6)

@@ -10,12 +10,13 @@ import {
   canCheckInFormBooking,
   canCreateBookings,
   canEditBookings,
+  canModifyBookingServicePrice,
   canSeeAllBranches,
-  canSeeForPaymentLane,
   getBranchScopeList,
   isFormBookingsOnlyRole,
   ROLES,
 } from '@/auth/permissions'
+import { DETAILING_BOARD_STATUSES, detailingBoardStatusLabel } from '@/lib/detailingBoardStatuses'
 import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope } from '@/lib/crmInsights'
@@ -29,6 +30,7 @@ import {
   resolveBranchFilter,
   filterBranchesForProfile,
   pickDefaultBranchSlug,
+  STATUS_LABELS,
 } from '@/queue/queueLogic'
 import { assignStaff, fetchPresentAssignableStaff, fetchServices } from '@/queue/queueApi'
 import { filterFloorDetailingServices } from '@/lib/serviceKinds'
@@ -49,15 +51,8 @@ import { createCoalescedReload } from '@/lib/coalesceReload'
 
 const BOOKING_TABS = ['board', 'table', 'calendar']
 const COLUMNS = [
-  { id: 'pending', label: 'New', tone: 'border-l-blue-500' },
-  { id: 'confirmed', label: 'Confirmed', tone: 'border-l-emerald-500' },
-  { id: 'waiting', label: 'Waiting', tone: 'border-l-violet-500' },
-  { id: 'in_progress', label: 'In Progress', tone: 'border-l-amber-500' },
-  { id: 'final_checking', label: 'Final check', tone: 'border-l-cyan-500' },
-  { id: 'for_payment', label: 'For payment', tone: 'border-l-orange-500' },
-  { id: 'redo', label: 'Redo', tone: 'border-l-rose-500' },
-  { id: 'completed', label: 'Done', tone: 'border-l-slate-400' },
-  { id: 'cancelled', label: 'Cancelled', tone: 'border-l-red-500' },
+  ...DETAILING_BOARD_STATUSES.map((s) => ({ id: s.id, label: s.label, tone: s.tone, hint: s.hint })),
+  { id: 'cancelled', label: 'Cancelled', tone: 'border-l-red-500', hint: 'Cancelled with reason' },
 ]
 
 const localizer = dateFnsLocalizer({
@@ -71,6 +66,7 @@ const localizer = dateFnsLocalizer({
 const emptyBooking = {
   customer_name: '',
   customer_phone: '',
+  customer_id: null,
   branch: '',
   scheduled_start: '',
   service_id: '',
@@ -79,6 +75,7 @@ const emptyBooking = {
   vehicle_model: '',
   notes: '',
   status: 'pending',
+  price_pesos: '',
 }
 
 function todayISO() {
@@ -103,10 +100,13 @@ export default function BookingBoardPage() {
   const { profile } = useAuth()
   const canEdit = canEditBookings(profile)
   const canCreate = canCreateBookings(profile)
-  const isTeamLead = profile?.role === ROLES.TEAM_LEAD
+  const canEditServicePrice = canModifyBookingServicePrice(profile)
+  const isMarketing = profile?.role === ROLES.MARKETING
   const formBookingsOnly = isFormBookingsOnlyRole(profile)
   const canCheckIn = canCheckInFormBooking(profile)
-  const canCancelForm = canEdit && formBookingsOnly
+  const canAdvanceStatus = canEdit && !isMarketing
+  const canCancelForm = canEdit
+  const canSeePayment = false // Bookings board ends at Successful Release — POS is separate
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = BOOKING_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'board'
   const [bookings, setBookings] = useState([])
@@ -127,7 +127,7 @@ export default function BookingBoardPage() {
   const [crewLoading, setCrewLoading] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
-  const canSeePayment = canSeeForPaymentLane(profile)
+  const [customerLookup, setCustomerLookup] = useState({ loading: false, error: '', match: null })
   const formServices = useMemo(
     () => (formBookingsOnly ? filterFloorDetailingServices(services) : services),
     [services, formBookingsOnly],
@@ -157,7 +157,7 @@ export default function BookingBoardPage() {
     const endIso = `${range.end}T23:59:59.999+08:00`
     let query = supabase
       .from('bookings')
-      .select('id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id, services(name, pay_category)')
+      .select('id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id, final_price_minor, price_minor, services(name, pay_category)')
       .eq('is_archived', false)
       .in('status', boardStatuses)
       .gte('scheduled_start', startIso)
@@ -236,8 +236,9 @@ export default function BookingBoardPage() {
   )
 
   async function move(booking, status) {
-    if (!canEdit) return
-    if (status === 'in_progress') {
+    if (!canAdvanceStatus) return
+    // Crew assignment on start stays on Queue for TL/Admin; Sales advances status only.
+    if (status === 'in_progress' && !formBookingsOnly) {
       setCrewLoading(true)
       setCrewDialog(booking)
       setCrewSelected([])
@@ -274,10 +275,11 @@ export default function BookingBoardPage() {
       toast.error(body.error || 'Unable to update booking')
       return false
     }
+    const label = detailingBoardStatusLabel(status) || STATUS_LABELS[status] || status
     toast.success(
       status === 'cancelled'
         ? 'Booking cancelled'
-        : `Moved to ${status}${body.notify?.sms?.ok ? ' · SMS sent' : ''}`,
+        : `Moved to ${label}${body.notify?.sms?.ok ? ' · SMS sent' : ''}`,
     )
     load()
     return true
@@ -332,11 +334,54 @@ export default function BookingBoardPage() {
         : services)[0]?.id || '',
       scheduled_start: `${todayISO()}T10:00`,
     })
+    setCustomerLookup({ loading: false, error: '', match: null })
     setFormOpen(true)
+  }
+
+  async function lookupExistingCustomer(identifier) {
+    const raw = String(identifier || '').trim()
+    if (raw.length < 3) {
+      setCustomerLookup({ loading: false, error: '', match: null })
+      return
+    }
+    setCustomerLookup({ loading: true, error: '', match: null })
+    try {
+      const token = await getAccessTokenFresh()
+      if (!token) {
+        setCustomerLookup({ loading: false, error: 'Sign in required', match: null })
+        return
+      }
+      const res = await fetch('/api/customer-auth-lookup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ identifier, action: 'lookup', site_origin: window.location.origin }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setCustomerLookup({ loading: false, error: data.error || 'Lookup failed', match: null })
+        return
+      }
+      const match = data.status === 'ready' || data.status === 'needs_password' ? data.customer || null : null
+      setCustomerLookup({ loading: false, error: '', match })
+      if (match) {
+        setForm((f) => ({
+          ...f,
+          customer_id: match.id || null,
+          customer_name: match.full_name || f.customer_name,
+          customer_phone: match.phone || f.customer_phone,
+        }))
+      }
+    } catch (err) {
+      setCustomerLookup({ loading: false, error: String(err.message || err), match: null })
+    }
   }
 
   function openEdit(booking) {
     setEditing(booking)
+    setCustomerLookup({ loading: false, error: '', match: booking?.customer_id ? { id: booking.customer_id } : null })
     setForm({
       customer_name: booking.customer_name || '',
       customer_phone: booking.customer_phone || '',
@@ -348,6 +393,12 @@ export default function BookingBoardPage() {
       vehicle_model: booking.vehicle_model || '',
       notes: booking.notes || '',
       status: booking.status || 'pending',
+      price_pesos:
+        booking.final_price_minor != null
+          ? String(Number(booking.final_price_minor) / 100)
+          : booking.price_minor != null
+            ? String(Number(booking.price_minor) / 100)
+            : '',
     })
     setFormOpen(true)
   }
@@ -371,13 +422,14 @@ export default function BookingBoardPage() {
       return
     }
     if (!editing && formBookingsOnly && !['pending', 'confirmed'].includes(form.status)) {
-      toast.error('Form bookings stay New or Confirmed only.')
+      toast.error('New bookings start as Booking Placeholder or Assigned to Branch.')
       return
     }
     setSaving(true)
     const payload = {
       customer_name: form.customer_name.trim(),
       customer_phone: form.customer_phone.trim() || null,
+      customer_id: form.customer_id || null,
       branch: form.branch,
       scheduled_start: new Date(form.scheduled_start).toISOString(),
       service_id: serviceId,
@@ -386,8 +438,14 @@ export default function BookingBoardPage() {
       vehicle_model: model,
       notes: form.notes.trim() || null,
     }
+    if (canEditServicePrice && form.price_pesos !== '') {
+      const pesos = Number(String(form.price_pesos).replace(/,/g, ''))
+      if (Number.isFinite(pesos) && pesos >= 0) {
+        payload.final_price_minor = Math.round(pesos * 100)
+      }
+    }
     // Status changes write queue_events (can_manage_branch). Sales is not a queue manager —
-    // create may set pending/confirmed; edits keep status and use Confirm / Cancel actions.
+    // create may set pending/confirmed; edits keep status and use board advance actions.
     if (!editing) payload.status = form.status
     const { error } = editing
       ? await supabase.from('bookings').update(payload).eq('id', editing.id).select('id').single()
@@ -448,13 +506,13 @@ export default function BookingBoardPage() {
             <p className="bk-hero-kicker">Hakum Auto Care</p>
             <h1 className="bk-hero-title">Bookings</h1>
             <p className="bk-hero-sub">
-              {formBookingsOnly
-                ? isTeamLead
-                  ? 'Form appointments only · send to waiting when the car is in the shop'
-                  : 'Form appointments only · confirm or cancel — Team Lead checks cars in'
-                : range.start === range.end
-                  ? range.start
-                  : `${range.start} → ${range.end}`}
+              {isMarketing
+                ? 'Read-only detailing pipeline · Sales owns service and price changes'
+                : formBookingsOnly
+                  ? 'Full detailing pipeline · service and price edits stay with Sales'
+                  : range.start === range.end
+                    ? range.start
+                    : `${range.start} → ${range.end}`}
             </p>
           </div>
         </div>
@@ -524,12 +582,16 @@ export default function BookingBoardPage() {
 
           <div className="bk-card-list md:hidden" aria-label={`${boardFilter} bookings`}>
             {(grouped[boardFilter] || []).map((booking) => {
-              const next = getBookingPrimaryNextStatus(booking.status, { canSeePayment, canCheckIn })
+              const next = getBookingPrimaryNextStatus(booking.status, {
+                canSeePayment,
+                canCheckIn,
+                detailingPipeline: true,
+              })
               return (
                 <article key={booking.id} className="bk-card">
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-semibold text-foreground">{booking.customer_name}</p>
-                    {canEdit && (
+                    {canEditServicePrice && (
                       <Button size="sm" variant="ghost" className="h-9 shrink-0 cursor-pointer px-2" onClick={() => openEdit(booking)}>
                         Edit
                       </Button>
@@ -549,7 +611,7 @@ export default function BookingBoardPage() {
                       minute: '2-digit',
                     })}
                   </p>
-                  {canEdit && next ? (
+                  {canAdvanceStatus && next ? (
                     <Button
                       type="button"
                       className="mt-3 min-h-11 w-full cursor-pointer"
@@ -587,7 +649,11 @@ export default function BookingBoardPage() {
                 </div>
                 <div className="floor-lane-body">
                   {grouped[col.id].map((booking) => {
-                    const next = getBookingPrimaryNextStatus(booking.status, { canSeePayment, canCheckIn })
+                    const next = getBookingPrimaryNextStatus(booking.status, {
+                      canSeePayment,
+                      canCheckIn,
+                      detailingPipeline: true,
+                    })
                     return (
                       <article
                         key={booking.id}
@@ -595,13 +661,16 @@ export default function BookingBoardPage() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <p className="font-semibold text-foreground">{booking.customer_name}</p>
-                          {canEdit && (
+                          {canEditServicePrice && (
                             <Button size="sm" variant="ghost" className="h-8 shrink-0 cursor-pointer px-2" onClick={() => openEdit(booking)}>
                               Edit
                             </Button>
                           )}
                         </div>
                         <p className="mt-1 text-sm text-foreground/80">{vehicleLine(booking)}</p>
+                        {serviceLine(booking) ? (
+                          <p className="mt-1 text-xs font-semibold text-primary">{serviceLine(booking)}</p>
+                        ) : null}
                         <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
                           {booking.branch}
                           {' · '}
@@ -612,7 +681,7 @@ export default function BookingBoardPage() {
                             minute: '2-digit',
                           })}
                         </p>
-                        {canEdit && next ? (
+                        {canAdvanceStatus && next ? (
                           <Button
                             type="button"
                             size="sm"
@@ -622,7 +691,7 @@ export default function BookingBoardPage() {
                             {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
                           </Button>
                         ) : null}
-                        {canCancelForm ? (
+                        {canCancelForm && booking.status !== 'cancelled' && booking.status !== 'completed' ? (
                           <Button
                             type="button"
                             size="sm"
@@ -675,9 +744,17 @@ export default function BookingBoardPage() {
                       </TableCell>
                       <TableCell className="capitalize text-foreground">{b.branch}</TableCell>
                       <TableCell className="text-foreground">{b.vehicle_plate || [b.vehicle_make, b.vehicle_model].filter(Boolean).join(' ') || '—'}</TableCell>
-                      <TableCell><Badge variant="secondary">{b.status}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status] || b.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="flex flex-wrap gap-1">
-                        {canEdit && <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(b)}>Edit</Button>}
+                        {canEditServicePrice && (
+                          <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(b)}>
+                            Edit
+                          </Button>
+                        )}
                         {canEdit && !formBookingsOnly ? (
                           <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => archiveBooking(b)}>Archive</Button>
                         ) : null}
@@ -720,6 +797,25 @@ export default function BookingBoardPage() {
             <DialogTitle>{editing ? 'Edit booking' : 'New booking'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={saveBooking} className="grid gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="bk-lookup">Find existing customer (phone, plate, or email)</Label>
+              <Input
+                id="bk-lookup"
+                type="search"
+                placeholder="Type to search existing customers"
+                onChange={(e) => lookupExistingCustomer(e.target.value)}
+                aria-describedby="bk-lookup-help"
+              />
+              <p id="bk-lookup-help" className="text-xs text-muted-foreground">
+                {customerLookup.loading
+                  ? 'Searching…'
+                  : customerLookup.error
+                    ? customerLookup.error
+                    : customerLookup.match
+                      ? `Linked: ${customerLookup.match.full_name || customerLookup.match.phone || customerLookup.match.id}`
+                      : 'New customer — leave blank to create a fresh CRM row on save.'}
+              </p>
+            </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="bk-name">Customer name</Label>
               <Input id="bk-name" required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
@@ -774,12 +870,25 @@ export default function BookingBoardPage() {
               </div>
             </div>
             <div className="flex flex-col gap-2">
+              <Label htmlFor="bk-price">Price (PHP)</Label>
+              <Input
+                id="bk-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.price_pesos}
+                onChange={(e) => setForm({ ...form, price_pesos: e.target.value })}
+                placeholder="Optional · Sales overrides"
+              />
+              <p className="text-xs text-muted-foreground">Service and price changes stay with Sales.</p>
+            </div>
+            <div className="flex flex-col gap-2">
               <Label>Status</Label>
               {editing && formBookingsOnly ? (
-                <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm capitalize text-foreground">
-                  {form.status}
+                <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
+                  {detailingBoardStatusLabel(form.status) || form.status}
                   <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Use Confirm or Cancel on the board to change status.
+                    Advance status from the board cards. Additional services stay with Sales.
                   </span>
                 </p>
               ) : (

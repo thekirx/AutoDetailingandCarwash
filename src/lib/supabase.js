@@ -12,7 +12,7 @@ export const supabase = createClient(config.url, config.key, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    // Explicit localStorage (not memory) so reloads keep the ops session.
+    // localStorage = stay signed in across reloads / PWA restarts until explicit logout.
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     flowType: 'pkce',
   },

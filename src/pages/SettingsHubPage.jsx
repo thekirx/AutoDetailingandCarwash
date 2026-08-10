@@ -1,11 +1,13 @@
 import { Link, Navigate } from 'react-router-dom'
-import { Building2, ScrollText, Shield, UserPlus } from 'lucide-react'
+import { Bell, Building2, Megaphone, ScrollText, Shield, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessAudit,
   canAccessConsole,
   canManageBranches,
+  canManageNotifications,
   canManagePeople,
+  canSendBroadcast,
 } from '@/auth/permissions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -41,6 +43,22 @@ const TILES = [
     to: '/operations/people',
     icon: Shield,
     allow: (p) => canManagePeople(p) || canAccessConsole(p),
+  },
+  {
+    key: 'notifications',
+    title: 'Reminder notifications',
+    description: 'Automated SMS / push reminders per service, every N months.',
+    to: '/operations/notifications',
+    icon: Bell,
+    allow: canManageNotifications,
+  },
+  {
+    key: 'broadcast',
+    title: 'Broadcast push',
+    description: 'Send a custom push or SMS to all customers — promos, we-missed-you.',
+    to: '/operations/broadcast',
+    icon: Megaphone,
+    allow: canSendBroadcast,
   },
 ]
 

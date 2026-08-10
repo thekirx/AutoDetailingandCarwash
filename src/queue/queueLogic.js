@@ -14,6 +14,7 @@ import {
   formatQueueNumberForKind as formatQueueNumber,
   serviceKindFromPayCategory,
 } from '../lib/serviceKinds.js'
+import { DETAILING_BOARD_STATUSES, nextDetailingBoardStatus } from '../lib/detailingBoardStatuses.js'
 
 export { formatQueueNumber }
 export { getBranchScopeList }
@@ -38,7 +39,7 @@ export const DEFAULT_TIMING_WARNINGS = { enabled: true, min_seconds_in_progress:
 export const NO_BRANCH_SCOPE = '__none__'
 
 export const STATUS_LABELS = {
-  waiting: 'Intake Started',
+  waiting: 'In Take Started',
   in_progress: 'Vehicle Inspection',
   final_checking: 'Ready for Release',
   for_payment: 'For Payment',
@@ -154,7 +155,7 @@ export const QUEUE_STATUS_TRANSITIONS = {
   confirmed: ['waiting', 'cancelled'],
   waiting: ['in_progress', 'cancelled'],
   in_progress: ['final_checking', 'cancelled'],
-  final_checking: ['cancelled'],
+  final_checking: ['completed', 'cancelled'],
   for_payment: [],
   redo: ['in_progress'],
   completed: [],
@@ -175,24 +176,17 @@ export function isFormBookingStatus(status) {
   return FORM_BOOKING_STATUSES.includes(String(status || ''))
 }
 
-/** Sales / Marketing Bookings = form appointments. SA/ASA see detailing floor lanes too. */
+/** Sales / Marketing Bookings = detailing 6-status pipeline + cancelled. SA same (no POS lane on this board). */
 export function getBookingBoardStatuses(profile) {
+  const detailing = DETAILING_BOARD_STATUSES.map((s) => s.id)
   if (profile?.role === ROLES.SALES || profile?.role === ROLES.MARKETING) {
-    return [...FORM_BOOKING_STATUSES, 'cancelled']
+    return [...detailing, 'cancelled']
   }
-  // TL no longer uses Bookings view (Queue owns status). Defensive form-only if called.
+  // TL uses Queue for status — defensive form/detailing list if called.
   if (profile?.role === ROLES.TEAM_LEAD) {
-    return [...FORM_BOOKING_STATUSES]
+    return [...detailing]
   }
-  return [
-    ...FORM_BOOKING_STATUSES,
-    'waiting',
-    'in_progress',
-    'final_checking',
-    ...(canSeeForPaymentLane(profile) ? ['for_payment'] : []),
-    'completed',
-    'cancelled',
-  ]
+  return [...detailing, 'cancelled']
 }
 
 export function validateCancellationReason(reason) {
@@ -296,8 +290,12 @@ export function crewRequiredForPayCategory(payCategory) {
 }
 
 /** One primary next step for mobile booking cards (avoids six outline buttons). */
-export function getBookingPrimaryNextStatus(status, { canSeePayment = true, canCheckIn = true } = {}) {
+export function getBookingPrimaryNextStatus(status, { canSeePayment = true, canCheckIn = true, detailingPipeline = false } = {}) {
   const s = String(status || '')
+  if (detailingPipeline) {
+    if (s === 'confirmed' && !canCheckIn) return null
+    return nextDetailingBoardStatus(s)
+  }
   if (s === 'pending') return 'confirmed'
   if (s === 'confirmed') return canCheckIn ? 'waiting' : null
   if (s === 'waiting' || s === 'redo') return 'in_progress'
@@ -307,10 +305,11 @@ export function getBookingPrimaryNextStatus(status, { canSeePayment = true, canC
 }
 
 export const BOOKING_PRIMARY_ACTION_LABELS = {
-  confirmed: 'Confirm',
-  waiting: 'Send to waiting',
-  in_progress: 'Start · assign crew',
-  final_checking: 'Final check',
+  confirmed: 'Assign to branch',
+  waiting: 'Start intake',
+  in_progress: 'Start inspection',
+  final_checking: 'Mark ready for release',
+  completed: 'Successful release',
   for_payment: 'Send to payment',
 }
 

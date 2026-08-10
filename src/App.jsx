@@ -10,6 +10,8 @@ import NotFoundPage from './pages/NotFoundPage'
 import OpsIndexRedirect from './pages/OpsIndexRedirect'
 
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'))
+const RootEntry = lazy(() => import('./pages/RootEntry'))
+const AppShellGate = lazy(() => import('./pages/AppShellGate'))
 const PublicQueuePage = lazy(() => import('./pages/PublicQueuePage'))
 const PublicQueueTvPage = lazy(() =>
   import('./pages/PublicQueuePage').then((m) => ({ default: m.PublicQueueTvPage })),
@@ -38,6 +40,8 @@ const BookingBoardPage = lazy(() => import('./pages/BookingBoardPage'))
 const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
 const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
 const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
+const NotificationSettingsPage = lazy(() => import('./pages/NotificationSettingsPage'))
+const BroadcastPage = lazy(() => import('./pages/BroadcastPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
 const KpiPage = lazy(() => import('./pages/KpiPage'))
@@ -105,8 +109,11 @@ export default function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
+        <Route path="/" element={<RootEntry />} />
+        <Route path="/app" element={<AppShellGate />} />
+
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<PublicLandingPage />} />
+          <Route path="/home" element={<PublicLandingPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/packages" element={<PackagesPage />} />
           <Route path="/book" element={<BookingPage />} />
@@ -176,6 +183,8 @@ export default function App() {
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />
             <Route path="planning" element={gate('planning', <PlanningBoardPage />)} />
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
+            <Route path="notifications" element={gate('settings', <NotificationSettingsPage />)} />
+            <Route path="broadcast" element={gate('settings', <BroadcastPage />)} />
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
             <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
           </Route>

@@ -6,10 +6,11 @@ import NotificationBell from '@/components/NotificationBell'
 import { CookiePreferencesButton } from '@/components/CookieConsent'
 import { useAuth } from '@/auth/AuthProvider'
 import { usePublicBranches } from '@/lib/branches'
+import { prefersAppShell } from '@/lib/appShell'
 import { CustomerInstallPopup } from '@/components/InstallGuide'
 
 const navItems = [
-  ['Main', '/'],
+  ['Main', '/home'],
   ['Services', '/services'],
   ['Packages', '/packages'],
   ['Branch', '/branches'],
@@ -25,17 +26,31 @@ export default function PublicLayout() {
   const { user, profile, loading } = useAuth()
   // Trust DB profile only — metadata.role is client-writable
   const isCustomer = !loading && Boolean(user) && profile?.role === 'customer'
+  // Mobile / PWA: account is an app screen — no marketing header/footer.
+  const appAccountShell = prefersAppShell() && pathname.startsWith('/account')
 
   useEffect(() => setOpen(false), [pathname])
 
   const footerCities = branches.map((b) => b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name).join(' · ') || 'Philippines'
+
+  if (appAccountShell) {
+    return (
+      <div className="public-site app-shell">
+        <PublicPageMeta />
+        <main className="app-shell-main">
+          <Outlet />
+        </main>
+        <CustomerInstallPopup enabled={isCustomer} />
+      </div>
+    )
+  }
 
   return (
     <div className="public-site">
       <PublicPageMeta />
       <header className={`public-header ${open ? 'menu-open' : ''}`}>
         <div className="public-shell header-inner">
-          <Link className="wordmark" to="/" aria-label="Hakum Auto Care home">
+          <Link className="wordmark" to="/home" aria-label="Hakum Auto Care home">
             <img
               className="wordmark-image"
               src="/branding/hakum-lw-ow.png"
@@ -46,7 +61,7 @@ export default function PublicLayout() {
           </Link>
           <nav className="desktop-nav" aria-label="Primary navigation">
             {navItems.map(([label, to]) => (
-              <NavLink key={to} to={to} end={to === '/'}>
+              <NavLink key={to} to={to} end={to === '/home'}>
                 {label}
               </NavLink>
             ))}
@@ -87,7 +102,7 @@ export default function PublicLayout() {
         {open && (
           <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">
             {navItems.map(([label, to]) => (
-              <NavLink key={to} to={to} end={to === '/'}>
+              <NavLink key={to} to={to} end={to === '/home'}>
                 {label}
               </NavLink>
             ))}
