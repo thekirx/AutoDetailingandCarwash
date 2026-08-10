@@ -96,6 +96,25 @@ function serviceLine(booking) {
   return name || null
 }
 
+/** Prefer live ops shops (Bacoor / Batangas) over test / Dasmarinas audit slugs. */
+function preferredBranchSlug(branches = []) {
+  const preferred = ['bacoor', 'batangas']
+  for (const slug of preferred) {
+    if (branches.some((b) => b.slug === slug)) return slug
+  }
+  return branches[0]?.slug || ''
+}
+
+function bookableBranches(branches = [], profile) {
+  return filterBranchesForProfile(branches, profile).filter(
+    (b) => b && !b.is_archived && b.is_active !== false && !b.coming_soon,
+  )
+}
+
+function selectItems(options = []) {
+  return Object.fromEntries(options.map((o) => [o.value, o.label]))
+}
+
 export default function BookingBoardPage() {
   const { profile } = useAuth()
   const canEdit = canEditBookings(profile)
@@ -128,6 +147,9 @@ export default function BookingBoardPage() {
   const [cancelTarget, setCancelTarget] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [customerLookup, setCustomerLookup] = useState({ loading: false, error: '', match: null })
+  const [assignBranchDialog, setAssignBranchDialog] = useState(null)
+  const [assignBranchSlug, setAssignBranchSlug] = useState('')
+  const [assignBranchSaving, setAssignBranchSaving] = useState(false)
   const formServices = useMemo(
     () => (formBookingsOnly ? filterFloorDetailingServices(services) : services),
     [services, formBookingsOnly],
@@ -172,17 +194,43 @@ export default function BookingBoardPage() {
 
   useEffect(() => {
     listBranches().then((rows) => {
-      const scoped = filterBranchesForProfile(rows || [], profile)
       setBranches(rows || [])
-      setForm((f) => ({
-        ...f,
-        branch: f.branch || pickDefaultBranchSlug(profile, scoped),
-      }))
+      setForm((f) => {
+        if (f.branch) return f
+        const scoped = bookableBranches(rows || [], profile)
+        return {
+          ...f,
+          branch: preferredBranchSlug(scoped) || pickDefaultBranchSlug(profile, scoped),
+        }
+      })
     }).catch(() => {})
     fetchServices()
       .then((rows) => setServices(rows || []))
       .catch(() => setServices([]))
   }, [profile])
+
+  const formBranchOptions = useMemo(() => bookableBranches(branches, profile), [branches, profile])
+  const branchNameBySlug = useMemo(
+    () => Object.fromEntries((branches || []).map((b) => [b.slug, b.name || b.slug])),
+    [branches],
+  )
+  const serviceSelectOptions = useMemo(() => {
+    const base = formServices.map((s) => ({ value: s.id, label: s.name }))
+    // Keep the current service visible when editing a non-detailing historical row.
+    if (form.service_id && !base.some((s) => s.value === form.service_id)) {
+      const orphan = services.find((s) => s.id === form.service_id)
+      if (orphan) base.unshift({ value: orphan.id, label: orphan.name })
+    }
+    return base
+  }, [formServices, form.service_id, services])
+  const branchSelectOptions = useMemo(
+    () => formBranchOptions.map((b) => ({ value: b.slug, label: b.name || b.slug })),
+    [formBranchOptions],
+  )
+  const canAssignBranch =
+    profile?.role === ROLES.SALES ||
+    profile?.role === ROLES.SUPER_ADMIN ||
+    profile?.role === ROLES.ASSISTANT_SUPER_ADMIN
 
   useEffect(() => {
     load()
@@ -237,6 +285,12 @@ export default function BookingBoardPage() {
 
   async function move(booking, status) {
     if (!canAdvanceStatus) return
+    // Sales assigns a concrete branch when leaving Booking Placeholder.
+    if (status === 'confirmed' && canAssignBranch) {
+      setAssignBranchSlug(booking.branch || preferredBranchSlug(formBranchOptions) || '')
+      setAssignBranchDialog(booking)
+      return
+    }
     // Crew assignment on start stays on Queue for TL/Admin; Sales advances status only.
     if (status === 'in_progress' && !formBookingsOnly) {
       setCrewLoading(true)
@@ -254,6 +308,21 @@ export default function BookingBoardPage() {
       return
     }
     await applyStatusMove(booking, status)
+  }
+
+  async function confirmAssignBranch() {
+    if (!assignBranchDialog) return
+    if (!assignBranchSlug) {
+      toast.error('Pick a branch.')
+      return
+    }
+    setAssignBranchSaving(true)
+    try {
+      const ok = await applyStatusMove(assignBranchDialog, 'confirmed', { branch: assignBranchSlug })
+      if (ok) setAssignBranchDialog(null)
+    } finally {
+      setAssignBranchSaving(false)
+    }
   }
 
   async function applyStatusMove(booking, status, extra = {}) {
@@ -321,17 +390,20 @@ export default function BookingBoardPage() {
 
   function openCreate() {
     setEditing(null)
-    const formBranches = filterBranchesForProfile(branches, profile)
+    const formBranches = formBranchOptions
     const defaultBranch =
       branchFilter !== 'all'
         ? branchFilter
-        : pickDefaultBranchSlug(profile, formBranches) || formBranches[0]?.slug || ''
+        : preferredBranchSlug(formBranches) ||
+          pickDefaultBranchSlug(profile, formBranches) ||
+          formBranches[0]?.slug ||
+          ''
+    const defaultService =
+      (formBookingsOnly ? filterFloorDetailingServices(services) : services)[0]?.id || ''
     setForm({
       ...emptyBooking,
       branch: defaultBranch,
-      service_id: (formBookingsOnly
-        ? filterFloorDetailingServices(services)
-        : services)[0]?.id || '',
+      service_id: defaultService,
       scheduled_start: `${todayISO()}T10:00`,
     })
     setCustomerLookup({ loading: false, error: '', match: null })
@@ -484,11 +556,23 @@ export default function BookingBoardPage() {
   }
 
   const branchOptions = canSeeAllBranches(profile)
-    ? [{ slug: 'all', name: 'All branches' }, ...branches]
+    ? [{ slug: 'all', name: 'All branches' }, ...formBranchOptions]
     : (getBranchScopeList(profile) || []).map((slug) => ({
         slug,
         name: branches.find((b) => b.slug === slug)?.name || slug,
       }))
+
+  const filterBranchItems = selectItems(branchOptions.map((b) => ({ value: b.slug, label: b.name })))
+  const formBranchItems = selectItems(branchSelectOptions)
+  const formServiceItems = selectItems(serviceSelectOptions)
+  const formStatusItems = selectItems(visibleColumns.map((c) => ({ value: c.id, label: c.label })))
+  const datePresetItems = selectItems([
+    { value: 'today', label: 'Today' },
+    { value: 'week', label: 'This week' },
+    { value: 'month', label: 'This month' },
+    { value: 'year', label: 'This year' },
+    { value: 'custom', label: 'Custom range' },
+  ])
 
   return (
     <section className="bk-page flex min-h-0 flex-col gap-4 sm:gap-5">
@@ -518,7 +602,7 @@ export default function BookingBoardPage() {
         </div>
         <div className="bk-hero-actions">
           {(canSeeAllBranches(profile) || branchOptions.length > 1) && (
-            <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <Select value={branchFilter} onValueChange={setBranchFilter} items={filterBranchItems}>
               <SelectTrigger className="min-h-11 w-full cursor-pointer sm:w-44" aria-label="Filter by branch">
                 <SelectValue placeholder="Branch" />
               </SelectTrigger>
@@ -527,7 +611,7 @@ export default function BookingBoardPage() {
               </SelectContent>
             </Select>
           )}
-          <Select value={datePreset} onValueChange={setDatePreset}>
+          <Select value={datePreset} onValueChange={setDatePreset} items={datePresetItems}>
             <SelectTrigger className="min-h-11 w-full cursor-pointer sm:w-40" aria-label="Date range">
               <SelectValue />
             </SelectTrigger>
@@ -602,7 +686,7 @@ export default function BookingBoardPage() {
                     <p className="mt-1 text-xs font-semibold text-primary">{serviceLine(booking)}</p>
                   ) : null}
                   <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
-                    {booking.branch}
+                    {branchNameBySlug[booking.branch] || booking.branch}
                     {' · '}
                     {new Date(booking.scheduled_start).toLocaleString([], {
                       month: 'short',
@@ -672,7 +756,7 @@ export default function BookingBoardPage() {
                           <p className="mt-1 text-xs font-semibold text-primary">{serviceLine(booking)}</p>
                         ) : null}
                         <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
-                          {booking.branch}
+                          {branchNameBySlug[booking.branch] || booking.branch}
                           {' · '}
                           {new Date(booking.scheduled_start).toLocaleString([], {
                             month: 'short',
@@ -742,7 +826,7 @@ export default function BookingBoardPage() {
                         <div className="font-medium text-foreground">{b.customer_name}</div>
                         <div className="text-xs text-muted-foreground">{b.customer_phone || '—'}</div>
                       </TableCell>
-                      <TableCell className="capitalize text-foreground">{b.branch}</TableCell>
+                      <TableCell className="capitalize text-foreground">{branchNameBySlug[b.branch] || b.branch}</TableCell>
                       <TableCell className="text-foreground">{b.vehicle_plate || [b.vehicle_make, b.vehicle_model].filter(Boolean).join(' ') || '—'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
@@ -826,24 +910,32 @@ export default function BookingBoardPage() {
             </div>
             <div className="flex flex-col gap-2">
               <Label>Branch</Label>
-              <Select value={form.branch} onValueChange={(branch) => setForm({ ...form, branch })}>
-                <SelectTrigger className="cursor-pointer"><SelectValue placeholder="Branch" /></SelectTrigger>
+              <Select
+                value={form.branch || undefined}
+                onValueChange={(branch) => setForm({ ...form, branch })}
+                items={formBranchItems}
+              >
+                <SelectTrigger className="cursor-pointer"><SelectValue placeholder="Pick a branch" /></SelectTrigger>
                 <SelectContent>
-                  {filterBranchesForProfile(branches, profile).map((b) => (
-                    <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
+                  {branchSelectOptions.map((b) => (
+                    <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-2">
               <Label>Service</Label>
-              <Select value={form.service_id} onValueChange={(service_id) => setForm({ ...form, service_id })}>
+              <Select
+                value={form.service_id || undefined}
+                onValueChange={(service_id) => setForm({ ...form, service_id })}
+                items={formServiceItems}
+              >
                 <SelectTrigger className="cursor-pointer" aria-label="Service">
                   <SelectValue placeholder={formServices.length ? 'Select detailing service' : 'No detailing services loaded'} />
                 </SelectTrigger>
                 <SelectContent>
-                  {formServices.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  {serviceSelectOptions.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -892,7 +984,7 @@ export default function BookingBoardPage() {
                   </span>
                 </p>
               ) : (
-                <Select value={form.status} onValueChange={(status) => setForm({ ...form, status })}>
+                <Select value={form.status} onValueChange={(status) => setForm({ ...form, status })} items={formStatusItems}>
                   <SelectTrigger className="cursor-pointer"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {visibleColumns.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
@@ -909,6 +1001,52 @@ export default function BookingBoardPage() {
               <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(assignBranchDialog)}
+        onOpenChange={(open) => {
+          if (!open) setAssignBranchDialog(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign to branch</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Send {assignBranchDialog?.customer_name || 'this booking'} to a shop. Team Lead for that branch will see it next.
+          </p>
+          <div className="flex flex-col gap-2 py-2">
+            <Label htmlFor="assign-branch">Branch</Label>
+            <Select
+              value={assignBranchSlug || undefined}
+              onValueChange={setAssignBranchSlug}
+              items={formBranchItems}
+            >
+              <SelectTrigger id="assign-branch" className="min-h-11 w-full cursor-pointer">
+                <SelectValue placeholder="Pick a branch" />
+              </SelectTrigger>
+              <SelectContent>
+                {branchSelectOptions.map((b) => (
+                  <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setAssignBranchDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="cursor-pointer"
+              disabled={assignBranchSaving || !assignBranchSlug}
+              onClick={confirmAssignBranch}
+            >
+              {assignBranchSaving ? 'Assigning…' : 'Assign to branch'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

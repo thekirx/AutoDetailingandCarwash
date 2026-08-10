@@ -143,19 +143,45 @@ export async function handleBookingStatusRequest(req, res) {
     }
 
     const now = new Date().toISOString()
+    const patch = {
+      status,
+      updated_at: now,
+      ...(status === 'cancelled'
+        ? {
+            cancelled_at: now,
+            cancellation_reason: String(body.cancellation_reason || body.reason || '').trim(),
+          }
+        : {}),
+      ...(status === 'waiting' ? { waiting_at: now } : {}),
+    }
+
+    // Sales / SA / ASA may re-assign branch when moving to Assigned to Branch (confirmed).
+    const nextBranch = body.branch != null ? String(body.branch).trim() : ''
+    if (nextBranch && nextBranch !== existing.branch) {
+      const canAssignBranch =
+        staff.role === 'sales' ||
+        staff.role === 'BossMich' ||
+        staff.role === 'assistant_super_admin'
+      if (!canAssignBranch) {
+        return json(res, 403, { error: 'Only Sales or Super Admin can assign a branch.' })
+      }
+      const { data: branchRow } = await db
+        .from('branches')
+        .select('slug, is_active, coming_soon, is_archived')
+        .eq('slug', nextBranch)
+        .maybeSingle()
+      if (!branchRow || branchRow.is_archived || branchRow.is_active === false) {
+        return json(res, 400, { error: 'Branch is not available.' })
+      }
+      if (branchRow.coming_soon) {
+        return json(res, 400, { error: 'This branch is coming soon.' })
+      }
+      patch.branch = nextBranch
+    }
+
     const { data: booking, error } = await db
       .from('bookings')
-      .update({
-        status,
-        updated_at: now,
-        ...(status === 'cancelled'
-          ? {
-              cancelled_at: now,
-              cancellation_reason: String(body.cancellation_reason || body.reason || '').trim(),
-            }
-          : {}),
-        ...(status === 'waiting' ? { waiting_at: now } : {}),
-      })
+      .update(patch)
       .eq('id', bookingId)
       .select('*')
       .single()
@@ -168,7 +194,7 @@ export async function handleBookingStatusRequest(req, res) {
       notify = { error: String(err.message || err) }
     }
 
-    return json(res, 200, { ok: true, booking: { id: booking.id, status: booking.status }, notify })
+    return json(res, 200, { ok: true, booking: { id: booking.id, status: booking.status, branch: booking.branch }, notify })
   } catch (err) {
     return json(res, 500, { error: String(err.message || err) })
   }
