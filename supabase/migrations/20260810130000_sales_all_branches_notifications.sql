@@ -50,8 +50,6 @@ with check (
   )
 );
 
-commit;
-
 -- Notification reminder settings: Super Admin / ASA configure per-service reminders.
 create table if not exists public.notification_settings (
   id uuid primary key default gen_random_uuid(),
