@@ -2,6 +2,11 @@ import { createClient } from '@supabase/supabase-js'
 import { busybeeSendSms } from './busybee.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import {
+  BUSYBEE_SMS_SINGLE_MAX,
+  messageMaxForChannel,
+  titleMaxForChannel,
+} from '../src/lib/notificationCopy.js'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -45,11 +50,22 @@ export async function handleNotificationBroadcastRequest(req, res) {
   if (!staff || !ALLOWED.has(staff.role)) return json(res, 403, { error: 'Forbidden' })
 
   const body = await readJsonBody(req)
+  const channel = ['push', 'sms', 'both'].includes(body.channel) ? body.channel : 'push'
   const title = String(body.title || '').trim()
   const message = String(body.body || '').trim()
   if (!title || !message) return json(res, 400, { error: 'title and body are required' })
 
-  const channel = ['push', 'sms', 'both'].includes(body.channel) ? body.channel : 'push'
+  const tMax = titleMaxForChannel(channel)
+  const mMax = messageMaxForChannel(channel)
+  if (title.length > tMax) {
+    return json(res, 400, { error: `Title must be ${tMax} characters or fewer.` })
+  }
+  if (message.length > mMax) {
+    return json(res, 400, {
+      error: `Message must be ${mMax} characters or fewer (BusyBee ${channel === 'push' ? 'push' : `SMS ${BUSYBEE_SMS_SINGLE_MAX}`} limit).`,
+    })
+  }
+
   const targetAudience = ['all', 'detailing', 'wash', 'branch'].includes(body.target_audience)
     ? body.target_audience
     : 'all'

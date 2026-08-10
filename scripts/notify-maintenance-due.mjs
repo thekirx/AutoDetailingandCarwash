@@ -3,13 +3,14 @@
  * Run on a schedule (Render cron / GitHub Action): node scripts/notify-maintenance-due.mjs
  *
  * Reminder basis: next_due_at = (last_maintenance_at || coated_at) + frequency_months.
- * Channel/frequency come from notification_settings (per-service, default push / 6 months).
+ * Channel / custom copy / scope come from notification_settings.
  */
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { busybeeSendSms } from '../server/busybee.mjs'
 import { sendWebPushToUsers } from '../server/webPush.mjs'
+import { renderNotificationMessage } from '../src/lib/notificationCopy.js'
 
 const envPath = resolve(process.cwd(), '.env')
 if (existsSync(envPath)) {
@@ -48,27 +49,29 @@ if (error) {
 
 console.log('Due maintenance rows:', (data || []).length)
 
-// Cache notification settings by service_slug.
-const settingsByService = new Map()
 const { data: settings } = await admin
   .from('notification_settings')
-  .select('service_id, branch_slug, channel, frequency_months, enabled')
+  .select('scope, service_id, branch_slug, channel, frequency_months, enabled, title, message')
   .eq('enabled', true)
-if (settings) {
-  for (const s of settings) {
-    const key = `${s.service_id || 'any'}:${s.branch_slug || 'any'}`
-    settingsByService.set(key, s)
-  }
-}
 
+const { data: services } = await admin.from('services').select('id, slug, name')
+const serviceBySlug = new Map((services || []).map((s) => [String(s.slug || '').toLowerCase(), s]))
+
+/**
+ * Most specific matching rule wins:
+ * per_service_branch > per_service > per_branch > whole
+ */
 function settingFor(serviceSlug, branchSlug) {
-  return (
-    settingsByService.get(`${serviceSlug}:${branchSlug}`) ||
-    settingsByService.get(`any:${branchSlug}`) ||
-    settingsByService.get(`${serviceSlug}:any`) ||
-    settingsByService.get('any:any') ||
-    { channel: 'push', frequency_months: 6 }
-  )
+  const svc = serviceBySlug.get(String(serviceSlug || '').toLowerCase())
+  const svcId = svc?.id || null
+  const rows = settings || []
+  const match =
+    rows.find((s) => s.scope === 'per_service_branch' && s.service_id === svcId && s.branch_slug === branchSlug) ||
+    rows.find((s) => s.scope === 'per_service' && s.service_id === svcId) ||
+    rows.find((s) => s.scope === 'per_branch' && s.branch_slug === branchSlug) ||
+    rows.find((s) => s.scope === 'whole') ||
+    null
+  return match || { channel: 'push', title: null, message: null }
 }
 
 let sentCount = 0
@@ -77,8 +80,15 @@ let failedCount = 0
 for (const row of data || []) {
   const setting = settingFor(row.service_slug, row.branch_slug)
   const channel = setting.channel || 'push'
-  const title = 'Hakum Auto Care: Time for your maintenance'
-  const message = `Hakum Auto Care: ${row.plate_number || 'your vehicle'} is due for its ${row.service_slug || 'detailing'} maintenance. Book a slot at hakumautocare.com/book.`
+  const svc = serviceBySlug.get(String(row.service_slug || '').toLowerCase())
+  const title =
+    String(setting.title || '').trim() || 'Hakum Auto Care: Time for your maintenance'
+  const message = renderNotificationMessage(setting.message, {
+    plate: row.plate_number,
+    service: svc?.name || row.service_slug || 'detailing',
+    name: row.customer_name,
+    branch: row.branch_slug,
+  })
 
   if (channel === 'push' || channel === 'both') {
     if (row.customer_id) {
@@ -103,7 +113,7 @@ for (const row of data || []) {
   if (channel === 'sms' || channel === 'both') {
     if (row.customer_phone) {
       try {
-        await busybeeSendSms({ phone: row.customer_phone, message: `${title}\n${message}` })
+        await busybeeSendSms({ phone: row.customer_phone, message: `${title}\n${message}`.slice(0, 160) })
         sentCount += 1
       } catch (err) {
         console.error('[maintenance] sms failed', row.id, err?.message || err)

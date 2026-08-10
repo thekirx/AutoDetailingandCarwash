@@ -1,21 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import {
+  BUSYBEE_SMS_SINGLE_MAX,
+  clampNotificationCopy,
+  messageMaxForChannel,
+  resolveNotificationScope,
+} from '../src/lib/notificationCopy.js'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
-
-function userClient(token) {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
-  if (!url || !anon) throw new Error('Missing SUPABASE_URL or anon key')
-  return createClient(url, anon, {
-    auth: { autoRefreshToken: false, persistSession: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  })
 }
 
 const ALLOWED = new Set(['BossMich', 'assistant_super_admin'])
@@ -32,9 +28,12 @@ async function loadStaff(db, token) {
   return staff
 }
 
+const SELECT_COLS =
+  'id, scope, service_id, branch_slug, channel, frequency_months, enabled, title, message, created_at, updated_at'
+
 /**
- * GET  /api/notification-settings — list settings (optionally by branch)
- * POST /api/notification-settings — upsert { service_id, branch_slug, channel, frequency_months, enabled }
+ * GET  /api/notification-settings
+ * POST /api/notification-settings — upsert scoped detailing reminder with custom copy
  * DELETE /api/notification-settings?id=...
  */
 export async function handleNotificationSettingsRequest(req, res) {
@@ -54,28 +53,79 @@ export async function handleNotificationSettingsRequest(req, res) {
   if (req.method === 'GET') {
     const url = new URL(req.url, 'http://localhost')
     const branch = url.searchParams.get('branch')
-    let query = db.from('notification_settings').select('id, service_id, branch_slug, channel, frequency_months, enabled, created_at, updated_at')
+    let query = db.from('notification_settings').select(SELECT_COLS)
     if (branch) query = query.eq('branch_slug', branch)
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) return json(res, 400, { error: error.message })
-    return json(res, 200, { settings: data || [] })
+    return json(res, 200, { settings: data || [], limits: { sms: BUSYBEE_SMS_SINGLE_MAX } })
   }
 
   if (req.method === 'POST') {
     const body = await readJsonBody(req)
+    const scoped = resolveNotificationScope({
+      scope: body.scope,
+      service_id: body.service_id,
+      branch_slug: body.branch_slug,
+    })
+    if (!scoped.ok) return json(res, 400, { error: scoped.error })
+
+    // Detailing-only when a service is picked.
+    if (scoped.service_id) {
+      const { data: svc } = await db
+        .from('services')
+        .select('id, pay_category, slug')
+        .eq('id', scoped.service_id)
+        .maybeSingle()
+      if (!svc) return json(res, 400, { error: 'Service not found.' })
+      const cat = String(svc.pay_category || '').toLowerCase()
+      const slug = String(svc.slug || '').toLowerCase()
+      const detailingSlugs = new Set(['ceramic-coating', 'nano-ceramic-tint', 'paint-protection-film'])
+      if (cat !== 'detailing' && !detailingSlugs.has(slug)) {
+        return json(res, 400, { error: 'Reminders are limited to detailing services.' })
+      }
+    }
+
+    const channel = ['push', 'sms', 'both'].includes(body.channel) ? body.channel : 'push'
+    const copy = clampNotificationCopy({
+      channel,
+      title: body.title,
+      message: body.message,
+    })
+    const mMax = messageMaxForChannel(channel)
+    if (body.message && String(body.message).trim().length > mMax) {
+      return json(res, 400, {
+        error: `Message must be ${mMax} characters or fewer (BusyBee ${channel === 'push' ? 'push' : 'SMS'} limit).`,
+      })
+    }
+    if (!copy.message) {
+      return json(res, 400, { error: 'Write a custom reminder message.' })
+    }
+
     const payload = {
-      service_id: body.service_id || null,
-      branch_slug: body.branch_slug || null,
-      channel: ['push', 'sms', 'both'].includes(body.channel) ? body.channel : 'push',
+      scope: scoped.scope,
+      service_id: scoped.service_id,
+      branch_slug: scoped.branch_slug,
+      channel: copy.channel,
+      title: copy.title,
+      message: copy.message,
       frequency_months: Math.min(24, Math.max(1, Number(body.frequency_months) || 6)),
       enabled: body.enabled !== false,
       created_by: staff.id,
       updated_at: new Date().toISOString(),
     }
+
+    // Upsert by unique scope index — delete conflicting row then insert keeps it simple.
+    let del = db.from('notification_settings').delete().eq('scope', scoped.scope)
+    if (scoped.service_id) del = del.eq('service_id', scoped.service_id)
+    else del = del.is('service_id', null)
+    if (scoped.branch_slug) del = del.eq('branch_slug', scoped.branch_slug)
+    else del = del.is('branch_slug', null)
+    await del
+
     const { data, error } = await db
       .from('notification_settings')
-      .upsert(payload, { onConflict: 'service_id, branch_slug' })
-      .select('id, service_id, branch_slug, channel, frequency_months, enabled')
+      .insert(payload)
+      .select(SELECT_COLS)
       .single()
     if (error) return json(res, 400, { error: error.message })
     return json(res, 200, { setting: data })

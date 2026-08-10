@@ -5,6 +5,12 @@ import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { canSendBroadcast } from '@/auth/permissions'
 import { getAccessTokenFresh } from '@/lib/authToken'
+import {
+  BUSYBEE_SMS_SINGLE_MAX,
+  busybeeSmsSegments,
+  messageMaxForChannel,
+  titleMaxForChannel,
+} from '@/lib/notificationCopy'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -53,10 +59,23 @@ export default function BroadcastPage() {
 
   if (!canSendBroadcast(profile)) return <Navigate to="/operations/access-denied" replace />
 
+  const titleMax = titleMaxForChannel(form.channel)
+  const messageMax = messageMaxForChannel(form.channel)
+  const smsCredits =
+    form.channel === 'push' ? 0 : busybeeSmsSegments(`${form.title}\n${form.body}`.trim())
+
   async function send(e) {
     e.preventDefault()
     if (!form.title.trim() || !form.body.trim()) {
       toast.error('Title and message are required.')
+      return
+    }
+    if (form.title.trim().length > titleMax) {
+      toast.error(`Title must be ${titleMax} characters or fewer.`)
+      return
+    }
+    if (form.body.trim().length > messageMax) {
+      toast.error(`Message must be ${messageMax} characters or fewer (BusyBee limit).`)
       return
     }
     setSending(true)
@@ -161,12 +180,23 @@ export default function BroadcastPage() {
               ) : null}
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="bc-title">Title</Label>
-              <Input id="bc-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={80} />
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor="bc-title">Title</Label>
+                <span className={`text-xs tabular-nums ${form.title.length > titleMax ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {form.title.length}/{titleMax}
+                </span>
+              </div>
+              <Input id="bc-title" required value={form.title} maxLength={titleMax} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="bc-body">Message</Label>
-              <Textarea id="bc-body" required rows={4} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} maxLength={480} />
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor="bc-body">Message</Label>
+                <span className={`text-xs tabular-nums ${form.body.length > messageMax ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {form.body.length}/{messageMax}
+                  {form.channel !== 'push' ? ` · BusyBee ${BUSYBEE_SMS_SINGLE_MAX} · ~${smsCredits} SMS` : ''}
+                </span>
+              </div>
+              <Textarea id="bc-body" required rows={4} value={form.body} maxLength={messageMax} onChange={(e) => setForm({ ...form, body: e.target.value })} />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="bc-url">Tap URL</Label>
