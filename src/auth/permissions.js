@@ -191,14 +191,13 @@ export function canAccessAudit(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
-/** Settings hub (branches / people / audit / permissions / notifications). */
+/** Settings hub (branches / people / audit / permissions). Notifications live on their own nav item. */
 export function canAccessSettings(profile) {
   return (
     canManageBranches(profile) ||
     canManagePeople(profile) ||
     canAccessAudit(profile) ||
-    canAccessConsole(profile) ||
-    canManageNotifications(profile)
+    canAccessConsole(profile)
   )
 }
 
@@ -213,6 +212,18 @@ export function canSendBroadcast(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return true
   return profile?.role === ROLES.MARKETING
+}
+
+/** Dedicated Notifications page — reminders (SA/ASA) and/or broadcast (SA/ASA/Marketing). */
+export function canAccessNotifications(profile) {
+  return canManageNotifications(profile) || canSendBroadcast(profile)
+}
+
+/** Customer visit History — plate / phone ledger for ops roles. */
+export function canAccessHistory(profile) {
+  if (!profile) return false
+  if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile)) return true
+  return [ROLES.SALES, ROLES.TEAM_LEAD, ROLES.MARKETING, ROLES.ADMIN].includes(profile.role)
 }
 
 /** Super Admin only — master make/model catalog for TL picker */
@@ -357,11 +368,16 @@ export function getOperationsNav(profile) {
     return [
       { label: 'CRM', to: '/operations/crm', icon: 'Contact' },
       { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' },
+      { label: 'History', to: '/operations/history', icon: 'History' },
+      { label: 'Notifications', to: '/operations/notifications', icon: 'Bell' },
     ]
   }
 
   if (profile?.role === ROLES.SALES) {
-    return [{ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' }]
+    return [
+      { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' },
+      { label: 'History', to: '/operations/history', icon: 'History' },
+    ]
   }
 
   // Branch Admin: tablet dock surface — keep sidebar/nav identical if shell falls back.
@@ -370,6 +386,7 @@ export function getOperationsNav(profile) {
       { label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' },
       { label: 'Queue View', to: '/operations/dashboard', icon: 'Gauge' },
       { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
+      { label: 'History', to: '/operations/history', icon: 'History' },
     ]
   }
 
@@ -377,6 +394,12 @@ export function getOperationsNav(profile) {
 
   if (canAccessConsole(profile)) {
     items.push({ label: 'Console', to: '/operations/console', icon: 'LayoutDashboard' })
+  }
+  if (canAccessHistory(profile)) {
+    items.push({ label: 'History', to: '/operations/history', icon: 'History' })
+  }
+  if (canAccessNotifications(profile)) {
+    items.push({ label: 'Notifications', to: '/operations/notifications', icon: 'Bell' })
   }
   if (canAccessSettings(profile)) {
     items.push({ label: 'Settings', to: '/operations/settings', icon: 'Settings' })
@@ -462,6 +485,7 @@ export function getTeamLeadDock(profile) {
 
 export function getTeamLeadMore(profile) {
   const more = []
+  if (canAccessHistory(profile)) more.push({ label: 'History', to: '/operations/history', icon: 'History' })
   if (canViewQueueOperations(profile)) more.push({ label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' })
   if (canViewAssignedTasks(profile)) more.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
   return more
@@ -479,17 +503,25 @@ export function getBranchAdminDock(profile) {
 }
 
 /** Optional overflow for Branch Admin (public kiosk links live on the queue page). */
-export function getBranchAdminMore() {
+export function getBranchAdminMore(profile) {
+  if (!isBranchAdmin(profile)) return []
+  if (canAccessHistory(profile)) {
+    return [{ label: 'History', to: '/operations/history', icon: 'History' }]
+  }
   return []
 }
 
 /** Sales thumb dock — form bookings only (Hakum floor shell). */
 export function getSalesDock(profile) {
   if (!isSalesRole(profile)) return []
-  return [{ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban', primary: true, end: true }]
+  return [
+    { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban', primary: true, end: true },
+    { label: 'History', to: '/operations/history', icon: 'History' },
+  ]
 }
 
-export function getSalesMore() {
+export function getSalesMore(profile) {
+  if (!isSalesRole(profile)) return []
   return []
 }
 
@@ -531,6 +563,8 @@ export function allowRoute(profile, key) {
     reports: canAccessReports,
     memberships: canAccessMemberships,
     settings: canAccessSettings,
+    notifications: canAccessNotifications,
+    history: canAccessHistory,
   }
   const fn = map[key]
   return fn ? fn(profile) : false

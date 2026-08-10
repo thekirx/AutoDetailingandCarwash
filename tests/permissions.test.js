@@ -92,7 +92,7 @@ describe('RBAC Part 1 matrix', () => {
     assert.deepEqual(getBranchScopeList(p), ['bacoor', 'imus'])
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/pos', '/operations/dashboard', '/operations/queue'],
+      ['/operations/pos', '/operations/dashboard', '/operations/queue', '/operations/history'],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
   })
@@ -104,7 +104,7 @@ describe('RBAC Part 1 matrix', () => {
     assert.equal(canAccessPos(p), false)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/crm', '/operations/bookings'],
+      ['/operations/crm', '/operations/bookings', '/operations/history', '/operations/notifications'],
     )
   })
 

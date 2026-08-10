@@ -33,17 +33,17 @@ const sales = { role: ROLES.SALES, branch_slug: 'bacoor' }
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('sales role — detailing bookings board', () => {
-  it('lands on bookings with a bookings-only dock/nav', () => {
+  it('lands on bookings with bookings + history dock/nav', () => {
     assert.equal(isSalesRole(sales), true)
     assert.equal(isFormBookingsOnlyRole(sales), true)
     assert.equal(redirectForRole(ROLES.SALES), '/operations/bookings')
     assert.deepEqual(
       getOperationsNav(sales).map((i) => i.to),
-      ['/operations/bookings'],
+      ['/operations/bookings', '/operations/history'],
     )
     assert.deepEqual(
       getSalesDock(sales).map((i) => i.to),
-      ['/operations/bookings'],
+      ['/operations/bookings', '/operations/history'],
     )
     assert.equal(canAccessBookingBoard(sales), true)
     assert.equal(canEditBookings(sales), true)

@@ -40,7 +40,8 @@ const BookingBoardPage = lazy(() => import('./pages/BookingBoardPage'))
 const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
 const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
 const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
-const NotificationSettingsPage = lazy(() => import('./pages/NotificationSettingsPage'))
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
+const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const BroadcastPage = lazy(() => import('./pages/BroadcastPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
@@ -183,8 +184,9 @@ export default function App() {
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />
             <Route path="planning" element={gate('planning', <PlanningBoardPage />)} />
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
-            <Route path="notifications" element={gate('settings', <NotificationSettingsPage />)} />
-            <Route path="broadcast" element={gate('settings', <BroadcastPage />)} />
+            <Route path="notifications" element={gate('notifications', <NotificationsPage />)} />
+            <Route path="history" element={gate('history', <HistoryPage />)} />
+            <Route path="broadcast" element={gate('notifications', <BroadcastPage />)} />
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
             <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
           </Route>

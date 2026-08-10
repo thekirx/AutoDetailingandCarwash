@@ -9,6 +9,7 @@ const expected = {
   '/api/booking-status': '/api/bookings?operation=booking-status',
   '/api/busybee': '/api/notifications?operation=busybee',
   '/api/customer-auth-lookup': '/api/customer?operation=customer-auth-lookup',
+  '/api/customer-history': '/api/customer?operation=customer-history',
   '/api/customer-portal': '/api/customer?operation=customer-portal',
   '/api/customer-signup': '/api/customer?operation=customer-signup',
   '/api/data-center': '/api/data-center?operation=data-center',

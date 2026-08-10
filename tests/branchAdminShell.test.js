@@ -24,10 +24,10 @@ describe('Branch Admin simplified shell', () => {
     assert.equal(redirectForRole(ROLES.SUPER_ADMIN), '/operations/console')
   })
 
-  it('nav is POS + Queue View + Queue only', () => {
+  it('nav is POS + Queue View + Queue + History', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/pos', '/operations/dashboard', '/operations/queue'],
+      ['/operations/pos', '/operations/dashboard', '/operations/queue', '/operations/history'],
     )
     assert.ok(getOperationsNav(p).some((i) => i.label === 'Queue View'))
   })

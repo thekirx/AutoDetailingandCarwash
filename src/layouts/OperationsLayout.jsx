@@ -8,6 +8,7 @@ import {
   Crown,
   Database,
   Gauge,
+  History,
   Kanban,
   Layers,
   LayoutDashboard,
@@ -22,6 +23,7 @@ import {
   Settings,
   ShoppingCart,
   Sparkles,
+  Bell,
   UserPlus,
   Users,
   Wallet,
@@ -91,6 +93,8 @@ const iconMap = {
   Database,
   Layers,
   Settings,
+  Bell,
+  History,
 }
 
 function formatRole(role) {
@@ -273,7 +277,7 @@ function TeamLeadFloorShell({ profile, signOut }) {
 
 function SalesFloorShell({ profile, signOut }) {
   const dock = useMemo(() => getSalesDock(profile), [profile])
-  const more = useMemo(() => getSalesMore(), [])
+  const more = useMemo(() => getSalesMore(profile), [profile])
   return (
     <FloorOpsShell
       profile={profile}
@@ -302,7 +306,7 @@ function SalesFloorShell({ profile, signOut }) {
 
 function BranchAdminFloorShell({ profile, signOut }) {
   const dock = useMemo(() => getBranchAdminDock(profile), [profile])
-  const more = useMemo(() => getBranchAdminMore(), [])
+  const more = useMemo(() => getBranchAdminMore(profile), [profile])
   return (
     <FloorOpsShell
       profile={profile}

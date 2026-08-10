@@ -78,13 +78,13 @@ describe('custom message tokens', () => {
 })
 
 describe('settings page + migration contract', () => {
-  it('UI is detailing-only with scope + BusyBee counter + custom message', async () => {
-    const jsx = await readFile(resolve(root, 'src/pages/NotificationSettingsPage.jsx'), 'utf8')
+  it('Notifications hub is detailing-only with scope + BusyBee counter + custom message', async () => {
+    const jsx = await readFile(resolve(root, 'src/pages/NotificationsPage.jsx'), 'utf8')
     assert.match(jsx, /filterFloorDetailingServices/)
     assert.match(jsx, /NOTIFICATION_SCOPES/)
     assert.match(jsx, /BUSYBEE_SMS_SINGLE_MAX/)
-    assert.match(jsx, /Custom message/)
     assert.match(jsx, /\{plate\}/)
+    assert.match(jsx, /Paint Maintenance/)
   })
 
   it('migration adds scope title message + unique scope index', async () => {

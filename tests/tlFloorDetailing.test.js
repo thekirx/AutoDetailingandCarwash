@@ -14,9 +14,10 @@ import { getTeamLeadDock, ROLES } from '../src/auth/permissions.js'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('TL floor + detailing catalog', () => {
-  it('exposes the three detailing SKUs and requires crew', () => {
+  it('exposes the floor detailing SKUs and requires crew', () => {
     assert.deepEqual(FLOOR_DETAILING_SERVICE_SLUGS, [
       'ceramic-coating',
+      'paint-maintenance',
       'nano-ceramic-tint',
       'paint-protection-film',
     ])
@@ -33,6 +34,7 @@ describe('TL floor + detailing catalog', () => {
       { id: 'x', slug: 'premium-car-wash', pay_category: 'general', name: 'Wash' },
       { id: '3', slug: 'paint-protection-film', pay_category: 'detailing', name: 'PPF' },
       { id: '1', slug: 'ceramic-coating', pay_category: 'detailing', name: 'Ceramic' },
+      { id: '4', slug: 'paint-maintenance', pay_category: 'detailing', name: 'Paint Maint' },
       { id: '2', slug: 'nano-ceramic-tint', pay_category: 'detailing', name: 'Tint' },
     ]
     assert.deepEqual(
@@ -62,7 +64,7 @@ describe('TL floor + detailing catalog', () => {
   it('bookings form validates detailing catalog for TL/Sales', () => {
     const page = readFileSync(join(root, 'src/pages/BookingBoardPage.jsx'), 'utf8')
     assert.match(page, /filterFloorDetailingServices/)
-    assert.match(page, /Ceramic Coating, Nano Ceramic Tint, or PPF/)
+    assert.match(page, /Ceramic, Paint Maintenance, Tint, or PPF/)
     assert.match(page, /Select at least one present crew member who is not busy/)
     assert.match(page, /service_pay_category: crewDialog\.services\?\.pay_category/)
   })
@@ -75,6 +77,7 @@ describe('TL floor + detailing catalog', () => {
     )
     assert.match(seed, /seedFloorDetailingServices/)
     assert.match(seed, /ceramic-coating/)
+    assert.match(seed, /paint-maintenance/)
     assert.match(seed, /markPresent/)
     assert.match(seed, /Crew One/)
     assert.match(migration, /pay_category.*detailing|detailing/)

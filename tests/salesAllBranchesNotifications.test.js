@@ -9,7 +9,9 @@ import {
   canSeeAllBranches,
   canManageNotifications,
   canSendBroadcast,
+  canAccessNotifications,
   getBranchScopeList,
+  getOperationsNav,
 } from '../src/auth/permissions.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -79,19 +81,28 @@ describe('notification RBAC', () => {
 })
 
 describe('maintenance reminder seed on completion', () => {
-  it('notifyBooking seeds vehicle_maintenance_schedules when status=completed', async () => {
+  it('notifyBooking seeds paint-maintenance program when status=completed', async () => {
     const mjs = await readProject('server/notifyBooking.mjs')
     assert.match(mjs, /seedMaintenanceReminder/)
-    assert.match(mjs, /status === 'completed' && booking\?\.customer_id/)
-    assert.match(mjs, /vehicle_maintenance_schedules/)
-    assert.match(mjs, /next_due_at/)
+    assert.match(mjs, /status === 'completed'/)
+    assert.match(mjs, /applyPaintMaintenanceOnComplete/)
+    assert.doesNotMatch(mjs, /status === 'completed' && booking\?\.customer_id/)
   })
 
-  it('reminder cron actually sends push/SMS based on settings', async () => {
+  it('paintMaintenanceSchedule dedupes by plate + program', async () => {
+    const mjs = await readProject('server/paintMaintenanceSchedule.mjs')
+    assert.match(mjs, /plate_normalized/)
+    assert.match(mjs, /program_key/)
+    assert.match(mjs, /PAINT_MAINTENANCE_PROGRAM/)
+    assert.match(mjs, /action === 'reset'/)
+  })
+
+  it('reminder cron sends once per due cycle (scheduled only)', async () => {
     const mjs = await readProject('scripts/notify-maintenance-due.mjs')
     assert.match(mjs, /sendWebPushToUsers/)
     assert.match(mjs, /busybeeSendSms/)
     assert.match(mjs, /notification_settings/)
+    assert.match(mjs, /\.eq\('status', 'scheduled'\)/)
   })
 })
 
@@ -105,20 +116,34 @@ describe('booking form customer lookup', () => {
   })
 })
 
-describe('settings hub exposes reminders + broadcast', () => {
-  it('SettingsHubPage tiles include notifications and broadcast', async () => {
+describe('dedicated Notifications sidebar page', () => {
+  it('Settings hub no longer tiles notifications/broadcast', async () => {
     const jsx = await readProject('src/pages/SettingsHubPage.jsx')
-    assert.match(jsx, /Reminder notifications/)
-    assert.match(jsx, /Broadcast push/)
-    assert.match(jsx, /\/operations\/notifications/)
-    assert.match(jsx, /\/operations\/broadcast/)
+    assert.doesNotMatch(jsx, /Reminder notifications/)
+    assert.doesNotMatch(jsx, /Broadcast push/)
+    assert.doesNotMatch(jsx, /\/operations\/notifications/)
   })
 
-  it('App.jsx routes the new pages', async () => {
+  it('SA/ASA/Marketing nav includes Notifications; App routes the hub', async () => {
+    const navSa = getOperationsNav({ role: 'BossMich' })
+    assert.ok(navSa.some((i) => i.to === '/operations/notifications' && i.label === 'Notifications'))
+    assert.equal(canAccessNotifications({ role: 'BossMich' }), true)
+    assert.equal(canAccessNotifications({ role: ROLES.MARKETING }), true)
+    assert.equal(canAccessNotifications({ role: ROLES.SALES }), false)
+
     const jsx = await readProject('src/App.jsx')
-    assert.match(jsx, /NotificationSettingsPage/)
-    assert.match(jsx, /BroadcastPage/)
+    assert.match(jsx, /NotificationsPage/)
     assert.match(jsx, /path="notifications"/)
-    assert.match(jsx, /path="broadcast"/)
+    assert.match(jsx, /gate\('notifications'/)
+  })
+
+  it('NotificationsPage has reminders + broadcast tabs and paint program callout', async () => {
+    const jsx = await readProject('src/pages/NotificationsPage.jsx')
+    assert.match(jsx, /Paint maintenance program/)
+    assert.match(jsx, /filterFloorDetailingServices/)
+    assert.match(jsx, /NOTIFICATION_SCOPES/)
+    assert.match(jsx, /BUSYBEE_SMS_SINGLE_MAX/)
+    assert.match(jsx, /PAINT_MAINTENANCE_SLUG/)
+    assert.match(jsx, /Send broadcast/)
   })
 })

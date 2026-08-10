@@ -73,6 +73,10 @@ function provisionApiPlugin() {
         const { handleCustomerAuthLookupRequest } = await import('./server/customerAuthLookup.mjs')
         return handleCustomerAuthLookupRequest(req, res, helpers)
       })
+      mount('/api/customer-history', async (req, res) => {
+        const { handleCustomerHistoryRequest } = await import('./server/customerHistoryApi.mjs')
+        return handleCustomerHistoryRequest(req, res)
+      })
       mount('/api/public-book', (req, res) => handlePublicBookRequest(req, res))
       mount('/api/plate-lookup', async (req, res) => {
         const { handlePublicPlateLookup } = await import('./server/publicPlateLookup.mjs')

@@ -55,6 +55,15 @@ const DETAILING_SERVICES = [
     description: 'Multi-day ceramic coating. Crew required.',
   },
   {
+    id: '44444444-4444-4444-8444-444444444444',
+    name: 'Paint Maintenance',
+    slug: 'paint-maintenance',
+    price_minor: 350_000,
+    duration_minutes: 180,
+    display_order: 15,
+    description: 'Follow-up paint maintenance for Ceramic Coating and PPF.',
+  },
+  {
     id: '22222222-2222-4222-8222-222222222222',
     name: 'Nano Ceramic Tint',
     slug: 'nano-ceramic-tint',

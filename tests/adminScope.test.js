@@ -46,7 +46,7 @@ describe('Admin capability matrix', () => {
     assert.equal(allowRoute(p, 'queue-new'), false)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/pos', '/operations/dashboard', '/operations/queue'],
+      ['/operations/pos', '/operations/dashboard', '/operations/queue', '/operations/history'],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/cars'))
   })

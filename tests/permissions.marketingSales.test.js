@@ -23,7 +23,7 @@ assert.equal(canAccessReports(assistant), true)
 const mNav = getOperationsNav(marketing)
 assert.deepEqual(
   mNav.map((i) => i.to),
-  ['/operations/crm', '/operations/bookings'],
+  ['/operations/crm', '/operations/bookings', '/operations/history', '/operations/notifications'],
 )
 
 assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')

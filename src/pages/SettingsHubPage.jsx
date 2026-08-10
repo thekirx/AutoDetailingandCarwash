@@ -1,13 +1,11 @@
 import { Link, Navigate } from 'react-router-dom'
-import { Bell, Building2, Megaphone, ScrollText, Shield, UserPlus } from 'lucide-react'
+import { Building2, ScrollText, Shield, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessAudit,
   canAccessConsole,
   canManageBranches,
-  canManageNotifications,
   canManagePeople,
-  canSendBroadcast,
 } from '@/auth/permissions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -44,25 +42,9 @@ const TILES = [
     icon: Shield,
     allow: (p) => canManagePeople(p) || canAccessConsole(p),
   },
-  {
-    key: 'notifications',
-    title: 'Reminder notifications',
-    description: 'Automated SMS / push reminders per service, every N months.',
-    to: '/operations/notifications',
-    icon: Bell,
-    allow: canManageNotifications,
-  },
-  {
-    key: 'broadcast',
-    title: 'Broadcast push',
-    description: 'Send a custom push or SMS to all customers — promos, we-missed-you.',
-    to: '/operations/broadcast',
-    icon: Megaphone,
-    allow: canSendBroadcast,
-  },
 ]
 
-/** Settings hub — client command category for branch/people/audit/permissions. */
+/** Settings hub — branches / people / audit / permissions (notifications are a sidebar page). */
 export default function SettingsHubPage() {
   const { profile } = useAuth()
   const tiles = TILES.filter((t) => t.allow(profile))
@@ -84,7 +66,11 @@ export default function SettingsHubPage() {
         {tiles.map((tile) => {
           const Icon = tile.icon
           return (
-            <Link key={tile.key} to={tile.to} className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Link
+              key={tile.key}
+              to={tile.to}
+              className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <Card className="h-full transition group-hover:border-primary/40">
                 <CardHeader className="flex flex-row items-start gap-3 space-y-0">
                   <span className="rounded-lg border border-border bg-muted/40 p-2">

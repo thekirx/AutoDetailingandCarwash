@@ -31,7 +31,7 @@ const domains = [
     'customer',
     customerGateway,
     customer,
-    ['customer-auth-lookup', 'customer-portal', 'customer-signup', 'provision-customer'],
+    ['customer-auth-lookup', 'customer-history', 'customer-portal', 'customer-signup', 'provision-customer'],
   ],
   ['staff', staffGateway, staff, ['provision-staff', 'update-staff']],
   ['bookings', bookingsGateway, bookings, ['booking-status', 'plate-lookup', 'public-book']],

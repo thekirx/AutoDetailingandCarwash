@@ -1,5 +1,6 @@
 import { createGateway } from '../server/apiGateway.mjs'
 import { handleCustomerAuthLookupRequest } from '../server/customerAuthLookup.mjs'
+import { handleCustomerHistoryRequest } from '../server/customerHistoryApi.mjs'
 import { handleCustomerPortalRequest } from '../server/customerPortal.mjs'
 import { handleCustomerSignupRequest } from '../server/customerSignup.mjs'
 import { bearer, readJsonBody, setCors } from '../server/httpUtil.mjs'
@@ -13,6 +14,7 @@ export const operations = Object.freeze({
       siteOrigin: req.headers.origin || `https://${req.headers.host}`,
     })
   },
+  'customer-history': handleCustomerHistoryRequest,
   'customer-portal': (req, res) =>
     handleCustomerPortalRequest(req, res, {
       getAccessToken: () => bearer(req),

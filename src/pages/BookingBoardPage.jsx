@@ -523,7 +523,7 @@ export default function BookingBoardPage() {
       return
     }
     if (formBookingsOnly && !formServices.some((s) => s.id === serviceId)) {
-      toast.error('Pick a detailing service: Ceramic Coating, Nano Ceramic Tint, or PPF.')
+      toast.error('Pick a detailing service: Ceramic, Paint Maintenance, Tint, or PPF.')
       return
     }
     if (!make || !model) {
@@ -1105,7 +1105,9 @@ export default function BookingBoardPage() {
                 </SelectContent>
               </Select>
               {(formBookingsOnly) ? (
-                <p className="text-xs text-muted-foreground">Detailing only · Ceramic Coating, Nano Ceramic Tint, PPF</p>
+                <p className="text-xs text-muted-foreground">
+                  Detailing · Ceramic, Paint Maintenance, Tint, PPF — Ceramic/PPF start a 6‑month paint-maintenance reminder
+                </p>
               ) : null}
             </div>
             <div className="flex flex-col gap-2">

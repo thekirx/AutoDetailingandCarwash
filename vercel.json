@@ -6,6 +6,7 @@
     { "source": "/api/booking-status", "destination": "/api/bookings?operation=booking-status" },
     { "source": "/api/busybee", "destination": "/api/notifications?operation=busybee" },
     { "source": "/api/customer-auth-lookup", "destination": "/api/customer?operation=customer-auth-lookup" },
+    { "source": "/api/customer-history", "destination": "/api/customer?operation=customer-history" },
     { "source": "/api/customer-portal", "destination": "/api/customer?operation=customer-portal" },
     { "source": "/api/customer-signup", "destination": "/api/customer?operation=customer-signup" },
     { "source": "/api/data-center", "destination": "/api/data-center?operation=data-center" },

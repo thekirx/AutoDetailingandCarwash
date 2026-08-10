@@ -4,6 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { busybeeSendSms } from './busybee.mjs'
+import { applyPaintMaintenanceOnComplete } from './paintMaintenanceSchedule.mjs'
 import { resolvePushTargets, sendWebPushToUsers } from './webPush.mjs'
 
 function admin() {
@@ -271,8 +272,8 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
     }
   }
 
-  // On Successful Release: seed 6-month maintenance reminder for coating/PPF services.
-  if (status === 'completed' && booking?.customer_id) {
+  // On Successful Release: Ceramic/PPF enroll or Paint Maintenance resets the 6-mo clock (deduped).
+  if (status === 'completed') {
     try {
       await seedMaintenanceReminder(db, booking)
     } catch (err) {
@@ -283,60 +284,7 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
   return result
 }
 
-/**
- * Seed a vehicle_maintenance_schedules row when a coating/PPF/detailing booking completes.
- * next_due_at = today + 6 months (overridden by notification_settings.frequency_months if configured).
- */
-async function seedMaintenanceReminder(db, booking) {
-  if (!booking?.id || !booking?.customer_id) return
-  const { data: svc } = await db
-    .from('services')
-    .select('id, slug, pay_category')
-    .eq('id', booking.service_id)
-    .maybeSingle()
-  if (!svc) return
-  // Only detailing-grade services earn a 6-month maintenance reminder.
-  if (!['detailing', 'package'].includes(svc.pay_category)) return
-
-  const { data: vehicle } = await db
-    .from('vehicles')
-    .select('id')
-    .eq('customer_id', booking.customer_id)
-    .eq('normalized_plate_number', String(booking.vehicle_plate || '').toLowerCase().replace(/\s+/g, ''))
-    .maybeSingle()
-
-  // Per-service frequency override (defaults to 6 months).
-  let frequencyMonths = 6
-  const { data: setting } = await db
-    .from('notification_settings')
-    .select('frequency_months')
-    .or(`service_id.eq.${svc.id},service_id.is.null`)
-    .eq('enabled', true)
-    .order('service_id', { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle()
-  if (setting?.frequency_months) frequencyMonths = setting.frequency_months
-
-  const coatedAt = booking.completed_at || new Date().toISOString()
-  const nextDue = new Date(coatedAt)
-  nextDue.setMonth(nextDue.getMonth() + frequencyMonths)
-
-  const { error } = await db.from('vehicle_maintenance_schedules').upsert(
-    {
-      vehicle_id: vehicle?.id || null,
-      customer_id: booking.customer_id,
-      booking_id: booking.id,
-      service_slug: svc.slug || svc.id,
-      plate_number: booking.vehicle_plate || null,
-      customer_phone: booking.customer_phone || null,
-      customer_name: booking.customer_name || null,
-      coated_at: coatedAt,
-      last_maintenance_at: coatedAt,
-      next_due_at: nextDue.toISOString(),
-      branch_slug: booking.branch || null,
-      status: 'scheduled',
-    },
-    { onConflict: 'booking_id, service_slug' },
-  )
-  if (error) console.warn('[notify] maintenance upsert failed', error.message)
+/** @deprecated name kept for tests — delegates to paint-maintenance program module. */
+export async function seedMaintenanceReminder(db, booking) {
+  return applyPaintMaintenanceOnComplete(db, booking)
 }

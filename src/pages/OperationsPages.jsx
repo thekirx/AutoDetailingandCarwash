@@ -527,14 +527,14 @@ function ScopedFloorDashboard() {
       )}
       {!isTeamLeadFloor ? (
         <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr] sm:mt-5 sm:gap-5">
-          <Panel title="Crew Availability" icon={Users}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <CrewList title="Available" rows={availableStaff} empty="No available staff" />
-              <CrewList title="Busy" rows={busyStaff} empty="No busy staff" busy />
-            </div>
-          </Panel>
-          <Panel title="Recently Sent To Payment" icon={Send}>
-            <div className="grid gap-3">
+        <Panel title="Crew Availability" icon={Users}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CrewList title="Available" rows={availableStaff} empty="No available staff" />
+            <CrewList title="Busy" rows={busyStaff} empty="No busy staff" busy />
+          </div>
+        </Panel>
+        <Panel title="Recently Sent To Payment" icon={Send}>
+          <div className="grid gap-3">
               {filteredHandoffs.length ? filteredHandoffs.slice(0, 8).map((handoff) => {
                 const body = (
                   <>
@@ -554,12 +554,12 @@ function ScopedFloorDashboard() {
                 ) : (
                   <div key={handoff.id} className="rounded-2xl border border-border bg-card p-4">
                     {body}
-                </div>
+              </div>
                 )
               }) : <EmptyLine text="No payment handoffs in this range." />}
-            </div>
-          </Panel>
-        </div>
+          </div>
+        </Panel>
+      </div>
       ) : null}
       <Panel title={`Paid sales · ${branchLabel}`} icon={Wallet} className="mt-4 sm:mt-5">
         <p className="mb-3 text-sm text-muted-foreground">
@@ -600,14 +600,14 @@ function ScopedFloorDashboard() {
                     <p className="shrink-0 text-base font-semibold tabular-nums text-foreground sm:text-lg">
                       {formatMoney(sale.total_minor)}
                     </p>
-                  </div>
+        </div>
                 </div>
               )
             })
           ) : (
             <EmptyLine text="No paid sales in this range for your branch." />
           )}
-        </div>
+            </div>
       </Panel>
       {!isTeamLeadFloor ? (
         <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
@@ -616,9 +616,9 @@ function ScopedFloorDashboard() {
               <div key={event.id} className="rounded-2xl border border-border bg-card p-4">
                 <p className="text-sm text-foreground">{event.old_status || 'created'} to {event.new_status}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{event.branch} · {event.notes || 'Status update'} · {new Date(event.created_at).toLocaleString()}</p>
-              </div>
+            </div>
             )) : <EmptyLine text="No queue activity in this range." />}
-          </div>
+      </div>
         </Panel>
       ) : null}
     </section>
@@ -768,7 +768,7 @@ function OperationsQueueBoardPage() {
                   {f.shortLabel}
                 </button>
               ))}
-            </div>
+          </div>
             <RefreshButton loading={loading} onClick={reload} />
             {branchFilter && branchFilter !== 'all' ? (
               <>
@@ -796,7 +796,7 @@ function OperationsQueueBoardPage() {
                 New ticket
               </Link>
             )}
-          </div>
+            </div>
         )}
       />
 
@@ -874,7 +874,7 @@ function OperationsQueueBoardPage() {
           const tickets = grouped[status] || []
           const laneFocused = focusLane === status
           const laneDimmed = Boolean(focusLane) && !laneFocused
-          return (
+              return (
             <section
               key={status}
               id={`queue-lane-${status}`}
@@ -895,7 +895,7 @@ function OperationsQueueBoardPage() {
                       <Icon size={14} />
                     </span>
                     <h2 className="queue-lane-title text-xs font-bold tracking-[0.14em] uppercase">{STATUS_LABELS[status]}</h2>
-                  </div>
+          </div>
                   <p className="queue-lane-hint mt-1 text-[11px]">{meta.hint}</p>
                 </button>
                 <button
@@ -907,7 +907,7 @@ function OperationsQueueBoardPage() {
                 >
                   {tickets.length}
                 </button>
-              </div>
+            </div>
               <div className="floor-lane-body">
                 {loading
                   ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-muted" />)
@@ -921,11 +921,11 @@ function OperationsQueueBoardPage() {
                       />
                     ))
                     : <EmptyLine text="No tickets in this lane." />}
-            </div>
+          </div>
           </section>
           )
         })}
-      </div>
+        </div>
 
       {canManageQueue ? (
         <QueueTicketEditModal
@@ -1097,7 +1097,7 @@ export function NewQueueTicketPage() {
       const ids = current.service_ids || []
       const total = sumSelectedPrices(services, ids, vehicle_type)
       return {
-        ...current,
+      ...current,
         vehicle_type,
         _sizeReady: true,
         final_price: ids.length ? String(total / 100) : current.final_price,
