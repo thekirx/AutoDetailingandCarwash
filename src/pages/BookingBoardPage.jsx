@@ -26,6 +26,7 @@ import {
   getBookingBoardStatuses,
   getBookingPrimaryNextStatus,
   getDashboardDateRange,
+  matchesBookingSmartSearch,
   requiresTeamLeadBranchSetup,
   resolveBranchFilter,
   filterBranchesForProfile,
@@ -135,6 +136,8 @@ export default function BookingBoardPage() {
   const [datePreset, setDatePreset] = useState('week')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyBooking)
@@ -161,11 +164,15 @@ export default function BookingBoardPage() {
   )
 
   const range = useMemo(() => {
+    if (datePreset === 'all' || datePreset === 'any') {
+      return { start: null, end: null }
+    }
     if (datePreset === 'today' || datePreset === 'day') {
       const d = todayISO()
       return { start: d, end: d }
     }
     const r = getDashboardDateRange(datePreset, customStart, customEnd)
+    if (!r.start || !r.end) return { start: null, end: null }
     return {
       start: r.start.toLocaleDateString('en-CA'),
       end: r.end.toLocaleDateString('en-CA'),
@@ -175,22 +182,23 @@ export default function BookingBoardPage() {
   const branchScope = useMemo(() => resolveBranchFilter(profile, branchFilter), [profile, branchFilter])
 
   const load = useCallback(async () => {
-    const startIso = `${range.start}T00:00:00+08:00`
-    const endIso = `${range.end}T23:59:59.999+08:00`
     let query = supabase
       .from('bookings')
       .select('id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id, final_price_minor, price_minor, services(name, pay_category)')
       .eq('is_archived', false)
       .in('status', boardStatuses)
-      .gte('scheduled_start', startIso)
-      .lte('scheduled_start', endIso)
       .order('scheduled_start', { ascending: true })
-      .limit(400)
+      .limit(datePreset === 'all' ? 800 : 400)
+    if (range.start && range.end) {
+      query = query
+        .gte('scheduled_start', `${range.start}T00:00:00+08:00`)
+        .lte('scheduled_start', `${range.end}T23:59:59.999+08:00`)
+    }
     query = applyBranchScope(query, branchScope)
     const { data, error } = await query
     if (error) toast.error(error.message)
     setBookings(data || [])
-  }, [branchScope, range.start, range.end, boardStatuses])
+  }, [branchScope, range.start, range.end, boardStatuses, datePreset])
 
   useEffect(() => {
     listBranches().then((rows) => {
@@ -260,12 +268,24 @@ export default function BookingBoardPage() {
 
   const grouped = useMemo(() => {
     const map = Object.fromEntries(COLUMNS.map((c) => [c.id, []]))
-    for (const booking of bookings) {
+    const source = searchQuery.trim()
+      ? bookings.filter((b) =>
+          matchesBookingSmartSearch(
+            {
+              ...b,
+              status_label: detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status],
+            },
+            searchQuery,
+            branchNameBySlug,
+          ),
+        )
+      : bookings
+    for (const booking of source) {
       const key = map[booking.status] ? booking.status : 'pending'
       map[key].push(booking)
     }
     return map
-  }, [bookings])
+  }, [bookings, searchQuery, branchNameBySlug])
 
   const calendarEvents = useMemo(
     () =>
@@ -282,6 +302,23 @@ export default function BookingBoardPage() {
       }),
     [bookings],
   )
+
+  const filteredBookings = useMemo(() => {
+    let rows = bookings
+    if (statusFilter !== 'all') rows = rows.filter((b) => b.status === statusFilter)
+    const q = searchQuery.trim()
+    if (!q) return rows
+    return rows.filter((b) =>
+      matchesBookingSmartSearch(
+        {
+          ...b,
+          status_label: detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status],
+        },
+        q,
+        branchNameBySlug,
+      ),
+    )
+  }, [bookings, searchQuery, statusFilter, branchNameBySlug])
 
   async function move(booking, status) {
     if (!canAdvanceStatus) return
@@ -567,12 +604,28 @@ export default function BookingBoardPage() {
   const formServiceItems = selectItems(serviceSelectOptions)
   const formStatusItems = selectItems(visibleColumns.map((c) => ({ value: c.id, label: c.label })))
   const datePresetItems = selectItems([
+    { value: 'all', label: 'All dates' },
     { value: 'today', label: 'Today' },
+    { value: 'upcoming', label: 'Upcoming' },
     { value: 'week', label: 'This week' },
     { value: 'month', label: 'This month' },
     { value: 'year', label: 'This year' },
     { value: 'custom', label: 'Custom range' },
   ])
+  const statusFilterItems = selectItems([
+    { value: 'all', label: 'All statuses' },
+    ...visibleColumns.map((c) => ({ value: c.id, label: c.label })),
+  ])
+  const rangeLabel =
+    datePreset === 'all'
+      ? 'All dates'
+      : datePreset === 'upcoming'
+        ? 'Upcoming'
+        : !range.start || !range.end
+          ? 'All dates'
+          : range.start === range.end
+            ? range.start
+            : `${range.start} → ${range.end}`
 
   return (
     <section className="bk-page flex min-h-0 flex-col gap-4 sm:gap-5">
@@ -594,13 +647,23 @@ export default function BookingBoardPage() {
                 ? 'Read-only detailing pipeline · Sales owns service and price changes'
                 : formBookingsOnly
                   ? 'Full detailing pipeline · service and price edits stay with Sales'
-                  : range.start === range.end
-                    ? range.start
-                    : `${range.start} → ${range.end}`}
+                  : rangeLabel}
             </p>
           </div>
         </div>
         <div className="bk-hero-actions">
+          <div className="bk-search-wrap">
+            <Label htmlFor="bk-smart-search" className="sr-only">Search bookings</Label>
+            <Input
+              id="bk-smart-search"
+              type="search"
+              className="bk-smart-search min-h-11 w-full"
+              placeholder="Search name, phone, plate, branch…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
           {(canSeeAllBranches(profile) || branchOptions.length > 1) && (
             <Select value={branchFilter} onValueChange={setBranchFilter} items={filterBranchItems}>
               <SelectTrigger className="min-h-11 w-full cursor-pointer sm:w-44" aria-label="Filter by branch">
@@ -616,7 +679,9 @@ export default function BookingBoardPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All dates</SelectItem>
               <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="upcoming">Upcoming</SelectItem>
               <SelectItem value="week">This week</SelectItem>
               <SelectItem value="month">This month</SelectItem>
               <SelectItem value="year">This year</SelectItem>
@@ -801,58 +866,158 @@ export default function BookingBoardPage() {
         </TabsContent>
 
         <TabsContent value="table" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{bookings.length} bookings</CardTitle>
-              <CardDescription>Flat list for the selected branch and date range.</CardDescription>
+          <Card className="bk-table-card overflow-hidden">
+            <CardHeader className="gap-3 space-y-0 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <CardTitle className="text-lg sm:text-xl">
+                  {filteredBookings.length} booking{filteredBookings.length === 1 ? '' : 's'}
+                </CardTitle>
+                <CardDescription>
+                  {rangeLabel}
+                  {searchQuery.trim() ? ` · “${searchQuery.trim()}”` : ''}
+                  {statusFilter !== 'all' ? ` · ${detailingBoardStatusLabel(statusFilter) || statusFilter}` : ''}
+                </CardDescription>
+              </div>
+              <div className="w-full sm:w-48">
+                <Label htmlFor="bk-status-filter" className="sr-only">Status filter</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter} items={statusFilterItems}>
+                  <SelectTrigger id="bk-status-filter" className="min-h-11 w-full cursor-pointer" aria-label="Filter by status">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    {visibleColumns.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>When</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Branch</TableHead>
-                    <TableHead>Vehicle</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bookings.map((b) => (
-                    <TableRow key={b.id}>
-                      <TableCell className="whitespace-nowrap text-sm text-foreground">{new Date(b.scheduled_start).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <div className="font-medium text-foreground">{b.customer_name}</div>
-                        <div className="text-xs text-muted-foreground">{b.customer_phone || '—'}</div>
-                      </TableCell>
-                      <TableCell className="capitalize text-foreground">{branchNameBySlug[b.branch] || b.branch}</TableCell>
-                      <TableCell className="text-foreground">{b.vehicle_plate || [b.vehicle_make, b.vehicle_model].filter(Boolean).join(' ') || '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
+            <CardContent className="px-3 pb-4 sm:px-6">
+              {/* Mobile-first cards */}
+              <div className="bk-table-cards md:hidden" aria-label="Bookings list">
+                {filteredBookings.map((b) => {
+                  const next = getBookingPrimaryNextStatus(b.status, {
+                    canSeePayment,
+                    canCheckIn,
+                    detailingPipeline: true,
+                  })
+                  return (
+                    <article key={b.id} className="bk-table-card-row">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-foreground">{b.customer_name}</p>
+                          <p className="text-xs text-muted-foreground">{b.customer_phone || 'No phone'}</p>
+                        </div>
+                        <Badge variant="secondary" className="shrink-0">
                           {detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status] || b.status}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="flex flex-wrap gap-1">
-                        {canEditServicePrice && (
-                          <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(b)}>
+                      </div>
+                      <p className="mt-2 text-sm text-foreground/85">{vehicleLine(b)}</p>
+                      {serviceLine(b) ? (
+                        <p className="mt-1 text-xs font-semibold text-primary">{serviceLine(b)}</p>
+                      ) : null}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {branchNameBySlug[b.branch] || b.branch}
+                        {' · '}
+                        {new Date(b.scheduled_start).toLocaleString([], {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {canAdvanceStatus && next ? (
+                          <Button type="button" className="min-h-11 flex-1 cursor-pointer" onClick={() => move(b, next)}>
+                            {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
+                          </Button>
+                        ) : null}
+                        {canEditServicePrice ? (
+                          <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => openEdit(b)}>
                             Edit
                           </Button>
-                        )}
-                        {canEdit && !formBookingsOnly ? (
-                          <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => archiveBooking(b)}>Archive</Button>
                         ) : null}
                         {canCancelForm ? (
-                          <Button size="sm" variant="ghost" className="cursor-pointer text-destructive" onClick={() => setCancelTarget(b)}>Cancel</Button>
+                          <Button type="button" variant="ghost" className="min-h-11 cursor-pointer text-destructive" onClick={() => setCancelTarget(b)}>
+                            Cancel
+                          </Button>
                         ) : null}
-                      </TableCell>
+                      </div>
+                    </article>
+                  )
+                })}
+                {!filteredBookings.length ? (
+                  <p className="rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center text-sm text-muted-foreground">
+                    No bookings match this search and date range.
+                  </p>
+                ) : null}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden overflow-x-auto md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>When</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Vehicle</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead />
                     </TableRow>
-                  ))}
-                  {!bookings.length && (
-                    <TableRow><TableCell colSpan={6} className="text-muted-foreground">No bookings in this range.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBookings.map((b) => (
+                      <TableRow key={b.id}>
+                        <TableCell className="whitespace-nowrap text-sm text-foreground">
+                          {new Date(b.scheduled_start).toLocaleString([], {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium text-foreground">{b.customer_name}</div>
+                          <div className="text-xs text-muted-foreground">{b.customer_phone || '—'}</div>
+                        </TableCell>
+                        <TableCell className="text-foreground">{branchNameBySlug[b.branch] || b.branch}</TableCell>
+                        <TableCell className="text-foreground">{vehicleLine(b)}</TableCell>
+                        <TableCell className="text-foreground">{serviceLine(b) || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status] || b.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="flex flex-wrap gap-1">
+                          {canEditServicePrice && (
+                            <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(b)}>
+                              Edit
+                            </Button>
+                          )}
+                          {canEdit && !formBookingsOnly ? (
+                            <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => archiveBooking(b)}>Archive</Button>
+                          ) : null}
+                          {canCancelForm ? (
+                            <Button size="sm" variant="ghost" className="cursor-pointer text-destructive" onClick={() => setCancelTarget(b)}>Cancel</Button>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!filteredBookings.length && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-muted-foreground">
+                          No bookings match this search and date range.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

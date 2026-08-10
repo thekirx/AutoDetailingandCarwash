@@ -440,12 +440,13 @@ export function aggregateDailySalesSummary(rows = []) {
 }
 
 export function getDashboardDateRange(preset, customStart, customEnd, now = new Date()) {
-  const end = new Date(now)
-  end.setHours(23, 59, 59, 999)
   const parseLocalDay = (value, endOfDay = false) => {
     const [y, m, d] = String(value).split('-').map(Number)
     if (!y || !m || !d) return null
     return endOfDay ? new Date(y, m - 1, d, 23, 59, 59, 999) : new Date(y, m - 1, d, 0, 0, 0, 0)
+  }
+  if (preset === 'all' || preset === 'any') {
+    return { start: null, end: null }
   }
   if (preset === 'custom' && customStart && customEnd) {
     const start = parseLocalDay(customStart)
@@ -455,6 +456,16 @@ export function getDashboardDateRange(preset, customStart, customEnd, now = new 
   if (preset === 'today' || preset === 'day') {
     const start = new Date(now)
     start.setHours(0, 0, 0, 0)
+    const end = new Date(now)
+    end.setHours(23, 59, 59, 999)
+    return { start, end }
+  }
+  if (preset === 'upcoming') {
+    const start = new Date(now)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(now)
+    end.setMonth(end.getMonth() + 12)
+    end.setHours(23, 59, 59, 999)
     return { start, end }
   }
   if (preset === 'week') {
@@ -463,21 +474,59 @@ export function getDashboardDateRange(preset, customStart, customEnd, now = new 
     const mondayOffset = day === 0 ? -6 : 1 - day
     start.setDate(start.getDate() + mondayOffset)
     start.setHours(0, 0, 0, 0)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 6)
+    end.setHours(23, 59, 59, 999)
     return { start, end }
   }
   if (preset === 'month') {
     const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
     return { start, end }
   }
   if (preset === 'year') {
     const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0)
+    const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
     return { start, end }
   }
   const months = preset === '6mo' ? 6 : 3
   const start = new Date(now)
   start.setMonth(start.getMonth() - months)
   start.setHours(0, 0, 0, 0)
+  const end = new Date(now)
+  end.setHours(23, 59, 59, 999)
   return { start, end }
+}
+
+/**
+ * Smart booking search — name, phone, plate, make/model, branch, status, service.
+ */
+export function matchesBookingSmartSearch(booking, query, branchNameBySlug = {}) {
+  const q = String(query || '').trim().toLowerCase()
+  if (!q) return true
+  const statusLabel = String(
+    booking?.status_label ||
+      booking?.status ||
+      '',
+  ).toLowerCase()
+  const hay = [
+    booking?.customer_name,
+    booking?.customer_phone,
+    booking?.vehicle_plate,
+    booking?.vehicle_make,
+    booking?.vehicle_model,
+    booking?.branch,
+    branchNameBySlug[booking?.branch],
+    booking?.status,
+    statusLabel,
+    booking?.services?.name,
+    booking?.service_name,
+    booking?.notes,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return hay.includes(q)
 }
 
 export function isSuspiciousTiming(ticket, thresholds = DEFAULT_TIMING_WARNINGS) {

@@ -2738,6 +2738,24 @@ html:not(.dark) .floor-shell .floor-alert-error {
   display: grid;
   gap: 0.5rem;
 }
+.bk-search-wrap {
+  width: 100%;
+  min-width: 0;
+}
+.bk-smart-search {
+  width: 100%;
+  box-sizing: border-box;
+}
+.bk-table-cards {
+  display: grid;
+  gap: 0.75rem;
+}
+.bk-table-card-row {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  padding: 0.95rem 1rem;
+}
 @media (min-width: 640px) {
   .bk-hero {
     grid-template-columns: 1fr auto;
@@ -2747,6 +2765,11 @@ html:not(.dark) .floor-shell .floor-alert-error {
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
+    max-width: 42rem;
+  }
+  .bk-search-wrap {
+    flex: 1 1 14rem;
+    min-width: 12rem;
   }
 }
 .bk-status-strip {
