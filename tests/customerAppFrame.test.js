@@ -8,17 +8,36 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(root, p), 'utf8')
 
 describe('customer app frame', () => {
-  it('account, blog, and events share CustomerAppFrame + dock', () => {
+  it('account, blog, events, and queue share CustomerAppFrame + dock', () => {
     for (const file of [
       'src/pages/CustomerAccountPage.jsx',
       'src/pages/CustomerBlogPage.jsx',
       'src/pages/CustomerEventsPage.jsx',
+      'src/pages/CustomerQueuePage.jsx',
     ]) {
       const src = read(file)
       assert.match(src, /CustomerAppFrame/, file)
     }
     assert.match(read('src/components/CustomerAppFrame.jsx'), /CustomerAccountDock/)
     assert.match(read('src/components/CustomerAccountDock.jsx'), /getCustomerAccountTabs/)
+    assert.match(read('src/App.jsx'), /path="\/account\/queue"/)
+  })
+
+  it('keeps signed-in queue inside the app and polls all branch counts', () => {
+    const queue = read('src/pages/CustomerQueuePage.jsx')
+    const home = read('src/pages/CustomerAccountPage.jsx')
+    const picker = read('src/pages/PublicUtilityPage.jsx')
+    const publicBoard = read('src/pages/PublicQueuePage.jsx')
+    assert.match(queue, /usePublicQueueCounts/)
+    assert.match(queue, /Other branches/)
+    assert.match(home, /customerQueuePath/)
+    assert.match(home, /usePublicQueueCounts/)
+    assert.match(picker, /CUSTOMER_QUEUE_PATH/)
+    assert.match(publicBoard, /customerQueuePath/)
+    assert.match(publicBoard, /!isTv && authLoading/)
+    assert.match(read('src/lib/usePublicQueueCounts.js'), /public_queue_counts/)
+    assert.match(read('src/lib/usePublicQueueCounts.js'), /PUBLIC_QUEUE_POLL_MS/)
+    assert.doesNotMatch(read('src/lib/usePublicQueueCounts.js'), /\.channel\(|\.from\('bookings'\)/)
   })
 
   it('keeps book, queue, garage, history, and activate paths', () => {
@@ -27,7 +46,10 @@ describe('customer app frame', () => {
     assert.match(home, /Live queue/)
     assert.match(home, /archive-vehicle/)
     assert.match(home, /Past visits/)
-    assert.match(home, /PushToggle/)
+    assert.match(home, /CustomerSettingsModal/)
+    assert.match(home, /Alert settings/)
+    assert.match(read('src/components/CustomerSettingsModal.jsx'), /Send test text/)
+    assert.match(read('src/components/CustomerSettingsModal.jsx'), /layout="panel"/)
   })
 
   it('always uses the app shell on /account, including desktop web', () => {

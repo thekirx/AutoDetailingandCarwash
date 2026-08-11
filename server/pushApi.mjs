@@ -16,13 +16,13 @@ function admin() {
  * - Service: any (internal)
  */
 export async function handleSendPushRequest(req, res) {
-  setCors(res, 'POST, OPTIONS')
+  setCors(res, 'POST, OPTIONS', req)
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
     res.end()
     return
   }
-  if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
+  if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' }, req)
 
   try {
     const body = await readJsonBody(req)
@@ -34,24 +34,39 @@ export async function handleSendPushRequest(req, res) {
 
     // Any signed-in user may ping themselves (device delivery check)
     if (body.selfTest) {
-      if (!token || isService) return json(res, 401, { error: 'Sign in required for self-test' })
+      if (!token || isService) return json(res, 401, { error: 'Sign in required for self-test' }, req)
       const db = admin()
       const { data: userData } = await db.auth.getUser(token)
-      if (!userData?.user) return json(res, 401, { error: 'Unauthorized' })
+      if (!userData?.user) return json(res, 401, { error: 'Unauthorized' }, req)
+      const titleText = title || 'Hakum alerts ready'
+      const bodyText = message || 'Push is working on this device.'
+      const url = body.url || '/'
       const result = await sendWebPushToUsers({
         userIds: [userData.user.id],
-        title: title || 'Hakum alerts ready',
-        body: message || 'Push is working on this device.',
-        url: body.url || '/',
+        title: titleText,
+        body: bodyText,
+        url,
         tag: body.tag || 'self-test',
         kind: 'self_test',
       })
-      return json(res, 200, { ok: true, ...result })
+      try {
+        await db.from('user_notifications').insert({
+          user_id: userData.user.id,
+          kind: 'self_test',
+          title: titleText,
+          body: bodyText,
+          url,
+          tag: body.tag || 'self-test',
+        })
+      } catch {
+        /* inbox is best-effort; push already attempted */
+      }
+      return json(res, 200, { ok: true, ...result }, req)
     }
 
     const targets = Array.isArray(body.targets) ? body.targets : []
     if (!title || !message || !targets.length) {
-      return json(res, 400, { error: 'title, body, and targets[] required' })
+      return json(res, 400, { error: 'title, body, and targets[] required' }, req)
     }
 
     const hasUserTarget = targets.some((t) => t.userId)
@@ -74,11 +89,11 @@ export async function handleSendPushRequest(req, res) {
     }
 
     if (!isService && !staffOk) {
-      return json(res, 403, { error: 'Staff or service auth required to send push' })
+      return json(res, 403, { error: 'Staff or service auth required to send push' }, req)
     }
 
     if (hasUserTarget && !isService && !['admin', 'BossMich', 'marketing'].includes(staffRole)) {
-      return json(res, 403, { error: 'userId targets require admin, BossMich, or marketing' })
+      return json(res, 403, { error: 'userId targets require admin, BossMich, or marketing' }, req)
     }
 
     const userIds = await resolvePushTargets(targets)
@@ -106,14 +121,14 @@ export async function handleSendPushRequest(req, res) {
       )
     }
 
-    return json(res, 200, { ok: true, ...result, userIds: userIds.length })
+    return json(res, 200, { ok: true, ...result, userIds: userIds.length }, req)
   } catch (err) {
-    return json(res, 500, { error: String(err.message || err) })
+    return json(res, 500, { error: String(err.message || err) }, req)
   }
 }
 
 export async function handlePushSubscribeRequest(req, res) {
-  setCors(res, 'POST, DELETE, OPTIONS')
+  setCors(res, 'POST, DELETE, OPTIONS', req)
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
     res.end()
@@ -122,26 +137,26 @@ export async function handlePushSubscribeRequest(req, res) {
 
   try {
     const token = bearer(req)
-    if (!token) return json(res, 401, { error: 'Sign in required' })
+    if (!token) return json(res, 401, { error: 'Sign in required' }, req)
     const db = admin()
     const { data: userData, error: userErr } = await db.auth.getUser(token)
-    if (userErr || !userData?.user) return json(res, 401, { error: 'Unauthorized' })
+    if (userErr || !userData?.user) return json(res, 401, { error: 'Unauthorized' }, req)
     const userId = userData.user.id
 
     if (req.method === 'DELETE') {
       const body = await readJsonBody(req)
       const endpoint = body.endpoint
-      if (!endpoint) return json(res, 400, { error: 'endpoint required' })
+      if (!endpoint) return json(res, 400, { error: 'endpoint required' }, req)
       await db.from('push_subscriptions').delete().eq('endpoint', endpoint).eq('user_id', userId)
-      return json(res, 200, { ok: true })
+      return json(res, 200, { ok: true }, req)
     }
 
-    if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
+    if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' }, req)
     const body = await readJsonBody(req)
     const endpoint = body.endpoint
     const p256dh = body.keys?.p256dh || body.p256dh
     const auth = body.keys?.auth || body.auth
-    if (!endpoint || !p256dh || !auth) return json(res, 400, { error: 'endpoint and keys required' })
+    if (!endpoint || !p256dh || !auth) return json(res, 400, { error: 'endpoint and keys required' }, req)
 
     let role = userData.user.user_metadata?.role || null
     let branch_slug = null
@@ -166,9 +181,9 @@ export async function handlePushSubscribeRequest(req, res) {
     }
 
     const { error } = await db.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' })
-    if (error) return json(res, 400, { error: error.message })
-    return json(res, 200, { ok: true })
+    if (error) return json(res, 400, { error: error.message }, req)
+    return json(res, 200, { ok: true }, req)
   } catch (err) {
-    return json(res, 500, { error: String(err.message || err) })
+    return json(res, 500, { error: String(err.message || err) }, req)
   }
 }

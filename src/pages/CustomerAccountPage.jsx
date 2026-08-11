@@ -12,14 +12,13 @@ import {
 import { useAuth } from '@/auth/AuthProvider'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { nearestBranchSlug } from '@/lib/branchGeo'
-import { getQueueCounts } from '@/queue/queueLogic'
 import { formatMoney } from '@/queue/queueApi'
-import { liveQueuePath } from '@/lib/liveQueuePath'
+import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
+import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
 import { Badge } from '@/components/ui/badge'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import LoyaltyCard from '@/components/LoyaltyCard'
 import NotificationBell from '@/components/NotificationBell'
-import PushToggle from '@/components/PushToggle'
 import CustomerBookingModal from '@/components/CustomerBookingModal'
 import CustomerSettingsModal from '@/components/CustomerSettingsModal'
 
@@ -59,7 +58,6 @@ export default function CustomerAccountPage() {
   const { profile: authProfile, user, session, signOut, loading: authLoading } = useAuth()
   const [branches, setBranches] = useState([])
   const [selectedBranch, setSelectedBranch] = useState('')
-  const [queueCounts, setQueueCounts] = useState({})
   const [history, setHistory] = useState([])
   const [purchases, setPurchases] = useState([])
   const [bookings, setBookings] = useState([])
@@ -75,6 +73,7 @@ export default function CustomerAccountPage() {
   const [bookVehicle, setBookVehicle] = useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState('alerts')
+  const { countsBySlug } = usePublicQueueCounts()
 
   function openSettings(next = 'alerts') {
     setSettingsTab(next)
@@ -94,7 +93,6 @@ export default function CustomerAccountPage() {
       setBookings(nextBookings)
       setVehicles(data.vehicles || [])
       setPortalProfile(data.profile || null)
-      setQueueCounts(data.queueCounts || {})
       setLoyalty(data.loyalty || null)
       setBirthday(data.birthday || null)
       setSelectedBranch((current) => {
@@ -159,12 +157,9 @@ export default function CustomerAccountPage() {
     }
   }, [branches, bookings])
 
-  const selectedCounts = useMemo(
-    () => queueCounts[selectedBranch] || getQueueCounts([]),
-    [queueCounts, selectedBranch],
-  )
+  const selectedCounts = countsBySlug[selectedBranch] || queueCountsFromRow(null)
 
-  const queueHref = liveQueuePath(selectedBranch)
+  const queueHref = customerQueuePath(selectedBranch)
   const firstName = (portalProfile?.full_name || authProfile?.full_name || '').split(' ')[0] || ''
   const carsHere = useMemo(
     () => bookings.filter((b) => !selectedBranch || b.branch === selectedBranch),
@@ -240,10 +235,35 @@ export default function CustomerAccountPage() {
     ? `${activeVisit.vehicle_plate || 'Your car'} is ${String(activeVisit.visit?.label || activeVisit.status || 'on the floor').toLowerCase()}`
     : 'Book, track the bay, and open your history.'
 
+  if (settingsOpen) {
+    return (
+      <>
+        <CustomerSettingsModal
+          open
+          onOpenChange={setSettingsOpen}
+          profile={settingsProfile}
+          onUpdated={load}
+          initialTab={settingsTab}
+        />
+        <CustomerBookingModal
+          open={bookOpen}
+          onOpenChange={(next) => {
+            setBookOpen(next)
+            if (!next) setBookVehicle(null)
+          }}
+          profile={settingsProfile}
+          branches={branches}
+          vehicles={vehicles}
+          initialVehicle={bookVehicle}
+          onBooked={load}
+        />
+      </>
+    )
+  }
+
   return (
     <>
       <CustomerAppFrame
-        queueHref={queueHref}
         hero={
           <header className="capp-hero">
             <div className="capp-hero-bar">
@@ -256,7 +276,7 @@ export default function CustomerAccountPage() {
                 <button type="button" className="capp-icon-btn" onClick={() => openSettings('alerts')} aria-label="Settings">
                   <Settings size={18} strokeWidth={1.75} />
                 </button>
-                <NotificationBell light homeUrl="/account" homeLabel="My account" />
+                <NotificationBell variant="capp" homeUrl="/account" homeLabel="Home" />
                 <button type="button" className="capp-icon-btn" onClick={() => signOut()} aria-label="Sign out">
                   <LogOut size={18} strokeWidth={1.75} />
                 </button>
@@ -554,10 +574,9 @@ export default function CustomerAccountPage() {
           </div>
         </section>
 
-        <div className="capp-ticket">
-          <p className="capp-label">Visit alerts</p>
-          <PushToggle audience="customer" surface="light" />
-        </div>
+        <button type="button" className="capp-btn capp-btn-ghost" onClick={() => openSettings('alerts')}>
+          Alert settings
+        </button>
       </CustomerAppFrame>
 
       <CustomerBookingModal
@@ -571,13 +590,6 @@ export default function CustomerAccountPage() {
         vehicles={vehicles}
         initialVehicle={bookVehicle}
         onBooked={load}
-      />
-      <CustomerSettingsModal
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        profile={settingsProfile}
-        onUpdated={load}
-        initialTab={settingsTab}
       />
     </>
   )

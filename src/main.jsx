@@ -8,8 +8,11 @@ import { AuthProvider } from './auth/AuthProvider'
 import AppErrorBoundary from '@/components/AppErrorBoundary'
 import CookieConsent from '@/components/CookieConsent'
 import { Toaster } from '@/components/ui/sonner'
+import { registerSW } from 'virtual:pwa-register'
 import './styles.css'
 import './styles-customer-app.css'
+
+registerSW({ immediate: true })
 
 // papaparse is used by finance CSV exports; expose it as a global for the pure helper.
 if (typeof window !== 'undefined' && !window.Papa) window.Papa = Papa

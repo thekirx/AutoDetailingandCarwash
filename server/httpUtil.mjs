@@ -6,10 +6,21 @@
 /** ponytail: per-instance Map — upgrade to Redis/Upstash when multi-region abuse matters. */
 const rateBuckets = new Map()
 
-export function setCors(res, methods = 'GET, POST, OPTIONS') {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', 'authorization, content-type, apikey, x-client-info')
+export function setCors(res, methods = 'GET, POST, OPTIONS', req) {
+  const origin = req?.headers?.origin || req?.headers?.Origin
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Vary', 'Origin')
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+  }
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Authorization, Content-Type, authorization, content-type, apikey, x-client-info, x-requested-with',
+  )
   res.setHeader('Access-Control-Allow-Methods', methods)
+  res.setHeader('Access-Control-Max-Age', '86400')
 }
 
 export function readJsonBody(req) {
@@ -57,7 +68,8 @@ export function clientIp(req) {
   return req.socket?.remoteAddress || req.headers?.['x-real-ip'] || 'unknown'
 }
 
-export function json(res, status, payload) {
+export function json(res, status, payload, req) {
+  setCors(res, 'GET, POST, PUT, PATCH, DELETE, OPTIONS', req)
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json')
   res.end(JSON.stringify(payload))

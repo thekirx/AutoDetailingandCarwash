@@ -10,8 +10,8 @@ const ICONS = {
 }
 
 /** Floating island dock. Same four tabs on every customer app screen. */
-export default function CustomerAccountDock({ queueHref = '/queue' }) {
-  const tabs = getCustomerAccountTabs(queueHref)
+export default function CustomerAccountDock() {
+  const tabs = getCustomerAccountTabs()
 
   return (
     <nav className="account-dock capp-dock" aria-label="Account">

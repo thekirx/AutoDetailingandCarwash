@@ -3,10 +3,32 @@
 const DISMISS_KEY = 'hakum-pwa-install-dismissed-v1'
 const DISMISS_MS = 14 * 24 * 60 * 60 * 1000 // 14 days
 
+export function isIosUa(ua = '', platform = '', maxTouchPoints = 0) {
+  return /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && maxTouchPoints > 1)
+}
+
 export function isIosDevice() {
   if (typeof navigator === 'undefined') return false
-  const ua = navigator.userAgent || ''
-  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  return isIosUa(navigator.userAgent || '', navigator.platform || '', navigator.maxTouchPoints || 0)
+}
+
+/** Desktop Chrome device toolbar spoofs iPhone UA but still has window.chrome. */
+export function isChromiumBrowser() {
+  return typeof window !== 'undefined' && Boolean(window.chrome)
+}
+
+/**
+ * True only on real iOS Safari/WebKit tabs (push needs Home Screen).
+ * Chrome DevTools iPhone mode stays false so desktop push still works.
+ */
+export function iosPushBlocked({
+  ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '',
+  standalone = typeof window !== 'undefined' ? isStandaloneDisplay() : false,
+  hasChrome = typeof window !== 'undefined' ? Boolean(window.chrome) : false,
+} = {}) {
+  if (!isIosUa(ua) || standalone) return false
+  if (hasChrome) return false
+  return true
 }
 
 export function isAndroidDevice() {
@@ -26,7 +48,7 @@ export function isStandaloneDisplay() {
 /** @returns {'installed' | 'ios' | 'android' | 'desktop'} */
 export function getInstallPlatform() {
   if (isStandaloneDisplay()) return 'installed'
-  if (isIosDevice()) return 'ios'
+  if (isIosDevice() && !isChromiumBrowser()) return 'ios'
   if (isAndroidDevice()) return 'android'
   return 'desktop'
 }

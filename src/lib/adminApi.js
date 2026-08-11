@@ -4,6 +4,7 @@ import { getBranchScope } from '../queue/queueLogic'
 import { DEFAULT_ASSISTANT_GRANTS, getBranchScopeList } from '../auth/permissions'
 import { applyBranchScope } from './crmInsights'
 import { writeAudit } from './audit'
+import { smsNotificationsEnabledFromSetting } from './smsNotificationsToggle'
 import {
   validateBranchInput,
   validateLoyaltyMilestoneInput,
@@ -876,8 +877,7 @@ export async function archiveProduct(id) {
 export async function getSmsNotificationsEnabled() {
   const { data, error } = await supabase.from('app_settings').select('value').eq('key', 'sms_notifications').maybeSingle()
   if (error) throw mapDbError(error)
-  if (!data?.value) return true
-  return data.value.enabled !== false
+  return smsNotificationsEnabledFromSetting(data?.value)
 }
 
 export async function setSmsNotificationsEnabled(enabled) {

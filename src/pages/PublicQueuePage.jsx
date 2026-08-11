@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 import { fetchPublicBranches } from '../lib/branches'
+import { customerQueuePath, PUBLIC_QUEUE_POLL_MS } from '../lib/liveQueuePath'
 import { usePageMeta } from '../lib/pageMeta'
 import {
   ACTIVE_QUEUE_STATUSES,
@@ -23,9 +25,6 @@ const LANE_META = {
   final_checking: { tone: 'check', hint: 'QC pass' },
 }
 
-/** Poll safe public_queue_* views only — never Realtime WAL on bookings (full-row PII). */
-const PUBLIC_QUEUE_POLL_MS = 8_000
-
 function LivePulse({ label = 'Live' }) {
   return (
     <span className="lq-pulse">
@@ -43,6 +42,7 @@ function LivePulse({ label = 'Live' }) {
 export default function PublicQueuePage({ mode = 'customer' }) {
   const isTv = mode === 'tv'
   const { branch } = useParams()
+  const { user, profile, loading: authLoading } = useAuth()
   const [branchDetails, setBranchDetails] = useState(null)
   const [branchValid, setBranchValid] = useState(null)
   const [countsRow, setCountsRow] = useState(null)
@@ -156,6 +156,11 @@ export default function PublicQueuePage({ mode = 'customer' }) {
   )
 
   const timeLabel = now.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
+
+  if (!isTv && authLoading) return null
+  if (!isTv && user && profile?.role === 'customer' && branch) {
+    return <Navigate to={customerQueuePath(branch)} replace />
+  }
 
   if (!branch) {
     return <Navigate to={fallbackSlug ? `/queue/${fallbackSlug}` : '/queue'} replace />

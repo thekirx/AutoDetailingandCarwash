@@ -11,7 +11,6 @@ export default function CustomerAppFrame({
   backTo,
   onBack,
   actions,
-  queueHref = '/queue',
   hero,
   children,
 }) {
@@ -42,7 +41,7 @@ export default function CustomerAppFrame({
           </header>
         ) : null}
         <div className="capp-scroll">{children}</div>
-        <CustomerAccountDock queueHref={queueHref} />
+        <CustomerAccountDock />
       </div>
     </div>
   )

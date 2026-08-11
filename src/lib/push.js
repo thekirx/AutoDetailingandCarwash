@@ -1,7 +1,7 @@
 /** Client Web Push helpers — VITE_VAPID_PUBLIC_KEY only. */
-import { isIosDevice, isStandaloneDisplay } from '@/lib/installApp'
+import { iosPushBlocked, isIosDevice, isStandaloneDisplay } from '@/lib/installApp'
 
-export { isIosDevice, isStandaloneDisplay }
+export { isIosDevice, isStandaloneDisplay, iosPushBlocked }
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -15,14 +15,13 @@ function urlBase64ToUint8Array(base64String) {
 export function pushSupported() {
   if (typeof window === 'undefined') return false
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return false
-  // iOS browser tab: PushManager may exist in newer versions but delivery needs PWA
-  if (isIosDevice() && !isStandaloneDisplay()) return false
+  if (iosPushBlocked()) return false
   return true
 }
 
 export function pushUnsupportedReason() {
   if (typeof window === 'undefined') return 'unavailable'
-  if (isIosDevice() && !isStandaloneDisplay()) return 'ios-install'
+  if (iosPushBlocked()) return 'ios-install'
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'unsupported'
   return null
 }
@@ -50,7 +49,12 @@ export async function enablePush(accessToken) {
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new Error('Notification permission blocked.')
 
-  const reg = await navigator.serviceWorker.ready
+  const reg = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error('Service worker did not start. Refresh and try again.')), 8000)
+    }),
+  ])
   let sub = await reg.pushManager.getSubscription()
   if (!sub) {
     sub = await reg.pushManager.subscribe({
@@ -62,6 +66,7 @@ export async function enablePush(accessToken) {
   const json = sub.toJSON()
   const res = await fetch('/api/push-subscribe', {
     method: 'POST',
+    credentials: 'same-origin',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
@@ -87,6 +92,7 @@ export async function disablePush(accessToken) {
     if (accessToken) {
       await fetch('/api/push-subscribe', {
         method: 'DELETE',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,

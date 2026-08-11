@@ -29,6 +29,7 @@ const CustomerSignInPage = lazy(() => import('./pages/CustomerSignInPage'))
 const CustomerSignUpPage = lazy(() => import('./pages/CustomerSignUpPage'))
 const CustomerSetPasswordPage = lazy(() => import('./pages/CustomerSetPasswordPage'))
 const CustomerAccountPage = lazy(() => import('./pages/CustomerAccountPage'))
+const CustomerQueuePage = lazy(() => import('./pages/CustomerQueuePage'))
 const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
 
 const AdminConsolePage = lazy(() => import('./pages/AdminConsolePage'))
@@ -147,6 +148,7 @@ export default function App() {
             <Route path="/account" element={<CustomerAccountPage />} />
             <Route path="/account/blog" element={<CustomerBlogPage />} />
             <Route path="/account/events" element={<CustomerEventsPage />} />
+            <Route path="/account/queue" element={<CustomerQueuePage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>

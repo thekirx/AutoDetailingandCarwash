@@ -17,7 +17,7 @@ export function adminDb() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-export const LIFECYCLE_KINDS = ['welcome_app', 'loyalty_claim', 'visit_milestone_4', 'visit_milestone_10']
+export const LIFECYCLE_KINDS = ['welcome_app', 'loyalty_claim', 'visit_milestone_4', 'visit_milestone_10', 'self_test']
 
 export function buildLifecycleSms(kind, { appUrl = '', name = '', templates = null } = {}) {
   const url = String(appUrl || '').trim()
@@ -38,6 +38,8 @@ export function buildLifecycleSms(kind, { appUrl = '', name = '', templates = nu
       return "Hakum Auto Care: That's your 4th completed visit! You're only 2 visits away from a free car freshener or coffee on us."
     case 'visit_milestone_10':
       return 'Hakum Auto Care: 10 visits, amazing! Your loyalty card is back to zero. Claim your free premium wax on your next visit. Thank you!'
+    case 'self_test':
+      return 'Hakum Auto Care: Test alert for this number. Visit updates will arrive here when SMS is on.'
     default:
       return null
   }
@@ -110,7 +112,7 @@ async function userOptedOut(db, customerId) {
  * (pass resolveVisitMilestone().dedupeKey for milestones so each 10-visit
  * cycle re-arms).
  */
-export async function sendLifecycleSms(db, { kind, eventType = kind, customerId, phone, bookingId = null, appUrl = '', name = '' }) {
+export async function sendLifecycleSms(db, { kind, eventType = kind, customerId, phone, bookingId = null, appUrl = '', name = '', ignoreShopToggle = false } = {}) {
   let templates = null
   try {
     templates = await loadTemplateMap(db)
@@ -139,7 +141,7 @@ export async function sendLifecycleSms(db, { kind, eventType = kind, customerId,
     return { ok: true, status: 'duplicate', skipped: true }
   }
 
-  if (!(await isSmsNotificationsEnabled(db))) {
+  if (!ignoreShopToggle && !(await isSmsNotificationsEnabled(db))) {
     await logEvent(db, {
       phone: target, message, eventType, bookingId, customerId,
       status: 'disabled', providerResponse: 'sms_notifications.enabled=false',

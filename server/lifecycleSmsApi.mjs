@@ -42,6 +42,30 @@ export async function handleLifecycleSmsRequest(req, res) {
     const body = await readJsonBody(req)
     const kind = String(body.kind || '').trim()
 
+    if (kind === 'self_test') {
+      const day = new Date().toISOString().slice(0, 10)
+      const result = await sendLifecycleSms(db, {
+        kind: 'self_test',
+        eventType: `self_test_${day}`,
+        customerId: user.id,
+        name: user.user_metadata?.full_name || '',
+        ignoreShopToggle: true,
+      })
+      await db.from('user_notifications').insert({
+        user_id: user.id,
+        kind: 'self_test',
+        title: 'Test text',
+        body: result?.status === 'sent' || result?.ok
+          ? 'We sent a test SMS to your number.'
+          : result?.status === 'disabled'
+            ? 'Shop SMS is off. Push still works on this device.'
+            : 'Could not send the test SMS. Check the number in Account.',
+        url: '/account',
+        tag: `self-test-sms-${day}`,
+      })
+      return json(res, 200, { ok: true, result })
+    }
+
     if (kind === 'welcome') {
       // Self only: the signed-in customer gets their own download-the-app welcome.
       const result = await sendLifecycleSms(db, {

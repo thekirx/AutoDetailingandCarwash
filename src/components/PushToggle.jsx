@@ -25,6 +25,7 @@ export default function PushToggle({
   compact = false,
   variant = 'default',
   surface = 'auto',
+  layout = 'chips',
 }) {
   const [status, setStatus] = useState('loading')
   const [busy, setBusy] = useState(false)
@@ -110,6 +111,7 @@ export default function PushToggle({
       const token = await sessionToken()
       const res = await fetch('/api/send-push', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           selfTest: true,
@@ -141,8 +143,22 @@ export default function PushToggle({
     if (compact) return null
     const tip =
       reason === 'ios-install'
-        ? 'iPhone/iPad: Share → Add to Home Screen, then open Hakum and enable alerts.'
+        ? 'iPhone/iPad: Share, Add to Home Screen, then open Hakum and enable alerts.'
         : 'Install Hakum (Chrome/Edge or Home Screen) to unlock push alerts.'
+    if (layout === 'panel') {
+      return (
+        <div className={`capp-pref ${className}`}>
+          <div>
+            <strong>Push on this device</strong>
+            <em>{tip}</em>
+          </div>
+          <button type="button" className="capp-btn capp-btn-ghost" onClick={() => setOpen(true)}>
+            How
+          </button>
+          <PushModal open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
+        </div>
+      )
+    }
     return (
       <>
         <button type="button" className={`push-chip push-chip-muted ${className}`} onClick={() => setOpen(true)}>
@@ -155,6 +171,42 @@ export default function PushToggle({
   }
 
   const on = status === 'subscribed'
+  const label = status === 'denied' ? 'Blocked in the browser' : on ? 'Push alerts on' : 'Push alerts off'
+  const hint =
+    status === 'denied'
+      ? 'Allow notifications for this site, then try again.'
+      : on
+        ? 'Visit and floor updates on this device.'
+        : 'Tap enable, then allow the browser prompt.'
+
+  if (layout === 'panel') {
+    return (
+      <div className={className}>
+        <div className="capp-pref">
+          <div>
+            <strong>{label}</strong>
+            <em>{hint}</em>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={on}
+            disabled={busy || status === 'loading' || status === 'denied'}
+            className={`capp-switch${on ? ' is-on' : ''}`}
+            onClick={() => (on ? turnOff() : setOpen(true))}
+          >
+            <span />
+          </button>
+        </div>
+        {on && !compact ? (
+          <button type="button" className="capp-btn capp-btn-ghost" disabled={busy} onClick={sendTest}>
+            {busy ? 'Sending…' : 'Send test push'}
+          </button>
+        ) : null}
+        <PushModal open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
+      </div>
+    )
+  }
 
   return (
     <div className={className}>

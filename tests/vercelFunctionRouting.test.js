@@ -65,6 +65,10 @@ describe('Vercel API rewrite contract', () => {
       ?.value
     assert.match(csp, /wasm-unsafe-eval/)
     assert.match(csp, /connect-src[^;]*blob:/)
+    assert.match(csp, /connect-src[^;]*fcm\.googleapis\.com/)
+    assert.match(csp, /connect-src[^;]*push\.services\.mozilla\.com/)
+    assert.match(csp, /connect-src[^;]*web\.push\.apple\.com/)
+    assert.match(csp, /connect-src[^;]*notify\.windows\.com/)
     assert.match(csp, /worker-src 'self' blob:/)
 
     const geo = config.headers

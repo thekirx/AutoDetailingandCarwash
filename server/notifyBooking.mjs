@@ -4,6 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { applyTemplateText, bookingNotifyVars, bookingTemplateKey } from '../src/lib/notificationTemplates.js'
+import { smsNotificationsEnabledFromSetting } from '../src/lib/smsNotificationsToggle.js'
 import { busybeeSendSms } from './busybee.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { applyPaintMaintenanceOnComplete } from './paintMaintenanceSchedule.mjs'
@@ -188,8 +189,7 @@ async function writeInbox(db, userIds, { kind, title, body, url, tag }) {
 
 export async function isSmsNotificationsEnabled(db = admin()) {
   const { data } = await db.from('app_settings').select('value').eq('key', 'sms_notifications').maybeSingle()
-  if (!data?.value) return true
-  return data.value.enabled !== false
+  return smsNotificationsEnabledFromSetting(data?.value)
 }
 
 /**

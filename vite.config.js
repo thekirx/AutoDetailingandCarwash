@@ -154,9 +154,10 @@ export default defineConfig({
           },
         ],
       },
+      injectRegister: null,
       devOptions: {
-        // classic SW so /push-sw.js importScripts works in local PWA testing
         enabled: true,
+        type: 'classic',
       },
     }),
   ],

@@ -1,6 +1,8 @@
 import { Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../auth/AuthProvider'
+import { CUSTOMER_QUEUE_PATH } from '../lib/liveQueuePath'
 import { usePublicBranches } from '../lib/branches'
 import { getAccessTokenFresh } from '../lib/authToken'
 import { supabase } from '../lib/supabase'
@@ -15,12 +17,18 @@ function formatPeso(minor) {
 }
 
 export function QueuePage() {
+  const { user, profile, loading: authLoading } = useAuth()
   const { branches, loading, error } = usePublicBranches()
   usePageMeta({
     title: 'Live queue',
     description: 'Pick a Hakum Auto Care branch for the customer count board or shop TV floor board.',
     path: '/queue',
   })
+
+  if (authLoading) return null
+  if (user && profile?.role === 'customer') {
+    return <Navigate to={CUSTOMER_QUEUE_PATH} replace />
+  }
 
   return (
     <section className="lq-picker">

@@ -9,7 +9,7 @@ function cfg() {
   const apiKey = process.env.BUSYBEE_API_KEY || process.env.SMS_PROVIDER_API_KEY
   const clientId = process.env.BUSYBEE_CLIENT_ID
   const senderId = process.env.BUSYBEE_SENDER_ID || 'HAKUM'
-  const baseUrl = (process.env.BUSYBEE_API_BASE_URL || 'https://brandtxt.busybee.ph').replace(/\/$/, '')
+  const baseUrl = (process.env.BUSYBEE_API_BASE_URL || 'https://app.brandtxt.io').replace(/\/$/, '')
   return { apiKey, clientId, senderId, baseUrl }
 }
 
