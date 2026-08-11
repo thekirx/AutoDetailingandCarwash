@@ -6,9 +6,15 @@ import {
   Link2,
   Pencil,
   Plus,
+  QrCode,
   Trash2,
 } from 'lucide-react'
 import BrandedOpsForm from '@/components/BrandedOpsForm'
+import { useAuth } from '@/auth/AuthProvider'
+import {
+  canManageOpsFormTemplates,
+  canSubmitOpsFormKind,
+} from '@/auth/permissions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,33 +26,27 @@ import { NamedSelect } from '@/components/ui/named-select'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
+import { getAccessTokenFresh } from '@/lib/authToken'
 import {
+  DEFAULT_FORM_LOGO,
   FIELD_TYPES,
+  FIXED_FORM_TEMPLATES,
   FORM_KINDS,
   FORM_STATUSES,
   SUBMISSION_STATUSES,
   extractCalendarAt,
+  extractComplaintBranch,
+  formKindLabel,
+  formQrImageUrl,
   formatFormPayloadDescription,
   normalizeFields,
+  normalizeFormSettings,
   shareFormUrl,
-  slugifyFormName,
   submissionTitle,
   templateFields,
   validatePayload,
 } from '@/lib/opsForms'
 import { toast } from 'sonner'
-
-const emptyEditor = () => ({
-  id: null,
-  name: '',
-  kind: 'custom',
-  description: '',
-  status: 'draft',
-  public_enabled: false,
-  event_id: '',
-  fields: templateFields('custom'),
-  settings: { push_to_planning: true, show_on_calendar: true },
-})
 
 function FieldBuilder({ fields, onChange, disabled }) {
   const rows = normalizeFields(fields)
@@ -185,12 +185,54 @@ function DynamicFields({ fields, values, onChange }) {
   )
 }
 
+async function notifyComplaintIfNeeded(form, payload, submissionId) {
+  if (form?.kind !== 'complaint') return
+  try {
+    const token = await getAccessTokenFresh().catch(() => null)
+    await fetch('/api/notify-ops-form', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        slug: form.slug,
+        form_name: form.name,
+        payload,
+        submission_id: submissionId || null,
+        branch: extractComplaintBranch(payload),
+      }),
+    })
+  } catch {
+    // ponytail: notify is best-effort; submission already saved
+  }
+}
+
+function emptyEditorFromForm(form) {
+  const kind = form?.kind || 'complaint'
+  return {
+    id: form?.id || null,
+    name: form?.name || '',
+    kind,
+    description: form?.description || '',
+    status: form?.status || 'published',
+    public_enabled: Boolean(form?.public_enabled),
+    event_id: form?.event_id || '',
+    fields: normalizeFields(form?.fields?.length ? form.fields : templateFields(kind)),
+    settings: normalizeFormSettings(form?.settings, kind),
+    slug: form?.slug || '',
+  }
+}
+
 export default function PlanningFormsSmartPanel({ canEdit, lists }) {
+  const { profile } = useAuth()
+  const manageTemplates = canEdit && canManageOpsFormTemplates(profile)
   const [forms, setForms] = useState([])
   const [events, setEvents] = useState([])
   const [submissions, setSubmissions] = useState([])
+  const [kindFilter, setKindFilter] = useState('equipment_repair')
   const [editorOpen, setEditorOpen] = useState(false)
-  const [editor, setEditor] = useState(emptyEditor)
+  const [editor, setEditor] = useState(() => emptyEditorFromForm(null))
   const [resultsFormId, setResultsFormId] = useState('')
   const [resultsOpen, setResultsOpen] = useState(false)
   const [previewForm, setPreviewForm] = useState(null)
@@ -206,7 +248,9 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
       supabase
         .from('ops_forms')
         .select('id, name, kind, fields, is_active, slug, description, status, public_enabled, event_id, settings, created_at')
-        .order('created_at', { ascending: false }),
+        .in('kind', FORM_KINDS.map((k) => k.value))
+        .neq('status', 'archived')
+        .order('created_at', { ascending: true }),
       supabase
         .from('ops_form_submissions')
         .select('id, form_id, payload, plan_card_id, due_at, calendar_at, status, source, respondent_label, created_at, ops_forms ( name, kind, slug )')
@@ -216,18 +260,34 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
     ])
     if (f.error) toast.error(f.error.message)
     else {
-      setForms(f.data || [])
-      if (!fillFormId && f.data?.[0]) setFillFormId(f.data[0].id)
+      const rows = f.data || []
+      setForms(rows)
+      const preferred = rows.find((r) => r.kind === kindFilter) || rows[0]
+      if (preferred && !rows.some((r) => r.id === fillFormId)) setFillFormId(preferred.id)
     }
     if (s.error) toast.error(s.error.message)
     else setSubmissions(s.data || [])
     if (!e.error) setEvents(e.data || [])
     if (!listId && lists?.[0]?.id) setListId(lists[0].id)
-  }, [fillFormId, listId, lists])
+  }, [fillFormId, kindFilter, listId, lists])
 
   useEffect(() => { load() }, [load])
 
-  const activeForm = forms.find((f) => f.id === fillFormId)
+  const templatesByKind = useMemo(() => {
+    const map = new Map()
+    for (const def of FIXED_FORM_TEMPLATES) {
+      const live = forms.find((f) => f.kind === def.kind) || forms.find((f) => f.slug === def.slug)
+      map.set(def.kind, live || null)
+    }
+    return map
+  }, [forms])
+
+  const selectedTemplate = templatesByKind.get(kindFilter) || null
+  const fillableForms = useMemo(
+    () => forms.filter((f) => f.is_active && f.status !== 'archived' && canSubmitOpsFormKind(profile, f.kind)),
+    [forms, profile],
+  )
+  const activeForm = fillableForms.find((f) => f.id === fillFormId) || fillableForms[0]
   const resultsForm = forms.find((f) => f.id === resultsFormId)
   const resultsRows = useMemo(() => {
     let rows = submissions.filter((s) => s.form_id === resultsFormId)
@@ -241,37 +301,25 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
     return map
   }, [submissions])
 
-  function openCreate() {
-    setEditor(emptyEditor())
-    setEditorOpen(true)
-  }
+  useEffect(() => {
+    if (activeForm && fillFormId !== activeForm.id) setFillFormId(activeForm.id)
+  }, [activeForm, fillFormId])
 
   function openEdit(form) {
-    setEditor({
-      id: form.id,
-      name: form.name,
-      kind: form.kind,
-      description: form.description || '',
-      status: form.status || 'draft',
-      public_enabled: Boolean(form.public_enabled),
-      event_id: form.event_id || '',
-      fields: normalizeFields(form.fields),
-      settings: { push_to_planning: true, show_on_calendar: true, ...(form.settings || {}) },
-    })
+    if (!form) return toast.error('Template not seeded yet - run the latest migration')
+    setEditor(emptyEditorFromForm(form))
     setEditorOpen(true)
   }
 
   async function saveForm(e) {
     e.preventDefault()
-    if (!canEdit) return
+    if (!manageTemplates || !editor.id) return
     const name = editor.name.trim()
     if (!name) return toast.error('Name is required')
     const fields = normalizeFields(editor.fields)
     if (!fields.length) return toast.error('Add at least one field')
     setSaving(true)
-    const slug = editor.id
-      ? (forms.find((f) => f.id === editor.id)?.slug || slugifyFormName(name, editor.id))
-      : slugifyFormName(name, crypto.randomUUID())
+    const settings = normalizeFormSettings(editor.settings, editor.kind)
     const row = {
       name,
       kind: editor.kind,
@@ -280,25 +328,23 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
       public_enabled: Boolean(editor.public_enabled),
       event_id: editor.event_id || null,
       fields,
-      settings: editor.settings || {},
+      settings,
       is_active: editor.status !== 'archived',
-      slug,
+      slug: editor.slug || forms.find((f) => f.id === editor.id)?.slug,
       updated_at: new Date().toISOString(),
     }
-    const { error } = editor.id
-      ? await supabase.from('ops_forms').update(row).eq('id', editor.id)
-      : await supabase.from('ops_forms').insert(row)
+    const { error } = await supabase.from('ops_forms').update(row).eq('id', editor.id)
     setSaving(false)
     if (error) toast.error(error.message)
     else {
-      toast.success(editor.id ? 'Form updated' : 'Form created')
+      toast.success('Template saved')
       setEditorOpen(false)
       load()
     }
   }
 
   async function copyShare(form) {
-    if (!form.slug) return toast.error('Form has no share slug yet')
+    if (!form?.slug) return toast.error('Form has no share slug yet')
     if (form.status !== 'published' || !form.public_enabled) {
       toast.message('Publish + enable public link to accept responses')
     }
@@ -313,12 +359,14 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
 
   async function submitStaff(e) {
     e.preventDefault()
-    if (!canEdit || !activeForm) return
+    if (!activeForm || !canSubmitOpsFormKind(profile, activeForm.kind)) {
+      return toast.error('You cannot submit this form kind')
+    }
     const errors = validatePayload(activeForm.fields, payload)
     if (errors[0]) return toast.error(errors[0])
     const calendarAt = extractCalendarAt(activeForm.fields, payload)
     let planCardId = null
-    if (pushPlanning && listId) {
+    if (pushPlanning && listId && manageTemplates) {
       const title = submissionTitle(activeForm, payload)
       const { data: card, error: cardErr } = await supabase
         .from('plan_cards')
@@ -342,19 +390,24 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
       if (cardErr) return toast.error(cardErr.message)
       planCardId = card.id
     }
-    const { error } = await supabase.from('ops_form_submissions').insert({
-      form_id: activeForm.id,
-      payload,
-      plan_card_id: planCardId,
-      due_at: calendarAt,
-      calendar_at: calendarAt,
-      respondent_label: payload.customer_name || payload.name || null,
-      source: 'staff',
-      status: 'new',
-    })
+    const { data: inserted, error } = await supabase
+      .from('ops_form_submissions')
+      .insert({
+        form_id: activeForm.id,
+        payload,
+        plan_card_id: planCardId,
+        due_at: calendarAt,
+        calendar_at: calendarAt,
+        respondent_label: payload.customer_name || payload.name || payload.employee_name || null,
+        source: 'staff',
+        status: 'new',
+      })
+      .select('id')
+      .single()
     if (error) toast.error(error.message)
     else {
-      toast.success(planCardId ? 'Submitted → planning' : 'Submission saved')
+      await notifyComplaintIfNeeded(activeForm, payload, inserted?.id)
+      toast.success(planCardId ? 'Submitted and added to Tasks' : 'Submission saved')
       setPayload({})
       load()
     }
@@ -369,141 +422,158 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
     }
   }
 
+  const shareUrl = selectedTemplate?.slug ? shareFormUrl(selectedTemplate.slug) : ''
+  const qrUrl = formQrImageUrl(shareUrl, 180)
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Smart form builder</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Build complaint, event, booking, or custom forms. Share a public link, review results, and sync dated answers to the calendar.
-          </p>
-        </div>
-        {canEdit && (
-          <Button type="button" className="min-h-11 cursor-pointer" onClick={openCreate}>
-            <Plus className="size-4" /> New form
-          </Button>
-        )}
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Forms</h2>
+        <p className="mt-1 max-w-[65ch] text-sm text-muted-foreground">
+          Four company forms. Edit the wording, then share a link or fill one here.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:max-w-sm">
+        <Label htmlFor="form-kind-filter">Which form</Label>
+        <NamedSelect
+          id="form-kind-filter"
+          value={kindFilter}
+          onChange={setKindFilter}
+          options={FORM_KINDS.map((k) => ({ value: k.value, label: k.label }))}
+        />
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Forms</CardTitle>
-          <CardDescription>{forms.length} templates · click Results to review submissions</CardDescription>
+        <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>{selectedTemplate?.name || formKindLabel(kindFilter)}</CardTitle>
+            <CardDescription>
+              {selectedTemplate
+                ? `${formKindLabel(selectedTemplate.kind)} · ${selectedTemplate.status}${
+                    selectedTemplate.public_enabled ? ' · public link on' : ''
+                  }`
+                : 'Template missing - apply the latest Supabase migration'}
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {selectedTemplate && (
+              <>
+                <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => setPreviewForm(selectedTemplate)}>
+                  <Eye className="size-3.5" /> Preview
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setResultsFormId(selectedTemplate.id)
+                    setResultsOpen(true)
+                    setStatusFilter('all')
+                  }}
+                >
+                  <Link2 className="size-3.5" /> Results ({countsByForm.get(selectedTemplate.id) || 0})
+                </Button>
+                {manageTemplates && (
+                  <Button size="sm" className="cursor-pointer" onClick={() => openEdit(selectedTemplate)}>
+                    <Pencil className="size-3.5" /> Edit template
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Kind</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Public</TableHead>
-                <TableHead>Results</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {forms.map((form) => (
-                <TableRow key={form.id}>
-                  <TableCell>
-                    <div className="font-medium text-foreground">{form.name}</div>
-                    <div className="text-xs text-muted-foreground">{form.slug || '—'}</div>
-                  </TableCell>
-                  <TableCell className="capitalize"><Badge variant="secondary">{form.kind}</Badge></TableCell>
-                  <TableCell className="capitalize text-foreground">{form.status}</TableCell>
-                  <TableCell>{form.public_enabled && form.status === 'published' ? 'Open' : 'Closed'}</TableCell>
-                  <TableCell className="tabular-nums">{countsByForm.get(form.id) || 0}</TableCell>
-                  <TableCell className="flex flex-wrap justify-end gap-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="cursor-pointer"
-                      onClick={() => setPreviewForm(form)}
-                    >
-                      <Eye className="size-3.5" /> Preview
-                    </Button>
-                    <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => { setResultsFormId(form.id); setResultsOpen(true); setStatusFilter('all') }}>
-                      <Link2 className="size-3.5" /> Results
-                    </Button>
-                    {canEdit && (
-                      <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(form)}>
-                        <Pencil className="size-3.5" /> Edit
-                      </Button>
-                    )}
-                    <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => copyShare(form)}>
-                      <Copy className="size-3.5" /> Link
-                    </Button>
-                    {form.slug && form.public_enabled && form.status === 'published' && (
-                      <a
-                        href={shareFormUrl(form.slug)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-8 items-center rounded-lg px-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        aria-label="Open public form"
-                      >
-                        <ExternalLink className="size-3.5" />
+        <CardContent className="grid gap-4 lg:grid-cols-[1fr_auto]">
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">{selectedTemplate?.description || 'No description yet.'}</p>
+            {shareUrl ? (
+              <div className="rounded-xl border border-border bg-muted/20 p-3">
+                <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Shareable link</p>
+                <p className="break-all font-mono text-xs text-foreground">{shareUrl}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => copyShare(selectedTemplate)}>
+                    <Copy className="size-3.5" /> Copy link
+                  </Button>
+                  {selectedTemplate?.public_enabled && selectedTemplate?.status === 'published' ? (
+                    <Button size="sm" variant="ghost" className="cursor-pointer" asChild>
+                      <a href={shareUrl} target="_blank" rel="noreferrer">
+                        <ExternalLink className="size-3.5" /> Open
                       </a>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!forms.length && (
-                <TableRow><TableCell colSpan={6} className="text-muted-foreground">No forms yet. Create one to get started.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Publish + enable public link for live answers</span>
+                  )}
+                </div>
+              </div>
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              Access: Complaint + Events RSVP are shareable when published.
+              Equipment repairs are crew-only.
+              Cash advance is for employees except Super Admin (who still edits everything).
+            </p>
+          </div>
+          {qrUrl ? (
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-3">
+              <QrCode className="size-4 text-muted-foreground" aria-hidden />
+              <img src={qrUrl} alt={`QR code for ${selectedTemplate?.name || 'form'}`} width={180} height={180} className="rounded-lg bg-white p-2" />
+              <p className="text-center text-xs text-muted-foreground">Scan to open the form link</p>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Staff fill</CardTitle>
-          <CardDescription>Submit internally and optionally push a card onto the planning board.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canEdit ? (
-            <p className="text-sm text-muted-foreground">View-only — need planning edit permission to submit.</p>
-          ) : (
+      {fillableForms.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Fill a form</CardTitle>
+            <CardDescription>
+              Use the form you are allowed to submit
+              {manageTemplates ? '. Tick Add a Planner card if this should also appear on Tasks.' : '.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <form onSubmit={submitStaff} className="grid max-w-xl gap-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="staff-fill-form">Form</Label>
                 <NamedSelect
                   id="staff-fill-form"
-                  value={fillFormId}
+                  value={activeForm?.id || ''}
                   onChange={(id) => { setFillFormId(id); setPayload({}) }}
                   placeholder="Select form"
-                  options={forms
-                    .filter((f) => f.is_active && f.status !== 'archived')
-                    .map((f) => ({ value: f.id, label: f.name }))}
+                  options={fillableForms.map((f) => ({ value: f.id, label: f.name }))}
                 />
               </div>
-              <label className="flex items-center gap-2 text-sm text-foreground">
-                <input type="checkbox" checked={pushPlanning} onChange={(e) => setPushPlanning(e.target.checked)} />
-                Push to planning board
-              </label>
-              {pushPlanning && (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="staff-fill-list">Planning list</Label>
-                  <NamedSelect
-                    id="staff-fill-list"
-                    value={listId}
-                    onChange={setListId}
-                    placeholder="Select list"
-                    options={(lists || []).map((l) => ({ value: l.id, label: l.title || 'Untitled list' }))}
-                  />
-                </div>
+              {manageTemplates && (
+                <>
+                  <label className="flex items-center gap-2 text-sm text-foreground">
+                    <input type="checkbox" checked={pushPlanning} onChange={(e) => setPushPlanning(e.target.checked)} />
+                    Add a Planner card
+                  </label>
+                  {pushPlanning && (
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="staff-fill-list">Which column</Label>
+                      <NamedSelect
+                        id="staff-fill-list"
+                        value={listId}
+                        onChange={setListId}
+                        placeholder="Select list"
+                        options={(lists || []).map((l) => ({ value: l.id, label: l.title || 'Untitled list' }))}
+                      />
+                    </div>
+                  )}
+                </>
               )}
               <DynamicFields fields={activeForm?.fields || []} values={payload} onChange={setPayload} />
               <Button type="submit" className="w-fit cursor-pointer" disabled={!activeForm}>Submit</Button>
             </form>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editor.id ? 'Edit form' : 'New form'}</DialogTitle>
+            <DialogTitle>Edit template · {formKindLabel(editor.kind)}</DialogTitle>
           </DialogHeader>
           <form onSubmit={saveForm} className="grid gap-4">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -513,19 +583,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Kind</Label>
-                <Select
-                  value={editor.kind}
-                  onValueChange={(kind) => setEditor({
-                    ...editor,
-                    kind,
-                    fields: editor.id ? editor.fields : templateFields(kind),
-                  })}
-                >
-                  <SelectTrigger className="cursor-pointer"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {FORM_KINDS.map((k) => <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Input value={formKindLabel(editor.kind)} disabled readOnly />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
@@ -551,6 +609,42 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
               <Label htmlFor="sf-desc">Description</Label>
               <Textarea id="sf-desc" value={editor.description} onChange={(e) => setEditor({ ...editor, description: e.target.value })} />
             </div>
+            <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label htmlFor="sf-header">Header title (optional override)</Label>
+                <Input
+                  id="sf-header"
+                  value={editor.settings?.header_title || ''}
+                  onChange={(e) => setEditor({
+                    ...editor,
+                    settings: { ...editor.settings, header_title: e.target.value },
+                  })}
+                  placeholder={editor.name || 'Uses form name'}
+                />
+              </div>
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label htmlFor="sf-logo">Logo URL</Label>
+                <Input
+                  id="sf-logo"
+                  value={editor.settings?.logo_url || DEFAULT_FORM_LOGO}
+                  onChange={(e) => setEditor({
+                    ...editor,
+                    settings: { ...editor.settings, logo_url: e.target.value },
+                  })}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={editor.settings?.show_logo !== false}
+                  onChange={(e) => setEditor({
+                    ...editor,
+                    settings: { ...editor.settings, show_logo: e.target.checked },
+                  })}
+                />
+                Show logo on form
+              </label>
+            </div>
             <label className="flex items-center gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
@@ -560,12 +654,30 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
               <Link2 className="size-4 text-muted-foreground" />
               Public shareable link (anyone with the URL can answer when Published)
             </label>
+            {editor.slug ? (
+              <div className="flex flex-wrap items-start gap-4 rounded-xl border border-border bg-muted/20 p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Link + QR</p>
+                  <p className="break-all font-mono text-xs">{shareFormUrl(editor.slug)}</p>
+                  <Button type="button" size="sm" variant="outline" className="mt-2 cursor-pointer" onClick={() => copyShare({ ...editor, public_enabled: editor.public_enabled, status: editor.status })}>
+                    <Copy className="size-3.5" /> Copy link
+                  </Button>
+                </div>
+                <img
+                  src={formQrImageUrl(shareFormUrl(editor.slug), 140)}
+                  alt="Form QR"
+                  width={140}
+                  height={140}
+                  className="rounded-lg bg-white p-1"
+                />
+              </div>
+            ) : null}
             <div>
               <p className="mb-2 text-sm font-medium text-foreground">Fields</p>
               <FieldBuilder
                 fields={editor.fields}
                 onChange={(fields) => setEditor({ ...editor, fields })}
-                disabled={!canEdit}
+                disabled={!manageTemplates}
               />
             </div>
             <DialogFooter className="gap-2 sm:justify-between">
@@ -580,9 +692,10 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
                     fields: editor.fields,
                     name: editor.name || 'Untitled form',
                     description: editor.description,
-                    slug: forms.find((f) => f.id === editor.id)?.slug,
+                    slug: editor.slug,
                     public_enabled: editor.public_enabled,
                     status: editor.status,
+                    settings: editor.settings,
                   })
                 }
               >
@@ -590,7 +703,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
               </Button>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setEditorOpen(false)}>Cancel</Button>
-                <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save form'}</Button>
+                <Button type="submit" className="cursor-pointer" disabled={saving || !editor.id}>{saving ? 'Saving…' : 'Save template'}</Button>
               </div>
             </DialogFooter>
           </form>
@@ -605,7 +718,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
           {previewForm ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm">
-                <span>How customers see this form</span>
+                <span>How people see this form</span>
                 <div className="flex flex-wrap gap-2">
                   {previewForm.slug && previewForm.public_enabled && previewForm.status === 'published' ? (
                     <Button size="sm" variant="outline" className="cursor-pointer" asChild>
@@ -644,6 +757,29 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
               <Button type="button" variant="outline" className="cursor-pointer" onClick={() => copyShare(resultsForm)}>Copy share link</Button>
             )}
           </div>
+          <div className="planning-event-list">
+            {resultsRows.map((row) => (
+              <article key={`m-${row.id}`} className="planning-event-card">
+                <div>
+                  <h3>{row.respondent_label || 'No name'}</h3>
+                  <p>{new Date(row.created_at).toLocaleString()}</p>
+                </div>
+                <div className="planning-event-card-meta">
+                  <Badge variant="secondary" className="capitalize">{row.source}</Badge>
+                  {row.plan_card_id ? <Badge variant="secondary">On Tasks</Badge> : null}
+                </div>
+                <Select value={row.status || 'new'} onValueChange={(status) => setSubmissionStatus(row.id, status)} disabled={!manageTemplates}>
+                  <SelectTrigger className="h-10 cursor-pointer"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SUBMISSION_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="whitespace-pre-wrap">{formatFormPayloadDescription(row.payload || {})}</p>
+              </article>
+            ))}
+            {!resultsRows.length ? <p className="text-sm text-muted-foreground">No submissions for this filter.</p> : null}
+          </div>
+          <div className="planning-event-table">
           <Table>
             <TableHeader>
               <TableRow>
@@ -669,7 +805,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
                   <TableCell>{row.respondent_label || '—'}</TableCell>
                   <TableCell className="capitalize">{row.source}</TableCell>
                   <TableCell>
-                    <Select value={row.status || 'new'} onValueChange={(status) => setSubmissionStatus(row.id, status)} disabled={!canEdit}>
+                    <Select value={row.status || 'new'} onValueChange={(status) => setSubmissionStatus(row.id, status)} disabled={!manageTemplates}>
                       <SelectTrigger className="h-8 w-32 cursor-pointer"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {SUBMISSION_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
@@ -687,6 +823,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
               )}
             </TableBody>
           </Table>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

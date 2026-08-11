@@ -59,6 +59,25 @@ assert.equal(loyalty.lines[1].unit_price_minor, 0)
 assert.equal(loyalty.lines[1].is_loyalty_award, true)
 assert.equal(loyalty.lines[0].unit_price_minor, 35000)
 
+const birthday = buildPosSalePayload({
+  branch: 'bacoor',
+  customerId: 'cust-3',
+  paymentMethod: 'cash',
+  cart: [
+    {
+      item_type: 'service',
+      id: 'svc-2',
+      name: 'Wash (birthday)',
+      quantity: 1,
+      unit_price_minor: 99900,
+      is_birthday_award: true,
+    },
+  ],
+})
+assert.equal(birthday.lines[0].unit_price_minor, 0)
+assert.equal(birthday.lines[0].is_loyalty_award, true)
+assert.equal(birthday.lines[0].is_birthday_award, true)
+
 // Missing booking.service_id must NOT fall back to handoff UUID
 const orphan = buildHandoffCartLine({
   handoff: {

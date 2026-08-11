@@ -4,20 +4,16 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { authCreateUserIdForCrm, buildProvisionInviteMessage } from './provisionSms.mjs'
+import { phoneLoginEmail } from '../src/lib/customerAuth.js'
 import {
   mergeCustomerDisplayName,
   resolveQueueCustomerDisplayName,
 } from '../src/lib/queueCustomerName.js'
 
+export { phoneLoginEmail }
+
 /** Queue walk-in provision: SA / Admin / ASA / Team Lead (TL forced to own branch at ticket create). */
 export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin', 'team_lead'])
-
-/** Phone digits → synthetic login email when walk-in has no email. */
-export function phoneLoginEmail(phone) {
-  const digits = String(phone || '').replace(/\D/g, '')
-  if (digits.length < 10) throw new Error('Phone number is required.')
-  return `c${digits}@customers.hakumautocare.com`
-}
 
 function randomTempPassword() {
   return `Hakum-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}!`
@@ -151,7 +147,7 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
   if (!authUser) {
     if (email) {
       const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-        data: { role: 'customer', full_name: fullName, phone, plate },
+        data: { role: 'customer', full_name: fullName, phone, plate, must_set_password: true },
         redirectTo,
       })
       if (!inviteError && invited?.user) {

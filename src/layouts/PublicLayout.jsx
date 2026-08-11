@@ -6,7 +6,6 @@ import NotificationBell from '@/components/NotificationBell'
 import { CookiePreferencesButton } from '@/components/CookieConsent'
 import { useAuth } from '@/auth/AuthProvider'
 import { usePublicBranches } from '@/lib/branches'
-import { prefersAppShell } from '@/lib/appShell'
 import { CustomerInstallPopup } from '@/components/InstallGuide'
 
 const navItems = [
@@ -15,6 +14,7 @@ const navItems = [
   ['Packages', '/packages'],
   ['Branch', '/branches'],
   ['Events', '/events'],
+  ['Journal', '/blog'],
   ['Live Queue', '/queue'],
   ['Contact', '/contact'],
 ]
@@ -26,8 +26,8 @@ export default function PublicLayout() {
   const { user, profile, loading } = useAuth()
   // Trust DB profile only — metadata.role is client-writable
   const isCustomer = !loading && Boolean(user) && profile?.role === 'customer'
-  // Mobile / PWA: account is an app screen — no marketing header/footer.
-  const appAccountShell = prefersAppShell() && pathname.startsWith('/account')
+  // Customer app routes are always the phone stage, including desktop web.
+  const appAccountShell = pathname.startsWith('/account')
 
   useEffect(() => setOpen(false), [pathname])
 

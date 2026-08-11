@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar'
 import { format, getDay, parse, startOfWeek } from 'date-fns'
@@ -6,10 +6,14 @@ import { enUS } from 'date-fns/locale'
 import {
   CalendarDays,
   CheckSquare,
+  ClipboardList,
   Columns3,
+  FileText,
   LoaderCircle,
   Plus,
+  Settings2,
   Trash2,
+  Users,
   X,
 } from 'lucide-react'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
@@ -17,17 +21,18 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canEditPlanning, canViewPlanning } from '@/auth/permissions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { NamedSelect } from '@/components/ui/named-select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabase'
 import { createCoalescedReload } from '@/lib/coalesceReload'
+import { pickPlannerBoard, PLANNER_TABS, plannerTabFromSearch, visiblePlannerBoards } from '@/lib/plannerBoard'
 import {
   PlanningEventsPanel,
   PlanningFormsPanel,
   PlanningSettingsPanel,
 } from '@/pages/planning/PlanningPart6Panels'
 import { toast } from 'sonner'
-
-const PLAN_TABS = ['board', 'calendar', 'settings', 'forms', 'events']
 
 const localizer = dateFnsLocalizer({
   format,
@@ -65,6 +70,20 @@ function checklistStats(card) {
   const items = card.plan_checklist_items || []
   const done = items.filter((i) => i.done).length
   return { done, total: items.length }
+}
+
+const TAB_ICONS = {
+  tasks: Columns3,
+  calendar: CalendarDays,
+  forms: FileText,
+  events: ClipboardList,
+  setup: Settings2,
+}
+
+function assigneeNames(card) {
+  return (card.plan_card_assignees || [])
+    .map((a) => a.staff_profiles?.full_name || a.staff_profiles?.username)
+    .filter(Boolean)
 }
 
 function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, onSaved, onDeleted }) {
@@ -140,7 +159,7 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
       user_id: staff.id,
       kind: 'planner_task',
       title: 'Planner task assigned',
-      body: card.title || 'You have a new Hakum Planner task',
+      body: card.title || 'You have a new Planner task',
       url: '/operations/my-tasks',
       tag: `plan-card:${card.id}`,
     })
@@ -434,7 +453,7 @@ export default function PlanningBoardPage() {
   const { profile } = useAuth()
   const canEdit = canEditPlanning(profile)
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = PLAN_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'board'
+  const tab = plannerTabFromSearch(searchParams.get('tab'))
   const [board, setBoard] = useState(null)
   const [boards, setBoards] = useState([])
   const [loading, setLoading] = useState(true)
@@ -460,11 +479,9 @@ export default function PlanningBoardPage() {
       setLoading(false)
       return
     }
-    setBoards(boardRows || [])
-    const wanted =
-      boardRows?.find((b) => b.id === searchParams.get('board')) ||
-      boardRows?.find((b) => b.name === searchParams.get('board')) ||
-      boardRows?.[0]
+    const visibleBoards = visiblePlannerBoards(boardRows)
+    setBoards(visibleBoards)
+    const wanted = pickPlannerBoard(visibleBoards, searchParams.get('board'))
     if (!wanted) {
       setBoard(null)
       setLoading(false)
@@ -517,6 +534,19 @@ export default function PlanningBoardPage() {
   }, [load])
 
   const lists = useMemo(() => [...(board?.plan_lists || [])].sort(sortByPos), [board])
+  const laneBoardRef = useRef(null)
+  const [focusListId, setFocusListId] = useState(null)
+
+  useEffect(() => {
+    if (!lists.length) return
+    if (!focusListId || !lists.some((l) => l.id === focusListId)) setFocusListId(lists[0].id)
+  }, [lists, focusListId])
+
+  function scrollToLane(listId) {
+    setFocusListId(listId)
+    const el = laneBoardRef.current?.querySelector(`[data-lane-id="${listId}"]`)
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -677,7 +707,6 @@ export default function PlanningBoardPage() {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev)
       params.set('board', boardId)
-      params.delete('tab')
       return params
     }, { replace: true })
   }
@@ -686,70 +715,92 @@ export default function PlanningBoardPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center gap-2 text-slate-400">
-        <LoaderCircle className="animate-spin" size={20} /> Loading planning…
+      <div className="flex min-h-[40vh] items-center justify-center gap-2 text-muted-foreground">
+        <LoaderCircle className="animate-spin" size={20} /> Loading Planner
       </div>
     )
   }
 
   if (!board) {
     return (
-      <section className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-6 text-amber-100">
-        No planning board found. Ask Super Admin to seed Hakum Planner (migration).
+      <section className="rounded-2xl border border-border bg-card p-6 text-foreground">
+        <h1 className="text-xl font-semibold">Planner is not set up yet</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Ask a Super Admin to run the latest Planner migration, then refresh this page.
+        </p>
       </section>
     )
   }
 
   return (
-    <section className="planning-shell flex min-h-0 flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
-        <div>
-          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">Hakum Planner</p>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            <Columns3 className="size-7 text-primary" />
-            {board.name}
+    <section className="planning-shell flex min-h-0 flex-col gap-4">
+      <header className="planning-hero">
+        <div className="planning-hero-copy">
+          <h1 className="planning-title">
+            <Columns3 className="size-6 text-primary sm:size-7" aria-hidden />
+            Planner
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            {canEdit ? 'Full edit' : 'View only'} — Complaints, Equipment Repairs, Cash Advance, and general tasks. Assignments notify in-app.
+          <p className="planning-lead">
+            {canEdit
+              ? 'Add cards, assign people, and share forms. Assigned staff get an in-app notice.'
+              : 'View tasks, calendar, and forms. You can fill forms you are allowed to use.'}
           </p>
           {boards.length > 1 ? (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {boards.map((b) => (
+            <div className="planning-board-picker">
+              <Label htmlFor="planner-board-filter">Board</Label>
+              <NamedSelect
+                id="planner-board-filter"
+                value={board.id}
+                onChange={selectBoard}
+                options={boards.map((b) => ({ value: b.id, label: b.name }))}
+              />
+            </div>
+          ) : (
+            <p className="planning-board-name">{board.name}</p>
+          )}
+        </div>
+        <Badge variant={canEdit ? 'default' : 'secondary'} className="planning-role-badge">
+          {canEdit ? 'Can edit' : 'View only'}
+        </Badge>
+      </header>
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="planning-tabs-list">
+          {PLANNER_TABS.map((item) => {
+            const Icon = TAB_ICONS[item.icon]
+            return (
+              <TabsTrigger key={item.id} value={item.id} title={item.hint}>
+                {Icon ? <Icon className="size-4" aria-hidden /> : null}
+                {item.label}
+              </TabsTrigger>
+            )
+          })}
+        </TabsList>
+        <p className="planning-tab-hint">{PLANNER_TABS.find((item) => item.id === tab)?.hint}</p>
+
+        <TabsContent value="board" className="mt-4">
+          {lists.length > 1 ? (
+            <div className="planning-lane-jump" role="navigation" aria-label="Columns">
+              {lists.map((list) => (
                 <button
-                  key={b.id}
+                  key={list.id}
                   type="button"
-                  onClick={() => selectBoard(b.id)}
-                  className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
-                    board.id === b.id ? 'bg-primary text-primary-foreground' : 'border border-border'
-                  }`}
+                  className={`planning-lane-jump-btn${focusListId === list.id ? ' is-active' : ''}`}
+                  onClick={() => scrollToLane(list.id)}
                 >
-                  {b.name}
+                  {list.title}
+                  <span>{(list.plan_cards || []).length}</span>
                 </button>
               ))}
             </div>
           ) : null}
-        </div>
-        <Badge variant={canEdit ? 'default' : 'secondary'} className="min-h-8 px-3">
-          {canEdit ? 'Editor' : 'Viewer'}
-        </Badge>
-      </div>
-
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="planning-tabs-list">
-          <TabsTrigger value="board">Board</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="forms">Forms</TabsTrigger>
-          <TabsTrigger value="events">Events</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="board" className="mt-4">
-          <div className="planning-lane-board" role="region" aria-label="Planning columns">
+          <div ref={laneBoardRef} className="planning-lane-board" role="region" aria-label="Task columns">
             {lists.map((list) => {
               const cards = [...(list.plan_cards || [])].sort(sortByPos)
               return (
                 <section
                   key={list.id}
+                  data-lane-id={list.id}
                   className="floor-lane planning-lane"
                   aria-label={list.title}
                   onDragOver={(e) => canEdit && e.preventDefault()}
@@ -763,13 +814,13 @@ export default function PlanningBoardPage() {
                   <div className="mb-3 flex items-center justify-between gap-2">
                     {canEdit ? (
                       <input
-                        className="min-w-0 flex-1 bg-transparent text-xs font-bold tracking-[0.14em] text-foreground uppercase outline-none"
+                        className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-foreground outline-none"
                         defaultValue={list.title}
                         onBlur={(e) => renameList(list, e.target.value)}
-                        aria-label="List title"
+                        aria-label="Column name"
                       />
                     ) : (
-                      <h2 className="text-xs font-bold tracking-[0.14em] text-foreground uppercase">{list.title}</h2>
+                      <h2 className="text-sm font-semibold text-foreground">{list.title}</h2>
                     )}
                     <Badge variant="secondary" className="tabular-nums">{cards.length}</Badge>
                   </div>
@@ -777,49 +828,78 @@ export default function PlanningBoardPage() {
                     {cards.map((card) => {
                       const { done, total } = checklistStats(card)
                       const labels = Array.isArray(card.labels) ? card.labels : []
+                      const people = assigneeNames(card)
                       return (
                         <article
                           key={card.id}
-                          className="floor-ticket"
+                          className="floor-ticket planning-card"
                           draggable={canEdit}
                           onDragStart={() => setDragCardId(card.id)}
                           onDragEnd={() => setDragCardId(null)}
-                          onClick={() => setActiveCard(card)}
                         >
-                          {labels.length > 0 && (
-                            <div className="mb-2 flex flex-wrap gap-1">
-                              {labels.map((l) => (
-                                <span
-                                  key={l.name}
-                                  className="rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-950"
-                                  style={{ backgroundColor: l.color || '#94a3b8' }}
-                                >
-                                  {l.name}
+                          <button
+                            type="button"
+                            className="planning-card-open"
+                            onClick={() => setActiveCard(card)}
+                          >
+                            {labels.length > 0 && (
+                              <div className="mb-2 flex flex-wrap gap-1">
+                                {labels.map((l) => (
+                                  <span
+                                    key={l.name}
+                                    className="rounded-full px-2 py-0.5 text-[10px] font-bold text-[#020a31]"
+                                    style={{ backgroundColor: l.color || '#94a3b8' }}
+                                  >
+                                    {l.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <p className="font-medium text-foreground">{card.title}</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                              {card.due_at && (
+                                <span className="inline-flex items-center gap-1">
+                                  <CalendarDays size={12} />
+                                  {format(new Date(card.due_at), 'MMM d')}
                                 </span>
-                              ))}
+                              )}
+                              {total > 0 && (
+                                <span className="inline-flex items-center gap-1">
+                                  <CheckSquare size={12} />
+                                  {done}/{total}
+                                </span>
+                              )}
+                              {people.length > 0 && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Users size={12} />
+                                  {people.join(', ')}
+                                </span>
+                              )}
                             </div>
-                          )}
-                          <p className="font-medium text-foreground">{card.title}</p>
-                          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                            {card.due_at && (
-                              <span className="inline-flex items-center gap-1">
-                                <CalendarDays size={12} />
-                                {format(new Date(card.due_at), 'MMM d')}
-                              </span>
-                            )}
-                            {total > 0 && (
-                              <span className="inline-flex items-center gap-1">
-                                <CheckSquare size={12} />
-                                {done}/{total}
-                              </span>
-                            )}
-                          </div>
+                          </button>
+                          {canEdit && lists.length > 1 ? (
+                            <label className="planning-card-move">
+                              <span className="planning-visually-hidden">Move {card.title}</span>
+                              <select
+                                value={list.id}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  e.stopPropagation()
+                                  if (e.target.value !== list.id) moveCard(card.id, e.target.value)
+                                }}
+                              >
+                                {lists.map((opt) => (
+                                  <option key={opt.id} value={opt.id}>{opt.title}</option>
+                                ))}
+                              </select>
+                            </label>
+                          ) : null}
                         </article>
                       )
                     })}
                     {!cards.length && (
-                      <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
-                        No cards yet
+                      <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+                        No cards in this column yet.
                       </p>
                     )}
                     {canEdit && (
@@ -827,21 +907,21 @@ export default function PlanningBoardPage() {
                         <div className="mt-1 space-y-2 rounded-xl border border-border bg-background p-2">
                           <input
                             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
-                            placeholder="Card title"
+                            placeholder="What needs to get done?"
                             value={newCardTitle}
                             onChange={(e) => setNewCardTitle(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && addCard(list.id)}
                             autoFocus
                           />
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => addCard(list.id)}>Add</Button>
+                            <Button size="sm" onClick={() => addCard(list.id)}>Add card</Button>
                             <Button size="sm" variant="ghost" onClick={() => { setAddingCardFor(null); setNewCardTitle('') }}>Cancel</Button>
                           </div>
                         </div>
                       ) : (
                         <button
                           type="button"
-                          className="mt-1 flex min-h-10 w-full items-center gap-2 rounded-xl border border-dashed border-border px-2 text-sm text-muted-foreground transition hover:border-primary/40 hover:bg-background hover:text-foreground"
+                          className="mt-1 flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed border-border px-2 text-sm text-muted-foreground transition hover:border-primary/40 hover:bg-background hover:text-foreground"
                           onClick={() => setAddingCardFor(list.id)}
                         >
                           <Plus size={16} /> Add card
@@ -873,8 +953,8 @@ export default function PlanningBoardPage() {
           <div className="planning-cal-filters" role="group" aria-label="Calendar sources">
             <span className="planning-cal-filters-label">Show</span>
             {[
-              { key: 'planning', label: 'Planning cards' },
-              { key: 'forms', label: 'Form results' },
+              { key: 'planning', label: 'Tasks' },
+              { key: 'forms', label: 'Form answers' },
               { key: 'events', label: 'Events' },
               { key: 'bookings', label: 'Bookings' },
             ].map((src) => (

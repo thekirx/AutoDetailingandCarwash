@@ -7,6 +7,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
 import { AuthLegalLinks } from '../components/FormLegalNotice'
 import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
+import { activateSignupHref, resolveCustomerAuthIntent } from '../lib/customerAccountLifecycle'
 import { canOfferPasswordEmailReset } from '../lib/uiDeadControls'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { isDemoLoginEnabled } from '../lib/demoLogin'
@@ -26,10 +27,11 @@ async function authLookup(identifier, action = 'lookup') {
 export default function CustomerSignInPage() {
   usePageMeta({
     title: 'Sign in',
-    description: 'Sign in to your Hakum Auto Care customer account with email, phone, or plate.',
+    description: 'Sign in to your Hakum Auto Care customer account with your phone and password.',
     path: '/signin',
   })
 
+  const [idMode, setIdMode] = useState('phone')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -103,41 +105,56 @@ export default function CustomerSignInPage() {
   if (loading) return <LoadingScreen />
   if (user && profile?.role === 'customer') return <Navigate to="/account" replace />
 
-  const resolveEmail = async (raw) => {
-    const kind = classifyIdentifier(raw)
-    if (kind === 'email' || kind === 'phone') return resolveLoginEmail(raw)
-    if (lookupEmail) return lookupEmail
-    const data = await authLookup(raw, 'lookup')
-    if (data.login_email) return data.login_email
-    throw new Error('No Hakum account found for that plate. Try phone or email, or ask your Team Lead.')
-  }
-
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
     setInfo('')
+    const intent = resolveCustomerAuthIntent({
+      status: setupStatus || 'unknown',
+      passwordProvided: Boolean(password),
+      flow: 'signin',
+    })
+    if (intent.action === 'activate') {
+      navigate(activateSignupHref(identifier.trim()))
+      return
+    }
     setSubmitting(true)
     try {
-      if (setupStatus === 'needs_password' && !password) {
-        throw new Error('Set a password first — use the button below to get your link.')
+      const res = await fetch('/api/customer-auth-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: identifier.trim(),
+          password,
+          action: 'signin',
+          site_origin: window.location.origin,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.activate) {
+        navigate(activateSignupHref(identifier.trim()))
+        return
       }
-      if (setupStatus === 'needs_invite') {
-        throw new Error('Your visit is on file, but your account invite is not ready. Ask your Team Lead to send it from the queue.')
+      if (data.offer_signup) {
+        setSetupStatus('unknown')
+        throw new Error(data.error || 'No Hakum account for that number yet. Create one to track visits.')
+      }
+      if (!res.ok || !data.access_token || !data.refresh_token) {
+        throw new Error(data.error || 'Invalid phone or password.')
       }
 
-      const email = await resolveEmail(identifier)
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
-      if (authError) {
-        if (setupStatus === 'needs_password') {
-          throw new Error('You still need to set a password. Your Team Lead registered your visit — send yourself a set-password link below.')
-        }
-        throw new Error('Invalid email, phone, plate, or password.')
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      })
+      if (sessionError || !sessionData?.user) {
+        throw new Error(sessionError?.message || 'Could not open your session. Try again.')
       }
 
       const { data: customer, error: customerError } = await supabase
         .from('customers')
         .select('id, role, is_archived')
-        .eq('id', data.user.id)
+        .eq('id', sessionData.user.id)
         .eq('role', 'customer')
         .eq('is_archived', false)
         .maybeSingle()
@@ -153,8 +170,7 @@ export default function CustomerSignInPage() {
         )
       }
 
-      // First-login welcome SMS (download the app) — server dedupes to once ever.
-      const accessToken = data.session?.access_token
+      const accessToken = sessionData.session?.access_token || data.access_token
       if (accessToken) {
         fetch('/api/lifecycle-sms', {
           method: 'POST',
@@ -163,8 +179,8 @@ export default function CustomerSignInPage() {
         }).catch(() => {})
       }
 
-      if (data.user.user_metadata?.must_set_password) {
-        navigate('/account/set-password', { replace: true })
+      if (sessionData.user.user_metadata?.must_set_password) {
+        navigate(activateSignupHref(identifier.trim()), { replace: true })
         return
       }
       navigate('/account', { replace: true })
@@ -231,7 +247,7 @@ export default function CustomerSignInPage() {
   return (
     <HakumAuthShell
       title="Your car. Your account."
-      subtitle="Sign in with email, phone, or plate to manage visit history, live queue, and bookings."
+      subtitle="Sign in with your phone and password to track visits, live queue, and bookings."
       bullets={CUSTOMER_AUTH_BULLETS}
       footerLinks={
         <>
@@ -263,59 +279,74 @@ export default function CustomerSignInPage() {
 
       <form onSubmit={handleSubmit} className="hakum-auth-form">
         <label>
-          <span>Email, phone, or plate</span>
+          <span>{idMode === 'phone' ? 'Mobile number' : 'Email or plate'}</span>
           <input
             required
             autoComplete="username"
+            inputMode={idMode === 'phone' ? 'tel' : 'text'}
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="you@email.com, 09XXXXXXXXX, or ABC 1234"
+            placeholder={idMode === 'phone' ? '09XXXXXXXXX' : 'you@email.com or ABC 1234'}
           />
         </label>
+        <button
+          type="button"
+          className="hakum-auth-text-btn hakum-auth-mode-toggle"
+          onClick={() => {
+            setIdMode((m) => (m === 'phone' ? 'other' : 'phone'))
+            setIdentifier('')
+            setSetupStatus(null)
+            setError('')
+          }}
+        >
+          {idMode === 'phone' ? 'Use email or plate instead' : 'Use phone number instead'}
+        </button>
 
         {checking ? <p className="hakum-auth-hint">Checking your Hakum visit…</p> : null}
 
-        {setupStatus === 'needs_password' ? (
+        {setupStatus === 'needs_password' || setupStatus === 'needs_invite' ? (
           <div className="hakum-auth-setup" role="status">
-            <strong>Set up your password</strong>
+            <strong>Activate your Hakum account</strong>
             <p>
-              Your Team Lead already registered your visit. You do not have a password yet — we will email a Supabase
-              set-password link to the address on your account.
+              Your Team Lead already saved your visit. Finish setup to open your history (name, plate, birthday,
+              password).
             </p>
-            <button
-              type="button"
-              className="hakum-auth-setup-btn"
-              onClick={handleSendSetup}
-              disabled={sendingSetup || !identifier.trim() || !offerEmailReset}
-              title={!offerEmailReset ? 'Add a real email on your Hakum account to receive set-password mail' : undefined}
-            >
-              {sendingSetup ? 'Sending…' : 'Email set-password link'}
-            </button>
-            {!offerEmailReset ? (
-              <p className="hakum-auth-hint">Phone-only accounts need a real email on file — ask your Team Lead to add one, then try again.</p>
+            <Link className="hakum-auth-setup-btn" to={activateSignupHref(identifier.trim())}>
+              Continue setup
+            </Link>
+            {setupStatus === 'needs_password' && offerEmailReset ? (
+              <button
+                type="button"
+                className="hakum-auth-text-btn"
+                onClick={handleSendSetup}
+                disabled={sendingSetup || !identifier.trim()}
+              >
+                {sendingSetup ? 'Sending…' : 'Or email a set-password link'}
+              </button>
             ) : null}
           </div>
         ) : null}
 
-        {setupStatus === 'needs_invite' ? (
-          <div className="hakum-auth-setup" role="status">
-            <strong>Account invite pending</strong>
-            <p>Your plate or number is on file, but the Team Lead has not issued your login invite yet. Ask them at the shop.</p>
-          </div>
+        {setupStatus === 'ready' ? <p className="hakum-auth-hint hakum-auth-hint--ok">Account found. Enter your password.</p> : null}
+        {setupStatus === 'unknown' ? (
+          <p className="hakum-auth-hint">
+            No account for that number yet.{' '}
+            <Link to={activateSignupHref(identifier.trim())}>Create one</Link> to track visits.
+          </p>
         ) : null}
-
-        {setupStatus === 'ready' ? <p className="hakum-auth-hint hakum-auth-hint--ok">Account found — enter your password.</p> : null}
 
         <label>
           <span>Password</span>
           <div className="hakum-auth-password">
             <input
-              required={setupStatus !== 'needs_password'}
+              required={setupStatus !== 'needs_password' && setupStatus !== 'needs_invite'}
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={setupStatus === 'needs_password' ? 'After you set one' : undefined}
+              placeholder={
+                setupStatus === 'needs_password' || setupStatus === 'needs_invite' ? 'Set this in setup' : undefined
+              }
             />
             <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -335,8 +366,12 @@ export default function CustomerSignInPage() {
         {(idKind === 'phone' || idKind === 'plate') && lookupEmail && !canOfferPasswordEmailReset(lookupEmail) ? (
           <p className="hakum-auth-hint">This account has no real email on file, so reset mail cannot be sent. Ask the shop to add one.</p>
         ) : null}
-        <button type="submit" className="hakum-auth-submit" disabled={submitting || setupStatus === 'needs_invite'}>
-          {submitting ? 'Signing in…' : 'Sign in'}
+        <button type="submit" className="hakum-auth-submit" disabled={submitting}>
+          {submitting
+            ? 'Signing in…'
+            : setupStatus === 'needs_password' || setupStatus === 'needs_invite'
+              ? 'Activate account'
+              : 'Sign in'}
         </button>
       </form>
 

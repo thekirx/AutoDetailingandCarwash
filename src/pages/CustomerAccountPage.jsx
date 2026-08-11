@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
+  Cake,
   CalendarDays,
-  CarFront,
-  Home,
+  CalendarPlus,
   LogOut,
-  MapPin,
-  Navigation,
   Radio,
   Receipt,
-  CalendarPlus,
   Settings,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
@@ -19,8 +16,7 @@ import { getQueueCounts } from '@/queue/queueLogic'
 import { formatMoney } from '@/queue/queueApi'
 import { liveQueuePath } from '@/lib/liveQueuePath'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+import CustomerAppFrame from '@/components/CustomerAppFrame'
 import LoyaltyCard from '@/components/LoyaltyCard'
 import NotificationBell from '@/components/NotificationBell'
 import PushToggle from '@/components/PushToggle'
@@ -34,13 +30,13 @@ async function fetchPortal() {
     headers: { Authorization: `Bearer ${token}` },
   })
   const body = await res.json().catch(() => ({}))
-  if (res.status === 401) throw new Error('Session expired — please sign in again.')
+  if (res.status === 401) throw new Error('Session expired. Sign in again.')
   if (!res.ok) throw new Error(body.error || 'Unable to load account.')
   return body
 }
 
 function formatWhen(iso) {
-  if (!iso) return '—'
+  if (!iso) return '-'
   try {
     return new Date(iso).toLocaleString('en-PH', {
       month: 'short',
@@ -49,7 +45,7 @@ function formatWhen(iso) {
       minute: '2-digit',
     })
   } catch {
-    return '—'
+    return '-'
   }
 }
 
@@ -70,6 +66,7 @@ export default function CustomerAccountPage() {
   const [vehicles, setVehicles] = useState([])
   const [portalProfile, setPortalProfile] = useState(null)
   const [loyalty, setLoyalty] = useState(null)
+  const [birthday, setBirthday] = useState(null)
   const [loading, setLoading] = useState(true)
   const [geoNote, setGeoNote] = useState('')
   const [error, setError] = useState('')
@@ -79,8 +76,8 @@ export default function CustomerAccountPage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState('alerts')
 
-  function openSettings(tab = 'alerts') {
-    setSettingsTab(tab)
+  function openSettings(next = 'alerts') {
+    setSettingsTab(next)
     setSettingsOpen(true)
   }
 
@@ -99,6 +96,7 @@ export default function CustomerAccountPage() {
       setPortalProfile(data.profile || null)
       setQueueCounts(data.queueCounts || {})
       setLoyalty(data.loyalty || null)
+      setBirthday(data.birthday || null)
       setSelectedBranch((current) => {
         if (current && nextBranches.some((b) => b.slug === current)) return current
         const fromVisit = nextBookings[0]?.branch
@@ -141,7 +139,6 @@ export default function CustomerAccountPage() {
         { enableHighAccuracy: false, timeout: 8000 },
       )
     }
-    // Avoid hammering Chrome when permission was previously denied
     if (navigator.permissions?.query) {
       navigator.permissions
         .query({ name: 'geolocation' })
@@ -178,10 +175,11 @@ export default function CustomerAccountPage() {
     phone: authProfile?.phone,
     email: user?.email,
   }
+  const activeVisit = bookings[0]
 
   function pickNearest() {
     if (!navigator.geolocation) {
-      setGeoNote('Location unavailable — pick a branch')
+      setGeoNote('Location unavailable. Pick a branch.')
       return
     }
     navigator.geolocation.getCurrentPosition(
@@ -195,15 +193,41 @@ export default function CustomerAccountPage() {
           setGeoNote(`Nearest · ${branchLabel(branches, nearest.slug)}`)
         }
       },
-      () => setGeoNote('Location blocked — pick a branch manually'),
+      () => setGeoNote('Location blocked. Pick a branch.'),
       { enableHighAccuracy: false, timeout: 8000 },
     )
   }
 
+  async function removeVehicle(v) {
+    if (!window.confirm(`Remove ${v.plate_number} from your garage?`)) return
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/customer-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'archive-vehicle', vehicle_id: v.id }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Unable to remove car')
+      setVehicles((prev) => prev.filter((x) => x.id !== v.id))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   if (authLoading) {
     return (
-      <div className="account-app account-app-public flex min-h-[50svh] items-center justify-center p-6">
-        <Skeleton className="h-40 w-full max-w-md rounded-2xl" />
+      <div className="capp">
+        <div className="capp-stage">
+          <div className="capp-hero">
+            <p className="capp-kicker">Hakum</p>
+            <h1>My account</h1>
+          </div>
+          <div className="capp-scroll">
+            <div className="capp-skel" aria-hidden />
+            <div className="capp-skel" aria-hidden />
+          </div>
+        </div>
       </div>
     )
   }
@@ -212,281 +236,173 @@ export default function CustomerAccountPage() {
     return <Navigate to="/signin" replace />
   }
 
-  return (
-    <section className="account-app account-app-public">
-      <header className="account-app-hero">
-        <div className="public-shell account-app-hero-inner">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="account-eyebrow">My Hakum</p>
-              <h1 className="account-title">Hi{firstName ? `, ${firstName}` : ''}</h1>
-              <p className="account-sub">Stamps, your car on the floor, and visit alerts.</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="min-h-11 min-w-11 text-white hover:bg-white/10 hover:text-white"
-                onClick={() => openSettings('alerts')}
-                aria-label="Settings"
-              >
-                <Settings />
-              </Button>
-              <div className="account-mobile-only items-center gap-1">
-                <NotificationBell light homeUrl="/account" homeLabel="My account" />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="min-h-11 min-w-11 text-white hover:bg-white/10 hover:text-white"
-                  onClick={() => signOut()}
-                  aria-label="Sign out"
-                >
-                  <LogOut />
-                </Button>
-              </div>
-              <div className="account-desktop-only account-hero-web-actions">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="account-btn account-btn-ghost-light min-h-10"
-                  onClick={() => signOut()}
-                >
-                  <LogOut data-icon="inline-start" />
-                  Sign out
-                </Button>
-              </div>
-            </div>
-          </div>
-          <div className="account-hero-ctas">
-            <PushToggle audience="customer" autoPrompt />
-            <Button type="button" className="account-btn account-btn-on-navy min-h-11" onClick={() => { setBookVehicle(null); setBookOpen(true) }}>
-              <CalendarPlus data-icon="inline-start" />
-              Book a service
-            </Button>
-            <Button asChild className="account-btn account-btn-ghost-light min-h-11">
-              <Link to={queueHref}>
-                <Radio data-icon="inline-start" />
-                Live queue
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+  const heroLine = activeVisit
+    ? `${activeVisit.vehicle_plate || 'Your car'} is ${String(activeVisit.visit?.label || activeVisit.status || 'on the floor').toLowerCase()}`
+    : 'Book, track the bay, and open your history.'
 
-      <div className="public-shell account-layout">
-        {error ? (
-          <div className="account-error account-layout-error" role="alert">
-            <p>{error}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" className="account-btn account-btn-primary" onClick={load}>
-                Retry
-              </Button>
-              <Button size="sm" variant="outline" asChild>
-                <Link to="/signin">Sign in</Link>
-              </Button>
+  return (
+    <>
+      <CustomerAppFrame
+        queueHref={queueHref}
+        hero={
+          <header className="capp-hero">
+            <div className="capp-hero-bar">
+              <div className="min-w-0">
+                <p className="capp-kicker">Hakum</p>
+                <h1>Hi{firstName ? `, ${firstName}` : ''}</h1>
+                <p className="capp-hero-sub">{heroLine}</p>
+              </div>
+              <div className="capp-icon-row">
+                <button type="button" className="capp-icon-btn" onClick={() => openSettings('alerts')} aria-label="Settings">
+                  <Settings size={18} strokeWidth={1.75} />
+                </button>
+                <NotificationBell light homeUrl="/account" homeLabel="My account" />
+                <button type="button" className="capp-icon-btn" onClick={() => signOut()} aria-label="Sign out">
+                  <LogOut size={18} strokeWidth={1.75} />
+                </button>
+              </div>
             </div>
+          </header>
+        }
+      >
+        {error ? (
+          <div className="capp-empty" role="alert">
+            <strong>{error}</strong>
+            <button type="button" className="capp-btn capp-btn-fill" onClick={load}>
+              Retry
+            </button>
           </div>
         ) : null}
 
-        <section className="account-sheet account-sheet-car account-area-car" aria-labelledby="your-car-heading">
-          <div className="account-sheet-head">
-            <span className="account-sheet-icon" aria-hidden>
-              <CarFront className="size-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <h2 id="your-car-heading" className="account-sheet-title">
-                Your car
-              </h2>
-              <p className="account-sheet-sub">Garage + live status while Hakum works on a visit.</p>
+        {loading ? (
+          <div className="capp-skel" aria-hidden />
+        ) : activeVisit ? (
+          <article className="capp-ticket">
+            <div className="capp-ticket-row">
+              <div className="min-w-0">
+                <p className="capp-plate">{activeVisit.vehicle_plate || '-'}</p>
+                <p className="capp-meta">
+                  {[activeVisit.vehicle_make, activeVisit.vehicle_model].filter(Boolean).join(' ') ||
+                    activeVisit.service_name ||
+                    'Service visit'}
+                </p>
+                <span className="capp-pill">{activeVisit.visit?.label || activeVisit.status}</span>
+              </div>
+              <div>
+                <p className="capp-q">
+                  {activeVisit.queue_label || '--'}
+                  <span>{branchLabel(branches, activeVisit.branch) || 'Queue'}</span>
+                </p>
+              </div>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="account-btn shrink-0 text-[#052699] hover:bg-[#052699]/08 hover:text-[#052699]"
-              onClick={() => openSettings('car')}
-            >
-              <Settings data-icon="inline-start" />
-              Manage garage
-            </Button>
-          </div>
-
-          {loading ? (
-            <Skeleton className="mt-4 h-28 w-full rounded-xl" />
-          ) : (
-            <>
-              {vehicles.length > 0 ? (
-                <ul className="account-garage mt-4">
-                  {vehicles.map((v) => (
-                    <li key={v.id} className="account-garage-item">
-                      <div className="min-w-0">
-                        <p className="account-plate">{v.plate_number}</p>
-                        <p className="truncate text-sm text-slate-500">
-                          {[v.vehicle_make, v.vehicle_model, v.color].filter(Boolean).join(' · ') || 'Saved vehicle'}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap gap-2">
-                        <Button type="button" size="sm" className="account-btn account-btn-primary" onClick={() => { setBookVehicle(v); setBookOpen(true) }}>
-                          Book
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={async () => {
-                            if (!window.confirm(`Remove ${v.plate_number} from your garage?`)) return
-                            try {
-                              const token = await getAccessTokenFresh()
-                              const res = await fetch('/api/customer-portal', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                                body: JSON.stringify({ action: 'archive-vehicle', vehicle_id: v.id }),
-                              })
-                              const body = await res.json().catch(() => ({}))
-                              if (!res.ok) throw new Error(body.error || 'Unable to remove car')
-                              setVehicles((prev) => prev.filter((x) => x.id !== v.id))
-                            } catch (err) {
-                              setError(err.message)
-                            }
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </div>
+            {activeVisit.visit?.steps?.length ? (
+              <ol className="account-flow" aria-label="Visit progress">
+                {activeVisit.visit.steps.map((step, idx) => {
+                  const done = activeVisit.visit.isComplete || idx < activeVisit.visit.currentIndex
+                  const current = !activeVisit.visit.isComplete && idx === activeVisit.visit.currentIndex
+                  return (
+                    <li key={step.key} className={`account-flow-step ${done ? 'is-done' : ''} ${current ? 'is-current' : ''}`}>
+                      <span className="account-flow-dot" aria-hidden />
+                      <span className="account-flow-label">{step.label}</span>
                     </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="account-empty account-empty-inset mt-4">
-                  <strong>No cars on file yet</strong>
-                  Plates are usually added at the branch or POS when you visit.{' '}
-                  <button type="button" className="account-link-btn" onClick={() => openSettings('car')}>
-                    Save a plate in settings
-                  </button>{' '}
-                  if you already know it.
-                </div>
-              )}
+                  )
+                })}
+              </ol>
+            ) : null}
+          </article>
+        ) : (
+          <div className="capp-empty">
+            <strong>No active visit</strong>
+            Book a service to track your car on the floor.
+          </div>
+        )}
 
-              <div className="mt-5 border-t border-[color:var(--account-line)] pt-5">
-                <p className="account-section-label">Active visit</p>
-                {bookings.length === 0 ? (
-                  <div className="account-empty account-empty-inset">
-                    <strong>No active visit</strong>
-                    Book a service to track your car on the floor.{' '}
-                    <button type="button" className="account-link-btn" onClick={() => setBookOpen(true)}>
-                      Book a service
+        <div className="capp-actions">
+          <button
+            type="button"
+            className="capp-btn capp-btn-fill"
+            onClick={() => {
+              setBookVehicle(null)
+              setBookOpen(true)
+            }}
+          >
+            <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />
+            Book
+          </button>
+          <Link className="capp-btn capp-btn-ghost" to={queueHref}>
+            <Radio size={16} strokeWidth={1.75} aria-hidden />
+            Live queue
+          </Link>
+        </div>
+
+        <section className="capp-section" aria-label="Garage">
+          <div className="capp-ticket-row" style={{ marginBottom: '0.45rem' }}>
+            <p className="capp-label" style={{ margin: 0 }}>Garage</p>
+            <button type="button" className="account-link-btn" onClick={() => openSettings('car')}>
+              Manage
+            </button>
+          </div>
+          {vehicles.length ? (
+            <div className="capp-chips">
+              {vehicles.map((v) => (
+                <div key={v.id} className="capp-chip">
+                  <strong>{v.plate_number}</strong>
+                  <em>{[v.vehicle_make, v.vehicle_model, v.color].filter(Boolean).join(' · ') || 'Saved vehicle'}</em>
+                  <div className="capp-actions" style={{ marginTop: '0.65rem' }}>
+                    <button type="button" className="capp-btn capp-btn-fill" onClick={() => { setBookVehicle(v); setBookOpen(true) }}>
+                      Book
+                    </button>
+                    <button type="button" className="capp-btn capp-btn-ghost" onClick={() => removeVehicle(v)}>
+                      Remove
                     </button>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {bookings.map((row) => {
-                      const visit = row.visit || { steps: [], currentIndex: 0, label: row.status, isComplete: false }
-                      return (
-                        <article key={row.id} className="account-car-card">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="account-plate">{row.vehicle_plate || '—'}</p>
-                              <p className="truncate text-sm text-slate-500">
-                                {[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ') ||
-                                  row.service_name ||
-                                  'Service visit'}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-400">{branchLabel(branches, row.branch)}</p>
-                            </div>
-                            <div className="shrink-0 text-right">
-                              {row.queue_label ? (
-                                <p className="text-2xl font-black tabular-nums text-[#052699]">{row.queue_label}</p>
-                              ) : (
-                                <p className="text-xs font-semibold text-slate-400">Queue pending</p>
-                              )}
-                              <Badge variant="secondary" className="mt-1">
-                                {visit.label || row.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          <ol className="account-flow" aria-label="Visit progress">
-                            {visit.steps.map((step, idx) => {
-                              const done = visit.isComplete || idx < visit.currentIndex
-                              const current = !visit.isComplete && idx === visit.currentIndex
-                              return (
-                                <li
-                                  key={step.key}
-                                  className={`account-flow-step ${done ? 'is-done' : ''} ${current ? 'is-current' : ''}`}
-                                >
-                                  <span className="account-flow-dot" aria-hidden />
-                                  <span className="account-flow-label">{step.label}</span>
-                                </li>
-                              )
-                            })}
-                          </ol>
-                          {row.branch ? (
-                            <Link className="account-inline-cta" to={liveQueuePath(row.branch)}>
-                              <Radio className="size-3.5" aria-hidden />
-                              Open live queue at this branch
-                            </Link>
-                          ) : null}
-                        </article>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="capp-empty">
+              <strong>No cars on file yet</strong>
+              <button type="button" className="account-link-btn" onClick={() => openSettings('car')}>
+                Save a plate
+              </button>
+            </div>
           )}
         </section>
 
-        <section className="account-sheet account-area-queue" aria-labelledby="live-queue-heading">
-          <div className="account-sheet-head">
-            <span className="account-sheet-icon" aria-hidden>
-              <MapPin className="size-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <h2 id="live-queue-heading" className="account-sheet-title">
-                Live queue
-              </h2>
-              <p className="account-sheet-sub">{geoNote || 'See waiting and in-progress cars at a branch.'}</p>
-            </div>
+        <section className="capp-ticket" aria-label="Live queue">
+          <p className="capp-label">This branch</p>
+          <label className="grid gap-1.5 text-xs font-semibold text-[color:var(--capp-steel)]">
+            {geoNote || 'Choose a branch'}
+            <select
+              className="account-field"
+              value={selectedBranch}
+              onChange={(e) => {
+                const slug = e.target.value
+                setSelectedBranch(slug)
+                setGeoNote(branchLabel(branches, slug) ? `Branch · ${branchLabel(branches, slug)}` : '')
+              }}
+            >
+              <option value="">Choose branch</option>
+              {branches.map((b) => (
+                <option key={b.slug} value={b.slug}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="capp-actions" style={{ marginTop: '0.7rem' }}>
+            <button type="button" className="capp-btn capp-btn-ghost" onClick={pickNearest}>
+              Use nearest
+            </button>
+            <Link className="capp-btn capp-btn-fill" to={queueHref}>
+              Open queue
+            </Link>
           </div>
-
-          <div className="mt-4 flex flex-col gap-2.5">
-            <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
-              Branch
-              <select
-                className="account-field"
-                value={selectedBranch}
-                onChange={(e) => {
-                  const slug = e.target.value
-                  setSelectedBranch(slug)
-                  setGeoNote(branchLabel(branches, slug) ? `Branch · ${branchLabel(branches, slug)}` : '')
-                }}
-              >
-                <option value="">Choose branch</option>
-                {branches.map((b) => (
-                  <option key={b.slug} value={b.slug}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button type="button" className="account-btn account-btn-secondary min-h-11" onClick={pickNearest}>
-                <Navigation data-icon="inline-start" />
-                Use nearest
-              </Button>
-              <Button asChild className="account-btn account-btn-primary min-h-11">
-                <Link to={queueHref}>View live queue</Link>
-              </Button>
-            </div>
-          </div>
-
-          {!loading && (
-            <div className="mt-4 grid grid-cols-2 gap-2">
+          {!loading ? (
+            <div className="mt-3 grid grid-cols-2 gap-2">
               {[
                 ['Waiting', selectedCounts.waiting],
-                ['In progress', selectedCounts.in_progress],
+                ['In wash', selectedCounts.in_progress],
                 ['Checking', selectedCounts.final_checking],
                 ['On floor', selectedCounts.total],
               ].map(([label, value]) => (
@@ -496,67 +412,74 @@ export default function CustomerAccountPage() {
                 </div>
               ))}
             </div>
-          )}
-
+          ) : null}
           {carsHere.length > 0 && selectedBranch ? (
-            <p className="mt-3 text-xs font-medium text-[#052699]">
+            <p className="capp-meta" style={{ marginTop: '0.7rem' }}>
               Your car is on this floor · {carsHere.map((c) => c.vehicle_plate || 'visit').join(', ')}
             </p>
           ) : null}
         </section>
 
-        <div className="account-area-loyalty">
-          {loading ? (
-            <Skeleton className="h-48 w-full rounded-[1.5rem]" />
-          ) : loyalty ? (
-            <div className="flex flex-col gap-3">
-              {loyalty.membershipsEnabled && loyalty.membership?.tier_name ? (
-                <div className="rounded-[1.25rem] border border-[#d7e0ff] bg-white/80 px-4 py-3 text-sm">
-                  <p className="text-xs font-bold tracking-[0.18em] text-[#052699] uppercase">Membership</p>
-                  <p className="mt-1 font-semibold text-[#0b1b4a]">{loyalty.membership.tier_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {loyalty.membership.discount_percent != null
-                      ? `${loyalty.membership.discount_percent}% member discount`
-                      : 'Active member'}
-                    {loyalty.membership.ends_at ? ` · ends ${loyalty.membership.ends_at}` : ''}
-                  </p>
-                </div>
-              ) : null}
-              {loyalty.pointsEnabled ? (
-                <div className="rounded-[1.25rem] border border-[#d7e0ff] bg-white/80 px-4 py-3 text-sm">
-                  <p className="text-xs font-bold tracking-[0.18em] text-[#052699] uppercase">Spend points</p>
-                  <p className="mt-1 text-2xl font-semibold text-[#0b1b4a]">{loyalty.loyaltyPoints ?? 0}</p>
-                </div>
-              ) : null}
-              {loyalty.stampsEnabled !== false ? (
-                <LoyaltyCard
-                  variant="hakum"
-                  completed={loyalty.completed}
-                  cardSlots={loyalty.cardSlots}
-                  milestones={loyalty.milestones}
-                  encouragement={loyalty.encouragement}
-                />
-              ) : (
-                <div className="account-empty">Stamp card is paused by the shop right now.</div>
-              )}
-            </div>
-          ) : (
-            <div className="account-empty">Loyalty stamps appear after your first completed visit.</div>
-          )}
-        </div>
-
-        <section className="account-sheet account-area-history" aria-labelledby="history-heading">
-          <div className="account-sheet-head mb-4">
-            <span className="account-sheet-icon" aria-hidden>
-              <CalendarDays className="size-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <h2 id="history-heading" className="account-sheet-title">
-                Activity
-              </h2>
-              <p className="account-sheet-sub">Past visits and store purchases linked to your account.</p>
-            </div>
+        {birthday?.perk ? (
+          <div className="capp-note">
+            <p className="capp-kicker" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              <Cake className="mr-1 inline size-3.5" aria-hidden /> Birthday treat
+            </p>
+            <strong>One free service is waiting.</strong>
+            <p>
+              Show this at any Hakum branch. Valid until{' '}
+              {birthday.perk.expires_at
+                ? new Date(birthday.perk.expires_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+                : 'this month'}
+              .
+            </p>
           </div>
+        ) : !birthday?.date_of_birth ? (
+          <button type="button" className="capp-row" onClick={() => openSettings('account')}>
+            <Cake className="capp-thumb" style={{ width: '2.5rem', height: '2.5rem', padding: '0.55rem' }} />
+            <span>
+              <strong>Add your birthday</strong>
+              <em>Free carwash on your day.</em>
+            </span>
+          </button>
+        ) : null}
+
+        {loyalty?.membershipsEnabled && loyalty.membership?.tier_name ? (
+          <div className="capp-ticket">
+            <p className="capp-label">Membership</p>
+            <p className="capp-plate" style={{ fontSize: '1.15rem', letterSpacing: 0 }}>{loyalty.membership.tier_name}</p>
+            <p className="capp-meta">
+              {loyalty.membership.discount_percent != null
+                ? `${loyalty.membership.discount_percent}% member discount`
+                : 'Active member'}
+              {loyalty.membership.ends_at ? ` · ends ${loyalty.membership.ends_at}` : ''}
+            </p>
+          </div>
+        ) : null}
+
+        {loyalty?.pointsEnabled ? (
+          <div className="capp-ticket">
+            <p className="capp-label">Spend points</p>
+            <p className="capp-q" style={{ textAlign: 'left' }}>{loyalty.loyaltyPoints ?? 0}</p>
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="capp-skel" aria-hidden />
+        ) : loyalty?.stampsEnabled !== false && loyalty ? (
+          <LoyaltyCard
+            variant="hakum"
+            completed={loyalty.completed}
+            cardSlots={loyalty.cardSlots}
+            milestones={loyalty.milestones}
+            encouragement={loyalty.encouragement}
+          />
+        ) : (
+          <div className="capp-empty">Loyalty stamps appear after your first completed visit.</div>
+        )}
+
+        <section className="capp-section" aria-labelledby="history-heading">
+          <h2 id="history-heading" className="capp-label">Activity</h2>
           <div className="account-seg account-seg-2" role="tablist" aria-label="History">
             {[
               ['history', 'Past visits'],
@@ -574,123 +497,68 @@ export default function CustomerAccountPage() {
               </button>
             ))}
           </div>
-
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 grid gap-2">
             {tab === 'history' &&
               (loading ? (
-                <Skeleton className="h-28 w-full rounded-2xl" />
+                <div className="capp-skel" aria-hidden />
               ) : history.length === 0 ? (
-                <EmptyBlock title="No past visits yet">Completed services will show up here.</EmptyBlock>
+                <div className="capp-empty">
+                  <strong>No past visits yet</strong>
+                  Completed services show up here.
+                </div>
               ) : (
                 history.map((row) => (
-                  <article key={row.id} className="account-tile account-tile-row">
-                    <span className="account-tile-icon" aria-hidden>
+                  <article key={row.id} className="capp-row" style={{ cursor: 'default' }}>
+                    <span className="capp-thumb" style={{ display: 'grid', placeItems: 'center', width: '2.6rem', height: '2.6rem' }}>
                       <CalendarDays className="size-4" />
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-[color:var(--account-ink,#020a31)]">{row.vehicle_plate || 'Visit'}</p>
-                          <p className="truncate text-xs text-[color:var(--account-muted,#5b6478)]">
-                            {[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ') || 'Service'}
-                          </p>
-                        </div>
-                        <p className="shrink-0 text-sm font-bold tabular-nums text-[color:var(--account-navy,#052699)]">
-                          {formatMoney(row.final_price_minor)}
-                        </p>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--account-muted,#5b6478)]">
-                        <span>{formatWhen(row.created_at || row.scheduled_start)}</span>
-                        <span aria-hidden>·</span>
-                        <span>{branchLabel(branches, row.branch) || row.branch}</span>
-                        <Badge variant="outline" className="text-[10px]">
-                          {row.status}
-                        </Badge>
-                      </div>
-                    </div>
+                    <span className="min-w-0 flex-1">
+                      <strong>{row.vehicle_plate || 'Visit'}</strong>
+                      <em>
+                        {formatWhen(row.created_at || row.scheduled_start)} · {branchLabel(branches, row.branch) || row.branch}
+                      </em>
+                    </span>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-[color:var(--capp-navy)]">
+                      {formatMoney(row.final_price_minor)}
+                    </span>
+                    <Badge variant="outline" className="text-[10px]">{row.status}</Badge>
                   </article>
                 ))
               ))}
-
             {tab === 'purchases' &&
               (loading ? (
-                <Skeleton className="h-28 w-full rounded-2xl" />
+                <div className="capp-skel" aria-hidden />
               ) : purchases.length === 0 ? (
-                <EmptyBlock title="No store purchases linked">
-                  Ask Admin or POS to search your name or plate at checkout.
-                </EmptyBlock>
+                <div className="capp-empty">
+                  <strong>No store purchases linked</strong>
+                  Ask the shop to search your name or plate at checkout.
+                </div>
               ) : (
                 purchases.map((row) => (
-                  <article key={row.id} className="account-tile account-tile-row">
-                    <span className="account-tile-icon" aria-hidden>
+                  <article key={row.id} className="capp-row" style={{ cursor: 'default' }}>
+                    <span className="capp-thumb" style={{ display: 'grid', placeItems: 'center', width: '2.6rem', height: '2.6rem' }}>
                       <Receipt className="size-4" />
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-[color:var(--account-ink,#020a31)]">Store purchase</p>
-                          <p className="text-xs text-[color:var(--account-muted,#5b6478)] capitalize">
-                            {row.payment_method || 'paid'} · {branchLabel(branches, row.branch) || row.branch}
-                          </p>
-                        </div>
-                        <p className="shrink-0 text-sm font-bold tabular-nums text-[color:var(--account-navy,#052699)]">
-                          {formatMoney(row.total_minor)}
-                        </p>
-                      </div>
-                      <p className="mt-2 text-xs text-[color:var(--account-muted,#5b6478)]">{formatWhen(row.occurred_at)}</p>
-                    </div>
+                    <span className="min-w-0 flex-1">
+                      <strong>Store purchase</strong>
+                      <em>
+                        {formatWhen(row.occurred_at)} · {row.payment_method || 'paid'}
+                      </em>
+                    </span>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-[color:var(--capp-navy)]">
+                      {formatMoney(row.total_minor)}
+                    </span>
                   </article>
                 ))
               ))}
           </div>
         </section>
 
-        <aside className="account-desktop-only account-area-actions account-sheet" aria-label="Quick actions">
-          <h2 className="account-sheet-title">Quick actions</h2>
-          <p className="account-sheet-sub mt-1">Book, queue, settings, and home.</p>
-          <div className="mt-5 flex flex-col gap-2.5">
-            <Button type="button" className="account-btn account-btn-primary min-h-11 w-full justify-start" onClick={() => setBookOpen(true)}>
-              <CalendarPlus data-icon="inline-start" />
-              Book a service
-            </Button>
-            <Button asChild className="account-btn account-btn-secondary min-h-11 w-full justify-start">
-              <Link to={queueHref}>
-                <Radio data-icon="inline-start" />
-                Open live queue
-              </Link>
-            </Button>
-            <Button type="button" className="account-btn account-btn-secondary min-h-11 w-full justify-start" onClick={() => openSettings('alerts')}>
-              <Settings data-icon="inline-start" />
-              Settings
-            </Button>
-            <Button asChild variant="ghost" className="min-h-11 w-full justify-start rounded-xl">
-              <Link to="/">
-                <Home data-icon="inline-start" />
-                Back to home
-              </Link>
-            </Button>
-          </div>
-          <div className="mt-5 rounded-xl border border-[color:var(--account-line)] bg-[color:var(--account-soft,#f5f7fc)] p-3.5">
-            <p className="mb-2.5 text-xs font-bold text-[color:var(--account-ink,#020a31)]">Push alerts</p>
-            <PushToggle audience="customer" surface="light" />
-          </div>
-        </aside>
-      </div>
-
-      <nav className="account-dock account-mobile-only" aria-label="Primary">
-        <button type="button" className="account-dock-item" onClick={() => setBookOpen(true)}>
-          <CalendarPlus className="size-5" aria-hidden />
-          <span>Book</span>
-        </button>
-        <Link to={queueHref} className="account-dock-item account-dock-item-primary">
-          <Radio className="size-5" aria-hidden />
-          <span>Live queue</span>
-        </Link>
-        <button type="button" className="account-dock-item" onClick={() => openSettings('alerts')}>
-          <Settings className="size-5" aria-hidden />
-          <span>Settings</span>
-        </button>
-      </nav>
+        <div className="capp-ticket">
+          <p className="capp-label">Visit alerts</p>
+          <PushToggle audience="customer" surface="light" />
+        </div>
+      </CustomerAppFrame>
 
       <CustomerBookingModal
         open={bookOpen}
@@ -711,15 +579,6 @@ export default function CustomerAccountPage() {
         onUpdated={load}
         initialTab={settingsTab}
       />
-    </section>
-  )
-}
-
-function EmptyBlock({ title, children }) {
-  return (
-    <div className="account-empty">
-      {title ? <strong>{title}</strong> : null}
-      {children}
-    </div>
+    </>
   )
 }

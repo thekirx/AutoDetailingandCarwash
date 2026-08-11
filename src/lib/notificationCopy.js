@@ -69,12 +69,14 @@ export function resolveNotificationScope({ scope, service_id, branch_slug } = {}
   return { ok: true, scope: s, service_id: svc, branch_slug: br }
 }
 
-/** Clickable insert tokens for reminder / broadcast composers. */
+/** Clickable insert tokens for reminder / broadcast / system templates. */
 export const MESSAGE_TOKENS = [
   { token: '{name}', label: 'Name', hint: 'Customer first/full name' },
   { token: '{plate}', label: 'Plate', hint: 'Vehicle plate' },
   { token: '{service}', label: 'Service', hint: 'Service name' },
   { token: '{branch}', label: 'Branch', hint: 'Branch name' },
+  { token: '{when}', label: 'When', hint: 'Scheduled date and time' },
+  { token: '{appUrl}', label: 'App URL', hint: 'Download or book link' },
 ]
 
 /**
@@ -92,7 +94,7 @@ export function insertMessageToken(text, token, caret = null) {
 
 /**
  * Substitute smart tokens in a custom reminder / SMS message.
- * Tokens: {plate} {service} {name} {branch}
+ * Tokens: {plate} {service} {name} {branch} {when} {appUrl}
  * Missing vars keep the token when keepMissing is true (broadcast draft preview);
  * reminders use defaults for a finished SMS.
  */
@@ -109,6 +111,8 @@ export function renderNotificationMessage(template, vars = {}, { keepMissing = f
     .replaceAll('{service}', pick('service', 'detailing'))
     .replaceAll('{name}', pick('name', 'there'))
     .replaceAll('{branch}', pick('branch', 'Hakum'))
+    .replaceAll('{when}', pick('when', ''))
+    .replaceAll('{appUrl}', pick('appUrl', 'hakumautocare.com'))
 }
 
 export function clampNotificationCopy({ channel, title, message } = {}) {

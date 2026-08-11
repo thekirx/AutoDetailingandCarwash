@@ -29,6 +29,7 @@ import {
   Users,
   Wallet,
   X,
+  Newspaper,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -97,6 +98,7 @@ const iconMap = {
   Bell,
   History,
   Clock,
+  Newspaper,
 }
 
 function formatRole(role) {

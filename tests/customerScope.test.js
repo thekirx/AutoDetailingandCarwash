@@ -53,6 +53,35 @@ describe('Auth lookup anti-enumeration (CUST-H1)', () => {
     )
   })
 
+  it('exposes Team Lead prefill while the account still needs a password or invite', () => {
+    const pending = publicAuthLookupPayload({
+      status: 'needs_password',
+      kind: 'phone',
+      login_email: 'secret@x.com',
+      prefill: { full_name: 'Ana', plate: 'ABC123', email: 'c09@customers.hakumautocare.com' },
+    })
+    assert.equal(pending.login_email, undefined)
+    assert.equal(pending.source, 'team_lead')
+    assert.equal(pending.prefill.full_name, 'Ana')
+    assert.equal(pending.prefill.email, '')
+
+    const invite = publicAuthLookupPayload({
+      status: 'needs_invite',
+      kind: 'phone',
+      login_email: 'secret@x.com',
+      prefill: { full_name: 'Ana', plate: 'ABC123' },
+    })
+    assert.equal(invite.source, 'team_lead')
+    assert.equal(invite.prefill.full_name, 'Ana')
+
+    const ready = publicAuthLookupPayload({
+      status: 'ready',
+      kind: 'phone',
+      prefill: { full_name: 'Ana', plate: 'ABC123' },
+    })
+    assert.equal(ready.prefill, undefined)
+  })
+
   it('keeps login_email for plate when ready/needs_password', () => {
     assert.equal(
       publicAuthLookupPayload({

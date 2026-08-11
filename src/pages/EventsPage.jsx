@@ -15,7 +15,7 @@ export default function EventsPage() {
   useEffect(() => {
     supabase
       .from('events')
-      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug')
+      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, form_id, ops_forms ( id, name, slug, public_enabled, status )')
       .eq('is_published', true)
       .order('starts_at')
       .then(({ data, error: e }) => {
@@ -56,26 +56,53 @@ export default function EventsPage() {
         <div className="public-shell">
           <p className="eyebrow eyebrow-light">Community</p>
           <h1 className="display-title">Events &amp; meets.</h1>
-          <p className="inner-hero-copy">Promotions, branch events, and car meets from Hakum Auto Care.</p>
+          <p className="inner-hero-copy">Promotions, branch days, and car meets from Hakum Auto Care.</p>
         </div>
       </section>
       <section className="content-section">
-        <div className="public-shell numbered-grid">
+        <div className="public-shell hakum-event-stack">
           {error && <p className="form-error">{error}</p>}
           {status === 'success' && <p>Registration confirmed.</p>}
           {!events.length && !error && <p>No published events yet. Check back soon.</p>}
-          {events.map((item, index) => (
-            <article key={item.id}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <h2>{item.title}</h2>
-              <p>{item.description}</p>
-              <p>{item.branch} · {new Date(item.starts_at).toLocaleString()}</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
-                {item.slug && <Link className="button button-blue" to={`/events/${item.slug}`}>Open share page</Link>}
-                <button type="button" className="button button-blue" onClick={() => setRegisterFor(item.id)}>Register</button>
-              </div>
-            </article>
-          ))}
+          {events.map((item) => {
+            const attached = item.ops_forms
+            const formOpen = attached?.slug && attached.public_enabled && attached.status === 'published'
+            return (
+              <article key={item.id} className="hakum-event-card">
+                {item.banner_url ? (
+                  <Link to={`/events/${item.slug}`} className="hakum-event-card-media">
+                    <img src={item.banner_url} alt="" loading="lazy" />
+                  </Link>
+                ) : null}
+                <div className="hakum-event-card-body">
+                  <p className="hakum-blog-meta">
+                    {item.branch ? `${item.branch} · ` : ''}
+                    {new Date(item.starts_at).toLocaleString()}
+                  </p>
+                  <h2>
+                    <Link to={`/events/${item.slug}`}>{item.title}</Link>
+                  </h2>
+                  {item.description ? <p>{item.description}</p> : null}
+                  <div className="hakum-event-actions">
+                    {item.slug && (
+                      <Link className="button button-blue" to={`/events/${item.slug}`}>
+                        Details
+                      </Link>
+                    )}
+                    {formOpen ? (
+                      <Link className="button button-blue" to={`/f/${attached.slug}`}>
+                        {attached.name}
+                      </Link>
+                    ) : (
+                      <button type="button" className="button button-blue" onClick={() => setRegisterFor(item.id)}>
+                        Register
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            )
+          })}
         </div>
         {registerFor && (
           <form onSubmit={register} className="public-shell booking-form" style={{ marginTop: 40, maxWidth: 480 }}>
@@ -97,6 +124,8 @@ export default function EventsPage() {
           </form>
         )}
         <div className="public-shell" style={{ marginTop: 48 }}>
+          <Link className="dark-link" to="/blog">Journal</Link>
+          {' · '}
           <Link className="dark-link" to="/">Back home</Link>
         </div>
       </section>

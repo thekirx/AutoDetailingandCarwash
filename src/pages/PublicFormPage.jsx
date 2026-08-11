@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import BrandedOpsForm from '@/components/BrandedOpsForm'
-import { normalizeFields, validatePayload } from '@/lib/opsForms'
+import { extractComplaintBranch, normalizeFields, validatePayload } from '@/lib/opsForms'
 import { supabase } from '@/lib/supabase'
 
 export default function PublicFormPage() {
@@ -38,16 +38,34 @@ export default function PublicFormPage() {
     }
     setStatus('loading')
     setError('')
-    const { error: err } = await supabase.rpc('submit_public_ops_form', {
+    const submittedPayload = { ...values }
+    const { data, error: err } = await supabase.rpc('submit_public_ops_form', {
       p_slug: slug,
-      p_payload: values,
+      p_payload: submittedPayload,
       p_calendar_at: null,
-      p_respondent_label: values.customer_name || values.name || values.full_name || null,
+      p_respondent_label: submittedPayload.customer_name || submittedPayload.name || submittedPayload.full_name || null,
     })
     if (err) {
       setError(err.message)
       setStatus('idle')
       return
+    }
+    if (form.kind === 'complaint') {
+      try {
+        await fetch('/api/notify-ops-form', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slug,
+            form_name: form.name,
+            payload: submittedPayload,
+            submission_id: data?.id || null,
+            branch: extractComplaintBranch(submittedPayload),
+          }),
+        })
+      } catch {
+        // best-effort push
+      }
     }
     setStatus('success')
     setValues({})
@@ -61,7 +79,7 @@ export default function PublicFormPage() {
         {!form && !error ? <p className="hakum-form-loading">Loading form…</p> : null}
         {(form || error) && (
           <BrandedOpsForm
-            form={form || { name: 'Form unavailable', fields: [], kind: 'custom' }}
+            form={form || { name: 'Form unavailable', fields: [], kind: 'complaint' }}
             values={values}
             onChange={setValues}
             onSubmit={onSubmit}

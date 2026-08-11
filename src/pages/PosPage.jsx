@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
-import { Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
+import { Cake, Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessPos, canManageServices, canSeeAllBranches, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
@@ -76,6 +76,7 @@ export default function PosPage() {
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
   const [activeMembership, setActiveMembership] = useState(null)
+  const [birthdayPerk, setBirthdayPerk] = useState(null)
   const [membershipsEnabled, setMembershipsEnabled] = useState(true)
 
   const membershipContext = useMemo(
@@ -276,12 +277,31 @@ export default function PosPage() {
     }
   }
 
+  async function refreshBirthdayPerk(customerIdValue) {
+    if (!customerIdValue) {
+      setBirthdayPerk(null)
+      return
+    }
+    const { data } = await supabase
+      .from('customer_birthday_perks')
+      .select('id, perk_year, status, expires_at')
+      .eq('customer_id', customerIdValue)
+      .eq('status', 'available')
+      .gt('expires_at', new Date().toISOString())
+      .order('perk_year', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    setBirthdayPerk(data || null)
+  }
+
   function clearCustomerLink() {
     setCustomerId('')
     setLinkedCustomer(null)
     setCustomerHits([])
     setCustomerSearch('')
     setActiveMembership(null)
+    setBirthdayPerk(null)
+    setBirthdayPerk(null)
     setCart((current) =>
       priceCartForMembership(current, {
         membershipsEnabled: false,
@@ -298,20 +318,22 @@ export default function PosPage() {
     setPaymentMethod('cash')
   }
 
-  function addToCart(item, { loyaltyAward = false } = {}) {
+  function addToCart(item, { loyaltyAward = false, birthdayAward = false } = {}) {
     setActiveHandoff(null)
     const listPrice = item.price_minor
+    const free = loyaltyAward || birthdayAward
     const priced = priceCartForMembership(
       [
         {
           ...item,
-          key: loyaltyAward ? `${item.key}-loyalty` : item.key,
+          key: birthdayAward ? `${item.key}-birthday` : loyaltyAward ? `${item.key}-loyalty` : item.key,
           quantity: 1,
           list_price_minor: listPrice,
           unit_price_minor: listPrice,
           price_minor: listPrice,
-          is_loyalty_award: loyaltyAward,
-          name: loyaltyAward ? `${item.name} (loyalty award)` : item.name,
+          is_loyalty_award: free,
+          is_birthday_award: birthdayAward,
+          name: birthdayAward ? `${item.name} (birthday)` : loyaltyAward ? `${item.name} (loyalty award)` : item.name,
           from_handoff: false,
         },
       ],
@@ -363,9 +385,12 @@ export default function PosPage() {
       toast.message('Queue ticket has no linked service — checkout will record the amount without loyalty stamps.')
     }
     setCartOpen(true)
-    if (cid) refreshMembershipForCustomer(cid)
-    else {
+    if (cid) {
+      refreshMembershipForCustomer(cid)
+      refreshBirthdayPerk(cid)
+    } else {
       setActiveMembership(null)
+      setBirthdayPerk(null)
     }
   }
 
@@ -396,6 +421,7 @@ export default function PosPage() {
     setCustomerSearch('')
     toast.success(`Linked · ${hit.full_name}`)
     refreshMembershipForCustomer(hit.id)
+    refreshBirthdayPerk(hit.id)
   }
 
   async function checkout() {
@@ -436,7 +462,8 @@ export default function PosPage() {
       noteParts.push(`Walk-in: ${[guestName.trim(), guestPhone.trim()].filter(Boolean).join(' · ')}`)
     }
     if (linkedCustomer?.plate) noteParts.push(`Plate ${linkedCustomer.plate}`)
-    if (cart.some((l) => l.is_loyalty_award)) noteParts.push('Includes loyalty award line')
+    if (cart.some((l) => l.is_loyalty_award && !l.is_birthday_award)) noteParts.push('Includes loyalty award line')
+    if (cart.some((l) => l.is_birthday_award)) noteParts.push('Includes birthday free service')
     if (cart.some((l) => l.is_membership_included)) noteParts.push('Includes membership service')
     if (cart.some((l) => l.membership_discount_applied) && activeMembership?.name) {
       noteParts.push(`Member ${activeMembership.name} ${activeMembership.discount_percent}% off`)
@@ -475,7 +502,15 @@ export default function PosPage() {
       }
     }
     // Loyalty claim thank-you SMS — fire and forget, server dedupes per sale.
-    if (resolvedCustomerId && cart.some((l) => l.is_loyalty_award)) {
+    if (resolvedCustomerId && cart.some((l) => l.is_birthday_award)) {
+      supabase.rpc('claim_birthday_perk', {
+        p_customer_id: resolvedCustomerId,
+        p_sale_id: data?.sale_id || null,
+      }).then(({ error: claimErr }) => {
+        if (claimErr) toast.warning(claimErr.message || 'Birthday perk not marked claimed')
+      })
+    }
+    if (resolvedCustomerId && cart.some((l) => l.is_loyalty_award && !l.is_birthday_award)) {
       getAccessTokenFresh()
         .then((token) => {
           if (!token) return null
@@ -623,6 +658,7 @@ export default function PosPage() {
           <CatalogGrid
             items={merchItems}
             onAdd={addToCart}
+            birthdayPerk={birthdayPerk}
             empty="No merch items for this branch yet."
           />
         </div>
@@ -637,10 +673,10 @@ export default function PosPage() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="services" className="mt-4">
-            <CatalogGrid items={catalog} onAdd={addToCart} empty="No services match." />
+            <CatalogGrid items={catalog} onAdd={addToCart} birthdayPerk={birthdayPerk} empty="No services match." />
           </TabsContent>
           <TabsContent value="merch" className="mt-4">
-            <CatalogGrid items={catalog} onAdd={addToCart} empty="No merch items. Add stock under Manage merch." />
+            <CatalogGrid items={catalog} onAdd={addToCart} birthdayPerk={birthdayPerk} empty="No merch items. Add stock under Manage merch." />
           </TabsContent>
         </Tabs>
       )}
@@ -786,6 +822,9 @@ export default function PosPage() {
                     <p className="text-xs text-muted-foreground">
                       {[linkedCustomer.phone, linkedCustomer.plate].filter(Boolean).join(' · ') || 'Account linked'}
                     </p>
+                    {birthdayPerk ? (
+                      <p className="mt-1 text-xs font-medium text-primary">Birthday free service available</p>
+                    ) : null}
                     {activeMembership ? (
                       <p className="mt-1 text-xs font-medium text-primary">
                         {activeMembership.name}
@@ -917,7 +956,7 @@ export default function PosPage() {
   )
 }
 
-function CatalogGrid({ items, onAdd, empty }) {
+function CatalogGrid({ items, onAdd, empty, birthdayPerk }) {
   if (!items.length) return <p className="text-sm text-muted-foreground">{empty}</p>
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
@@ -936,7 +975,7 @@ function CatalogGrid({ items, onAdd, empty }) {
                 {item.meta && <p className="mt-2 text-xs text-muted-foreground">{item.meta}</p>}
               </CardContent>
             </button>
-            <div className="border-t border-border px-4 py-2">
+            <div className="flex flex-wrap gap-1 border-t border-border px-4 py-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -947,6 +986,18 @@ function CatalogGrid({ items, onAdd, empty }) {
                 <Gift className="size-3.5" aria-hidden />
                 Loyalty / free
               </Button>
+              {birthdayPerk ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2 text-xs text-primary"
+                  onClick={() => onAdd(item, { birthdayAward: true })}
+                >
+                  <Cake className="size-3.5" aria-hidden />
+                  Birthday
+                </Button>
+              ) : null}
             </div>
           </Card>
         </div>

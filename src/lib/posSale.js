@@ -144,8 +144,10 @@ export function buildPosSalePayload({ branch, customerId, paymentMethod, cart, a
       product_id: line.item_type === 'product' && line.id ? line.id : null,
       name: line.name,
       quantity: line.quantity,
-      unit_price_minor: line.is_loyalty_award || line.is_membership_included ? 0 : line.unit_price_minor,
-      is_loyalty_award: Boolean(line.is_loyalty_award),
+      unit_price_minor:
+        line.is_loyalty_award || line.is_birthday_award || line.is_membership_included ? 0 : line.unit_price_minor,
+      is_loyalty_award: Boolean(line.is_loyalty_award || line.is_birthday_award),
+      is_birthday_award: Boolean(line.is_birthday_award),
       is_membership_included: Boolean(line.is_membership_included),
     })),
   }

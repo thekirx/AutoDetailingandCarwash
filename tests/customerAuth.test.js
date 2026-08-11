@@ -9,9 +9,10 @@ import {
 import { phoneLoginEmail as serverPhoneLoginEmail } from '../server/provisionCustomer.mjs'
 
 describe('customer account login email', () => {
-  it('maps PH mobile to synthetic login email', () => {
-    assert.equal(phoneLoginEmail('0917-123-4567'), 'c09171234567@customers.hakumautocare.com')
-    assert.equal(serverPhoneLoginEmail('+63 917 123 4567'), 'c639171234567@customers.hakumautocare.com')
+  it('maps PH mobile to one canonical synthetic login email', () => {
+    const expected = 'c09171234567@customers.hakumautocare.com'
+    assert.equal(phoneLoginEmail('0917-123-4567'), expected)
+    assert.equal(serverPhoneLoginEmail('+63 917 123 4567'), expected)
   })
 
   it('rejects short phones', () => {

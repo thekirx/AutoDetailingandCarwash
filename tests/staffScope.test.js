@@ -42,9 +42,10 @@ describe('Staff capability matrix', () => {
     assert.equal(canAccessFinance(p), false)
     assert.equal(canAccessConsole(p), false)
     assert.equal(canManageCrew(p), false)
+    assert.equal(allowRoute(p, 'planning'), true)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/attendance', '/operations/my-tasks'],
+      ['/operations/attendance', '/operations/my-tasks', '/operations/planning?tab=forms'],
     )
   })
 })

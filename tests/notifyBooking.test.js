@@ -31,6 +31,21 @@ assert.match(checking.sms, /final checking/i)
 
 assert.equal(buildBookingNotifyPayload(booking, 'nope'), null)
 
+const redo = buildBookingNotifyPayload(booking, 'redo')
+assert.equal(redo.kind, 'booking_status')
+assert.match(redo.sms, /redoing/i)
+
+const off = buildBookingNotifyPayload(booking, 'pending', {
+  'booking.pending.customer': { enabled: false },
+})
+assert.equal(off, null)
+
+const custom = buildBookingNotifyPayload(booking, 'pending', {
+  'booking.pending.customer': { enabled: true, title: 'Got it {name}', body: 'At {branch}', sms_body: 'SMS {plate}' },
+})
+assert.equal(custom.title, 'Got it Ana')
+assert.equal(custom.sms, 'SMS ABC1234')
+
 const opsTargets = buildOpsPushTargets(booking)
 assert.equal(opsTargets.length, 2)
 assert.deepEqual(opsTargets[0].roles, ['admin', 'team_lead', 'staff'])

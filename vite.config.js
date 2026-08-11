@@ -89,6 +89,10 @@ function provisionApiPlugin() {
         const { handleNotifyBookingRequest } = await import('./server/notifyBookingApi.mjs')
         return handleNotifyBookingRequest(req, res)
       })
+      mount('/api/notify-ops-form', async (req, res) => {
+        const { handleNotifyOpsFormRequest } = await import('./server/notifyOpsFormApi.mjs')
+        return handleNotifyOpsFormRequest(req, res)
+      })
       mount('/api/lifecycle-sms', async (req, res) => {
         const { handleLifecycleSmsRequest } = await import('./server/lifecycleSmsApi.mjs')
         return handleLifecycleSmsRequest(req, res)
@@ -105,6 +109,14 @@ function provisionApiPlugin() {
       mount('/api/notification-broadcast-kinds', async (req, res) => {
         const { handleNotificationBroadcastKindsRequest } = await import('./server/notificationBroadcastKindsApi.mjs')
         return handleNotificationBroadcastKindsRequest(req, res)
+      })
+      mount('/api/notification-templates', async (req, res) => {
+        const { handleNotificationTemplatesRequest } = await import('./server/notificationTemplatesApi.mjs')
+        return handleNotificationTemplatesRequest(req, res)
+      })
+      mount('/api/birthday-greetings', async (req, res) => {
+        const { handleBirthdayGreetingsRequest } = await import('./server/birthdayGreetingsApi.mjs')
+        return handleBirthdayGreetingsRequest(req, res)
       })
       mount('/api/send-finance-quote', async (req, res, helpers) => {
         const { handleFinanceQuoteRequest } = await import('./server/sendFinanceQuote.mjs')

@@ -2,12 +2,17 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ThemeProvider } from 'next-themes'
 import { BrowserRouter } from 'react-router-dom'
+import Papa from 'papaparse'
 import App from './App'
 import { AuthProvider } from './auth/AuthProvider'
 import AppErrorBoundary from '@/components/AppErrorBoundary'
 import CookieConsent from '@/components/CookieConsent'
 import { Toaster } from '@/components/ui/sonner'
 import './styles.css'
+import './styles-customer-app.css'
+
+// papaparse is used by finance CSV exports; expose it as a global for the pure helper.
+if (typeof window !== 'undefined' && !window.Papa) window.Papa = Papa
 
 // After a deploy, a stale tab/SW can request deleted hashed chunks. Reload once so the new index wins.
 const PRELOAD_RELOAD_KEY = 'hakum-preload-reload'

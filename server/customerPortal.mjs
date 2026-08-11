@@ -24,7 +24,7 @@ async function requireCustomer(accessToken) {
   const userId = userData.user.id
   const { data: customer, error: customerError } = await admin
     .from('customers')
-    .select('id, full_name, phone, email, role')
+    .select('id, full_name, phone, email, role, date_of_birth')
     .eq('id', userId)
     .eq('role', 'customer')
     .eq('is_archived', false)
@@ -80,7 +80,7 @@ export async function loadCustomerPortal({ accessToken }) {
         .eq('is_active', true)
         .order('sort_order')
         .order('threshold_points'),
-      admin.from('customers').select('loyalty_stamps, loyalty_points, phone, email, full_name').eq('id', userId).maybeSingle(),
+      admin.from('customers').select('loyalty_stamps, loyalty_points, phone, email, full_name, date_of_birth').eq('id', userId).maybeSingle(),
       admin
         .from('vehicles')
         .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color')
@@ -96,6 +96,33 @@ export async function loadCustomerPortal({ accessToken }) {
         .limit(1)
         .maybeSingle(),
     ])
+
+  let birthdayPerk = null
+  try {
+    const { grantBirthdayIfDue } = await import('./birthdayGreetings.mjs')
+    const granted = await grantBirthdayIfDue(admin, {
+      id: userId,
+      full_name: customerRow.data?.full_name || customer.full_name,
+      phone: customerRow.data?.phone || customer.phone,
+      date_of_birth: customerRow.data?.date_of_birth || customer.date_of_birth,
+    })
+    if (granted?.perk) birthdayPerk = granted.perk
+  } catch {
+    /* never block portal on birthday */
+  }
+
+  if (!birthdayPerk) {
+    const { data: perkRow } = await admin
+      .from('customer_birthday_perks')
+      .select('id, perk_year, status, expires_at, claimed_at, greeting_sent_at')
+      .eq('customer_id', userId)
+      .eq('status', 'available')
+      .gt('expires_at', new Date().toISOString())
+      .order('perk_year', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    birthdayPerk = perkRow || null
+  }
 
   const queueRows = queue.data || []
   const queueByBranch = {}
@@ -132,6 +159,7 @@ export async function loadCustomerPortal({ accessToken }) {
     full_name: customerRow.data?.full_name || customer?.full_name || user.user_metadata?.full_name || 'Customer',
     phone: customerRow.data?.phone || customer?.phone || user.user_metadata?.phone || null,
     email: customerRow.data?.email || customer?.email || user.email,
+    date_of_birth: customerRow.data?.date_of_birth || customer?.date_of_birth || null,
     role: 'customer',
   }
 
@@ -162,6 +190,10 @@ export async function loadCustomerPortal({ accessToken }) {
       loyaltyPoints: pointsEnabled ? (customerRow.data?.loyalty_points ?? 0) : 0,
       milestones: stampsEnabled ? (loyaltyMilestones.data || []) : [],
       membership,
+    },
+    birthday: {
+      date_of_birth: profile.date_of_birth,
+      perk: birthdayPerk && birthdayPerk.status === 'available' ? birthdayPerk : null,
     },
   }
 }
@@ -263,6 +295,32 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const { error } = await admin.from('customers').update({ email }).eq('id', userId)
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
     return { ok: true, email }
+  }
+
+  if (action === 'update-birthday') {
+    const raw = String(body.date_of_birth || '').trim()
+    if (!raw) {
+      const { error } = await admin.from('customers').update({ date_of_birth: null }).eq('id', userId)
+      if (error) throw Object.assign(new Error(error.message), { status: 400 })
+      return { ok: true, date_of_birth: null }
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      throw Object.assign(new Error('Use a valid birthday date.'), { status: 400 })
+    }
+    const year = Number(raw.slice(0, 4))
+    if (year < 1920 || year > new Date().getFullYear()) {
+      throw Object.assign(new Error('Birthday year looks off.'), { status: 400 })
+    }
+    const { error } = await admin.from('customers').update({ date_of_birth: raw }).eq('id', userId)
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    try {
+      const { grantBirthdayIfDue } = await import('./birthdayGreetings.mjs')
+      const { data: row } = await admin.from('customers').select('id, full_name, phone, date_of_birth').eq('id', userId).maybeSingle()
+      if (row) await grantBirthdayIfDue(admin, row)
+    } catch {
+      /* greeting is best-effort */
+    }
+    return { ok: true, date_of_birth: raw }
   }
 
   if (action === 'update-phone') {

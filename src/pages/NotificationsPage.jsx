@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Bell, Megaphone, Pencil, ShieldCheck, Trash2 } from 'lucide-react'
+import { Bell, ListTree, Megaphone, Pencil, ShieldCheck, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import {
@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import NotificationTemplatesPanel from '@/pages/notifications/NotificationTemplatesPanel'
 
 const EMPTY_REMINDER = {
   scope: 'whole',
@@ -64,13 +65,15 @@ export default function NotificationsPage() {
 
   const tabParam = params.get('tab')
   const tab =
-    tabParam === 'broadcast' && canBroadcast
-      ? 'broadcast'
-      : tabParam === 'reminders' && canReminders
-        ? 'reminders'
-        : canReminders
+    tabParam === 'templates' && canReminders
+      ? 'templates'
+      : tabParam === 'broadcast' && canBroadcast
+        ? 'broadcast'
+        : tabParam === 'reminders' && canReminders
           ? 'reminders'
-          : 'broadcast'
+          : canReminders
+            ? 'reminders'
+            : 'broadcast'
 
   function setTab(next) {
     setParams(next === 'reminders' ? {} : { tab: next }, { replace: true })
@@ -85,7 +88,7 @@ export default function NotificationsPage() {
           Notifications
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Push and SMS for paint-maintenance reminders and customer broadcasts — scoped by network, branch, or service.
+          All shop push and SMS copy, paint-maintenance reminders, and customer broadcasts. Super Admin can edit every template.
         </p>
       </header>
 
@@ -106,7 +109,10 @@ export default function NotificationsPage() {
       <div
         role="tablist"
         aria-label="Notification sections"
-        className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-muted/40 p-1"
+        className={cn(
+          'grid gap-1 rounded-xl border border-border bg-muted/40 p-1',
+          canReminders && canBroadcast ? 'grid-cols-3' : 'grid-cols-2',
+        )}
       >
         {canReminders ? (
           <button
@@ -123,6 +129,23 @@ export default function NotificationsPage() {
           >
             <Bell className="size-4" aria-hidden />
             Reminders
+          </button>
+        ) : null}
+        {canReminders ? (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'templates'}
+            className={cn(
+              'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition',
+              tab === 'templates'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+            onClick={() => setTab('templates')}
+          >
+            <ListTree className="size-4" aria-hidden />
+            Templates
           </button>
         ) : null}
         {canBroadcast ? (
@@ -146,6 +169,7 @@ export default function NotificationsPage() {
       </div>
 
       {tab === 'reminders' && canReminders ? <ReminderRulesPanel /> : null}
+      {tab === 'templates' && canReminders ? <NotificationTemplatesPanel /> : null}
       {tab === 'broadcast' && canBroadcast ? (
         <BroadcastPanel canManageKinds={canReminders} />
       ) : null}

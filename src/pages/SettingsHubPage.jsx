@@ -1,15 +1,24 @@
 import { Link, Navigate } from 'react-router-dom'
-import { Building2, ScrollText, Shield, UserPlus } from 'lucide-react'
+import { Building2, Newspaper, ScrollText, Shield, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessAudit,
   canAccessConsole,
   canManageBranches,
   canManagePeople,
+  canManageSiteContent,
 } from '@/auth/permissions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const TILES = [
+  {
+    key: 'content',
+    title: 'Blogs & Events',
+    description: 'Publish journal posts and event pages with images, video, and form buttons.',
+    to: '/operations/content',
+    icon: Newspaper,
+    allow: canManageSiteContent,
+  },
   {
     key: 'branches',
     title: 'Branches',

@@ -5,8 +5,10 @@
  * per-user sms_opt_in, and are idempotent via sms_events (event_type + customer).
  */
 import { createClient } from '@supabase/supabase-js'
+import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { busybeeSendSms } from './busybee.mjs'
 import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
+import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 
 export function adminDb() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -17,8 +19,12 @@ export function adminDb() {
 
 export const LIFECYCLE_KINDS = ['welcome_app', 'loyalty_claim', 'visit_milestone_4', 'visit_milestone_10']
 
-export function buildLifecycleSms(kind, { appUrl = '' } = {}) {
+export function buildLifecycleSms(kind, { appUrl = '', name = '', templates = null } = {}) {
   const url = String(appUrl || '').trim()
+  const tpl = templates?.[`lifecycle.${kind}`]
+  if (tpl?.sms_body) {
+    return applyTemplateText(tpl.sms_body, { appUrl: url || 'hakumautocare.com', name: name || 'there' })
+  }
   switch (kind) {
     case 'welcome_app':
       return (
@@ -104,8 +110,17 @@ async function userOptedOut(db, customerId) {
  * (pass resolveVisitMilestone().dedupeKey for milestones so each 10-visit
  * cycle re-arms).
  */
-export async function sendLifecycleSms(db, { kind, eventType = kind, customerId, phone, bookingId = null, appUrl = '' }) {
-  const message = buildLifecycleSms(kind, { appUrl })
+export async function sendLifecycleSms(db, { kind, eventType = kind, customerId, phone, bookingId = null, appUrl = '', name = '' }) {
+  let templates = null
+  try {
+    templates = await loadTemplateMap(db)
+  } catch {
+    templates = null
+  }
+  if (templates && !templateEnabled(templates, `lifecycle.${kind}`)) {
+    return { ok: false, status: 'disabled' }
+  }
+  const message = buildLifecycleSms(kind, { appUrl, name, templates })
   if (!message) return { ok: false, status: 'unknown_kind' }
   if (!customerId) return { ok: false, status: 'missing_customer' }
 

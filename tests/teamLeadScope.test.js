@@ -52,7 +52,7 @@ describe('Team Lead capability matrix', () => {
     assert.equal(allowRoute(p, 'branches'), false)
     assert.equal(allowRoute(p, 'cars'), false)
     assert.equal(allowRoute(p, 'reports'), false)
-    assert.equal(allowRoute(p, 'planning'), false)
+    assert.equal(allowRoute(p, 'planning'), true)
     assert.equal(canAccessConsole(p), false)
     assert.equal(canAccessPos(p), false)
     assert.equal(canAccessFinance(p), false)

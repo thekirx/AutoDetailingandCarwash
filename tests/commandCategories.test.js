@@ -52,7 +52,8 @@ describe('command category IA', () => {
     assert.ok(labels.includes('Floor Board'))
     assert.ok(labels.includes('Car Wash Queue'))
     assert.ok(labels.includes('Detailing Queue'))
-    assert.ok(labels.includes('Hakum Planner'))
+    assert.ok(labels.includes('Planner'))
+    assert.equal(labels.includes('Hakum Planner'), false)
     assert.ok(labels.includes('Settings'))
     assert.equal(canAccessSettings({ role: 'BossMich' }), true)
     const dock = getTeamLeadDock({ role: 'team_lead', branch_slug: 'bacoor' })
@@ -78,6 +79,8 @@ describe('command category IA', () => {
   it('planner form kinds cover specialty boards', () => {
     assert.ok(FORM_KINDS.some((k) => k.value === 'equipment_repair'))
     assert.ok(FORM_KINDS.some((k) => k.value === 'cash_advance'))
+    assert.equal(FORM_KINDS.length, 4)
+    assert.equal(FORM_KINDS.some((k) => k.value === 'custom'), false)
     assert.ok(templateFields('equipment_repair').some((f) => f.key === 'equipment'))
     assert.ok(templateFields('cash_advance').some((f) => f.key === 'amount'))
     const mig = readFileSync(join(root, 'supabase/migrations/20260809220000_planner_specialty_boards.sql'), 'utf8')

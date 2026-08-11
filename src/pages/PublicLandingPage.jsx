@@ -7,6 +7,7 @@ import { PrimaryButton, SecondaryButton, StatCard } from '../components/ui'
 import { aboutImage } from '../data/publicHomeContent'
 import { ceramicPackages, ceramicSection, featuredServices, otherServices } from '../data/publicHomeContent'
 import { usePublicBranches, branchLabel } from '../lib/branches'
+import { supabase } from '../lib/supabase'
 
 const stats = [
   { value: 10, suffix: ' years', label: 'Auto industry experience combined' },
@@ -35,6 +36,82 @@ function AnimatedNumber({ value, suffix }) {
     return () => { observer.disconnect(); cancelAnimationFrame(frame) }
   }, [value])
   return <span ref={ref}>{display.toLocaleString()}{suffix}</span>
+}
+
+function HomeContentTeasers() {
+  const [posts, setPosts] = useState([])
+  const [events, setEvents] = useState([])
+
+  useEffect(() => {
+    Promise.all([
+      supabase
+        .from('blogs')
+        .select('id, title, slug, excerpt, cover_url, published_at')
+        .eq('is_published', true)
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .limit(2),
+      supabase
+        .from('events')
+        .select('id, title, slug, description, starts_at, banner_url, branch')
+        .eq('is_published', true)
+        .order('starts_at', { ascending: true })
+        .limit(2),
+    ]).then(([b, e]) => {
+      setPosts(b.data || [])
+      setEvents(e.data || [])
+    })
+  }, [])
+
+  if (!posts.length && !events.length) return null
+
+  return (
+    <section className="hakum-home-content">
+      <div className="public-shell hakum-home-content-grid">
+        <div className="hakum-home-content-col">
+          <h2 className="section-title">From the journal</h2>
+          <p className="hakum-home-content-lead">Care tips and bay stories for drivers who notice finish.</p>
+          <div className="hakum-home-content-list">
+            {posts.map((post) => (
+              <Link key={post.id} to={`/blog/${post.slug}`} className="hakum-home-content-item">
+                {post.cover_url ? <img src={post.cover_url} alt="" loading="lazy" /> : null}
+                <span>
+                  <strong>{post.title}</strong>
+                  <em>{post.excerpt || 'Read the post'}</em>
+                </span>
+              </Link>
+            ))}
+            {!posts.length && <p className="hakum-home-content-empty">New posts land here soon.</p>}
+          </div>
+          <Link className="about-link" to="/blog">
+            All journal posts <ArrowRight size={18} />
+          </Link>
+        </div>
+        <div className="hakum-home-content-col is-events">
+          <h2 className="section-title light">Upcoming meets</h2>
+          <p className="hakum-home-content-lead is-light">Branch days you can RSVP to from the event page.</p>
+          <div className="hakum-home-content-list">
+            {events.map((ev) => (
+              <Link key={ev.id} to={`/events/${ev.slug}`} className="hakum-home-content-item is-light">
+                {ev.banner_url ? <img src={ev.banner_url} alt="" loading="lazy" /> : null}
+                <span>
+                  <strong>{ev.title}</strong>
+                  <em>
+                    {new Date(ev.starts_at).toLocaleDateString()}
+                    {ev.branch ? ` · ${ev.branch}` : ''}
+                  </em>
+                </span>
+              </Link>
+            ))}
+            {!events.length && <p className="hakum-home-content-empty is-light">No meets posted yet.</p>}
+          </div>
+          <Link className="button button-white" to="/events">
+            All events <ArrowRight size={18} />
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export default function PublicLandingPage() {
@@ -92,7 +169,7 @@ export default function PublicLandingPage() {
           <span className="hero-line hero-line-one">Give your car</span>
           <span className="hero-line hero-line-three">The pampering it deserves</span>
         </h1>
-        <p className="hero-subheading">Expert detailing, precision car care, and the shine that turns heads — all in one place.</p>
+        <p className="hero-subheading">Expert detailing, precision car care, and the shine that turns heads - all in one place.</p>
         <div className="hero-actions">
           <PrimaryButton to="/services">Start now</PrimaryButton>
           <SecondaryButton to="/book">Book a service</SecondaryButton>
@@ -215,8 +292,10 @@ export default function PublicLandingPage() {
       <PPFVisualizer />
     </Suspense>
 
+    <HomeContentTeasers />
+
     <section className="queue-teaser">
-      <div className="public-shell queue-grid"><div><p className="eyebrow eyebrow-light"><Radio size={13}/> Live branch status</p><h2 className="section-title light">Know the queue.<br/>Own your time.</h2></div><div><p>See the customer-safe live service queue before you leave home. No internal records, no clutter — just the status you need.</p><Link className="button button-white" to="/queue">View live queue <ArrowRight size={18}/></Link></div></div>
+      <div className="public-shell queue-grid"><div><p className="eyebrow eyebrow-light"><Radio size={13}/> Live branch status</p><h2 className="section-title light">Know the queue.<br/>Own your time.</h2></div><div><p>See the customer-safe live service queue before you leave home. No internal records, no clutter - just the status you need.</p><Link className="button button-white" to="/queue">View live queue <ArrowRight size={18}/></Link></div></div>
     </section>
 
     <section className="home-branches">

@@ -17,6 +17,11 @@ Short vocabulary for audits and architecture reviews. Expand as seams deepen.
 | Service loyalty weight | `services.loyalty_weight` × qty → stamp delta (0 = never earns) |
 | Membership multiplier | Tier `loyalty_multiplier` on spend points; optional on stamps too |
 | Membership POS pricing | Tier `discount_percent` + `included_services` applied on catalog POS lines (queue handoffs keep floor price) |
+| First-account wizard | Customer onboarding steps: phone → name/plate → birthday perk → password. Interface: `src/lib/customerOnboarding.js` |
+| Team Lead prefill | Queue-provisioned Auth with `must_set_password` autofills name/plate/phone on the wizard; claim path sets the password |
+| Unactivated account | Team Lead queue provision: CRM row (+ optional Auth) with no customer-chosen password. Status `needs_password` or `needs_invite` |
+| Account activate | Customer finishes the wizard on that same `customers.id` so visit history stays linked |
+| Customer account lifecycle | Intent router for sign-in / signup / claim. Interface: `src/lib/customerAccountLifecycle.js` |
 
 ## Intentional denorm
 

@@ -1,7 +1,8 @@
-import { normalizeFields } from '@/lib/opsForms'
+import { formKindLabel, normalizeFields, normalizeFormSettings } from '@/lib/opsForms'
 
 /**
  * Branded Hakum customer form surface — used by /f/:slug and admin Preview.
+ * Reading this as: ops branded form for customers/staff, Hakum blue language, existing DS.
  */
 export default function BrandedOpsForm({
   form,
@@ -15,7 +16,10 @@ export default function BrandedOpsForm({
   footerSlot = null,
 }) {
   const fields = normalizeFields(form?.fields)
-  const kindLabel = String(form?.kind || 'form').replace(/_/g, ' ')
+  const settings = normalizeFormSettings(form?.settings, form?.kind)
+  const kindLabel = formKindLabel(form?.kind)
+  const title = settings.header_title || form?.name || 'Form'
+  const logoUrl = settings.show_logo ? settings.logo_url : ''
 
   function setField(key, value) {
     onChange?.({ ...values, [key]: value })
@@ -25,16 +29,26 @@ export default function BrandedOpsForm({
     <div className={`hakum-form-shell ${preview ? 'is-preview' : ''} ${className}`.trim()}>
       <header className="hakum-form-hero">
         <div className="hakum-form-brand">
-          <span className="hakum-form-mark" aria-hidden>
-            H
-          </span>
+          {logoUrl ? (
+            <img
+              className="hakum-form-logo"
+              src={logoUrl}
+              alt="Hakum Auto Care"
+              width={140}
+              height={40}
+            />
+          ) : (
+            <span className="hakum-form-mark" aria-hidden>
+              H
+            </span>
+          )}
           <div>
             <p className="hakum-form-eyebrow">Hakum Auto Care</p>
             <p className="hakum-form-kind">{kindLabel}</p>
           </div>
         </div>
         {preview && <span className="hakum-form-preview-badge">Customer preview</span>}
-        <h1 className="hakum-form-title">{form?.name || 'Form'}</h1>
+        <h1 className="hakum-form-title">{title}</h1>
         {form?.description ? <p className="hakum-form-lead">{form.description}</p> : null}
       </header>
 

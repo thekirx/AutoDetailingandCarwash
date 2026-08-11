@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import { supabase } from '@/lib/supabase'
 import { shareFormUrl } from '@/lib/opsForms'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
@@ -8,6 +9,7 @@ import FormLegalNotice from '@/components/FormLegalNotice'
 export default function EventSharePage() {
   const { slug } = useParams()
   const [event, setEvent] = useState(null)
+  const [forms, setForms] = useState([])
   const [error, setError] = useState('')
   const [form, setForm] = useState({ name: '', phone: '', email: '' })
   const [status, setStatus] = useState('idle')
@@ -15,18 +17,27 @@ export default function EventSharePage() {
 
   useEffect(() => {
     if (!slug) return
-    supabase
-      .from('events')
-      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, is_published, form_id, ops_forms ( id, name, slug, public_enabled, status )')
-      .eq('slug', slug)
-      .eq('is_published', true)
-      .maybeSingle()
-      .then(({ data, error: e }) => {
-        if (e) setError(e.message)
-        else if (!data) setError('Event not found or not published.')
-        else setEvent(data)
-      })
+    Promise.all([
+      supabase
+        .from('events')
+        .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, is_published, form_id, content_blocks, ops_forms ( id, name, slug, public_enabled, status )')
+        .eq('slug', slug)
+        .eq('is_published', true)
+        .maybeSingle(),
+      supabase.from('ops_forms').select('id, name, slug, public_enabled, status').eq('is_active', true),
+    ]).then(([ev, fo]) => {
+      if (ev.error) setError(ev.error.message)
+      else if (!ev.data) setError('Event not found or not published.')
+      else setEvent(ev.data)
+      if (!fo.error) setForms(fo.data || [])
+    })
   }, [slug])
+
+  const formsById = useMemo(() => {
+    const map = {}
+    for (const f of forms) map[f.id] = f
+    return map
+  }, [forms])
 
   async function register(e) {
     e.preventDefault()
@@ -56,6 +67,7 @@ export default function EventSharePage() {
 
   const attached = event?.ops_forms
   const formOpen = attached?.slug && attached.public_enabled && attached.status === 'published'
+  const hasBlocks = Array.isArray(event?.content_blocks) && event.content_blocks.length > 0
 
   return (
     <>
@@ -72,48 +84,58 @@ export default function EventSharePage() {
         </div>
       </section>
       <section className="content-section">
-        <div className="public-shell" style={{ maxWidth: 640 }}>
+        <div className="public-shell hakum-article" style={{ maxWidth: 720 }}>
           {error && <p className="form-error">{error}</p>}
           {status === 'success' && <p>Registration confirmed.</p>}
           {event && (
             <>
-              {event.description && <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{event.description}</p>}
+              {event.banner_url ? (
+                <img className="hakum-article-cover" src={event.banner_url} alt="" />
+              ) : null}
+              {event.description && !hasBlocks ? (
+                <p className="hakum-block-p" style={{ whiteSpace: 'pre-wrap' }}>{event.description}</p>
+              ) : null}
+              {event.description && hasBlocks ? (
+                <p className="hakum-block-p">{event.description}</p>
+              ) : null}
               {event.ends_at && (
-                <p style={{ marginTop: 12, opacity: 0.8 }}>Ends {new Date(event.ends_at).toLocaleString()}</p>
+                <p className="hakum-blog-meta">Ends {new Date(event.ends_at).toLocaleString()}</p>
               )}
+              <ContentBlockRenderer blocks={event.content_blocks} formsById={formsById} />
               {formOpen && (
-                <p style={{ marginTop: 24, padding: 16, border: '1px solid var(--color-border-light, #e5e7eb)', borderRadius: 12 }}>
-                  This event has a form: <strong>{attached.name}</strong>
-                  <br />
-                  <Link className="dark-link" to={`/f/${attached.slug}`} style={{ display: 'inline-block', marginTop: 8 }}>
-                    Open form →
+                <p className="hakum-block-cta-wrap">
+                  <Link className="hakum-block-cta is-primary" to={`/f/${attached.slug}`}>
+                    Open {attached.name}
                   </Link>
-                  {' '}
-                  <a className="dark-link" href={shareFormUrl(attached.slug)} style={{ marginLeft: 8 }}>
+                  <a className="dark-link" href={shareFormUrl(attached.slug)} style={{ marginLeft: 12 }}>
                     Direct link
                   </a>
                 </p>
               )}
-              <form onSubmit={register} className="booking-form" style={{ marginTop: 32 }}>
-                <label>Name<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-                <label>Phone<input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
-                <label>Email<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-                <label className="sr-only" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }}>
-                  Company website
-                  <input
-                    tabIndex={-1}
-                    autoComplete="off"
-                    value={guard.honeypot}
-                    onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
-                  />
-                </label>
-                <FormLegalNotice id="event-share-legal" className="form-legal-notice booking-span-2" />
-                <button className="button button-blue" disabled={status === 'loading'}>Register</button>
-              </form>
+              {!formOpen && (
+                <form onSubmit={register} className="booking-form" style={{ marginTop: 32 }}>
+                  <label>Name<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+                  <label>Phone<input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+                  <label>Email<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+                  <label className="sr-only" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }}>
+                    Company website
+                    <input
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={guard.honeypot}
+                      onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
+                    />
+                  </label>
+                  <FormLegalNotice id="event-share-legal" className="form-legal-notice booking-span-2" />
+                  <button className="button button-blue" disabled={status === 'loading'}>Register</button>
+                </form>
+              )}
             </>
           )}
-          <p style={{ marginTop: 40 }}>
+          <p className="hakum-article-footer">
             <Link className="dark-link" to="/events">All events</Link>
+            {' · '}
+            <Link className="dark-link" to="/blog">Journal</Link>
             {' · '}
             <Link className="dark-link" to="/">Home</Link>
           </p>

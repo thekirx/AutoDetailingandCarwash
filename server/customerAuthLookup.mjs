@@ -4,9 +4,26 @@
  * Indexed lookups only (plate unique, phone/email on customers) — no Auth listUsers scans.
  */
 import { createClient } from '@supabase/supabase-js'
-import { classifyIdentifier, normalizePlate, phoneDigits, phoneLoginEmail } from '../src/lib/customerAuth.js'
+import {
+  classifyIdentifier,
+  canonicalPhMobile,
+  normalizePlate,
+  phoneDigits,
+  phoneLoginEmailAliases,
+} from '../src/lib/customerAuth.js'
 import { publicAuthLookupPayload } from './customerAuthPublic.mjs'
+import { signInCustomerWithPassword } from './customerSignIn.mjs'
 import { clientIp, rateLimit } from './httpUtil.mjs'
+
+function phoneLookupVariants(identifier) {
+  const digits = phoneDigits(identifier)
+  const canon = canonicalPhMobile(identifier)
+  const variants = new Set([digits, canon].filter(Boolean))
+  if (digits.startsWith('63') && digits.length >= 12) variants.add(`0${digits.slice(2)}`)
+  if (digits.startsWith('0') && digits.length >= 11) variants.add(`63${digits.slice(1)}`)
+  if (digits.startsWith('9') && digits.length === 10) variants.add(`0${digits}`)
+  return [...variants]
+}
 
 function adminClient() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -23,7 +40,7 @@ async function findCustomerByIdentifier(admin, identifier) {
     const email = String(identifier).trim().toLowerCase()
     const { data } = await admin
       .from('customers')
-      .select('id, phone, email, full_name, role, is_archived')
+      .select('id, phone, email, full_name, date_of_birth, role, is_archived')
       .eq('role', 'customer')
       .eq('is_archived', false)
       .ilike('email', email)
@@ -33,15 +50,10 @@ async function findCustomerByIdentifier(admin, identifier) {
   }
 
   if (kind === 'phone') {
-    const digits = phoneDigits(identifier)
-    const variants = [digits]
-    if (digits.startsWith('63') && digits.length >= 12) variants.push(`0${digits.slice(2)}`)
-    if (digits.startsWith('0') && digits.length >= 11) variants.push(`63${digits.slice(1)}`)
-
-    for (const phone of variants) {
+    for (const phone of phoneLookupVariants(identifier)) {
       const { data } = await admin
         .from('customers')
-        .select('id, phone, email, full_name, role, is_archived')
+        .select('id, phone, email, full_name, date_of_birth, role, is_archived')
         .eq('role', 'customer')
         .eq('is_archived', false)
         .eq('phone', phone)
@@ -51,20 +63,16 @@ async function findCustomerByIdentifier(admin, identifier) {
       if (data) return { kind, customer: data }
     }
 
-    // Synthetic login email row
-    try {
-      const loginEmail = phoneLoginEmail(identifier)
+    for (const loginEmail of phoneLoginEmailAliases(identifier)) {
       const { data } = await admin
         .from('customers')
-        .select('id, phone, email, full_name, role, is_archived')
+        .select('id, phone, email, full_name, date_of_birth, role, is_archived')
         .eq('role', 'customer')
         .eq('is_archived', false)
         .ilike('email', loginEmail)
         .limit(1)
         .maybeSingle()
       if (data) return { kind, customer: data }
-    } catch {
-      /* short phone */
     }
     return { kind, customer: null }
   }
@@ -84,7 +92,7 @@ async function findCustomerByIdentifier(admin, identifier) {
 
   const { data: customer } = await admin
     .from('customers')
-    .select('id, phone, email, full_name, role, is_archived')
+    .select('id, phone, email, full_name, date_of_birth, role, is_archived')
     .eq('id', vehicle.customer_id)
     .eq('role', 'customer')
     .eq('is_archived', false)
@@ -99,6 +107,24 @@ async function getAuthUser(admin, id) {
   return data?.user || null
 }
 
+async function loadTeamLeadPrefill(admin, customer, user) {
+  const { data: vehicle } = await admin
+    .from('vehicles')
+    .select('plate_number')
+    .eq('customer_id', customer.id)
+    .eq('is_archived', false)
+    .order('plate_number')
+    .limit(1)
+    .maybeSingle()
+  return {
+    full_name: customer.full_name || user?.user_metadata?.full_name || '',
+    phone: customer.phone || user?.user_metadata?.phone || '',
+    plate: vehicle?.plate_number || user?.user_metadata?.plate || '',
+    email: customer.email || '',
+    date_of_birth: customer.date_of_birth || '',
+  }
+}
+
 async function statusForCustomer(admin, customer, kind) {
   if (!customer) return { status: 'unknown', kind }
 
@@ -108,7 +134,7 @@ async function statusForCustomer(admin, customer, kind) {
     return {
       status: 'needs_invite',
       kind,
-      // CRM walk-in without Auth yet
+      prefill: await loadTeamLeadPrefill(admin, customer, null),
     }
   }
 
@@ -119,6 +145,7 @@ async function statusForCustomer(admin, customer, kind) {
     status: needsPassword ? 'needs_password' : 'ready',
     kind,
     login_email: loginEmail,
+    prefill: needsPassword ? await loadTeamLeadPrefill(admin, customer, user) : null,
   }
 }
 
@@ -210,11 +237,15 @@ export async function handleCustomerAuthLookupRequest(req, res, { getBody, siteO
     if (action === 'send_setup' || action === 'send_reset') {
       rateLimit({ key: `auth-mail:${ip}`, limit: 8, windowMs: 15 * 60_000 })
       rateLimit({ key: `auth-mail-id:${idKey || ip}`, limit: 5, windowMs: 15 * 60_000 })
+    } else if (action === 'signin') {
+      rateLimit({ key: `auth-signin:${ip}`, limit: 10, windowMs: 60_000 })
+      rateLimit({ key: `auth-signin-id:${idKey || ip}`, limit: 8, windowMs: 60_000 })
     } else {
       rateLimit({ key: `auth-lookup:${ip}`, limit: 60, windowMs: 60_000 })
     }
 
     let result
+    let statusCode = 200
     if (action === 'send_setup') {
       result = await sendCustomerSetupLink({
         identifier: body.identifier,
@@ -227,11 +258,20 @@ export async function handleCustomerAuthLookupRequest(req, res, { getBody, siteO
         siteOrigin: origin,
         mode: 'reset',
       })
+    } else if (action === 'signin') {
+      const looked = await lookupCustomerAuthStatus({ identifier: body.identifier })
+      const signed = await signInCustomerWithPassword({
+        status: looked.status,
+        authEmail: looked.login_email,
+        password: body.password,
+      })
+      statusCode = signed.status
+      result = signed.body
     } else {
       result = publicAuthLookupPayload(await lookupCustomerAuthStatus({ identifier: body.identifier }))
     }
 
-    res.statusCode = 200
+    res.statusCode = statusCode
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify(result))
   } catch (err) {

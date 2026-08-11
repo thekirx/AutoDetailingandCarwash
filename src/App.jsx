@@ -20,11 +20,16 @@ const ContactPage = lazy(() => import('./pages/ContactPage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
 const EventSharePage = lazy(() => import('./pages/EventSharePage'))
+const BlogPage = lazy(() => import('./pages/BlogPage'))
+const BlogPostPage = lazy(() => import('./pages/BlogPostPage'))
+const CustomerBlogPage = lazy(() => import('./pages/CustomerBlogPage'))
+const CustomerEventsPage = lazy(() => import('./pages/CustomerEventsPage'))
 const PublicFormPage = lazy(() => import('./pages/PublicFormPage'))
 const CustomerSignInPage = lazy(() => import('./pages/CustomerSignInPage'))
 const CustomerSignUpPage = lazy(() => import('./pages/CustomerSignUpPage'))
 const CustomerSetPasswordPage = lazy(() => import('./pages/CustomerSetPasswordPage'))
 const CustomerAccountPage = lazy(() => import('./pages/CustomerAccountPage'))
+const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
 
 const AdminConsolePage = lazy(() => import('./pages/AdminConsolePage'))
 const PeopleManagePage = lazy(() => import('./pages/PeopleManagePage'))
@@ -126,6 +131,8 @@ export default function App() {
           <Route path="/complaints" element={<ComplaintsPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:slug" element={<EventSharePage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/f/:slug" element={<PublicFormPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
@@ -138,6 +145,8 @@ export default function App() {
             }
           >
             <Route path="/account" element={<CustomerAccountPage />} />
+            <Route path="/account/blog" element={<CustomerBlogPage />} />
+            <Route path="/account/events" element={<CustomerEventsPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>
@@ -186,6 +195,7 @@ export default function App() {
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />
             <Route path="planning" element={gate('planning', <PlanningBoardPage />)} />
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
+            <Route path="content" element={gate('content', <ContentAdminPage />)} />
             <Route path="notifications" element={gate('notifications', <NotificationsPage />)} />
             <Route path="history" element={gate('history', <HistoryPage />)} />
             <Route path="broadcast" element={gate('notifications', <BroadcastPage />)} />

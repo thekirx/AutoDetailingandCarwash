@@ -3,7 +3,9 @@
  * Best-effort: never throw to callers after durable booking writes.
  */
 import { createClient } from '@supabase/supabase-js'
+import { applyTemplateText, bookingNotifyVars, bookingTemplateKey } from '../src/lib/notificationTemplates.js'
 import { busybeeSendSms } from './busybee.mjs'
+import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { applyPaintMaintenanceOnComplete } from './paintMaintenanceSchedule.mjs'
 import { resolvePushTargets, sendWebPushToUsers } from './webPush.mjs'
 
@@ -89,22 +91,35 @@ const STATUS_COPY = {
     opsBody: (b) => `${b.vehicle_plate || 'Ticket'} cancelled @ ${b.branch}`,
     opsUrl: '/operations/bookings',
   },
+  redo: {
+    kind: 'booking_status',
+    title: 'We are redoing your service',
+    sms: (b) => `Hakum Auto Care: We are redoing ${b.vehicle_plate || 'your car'} at ${b.branch}. We will update you shortly.`,
+    body: (b) => `${b.vehicle_plate || 'Your vehicle'} is back on the floor for a redo at ${b.branch}.`,
+    opsTitle: 'Redo on floor',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} redo @ ${b.branch}`,
+    opsUrl: '/operations/queue',
+  },
 }
 
 /** Customer-facing inbox/SMS/push payload. */
-export function buildBookingNotifyPayload(booking, status) {
+export function buildBookingNotifyPayload(booking, status, templates = null) {
   const key = status || booking?.status
   const copy = STATUS_COPY[key]
   if (!booking || !copy) return null
+  const tplKey = bookingTemplateKey(key, 'customer')
+  if (templates && !templateEnabled(templates, tplKey)) return null
+  const tpl = templates?.[tplKey]
+  const vars = bookingNotifyVars(booking)
   const phone = booking.customer_phone
   const userId = booking.customer_id || null
   return {
     phone,
     userId,
     kind: copy.kind,
-    title: copy.title,
-    body: copy.body(booking),
-    sms: copy.sms(booking),
+    title: applyTemplateText(tpl?.title, vars, copy.title),
+    body: applyTemplateText(tpl?.body, vars, copy.body(booking)),
+    sms: applyTemplateText(tpl?.sms_body, vars, copy.sms(booking)),
     url: userId ? '/account' : '/book',
     tag: `booking-${booking.id}-${key}`,
   }
@@ -123,14 +138,18 @@ export function buildOpsPushTargets(booking) {
   ]
 }
 
-export function buildOpsNotifyCopy(booking, status) {
+export function buildOpsNotifyCopy(booking, status, templates = null) {
   const key = status || booking?.status
   const copy = STATUS_COPY[key]
   if (!booking || !copy) return null
+  const tplKey = bookingTemplateKey(key, 'ops')
+  if (templates && !templateEnabled(templates, tplKey)) return null
+  const tpl = templates?.[tplKey]
+  const vars = bookingNotifyVars(booking)
   return {
     kind: `ops_${copy.kind}`,
-    title: copy.opsTitle || copy.title,
-    body: copy.opsBody(booking),
+    title: applyTemplateText(tpl?.title, vars, copy.opsTitle || copy.title),
+    body: applyTemplateText(tpl?.body, vars, copy.opsBody(booking)),
     url: copy.opsUrl || '/operations',
     tag: `ops-booking-${booking.id}-${key}`,
   }
@@ -177,10 +196,16 @@ export async function isSmsNotificationsEnabled(db = admin()) {
  * After booking create/status change: SMS + customer inbox/push + ops inbox/push.
  */
 export async function notifyBookingStatus(booking, status = booking?.status) {
-  const payload = buildBookingNotifyPayload(booking, status)
+  const db = admin()
+  let templates = null
+  try {
+    templates = await loadTemplateMap(db)
+  } catch (err) {
+    console.warn('[notify] template map failed', err?.message || err)
+  }
+  const payload = buildBookingNotifyPayload(booking, status, templates)
   if (!payload) return { skipped: true }
 
-  const db = admin()
   const result = { sms: null, inbox: null, push: null, ops: null, smsEnabled: true }
 
   const smsOn = await isSmsNotificationsEnabled(db)
@@ -246,7 +271,7 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
     }
   }
 
-  const opsCopy = buildOpsNotifyCopy(booking, status)
+  const opsCopy = buildOpsNotifyCopy(booking, status, templates)
   if (opsCopy) {
     try {
       const opsIds = await resolvePushTargets(buildOpsPushTargets(booking))

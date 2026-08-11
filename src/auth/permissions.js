@@ -191,13 +191,19 @@ export function canAccessAudit(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+/** SA / ASA: blogs + event rich content on landing and customer app. */
+export function canManageSiteContent(profile) {
+  return isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
+}
+
 /** Settings hub (branches / people / audit / permissions). Notifications live on their own nav item. */
 export function canAccessSettings(profile) {
   return (
     canManageBranches(profile) ||
     canManagePeople(profile) ||
     canAccessAudit(profile) ||
-    canAccessConsole(profile)
+    canAccessConsole(profile) ||
+    canManageSiteContent(profile)
   )
 }
 
@@ -321,12 +327,39 @@ export function canModifyBookingServicePrice(profile) {
 }
 
 export function canViewPlanning(profile) {
-  return isAdmin(profile)
+  // SA / ASA / Branch Admin manage boards; crew + TL open Forms for staff fill.
+  return isAdmin(profile) || has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD])
 }
 
 export function canEditPlanning(profile) {
   if (isSuperAdmin(profile)) return true
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'planning_edit')
+}
+
+/**
+ * Who may submit an ops form kind (staff fill). SA edits templates but does not fill cash advance.
+ * Equipment repairs: crew (staff) only. Cash advance: all employees except Super Admin.
+ * Complaint / Events RSVP: any planning viewer (plus public share links).
+ */
+export function canSubmitOpsFormKind(profile, kind) {
+  if (!profile?.role) return false
+  if (kind === 'equipment_repair') return profile.role === ROLES.STAFF
+  if (kind === 'cash_advance') {
+    if (isSuperAdmin(profile)) return false
+    return has(profile, [
+      ROLES.STAFF,
+      ROLES.TEAM_LEAD,
+      ROLES.ADMIN,
+      ROLES.ASSISTANT_SUPER_ADMIN,
+    ])
+  }
+  if (kind === 'complaint' || kind === 'event') return canViewPlanning(profile)
+  return false
+}
+
+/** SA / ASA with planning_edit can open every template for edit + results. */
+export function canManageOpsFormTemplates(profile) {
+  return canEditPlanning(profile)
 }
 
 export function canUseOperations(profile) {
@@ -413,6 +446,7 @@ export function getOperationsNav(profile) {
     return [
       { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
       { label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
+      { label: 'Planner', to: '/operations/planning?tab=forms', icon: 'Columns3' },
     ]
   }
 
@@ -430,8 +464,11 @@ export function getOperationsNav(profile) {
   if (canAccessSettings(profile)) {
     items.push({ label: 'Settings', to: '/operations/settings', icon: 'Settings' })
   }
+  if (canManageSiteContent(profile)) {
+    items.push({ label: 'Content', to: '/operations/content', icon: 'Newspaper' })
+  }
   if (canViewPlanning(profile)) {
-    items.push({ label: 'Hakum Planner', to: '/operations/planning', icon: 'Columns3' })
+    items.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
   }
   if (canManagePeople(profile)) {
     items.push({ label: 'People', to: '/operations/people', icon: 'UserPlus' })
@@ -520,6 +557,7 @@ export function getTeamLeadMore(profile) {
   if (canViewQueueOperations(profile)) more.push({ label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' })
   if (canViewQueueOperations(profile)) more.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
   if (canViewAssignedTasks(profile)) more.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
+  if (canViewPlanning(profile)) more.push({ label: 'Planner', to: '/operations/planning?tab=forms', icon: 'Columns3' })
   return more
 }
 
@@ -600,6 +638,7 @@ export function allowRoute(profile, key) {
     reports: canAccessReports,
     memberships: canAccessMemberships,
     settings: canAccessSettings,
+    content: canManageSiteContent,
     notifications: canAccessNotifications,
     history: canAccessHistory,
   }

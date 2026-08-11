@@ -1,13 +1,46 @@
-/** Smart ops form helpers — field templates, slug, validation, calendar extract */
+/** Fixed ops form templates — field helpers, slug, validation, share/QR */
 
 export const FORM_KINDS = [
   { value: 'complaint', label: 'Complaint' },
-  { value: 'equipment_repair', label: 'Equipment repair' },
-  { value: 'cash_advance', label: 'Employee cash advance' },
-  { value: 'event', label: 'Event / RSVP' },
-  { value: 'booking', label: 'Booking request' },
-  { value: 'survey', label: 'Survey' },
-  { value: 'custom', label: 'Custom' },
+  { value: 'event', label: 'Events RSVP' },
+  { value: 'equipment_repair', label: 'Equipment repairs' },
+  { value: 'cash_advance', label: 'Cash advance' },
+]
+
+/** Stable public slugs for the four templates (edit-only; never free-create). */
+export const FIXED_FORM_TEMPLATES = [
+  {
+    kind: 'complaint',
+    slug: 'customer-complaints',
+    name: 'Customer Complaints',
+    description: 'Tell us what went wrong so we can make it right.',
+    public_enabled: true,
+    status: 'published',
+  },
+  {
+    kind: 'event',
+    slug: 'events-rsvp',
+    name: 'Events RSVP',
+    description: 'Confirm your spot for the next Hakum event.',
+    public_enabled: true,
+    status: 'published',
+  },
+  {
+    kind: 'equipment_repair',
+    slug: 'equipment-repairs',
+    name: 'Equipment Repairs',
+    description: 'Crew reports equipment issues for ops follow-up.',
+    public_enabled: false,
+    status: 'published',
+  },
+  {
+    kind: 'cash_advance',
+    slug: 'cash-advance',
+    name: 'Employee Cash Advance',
+    description: 'Request a cash advance. Managers review submissions in Planner.',
+    public_enabled: false,
+    status: 'published',
+  },
 ]
 
 export const FORM_STATUSES = [
@@ -34,6 +67,16 @@ export const FIELD_TYPES = [
   { value: 'select', label: 'Dropdown' },
   { value: 'checkbox', label: 'Checkbox' },
 ]
+
+export const DEFAULT_FORM_LOGO = '/branding/hakum-lw-ow.png'
+
+export function isFixedFormKind(kind) {
+  return FORM_KINDS.some((k) => k.value === kind)
+}
+
+export function formKindLabel(kind) {
+  return FORM_KINDS.find((k) => k.value === kind)?.label || String(kind || 'form').replace(/_/g, ' ')
+}
 
 export function slugifyFormName(name, id = '') {
   const base = String(name || 'form')
@@ -120,27 +163,30 @@ export function templateFields(kind) {
       { key: 'notes', label: 'Notes', type: 'textarea', required: false },
     ])
   }
-  if (kind === 'booking') {
-    return normalizeFields([
-      { key: 'customer_name', label: 'Customer name', type: 'text', required: true },
-      { key: 'phone', label: 'Phone', type: 'phone', required: true },
-      { key: 'preferred_at', label: 'Preferred date & time', type: 'datetime', required: true },
-      { key: 'vehicle_plate', label: 'Plate', type: 'text', required: false },
-      { key: 'service', label: 'Service', type: 'text', required: true },
-      { key: 'notes', label: 'Notes', type: 'textarea', required: false },
-    ])
+  // Fixed kinds only — unknown kind falls back to complaint shape
+  return templateFields('complaint')
+}
+
+export function defaultFormSettings(kind = 'complaint') {
+  return {
+    push_to_planning: true,
+    show_on_calendar: kind === 'event',
+    show_logo: true,
+    logo_url: DEFAULT_FORM_LOGO,
+    header_title: '',
   }
-  if (kind === 'survey') {
-    return normalizeFields([
-      { key: 'name', label: 'Name', type: 'text', required: false },
-      { key: 'rating', label: 'Rating (1-5)', type: 'number', required: true },
-      { key: 'feedback', label: 'Feedback', type: 'textarea', required: true },
-    ])
+}
+
+export function normalizeFormSettings(settings = {}, kind = 'complaint') {
+  const base = defaultFormSettings(kind)
+  const raw = settings && typeof settings === 'object' ? settings : {}
+  return {
+    ...base,
+    ...raw,
+    show_logo: raw.show_logo !== false,
+    logo_url: String(raw.logo_url || base.logo_url).trim() || DEFAULT_FORM_LOGO,
+    header_title: String(raw.header_title || '').trim(),
   }
-  return normalizeFields([
-    { key: 'name', label: 'Name', type: 'text', required: true },
-    { key: 'notes', label: 'Notes', type: 'textarea', required: false },
-  ])
 }
 
 export function validatePayload(fields, payload = {}) {
@@ -183,12 +229,25 @@ export function shareFormUrl(slug, origin = typeof window !== 'undefined' ? wind
   return `${String(origin).replace(/\/$/, '')}/f/${slug}`
 }
 
+/** QR image URL for a share link (no npm dep — CSP allows https: img-src). */
+export function formQrImageUrl(url, size = 200) {
+  if (!url) return ''
+  const n = Math.min(512, Math.max(120, Number(size) || 200))
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${n}x${n}&data=${encodeURIComponent(url)}`
+}
+
 export function submissionTitle(form, payload = {}) {
-  const name = payload.customer_name || payload.name || payload.full_name || ''
+  const name = payload.customer_name || payload.name || payload.full_name || payload.employee_name || ''
   if (form?.kind === 'complaint') return `Complaint: ${name || 'Customer'}`
-  if (form?.kind === 'booking') return `Booking request: ${name || payload.service || 'Customer'}`
   if (form?.kind === 'event') return `RSVP: ${name || 'Guest'}`
+  if (form?.kind === 'equipment_repair') return `Equipment: ${payload.equipment || name || 'Report'}`
+  if (form?.kind === 'cash_advance') return `Cash advance: ${name || 'Employee'}`
   return `${form?.name || 'Form'}: ${name || 'Submission'}`
+}
+
+export function extractComplaintBranch(payload = {}) {
+  const raw = String(payload.branch || payload.branch_slug || '').trim().toLowerCase()
+  return raw || null
 }
 
 // Back-compat exports used by older planningPart6 imports

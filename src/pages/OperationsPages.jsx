@@ -911,7 +911,7 @@ function OperationsQueueBoardPage() {
           const tickets = grouped[status] || []
           const laneFocused = focusLane === status
           const laneDimmed = Boolean(focusLane) && !laneFocused
-          return (
+              return (
             <section
               key={status}
               id={`queue-lane-${status}`}
@@ -934,7 +934,7 @@ function OperationsQueueBoardPage() {
                     <h2 className="queue-lane-title text-[10px] font-bold tracking-[0.08em] uppercase">
                       {statusShortLabel(status)}
                     </h2>
-                  </div>
+          </div>
                   <p className="queue-lane-hint mt-0.5 text-[10px] leading-snug">{meta.hint}</p>
                 </button>
                 <button
@@ -946,7 +946,7 @@ function OperationsQueueBoardPage() {
                 >
                   {tickets.length}
                 </button>
-              </div>
+            </div>
               <div className="floor-lane-body">
                 {loading
                   ? Array.from({ length: 2 }, (_, index) => (
@@ -963,11 +963,11 @@ function OperationsQueueBoardPage() {
                         />
                       ))
                     : <EmptyLine text="Empty" />}
-              </div>
+          </div>
             </section>
           )
         })}
-      </div>
+        </div>
 
       {canManageQueue ? (
         <QueueTicketEditModal

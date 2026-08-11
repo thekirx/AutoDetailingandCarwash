@@ -145,5 +145,7 @@ describe('dedicated Notifications sidebar page', () => {
     assert.match(jsx, /BUSYBEE_SMS_SINGLE_MAX/)
     assert.match(jsx, /PAINT_MAINTENANCE_SLUG/)
     assert.match(jsx, /Send broadcast/)
+    assert.match(jsx, /NotificationTemplatesPanel/)
+    assert.match(jsx, /templates/)
   })
 })

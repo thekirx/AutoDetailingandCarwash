@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { KeyRound, LogOut, Mail, Moon, Phone, Plus, Settings, Sun, Smartphone } from 'lucide-react'
+import { Cake, KeyRound, LogOut, Mail, Moon, Phone, Plus, Settings, Sun, Smartphone } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -52,6 +52,7 @@ export default function UserSettingsModal({
   const [busy, setBusy] = useState(false)
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [birthday, setBirthday] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
   const [smsOptIn, setSmsOptIn] = useState(true)
@@ -69,6 +70,7 @@ export default function UserSettingsModal({
     if (!open) return
     setEmail(profile?.email || '')
     setPhone(profile?.phone || '')
+    setBirthday(profile?.date_of_birth ? String(profile.date_of_birth).slice(0, 10) : '')
     setPassword('')
     setPassword2('')
     setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '' })
@@ -310,6 +312,46 @@ export default function UserSettingsModal({
                   Update email
                 </Button>
               </form>
+
+              {isCustomer ? (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault()
+                    setBusy(true)
+                    try {
+                      await portalAction('update-birthday', { date_of_birth: birthday.trim() })
+                      toast.success(birthday.trim() ? 'Birthday saved' : 'Birthday cleared')
+                      onUpdated?.()
+                    } catch (err) {
+                      toast.error(err.message)
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                  className="space-y-3 border-t border-border pt-5"
+                >
+                  <div className="flex items-center gap-2 text-sm font-bold">
+                    <Cake className="size-4 text-primary" aria-hidden />
+                    Birthday
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    On your birthday you get a greeting and one free service at any Hakum branch.
+                  </p>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="set-bday">Date of birth</Label>
+                    <Input
+                      id="set-bday"
+                      type="date"
+                      className="min-h-11"
+                      value={birthday}
+                      onChange={(e) => setBirthday(e.target.value)}
+                    />
+                  </div>
+                  <Button type="submit" className="account-btn account-btn-primary min-h-11 w-full" disabled={busy}>
+                    Save birthday
+                  </Button>
+                </form>
+              ) : null}
 
               {isCustomer ? (
                 <form onSubmit={savePhone} className="space-y-3 border-t border-border pt-5">

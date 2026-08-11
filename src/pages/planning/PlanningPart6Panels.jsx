@@ -109,8 +109,8 @@ export function PlanningSettingsPanel({ canEdit, onPresetsChanged }) {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Label presets</CardTitle>
-          <CardDescription>Shared colors used on planning cards (Trello-like).</CardDescription>
+          <CardTitle>Card labels</CardTitle>
+          <CardDescription>Colors you can tap onto a task so the team can spot it.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {canEdit && (
@@ -138,7 +138,7 @@ export function PlanningSettingsPanel({ canEdit, onPresetsChanged }) {
       <Card>
         <CardHeader>
           <CardTitle>Checklist templates</CardTitle>
-          <CardDescription>Apply a template from a card modal to seed checklist items.</CardDescription>
+          <CardDescription>Saved checklists you can apply when you open a card.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {canEdit && (
@@ -148,6 +148,26 @@ export function PlanningSettingsPanel({ canEdit, onPresetsChanged }) {
               <Button type="submit" className="w-fit">Save template</Button>
             </form>
           )}
+          <div className="planning-event-list">
+            {templates.map((t) => (
+              <article key={`m-${t.id}`} className="planning-event-card">
+                <div>
+                  <h3>{t.name}</h3>
+                  <p>
+                    {(t.plan_checklist_template_items || [])
+                      .sort((a, b) => a.position - b.position)
+                      .map((i) => i.title)
+                      .join(' · ') || 'No items'}
+                  </p>
+                </div>
+                {canEdit ? (
+                  <Button size="sm" variant="ghost" onClick={() => deleteTemplate(t.id)}>Delete</Button>
+                ) : null}
+              </article>
+            ))}
+            {!templates.length ? <p className="text-sm text-muted-foreground">No templates yet.</p> : null}
+          </div>
+          <div className="planning-event-table">
           <Table>
             <TableHeader>
               <TableRow>
@@ -175,6 +195,7 @@ export function PlanningSettingsPanel({ canEdit, onPresetsChanged }) {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -278,8 +299,8 @@ export function PlanningEventsPanel({ canEdit }) {
       {canEdit && (
         <Card>
           <CardHeader>
-            <CardTitle>Create event / meet</CardTitle>
-            <CardDescription>Each event gets a public shareable URL.</CardDescription>
+            <CardTitle>New event</CardTitle>
+            <CardDescription>Creates a public page you can share. Attach a form if people need to RSVP.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={createEvent} className="grid gap-3 md:grid-cols-2">
@@ -336,6 +357,37 @@ export function PlanningEventsPanel({ canEdit }) {
           <CardDescription>Share links and optional attached smart forms.</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="planning-event-list">
+            {events.map((ev) => (
+              <article key={`m-${ev.id}`} className="planning-event-card">
+                <div>
+                  <h3>{ev.title}</h3>
+                  <p>{new Date(ev.starts_at).toLocaleString()}{ev.branch ? ` · ${ev.branch}` : ''}</p>
+                </div>
+                <div className="planning-event-card-meta">
+                  <Badge variant={ev.is_published ? 'default' : 'secondary'}>
+                    {ev.is_published ? 'Published' : 'Draft'}
+                  </Badge>
+                  {ev.ops_forms?.name ? <span>{ev.ops_forms.name}</span> : null}
+                </div>
+                {ev.slug ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">Open page</a>
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => copyLink(ev)}>Copy link</Button>
+                    {canEdit ? (
+                      <Button size="sm" variant="ghost" onClick={() => togglePublish(ev)}>
+                        {ev.is_published ? 'Unpublish' : 'Publish'}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+            {!events.length ? <p className="text-sm text-muted-foreground">No events yet.</p> : null}
+          </div>
+          <div className="planning-event-table">
           <Table>
             <TableHeader>
               <TableRow>
@@ -394,6 +446,7 @@ export function PlanningEventsPanel({ canEdit }) {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
