@@ -22,16 +22,17 @@ import {
   parsePesoInputToMinor,
   requiresTeamLeadBranchSetup,
   resolveBranchFilter,
-  getQueueCounts,
   validateCancellationReason,
   validateCrewUsername,
 } from './queueLogic'
 import { writeAudit } from '../lib/audit'
+import { splitFloorBoardLanes, sumFloorLaneCounts } from '../lib/floorBoardLanes'
 import { resolveServicePriceMinor } from '../lib/servicePricing'
 import { createTtlCache } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { isDetailingPayCategory, isTicketOnTodayFloor } from '../lib/serviceKinds'
 import { aggregateSalesFinancials } from '../lib/paymentMethods'
+import { buildAdminRoster } from '../lib/floorBoardRoster'
 import { averageCycleMinutes, failedQaCount, totalWaitMinutes } from '../lib/kpiPart8'
 import {
   resolveQueueCustomerDisplayName,
@@ -332,33 +333,25 @@ const EMPTY_FINANCIALS = aggregateSalesFinancials([])
 
 /** Super Admin / network floor: lanes + crew + financials + KPI for branch + date range. */
 export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all', startDate, endDate } = {}) {
-  const snapshot = await fetchOperationsSnapshot(profile, { branchFilter })
+  // Detailing family includes confirmed (Assigned to Branch); wash tickets still return and are split client-side.
+  const snapshot = await fetchOperationsSnapshot(profile, { branchFilter, family: 'detailing' })
   const branchScope = resolveBranchFilter(profile, branchFilter)
   const start = startDate || getLocalCalendarDate()
   const end = endDate || start
   const startIso = `${start}T00:00:00+08:00`
   const endIso = `${end}T23:59:59.999+08:00`
 
-  const boardStatuses = getOpsBoardStatuses(profile)
-  const liveCounts = getQueueCounts(snapshot.activeQueue || [], { statuses: boardStatuses })
-
   if (branchScope === NO_BRANCH_SCOPE) {
+    const emptyByFamily = splitFloorBoardLanes({ activeQueue: [], periodJobs: [] })
     return {
       ...snapshot,
-      laneCounts: {
-        waiting: 0,
-        in_progress: 0,
-        final_checking: 0,
-        for_payment: 0,
-        redo: 0,
-        completed: 0,
-        cancelled: 0,
-        total: 0,
-      },
+      laneCounts: sumFloorLaneCounts(emptyByFamily),
+      laneCountsByFamily: emptyByFamily,
       periodJobs: [],
       financials: { ...EMPTY_FINANCIALS, cancel_loss_minor: 0 },
-      kpi: { total_wait_minutes: 0, avg_service_minutes: null, failed_qa_count: 0 },
+      kpi: { total_wait_minutes: 0, avg_service_minutes: null, failed_qa_count: 0, cancelled_count: 0 },
       recentSales: [],
+      adminRoster: [],
     }
   }
 
@@ -412,7 +405,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
   let salesQuery = supabase
     .from('sales')
     .select(
-      'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, queue_number, services(name))',
+      'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, queue_number, services(name, pay_category))',
     )
     .eq('status', 'paid')
     .gte('occurred_at', startIso)
@@ -421,18 +414,27 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     .limit(2000)
   salesQuery = scopedQuery(salesQuery, branchScope)
 
-  const [completedRes, cancelledRes, redoRes, startedRes, salesRes] = await Promise.all([
+  let adminStaffQuery = supabase
+    .from('staff_profiles')
+    .select('id, full_name, role, branch_slug, is_active')
+    .eq('is_active', true)
+    .in('role', ['marketing', 'video_editor', 'admin', 'assistant_super_admin', 'team_lead'])
+  adminStaffQuery = scopedStaffQuery(adminStaffQuery, branchScope)
+
+  const [completedRes, cancelledRes, redoRes, startedRes, salesRes, adminStaffRes] = await Promise.all([
     completedQuery,
     cancelledQuery,
     redoQuery,
     startedQuery,
     salesQuery,
+    adminStaffQuery,
   ])
   if (completedRes.error) throw completedRes.error
   if (cancelledRes.error) throw cancelledRes.error
   if (redoRes.error) throw redoRes.error
   if (startedRes.error) throw startedRes.error
   if (salesRes.error) throw salesRes.error
+  if (adminStaffRes.error) console.warn('Admin roster unavailable', adminStaffRes.error)
 
   const toJob = (row) => ({
     booking_id: row.id,
@@ -461,7 +463,11 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
   const cancelledJobs = (cancelledRes.data || []).map(toJob)
   const redoJobs = (redoRes.data || []).map(toJob)
   const startedJobs = (startedRes.data || []).map(toJob)
-  const salesRows = salesRes.data || []
+  const salesRows = (salesRes.data || []).map((row) => ({
+    ...row,
+    pay_category: row.bookings?.services?.pay_category || null,
+    service_name: row.bookings?.services?.name || null,
+  }))
 
   const financials = {
     ...aggregateSalesFinancials(salesRows),
@@ -477,26 +483,24 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     total_wait_minutes: Math.round(totalWaitMinutes(startedJobs)),
     avg_service_minutes: avg == null ? null : Math.round(avg),
     failed_qa_count: failedQaCount(redoJobs),
+    cancelled_count: cancelledJobs.length,
   }
 
-  const forPaymentLive = liveCounts.for_payment || 0
+  const periodJobs = [...completedJobs.slice(0, 40), ...cancelledJobs.slice(0, 20)]
+  const laneCountsByFamily = splitFloorBoardLanes({
+    activeQueue: snapshot.activeQueue || [],
+    periodJobs,
+  })
 
   return {
     ...snapshot,
-    laneCounts: {
-      waiting: liveCounts.waiting || 0,
-      in_progress: liveCounts.in_progress || 0,
-      final_checking: liveCounts.final_checking || 0,
-      for_payment: forPaymentLive,
-      redo: liveCounts.redo || 0,
-      completed: completedJobs.length,
-      cancelled: cancelledJobs.length,
-      total: liveCounts.total || 0,
-    },
-    periodJobs: [...completedJobs.slice(0, 40), ...cancelledJobs.slice(0, 20)],
+    laneCounts: sumFloorLaneCounts(laneCountsByFamily),
+    laneCountsByFamily,
+    periodJobs,
     financials,
     kpi,
     recentSales: salesRows.slice(0, 40),
+    adminRoster: buildAdminRoster(adminStaffRes.data || []),
   }
 }
 
@@ -1008,6 +1012,10 @@ export async function updateTicketStatus(ticket, nextStatus) {
   if (nextStatus === 'final_checking') {
     patch.final_checking_at = now
     if (profile?.id) patch.final_checked_by = profile.id
+  }
+  if (nextStatus === 'for_releasing') {
+    // ponytail: reuse final_checking_at stamp; dedicated column not required for board
+    patch.final_checking_at = ticket.final_checking_at || now
   }
   if (nextStatus === 'for_payment') patch.for_payment_at = now
   if (nextStatus === 'completed') patch.completed_at = now

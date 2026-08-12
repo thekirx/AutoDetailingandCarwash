@@ -19,10 +19,16 @@
   --color-surface-cinematic: #020a31;
 
   /* Type families */
-  --font-display: "Benzin Semibold", "Montserrat ExtraBold", "Arial Black", sans-serif;
-  --font-body: "Gilmer Light", Inter, Roboto, sans-serif;
+  --font-display: "Benzin", "Benzin Semibold", "Arial Black", sans-serif;
+  --font-body: "Gilmer", "Gilmer Light", system-ui, sans-serif;
+  --font-ops: "Gilmer", system-ui, sans-serif;
   --font-public-display: "Benzin", "Arial Black", sans-serif;
   --font-public-body: "Gilmer", Arial, sans-serif;
+  /* Ops chrome aliases */
+  --ops-primary: var(--color-brand-primary);
+  --ops-page: var(--color-surface-page);
+  --ops-ink: var(--color-surface-dark);
+  --ops-cinematic: var(--color-surface-cinematic);
   --font-weight-body: 300;
   --font-weight-medium: 600;
   --font-weight-display: 800;

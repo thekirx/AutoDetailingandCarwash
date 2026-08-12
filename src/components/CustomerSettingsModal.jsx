@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Cake, KeyRound, Mail, Phone, Plus } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Cake, Camera, KeyRound, Mail, Phone, Plus } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -57,7 +57,10 @@ export default function CustomerSettingsModal({
   const [password2, setPassword2] = useState('')
   const [smsOptIn, setSmsOptIn] = useState(true)
   const [smsBusy, setSmsBusy] = useState(false)
-  const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '' })
+  const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+  const [photoPreview, setPhotoPreview] = useState('')
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const photoRef = useRef(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -71,7 +74,9 @@ export default function CustomerSettingsModal({
     setBirthday(profile?.date_of_birth ? String(profile.date_of_birth).slice(0, 10) : '')
     setPassword('')
     setPassword2('')
-    setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '' })
+    setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+    setPhotoPreview('')
+    setPhotoUploading(false)
     setTab(initialTab || 'alerts')
     loadUserSettings()
       .then((s) => setSmsOptIn(s.sms_opt_in !== false))
@@ -177,13 +182,37 @@ export default function CustomerSettingsModal({
     }
   }
 
+  async function handlePhotoFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5 MB'); return }
+    setPhotoUploading(true)
+    const ext = file.name.split('.').pop() || 'jpg'
+    const path = `vehicles/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const { error } = await supabase.storage.from('vehicle-photos').upload(path, file, { upsert: false })
+    if (error) {
+      // ponytail: storage bucket may not exist — fall back to manual URL
+      toast.warning('Upload failed — paste a URL instead')
+      setPhotoUploading(false)
+      return
+    }
+    const { data: urlData } = supabase.storage.from('vehicle-photos').getPublicUrl(path)
+    const url = urlData?.publicUrl || ''
+    setCar((c) => ({ ...c, photo_url: url }))
+    setPhotoPreview(url)
+    setPhotoUploading(false)
+    toast.success('Photo uploaded')
+  }
+
   async function saveCar(e) {
     e.preventDefault()
     setBusy(true)
     try {
       await portalAction('add-vehicle', car)
       toast.success('Car saved to your garage')
-      setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '' })
+      setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+      setPhotoPreview('')
       onUpdated?.()
       onOpenChange(false)
     } catch (err) {
@@ -393,6 +422,45 @@ export default function CustomerSettingsModal({
             <span>Color (optional)</span>
             <input id="car-color" value={car.color} onChange={(e) => setCar((c) => ({ ...c, color: e.target.value }))} />
           </label>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <p className="capp-label" style={{ margin: 0 }}>Vehicle photo</p>
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              style={{ display: 'none' }}
+              onChange={handlePhotoFile}
+            />
+            <button
+              type="button"
+              className="capp-btn capp-btn-ghost"
+              disabled={photoUploading}
+              onClick={() => photoRef.current?.click()}
+            >
+              <Camera size={16} strokeWidth={1.75} aria-hidden />
+              {photoUploading ? 'Uploading…' : 'Upload photo'}
+            </button>
+            <label className="capp-field">
+              <span>Or paste image URL</span>
+              <input
+                id="car-photo-url"
+                type="url"
+                placeholder="https://…"
+                value={car.photo_url}
+                onChange={(e) => { setCar((c) => ({ ...c, photo_url: e.target.value })); setPhotoPreview(e.target.value) }}
+              />
+            </label>
+            {photoPreview && (
+              <img
+                src={photoPreview}
+                alt="Vehicle preview"
+                style={{ width: '100%', maxHeight: '12rem', objectFit: 'cover', borderRadius: '0.75rem', marginTop: '0.25rem' }}
+                onError={() => setPhotoPreview('')}
+              />
+            )}
+          </div>
+
           <button type="submit" className="capp-btn capp-btn-fill" disabled={busy}>
             <Plus size={16} strokeWidth={1.75} aria-hidden />
             {busy ? 'Saving…' : 'Save plate'}

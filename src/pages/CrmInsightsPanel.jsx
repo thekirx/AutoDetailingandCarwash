@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Download } from 'lucide-react'
 import { canSeeAllBranches, getBranchScopeList } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import {
@@ -8,9 +9,11 @@ import {
   applyBranchScope,
   peakSalesHour,
 } from '@/lib/crmInsights'
+import { topCustomersBySpend, insightsToCsv, downloadCsv } from '@/lib/crmInsightsExport'
 import { getDashboardDateRange } from '@/queue/queueLogic'
 import { formatMoney } from '@/queue/queueApi'
 import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -59,7 +62,7 @@ export default function CrmInsightsPanel({ profile }) {
     const endIso = `${range.end}T23:59:59.999+08:00`
     let q = supabase
       .from('sales')
-      .select('id, branch, total_minor, occurred_at, status')
+      .select('id, branch, total_minor, occurred_at, status, customer_id, customers(id, full_name, phone)')
       .gte('occurred_at', startIso)
       .lte('occurred_at', endIso)
       .in('status', ['paid', 'completed'])
@@ -101,6 +104,7 @@ export default function CrmInsightsPanel({ profile }) {
   const peak = useMemo(() => peakSalesHour(hourly), [hourly])
   const byBranch = useMemo(() => aggregateSalesByBranch(sales), [sales])
   const byService = useMemo(() => aggregateLineItemsByService(lines), [lines])
+  const topCustomers = useMemo(() => topCustomersBySpend(sales, 20), [sales])
   const totalMinor = sales.reduce((s, r) => s + Number(r.total_minor || 0), 0)
 
   const branchOptions = canSeeAllBranches(profile)
@@ -226,6 +230,62 @@ export default function CrmInsightsPanel({ profile }) {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>Top 20 customers by spend</CardTitle>
+            <CardDescription>{range.start} → {range.end}</CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={!topCustomers.length}
+            onClick={() => {
+              const csv = insightsToCsv(topCustomers, [
+                { key: 'name', label: 'Customer' },
+                { key: 'phone', label: 'Phone' },
+                { key: 'sales_count', label: 'Sales' },
+                { key: 'total_minor', label: 'Revenue (centavos)', get: (r) => r.total_minor },
+                { key: 'total_pesos', label: 'Revenue (₱)', get: (r) => (r.total_minor / 100).toFixed(2) },
+              ])
+              downloadCsv(`hakum-top-customers-${range.start}.csv`, csv)
+              toast.success('CSV downloaded')
+            }}
+          >
+            <Download className="size-4" /> Export CSV
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>#</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Sales</TableHead>
+                <TableHead>Revenue</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {topCustomers.map((row, idx) => (
+                <TableRow key={row.customer_id}>
+                  <TableCell>{idx + 1}</TableCell>
+                  <TableCell className="font-medium">{row.name}</TableCell>
+                  <TableCell>{row.phone || '—'}</TableCell>
+                  <TableCell>{row.sales_count}</TableCell>
+                  <TableCell>{formatMoney(row.total_minor)}</TableCell>
+                </TableRow>
+              ))}
+              {!topCustomers.length && (
+                <TableRow><TableCell colSpan={5} className="text-muted-foreground">No customer data.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

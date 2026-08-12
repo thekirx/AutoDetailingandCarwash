@@ -8,6 +8,9 @@ export const ROLES = {
   SALES: 'sales',
   STAFF: 'staff',
   MARKETING: 'marketing',
+  DETAILER: 'detailer',
+  VIDEO_EDITOR: 'video_editor',
+  INVESTOR: 'investor',
 }
 
 /** @deprecated enum values may still exist in DB; do not assign in app */
@@ -65,6 +68,9 @@ export const OPS_LOGIN_ROLES = [
   ROLES.SUPER_ADMIN,
   ROLES.ASSISTANT_SUPER_ADMIN,
   ROLES.MARKETING,
+  ROLES.DETAILER,
+  ROLES.VIDEO_EDITOR,
+  ROLES.INVESTOR,
 ]
 
 const has = (profile, roles) => roles.includes(profile?.role)
@@ -127,17 +133,20 @@ export function canAccessPos(profile) {
 export function canAccessFinance(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'finance_view')
+  if (profile?.role === ROLES.INVESTOR) return true
   return profile?.role === ROLES.ADMIN
 }
 
 export function canWriteFinance(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'finance_write')
+  if (profile?.role === ROLES.INVESTOR) return false
   return profile?.role === ROLES.ADMIN
 }
 
 export function canAccessReports(profile) {
   if (isSuperAdmin(profile)) return true
+  if (profile?.role === ROLES.INVESTOR) return true
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'reports')
 }
 
@@ -261,13 +270,18 @@ export function canEditAttendanceRoles(profile) {
 export function canAccessAttendance(profile) {
   if (!profile) return false
   if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile)) return true
-  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF].includes(profile.role)
+  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF, ROLES.DETAILER, ROLES.MARKETING, ROLES.VIDEO_EDITOR].includes(
+    profile.role,
+  )
 }
 
-/** Personal geofenced time in / time out — Branch Admin, Crew, Team Lead only. */
+/** Personal geofenced time in / time out — Branch Admin, Crew, Team Lead, Detailer. */
 export function canUseAttendanceClock(profile) {
   if (!profile) return false
-  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF].includes(profile.role)
+  if (profile.attendance_enabled === false) return false
+  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF, ROLES.DETAILER, ROLES.MARKETING, ROLES.VIDEO_EDITOR].includes(
+    profile.role,
+  )
 }
 
 export function canAccessConsole(profile) {
@@ -301,7 +315,7 @@ export function canAccessBookingBoard(profile) {
 
 /** Advance detailing board status without editing services (TL / Branch Admin / SA). */
 export function canAdvanceBookingStatus(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD, ROLES.SALES])
+  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD, ROLES.SALES, ROLES.DETAILER])
 }
 
 /** Form-appointments editors: Sales (details only) and TL (can check-in to waiting). */
@@ -327,8 +341,11 @@ export function canModifyBookingServicePrice(profile) {
 }
 
 export function canViewPlanning(profile) {
-  // SA / ASA / Branch Admin manage boards; crew + TL open Forms for staff fill.
-  return isAdmin(profile) || has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD])
+  // SA / ASA / Branch Admin manage boards; crew + TL + marketing + video open planner.
+  return (
+    isAdmin(profile) ||
+    has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD, ROLES.MARKETING, ROLES.VIDEO_EDITOR])
+  )
 }
 
 export function canEditPlanning(profile) {
@@ -381,6 +398,13 @@ export function canViewRedoLane(profile) {
   return isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
 }
 
+/** Failed QA: TL + SA + ASA may send wash/package tickets back from final_checking. */
+export function canMarkFailedQa(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return true
+  return profile?.role === ROLES.TEAM_LEAD
+}
+
 /** Legacy TL port: Team Lead never sees the For Payment lane; console tier does. */
 export function canSeeForPaymentLane(profile) {
   return isAdmin(profile)
@@ -395,6 +419,12 @@ export function canOverrideQueueStatus(profile) {
 
 export function canViewAssignedTasks(profile) {
   return has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN])
+}
+
+export function canAccessReviews(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return true
+  return profile?.role === ROLES.ADMIN
 }
 
 export function canAccessMemberships(profile) {
@@ -412,14 +442,58 @@ export function isBranchAdmin(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+/** Web-first Command shell: SA, ASA, Branch Admin, Investor. */
+export function usesCommandShell(profile) {
+  return (
+    isSuperAdmin(profile) ||
+    isAssistantSuperAdmin(profile) ||
+    isBranchAdmin(profile) ||
+    profile?.role === ROLES.INVESTOR
+  )
+}
+
+/** Mobile-app Floor shell: TL, crew, sales, marketing, video, detailer. */
+export function usesFloorAppShell(profile) {
+  return (
+    profile?.role === ROLES.TEAM_LEAD ||
+    profile?.role === ROLES.STAFF ||
+    profile?.role === ROLES.SALES ||
+    profile?.role === ROLES.MARKETING ||
+    profile?.role === ROLES.VIDEO_EDITOR ||
+    profile?.role === ROLES.DETAILER
+  )
+}
+
 /** Nav items for the shared ops shell — filtered by role + grants. */
 export function getOperationsNav(profile) {
+  if (profile?.role === ROLES.INVESTOR) {
+    return [
+      { label: 'Finance', to: '/operations/finance', icon: 'Wallet' },
+      { label: 'Reports', to: '/operations/reports', icon: 'LineChart' },
+    ]
+  }
+
+  if (profile?.role === ROLES.VIDEO_EDITOR) {
+    return [
+      { label: 'Calendar', to: '/operations/planning?tab=calendar', icon: 'Columns3' },
+      { label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
+    ]
+  }
+
+  if (profile?.role === ROLES.DETAILER) {
+    return [
+      { label: 'My Detailing', to: '/operations/queue?family=detailing', icon: 'Layers' },
+      { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
+    ]
+  }
+
   if (profile?.role === ROLES.MARKETING) {
     return [
       { label: 'CRM', to: '/operations/crm', icon: 'Contact' },
       { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' },
-      { label: 'History', to: '/operations/history', icon: 'History' },
+      { label: 'Planner', to: '/operations/planning', icon: 'Columns3' },
       { label: 'Notifications', to: '/operations/notifications', icon: 'Bell' },
+      { label: 'History', to: '/operations/history', icon: 'History' },
     ]
   }
 
@@ -430,14 +504,18 @@ export function getOperationsNav(profile) {
     ]
   }
 
-  // Branch Admin: tablet dock surface — keep sidebar/nav identical if shell falls back.
+  // Branch Admin: Command sidebar (web-first).
   if (isBranchAdmin(profile)) {
     return [
+      { label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' },
+      { label: 'Car Wash Queue', to: '/operations/queue', icon: 'ClipboardList' },
+      { label: 'Detailing Queue', to: '/operations/queue?family=detailing', icon: 'Layers' },
       { label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' },
-      { label: 'Queue View', to: '/operations/dashboard', icon: 'Gauge' },
-      { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
       { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
+      { label: 'Inventory', to: '/operations/inventory', icon: 'Package' },
       { label: 'History', to: '/operations/history', icon: 'History' },
+      { label: 'Reviews', to: '/operations/reviews', icon: 'Star' },
+      { label: 'Audit', to: '/operations/audit', icon: 'ScrollText' },
     ]
   }
 
@@ -528,6 +606,9 @@ export function getOperationsNav(profile) {
   if (canAccessBookingBoard(profile)) {
     items.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
   }
+  if (canAccessReviews(profile)) {
+    items.push({ label: 'Reviews', to: '/operations/reviews', icon: 'Star' })
+  }
   if (canAccessReports(profile)) {
     items.push({ label: 'Reports', to: '/operations/reports', icon: 'LineChart' })
   }
@@ -599,6 +680,63 @@ export function getSalesMore(profile) {
   return []
 }
 
+/** Crew thumb dock — attendance primary. */
+export function getStaffDock(profile) {
+  if (profile?.role !== ROLES.STAFF) return []
+  return [
+    { label: 'Attendance', to: '/operations/attendance', icon: 'Clock', primary: true, end: true },
+    { label: 'Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
+    { label: 'Forms', to: '/operations/planning?tab=forms', icon: 'Columns3' },
+  ]
+}
+
+export function getStaffMore(profile) {
+  if (profile?.role !== ROLES.STAFF) return []
+  return [{ label: 'History', to: '/operations/history', icon: 'History' }]
+}
+
+/** Marketing FloorApp dock. */
+export function getMarketingDock(profile) {
+  if (profile?.role !== ROLES.MARKETING) return []
+  return [
+    { label: 'CRM', to: '/operations/crm', icon: 'Contact', primary: true, end: true },
+    { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' },
+    { label: 'Planner', to: '/operations/planning', icon: 'Columns3' },
+    { label: 'Alerts', to: '/operations/notifications', icon: 'Bell' },
+  ]
+}
+
+export function getMarketingMore(profile) {
+  if (profile?.role !== ROLES.MARKETING) return []
+  return [{ label: 'History', to: '/operations/history', icon: 'History' }]
+}
+
+/** Video editor — calendar + tasks only. */
+export function getVideoEditorDock(profile) {
+  if (profile?.role !== ROLES.VIDEO_EDITOR) return []
+  return [
+    { label: 'Calendar', to: '/operations/planning?tab=calendar', icon: 'Columns3', primary: true },
+    { label: 'Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
+  ]
+}
+
+export function getVideoEditorMore() {
+  return []
+}
+
+/** Detailer — assigned detailing + attendance. */
+export function getDetailerDock(profile) {
+  if (profile?.role !== ROLES.DETAILER) return []
+  return [
+    { label: 'Detailing', to: '/operations/queue?family=detailing', icon: 'Layers', primary: true },
+    { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
+  ]
+}
+
+export function getDetailerMore() {
+  return []
+}
+
 export function redirectForRole(role) {
   if (role === ROLES.SUPER_ADMIN || role === ROLES.ASSISTANT_SUPER_ADMIN) {
     return '/operations/console'
@@ -608,6 +746,9 @@ export function redirectForRole(role) {
   if (role === ROLES.TEAM_LEAD) return '/operations/queue'
   if (role === ROLES.SALES) return '/operations/bookings'
   if (role === ROLES.MARKETING) return '/operations/crm'
+  if (role === ROLES.VIDEO_EDITOR) return '/operations/planning?tab=calendar'
+  if (role === ROLES.DETAILER) return '/operations/queue?family=detailing'
+  if (role === ROLES.INVESTOR) return '/operations/finance'
   // legacy cashier still lands on POS
   if (role === DEPRECATED_ROLES.CASHIER) return '/operations/pos'
   return '/operations/dashboard'
@@ -635,6 +776,7 @@ export function allowRoute(profile, key) {
     finance: canAccessFinance,
     crm: canAccessCrm,
     bookings: canAccessBookingBoard,
+    reviews: canAccessReviews,
     reports: canAccessReports,
     memberships: canAccessMemberships,
     settings: canAccessSettings,

@@ -37,6 +37,9 @@ const ROLE_LABELS = {
   staff: 'Staff',
   sales: 'Sales',
   marketing: 'Marketing',
+  detailer: 'Detailer',
+  video_editor: 'Video Editor',
+  investor: 'Investor',
   BossMich: 'Super Admin',
 }
 
@@ -82,6 +85,9 @@ export default function PeopleManagePage() {
     branch_slugs: [],
     temporary_password: '',
     permission_grants: { ...DEFAULT_ASSISTANT_GRANTS },
+    attendance_enabled: true,
+    geofence_enabled: true,
+    employment_type: 'permanent',
   })
 
   const roleOptions = useMemo(() => {
@@ -94,8 +100,11 @@ export default function PeopleManagePage() {
         { value: 'admin', label: 'Admin (multi-branch)' },
         { value: 'assistant_super_admin', label: 'Assistant Super Admin' },
         ...base,
+        { value: 'detailer', label: 'Detailer' },
         { value: 'sales', label: 'Sales (form bookings)' },
         { value: 'marketing', label: 'Marketing' },
+        { value: 'video_editor', label: 'Video Editor' },
+        { value: 'investor', label: 'Investor' },
       ]
     }
     return base
@@ -134,6 +143,9 @@ export default function PeopleManagePage() {
         branch_slug: needsBranch ? slugs[0] || form.branch_slug || null : null,
         branch_slugs: needsBranch ? slugs : [],
         permission_grants: form.role === ROLES.ASSISTANT_SUPER_ADMIN ? form.permission_grants : {},
+        attendance_enabled: form.attendance_enabled,
+        geofence_enabled: form.geofence_enabled,
+        employment_type: form.employment_type,
       })
       toast.success('Account created')
       setForm((f) => ({ ...f, full_name: '', email: '', phone: '', temporary_password: '' }))
@@ -163,6 +175,9 @@ export default function PeopleManagePage() {
         branch_slugs: editing.branch_slugs,
         phone: editing.phone,
         is_active: editing.is_active,
+        attendance_enabled: editing.attendance_enabled,
+        geofence_enabled: editing.geofence_enabled,
+        employment_type: editing.employment_type,
       }
       if (editing.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile)) {
         payload.permission_grants = editing.permission_grants
@@ -197,8 +212,8 @@ export default function PeopleManagePage() {
   return (
     <section className="flex flex-col gap-8">
       <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">RBAC</p>
-        <h1 className="text-3xl font-semibold tracking-tight">People & access control</h1>
+        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Users & Access</p>
+        <h1 className="text-3xl font-semibold tracking-tight">Users & Access</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {isSuperAdmin(profile)
             ? 'Create roles, assign multi-branch scope, and toggle Assistant Super Admin grants. Reload after edits; open sessions pick up grant changes on next auth refresh.'
@@ -298,6 +313,27 @@ export default function PeopleManagePage() {
                   </div>
                 </div>
               )}
+              <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff toggles</Label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input type="checkbox" checked={form.attendance_enabled} onChange={() => setForm((f) => ({ ...f, attendance_enabled: !f.attendance_enabled }))} />
+                  Attendance clock enabled
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input type="checkbox" checked={form.geofence_enabled} onChange={() => setForm((f) => ({ ...f, geofence_enabled: !f.geofence_enabled }))} />
+                  Geofence enabled
+                </label>
+                <div className="flex flex-col gap-1">
+                  <Label className="text-sm">Employment type</Label>
+                  <Select value={form.employment_type} onValueChange={(employment_type) => setForm((f) => ({ ...f, employment_type }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="permanent">Permanent</SelectItem>
+                      <SelectItem value="on_call">On-call</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="p-pass">Temporary password (optional)</Label>
                 <Input id="p-pass" type="text" value={form.temporary_password} onChange={(e) => setForm((f) => ({ ...f, temporary_password: e.target.value }))} />
@@ -455,6 +491,27 @@ export default function PeopleManagePage() {
                   </div>
                 </div>
               )}
+              <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff toggles</Label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input type="checkbox" checked={editing.attendance_enabled !== false} onChange={() => setEditing((r) => ({ ...r, attendance_enabled: !(r.attendance_enabled !== false) }))} />
+                  Attendance clock enabled
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input type="checkbox" checked={editing.geofence_enabled !== false} onChange={() => setEditing((r) => ({ ...r, geofence_enabled: !(r.geofence_enabled !== false) }))} />
+                  Geofence enabled
+                </label>
+                <div className="flex flex-col gap-1">
+                  <Label className="text-sm">Employment type</Label>
+                  <Select value={editing.employment_type || 'permanent'} onValueChange={(employment_type) => setEditing((r) => ({ ...r, employment_type }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="permanent">Permanent</SelectItem>
+                      <SelectItem value="on_call">On-call</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select

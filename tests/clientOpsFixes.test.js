@@ -30,14 +30,17 @@ describe('client ops fixes batch', () => {
   })
 
   it('detailing board labels and progression', () => {
-    assert.equal(STATUS_LABELS.pending, 'Booking Placeholder')
-    assert.equal(STATUS_LABELS.confirmed, 'Assigned to Branch')
-    assert.equal(STATUS_LABELS.waiting, 'In Take Started')
-    assert.equal(STATUS_LABELS.in_progress, 'Vehicle Inspection')
-    assert.equal(STATUS_LABELS.final_checking, 'Ready for Release')
-    assert.equal(STATUS_LABELS.completed, 'Successful Release')
+    assert.equal(STATUS_LABELS.pending, 'Pending')
+    assert.equal(STATUS_LABELS.waiting, 'Waiting')
+    assert.equal(STATUS_LABELS.in_progress, 'In Progress')
+    assert.equal(STATUS_LABELS.final_checking, 'Final Checking')
+    assert.equal(STATUS_LABELS.completed, 'Completed')
+    assert.equal(DETAILING_BOARD_STATUSES[0].label, 'Booking Placeholder')
+    assert.equal(DETAILING_BOARD_STATUSES[1].label, 'Assign to branch')
+    assert.equal(DETAILING_BOARD_STATUSES[2].label, 'Vehicle intake')
     assert.equal(nextDetailingBoardStatus('pending'), 'confirmed')
-    assert.equal(DETAILING_BOARD_STATUSES.length, 6)
+    assert.equal(nextDetailingBoardStatus('final_checking'), 'for_releasing')
+    assert.ok(DETAILING_BOARD_STATUSES.length >= 7)
   })
 
   it('Bookings view is Sales / SA / Marketing — not TL', () => {

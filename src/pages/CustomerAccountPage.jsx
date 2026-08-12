@@ -8,6 +8,7 @@ import {
   Radio,
   Receipt,
   Settings,
+  Star,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { getAccessTokenFresh } from '@/lib/authToken'
@@ -15,6 +16,7 @@ import { nearestBranchSlug } from '@/lib/branchGeo'
 import { formatMoney } from '@/queue/queueApi'
 import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
 import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
+import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import LoyaltyCard from '@/components/LoyaltyCard'
@@ -73,6 +75,10 @@ export default function CustomerAccountPage() {
   const [bookVehicle, setBookVehicle] = useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState('alerts')
+  const [ratingStars, setRatingStars] = useState(0)
+  const [ratingComment, setRatingComment] = useState('')
+  const [ratingSaving, setRatingSaving] = useState(false)
+  const [ratingDone, setRatingDone] = useState(false)
   const { countsBySlug } = usePublicQueueCounts()
 
   function openSettings(next = 'alerts') {
@@ -334,6 +340,68 @@ export default function CustomerAccountPage() {
           <div className="capp-empty">
             <strong>No active visit</strong>
             Book a service to track your car on the floor.
+          </div>
+        )}
+
+        {!loading && !ratingDone && history.length > 0 && history[0]?.status === 'completed' && (
+          <div className="capp-ticket">
+            <p className="capp-label">Rate your last visit</p>
+            <p className="capp-meta" style={{ marginBottom: '0.5rem' }}>
+              {history[0].vehicle_plate || 'Visit'} · {branchLabel(branches, history[0].branch)}
+            </p>
+            <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '0.6rem' }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setRatingStars(n)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.15rem' }}
+                  aria-label={`${n} star`}
+                >
+                  <Star
+                    size={28}
+                    className={n <= ratingStars ? 'fill-amber-400 text-amber-400' : 'text-[color:var(--capp-steel)]'}
+                  />
+                </button>
+              ))}
+            </div>
+            <textarea
+              className="account-field"
+              rows={2}
+              placeholder="Optional comment…"
+              value={ratingComment}
+              onChange={(e) => setRatingComment(e.target.value)}
+              style={{ marginBottom: '0.5rem' }}
+            />
+            <button
+              type="button"
+              className="capp-btn capp-btn-fill"
+              disabled={!ratingStars || ratingSaving}
+              onClick={async () => {
+                setRatingSaving(true)
+                const { error } = await supabase.from('service_reviews').insert({
+                  booking_id: history[0].id,
+                  customer_id: user.id,
+                  customer_name: portalProfile?.full_name || authProfile?.full_name || 'Customer',
+                  branch: history[0].branch || '',
+                  overall_rating: ratingStars,
+                  comment: ratingComment.trim() || null,
+                })
+                setRatingSaving(false)
+                if (error) {
+                  if (error.code === '23505') setRatingDone(true)
+                  return
+                }
+                setRatingDone(true)
+              }}
+            >
+              {ratingSaving ? 'Sending…' : 'Submit review'}
+            </button>
+          </div>
+        )}
+        {ratingDone && (
+          <div className="capp-note">
+            <strong>Thank you for your feedback!</strong>
           </div>
         )}
 

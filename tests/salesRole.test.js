@@ -83,17 +83,18 @@ describe('sales role — detailing bookings board', () => {
     for (const key of denied) assert.equal(allowRoute(sales, key), false, key)
   })
 
-  it('board shows 6 detailing statuses + cancelled; Sales advances full pipeline', () => {
+  it('board shows detailing statuses + cancelled; Sales advances full pipeline', () => {
     assert.deepEqual(getBookingBoardStatuses(sales), [
       ...DETAILING_BOARD_STATUSES.map((s) => s.id),
       'cancelled',
     ])
-    assert.equal(STATUS_LABELS.waiting, 'In Take Started')
+    assert.equal(STATUS_LABELS.waiting, 'Waiting')
     assert.equal(getBookingPrimaryNextStatus('pending', { canCheckIn: true, detailingPipeline: true }), 'confirmed')
     assert.equal(getBookingPrimaryNextStatus('confirmed', { canCheckIn: true, detailingPipeline: true }), 'waiting')
     assert.equal(getBookingPrimaryNextStatus('waiting', { detailingPipeline: true }), 'in_progress')
     assert.equal(getBookingPrimaryNextStatus('in_progress', { detailingPipeline: true }), 'final_checking')
-    assert.equal(getBookingPrimaryNextStatus('final_checking', { detailingPipeline: true }), 'completed')
+    assert.equal(getBookingPrimaryNextStatus('final_checking', { detailingPipeline: true }), 'for_releasing')
+    assert.equal(getBookingPrimaryNextStatus('for_releasing', { detailingPipeline: true }), 'for_payment')
     assert.equal(getBookingPrimaryNextStatus('confirmed', { canCheckIn: false, detailingPipeline: true }), null)
   })
 

@@ -95,7 +95,7 @@ export async function archiveBranch(slug) {
 export async function listStaffPeople({ includeInactive = false } = {}) {
   let q = supabase
     .from('staff_profiles')
-    .select('id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, created_at, updated_at')
+    .select('id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, created_at, updated_at')
     .eq('is_archived', false)
     .order('full_name')
   if (!includeInactive) q = q.eq('is_active', true)
@@ -131,6 +131,9 @@ export async function updateStaffPerson({
   phone,
   is_active,
   permission_grants,
+  attendance_enabled,
+  geofence_enabled,
+  employment_type,
 }) {
   const primary =
     branch_slug || (Array.isArray(branch_slugs) && branch_slugs.length ? branch_slugs[0] : null)
@@ -149,6 +152,9 @@ export async function updateStaffPerson({
     is_active: is_active ?? true,
     updated_at: new Date().toISOString(),
   }
+  if (attendance_enabled !== undefined) patch.attendance_enabled = attendance_enabled
+  if (geofence_enabled !== undefined) patch.geofence_enabled = geofence_enabled
+  if (employment_type !== undefined) patch.employment_type = employment_type
   // Only patch grants when explicitly provided (People UI omits when editor lacks rbac_edit)
   if (
     v.role === 'assistant_super_admin' &&

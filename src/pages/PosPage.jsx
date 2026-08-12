@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
-import { Cake, Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
+import { Cake, Check, Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X, XCircle } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, canManageServices, canSeeAllBranches, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
+import { canAccessPos, canManageServices, canSeeAllBranches, getBranchScopeList, isAdmin, isBranchAdmin, isSuperAdmin, isAssistantSuperAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
@@ -11,6 +11,7 @@ import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange } from '@
 import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
+import { buildBacoorDailyReport, formatBacoorReportText } from '@/lib/bacoorDailyReport'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -25,16 +26,29 @@ import { accumulatePosCategoryTotals, emptyPosCategoryTotals, productIsPosSellab
 
 const PAYMENT_OPTIONS = PAYMENT_METHODS
 
+const EXPENSE_KINDS = [
+  { value: 'daily', label: 'Daily expense' },
+  { value: 'salary_carwash', label: 'Carwash salary' },
+  { value: 'salary_detailer', label: 'Detailer salary' },
+  { value: 'salary_tinter', label: 'Tinter salary' },
+  { value: 'monthly', label: 'Monthly expense' },
+  { value: 'other_branch', label: 'Other branch expense' },
+  { value: 'other', label: 'Other' },
+]
+
+const SHELL_TABS = ['checkout', 'pending', 'expenses', 'cash-advance', 'dashboard', 'services', 'merch']
+
 export default function PosPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const branchAdmin = isBranchAdmin(profile)
   const canManageCatalog = canManageServices(profile)
-  const requestedShellTab = ['checkout', 'services', 'merch'].includes(searchParams.get('tab'))
+  const requestedShellTab = SHELL_TABS.includes(searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'checkout'
-  // Branch Admin (and anyone without catalog CRUD) stays on checkout — ignore manage deep links.
-  const shellTab = canManageCatalog ? requestedShellTab : 'checkout'
+  // Branch Admin (and anyone without catalog CRUD) can't access services/merch manage tabs.
+  const manageTabs = ['services', 'merch']
+  const shellTab = !canManageCatalog && manageTabs.includes(requestedShellTab) ? 'checkout' : requestedShellTab
   const scopeList = getBranchScopeList(profile)
   const canPickPosBranch = canSeeAllBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
   const branchLocked = !canPickPosBranch
@@ -52,7 +66,7 @@ export default function PosPage() {
   }, [branchAdmin, tab])
 
   useEffect(() => {
-    if (!canManageCatalog && searchParams.get('tab')) {
+    if (!canManageCatalog && manageTabs.includes(searchParams.get('tab'))) {
       setSearchParams({}, { replace: true })
     }
   }, [canManageCatalog, searchParams, setSearchParams])
@@ -70,6 +84,7 @@ export default function PosPage() {
   const [searchingCustomer, setSearchingCustomer] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [compToggles, setCompToggles] = useState({ freeShirt: false, cardPayment: false, crewAssisted: true, detailerAssigned: false })
   const [todayStats, setTodayStats] = useState(null)
   const [categoryTotals, setCategoryTotals] = useState(emptyPosCategoryTotals())
   const [dailyReportOpen, setDailyReportOpen] = useState(false)
@@ -78,6 +93,17 @@ export default function PosPage() {
   const [activeMembership, setActiveMembership] = useState(null)
   const [birthdayPerk, setBirthdayPerk] = useState(null)
   const [membershipsEnabled, setMembershipsEnabled] = useState(true)
+
+  // Expenses tab
+  const [expenseForm, setExpenseForm] = useState({ title: '', amount: '', expense_kind: 'daily' })
+  const [savingExpense, setSavingExpense] = useState(false)
+  const [todayExpenses, setTodayExpenses] = useState([])
+
+  // Cash-advance tab
+  const [caSubmissions, setCaSubmissions] = useState([])
+  const [caLoading, setCaLoading] = useState(false)
+
+  const canApproveCa = isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || isBranchAdmin(profile)
 
   const membershipContext = useMemo(
     () => ({
@@ -183,18 +209,58 @@ export default function PosPage() {
     if (assignedBranch && branch !== assignedBranch) setBranch(assignedBranch)
   }, [assignedBranch, branchLocked, branch])
 
+  const loadExpenses = useCallback(async () => {
+    if (!branch) return
+    const today = getLocalCalendarDate()
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('id, title, total_minor, expense_kind, branch, created_at')
+      .eq('branch', branch)
+      .gte('created_at', `${today}T00:00:00+08:00`)
+      .order('created_at', { ascending: false })
+      .limit(100)
+    if (error) toast.error(error.message)
+    setTodayExpenses(data || [])
+  }, [branch])
+
+  const loadCashAdvances = useCallback(async () => {
+    if (!branch) return
+    setCaLoading(true)
+    const { data, error } = await supabase
+      .from('ops_form_submissions')
+      .select('id, form_id, payload, status, respondent_label, created_at, ops_forms ( name, kind, slug )')
+      .eq('status', 'new')
+      .order('created_at', { ascending: false })
+      .limit(100)
+    setCaLoading(false)
+    if (error) { toast.error(error.message); return }
+    // Filter to cash_advance kind + branch scope
+    const filtered = (data || []).filter((row) => {
+      if (row.ops_forms?.kind !== 'cash_advance') return false
+      const subBranch = row.payload?.branch || ''
+      if (!subBranch) return true
+      const scope = getBranchScopeList(profile)
+      if (scope === null) return true
+      return scope.includes(subBranch)
+    })
+    setCaSubmissions(filtered)
+  }, [branch, profile])
+
   useEffect(() => {
     if (!branch) return
     load()
+    loadExpenses()
+    loadCashAdvances()
     const channel = supabase
       .channel(`pos-sales:${branch}:${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs' }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, loadExpenses)
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [load, branch])
+  }, [load, loadExpenses, loadCashAdvances, branch])
 
   const serviceItems = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -468,6 +534,8 @@ export default function PosPage() {
     if (cart.some((l) => l.membership_discount_applied) && activeMembership?.name) {
       noteParts.push(`Member ${activeMembership.name} ${activeMembership.discount_percent}% off`)
     }
+    const activeCompKeys = Object.entries(compToggles).filter(([, v]) => v).map(([k]) => k)
+    if (activeCompKeys.length) noteParts.push(`comp:${activeCompKeys.join(',')}`)
     const { data, error } = await supabase.rpc('complete_pos_sale', {
       payload: buildPosSalePayload({
         branch,
@@ -531,6 +599,7 @@ export default function PosPage() {
     setCart([])
     setActiveHandoff(null)
     resetCheckoutExtras()
+    setCompToggles({ freeShirt: false, cardPayment: false, crewAssisted: true, detailerAssigned: false })
     setCartOpen(false)
     load()
   }
@@ -541,8 +610,41 @@ export default function PosPage() {
   const catalogTab = branchAdmin ? 'merch' : tab
 
   function setShellTab(next) {
-    if (!canManageCatalog && next !== 'checkout') return
+    if (!canManageCatalog && manageTabs.includes(next)) return
     setSearchParams(next === 'checkout' ? {} : { tab: next }, { replace: true })
+  }
+
+  async function submitExpense(e) {
+    e.preventDefault()
+    const pesos = Number(String(expenseForm.amount).replace(/,/g, '').trim())
+    if (!expenseForm.title.trim() || !Number.isFinite(pesos) || pesos <= 0) {
+      return toast.error('Enter a title and valid amount')
+    }
+    setSavingExpense(true)
+    const total = Math.round(pesos * 100)
+    const { error } = await supabase.from('expenses').insert({
+      title: expenseForm.title.trim(),
+      total_minor: total,
+      unit_cost_minor: total,
+      quantity: 1,
+      expense_kind: expenseForm.expense_kind,
+      branch,
+      status: 'draft',
+    })
+    setSavingExpense(false)
+    if (error) return toast.error(error.message)
+    toast.success('Expense recorded')
+    setExpenseForm({ title: '', amount: '', expense_kind: 'daily' })
+    loadExpenses()
+  }
+
+  async function updateCaStatus(id, status) {
+    const { error } = await supabase.from('ops_form_submissions').update({ status }).eq('id', id)
+    if (error) toast.error(error.message)
+    else {
+      toast.success(`Cash advance ${status === 'resolved' ? 'approved' : 'declined'}`)
+      loadCashAdvances()
+    }
   }
 
   const checkoutBody = (
@@ -683,6 +785,220 @@ export default function PosPage() {
     </div>
   )
 
+  const dailyReportData = useMemo(() => {
+    return buildBacoorDailyReport({
+      branch: branch || 'bacoor',
+      date: getLocalCalendarDate(),
+      sales: [],
+      expenses: todayExpenses.map((e) => ({
+        expense_kind: e.expense_kind,
+        amount_minor: e.total_minor,
+        label: e.title,
+      })),
+      cashAdvances: caSubmissions
+        .filter((r) => r.status === 'resolved')
+        .map((r) => ({
+          status: 'approved',
+          amount_minor: Number(r.payload?.amount || 0) * 100,
+          employee_name: r.payload?.employee_name || r.respondent_label || 'Employee',
+        })),
+    })
+  }, [branch, todayExpenses, caSubmissions])
+
+  const pendingBody = (
+    <div className="mt-4 flex flex-col gap-4">
+      {handoffs.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No pending payments right now.</p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {handoffs.map((row) => {
+            const booking = row.bookings || {}
+            return (
+              <button
+                key={row.id}
+                type="button"
+                onClick={() => { loadHandoff(row); setShellTab('checkout') }}
+                className="min-h-[88px] rounded-xl border border-border bg-background p-4 text-left transition hover:border-primary/50 hover:bg-accent/30"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium">{booking.customer_name || 'Customer'}</p>
+                  <Badge variant="secondary">
+                    {booking.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{booking.vehicle_plate || '—'}</p>
+                <p className="mt-3 text-xl font-semibold tabular-nums">{formatMoney(row.amount_minor || booking.final_price_minor || 0)}</p>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+
+  const expensesBody = (
+    <div className="mt-4 flex flex-col gap-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Submit expense</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submitExpense} className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="pos-exp-title">Description</Label>
+              <Input
+                id="pos-exp-title"
+                required
+                placeholder="e.g. ice, supplies, parking"
+                value={expenseForm.title}
+                onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="pos-exp-amount">Amount (₱)</Label>
+              <Input
+                id="pos-exp-amount"
+                required
+                inputMode="decimal"
+                placeholder="0.00"
+                value={expenseForm.amount}
+                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="pos-exp-kind">Category</Label>
+              <Select value={expenseForm.expense_kind} onValueChange={(v) => setExpenseForm({ ...expenseForm, expense_kind: v })}>
+                <SelectTrigger id="pos-exp-kind" className="min-h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPENSE_KINDS.map((k) => (
+                    <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
+              <Button type="submit" disabled={savingExpense} className="min-h-11">
+                {savingExpense ? 'Saving…' : 'Record expense'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Today's expenses · {branchLabel}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {todayExpenses.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No expenses recorded today.</p>
+          ) : (
+            <div className="space-y-2">
+              {todayExpenses.map((row) => (
+                <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+                  <div>
+                    <p className="font-medium">{row.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {EXPENSE_KINDS.find((k) => k.value === row.expense_kind)?.label || row.expense_kind}
+                      {' · '}
+                      {new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <p className="text-lg font-semibold tabular-nums">{formatMoney(row.total_minor)}</p>
+                </div>
+              ))}
+              <div className="flex items-center justify-between border-t border-border pt-2">
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-lg font-semibold tabular-nums">
+                  {formatMoney(todayExpenses.reduce((s, r) => s + Number(r.total_minor || 0), 0))}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+
+  const cashAdvanceBody = (
+    <div className="mt-4 flex flex-col gap-4">
+      {caLoading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : caSubmissions.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No pending cash advance requests.</p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {caSubmissions.map((row) => {
+            const p = row.payload || {}
+            return (
+              <Card key={row.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base">{p.employee_name || row.respondent_label || 'Employee'}</CardTitle>
+                    <Badge variant="outline">{row.status}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-2xl font-semibold tabular-nums">{formatMoney(Number(p.amount || 0) * 100)}</p>
+                  {p.branch && <p className="text-xs text-muted-foreground">Branch: {p.branch}</p>}
+                  {p.needed_by && <p className="text-xs text-muted-foreground">Needed by: {p.needed_by}</p>}
+                  {p.reason && <p className="text-sm">{p.reason}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(row.created_at).toLocaleString()}
+                  </p>
+                  {canApproveCa && (
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" className="gap-1.5" onClick={() => updateCaStatus(row.id, 'resolved')}>
+                        <Check className="size-3.5" /> Approve
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => updateCaStatus(row.id, 'archived')}>
+                        <XCircle className="size-3.5" /> Decline
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+
+  const dashboardBody = (
+    <div className="mt-4 flex flex-col gap-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="Sales today" value={formatMoney(todayStats?.total_sales_minor || 0)} />
+        <Stat label="Paid" value={todayStats?.paid_count ?? 0} />
+        <Stat label="Queue to pay" value={handoffs.length} />
+        <Stat label="Avg ticket" value={formatMoney(todayStats?.average_ticket_minor || 0)} />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="Car wash" value={formatMoney(categoryTotals.car_wash)} />
+        <Stat label="Ceramic coating" value={formatMoney(categoryTotals.ceramic_coating)} />
+        <Stat label="Nano ceramic tint" value={formatMoney(categoryTotals.nano_tint)} />
+        <Stat label="PPF" value={formatMoney(categoryTotals.ppf)} />
+        <Stat label="Sellables" value={formatMoney(categoryTotals.sellables)} />
+        <Stat label="Today expenses" value={formatMoney(todayExpenses.reduce((s, r) => s + Number(r.total_minor || 0), 0))} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
+          Daily sales report
+        </Button>
+        {canManageCatalog && (
+          <Button type="button" variant="secondary" className="min-h-11" asChild>
+            <Link to="/operations/inventory">Inventory Management</Link>
+          </Button>
+        )}
+        <Button type="button" variant="secondary" className="min-h-11" asChild>
+          <Link to="/operations/finance?tab=expenses">Open Finance · expenses</Link>
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <section className={`flex flex-col ${branchAdmin ? 'gap-4' : 'gap-6'}`}>
       <div className="floor-compact-header flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -717,7 +1033,24 @@ export default function PosPage() {
         )}
       </div>
 
-      {checkoutBody}
+      <Tabs value={shellTab} onValueChange={setShellTab} className="w-full">
+        <TabsList className="flex w-full max-w-2xl flex-wrap gap-1">
+          <TabsTrigger value="checkout" className="min-h-10">Checkout</TabsTrigger>
+          <TabsTrigger value="pending" className="min-h-10">Pending{handoffs.length ? ` (${handoffs.length})` : ''}</TabsTrigger>
+          <TabsTrigger value="expenses" className="min-h-10">Expenses</TabsTrigger>
+          <TabsTrigger value="cash-advance" className="min-h-10">Cash Advance{caSubmissions.length ? ` (${caSubmissions.length})` : ''}</TabsTrigger>
+          <TabsTrigger value="dashboard" className="min-h-10">Dashboard</TabsTrigger>
+          {canManageCatalog && <TabsTrigger value="services" className="min-h-10">Services</TabsTrigger>}
+          {canManageCatalog && <TabsTrigger value="merch" className="min-h-10">Merch</TabsTrigger>}
+        </TabsList>
+        <TabsContent value="checkout">{checkoutBody}</TabsContent>
+        <TabsContent value="pending">{pendingBody}</TabsContent>
+        <TabsContent value="expenses">{expensesBody}</TabsContent>
+        <TabsContent value="cash-advance">{cashAdvanceBody}</TabsContent>
+        <TabsContent value="dashboard">{dashboardBody}</TabsContent>
+        {canManageCatalog && <TabsContent value="services">{checkoutBody}</TabsContent>}
+        {canManageCatalog && <TabsContent value="merch">{checkoutBody}</TabsContent>}
+      </Tabs>
 
       <Sheet open={dailyReportOpen} onOpenChange={setDailyReportOpen}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-md">
@@ -744,9 +1077,21 @@ export default function PosPage() {
               <p>PPF · {formatMoney(categoryTotals.ppf)}</p>
               <p>Sellables · {formatMoney(categoryTotals.sellables)}</p>
             </div>
-            <p className="text-muted-foreground">
-              Dictate expenses in Finance — they go directly into the finance cashflow.
-            </p>
+            <div className="rounded-xl border border-border bg-muted/30 p-3">
+              <p className="mb-2 font-semibold">Bacoor-style report</p>
+              <pre className="whitespace-pre-wrap text-xs leading-relaxed">{formatBacoorReportText(dailyReportData, formatMoney)}</pre>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full"
+              onClick={() => {
+                navigator.clipboard.writeText(formatBacoorReportText(dailyReportData, formatMoney))
+                toast.success('Report copied to clipboard')
+              }}
+            >
+              Copy report text
+            </Button>
             <Button type="button" className="min-h-11 w-full" asChild>
               <Link to="/operations/finance?tab=expenses" onClick={() => setDailyReportOpen(false)}>
                 Open Finance · expenses
@@ -932,6 +1277,25 @@ export default function PosPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-border bg-muted/25 p-3">
+              <p className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Compensation toggles</p>
+              {[
+                { key: 'freeShirt', label: 'Free shirt included' },
+                { key: 'cardPayment', label: 'Credit/debit card payment' },
+                { key: 'crewAssisted', label: 'Car wash crew assisted' },
+                { key: 'detailerAssigned', label: 'Detailer assigned' },
+              ].map((t) => (
+                <label key={t.key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={compToggles[t.key]}
+                    onChange={(e) => setCompToggles((prev) => ({ ...prev, [t.key]: e.target.checked }))}
+                  />
+                  {t.label}
+                </label>
+              ))}
             </div>
           </div>
 

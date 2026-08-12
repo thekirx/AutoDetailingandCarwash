@@ -12,9 +12,10 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
-import { canAccessPos, canModifyBookingServicePrice, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane } from '../auth/permissions'
+import { canAccessPos, canMarkFailedQa, canModifyBookingServicePrice, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane } from '../auth/permissions'
 import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
 import { PRICING_SIZES } from '../lib/servicePricing'
+import { serviceKindFromPayCategory } from '../lib/serviceKinds'
 import CancellationReasonDialog from './CancellationReasonDialog'
 import { supabase } from '../lib/supabase'
 import {
@@ -207,10 +208,13 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const showRedoBtn = showQueueRedoAction(canViewRedoLane(profile))
   const canOpenPos = canAccessPos(profile)
   const canSeePayment = canSeeForPaymentLane(profile)
+  const ticketKind = serviceKindFromPayCategory(ticket.service_pay_category || ticket.pay_category)
+  const showFailedQa = canMarkFailedQa(profile) && ticketKind !== 'detailing'
   const actions = getQueueTicketActionFlags(ticket.status, {
     canManageQueue,
     canViewRedoLane: showRedoBtn,
     canSeePayment,
+    canFailQa: showFailedQa,
   })
   const overrideTargets = canOverrideQueueStatus(profile) ? getAdminOverrideTargets(ticket.status) : []
   const canAddService =
@@ -454,6 +458,16 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   <ActionButton disabled={!actions.canMarkRedo} loading={saving === 'redo'} onClick={() => runAction('redo', runRedo)}>
                     <ShieldAlert size={17} aria-hidden />
                     Mark redo
+                  </ActionButton>
+                ) : null}
+                {showFailedQa && actions.canMarkFailedQa ? (
+                  <ActionButton loading={saving === 'failqa'} onClick={() => runAction('failqa', () => {
+                    const reason = window.prompt('Failed QA reason (visible in audit):', '')
+                    if (reason === null) return Promise.resolve()
+                    return markTicketRedo(ticket, reason || 'Failed QA')
+                  })}>
+                    <Undo2 size={17} aria-hidden />
+                    Failed QA
                   </ActionButton>
                 ) : null}
                 {actions.canCancel ? (

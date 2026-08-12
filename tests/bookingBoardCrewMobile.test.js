@@ -28,7 +28,8 @@ describe('crew assign + booking board mobile', () => {
     assert.equal(getBookingPrimaryNextStatus('in_progress'), 'final_checking')
     assert.equal(getBookingPrimaryNextStatus('final_checking', { canSeePayment: false }), null)
     assert.equal(getBookingPrimaryNextStatus('final_checking', { canSeePayment: true }), 'for_payment')
-    assert.equal(getBookingPrimaryNextStatus('final_checking', { detailingPipeline: true }), 'completed')
+    assert.equal(getBookingPrimaryNextStatus('final_checking', { detailingPipeline: true }), 'for_releasing')
+    assert.equal(getBookingPrimaryNextStatus('for_releasing', { detailingPipeline: true }), 'for_payment')
   })
 
   it('TL shell uses Hakum mark; bookings page is mobile-first with crew gate', () => {

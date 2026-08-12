@@ -9,7 +9,8 @@ const ASSIGNMENT_TRANSITIONS = {
 
 const PLAN_TRANSITIONS = {
   todo: new Set(['in_progress']),
-  in_progress: new Set(['done']),
+  in_progress: new Set(['for_review', 'done']),
+  for_review: new Set(['done']),
 }
 
 /**
@@ -44,5 +45,11 @@ export function allowedStaffPlanAssigneePatch(current, next) {
   const from = String(current.status || '')
   const to = String(next.status || '')
   if (!PLAN_TRANSITIONS[from]?.has(to)) return null
-  return { status: to, updated_at: new Date().toISOString() }
+  const patch = { status: to, updated_at: new Date().toISOString() }
+  if (to === 'for_review') {
+    patch.proof_url = next.proof_url ?? null
+    patch.proof_note = next.proof_note ?? null
+    patch.proof_submitted_at = new Date().toISOString()
+  }
+  return patch
 }

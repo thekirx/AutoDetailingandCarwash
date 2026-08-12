@@ -8,6 +8,8 @@ export const POS_SELLABLE_TAGS = [
   'scents',
   'merch',
   'sellable',
+  'clothing',
+  'apparel',
 ]
 
 export function productIsPosSellable(product) {
@@ -15,7 +17,7 @@ export function productIsPosSellable(product) {
   if (!tags.length) {
     // Legacy rows without tags: treat merch/general category as sellable
     const cat = String(product?.category || '').toLowerCase()
-    return !cat || cat === 'merch' || cat === 'general' || cat === 'coffee' || cat === 'accessories'
+    return !cat || cat === 'merch' || cat === 'general' || cat === 'coffee' || cat === 'accessories' || cat === 'clothing'
   }
   return tags.some((t) => POS_SELLABLE_TAGS.includes(String(t).toLowerCase()))
 }

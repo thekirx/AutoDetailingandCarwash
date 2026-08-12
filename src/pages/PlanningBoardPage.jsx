@@ -57,7 +57,7 @@ const BOARD_SELECT = `
     plan_cards (
       id, title, description, due_at, position, labels,
       plan_checklist_items ( id, title, done, position ),
-      plan_card_assignees ( id, staff_id, status, notes, staff_profiles ( id, full_name, username ) )
+      plan_card_assignees ( id, staff_id, status, notes, proof_url, proof_note, proof_submitted_at, staff_profiles ( id, full_name, username ) )
     )
   )
 `
@@ -111,7 +111,7 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
       .from('staff_profiles')
       .select('id, full_name, username, role, is_active')
       .eq('is_active', true)
-      .in('role', ['staff', 'team_lead', 'admin', 'assistant_super_admin', 'BossMich'])
+      .in('role', ['staff', 'team_lead', 'admin', 'assistant_super_admin', 'BossMich', 'marketing', 'video_editor'])
       .order('full_name')
       .then(({ data, error }) => {
         if (error) toast.error(error.message)
@@ -147,7 +147,7 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
         assigned_by: user?.id || null,
         status: 'todo',
       })
-      .select('id, staff_id, status, notes, staff_profiles ( id, full_name, username )')
+      .select('id, staff_id, status, notes, proof_url, proof_note, proof_submitted_at, staff_profiles ( id, full_name, username )')
       .single()
     if (error) {
       toast.error(error.message)
@@ -333,7 +333,8 @@ function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, o
                 <Badge key={a.id} variant="secondary" className="gap-1">
                   {a.staff_profiles?.full_name || a.staff_id}
                   {a.staff_profiles?.username ? ` · @${a.staff_profiles.username}` : ''}
-                  <span className="opacity-70">· {a.status}</span>
+                  <span className="opacity-70">· {a.status === 'for_review' ? 'For review' : a.status}</span>
+                  {a.proof_url && <a href={a.proof_url} target="_blank" rel="noreferrer" className="ml-1 underline text-xs text-blue-400" onClick={e => e.stopPropagation()}>proof</a>}
                 </Badge>
               ))}
             </div>
@@ -874,6 +875,9 @@ export default function PlanningBoardPage() {
                                   <Users size={12} />
                                   {people.join(', ')}
                                 </span>
+                              )}
+                              {(card.plan_card_assignees || []).some((a) => a.status === 'for_review') && (
+                                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">For review</span>
                               )}
                             </div>
                           </button>

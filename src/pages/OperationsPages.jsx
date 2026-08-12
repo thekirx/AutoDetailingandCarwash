@@ -29,7 +29,8 @@ import {
   QUEUE_FAMILY_DETAILING,
 } from '../lib/queueFamilies'
 import { splitCustomerName } from '../lib/phVehicles'
-import { canAccessPos, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES } from '../auth/permissions'
+import { canAccessPos, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
+import { splitWashPool, DEFAULT_COMPENSATION_RULES } from '../lib/compensation'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import QueueTicketEditor from '../components/QueueTicketEditor'
 import TeamLeadQueuePage from './TeamLeadQueuePage'
@@ -1328,6 +1329,7 @@ export function CrewPage() {
           { key: 'pool', label: `Pool (${staffPool.length})` },
           { key: 'present', label: `Present (${presentCount})` },
           { key: 'busy', label: `Busy (${busyStaff.length})` },
+          { key: 'compensation', label: 'Compensation' },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -1417,7 +1419,89 @@ export function CrewPage() {
           {crewTab === 'busy' && (
             <Panel title="Busy Staff" icon={Users} className="mt-5"><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
           )}
+          {crewTab === 'compensation' && (
+            <CrewCompensationPanel profile={profile} staffPool={staffPool} branchFilter={getBranchScope(profile) || 'all'} />
+          )}
     </section>
+  )
+}
+
+function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
+  const [totalSales, setTotalSales] = useState(0)
+  const [rules, setRules] = useState(DEFAULT_COMPENSATION_RULES)
+  const [loading, setLoading] = useState(true)
+  const isTL = profile?.role === ROLES.TEAM_LEAD
+  const canSeePay = isSuperAdmin(profile) || isTL
+
+  useEffect(() => {
+    setLoading(true)
+    const today = getLocalCalendarDate()
+    const startIso = `${today}T00:00:00+08:00`
+    const endIso = `${today}T23:59:59.999+08:00`
+    Promise.all([
+      supabase
+        .from('sales')
+        .select('total_minor')
+        .eq('status', 'paid')
+        .gte('occurred_at', startIso)
+        .lte('occurred_at', endIso)
+        .then(({ data }) => (data || []).reduce((s, r) => s + Number(r.total_minor || 0), 0)),
+      supabase
+        .from('compensation_settings')
+        .select('rules')
+        .eq('id', 1)
+        .maybeSingle()
+        .then(({ data }) => data?.rules || DEFAULT_COMPENSATION_RULES),
+    ])
+      .then(([sales, r]) => {
+        setTotalSales(sales)
+        setRules({ ...DEFAULT_COMPENSATION_RULES, ...r })
+      })
+      .finally(() => setLoading(false))
+  }, [branchFilter])
+
+  const roster = staffPool
+    .filter((m) => m.is_present_today)
+    .map((m) => ({ ...m, attendance_status: m.is_present_today ? 'present' : 'absent' }))
+  const result = splitWashPool({ totalSalesMinor: totalSales, poolPct: rules.wash_pool_pct, roster })
+
+  if (loading) return <Panel title="Compensation estimate" icon={Wallet} className="mt-5"><p className="text-sm text-muted-foreground">Loading…</p></Panel>
+
+  return (
+    <Panel title="Compensation estimate · today" icon={Wallet} className="mt-5">
+      <div className="grid gap-3 sm:grid-cols-3 mb-4">
+        <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
+          <p className="text-[11px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Total sales</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{formatMoney(totalSales)}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
+          <p className="text-[11px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Pool ({rules.wash_pool_pct}%)</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{formatMoney(result.pool_minor)}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
+          <p className="text-[11px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Present crew</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{roster.length}</p>
+        </div>
+      </div>
+      {canSeePay && result.rows.length > 0 ? (
+        <div className="grid gap-2">
+          {result.rows.map((row) => (
+            <div key={row.id || row.staff_id} className="flex items-center justify-between rounded-xl border border-border bg-muted/20 px-4 py-3">
+              <div>
+                <p className="font-medium text-foreground">{row.full_name}</p>
+                <p className="text-xs text-muted-foreground">Weight {row.weight}</p>
+              </div>
+              <p className="text-lg font-semibold tabular-nums text-foreground">{formatMoney(row.pay_minor)}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">{!canSeePay ? 'Salary breakdown visible to TL and Super Admin.' : 'No present crew for salary split.'}</p>
+      )}
+      <p className="mt-3 text-xs text-muted-foreground">
+        Read-only estimate from today's paid sales × compensation_settings. Actual payroll uses Finance.
+      </p>
+    </Panel>
   )
 }
 
@@ -1444,9 +1528,9 @@ export function MyTasksPage() {
         .order('created_at', { ascending: false }),
       supabase
         .from('plan_card_assignees')
-        .select('id, status, notes, created_at, updated_at, card_id, plan_cards(id, title, description, due_at, labels)')
+        .select('id, status, notes, proof_url, proof_note, proof_submitted_at, created_at, updated_at, card_id, plan_cards(id, title, description, due_at, labels)')
         .eq('staff_id', user.id)
-        .in('status', ['todo', 'in_progress'])
+        .in('status', ['todo', 'in_progress', 'for_review'])
         .order('created_at', { ascending: false }),
     ])
     if (queueRes.error) setError(queueRes.error.message)
@@ -1496,8 +1580,8 @@ export function MyTasksPage() {
     }
   }
 
-  const updatePlanTask = async (row, nextStatus) => {
-    const patch = allowedStaffPlanAssigneePatch(row, { status: nextStatus })
+  const updatePlanTask = async (row, nextStatus, proofFields = {}) => {
+    const patch = allowedStaffPlanAssigneePatch(row, { status: nextStatus, ...proofFields })
     if (!patch) {
       setError('Illegal planning status change.')
       return
@@ -1546,7 +1630,8 @@ export function MyTasksPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="truncate text-lg font-semibold">{card?.title || 'Planning card'}</p>
-                    <p className="mt-1 text-xs capitalize text-slate-400">{row.status.replace('_', ' ')}{card?.due_at ? ` · due ${new Date(card.due_at).toLocaleString()}` : ''}</p>
+                    <p className="mt-1 text-xs capitalize text-slate-400">{row.status === 'for_review' ? 'For review' : row.status.replace('_', ' ')}{card?.due_at ? ` · due ${new Date(card.due_at).toLocaleString()}` : ''}{row.proof_submitted_at ? ` · proof sent ${new Date(row.proof_submitted_at).toLocaleDateString()}` : ''}</p>
+                    {row.proof_url && <a href={row.proof_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-blue-400 underline">View proof</a>}
                     {card?.description && <p className="mt-2 text-sm text-slate-400 line-clamp-2">{card.description}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1554,7 +1639,10 @@ export function MyTasksPage() {
                       <button type="button" disabled={saving === row.id} onClick={() => updatePlanTask(row, 'in_progress')} className="min-h-11 rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white disabled:opacity-40">Start</button>
                     )}
                     {row.status === 'in_progress' && (
-                      <button type="button" disabled={saving === row.id} onClick={() => updatePlanTask(row, 'done')} className="min-h-11 rounded-2xl border border-emerald-300/30 px-4 text-sm font-semibold text-emerald-100 disabled:opacity-40">Mark done</button>
+                      <ProofSubmit row={row} saving={saving} onSubmit={(proofFields) => updatePlanTask(row, 'for_review', proofFields)} onSkip={() => updatePlanTask(row, 'done')} />
+                    )}
+                    {row.status === 'for_review' && (
+                      <span className="inline-flex items-center rounded-full bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-300">Waiting for review</span>
                     )}
                   </div>
                 </div>
@@ -1619,6 +1707,30 @@ export function MyTasksPage() {
 }
 
 export { default as AccessDeniedPage } from './AccessDeniedPage'
+
+function ProofSubmit({ row, saving, onSubmit, onSkip }) {
+  const [open, setOpen] = useState(false)
+  const [proofUrl, setProofUrl] = useState('')
+  const [proofNote, setProofNote] = useState('')
+  if (!open) {
+    return (
+      <>
+        <button type="button" disabled={saving === row.id} onClick={() => setOpen(true)} className="min-h-11 rounded-2xl bg-amber-500 px-4 text-sm font-semibold text-white disabled:opacity-40">Submit for review</button>
+        <button type="button" disabled={saving === row.id} onClick={onSkip} className="min-h-11 rounded-2xl border border-emerald-300/30 px-4 text-sm font-semibold text-emerald-100 disabled:opacity-40">Mark done</button>
+      </>
+    )
+  }
+  return (
+    <div className="flex w-full flex-col gap-2">
+      <input placeholder="Proof link (optional)" value={proofUrl} onChange={(e) => setProofUrl(e.target.value)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-foreground placeholder:text-slate-500" />
+      <input placeholder="Proof note (optional)" value={proofNote} onChange={(e) => setProofNote(e.target.value)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-foreground placeholder:text-slate-500" />
+      <div className="flex gap-2">
+        <button type="button" disabled={saving === row.id} onClick={() => onSubmit({ proof_url: proofUrl.trim() || null, proof_note: proofNote.trim() || null })} className="min-h-11 rounded-2xl bg-amber-500 px-4 text-sm font-semibold text-white disabled:opacity-40">{saving === row.id ? 'Saving…' : 'Submit'}</button>
+        <button type="button" onClick={() => setOpen(false)} className="min-h-11 rounded-2xl border border-white/10 px-4 text-sm font-semibold text-slate-300">Cancel</button>
+      </div>
+    </div>
+  )
+}
 
 function Panel({ title, icon: Icon, children, className = '' }) {
   return (

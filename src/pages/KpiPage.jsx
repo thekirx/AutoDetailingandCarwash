@@ -4,7 +4,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { applyBranchScope, resolveKpiRpcBranch } from '@/lib/crmInsights'
-import { aggregateByService, averageCycleMinutes, compareBranchesByCompleted } from '@/lib/kpiPart8'
+import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaCount } from '@/lib/kpiPart8'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import {
@@ -108,7 +108,7 @@ export default function KpiPage() {
 
       let bq = supabase
         .from('bookings')
-        .select('id, branch, service_id, status, in_progress_at, for_payment_at, completed_at, final_checking_at, final_price_minor')
+        .select('id, branch, service_id, status, waiting_at, in_progress_at, for_payment_at, completed_at, final_checking_at, final_price_minor, redo_at')
         .eq('is_archived', false)
         .gte('scheduled_start', startIso)
         .lte('scheduled_start', endIso)
@@ -161,6 +161,9 @@ export default function KpiPage() {
     [services],
   )
   const avgCycle = useMemo(() => averageCycleMinutes(bookings), [bookings])
+  const avgWait = useMemo(() => averageWaitMinutes(bookings), [bookings])
+  const cancelCount = useMemo(() => bookings.filter((b) => b.status === 'cancelled').length, [bookings])
+  const failedQa = useMemo(() => failedQaCount(bookings), [bookings])
   const branchCompare = useMemo(() => compareBranchesByCompleted(bookings), [bookings])
   const byService = useMemo(() => aggregateByService(bookings, serviceNames), [bookings, serviceNames])
   const salesTotal = sales.reduce((s, r) => s + Number(r.total_minor || 0), 0)
@@ -229,9 +232,12 @@ export default function KpiPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Avg cycle (min)" value={avgCycle == null ? '—' : Math.round(avgCycle)} />
+        <Stat label="Avg cycle (min)" value={avgCycle == null ? '—' : Math.round(avgCycle)} title="Average in_progress → complete/payment" />
+        <Stat label="Avg wait (min)" value={avgWait == null ? '—' : Math.round(avgWait)} title="Average waiting → in_progress" />
         <Stat label="Bookings in range" value={bookings.length} />
         <Stat label="Sales revenue" value={formatMoney(salesTotal)} />
+        <Stat label="Cancelled" value={cancelCount} title="Tickets cancelled in this range" />
+        <Stat label="Failed QA" value={failedQa} title="Tickets sent to redo (redo_at set)" />
         <Stat label="Complaints" value={complaints.length} />
       </div>
 
@@ -395,9 +401,9 @@ export default function KpiPage() {
   )
 }
 
-function Stat({ label, value }) {
+function Stat({ label, value, title }) {
   return (
-    <Card>
+    <Card title={title}>
       <CardContent className="pt-5">
         <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">{label}</p>
         <p className="mt-3 text-2xl font-semibold tabular-nums">{value}</p>

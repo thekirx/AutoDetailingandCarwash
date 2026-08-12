@@ -18,9 +18,9 @@ describe('open bookings + queue one-screen board', () => {
   })
 
   it('queue short labels fit dense boards', () => {
-    assert.equal(statusShortLabel('confirmed'), 'Assigned')
-    assert.equal(statusShortLabel('waiting'), 'In Take')
-    assert.equal(statusShortLabel('final_checking'), 'Ready')
+    assert.equal(statusShortLabel('confirmed'), 'Confirmed')
+    assert.equal(statusShortLabel('waiting'), 'Waiting')
+    assert.equal(statusShortLabel('final_checking'), 'Final check')
   })
 
   it('queue page uses chip list on small screens and fitted board on xl', () => {

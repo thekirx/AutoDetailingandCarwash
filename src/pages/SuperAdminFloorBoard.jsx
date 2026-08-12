@@ -15,9 +15,13 @@ import { supabase } from '@/lib/supabase'
 import {
   DASHBOARD_DATE_PRESETS,
   getDashboardDateRange,
-  operationsQueueHref,
-  STATUS_LABELS,
 } from '@/queue/queueLogic'
+import { queueFamilyHref, ticketQueueFamily, QUEUE_FAMILY_DETAILING } from '@/lib/queueFamilies'
+import {
+  FLOOR_BOARD_FAMILY_META,
+  floorLaneLabel,
+} from '@/lib/floorBoardLanes'
+import { serviceKindFromPayCategory, formatQueueNumberForKind } from '@/lib/serviceKinds'
 import { fetchBranches, fetchSuperAdminFloorBoard, formatMoney } from '@/queue/queueApi'
 
 function formatMinutes(total) {
@@ -29,7 +33,7 @@ function formatMinutes(total) {
   return m ? `${h}h ${m}m` : `${h}h`
 }
 
-function StatTile({ label, value, hint, tone = 'default', onClick }) {
+function StatTile({ label, value, hint, tone = 'default', onClick, breakdown }) {
   const toneClass =
     tone === 'green'
       ? 'border-emerald-500/25 bg-emerald-500/[0.06]'
@@ -43,11 +47,17 @@ function StatTile({ label, value, hint, tone = 'default', onClick }) {
     <Comp
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`rounded-2xl border p-4 text-left shadow-sm transition ${toneClass} ${onClick ? 'cursor-pointer hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary' : ''}`}
+      title={breakdown || undefined}
+      className={`group relative rounded-2xl border p-4 text-left shadow-sm transition ${toneClass} ${onClick ? 'cursor-pointer hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary' : ''}`}
     >
       <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">{label}</p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">{value}</p>
       {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
+      {breakdown ? (
+        <div className="pointer-events-none absolute inset-x-2 bottom-full z-10 mb-2 hidden rounded-xl border border-border bg-card p-3 text-left text-xs shadow-lg group-hover:block">
+          {breakdown}
+        </div>
+      ) : null}
     </Comp>
   )
 }
@@ -70,8 +80,7 @@ function Section({ title, eyebrow, children, action }) {
 }
 
 /**
- * Super Admin network floor — all-branch pulse, roster, money, tempo.
- * Signature: one continuous lane strip (bay status), then three quiet panels.
+ * Super Admin Floor Board — Services & Packages and Detailing Services, roster, money, tempo.
  */
 export default function SuperAdminFloorBoard() {
   const { profile, canViewQueueOperations } = useAuth()
@@ -153,7 +162,7 @@ export default function SuperAdminFloorBoard() {
     )
   }
 
-  const lanes = board?.laneCounts || {}
+  const lanesByFamily = board?.laneCountsByFamily || { wash: {}, detailing: {} }
   const financials = board?.financials || {}
   const kpi = board?.kpi || {}
   const available = board?.availableStaff || []
@@ -170,6 +179,51 @@ export default function SuperAdminFloorBoard() {
           ? periodJobs.filter((j) => j.status === 'cancelled')
           : [...activeJobs, ...periodJobs]
 
+  function openFamilyLane(family, lane) {
+    navigate(queueFamilyHref(family, { lane, branch: branchFilter }))
+  }
+
+  function LaneStrip({ family }) {
+    const meta = FLOOR_BOARD_FAMILY_META[family]
+    const lanes = lanesByFamily[family] || {}
+    const loadingValue = loading && !board ? '…' : null
+    const timelineStatuses = [
+      { id: 'completed', tone: 'green' },
+      { id: 'cancelled', tone: 'rose' },
+    ]
+    const tiles = [
+      ...meta.liveStatuses.map((id) => ({
+        id,
+        tone: id === 'in_progress' ? 'green' : id === 'final_checking' || id === 'for_payment' ? 'amber' : 'default',
+        hint: 'Live',
+        onClick: () => openFamilyLane(family, id),
+      })),
+      ...timelineStatuses.map((row) => ({
+        ...row,
+        hint: 'In timeline',
+        onClick: () => setJobFilter(row.id),
+      })),
+    ]
+
+    return (
+      <Section eyebrow={meta.eyebrow} title={meta.title}>
+        <p className="mb-3 text-xs text-muted-foreground">{meta.hint}</p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {tiles.map((tile) => (
+            <StatTile
+              key={`${family}-${tile.id}`}
+              label={floorLaneLabel(tile.id, family)}
+              value={loadingValue ?? lanes[tile.id] ?? 0}
+              tone={tile.tone}
+              hint={tile.hint}
+              onClick={tile.onClick}
+            />
+          ))}
+        </div>
+      </Section>
+    )
+  }
+
   return (
     <section className="sa-floor pb-10">
       <header className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
@@ -185,9 +239,9 @@ export default function SuperAdminFloorBoard() {
               </span>
             ) : null}
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Floor</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Floor Board</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Bay status across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
+            Services & Packages and Detailing Services across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
           </p>
         </div>
         <button
@@ -264,48 +318,53 @@ export default function SuperAdminFloorBoard() {
         </p>
       ) : null}
 
-      <Section eyebrow="Bay status" title="Jobs on the floor">
+      <LaneStrip family="wash" />
+      <LaneStrip family="detailing" />
+
+      <Section eyebrow="Detailing ops" title="Detailing operations summary">
         <p className="mb-3 text-xs text-muted-foreground">
-          Waiting through For Payment are live now. Completed and Cancelled follow the timeline.
+          Multi-day pipeline pulse — Assigned through Ready for Release are live now.
         </p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           <StatTile
-            label="Waiting"
-            value={loading && !board ? '…' : lanes.waiting ?? 0}
+            label="Assign to branch"
+            value={loading && !board ? '…' : lanesByFamily.detailing?.confirmed ?? 0}
             hint="Live"
-            onClick={() => navigate(operationsQueueHref({ lane: 'waiting', branch: branchFilter }))}
+            onClick={() => openFamilyLane('detailing', 'confirmed')}
           />
           <StatTile
-            label="In progress"
-            value={loading && !board ? '…' : lanes.in_progress ?? 0}
+            label="In shop"
+            value={
+              loading && !board
+                ? '…'
+                : (lanesByFamily.detailing?.waiting || 0) + (lanesByFamily.detailing?.in_progress || 0)
+            }
             tone="green"
-            hint="Live"
-            onClick={() => navigate(operationsQueueHref({ lane: 'in_progress', branch: branchFilter }))}
+            hint="Intake + in progress"
           />
           <StatTile
             label="Final checking"
-            value={loading && !board ? '…' : lanes.final_checking ?? 0}
+            value={loading && !board ? '…' : lanesByFamily.detailing?.final_checking ?? 0}
             tone="amber"
             hint="Live"
-            onClick={() => navigate(operationsQueueHref({ lane: 'final_checking', branch: branchFilter }))}
+            onClick={() => openFamilyLane('detailing', 'final_checking')}
           />
           <StatTile
-            label="For payment"
-            value={loading && !board ? '…' : lanes.for_payment ?? 0}
-            tone="amber"
+            label="For releasing"
+            value={loading && !board ? '…' : lanesByFamily.detailing?.for_releasing ?? 0}
             hint="Live"
-            onClick={() => navigate(operationsQueueHref({ lane: 'for_payment', branch: branchFilter }))}
+            onClick={() => openFamilyLane('detailing', 'for_releasing')}
           />
           <StatTile
             label="Completed"
-            value={loading && !board ? '…' : lanes.completed ?? 0}
+            value={loading && !board ? '…' : lanesByFamily.detailing?.completed ?? 0}
             tone="green"
             hint="In timeline"
             onClick={() => setJobFilter('completed')}
           />
           <StatTile
             label="Cancelled"
-            value={loading && !board ? '…' : lanes.cancelled ?? 0}
+            value={loading && !board ? '…' : lanesByFamily.detailing?.cancelled ?? 0}
             tone="rose"
             hint="In timeline"
             onClick={() => setJobFilter('cancelled')}
@@ -315,7 +374,7 @@ export default function SuperAdminFloorBoard() {
 
       <Section
         eyebrow="Roster"
-        title="Crew on shift"
+        title="Carwash crew on shift"
         action={
           <Link to="/operations/crew" className="text-sm font-medium text-primary no-underline hover:underline">
             Open crew
@@ -328,17 +387,37 @@ export default function SuperAdminFloorBoard() {
             value={board?.availableCount ?? available.length}
             tone="green"
             hint="Present or late · free"
+            breakdown={
+              available.length
+                ? available
+                    .slice(0, 12)
+                    .map((r) => r.full_name)
+                    .join(', ')
+                : 'No free carwash crew'
+            }
           />
           <StatTile
             label="On a bay"
             value={board?.onBayCount ?? (board?.busyStaff?.length || 0)}
             hint="Assigned now"
+            breakdown={(board?.busyStaff || [])
+              .slice(0, 12)
+              .map((r) => r.full_name)
+              .join(', ') || 'Nobody on a bay'}
           />
           <StatTile
             label="Absent / not in"
             value={board?.absentCount ?? absent.length}
             tone="rose"
             hint="Not on site today"
+            breakdown={
+              absent.length
+                ? absent
+                    .slice(0, 12)
+                    .map((r) => r.full_name)
+                    .join(', ')
+                : 'Everyone on site'
+            }
           />
           <StatTile
             label="Crew total"
@@ -346,6 +425,24 @@ export default function SuperAdminFloorBoard() {
             hint={branchLabel}
           />
         </div>
+        {(board?.adminRoster || []).length ? (
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+              Administrative crew
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+              {(board.adminRoster || []).map((group) => (
+                <StatTile
+                  key={group.role}
+                  label={group.label}
+                  value={group.count}
+                  hint="On roster"
+                  breakdown={group.names?.length ? group.names.join(', ') : 'None'}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <div className="rounded-2xl border border-border bg-card p-4">
             <p className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
@@ -392,17 +489,32 @@ export default function SuperAdminFloorBoard() {
             label="Total sales"
             value={loading && !board ? '…' : formatMoney(financials.total_sales_minor)}
             tone="green"
-            hint="POS + queue · paid"
+            hint="All POS · paid"
+            breakdown={
+              financials.total_sales_minor
+                ? `Queue (carwash) ${formatMoney(financials.queue_sales_minor || 0)} (${Math.round(((financials.queue_sales_minor || 0) / financials.total_sales_minor) * 100)}%) · Counter ${formatMoney(financials.pos_sales_minor || 0)} (${Math.round(((financials.pos_sales_minor || 0) / financials.total_sales_minor) * 100)}%)`
+                : 'No sales in timeline'
+            }
           />
           <StatTile
             label="Queue app sales"
             value={formatMoney(financials.queue_sales_minor)}
-            hint="Linked to a ticket"
+            hint="Carwash only"
+            breakdown="Services & packages linked to queue tickets"
           />
           <StatTile
             label="Counter / POS sales"
             value={formatMoney(financials.pos_sales_minor)}
-            hint="Walk-in, merch, coffee"
+            hint="Detailing · coffee · merch"
+            breakdown={[
+              financials.detailing_sales_minor != null
+                ? `Detailing ${formatMoney(financials.detailing_sales_minor)}`
+                : null,
+              financials.coffee_sales_minor != null ? `Coffee ${formatMoney(financials.coffee_sales_minor)}` : null,
+              financials.merch_sales_minor != null ? `Merch ${formatMoney(financials.merch_sales_minor)}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || 'Walk-in POS buckets'}
           />
           <StatTile label="Cash" value={formatMoney(financials.cash_sales_minor)} />
           <StatTile label="GCash" value={formatMoney(financials.gcash_sales_minor)} />
@@ -467,36 +579,46 @@ export default function SuperAdminFloorBoard() {
       >
         <div className="grid max-h-[28rem] gap-3 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
           {jobs.length ? (
-            jobs.slice(0, 60).map((ticket) => (
-              <button
-                key={ticket.booking_id}
-                type="button"
-                onClick={() => setEditBookingId(ticket.booking_id)}
-                className="rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">
-                      {ticket.customer_name || 'Customer'}
-                    </p>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">
-                      {ticket.branch}
-                      {ticket.queue_number != null ? ` · Q-${String(ticket.queue_number).padStart(3, '0')}` : ''}
-                      {' · '}
-                      {ticket.vehicle_plate || 'No plate'}
-                    </p>
+            jobs.slice(0, 60).map((ticket) => {
+              const family = ticketQueueFamily(ticket)
+              const kind = serviceKindFromPayCategory(ticket.service_pay_category)
+              const kindLabel =
+                kind === 'detailing' ? 'Detailing' : kind === 'package' ? 'Package' : 'Service'
+              return (
+                <button
+                  key={ticket.booking_id}
+                  type="button"
+                  onClick={() => setEditBookingId(ticket.booking_id)}
+                  className="rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">
+                        {ticket.customer_name || 'Customer'}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {ticket.branch}
+                        {ticket.queue_number != null
+                          ? ` · ${formatQueueNumberForKind(ticket.queue_number, ticket.service_pay_category)}`
+                          : ''}
+                        {' · '}
+                        {ticket.vehicle_plate || 'No plate'}
+                        {' · '}
+                        {kindLabel}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                      {floorLaneLabel(ticket.status, family)}
+                    </span>
                   </div>
-                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
-                    {STATUS_LABELS[ticket.status] || ticket.status}
-                  </span>
-                </div>
-                <p className="mt-2 truncate text-sm text-foreground/80">
-                  {ticket.service_name || 'Service'}
-                  {ticket.final_price_minor != null ? ` · ${formatMoney(ticket.final_price_minor)}` : ''}
-                </p>
-                <p className="mt-2 text-[11px] font-medium text-primary">View details</p>
-              </button>
-            ))
+                  <p className="mt-2 truncate text-sm text-foreground/80">
+                    {ticket.service_name || (family === QUEUE_FAMILY_DETAILING ? 'Detailing service' : 'Service')}
+                    {ticket.final_price_minor != null ? ` · ${formatMoney(ticket.final_price_minor)}` : ''}
+                  </p>
+                  <p className="mt-2 text-[11px] font-medium text-primary">View details</p>
+                </button>
+              )
+            })
           ) : (
             <p className="col-span-full rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
               {loading ? 'Loading jobs…' : 'No jobs in this view.'}

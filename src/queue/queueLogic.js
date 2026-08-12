@@ -3,6 +3,7 @@ import {
   QUEUE_EDITOR_ROLES as PERM_QUEUE_EDITOR_ROLES,
   QUEUE_VIEWER_ROLES as PERM_QUEUE_VIEWER_ROLES,
   canEditQueueOperations as permCanEditQueue,
+  canMarkFailedQa,
   canOverrideQueueStatus,
   canSeeAllBranches,
   canSeeForPaymentLane,
@@ -39,28 +40,30 @@ export const DEFAULT_TIMING_WARNINGS = { enabled: true, min_seconds_in_progress:
 export const NO_BRANCH_SCOPE = '__none__'
 
 export const STATUS_LABELS = {
-  waiting: 'In Take Started',
-  in_progress: 'Vehicle Inspection',
-  final_checking: 'Ready for Release',
+  waiting: 'Waiting',
+  in_progress: 'In Progress',
+  final_checking: 'Final Checking',
+  for_releasing: 'For Releasing',
   for_payment: 'For Payment',
   redo: 'Redo',
-  completed: 'Successful Release',
+  completed: 'Completed',
   cancelled: 'Cancelled',
-  pending: 'Booking Placeholder',
-  confirmed: 'Assigned to Branch',
+  pending: 'Pending',
+  confirmed: 'Confirmed',
 }
 
 /** Compact lane / chip labels for dense one-screen boards. */
 export const STATUS_SHORT_LABELS = {
-  waiting: 'In Take',
-  in_progress: 'Inspection',
-  final_checking: 'Ready',
+  waiting: 'Waiting',
+  in_progress: 'In progress',
+  final_checking: 'Final check',
+  for_releasing: 'Releasing',
   for_payment: 'Payment',
   redo: 'Redo',
-  completed: 'Released',
+  completed: 'Done',
   cancelled: 'Cancelled',
-  pending: 'Placeholder',
-  confirmed: 'Assigned',
+  pending: 'Pending',
+  confirmed: 'Confirmed',
 }
 
 export function statusShortLabel(status) {
@@ -120,6 +123,7 @@ export const CANCELABLE_STATUSES = [
   'waiting',
   'in_progress',
   'final_checking',
+  'for_releasing',
 ]
 
 export const VISIT_PROGRESS_STEPS = ['waiting', 'in_progress', 'final_checking', 'for_payment']
@@ -157,9 +161,9 @@ export function getOpsBoardStatuses(profile, { family } = {}) {
   const lanes = [...ACTIVE_QUEUE_STATUSES]
   if (canSeeForPaymentLane(profile)) lanes.push('for_payment')
   if (canViewRedoLane(profile)) lanes.push('redo')
-  // Lazy import avoided — keep family helper colocated via string check
   if (String(family || '').toLowerCase() === 'detailing') {
-    return ['confirmed', ...lanes.filter((s) => s !== 'confirmed')]
+    const detailing = ['confirmed', 'for_releasing', ...lanes.filter((s) => s !== 'confirmed')]
+    return [...new Set(detailing)]
   }
   return lanes
 }
@@ -173,7 +177,8 @@ export const QUEUE_STATUS_TRANSITIONS = {
   confirmed: ['waiting', 'cancelled'],
   waiting: ['in_progress', 'cancelled'],
   in_progress: ['final_checking', 'cancelled'],
-  final_checking: ['completed', 'cancelled'],
+  final_checking: ['for_releasing', 'completed', 'cancelled'],
+  for_releasing: ['for_payment', 'completed', 'cancelled'],
   for_payment: [],
   redo: ['in_progress'],
   completed: [],
@@ -279,11 +284,11 @@ export function getAdminOverrideTargets(status) {
 /**
  * Which TL/editor ticket buttons are enabled for the current status.
  * @param {string} status
- * @param {{ canManageQueue?: boolean, canViewRedoLane?: boolean, canSeePayment?: boolean }} caps
+ * @param {{ canManageQueue?: boolean, canViewRedoLane?: boolean, canSeePayment?: boolean, canFailQa?: boolean }} caps
  */
 export function getQueueTicketActionFlags(
   status,
-  { canManageQueue = false, canViewRedoLane: seeRedo = false, canSeePayment = false } = {},
+  { canManageQueue = false, canViewRedoLane: seeRedo = false, canSeePayment = false, canFailQa = false } = {},
 ) {
   const s = String(status || '')
   const edit = Boolean(canManageQueue)
@@ -293,6 +298,8 @@ export function getQueueTicketActionFlags(
     /** Admin / SA / ASA only — TL never sends to payment. */
     canSendToPayment: edit && Boolean(canSeePayment) && s === 'final_checking',
     canMarkRedo: edit && seeRedo && REDO_FROM_STATUSES.includes(s),
+    /** TL + SA + ASA: send wash/pkg back from final_checking via redo path. */
+    canMarkFailedQa: edit && Boolean(canFailQa) && s === 'final_checking',
     canCancel: edit && canCancelQueueStatus(s),
   }
 }
@@ -325,9 +332,10 @@ export function getBookingPrimaryNextStatus(status, { canSeePayment = true, canC
 export const BOOKING_PRIMARY_ACTION_LABELS = {
   confirmed: 'Assign to branch',
   waiting: 'Start intake',
-  in_progress: 'Start inspection',
-  final_checking: 'Mark ready for release',
-  completed: 'Successful release',
+  in_progress: 'Start work',
+  final_checking: 'Mark final checking',
+  for_releasing: 'Mark for releasing',
+  completed: 'Mark completed',
   for_payment: 'Send to payment',
 }
 
@@ -682,7 +690,7 @@ export function canViewQueueOperations(profile) {
   return permCanViewQueue(profile)
 }
 
-export { canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane }
+export { canMarkFailedQa, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane }
 
 export function canOverrideQueueBranches(profile) {
   return canSeeAllBranches(profile)

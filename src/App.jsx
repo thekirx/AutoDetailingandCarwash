@@ -52,6 +52,7 @@ const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const BroadcastPage = lazy(() => import('./pages/BroadcastPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
+const ReviewsPage = lazy(() => import('./pages/ReviewsPage'))
 const KpiPage = lazy(() => import('./pages/KpiPage'))
 
 const BookingPage = lazy(() =>
@@ -203,6 +204,7 @@ export default function App() {
             <Route path="broadcast" element={gate('notifications', <BroadcastPage />)} />
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
             <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
+            <Route path="reviews" element={gate('reviews', <ReviewsPage />)} />
           </Route>
         </Route>
 

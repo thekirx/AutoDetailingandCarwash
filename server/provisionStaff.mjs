@@ -13,10 +13,20 @@ const TEAM_LEAD = 'team_lead'
 /** Roles a caller may assign. */
 export function creatableRolesFor(callerRole) {
   if (callerRole === SUPER) {
-    return ['admin', 'assistant_super_admin', 'team_lead', 'staff', 'marketing', 'sales']
+    return [
+      'admin',
+      'assistant_super_admin',
+      'team_lead',
+      'staff',
+      'marketing',
+      'sales',
+      'detailer',
+      'video_editor',
+      'investor',
+    ]
   }
   if (callerRole === ADMIN || callerRole === ASSISTANT) {
-    return ['team_lead', 'staff']
+    return ['team_lead', 'staff', 'detailer']
   }
   if (callerRole === TEAM_LEAD) {
     return ['staff']
@@ -114,7 +124,7 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
     branchSlugs.push(caller.branch_slug)
   }
 
-  if (['admin', 'team_lead', 'staff', 'marketing', 'sales'].includes(role) && !branchSlug && !branchSlugs.length) {
+  if (['admin', 'team_lead', 'staff', 'marketing', 'sales', 'detailer', 'video_editor', 'investor'].includes(role) && !branchSlug && !branchSlugs.length) {
     throw Object.assign(new Error('Branch is required for this role.'), { status: 400 })
   }
   if (!branchSlug && branchSlugs.length) branchSlug = branchSlugs[0]
@@ -175,6 +185,9 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
       username,
       login_email: email,
       permission_grants: role === ASSISTANT ? permissionGrants : {},
+      attendance_enabled: body.attendance_enabled !== false,
+      geofence_enabled: body.geofence_enabled !== false,
+      employment_type: body.employment_type === 'on_call' ? 'on_call' : 'permanent',
       is_active: true,
       is_archived: false,
     },
@@ -182,7 +195,16 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
   )
   if (profileError) throw Object.assign(new Error(profileError.message), { status: 400 })
 
-  if (role === ADMIN || role === 'team_lead' || role === 'staff' || role === 'marketing' || role === 'sales') {
+  if (
+    role === ADMIN ||
+    role === 'team_lead' ||
+    role === 'staff' ||
+    role === 'marketing' ||
+    role === 'sales' ||
+    role === 'detailer' ||
+    role === 'video_editor' ||
+    role === 'investor'
+  ) {
     const slugs = branchSlugs.length ? branchSlugs : branchSlug ? [branchSlug] : []
     await admin.from('staff_branch_assignments').delete().eq('staff_id', authUser.id)
     if (slugs.length) {
