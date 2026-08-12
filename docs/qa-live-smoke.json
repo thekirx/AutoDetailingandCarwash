@@ -1,0 +1,96 @@
+{
+  "at": "2026-08-12T14:31:20.334Z",
+  "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
+  "results": [
+    {
+      "id": "C1-roles",
+      "ok": true,
+      "note": "{\"staff\":9,\"team_lead\":2,\"BossMich\":1,\"admin\":2,\"sales\":1,\"marketing\":1,\"assistant_super_admin\":1,\"detailer\":1,\"video_editor\":1,\"investor\":1}"
+    },
+    {
+      "id": "C1-provision-gap",
+      "ok": true,
+      "note": "detailer/video/investor present"
+    },
+    {
+      "id": "C3-bookings",
+      "ok": true,
+      "note": "n=8 statuses=completed|waiting|cancelled"
+    },
+    {
+      "id": "C5-sales",
+      "ok": true,
+      "note": "n=5"
+    },
+    {
+      "id": "C5-expenses",
+      "ok": true,
+      "note": "ok"
+    },
+    {
+      "id": "C7-attendance",
+      "ok": true,
+      "note": "staff_attendance ok"
+    },
+    {
+      "id": "C8-planner",
+      "ok": true,
+      "note": "plan_cards ok"
+    },
+    {
+      "id": "C9-reviews",
+      "ok": true,
+      "note": "service_reviews ok"
+    },
+    {
+      "id": "C10-comp",
+      "ok": true,
+      "note": "ok"
+    },
+    {
+      "id": "login-tl",
+      "ok": true,
+      "note": "role=team_lead branch=bacoor"
+    },
+    {
+      "id": "login-sales",
+      "ok": true,
+      "note": "role=sales branch=bacoor"
+    },
+    {
+      "id": "login-admin",
+      "ok": true,
+      "note": "role=admin branch=bacoor"
+    },
+    {
+      "id": "login-marketing",
+      "ok": true,
+      "note": "role=marketing branch=bacoor"
+    },
+    {
+      "id": "login-staff",
+      "ok": true,
+      "note": "role=staff branch=bacoor"
+    },
+    {
+      "id": "login-detailer",
+      "ok": true,
+      "note": "role=detailer branch=bacoor"
+    },
+    {
+      "id": "login-video",
+      "ok": true,
+      "note": "role=video_editor branch=bacoor"
+    },
+    {
+      "id": "login-investor",
+      "ok": true,
+      "note": "role=investor branch=null"
+    },
+    {
+      "id": "login-customer",
+      "ok": true,
+      "note": "uid=413c4487"
+    }
+  ]
+}

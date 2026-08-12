@@ -24,18 +24,23 @@ describe('Branch Admin simplified shell', () => {
     assert.equal(redirectForRole(ROLES.SUPER_ADMIN), '/operations/console')
   })
 
-  it('nav is POS + Queue View + Queue + Attendance + History', () => {
+  it('Command nav: Floor, wash/detail queues, POS, attendance, inventory, history, reviews, audit', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
-        '/operations/pos',
         '/operations/dashboard',
         '/operations/queue',
+        '/operations/queue?family=detailing',
+        '/operations/pos',
         '/operations/attendance',
+        '/operations/inventory',
         '/operations/history',
+        '/operations/reviews',
+        '/operations/audit',
       ],
     )
-    assert.ok(getOperationsNav(p).some((i) => i.label === 'Queue View'))
+    assert.ok(getOperationsNav(p).some((i) => i.label === 'Floor'))
+    assert.ok(getOperationsNav(p).some((i) => i.label === 'Detailing Queue'))
   })
 
   it('dock is Floor, Wash, Attendance, POS (POS primary)', () => {

@@ -6,7 +6,20 @@ describe('demo accounts', () => {
   it('exposes ops and customer demos with passwords', () => {
     assert.ok(OPS_DEMO_ACCOUNTS.length >= 9)
     const ids = OPS_DEMO_ACCOUNTS.map((a) => a.id)
-    for (const need of ['boss', 'asa', 'admin', 'tl', 'sales', 'crew1', 'crew2', 'crew3', 'marketing']) {
+    for (const need of [
+      'boss',
+      'asa',
+      'admin',
+      'tl',
+      'sales',
+      'crew1',
+      'crew2',
+      'crew3',
+      'marketing',
+      'detailer',
+      'video',
+      'investor',
+    ]) {
       assert.ok(ids.includes(need), `missing demo chip: ${need}`)
     }
     for (const a of OPS_DEMO_ACCOUNTS) {

@@ -83,7 +83,7 @@ describe('RBAC Part 1 matrix', () => {
     )
   })
 
-  it('Admin keeps planning capability but nav is POS/Queue View/Queue only', () => {
+  it('Admin keeps planning capability; Command nav includes Floor + queues + POS + ops tools', () => {
     const p = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor', 'imus'] }
     assert.equal(canViewPlanning(p), true)
     assert.equal(canEditPlanning(p), false)
@@ -93,24 +93,34 @@ describe('RBAC Part 1 matrix', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
-        '/operations/pos',
         '/operations/dashboard',
         '/operations/queue',
+        '/operations/queue?family=detailing',
+        '/operations/pos',
         '/operations/attendance',
+        '/operations/inventory',
         '/operations/history',
+        '/operations/reviews',
+        '/operations/audit',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
   })
 
-  it('marketing CRM + readonly Bookings', () => {
+  it('marketing CRM + bookings + planner + notifications + history', () => {
     const p = { role: ROLES.MARKETING }
     assert.equal(canAccessCrm(p), true)
     assert.equal(canAccessFinance(p), false)
     assert.equal(canAccessPos(p), false)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/crm', '/operations/bookings', '/operations/history', '/operations/notifications'],
+      [
+        '/operations/crm',
+        '/operations/bookings',
+        '/operations/planning',
+        '/operations/notifications',
+        '/operations/history',
+      ],
     )
   })
 

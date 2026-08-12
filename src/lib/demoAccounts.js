@@ -64,6 +64,27 @@ export const OPS_DEMO_ACCOUNTS = [
     password: 'HakumMkt2026!',
     hint: 'CRM + SMS only',
   },
+  {
+    id: 'detailer',
+    label: 'Detailer',
+    email: 'detailer@hakumautocare.com',
+    password: 'HakumDetail2026!',
+    hint: 'Detailing queue · FloorApp',
+  },
+  {
+    id: 'video',
+    label: 'Video Editor',
+    email: 'video@hakumautocare.com',
+    password: 'HakumVideo2026!',
+    hint: 'Calendar + my tasks',
+  },
+  {
+    id: 'investor',
+    label: 'Investor',
+    email: 'investor@hakumautocare.com',
+    password: 'HakumInvest2026!',
+    hint: 'Finance + reports read-only',
+  },
 ]
 
 export const CUSTOMER_DEMO_ACCOUNT = {

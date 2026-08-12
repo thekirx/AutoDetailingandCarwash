@@ -10,6 +10,9 @@
  *   staff1@hakumautocare.com       → HakumStaff2026!
  *   marketing@hakumautocare.com    → HakumMkt2026!
  *   assistant@hakumautocare.com    → HakumAsa2026!
+ *   detailer@hakumautocare.com     → HakumDetail2026!
+ *   video@hakumautocare.com        → HakumVideo2026!
+ *   investor@hakumautocare.com     → HakumInvest2026!
  *   demo.customer@…                → HakumCustomer2026!
  *
  * (cashier demos removed — Part 9)
@@ -290,6 +293,49 @@ async function main() {
   })
   console.log('Assistant Super Admin', asa.id)
 
+  const detailer = await ensureAuthUser({
+    email: 'detailer@hakumautocare.com',
+    password: 'HakumDetail2026!',
+    full_name: 'Demo Detailer',
+  })
+  await upsertStaffProfile(detailer, {
+    full_name: 'Demo Detailer',
+    role: 'detailer',
+    branch_slug: BRANCH,
+    phone: '09170000040',
+  })
+  await admin
+    .from('staff_profiles')
+    .update({ attendance_enabled: true, geofence_enabled: true })
+    .eq('id', detailer.id)
+  console.log('Detailer', detailer.id)
+
+  const video = await ensureAuthUser({
+    email: 'video@hakumautocare.com',
+    password: 'HakumVideo2026!',
+    full_name: 'Demo Video Editor',
+  })
+  await upsertStaffProfile(video, {
+    full_name: 'Demo Video Editor',
+    role: 'video_editor',
+    branch_slug: BRANCH,
+    phone: '09170000041',
+  })
+  console.log('Video Editor', video.id)
+
+  const investor = await ensureAuthUser({
+    email: 'investor@hakumautocare.com',
+    password: 'HakumInvest2026!',
+    full_name: 'Demo Investor',
+  })
+  await upsertStaffProfile(investor, {
+    full_name: 'Demo Investor',
+    role: 'investor',
+    branch_slug: null,
+    phone: '09170000042',
+  })
+  console.log('Investor', investor.id)
+
   const demo = await ensureAuthUser({
     email: 'demo.customer@hakumautocare.com',
     password: 'HakumCustomer2026!',
@@ -326,6 +372,9 @@ async function main() {
         staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026! (Crew 1–3 · present on Bacoor)',
         marketing: 'marketing@hakumautocare.com / HakumMkt2026!',
         assistant: 'assistant@hakumautocare.com / HakumAsa2026!',
+        detailer: 'detailer@hakumautocare.com / HakumDetail2026!',
+        video: 'video@hakumautocare.com / HakumVideo2026!',
+        investor: 'investor@hakumautocare.com / HakumInvest2026!',
         customer: 'demo.customer@hakumautocare.com / HakumCustomer2026!',
         attendance_date: TODAY,
       },
