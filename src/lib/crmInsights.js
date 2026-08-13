@@ -79,6 +79,16 @@ export async function collectPaged(fetchPage, pageSize = 1000) {
   return all
 }
 
+/** Chunk ids then page each chunk — `.in()` URL cap + `.range()` row cap. */
+export async function collectInChunks(ids, fetchPage, { chunkSize = 200, pageSize = 1000 } = {}) {
+  const out = []
+  for (const chunk of chunkIds(ids, chunkSize)) {
+    const rows = await collectPaged((from, to) => fetchPage(chunk, from, to), pageSize)
+    out.push(...rows)
+  }
+  return out
+}
+
 export function applyBranchScope(query, branchFilter) {
   if (branchFilter == null || branchFilter === 'all') return query
   if (Array.isArray(branchFilter)) {

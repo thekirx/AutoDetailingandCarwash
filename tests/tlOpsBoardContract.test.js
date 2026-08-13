@@ -81,6 +81,8 @@ describe('TL ops contract — cancel, payment gate, form bookings', () => {
       'waiting',
       'in_progress',
       'final_checking',
+      'for_releasing',
+      'for_payment',
       'completed',
     ])
     assert.ok(getBookingBoardStatuses({ role: 'BossMich' }).includes('waiting'))
@@ -88,7 +90,7 @@ describe('TL ops contract — cancel, payment gate, form bookings', () => {
     assert.equal(getBookingPrimaryNextStatus('final_checking', { canSeePayment: false }), null)
     assert.equal(
       getBookingPrimaryNextStatus('final_checking', { detailingPipeline: true }),
-      'completed',
+      'for_releasing',
     )
     assert.match(bookingBoard, /getBookingBoardStatuses|FORM_BOOKING_STATUSES|DETAILING_BOARD/)
     assert.doesNotMatch(bookingBoard, /archiveBooking\(b\)[\s\S]{0,80}team_lead/)

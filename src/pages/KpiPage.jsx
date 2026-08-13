@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
-import { applyBranchScope, resolveKpiRpcBranch } from '@/lib/crmInsights'
+import { applyBranchScope, collectPaged, resolveKpiRpcBranch } from '@/lib/crmInsights'
 import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaCount } from '@/lib/kpiPart8'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
@@ -106,29 +106,38 @@ export default function KpiPage() {
         )
       }
 
-      let bq = supabase
-        .from('bookings')
-        .select('id, branch, service_id, status, waiting_at, in_progress_at, for_payment_at, completed_at, final_checking_at, final_price_minor, redo_at')
-        .eq('is_archived', false)
-        .gte('scheduled_start', startIso)
-        .lte('scheduled_start', endIso)
-        .limit(800)
-      bq = applyBranchScope(bq, branchScope)
-      if (serviceFilter !== 'all') bq = bq.eq('service_id', serviceFilter)
-      const { data: bookingRows, error: bErr } = await bq
-      if (bErr) toast.error(bErr.message)
-      setBookings(bookingRows || [])
+      const bookingRows = await collectPaged(async (from, to) => {
+        let bq = supabase
+          .from('bookings')
+          .select('id, branch, service_id, status, waiting_at, in_progress_at, for_payment_at, completed_at, final_checking_at, final_price_minor, redo_at')
+          .eq('is_archived', false)
+          .gte('scheduled_start', startIso)
+          .lte('scheduled_start', endIso)
+          .order('scheduled_start', { ascending: false })
+          .range(from, to)
+        bq = applyBranchScope(bq, branchScope)
+        if (serviceFilter !== 'all') bq = bq.eq('service_id', serviceFilter)
+        const { data, error } = await bq
+        if (error) throw error
+        return data || []
+      }, 1000)
+      setBookings(bookingRows)
 
-      let sq = supabase
-        .from('sales')
-        .select('id, branch, total_minor, occurred_at, status')
-        .gte('occurred_at', startIso)
-        .lte('occurred_at', endIso)
-        .in('status', ['paid', 'completed'])
-        .limit(500)
-      sq = applyBranchScope(sq, branchScope)
-      const { data: saleRows } = await sq
-      setSales(saleRows || [])
+      const saleRows = await collectPaged(async (from, to) => {
+        let sq = supabase
+          .from('sales')
+          .select('id, branch, total_minor, occurred_at, status')
+          .gte('occurred_at', startIso)
+          .lte('occurred_at', endIso)
+          .in('status', ['paid', 'completed'])
+          .order('occurred_at', { ascending: false })
+          .range(from, to)
+        sq = applyBranchScope(sq, branchScope)
+        const { data, error } = await sq
+        if (error) throw error
+        return data || []
+      }, 1000)
+      setSales(saleRows)
 
       let cq = supabase
         .from('complaints')

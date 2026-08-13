@@ -103,3 +103,83 @@ export function computeCeramicPay({
     detailer_pct: detailerPct,
   }
 }
+
+export function compensationExpenseKey({ date, branch } = {}) {
+  return `compensation:${branch}:${date}`
+}
+
+/** Draft expense row for today's wash pool. Null when there is nothing to post. */
+export function buildDailyCompensationExpense({ date, branch, poolMinor } = {}) {
+  const pool = Math.round(Number(poolMinor) || 0)
+  if (!date || !branch || branch === 'all' || pool <= 0) return null
+  return {
+    title: `Carwash salary pool · ${branch} · ${date}`,
+    description: compensationExpenseKey({ date, branch }),
+    total_minor: pool,
+    unit_cost_minor: pool,
+    quantity: 1,
+    expense_kind: 'salary_carwash',
+    branch,
+    status: 'draft',
+  }
+}
+
+export function findPostedCompensationExpense(expenses = [], { date, branch } = {}) {
+  const key = compensationExpenseKey({ date, branch })
+  return (expenses || []).find((row) => row?.description === key) || null
+}
+
+function rosterAttendanceStatus(member) {
+  return member?.attendance_status || member?.attendance?.status || (member?.is_present_today ? 'present' : 'absent')
+}
+
+/** Group today's sales + present roster into per-branch pool drafts for Finance. */
+export function buildCompensationPostPlan({
+  date,
+  salesRows = [],
+  roster = [],
+  poolPct,
+  posted = [],
+  branchFilter = 'all',
+} = {}) {
+  const salesByBranch = {}
+  for (const sale of salesRows || []) {
+    const branch = sale?.branch
+    if (!branch) continue
+    if (branchFilter && branchFilter !== 'all' && branch !== branchFilter) continue
+    salesByBranch[branch] = (salesByBranch[branch] || 0) + Number(sale.total_minor || 0)
+  }
+
+  const rosterByBranch = {}
+  for (const member of roster || []) {
+    const status = rosterAttendanceStatus(member)
+    if (attendanceWeight(status) <= 0) continue
+    const branch = member.branch_slug || (branchFilter && branchFilter !== 'all' ? branchFilter : null)
+    if (!branch) continue
+    if (branchFilter && branchFilter !== 'all' && branch !== branchFilter) continue
+    if (!rosterByBranch[branch]) rosterByBranch[branch] = []
+    rosterByBranch[branch].push({ ...member, attendance_status: status })
+  }
+
+  const branchResults = [...new Set([...Object.keys(salesByBranch), ...Object.keys(rosterByBranch)])].map((branch) => ({
+    branch,
+    ...splitWashPool({
+      totalSalesMinor: salesByBranch[branch] || 0,
+      poolPct,
+      roster: rosterByBranch[branch] || [],
+    }),
+  }))
+
+  const drafts = branchResults
+    .map((row) => buildDailyCompensationExpense({ date, branch: row.branch, poolMinor: row.pool_minor }))
+    .filter(Boolean)
+  const pending = drafts.filter((draft) => !findPostedCompensationExpense(posted, { date, branch: draft.branch }))
+
+  return {
+    totalSales: Object.values(salesByBranch).reduce((sum, n) => sum + n, 0),
+    pool_minor: branchResults.reduce((sum, row) => sum + row.pool_minor, 0),
+    rows: branchResults.flatMap((row) => row.rows.map((member) => ({ ...member, branch: row.branch }))),
+    drafts,
+    pending,
+  }
+}

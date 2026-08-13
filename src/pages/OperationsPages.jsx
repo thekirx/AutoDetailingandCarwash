@@ -29,8 +29,13 @@ import {
   QUEUE_FAMILY_DETAILING,
 } from '../lib/queueFamilies'
 import { splitCustomerName } from '../lib/phVehicles'
-import { canAccessPos, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
-import { splitWashPool, DEFAULT_COMPENSATION_RULES, normalizeCompensationSettings } from '../lib/compensation'
+import { canAccessPos, canSeeAllBranches, canViewRedoLane, canWriteFinance, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
+import {
+  DEFAULT_COMPENSATION_RULES,
+  normalizeCompensationSettings,
+  buildCompensationPostPlan,
+} from '../lib/compensation'
+import { collectPaged } from '../lib/crmInsights'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import QueueTicketEditor from '../components/QueueTicketEditor'
 import TeamLeadQueuePage from './TeamLeadQueuePage'
@@ -1427,48 +1432,103 @@ export function CrewPage() {
 }
 
 function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
-  const [totalSales, setTotalSales] = useState(0)
+  const [salesRows, setSalesRows] = useState([])
   const [rules, setRules] = useState(DEFAULT_COMPENSATION_RULES)
+  const [posted, setPosted] = useState([])
   const [loading, setLoading] = useState(true)
+  const [posting, setPosting] = useState(false)
   const isTL = profile?.role === ROLES.TEAM_LEAD
   const canSeePay = isSuperAdmin(profile) || isTL
+  const canPost = canWriteFinance(profile)
+  const today = getLocalCalendarDate()
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     setLoading(true)
-    const today = getLocalCalendarDate()
     const startIso = `${today}T00:00:00+08:00`
     const endIso = `${today}T23:59:59.999+08:00`
-    Promise.all([
-      (() => {
-        let q = supabase
-          .from('sales')
-          .select('total_minor')
-          .eq('status', 'paid')
-          .gte('occurred_at', startIso)
-          .lte('occurred_at', endIso)
-        if (branchFilter && branchFilter !== 'all') q = q.eq('branch', branchFilter)
-        return q.then(({ data }) => (data || []).reduce((s, r) => s + Number(r.total_minor || 0), 0))
-      })(),
-      supabase
-        .from('compensation_settings')
-        .select(
-          'wash_pool_pct, ceramic_shirt_deduction_minor, ceramic_card_fee_pct, ceramic_crew_solo_pct, ceramic_crew_split_pct, ceramic_detailer_split_pct',
-        )
-        .eq('id', 1)
-        .maybeSingle()
-        .then(({ data }) => normalizeCompensationSettings(data)),
-    ])
-      .then(([sales, r]) => {
-        setTotalSales(sales)
-        setRules({ ...DEFAULT_COMPENSATION_RULES, ...r })
-      })
-      .finally(() => setLoading(false))
-  }, [branchFilter])
+    try {
+      const [sales, r, existing] = await Promise.all([
+        collectPaged(async (from, to) => {
+          let q = supabase
+            .from('sales')
+            .select('id, branch, total_minor')
+            .eq('status', 'paid')
+            .gte('occurred_at', startIso)
+            .lte('occurred_at', endIso)
+            .order('occurred_at', { ascending: false })
+            .range(from, to)
+          if (branchFilter && branchFilter !== 'all') q = q.eq('branch', branchFilter)
+          const { data, error } = await q
+          if (error) throw error
+          return data || []
+        }, 1000),
+        supabase
+          .from('compensation_settings')
+          .select(
+            'wash_pool_pct, ceramic_shirt_deduction_minor, ceramic_card_fee_pct, ceramic_crew_solo_pct, ceramic_crew_split_pct, ceramic_detailer_split_pct',
+          )
+          .eq('id', 1)
+          .maybeSingle()
+          .then(({ data, error }) => {
+            if (error) throw error
+            return normalizeCompensationSettings(data)
+          }),
+        canPost
+          ? supabase
+              .from('expenses')
+              .select('id, description, branch, total_minor')
+              .eq('expense_kind', 'salary_carwash')
+              .like('description', 'compensation:%')
+              .gte('created_at', startIso)
+              .then(({ data, error }) => {
+                if (error) throw error
+                return data || []
+              })
+          : Promise.resolve([]),
+      ])
+      setSalesRows(sales)
+      setRules({ ...DEFAULT_COMPENSATION_RULES, ...r })
+      setPosted(existing)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [branchFilter, today, canPost])
 
-  const roster = staffPool
-    .filter((m) => m.is_present_today)
-    .map((m) => ({ ...m, attendance_status: m.is_present_today ? 'present' : 'absent' }))
-  const result = splitWashPool({ totalSalesMinor: totalSales, poolPct: rules.wash_pool_pct, roster })
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const roster = staffPool.filter((m) => m.is_present_today)
+  const result = buildCompensationPostPlan({
+    date: today,
+    salesRows,
+    roster,
+    poolPct: rules.wash_pool_pct,
+    posted,
+    branchFilter,
+  })
+  const totalSales = result.totalSales
+  const pending = result.pending
+  const showBranch = new Set(result.rows.map((row) => row.branch)).size > 1
+
+  async function postPool() {
+    if (!pending.length) return
+    setPosting(true)
+    const { error } = await supabase.from('expenses').insert(pending)
+    setPosting(false)
+    if (error) {
+      if (error.code === '23505' || /duplicate|unique/i.test(error.message || '')) {
+        toast.message('Already posted today')
+        load()
+        return
+      }
+      return toast.error(error.message)
+    }
+    toast.success(pending.length === 1 ? 'Salary pool posted to Finance as draft' : `${pending.length} branch salary pools posted to Finance as draft`)
+    load()
+  }
 
   if (loading) return <Panel title="Compensation estimate" icon={Wallet} className="mt-5"><p className="text-sm text-muted-foreground">Loading…</p></Panel>
 
@@ -1491,10 +1551,10 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
       {canSeePay && result.rows.length > 0 ? (
         <div className="grid gap-2">
           {result.rows.map((row) => (
-            <div key={row.id || row.staff_id} className="flex items-center justify-between rounded-xl border border-border bg-muted/20 px-4 py-3">
+            <div key={`${row.branch}-${row.id || row.staff_id}`} className="flex items-center justify-between rounded-xl border border-border bg-muted/20 px-4 py-3">
               <div>
                 <p className="font-medium text-foreground">{row.full_name}</p>
-                <p className="text-xs text-muted-foreground">Weight {row.weight}</p>
+                <p className="text-xs text-muted-foreground">Weight {row.weight}{showBranch ? ` · ${row.branch}` : ''}</p>
               </div>
               <p className="text-lg font-semibold tabular-nums text-foreground">{formatMoney(row.pay_minor)}</p>
             </div>
@@ -1503,8 +1563,20 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
       ) : (
         <p className="text-sm text-muted-foreground">{!canSeePay ? 'Salary breakdown visible to TL and Super Admin.' : 'No present crew for salary split.'}</p>
       )}
+      {canPost ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={posting || !pending.length}
+            onClick={postPool}
+            className="floor-touch-btn inline-flex items-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            {posting ? 'Posting…' : pending.length ? `Post ${pending.length === 1 ? 'today\'s pool' : `${pending.length} branch pools`} to Finance` : 'Already posted today'}
+          </button>
+        </div>
+      ) : null}
       <p className="mt-3 text-xs text-muted-foreground">
-        Read-only estimate from today's paid sales × compensation_settings. Actual payroll uses Finance.
+        Estimate from today's paid sales × compensation_settings, split per branch. SA/admin posts a draft `salary_carwash` expense to Finance (once per branch per day).
       </p>
     </Panel>
   )

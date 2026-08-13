@@ -47,6 +47,7 @@ describe('TL queue status transitions (principal scenarios)', () => {
       canFinalCheck: false,
       canSendToPayment: false,
       canMarkRedo: false,
+      canMarkFailedQa: false,
       canCancel: true,
     })
   })
@@ -58,6 +59,7 @@ describe('TL queue status transitions (principal scenarios)', () => {
       canFinalCheck: true,
       canSendToPayment: false,
       canMarkRedo: false,
+      canMarkFailedQa: false,
       canCancel: true,
     })
   })
@@ -69,6 +71,7 @@ describe('TL queue status transitions (principal scenarios)', () => {
       canFinalCheck: false,
       canSendToPayment: false,
       canMarkRedo: false,
+      canMarkFailedQa: false,
       canCancel: true,
     })
   })
@@ -86,6 +89,7 @@ describe('TL queue status transitions (principal scenarios)', () => {
         canFinalCheck: false,
         canSendToPayment: false,
         canMarkRedo: false,
+        canMarkFailedQa: false,
         canCancel: false,
       })
     }
@@ -107,6 +111,7 @@ describe('TL queue status transitions (principal scenarios)', () => {
       canFinalCheck: false,
       canSendToPayment: false,
       canMarkRedo: false,
+      canMarkFailedQa: false,
       canCancel: false,
     })
   })

@@ -9,6 +9,7 @@ import {
   resolveKpiRpcBranch,
   chunkIds,
   collectPaged,
+  collectInChunks,
 } from '../src/lib/crmInsights.js'
 import { getDashboardDateRange } from '../src/queue/queueLogic.js'
 
@@ -60,6 +61,30 @@ describe('CRM insights Part 7', () => {
     const rows = await collectPaged(async (from, to) => pages[`${from}-${to}`] || [], 2)
     assert.deepEqual(rows, [1, 2, 3])
     assert.deepEqual(await collectPaged(async () => [], 1000), [])
+  })
+
+  it('pages each id chunk until a short page', async () => {
+    const ids = ['a', 'b', 'c']
+    const calls = []
+    const rows = await collectInChunks(
+      ids,
+      async (chunk, from, to) => {
+        calls.push({ chunk: chunk.join(','), from, to })
+        if (chunk.length === 2 && from === 0) return [{ id: 1 }, { id: 2 }]
+        if (chunk.length === 2 && from === 2) return [{ id: 3 }]
+        return [{ id: 4 }]
+      },
+      { chunkSize: 2, pageSize: 2 },
+    )
+    assert.deepEqual(
+      calls.map((c) => c.chunk),
+      ['a,b', 'a,b', 'c'],
+    )
+    assert.deepEqual(
+      rows.map((r) => r.id),
+      [1, 2, 3, 4],
+    )
+    assert.deepEqual(await collectInChunks([], async () => [{ id: 99 }]), [])
   })
 
   it('chunks sale ids so PostgREST .in() stays under 200', () => {

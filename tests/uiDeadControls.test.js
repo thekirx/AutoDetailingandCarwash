@@ -104,7 +104,8 @@ describe('P0 residual fixes (full-system 2026-08-01)', () => {
 
   it('ReportsPage toasts expenses/crew/comps/books errors (RPT-P0-1)', () => {
     const src = readFileSync(join(root, 'src/pages/ReportsPage.jsx'), 'utf8')
-    assert.match(src, /expenses\.error/)
+    assert.match(src, /toast\.error\(err\.message\)/)
+    assert.match(src, /sales\.error/)
     assert.match(src, /crew\.error/)
     assert.match(src, /comps\.error/)
     assert.match(src, /books\.error/)

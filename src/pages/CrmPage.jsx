@@ -86,15 +86,27 @@ export default function CrmPage() {
         setCustomers([])
         return
       }
-      let bookingQuery = supabase.from('bookings').select('customer_id').not('customer_id', 'is', null).eq('is_archived', false).limit(2500)
-      bookingQuery = applyBranchScope(bookingQuery, scope)
-      const { data: bookingRows, error: bookingErr } = await bookingQuery
-      if (bookingErr) {
+      let bookingRows = []
+      try {
+        bookingRows = await collectPaged(async (from, to) => {
+          let bookingQuery = supabase
+            .from('bookings')
+            .select('customer_id')
+            .not('customer_id', 'is', null)
+            .eq('is_archived', false)
+            .order('created_at', { ascending: false })
+            .range(from, to)
+          bookingQuery = applyBranchScope(bookingQuery, scope)
+          const { data, error } = await bookingQuery
+          if (error) throw error
+          return data || []
+        }, 1000)
+      } catch (bookingErr) {
         toast.error(bookingErr.message)
         setCustomers([])
         return
       }
-      customerIds = [...new Set((bookingRows || []).map((r) => r.customer_id).filter(Boolean))]
+      customerIds = [...new Set(bookingRows.map((r) => r.customer_id).filter(Boolean))]
       if (!customerIds.length) {
         setCustomers([])
         return

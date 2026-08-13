@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessReports, getBranchScopeList } from '@/auth/permissions'
-import { aggregateBestSellers, applyBranchScope } from '@/lib/crmInsights'
+import { aggregateBestSellers, applyBranchScope, collectInChunks, collectPaged } from '@/lib/crmInsights'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
@@ -32,8 +32,6 @@ export default function ReportsPage() {
 
     let salesQ = supabase.from('daily_sales_summary').select('*').order('sale_date', { ascending: false }).limit(30)
     salesQ = applyBranchScope(salesQ, branchFilter)
-    let expensesQ = supabase.from('expenses').select('total_minor, status, branch').gte('created_at', startIso).limit(500)
-    expensesQ = applyBranchScope(expensesQ, branchFilter)
     let booksQ = supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
@@ -42,46 +40,70 @@ export default function ReportsPage() {
       .gte('scheduled_start', startIso)
     booksQ = applyBranchScope(booksQ, branchFilter)
 
-    // sale_line_items has no branch — scope via parent sales ids
-    let saleIdsQ = supabase.from('sales').select('id').gte('occurred_at', startIso).limit(500)
-    saleIdsQ = applyBranchScope(saleIdsQ, branchFilter)
-
     let crewQ = supabase.from('crew_kpi_summary').select('staff_id', { count: 'exact', head: true })
     crewQ = applyBranchScope(crewQ, branchFilter)
     let compsQ = supabase.from('complaints').select('id', { count: 'exact', head: true }).gte('created_at', startIso)
     compsQ = applyBranchScope(compsQ, branchFilter)
 
-    const [sales, saleIdsRes, expenses, crew, comps, books] = await Promise.all([
-      salesQ,
-      saleIdsQ,
-      expensesQ,
-      crewQ,
-      compsQ,
-      booksQ,
-    ])
+    let saleIdRows = []
+    let expRows = []
+    let sales
+    let crew
+    let comps
+    let books
+    try {
+      ;[sales, saleIdRows, expRows, crew, comps, books] = await Promise.all([
+        salesQ,
+        collectPaged(async (from, to) => {
+          let q = supabase.from('sales').select('id').gte('occurred_at', startIso).order('occurred_at', { ascending: false }).range(from, to)
+          q = applyBranchScope(q, branchFilter)
+          const { data, error } = await q
+          if (error) throw error
+          return data || []
+        }, 1000),
+        collectPaged(async (from, to) => {
+          let q = supabase.from('expenses').select('total_minor, status, branch').gte('created_at', startIso).order('created_at', { ascending: false }).range(from, to)
+          q = applyBranchScope(q, branchFilter)
+          const { data, error } = await q
+          if (error) throw error
+          return data || []
+        }, 1000),
+        crewQ,
+        compsQ,
+        booksQ,
+      ])
+    } catch (err) {
+      toast.error(err.message)
+      return
+    }
 
     if (sales.error) toast.error(sales.error.message)
-    if (saleIdsRes.error) toast.error(saleIdsRes.error.message)
     setDaily((sales.data || []).reverse())
 
-    const saleIds = (saleIdsRes.data || []).map((r) => r.id).filter(Boolean)
-    let lines = { data: [], error: null }
-    if (saleIds.length) {
-      lines = await supabase
-        .from('sale_line_items')
-        .select('name, item_type, line_total_minor, quantity, sale_id')
-        .in('sale_id', saleIds)
-        .limit(1000)
-      if (lines.error) toast.error(lines.error.message)
+    const saleIds = saleIdRows.map((r) => r.id).filter(Boolean)
+    let lineRows = []
+    try {
+      lineRows = await collectInChunks(
+        saleIds,
+        async (chunk, from, to) => {
+          const { data, error } = await supabase
+            .from('sale_line_items')
+            .select('name, item_type, line_total_minor, quantity, sale_id')
+            .in('sale_id', chunk)
+            .range(from, to)
+          if (error) throw error
+          return data || []
+        },
+      )
+    } catch (err) {
+      toast.error(err.message)
     }
-    setServices(aggregateBestSellers(lines.data || [], 8))
+    setServices(aggregateBestSellers(lineRows, 8))
 
-    if (expenses.error) toast.error(expenses.error.message)
     if (crew.error) toast.error(crew.error.message)
     if (comps.error) toast.error(comps.error.message)
     if (books.error) toast.error(books.error.message)
 
-    const expRows = expenses.data || []
     setExpenseCount(expRows.length)
     setExpenseTotal(expRows.reduce((s, r) => s + Number(r.total_minor || 0), 0))
     setKpiCrew(crew.count || 0)

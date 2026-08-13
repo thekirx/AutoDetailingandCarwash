@@ -2,7 +2,16 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { buildAdminRoster } from '../src/lib/floorBoardRoster.js'
 import { aggregateSalesFinancials, classifyFloorSaleBucket } from '../src/lib/paymentMethods.js'
-import { splitWashPool, computeCeramicPay, normalizeCompensationSettings, toCompensationSettingsRow } from '../src/lib/compensation.js'
+import {
+  splitWashPool,
+  computeCeramicPay,
+  normalizeCompensationSettings,
+  toCompensationSettingsRow,
+  compensationExpenseKey,
+  buildDailyCompensationExpense,
+  findPostedCompensationExpense,
+  buildCompensationPostPlan,
+} from '../src/lib/compensation.js'
 import { buildBacoorDailyReport } from '../src/lib/bacoorDailyReport.js'
 import { topCustomersBySpend, insightsToCsv } from '../src/lib/crmInsightsExport.js'
 import { DETAILING_BOARD_STATUSES, detailingBoardStatusLabel } from '../src/lib/detailingBoardStatuses.js'
@@ -82,6 +91,64 @@ describe('compensation engine', () => {
       ceramic_detailer_split_pct: 12,
     })
     assert.equal(normalizeCompensationSettings(null).wash_pool_pct, 35)
+  })
+
+  it('builds an idempotent salary_carwash expense draft for Finance', () => {
+    const draft = buildDailyCompensationExpense({
+      date: '2026-08-13',
+      branch: 'bacoor',
+      poolMinor: 700000,
+      crewCount: 3,
+    })
+    assert.equal(draft.expense_kind, 'salary_carwash')
+    assert.equal(draft.branch, 'bacoor')
+    assert.equal(draft.total_minor, 700000)
+    assert.equal(draft.unit_cost_minor, 700000)
+    assert.equal(draft.quantity, 1)
+    assert.equal(draft.status, 'draft')
+    assert.equal(draft.description, compensationExpenseKey({ date: '2026-08-13', branch: 'bacoor' }))
+    assert.match(draft.title, /2026-08-13/)
+    assert.match(draft.title, /bacoor/)
+    assert.equal(
+      findPostedCompensationExpense(
+        [{ description: 'compensation:bacoor:2026-08-13', total_minor: 700000 }],
+        { date: '2026-08-13', branch: 'bacoor' },
+      )?.total_minor,
+      700000,
+    )
+    assert.equal(
+      findPostedCompensationExpense([], { date: '2026-08-13', branch: 'bacoor' }),
+      null,
+    )
+    assert.equal(buildDailyCompensationExpense({ date: '2026-08-13', branch: 'bacoor', poolMinor: 0 }), null)
+  })
+
+  it('builds per-branch salary drafts, keeps late weight, skips already posted', () => {
+    const plan = buildCompensationPostPlan({
+      date: '2026-08-13',
+      poolPct: 35,
+      salesRows: [
+        { branch: 'bacoor', total_minor: 2000000 },
+        { branch: 'imus', total_minor: 1000000 },
+      ],
+      roster: [
+        { id: '1', full_name: 'Ann', branch_slug: 'bacoor', is_present_today: true, attendance_status: 'present' },
+        { id: '2', full_name: 'Ben', branch_slug: 'bacoor', is_present_today: true, attendance: { status: 'late' } },
+        { id: '3', full_name: 'Cara', branch_slug: 'imus', is_present_today: true, attendance_status: 'present' },
+      ],
+      posted: [{ description: 'compensation:imus:2026-08-13' }],
+    })
+    assert.equal(plan.totalSales, 3000000)
+    assert.equal(plan.pool_minor, 1050000)
+    const bacoor = plan.rows.filter((r) => r.branch === 'bacoor')
+    assert.equal(bacoor.length, 2)
+    const ann = bacoor.find((r) => r.full_name === 'Ann')
+    const ben = bacoor.find((r) => r.full_name === 'Ben')
+    assert.ok(ann.pay_minor > ben.pay_minor)
+    assert.equal(plan.pending.length, 1)
+    assert.equal(plan.pending[0].branch, 'bacoor')
+    assert.equal(plan.pending[0].total_minor, 700000)
+    assert.equal(plan.pending[0].expense_kind, 'salary_carwash')
   })
 })
 

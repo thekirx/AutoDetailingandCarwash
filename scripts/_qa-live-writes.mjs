@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { buildPosSalePayload } from '../src/lib/posSale.js'
 import { allowedStaffPlanAssigneePatch } from '../src/queue/staffTaskLogic.js'
+import { buildDailyCompensationExpense, findPostedCompensationExpense } from '../src/lib/compensation.js'
 
 function loadEnv() {
   const raw = fs.readFileSync('.env', 'utf8')
@@ -169,6 +170,29 @@ async function main() {
   else {
     cleanup.expenseIds.push(expense.id)
     pass('C5-expense', expense.expense_kind)
+  }
+
+  const compDraft = buildDailyCompensationExpense({ date: '2099-01-01', branch: 'bacoor', poolMinor: 12345 })
+  if (!compDraft || findPostedCompensationExpense([], { date: '2099-01-01', branch: 'bacoor' })) {
+    fail('C10-comp-post', 'draft helper failed')
+  } else {
+    const { data: compExp, error: compErr } = await ba
+      .from('expenses')
+      .insert(compDraft)
+      .select('id, expense_kind, description')
+      .single()
+    if (compErr) fail('C10-comp-post', compErr.message)
+    else {
+      cleanup.expenseIds.push(compExp.id)
+      const found = findPostedCompensationExpense([compExp], { date: '2099-01-01', branch: 'bacoor' })
+      if (compExp.expense_kind === 'salary_carwash' && found?.id === compExp.id) pass('C10-comp-post', compExp.id)
+      else fail('C10-comp-post', 'kind or idempotency key mismatch')
+      const { error: dupErr } = await ba.from('expenses').insert(compDraft)
+      if (dupErr && (dupErr.code === '23505' || /duplicate|unique/i.test(dupErr.message || ''))) {
+        pass('C10-comp-unique', dupErr.code || 'unique')
+      } else if (dupErr) fail('C10-comp-unique', dupErr.message)
+      else fail('C10-comp-unique', 'second insert succeeded')
+    }
   }
 
   const { data: caForm } = await admin.from('ops_forms').select('id').eq('kind', 'cash_advance').limit(1).maybeSingle()

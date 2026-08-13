@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { PAYMENT_METHODS } from '@/lib/paymentMethods'
 import { accumulatePosCategoryTotals, emptyPosCategoryTotals, productIsPosSellable } from '@/lib/posSellables'
+import { collectPaged } from '@/lib/crmInsights'
 
 const PAYMENT_OPTIONS = PAYMENT_METHODS
 
@@ -124,7 +125,8 @@ export default function PosPage() {
     const today = getLocalCalendarDate()
     const startIso = `${today}T00:00:00+08:00`
     const endIso = `${today}T23:59:59.999+08:00`
-    const [svc, prod, stats, handoffRes, salesRes] = await Promise.all([
+    let saleRows = []
+    const [svc, prod, stats, handoffRes] = await Promise.all([
       supabase
         .from('services')
         .select('id, name, slug, pay_category, price_minor, service_size_prices(size_slug, price_minor)')
@@ -142,22 +144,30 @@ export default function PosPage() {
         .eq('status', 'pending')
         .eq('branch', branch)
         .order('created_at', { ascending: true }),
-      supabase
-        .from('sales')
-        .select(
-          'id, total_minor, payment_method, booking_id, sale_line_items(item_type, line_total_minor, service_id, product_id, services(name, slug, pay_category))',
-        )
-        .eq('status', 'paid')
-        .eq('branch', branch)
-        .gte('occurred_at', startIso)
-        .lte('occurred_at', endIso)
-        .limit(500),
     ])
+    try {
+      saleRows = await collectPaged(async (from, to) => {
+        const { data, error } = await supabase
+          .from('sales')
+          .select(
+            'id, total_minor, payment_method, booking_id, sale_line_items(item_type, line_total_minor, service_id, product_id, services(name, slug, pay_category))',
+          )
+          .eq('status', 'paid')
+          .eq('branch', branch)
+          .gte('occurred_at', startIso)
+          .lte('occurred_at', endIso)
+          .order('occurred_at', { ascending: false })
+          .range(from, to)
+        if (error) throw error
+        return data || []
+      }, 1000)
+    } catch (err) {
+      toast.error(err.message)
+    }
     if (svc.error) toast.error(svc.error.message)
     if (prod.error) toast.error(prod.error.message)
     if (stats.error) toast.error(stats.error.message)
     if (handoffRes.error) toast.error(handoffRes.error.message)
-    if (salesRes.error) toast.error(salesRes.error.message)
     setServices(
       (svc.data || []).map((row) => ({
         ...row,
@@ -170,7 +180,7 @@ export default function PosPage() {
     setHandoffs(handoffRes.data || [])
 
     const catRows = []
-    for (const sale of salesRes.data || []) {
+    for (const sale of saleRows) {
       const lines = sale.sale_line_items || []
       if (!lines.length) {
         catRows.push({ total_minor: sale.total_minor, itemType: sale.booking_id ? 'service' : 'product' })

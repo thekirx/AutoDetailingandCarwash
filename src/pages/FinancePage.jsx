@@ -19,6 +19,7 @@ import {
   scopeBranch,
   branchScopeList,
 } from '@/lib/financeData'
+import { collectPaged } from '@/lib/crmInsights'
 import FinanceFilters from './finance/FinanceFilters'
 import FinanceOverviewTab from './finance/FinanceOverviewTab'
 import FinanceSalesTab from './finance/FinanceSalesTab'
@@ -96,15 +97,6 @@ export default function FinancePage() {
         .lte('period_date', range.end)
       plQ = scopeBranch(plQ, profile, branchFilter)
 
-      let expQ = supabase
-        .from('expenses')
-        .select('id, title, description, total_minor, branch, status, category_id, created_at, quantity, unit_cost_minor')
-        .gte('created_at', startIso)
-        .lte('created_at', endIso)
-        .order('created_at', { ascending: false })
-        .limit(300)
-      expQ = scopeBranch(expQ, profile, branchFilter)
-
       let priorQ = null
       if (compareRange) {
         priorQ = supabase
@@ -115,25 +107,36 @@ export default function FinancePage() {
         priorQ = scopeBranch(priorQ, profile, branchFilter)
       }
 
-      const [branchRows, cats, sales, pl, exp, prior] = await Promise.all([
+      const [branchRows, cats, sales, pl, expRows, prior] = await Promise.all([
         listBranches(),
         supabase.from('expense_categories').select('id, name, is_chemical, kind').order('name'),
         salesQ,
         plQ,
-        expQ,
+        collectPaged(async (from, to) => {
+          let q = supabase
+            .from('expenses')
+            .select('id, title, description, total_minor, branch, status, expense_kind, category_id, created_at, quantity, unit_cost_minor')
+            .gte('created_at', startIso)
+            .lte('created_at', endIso)
+            .order('created_at', { ascending: false })
+            .range(from, to)
+          q = scopeBranch(q, profile, branchFilter)
+          const { data, error } = await q
+          if (error) throw error
+          return data || []
+        }, 1000),
         priorQ || Promise.resolve({ data: [], error: null }),
       ])
       if (cats.error) throw cats.error
       if (sales.error) throw sales.error
       if (pl.error) throw pl.error
-      if (exp.error) throw exp.error
       if (prior.error) throw prior.error
       setBranches(branchRows || [])
       setCategories(cats.data || [])
       setSalesRows(sales.data || [])
       setPlRows(pl.data || [])
       setPriorPlRows(prior.data || [])
-      setExpenses(exp.data || [])
+      setExpenses(expRows)
     } catch (err) {
       toast.error(err.message || 'Unable to load finance data')
     } finally {

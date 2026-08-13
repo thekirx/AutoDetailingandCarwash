@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import { getAccessTokenFresh } from './authToken'
 import { getBranchScope } from '../queue/queueLogic'
 import { DEFAULT_ASSISTANT_GRANTS, getBranchScopeList } from '../auth/permissions'
-import { applyBranchScope } from './crmInsights'
+import { applyBranchScope, collectInChunks } from './crmInsights'
 import { writeAudit } from './audit'
 import { smsNotificationsEnabledFromSetting } from './smsNotificationsToggle'
 import {
@@ -104,11 +104,15 @@ export async function listStaffPeople({ includeInactive = false } = {}) {
   const rows = data || []
   if (!rows.length) return rows
   const ids = rows.map((r) => r.id)
-  const { data: assigns, error: aErr } = await supabase
-    .from('staff_branch_assignments')
-    .select('staff_id, branch_slug')
-    .in('staff_id', ids)
-  if (aErr) throw mapDbError(aErr)
+  const assigns = await collectInChunks(ids, async (chunk, from, to) => {
+    const { data, error } = await supabase
+      .from('staff_branch_assignments')
+      .select('staff_id, branch_slug')
+      .in('staff_id', chunk)
+      .range(from, to)
+    if (error) throw mapDbError(error)
+    return data || []
+  })
   const byStaff = new Map()
   for (const a of assigns || []) {
     const list = byStaff.get(a.staff_id) || []

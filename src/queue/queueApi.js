@@ -38,6 +38,7 @@ import {
   resolveQueueCustomerDisplayName,
   validateQueueTicketIdentity,
 } from '../lib/queueCustomerName'
+import { collectPaged } from '../lib/crmInsights'
 
 const timingWarningsCache = createTtlCache(120_000)
 
@@ -102,6 +103,14 @@ function scopedStaffQuery(query, branchScope) {
   if (!branchScope) return query
   if (Array.isArray(branchScope)) return query.in('branch_slug', branchScope)
   return query.eq('branch_slug', branchScope)
+}
+
+async function collectScoped(buildQuery, pageSize = 1000) {
+  return collectPaged(async (from, to) => {
+    const { data, error } = await buildQuery().range(from, to)
+    if (error) throw error
+    return data || []
+  }, pageSize)
 }
 
 export async function getCurrentProfile({ required = true } = {}) {
@@ -257,18 +266,22 @@ export async function fetchTeamLeadDayBoard(profile, { branchFilter = 'all', day
   }
 
   const branchScope = resolveBranchFilter(profile, branchFilter)
-  let dayQuery = supabase
-    .from('operations_queue_board')
-    .select(QUEUE_BOARD_SELECT)
-    .in('status', ['completed', 'cancelled'])
-    .eq('queue_date', dayKey)
-    .order('created_at', { ascending: false })
-    .limit(300)
-  dayQuery = scopedQuery(dayQuery, branchScope)
-  const { data, error } = await dayQuery
-  if (error) throw formatQueueActionError(error)
-
-  const dayTickets = data || []
+  let dayTickets = []
+  try {
+    dayTickets = await collectScoped(() =>
+      scopedQuery(
+        supabase
+          .from('operations_queue_board')
+          .select(QUEUE_BOARD_SELECT)
+          .in('status', ['completed', 'cancelled'])
+          .eq('queue_date', dayKey)
+          .order('created_at', { ascending: false }),
+        branchScope,
+      ),
+    )
+  } catch (error) {
+    throw formatQueueActionError(error)
+  }
   const completedTotalMinor = dayTickets
     .filter((row) => row.status === 'completed')
     .reduce((sum, row) => sum + Number(row.final_price_minor ?? row.base_price_minor ?? 0), 0)
@@ -358,61 +371,8 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
   const periodSelect =
     'id, branch, status, queue_number, customer_name, vehicle_plate, vehicle_make, vehicle_model, service_id, final_price_minor, price_minor, waiting_at, in_progress_at, final_checking_at, for_payment_at, completed_at, cancelled_at, redo_at, created_at, notes, services(name, pay_category)'
 
-  let completedQuery = supabase
-    .from('bookings')
-    .select(periodSelect)
-    .eq('is_archived', false)
-    .eq('status', 'completed')
-    .gte('completed_at', startIso)
-    .lte('completed_at', endIso)
-    .order('completed_at', { ascending: false })
-    .limit(400)
-  completedQuery = scopedQuery(completedQuery, branchScope)
-
-  let cancelledQuery = supabase
-    .from('bookings')
-    .select(periodSelect)
-    .eq('is_archived', false)
-    .eq('status', 'cancelled')
-    .gte('cancelled_at', startIso)
-    .lte('cancelled_at', endIso)
-    .order('cancelled_at', { ascending: false })
-    .limit(400)
-  cancelledQuery = scopedQuery(cancelledQuery, branchScope)
-
-  let redoQuery = supabase
-    .from('bookings')
-    .select(periodSelect)
-    .eq('is_archived', false)
-    .not('redo_at', 'is', null)
-    .gte('redo_at', startIso)
-    .lte('redo_at', endIso)
-    .order('redo_at', { ascending: false })
-    .limit(400)
-  redoQuery = scopedQuery(redoQuery, branchScope)
-
-  // KPI wait/service sample: tickets that left waiting in range (started service)
-  let startedQuery = supabase
-    .from('bookings')
-    .select(periodSelect)
-    .eq('is_archived', false)
-    .not('in_progress_at', 'is', null)
-    .gte('in_progress_at', startIso)
-    .lte('in_progress_at', endIso)
-    .limit(500)
-  startedQuery = scopedQuery(startedQuery, branchScope)
-
-  let salesQuery = supabase
-    .from('sales')
-    .select(
-      'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, queue_number, services(name, pay_category))',
-    )
-    .eq('status', 'paid')
-    .gte('occurred_at', startIso)
-    .lte('occurred_at', endIso)
-    .order('occurred_at', { ascending: false })
-    .limit(2000)
-  salesQuery = scopedQuery(salesQuery, branchScope)
+  const salesSelect =
+    'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, queue_number, services(name, pay_category))'
 
   let adminStaffQuery = supabase
     .from('staff_profiles')
@@ -421,19 +381,72 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     .in('role', ['marketing', 'video_editor', 'admin', 'assistant_super_admin', 'team_lead'])
   adminStaffQuery = scopedStaffQuery(adminStaffQuery, branchScope)
 
-  const [completedRes, cancelledRes, redoRes, startedRes, salesRes, adminStaffRes] = await Promise.all([
-    completedQuery,
-    cancelledQuery,
-    redoQuery,
-    startedQuery,
-    salesQuery,
+  const [completedRows, cancelledRows, redoRows, startedRows, salesRaw, adminStaffRes] = await Promise.all([
+    collectScoped(() =>
+      scopedQuery(
+        supabase
+          .from('bookings')
+          .select(periodSelect)
+          .eq('is_archived', false)
+          .eq('status', 'completed')
+          .gte('completed_at', startIso)
+          .lte('completed_at', endIso)
+          .order('completed_at', { ascending: false }),
+        branchScope,
+      ),
+    ),
+    collectScoped(() =>
+      scopedQuery(
+        supabase
+          .from('bookings')
+          .select(periodSelect)
+          .eq('is_archived', false)
+          .eq('status', 'cancelled')
+          .gte('cancelled_at', startIso)
+          .lte('cancelled_at', endIso)
+          .order('cancelled_at', { ascending: false }),
+        branchScope,
+      ),
+    ),
+    collectScoped(() =>
+      scopedQuery(
+        supabase
+          .from('bookings')
+          .select(periodSelect)
+          .eq('is_archived', false)
+          .not('redo_at', 'is', null)
+          .gte('redo_at', startIso)
+          .lte('redo_at', endIso)
+          .order('redo_at', { ascending: false }),
+        branchScope,
+      ),
+    ),
+    collectScoped(() =>
+      scopedQuery(
+        supabase
+          .from('bookings')
+          .select(periodSelect)
+          .eq('is_archived', false)
+          .not('in_progress_at', 'is', null)
+          .gte('in_progress_at', startIso)
+          .lte('in_progress_at', endIso),
+        branchScope,
+      ),
+    ),
+    collectScoped(() =>
+      scopedQuery(
+        supabase
+          .from('sales')
+          .select(salesSelect)
+          .eq('status', 'paid')
+          .gte('occurred_at', startIso)
+          .lte('occurred_at', endIso)
+          .order('occurred_at', { ascending: false }),
+        branchScope,
+      ),
+    ),
     adminStaffQuery,
   ])
-  if (completedRes.error) throw completedRes.error
-  if (cancelledRes.error) throw cancelledRes.error
-  if (redoRes.error) throw redoRes.error
-  if (startedRes.error) throw startedRes.error
-  if (salesRes.error) throw salesRes.error
   if (adminStaffRes.error) console.warn('Admin roster unavailable', adminStaffRes.error)
 
   const toJob = (row) => ({
@@ -459,11 +472,11 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     notes: row.notes,
   })
 
-  const completedJobs = (completedRes.data || []).map(toJob)
-  const cancelledJobs = (cancelledRes.data || []).map(toJob)
-  const redoJobs = (redoRes.data || []).map(toJob)
-  const startedJobs = (startedRes.data || []).map(toJob)
-  const salesRows = (salesRes.data || []).map((row) => ({
+  const completedJobs = (completedRows || []).map(toJob)
+  const cancelledJobs = (cancelledRows || []).map(toJob)
+  const redoJobs = (redoRows || []).map(toJob)
+  const startedJobs = (startedRows || []).map(toJob)
+  const salesRows = (salesRaw || []).map((row) => ({
     ...row,
     pay_category: row.bookings?.services?.pay_category || null,
     service_name: row.bookings?.services?.name || null,

@@ -47,11 +47,15 @@ describe('Admin capability matrix', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
-        '/operations/pos',
         '/operations/dashboard',
         '/operations/queue',
+        '/operations/queue?family=detailing',
+        '/operations/pos',
         '/operations/attendance',
+        '/operations/inventory',
         '/operations/history',
+        '/operations/reviews',
+        '/operations/audit',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/cars'))
