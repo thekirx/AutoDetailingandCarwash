@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { buildAdminRoster } from '../src/lib/floorBoardRoster.js'
 import { aggregateSalesFinancials, classifyFloorSaleBucket } from '../src/lib/paymentMethods.js'
-import { splitWashPool, computeCeramicPay } from '../src/lib/compensation.js'
+import { splitWashPool, computeCeramicPay, normalizeCompensationSettings, toCompensationSettingsRow } from '../src/lib/compensation.js'
 import { buildBacoorDailyReport } from '../src/lib/bacoorDailyReport.js'
 import { topCustomersBySpend, insightsToCsv } from '../src/lib/crmInsightsExport.js'
 import { DETAILING_BOARD_STATUSES, detailingBoardStatusLabel } from '../src/lib/detailingBoardStatuses.js'
@@ -58,6 +58,30 @@ describe('compensation engine', () => {
     assert.ok(result.remaining_minor < 1000000 - 50000)
     assert.equal(result.crew_pct, 10)
     assert.equal(result.detailer_pct, 10)
+  })
+
+  it('maps live scalar compensation_settings columns (not a rules json blob)', () => {
+    const rules = normalizeCompensationSettings({
+      id: 1,
+      wash_pool_pct: 40,
+      ceramic_shirt_deduction_minor: 25000,
+      ceramic_card_fee_pct: 2.5,
+      ceramic_crew_solo_pct: 15,
+      ceramic_crew_split_pct: 8,
+      ceramic_detailer_split_pct: 12,
+    })
+    assert.equal(rules.wash_pool_pct, 40)
+    assert.equal(rules.ceramic_shirt_deduction_minor, 25000)
+    assert.deepEqual(toCompensationSettingsRow(rules), {
+      id: 1,
+      wash_pool_pct: 40,
+      ceramic_shirt_deduction_minor: 25000,
+      ceramic_card_fee_pct: 2.5,
+      ceramic_crew_solo_pct: 15,
+      ceramic_crew_split_pct: 8,
+      ceramic_detailer_split_pct: 12,
+    })
+    assert.equal(normalizeCompensationSettings(null).wash_pool_pct, 35)
   })
 })
 

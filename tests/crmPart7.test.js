@@ -7,6 +7,8 @@ import {
   aggregateSalesByHour,
   peakSalesHour,
   resolveKpiRpcBranch,
+  chunkIds,
+  collectPaged,
 } from '../src/lib/crmInsights.js'
 import { getDashboardDateRange } from '../src/queue/queueLogic.js'
 
@@ -48,6 +50,27 @@ describe('CRM insights Part 7', () => {
     assert.equal(top.length, 1)
     assert.equal(top[0].name, 'Wash')
     assert.equal(top[0].total, 800)
+  })
+
+  it('collects paged rows until a short page', async () => {
+    const pages = {
+      '0-1': [1, 2],
+      '2-3': [3],
+    }
+    const rows = await collectPaged(async (from, to) => pages[`${from}-${to}`] || [], 2)
+    assert.deepEqual(rows, [1, 2, 3])
+    assert.deepEqual(await collectPaged(async () => [], 1000), [])
+  })
+
+  it('chunks sale ids so PostgREST .in() stays under 200', () => {
+    const ids = Array.from({ length: 450 }, (_, i) => `s${i}`)
+    const chunks = chunkIds(ids, 200)
+    assert.equal(chunks.length, 3)
+    assert.equal(chunks[0].length, 200)
+    assert.equal(chunks[1].length, 200)
+    assert.equal(chunks[2].length, 50)
+    assert.deepEqual(chunkIds([], 200), [])
+    assert.deepEqual(chunkIds(['a', null, 'b'], 200), [['a', 'b']])
   })
 
   it('resolves KPI RPC branch slug without passing arrays', () => {

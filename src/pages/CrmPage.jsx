@@ -5,7 +5,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canAccessCrm, canWriteFinance, canViewQueueOperations, getBranchScopeList, isAdmin } from '@/auth/permissions'
 import { listBranches, listMembershipTiers } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
-import { applyBranchScope } from '@/lib/crmInsights'
+import { applyBranchScope, chunkIds, collectPaged } from '@/lib/crmInsights'
 import {
   CRM_SMART_GROUP_PRESETS,
   deleteSavedSmartGroup,
@@ -101,18 +101,41 @@ export default function CrmPage() {
       }
     }
 
-    let query = supabase
-      .from('customers')
-      .select('id, full_name, first_name, last_name, phone, email, loyalty_points, loyalty_stamps, created_at')
-      .eq('role', 'customer')
-      .eq('is_archived', false)
-      .order('created_at', { ascending: false })
-      .limit(200)
-    if (customerIds) query = query.in('id', customerIds.slice(0, 200))
-
-    const { data, error } = await query
-    if (error) toast.error(error.message)
-    setCustomers(data || [])
+    const select =
+      'id, full_name, first_name, last_name, phone, email, loyalty_points, loyalty_stamps, created_at'
+    try {
+      if (customerIds) {
+        const rows = []
+        for (const chunk of chunkIds(customerIds, 200)) {
+          const { data, error } = await supabase
+            .from('customers')
+            .select(select)
+            .eq('role', 'customer')
+            .eq('is_archived', false)
+            .in('id', chunk)
+          if (error) throw error
+          rows.push(...(data || []))
+        }
+        rows.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+        setCustomers(rows)
+        return
+      }
+      const rows = await collectPaged(async (from, to) => {
+        const { data, error } = await supabase
+          .from('customers')
+          .select(select)
+          .eq('role', 'customer')
+          .eq('is_archived', false)
+          .order('created_at', { ascending: false })
+          .range(from, to)
+        if (error) throw error
+        return data || []
+      }, 200)
+      setCustomers(rows)
+    } catch (error) {
+      toast.error(error.message)
+      setCustomers([])
+    }
   }, [profile])
 
   useEffect(() => {

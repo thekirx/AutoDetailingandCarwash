@@ -30,7 +30,7 @@ import {
 } from '../lib/queueFamilies'
 import { splitCustomerName } from '../lib/phVehicles'
 import { canAccessPos, canSeeAllBranches, canViewRedoLane, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
-import { splitWashPool, DEFAULT_COMPENSATION_RULES } from '../lib/compensation'
+import { splitWashPool, DEFAULT_COMPENSATION_RULES, normalizeCompensationSettings } from '../lib/compensation'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import QueueTicketEditor from '../components/QueueTicketEditor'
 import TeamLeadQueuePage from './TeamLeadQueuePage'
@@ -1439,19 +1439,24 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
     const startIso = `${today}T00:00:00+08:00`
     const endIso = `${today}T23:59:59.999+08:00`
     Promise.all([
-      supabase
-        .from('sales')
-        .select('total_minor')
-        .eq('status', 'paid')
-        .gte('occurred_at', startIso)
-        .lte('occurred_at', endIso)
-        .then(({ data }) => (data || []).reduce((s, r) => s + Number(r.total_minor || 0), 0)),
+      (() => {
+        let q = supabase
+          .from('sales')
+          .select('total_minor')
+          .eq('status', 'paid')
+          .gte('occurred_at', startIso)
+          .lte('occurred_at', endIso)
+        if (branchFilter && branchFilter !== 'all') q = q.eq('branch', branchFilter)
+        return q.then(({ data }) => (data || []).reduce((s, r) => s + Number(r.total_minor || 0), 0))
+      })(),
       supabase
         .from('compensation_settings')
-        .select('rules')
+        .select(
+          'wash_pool_pct, ceramic_shirt_deduction_minor, ceramic_card_fee_pct, ceramic_crew_solo_pct, ceramic_crew_split_pct, ceramic_detailer_split_pct',
+        )
         .eq('id', 1)
         .maybeSingle()
-        .then(({ data }) => data?.rules || DEFAULT_COMPENSATION_RULES),
+        .then(({ data }) => normalizeCompensationSettings(data)),
     ])
       .then(([sales, r]) => {
         setTotalSales(sales)

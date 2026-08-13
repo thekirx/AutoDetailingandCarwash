@@ -12,6 +12,33 @@ export const DEFAULT_COMPENSATION_RULES = Object.freeze({
   ceramic_detailer_split_pct: 10,
 })
 
+const COMP_KEYS = Object.keys(DEFAULT_COMPENSATION_RULES)
+
+/** Map a compensation_settings row (scalar columns, or legacy rules json) to engine input. */
+export function normalizeCompensationSettings(row) {
+  const src = row && typeof row.rules === 'object' && row.rules ? { ...row, ...row.rules } : row || {}
+  const out = { ...DEFAULT_COMPENSATION_RULES }
+  for (const key of COMP_KEYS) {
+    const n = Number(src[key])
+    if (Number.isFinite(n)) out[key] = n
+  }
+  return out
+}
+
+/** Payload for compensation_settings upsert — never a `rules` json blob. */
+export function toCompensationSettingsRow(rules, { id = 1 } = {}) {
+  const n = normalizeCompensationSettings(rules)
+  return {
+    id,
+    wash_pool_pct: n.wash_pool_pct,
+    ceramic_shirt_deduction_minor: n.ceramic_shirt_deduction_minor,
+    ceramic_card_fee_pct: n.ceramic_card_fee_pct,
+    ceramic_crew_solo_pct: n.ceramic_crew_solo_pct,
+    ceramic_crew_split_pct: n.ceramic_crew_split_pct,
+    ceramic_detailer_split_pct: n.ceramic_detailer_split_pct,
+  }
+}
+
 /**
  * Lateness weight: present = 1, late = 0.7, else 0.
  * ponytail: linear weights; upgrade to minute-based if SA asks.

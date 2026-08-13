@@ -1,0 +1,85 @@
+{
+  "at": "2026-08-13T03:38:28.355Z",
+  "results": [
+    {
+      "id": "C3-ticket",
+      "ok": true,
+      "note": "318c3209-de90-4e5d-83cb-48f6707b9c1a"
+    },
+    {
+      "id": "C3-in_progress",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C3-final_checking",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C3-failed-qa",
+      "ok": true,
+      "note": "QA Failed QA write flow"
+    },
+    {
+      "id": "C3-for_payment",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C5-pos-sale",
+      "ok": true,
+      "note": "fff47a22-5142-4b9b-a5a5-cfe3e696a70a"
+    },
+    {
+      "id": "C5-expense",
+      "ok": true,
+      "note": "daily"
+    },
+    {
+      "id": "C5-ca-approve",
+      "ok": true,
+      "note": "e90c2dfe-7006-4f27-bac6-8fb18dede5e1"
+    },
+    {
+      "id": "C8-assign",
+      "ok": true,
+      "note": "2049b5eb-4f16-48fa-9347-4559925c995b"
+    },
+    {
+      "id": "C8-proof",
+      "ok": true,
+      "note": "for_review"
+    },
+    {
+      "id": "C8-review-done",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C9-staff-denied",
+      "ok": true,
+      "note": "42501"
+    },
+    {
+      "id": "C9-customer-review",
+      "ok": true,
+      "note": "97fcbe36-b4e3-48fc-9f41-2eba858a96f4"
+    },
+    {
+      "id": "C9-investor-hidden",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "id": "C9-admin-read",
+      "ok": true,
+      "note": "5"
+    },
+    {
+      "id": "cleanup",
+      "ok": true,
+      "note": "{\"bookingIds\":[\"318c3209-de90-4e5d-83cb-48f6707b9c1a\"],\"expenseIds\":[\"f1d208fa-1478-475c-bb44-83d7bb2e4d48\"],\"saleIds\":[\"fff47a22-5142-4b9b-a5a5-cfe3e696a70a\"],\"reviewIds\":[\"97fcbe36-b4e3-48fc-9f41-2eba858a96f4\"],\"assigneeIds\":[\"2049b5eb-4f16-48fa-9347-4559925c995b\"],\"cardIds\":[\"1fc47102-6f6b-4cf9-a3cc-9679db382d24\"],\"formIds\":[\"e90c2dfe-7006-4f27-bac6-8fb18dede5e1\"]}"
+    }
+  ]
+}

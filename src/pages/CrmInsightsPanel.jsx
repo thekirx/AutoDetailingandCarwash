@@ -7,6 +7,8 @@ import {
   aggregateSalesByBranch,
   aggregateSalesByHour,
   applyBranchScope,
+  chunkIds,
+  collectPaged,
   peakSalesHour,
 } from '@/lib/crmInsights'
 import { topCustomersBySpend, insightsToCsv, downloadCsv } from '@/lib/crmInsightsExport'
@@ -60,36 +62,48 @@ export default function CrmInsightsPanel({ profile }) {
   const load = useCallback(async () => {
     const startIso = `${range.start}T00:00:00+08:00`
     const endIso = `${range.end}T23:59:59.999+08:00`
-    let q = supabase
-      .from('sales')
-      .select('id, branch, total_minor, occurred_at, status, customer_id, customers(id, full_name, phone)')
-      .gte('occurred_at', startIso)
-      .lte('occurred_at', endIso)
-      .in('status', ['paid', 'completed'])
-      .order('occurred_at', { ascending: false })
-      .limit(2000)
-    q = applyBranchScope(q, scope)
-    const { data, error } = await q
-    if (error) {
+    let rows = []
+    try {
+      rows = await collectPaged(async (from, to) => {
+        let q = supabase
+          .from('sales')
+          .select('id, branch, total_minor, occurred_at, status, customer_id, customers(id, full_name, phone)')
+          .gte('occurred_at', startIso)
+          .lte('occurred_at', endIso)
+          .in('status', ['paid', 'completed'])
+          .order('occurred_at', { ascending: false })
+          .range(from, to)
+        q = applyBranchScope(q, scope)
+        const { data, error } = await q
+        if (error) throw error
+        return data || []
+      }, 1000)
+    } catch (error) {
       toast.error(error.message)
       setSales([])
       setLines([])
       return
     }
-    const rows = data || []
     setSales(rows)
     if (!rows.length) {
       setLines([])
       return
     }
     const ids = rows.map((r) => r.id)
-    // ponytail: chunk if >200 — upgrade when sales volume grows
-    const { data: lineRows, error: lineErr } = await supabase
-      .from('sale_line_items')
-      .select('sale_id, item_type, service_id, name, quantity, line_total_minor')
-      .in('sale_id', ids.slice(0, 200))
-    if (lineErr) toast.error(lineErr.message)
-    setLines(lineRows || [])
+    const chunks = chunkIds(ids, 200)
+    const lineRows = []
+    for (const chunk of chunks) {
+      const { data, error: lineErr } = await supabase
+        .from('sale_line_items')
+        .select('sale_id, item_type, service_id, name, quantity, line_total_minor')
+        .in('sale_id', chunk)
+      if (lineErr) {
+        toast.error(lineErr.message)
+        break
+      }
+      lineRows.push(...(data || []))
+    }
+    setLines(lineRows)
   }, [range.start, range.end, scope])
 
   useEffect(() => {

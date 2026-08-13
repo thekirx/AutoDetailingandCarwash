@@ -121,6 +121,23 @@ describe('C1 provision roles + C10 compensation', () => {
     })
     assert.ok(ceramic.remaining_minor < 1000000)
   })
+
+  it('compensation UI reads scalar columns, not a ghost rules json', async () => {
+    const settings = await read('src/pages/SettingsHubPage.jsx')
+    const crew = await read('src/pages/OperationsPages.jsx')
+    const insights = await read('src/pages/CrmInsightsPanel.jsx')
+    assert.match(settings, /toCompensationSettingsRow/)
+    assert.doesNotMatch(settings, /upsert\(\{ id: 1, rules/)
+    assert.match(crew, /normalizeCompensationSettings/)
+    assert.doesNotMatch(crew, /select\('rules'\)/)
+    assert.match(insights, /chunkIds/)
+    assert.match(insights, /collectPaged/)
+    assert.doesNotMatch(insights, /ids\.slice\(0, 200\)/)
+    assert.doesNotMatch(insights, /\.limit\(2000\)/)
+    const crm = await read('src/pages/CrmPage.jsx')
+    assert.match(crm, /chunkIds/)
+    assert.doesNotMatch(crm, /customerIds\.slice\(0, 200\)/)
+  })
 })
 
 describe('C11 ASA/BA scope gates', () => {

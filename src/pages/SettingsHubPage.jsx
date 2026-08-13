@@ -10,7 +10,7 @@ import {
   canManageSiteContent,
   isSuperAdmin,
 } from '@/auth/permissions'
-import { DEFAULT_COMPENSATION_RULES } from '@/lib/compensation'
+import { DEFAULT_COMPENSATION_RULES, normalizeCompensationSettings, toCompensationSettingsRow } from '@/lib/compensation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -78,10 +78,12 @@ function CompensationSettings() {
   const load = useCallback(async () => {
     const { data } = await supabase
       .from('compensation_settings')
-      .select('rules')
+      .select(
+        'wash_pool_pct, ceramic_shirt_deduction_minor, ceramic_card_fee_pct, ceramic_crew_solo_pct, ceramic_crew_split_pct, ceramic_detailer_split_pct',
+      )
       .eq('id', 1)
       .maybeSingle()
-    if (data?.rules) setRules({ ...DEFAULT_COMPENSATION_RULES, ...data.rules })
+    setRules(normalizeCompensationSettings(data))
     setLoaded(true)
   }, [])
 
@@ -92,7 +94,7 @@ function CompensationSettings() {
     setSaving(true)
     const { error } = await supabase
       .from('compensation_settings')
-      .upsert({ id: 1, rules, updated_at: new Date().toISOString() })
+      .upsert({ ...toCompensationSettingsRow(rules), updated_at: new Date().toISOString() })
     setSaving(false)
     if (error) toast.error(error.message)
     else toast.success('Compensation rules saved')

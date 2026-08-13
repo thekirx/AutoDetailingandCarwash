@@ -55,6 +55,30 @@ export function aggregateLineItemsByService(lines = []) {
   return Object.values(map).sort((a, b) => b.total_minor - a.total_minor)
 }
 
+/** Split ids for PostgREST `.in()` (URL/filter cap ~200). */
+export function chunkIds(ids, size = 200) {
+  const list = (ids || []).filter((id) => id != null && id !== '')
+  const out = []
+  const n = Math.max(1, Number(size) || 200)
+  for (let i = 0; i < list.length; i += n) out.push(list.slice(i, i + n))
+  return out
+}
+
+/** Walk PostgREST `.range()` pages until a short/empty page. */
+export async function collectPaged(fetchPage, pageSize = 1000) {
+  const size = Math.max(1, Number(pageSize) || 1000)
+  const all = []
+  let from = 0
+  for (;;) {
+    const batch = await fetchPage(from, from + size - 1)
+    if (!Array.isArray(batch) || batch.length === 0) break
+    all.push(...batch)
+    if (batch.length < size) break
+    from += size
+  }
+  return all
+}
+
 export function applyBranchScope(query, branchFilter) {
   if (branchFilter == null || branchFilter === 'all') return query
   if (Array.isArray(branchFilter)) {
