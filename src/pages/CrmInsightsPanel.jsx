@@ -7,7 +7,7 @@ import {
   aggregateSalesByBranch,
   aggregateSalesByHour,
   applyBranchScope,
-  chunkIds,
+  collectInChunks,
   collectPaged,
   peakSalesHour,
 } from '@/lib/crmInsights'
@@ -90,20 +90,22 @@ export default function CrmInsightsPanel({ profile }) {
       return
     }
     const ids = rows.map((r) => r.id)
-    const chunks = chunkIds(ids, 200)
-    const lineRows = []
-    for (const chunk of chunks) {
-      const { data, error: lineErr } = await supabase
-        .from('sale_line_items')
-        .select('sale_id, item_type, service_id, name, quantity, line_total_minor')
-        .in('sale_id', chunk)
-      if (lineErr) {
-        toast.error(lineErr.message)
-        break
-      }
-      lineRows.push(...(data || []))
+    try {
+      const lineRows = await collectInChunks(ids, async (chunk, from, to) => {
+        const { data, error: lineErr } = await supabase
+          .from('sale_line_items')
+          .select('sale_id, item_type, service_id, name, quantity, line_total_minor')
+          .in('sale_id', chunk)
+          .order('id', { ascending: true })
+          .range(from, to)
+        if (lineErr) throw lineErr
+        return data || []
+      })
+      setLines(lineRows)
+    } catch (lineErr) {
+      toast.error(lineErr.message)
+      setLines([])
     }
-    setLines(lineRows)
   }, [range.start, range.end, scope])
 
   useEffect(() => {

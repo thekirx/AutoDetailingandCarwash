@@ -429,7 +429,8 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
           .eq('is_archived', false)
           .not('in_progress_at', 'is', null)
           .gte('in_progress_at', startIso)
-          .lte('in_progress_at', endIso),
+          .lte('in_progress_at', endIso)
+          .order('in_progress_at', { ascending: false }),
         branchScope,
       ),
     ),

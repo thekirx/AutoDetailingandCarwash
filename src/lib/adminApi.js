@@ -109,6 +109,7 @@ export async function listStaffPeople({ includeInactive = false } = {}) {
       .from('staff_branch_assignments')
       .select('staff_id, branch_slug')
       .in('staff_id', chunk)
+      .order('staff_id', { ascending: true })
       .range(from, to)
     if (error) throw mapDbError(error)
     return data || []

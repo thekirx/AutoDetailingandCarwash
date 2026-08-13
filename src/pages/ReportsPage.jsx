@@ -90,6 +90,7 @@ export default function ReportsPage() {
             .from('sale_line_items')
             .select('name, item_type, line_total_minor, quantity, sale_id')
             .in('sale_id', chunk)
+            .order('id', { ascending: true })
             .range(from, to)
           if (error) throw error
           return data || []
