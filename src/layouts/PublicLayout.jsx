@@ -14,10 +14,87 @@ const navItems = [
   ['Packages', '/packages'],
   ['Branch', '/branches'],
   ['Events', '/events'],
-  ['Journal', '/blog'],
+  ['Blog', '/blog'],
   ['Live Queue', '/queue'],
   ['Contact', '/contact'],
 ]
+
+function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
+  return (
+    <header className={`public-header ${className} ${open ? 'menu-open' : ''}`.trim()}>
+      <div className="public-shell header-inner">
+        <Link className="wordmark" to="/home" aria-label="Hakum Auto Care home">
+          <img
+            className="wordmark-image"
+            src="/branding/hakum-lw-ow.png"
+            alt=""
+            width="124"
+            height="70"
+          />
+        </Link>
+        <nav className="desktop-nav" aria-label="Primary navigation">
+          {navItems.map(([label, to]) => (
+            <NavLink key={to} to={to} end={to === '/home'}>
+              {label}
+            </NavLink>
+          ))}
+          {isCustomer ? <NavLink to="/account">My account</NavLink> : null}
+        </nav>
+        <div className="header-actions">
+          {isCustomer ? (
+            <>
+              <NotificationBell light />
+              <Link className="header-auth header-signin" to="/account">
+                Account
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link className="header-auth header-signin" to="/signin">
+                Sign in
+              </Link>
+              <Link className="header-auth header-signup" to="/signup">
+                Sign up
+              </Link>
+            </>
+          )}
+          <Link className="header-book" to="/book">
+            Book now <ArrowUpRight size={16} />
+          </Link>
+        </div>
+        <button
+          className="menu-button"
+          onClick={() => setOpen(!open)}
+          aria-label="Toggle navigation"
+          aria-expanded={open}
+          aria-controls="mobile-navigation"
+        >
+          {open ? <X /> : <Menu />}
+        </button>
+      </div>
+      {open && (
+        <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">
+          {navItems.map(([label, to]) => (
+            <NavLink key={to} to={to} end={to === '/home'}>
+              {label}
+            </NavLink>
+          ))}
+          {isCustomer ? (
+            <NavLink to="/account">My account</NavLink>
+          ) : (
+            <>
+              <Link to="/signin">Sign in</Link>
+              <Link to="/signup">Sign up</Link>
+            </>
+          )}
+          <Link className="mobile-book" to="/book">
+            Book now <ArrowUpRight size={17} />
+          </Link>
+        </nav>
+      )}
+    </header>
+  )
+}
 
 export default function PublicLayout() {
   const [open, setOpen] = useState(false)
@@ -26,17 +103,23 @@ export default function PublicLayout() {
   const { user, profile, loading } = useAuth()
   // Trust DB profile only — metadata.role is client-writable
   const isCustomer = !loading && Boolean(user) && profile?.role === 'customer'
-  // Customer app routes are always the phone stage, including desktop web.
-  const appAccountShell = pathname.startsWith('/account')
+  // /account: phone app chrome on mobile; landing header + wide layout on desktop.
+  const accountRoute = pathname.startsWith('/account')
 
   useEffect(() => setOpen(false), [pathname])
 
   const footerCities = branches.map((b) => b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name).join(' · ') || 'Philippines'
 
-  if (appAccountShell) {
+  if (accountRoute) {
     return (
-      <div className="public-site app-shell">
+      <div className="public-site app-shell account-route">
         <PublicPageMeta />
+        <PublicSiteHeader
+          className="account-web-header"
+          open={open}
+          setOpen={setOpen}
+          isCustomer={isCustomer}
+        />
         <main className="app-shell-main">
           <Outlet />
         </main>
@@ -48,78 +131,7 @@ export default function PublicLayout() {
   return (
     <div className="public-site">
       <PublicPageMeta />
-      <header className={`public-header ${open ? 'menu-open' : ''}`}>
-        <div className="public-shell header-inner">
-          <Link className="wordmark" to="/home" aria-label="Hakum Auto Care home">
-            <img
-              className="wordmark-image"
-              src="/branding/hakum-lw-ow.png"
-              alt=""
-              width="124"
-              height="70"
-            />
-          </Link>
-          <nav className="desktop-nav" aria-label="Primary navigation">
-            {navItems.map(([label, to]) => (
-              <NavLink key={to} to={to} end={to === '/home'}>
-                {label}
-              </NavLink>
-            ))}
-            {isCustomer ? <NavLink to="/account">My account</NavLink> : null}
-          </nav>
-          <div className="header-actions">
-            {isCustomer ? (
-              <>
-                <NotificationBell light />
-                <Link className="header-auth header-signin" to="/account">
-                  Account
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link className="header-auth header-signin" to="/signin">
-                  Sign in
-                </Link>
-                <Link className="header-auth header-signup" to="/signup">
-                  Sign up
-                </Link>
-              </>
-            )}
-            <Link className="header-book" to="/book">
-              Book now <ArrowUpRight size={16} />
-            </Link>
-          </div>
-          <button
-            className="menu-button"
-            onClick={() => setOpen(!open)}
-            aria-label="Toggle navigation"
-            aria-expanded={open}
-            aria-controls="mobile-navigation"
-          >
-            {open ? <X /> : <Menu />}
-          </button>
-        </div>
-        {open && (
-          <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">
-            {navItems.map(([label, to]) => (
-              <NavLink key={to} to={to} end={to === '/home'}>
-                {label}
-              </NavLink>
-            ))}
-            {isCustomer ? (
-              <NavLink to="/account">My account</NavLink>
-            ) : (
-              <>
-                <Link to="/signin">Sign in</Link>
-                <Link to="/signup">Sign up</Link>
-              </>
-            )}
-            <Link className="mobile-book" to="/book">
-              Book now <ArrowUpRight size={17} />
-            </Link>
-          </nav>
-        )}
-      </header>
+      <PublicSiteHeader open={open} setOpen={setOpen} isCustomer={isCustomer} />
 
       <main>
         <Outlet />

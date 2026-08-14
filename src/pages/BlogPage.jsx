@@ -24,7 +24,7 @@ export default function BlogPage() {
       <section className="inner-hero">
         <div className="public-shell">
           <p className="eyebrow eyebrow-light">From the bay</p>
-          <h1 className="display-title">Hakum Journal.</h1>
+          <h1 className="display-title">Hakum Blog.</h1>
           <p className="inner-hero-copy">Detailing craft, ceramic care, and branch stories - written for drivers who care how a finish ages.</p>
         </div>
       </section>

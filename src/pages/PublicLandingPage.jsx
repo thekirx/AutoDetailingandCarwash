@@ -69,7 +69,7 @@ function HomeContentTeasers() {
     <section className="hakum-home-content">
       <div className="public-shell hakum-home-content-grid">
         <div className="hakum-home-content-col">
-          <h2 className="section-title">From the journal</h2>
+          <h2 className="section-title">From the blog</h2>
           <p className="hakum-home-content-lead">Care tips and bay stories for drivers who notice finish.</p>
           <div className="hakum-home-content-list">
             {posts.map((post) => (
@@ -84,7 +84,7 @@ function HomeContentTeasers() {
             {!posts.length && <p className="hakum-home-content-empty">New posts land here soon.</p>}
           </div>
           <Link className="about-link" to="/blog">
-            All journal posts <ArrowRight size={18} />
+            All blog posts <ArrowRight size={18} />
           </Link>
         </div>
         <div className="hakum-home-content-col is-events">

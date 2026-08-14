@@ -52,23 +52,38 @@ describe('customer app frame', () => {
     assert.match(read('src/components/CustomerSettingsModal.jsx'), /layout="panel"/)
   })
 
-  it('always uses the app shell on /account, including desktop web', () => {
+  it('account routes keep app shell on phones and landing header on desktop web', () => {
     const layout = read('src/layouts/PublicLayout.jsx')
     assert.match(layout, /pathname\.startsWith\('\/account'\)/)
-    assert.doesNotMatch(layout, /prefersAppShell\(\) && pathname/)
+    assert.match(layout, /account-web-header|account-route/)
+    assert.match(layout, /public-header/)
+    assert.match(read('src/components/CustomerAppFrame.jsx'), /CustomerAccountDock/)
   })
 
-  it('ships mobile-first tokens, web phone stage, and landscape dock', () => {
+  it('ships mobile app chrome, desktop web layout (no phone stage), landscape dock', () => {
     const css = read('src/styles-customer-app.css')
     assert.match(css, /--capp-navy: #052699/)
     assert.match(css, /--capp-ink: #020a31/)
     assert.match(css, /min-width: 860px/)
-    assert.match(css, /width: min\(430px/)
+    assert.doesNotMatch(css, /width: min\(430px/)
+    assert.match(css, /\.capp \.account-dock[\s\S]*display:\s*none/)
+    assert.match(css, /account-web-header/)
     assert.match(css, /orientation: landscape/)
     assert.match(css, /max-height: 520px/)
     assert.match(css, /prefers-reduced-motion/)
     assert.match(css, /safe-area-inset-top/)
     assert.match(css, /safe-area-inset-bottom/)
+  })
+
+  it('hides mobile hero icon actions on desktop web; keeps settings and sign-out on web', () => {
+    const home = read('src/pages/CustomerAccountPage.jsx')
+    const css = read('src/styles-customer-app.css')
+    assert.match(home, /capp-icon-row[\s\S]*account-mobile-only|account-mobile-only[\s\S]*capp-icon-row/)
+    assert.match(home, /capp-web-actions[\s\S]*account-desktop-only|account-desktop-only[\s\S]*capp-web-actions/)
+    assert.match(home, /openSettings\('account'\)/)
+    assert.match(home, /signOut\(\)/)
+    assert.match(css, /min-width: 860px[\s\S]*\.capp-icon-row[\s\S]*display:\s*none/)
+    assert.match(css, /\.capp-web-actions/)
   })
 
   it('auth collapses to an app sheet on phones', () => {

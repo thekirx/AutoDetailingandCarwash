@@ -274,17 +274,27 @@ export default function CustomerAccountPage() {
           <header className="capp-hero">
             <div className="capp-hero-bar">
               <div className="min-w-0">
-                <p className="capp-kicker">Hakum</p>
+                <p className="capp-kicker">Hakum Auto Care</p>
                 <h1>Hi{firstName ? `, ${firstName}` : ''}</h1>
                 <p className="capp-hero-sub">{heroLine}</p>
               </div>
-              <div className="capp-icon-row">
+              {/* Mobile/PWA app chrome — hidden on desktop (landing header owns bell + account) */}
+              <div className="capp-icon-row account-mobile-only">
                 <button type="button" className="capp-icon-btn" onClick={() => openSettings('alerts')} aria-label="Settings">
                   <Settings size={18} strokeWidth={1.75} />
                 </button>
                 <NotificationBell variant="capp" homeUrl="/account" homeLabel="Home" />
                 <button type="button" className="capp-icon-btn" onClick={() => signOut()} aria-label="Sign out">
                   <LogOut size={18} strokeWidth={1.75} />
+                </button>
+              </div>
+              {/* Desktop web — quiet utilities; no second bell */}
+              <div className="capp-web-actions account-desktop-only">
+                <button type="button" className="capp-web-link" onClick={() => openSettings('account')}>
+                  Settings
+                </button>
+                <button type="button" className="capp-web-link" onClick={() => signOut()}>
+                  Sign out
                 </button>
               </div>
             </div>

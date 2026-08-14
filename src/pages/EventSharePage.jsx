@@ -135,7 +135,7 @@ export default function EventSharePage() {
           <p className="hakum-article-footer">
             <Link className="dark-link" to="/events">All events</Link>
             {' · '}
-            <Link className="dark-link" to="/blog">Journal</Link>
+            <Link className="dark-link" to="/blog">Blog</Link>
             {' · '}
             <Link className="dark-link" to="/">Home</Link>
           </p>

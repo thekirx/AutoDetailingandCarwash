@@ -22,7 +22,7 @@ const TILES = [
   {
     key: 'content',
     title: 'Blogs & Events',
-    description: 'Publish journal posts and event pages with images, video, and form buttons.',
+    description: 'Publish blog posts and event pages with images, video, and form buttons.',
     to: '/operations/content',
     icon: Newspaper,
     allow: canManageSiteContent,

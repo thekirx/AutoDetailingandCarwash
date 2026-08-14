@@ -28,7 +28,7 @@ export default function BlogPostPage() {
     <>
       <section className="inner-hero">
         <div className="public-shell" style={{ maxWidth: 720 }}>
-          <p className="eyebrow eyebrow-light">Journal</p>
+          <p className="eyebrow eyebrow-light">Blog</p>
           <h1 className="display-title">{post?.title || 'Blog'}</h1>
           {post && (
             <p className="inner-hero-copy">

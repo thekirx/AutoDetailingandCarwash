@@ -124,7 +124,7 @@ export default function EventsPage() {
           </form>
         )}
         <div className="public-shell" style={{ marginTop: 48 }}>
-          <Link className="dark-link" to="/blog">Journal</Link>
+          <Link className="dark-link" to="/blog">Blog</Link>
           {' · '}
           <Link className="dark-link" to="/">Back home</Link>
         </div>

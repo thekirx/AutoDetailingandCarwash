@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import CustomerAccountDock from '@/components/CustomerAccountDock'
 
 /**
- * Phone-first customer chrome. Same stage on web (ticket window on the bay).
+ * Customer account chrome.
+ * Mobile / PWA: phone app stage + bottom dock.
+ * Desktop web: content sits under the landing-page header (PublicLayout).
  */
 export default function CustomerAppFrame({
   title,

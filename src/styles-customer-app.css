@@ -1,4 +1,4 @@
-/* Customer app — ticket window on a wet navy bay. Mobile first, same stage on web. */
+/* Customer app — mobile/PWA feels like a native app; desktop connects to the landing site. */
 
 .capp {
   --capp-ink: #020a31;
@@ -82,6 +82,37 @@
   display: flex;
   align-items: center;
   gap: 0.3rem;
+}
+
+.capp-web-actions {
+  display: none;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.capp-web-link {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.95rem;
+  transition: background 320ms var(--capp-ease), transform 320ms var(--capp-ease);
+}
+
+.capp-web-link:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.capp-web-link:active {
+  transform: scale(0.98);
 }
 
 .capp-icon-btn {
@@ -673,7 +704,7 @@
   }
 }
 
-/* Dock stays an island on every width when inside the customer app */
+/* Dock stays an island on phones / PWA */
 .capp .account-dock,
 .capp-dock {
   display: grid !important;
@@ -688,28 +719,101 @@
   display: flex !important;
 }
 
-/* Web: same phone on a wet bay */
+/* Phones: hide landing header — account is an app shell */
+.account-route .account-web-header {
+  display: none !important;
+}
+
+/* Desktop / laptop: landing header + wide account (no phone frame) */
 @media (min-width: 860px) {
+  .account-route .account-web-header {
+    display: block !important;
+  }
+
+  .account-route .app-shell-main {
+    min-height: calc(100svh - 5.5rem);
+    /* Clear fixed landing header */
+    padding-top: calc(88px + env(safe-area-inset-top, 0px));
+  }
+
   .capp {
-    display: grid;
-    place-items: center;
-    padding: 1.5rem;
-    background:
-      radial-gradient(ellipse 50% 40% at 50% 0%, rgba(5, 38, 153, 0.45), transparent 60%),
-      #020a31;
+    min-height: auto;
+    background: var(--capp-foam);
   }
 
   .capp-stage {
-    width: min(430px, 100%);
-    min-height: min(860px, calc(100dvh - 3rem));
-    border-radius: 2rem;
-    overflow: hidden;
-    background: var(--capp-foam);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 40px 80px rgba(0, 0, 0, 0.35);
+    width: min(1120px, calc(100% - 3rem));
+    margin: 0 auto;
+    min-height: auto;
+    padding: 1.25rem 0 2.5rem;
+    border-radius: 0;
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
   }
 
-  .capp .account-dock {
-    width: min(24.5rem, calc(100% - 1.5rem));
+  .capp-hero {
+    border-radius: 1.75rem;
+    margin-bottom: 0.5rem;
+    padding: 1.65rem 1.75rem 1.55rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .capp-hero h1 {
+    font-size: clamp(2rem, 3.2vw, 2.55rem);
+    font-style: normal;
+    letter-spacing: -0.04em;
+  }
+
+  .capp-hero-sub {
+    max-width: 42ch;
+    font-size: 0.98rem;
+  }
+
+  .capp-icon-row {
+    display: none !important;
+  }
+
+  .capp-web-actions {
+    display: flex;
+  }
+
+  .capp-top {
+    border-radius: 1.25rem;
+    background: var(--capp-porcelain);
+    border: 1px solid var(--capp-line);
+    margin-bottom: 0.75rem;
+  }
+
+  .capp-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem 0 0;
+  }
+
+  .capp-scroll > .capp-ticket,
+  .capp-scroll > .capp-empty,
+  .capp-scroll > .capp-section,
+  .capp-scroll > .capp-note {
+    max-width: none;
+  }
+
+  .capp-actions {
+    max-width: 28rem;
+  }
+
+  .account-route .capp .account-dock,
+  .account-route .capp .capp-dock {
+    display: none !important;
+  }
+
+  .capp .account-desktop-only {
+    display: flex !important;
+  }
+
+  .capp .account-mobile-only {
+    display: none !important;
   }
 }
 
