@@ -2,10 +2,13 @@ import assert from 'node:assert/strict'
 import { access } from 'node:fs/promises'
 import { describe, it } from 'node:test'
 import {
-  aboutImage,
+  HOME_SECTION_IDS,
   ceramicPackages,
   featuredServices,
+  mediaGallery,
+  nanoCeramicTint,
   otherServices,
+  ppfInformation,
   services,
 } from '../src/data/publicHomeContent.js'
 
@@ -38,11 +41,6 @@ describe('Public homepage content assets', () => {
     })
   })
 
-  it('maps the dedicated About Us image', async () => {
-    assert.match(new URL(aboutImage).pathname, /about-hkm-21\.webp$/)
-    await access(new URL(aboutImage))
-  })
-
   it('maps the approved featured and ceramic WebP assets', async () => {
     assert.deepEqual(featuredServices.map(({ title, image }) => [title, new URL(image).pathname.split('/').at(-1)]), [
       ['PAINT PROTECTION FILM', 'paint-protection-film.webp'],
@@ -50,7 +48,6 @@ describe('Public homepage content assets', () => {
       ['DETAILING', 'detailing.webp'],
     ])
     assert.deepEqual(ceramicPackages.map(({ title, bgImage }) => [title, new URL(bgImage).pathname.split('/').at(-1)]), [
-      ['CLASSIC', 'ceramic-classic.webp'],
       ['PREMIUM', 'ceramic-premium.webp'],
       ['PLATINUM', 'ceramic-platinum.webp'],
     ])
@@ -68,5 +65,24 @@ describe('Public homepage content assets', () => {
       'ENGINE WASH',
     ])
     await Promise.all(otherServices.map(({ image }) => access(new URL(image))))
+  })
+
+  it('exposes the approved service-focused homepage flow', () => {
+    assert.deepEqual(HOME_SECTION_IDS, [
+      'hero',
+      'ceramic',
+      'ppf-information',
+      'ppf-packages',
+      'nano-ceramic-tint',
+      'media-gallery',
+      'latest-post',
+      'events',
+      'partnership',
+      'queue',
+      'branches',
+    ])
+    assert.deepEqual(ppfInformation.features.map(({ title }) => title), ['Clarity', 'Stretch', 'Adhesion', 'Warranty'])
+    assert.equal(nanoCeramicTint.title, 'Cooler cabin. Clearer drive.')
+    assert.deepEqual(mediaGallery.map(({ title }) => title), ['DETAILING', 'PAINT PROTECTION FILM', 'CERAMIC COATING'])
   })
 })
