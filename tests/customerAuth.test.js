@@ -2,9 +2,11 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   classifyIdentifier,
+  isValidCustomerPlate,
   normalizePlate,
   phoneLoginEmail,
   resolveLoginEmail,
+  safeVehiclePhotoUrl,
 } from '../src/lib/customerAuth.js'
 import { phoneLoginEmail as serverPhoneLoginEmail } from '../server/provisionCustomer.mjs'
 
@@ -33,5 +35,19 @@ describe('customer identifier classification', () => {
     assert.equal(resolveLoginEmail('You@Hakum.com'), 'you@hakum.com')
     assert.equal(resolveLoginEmail('0917 123 4567'), 'c09171234567@customers.hakumautocare.com')
     assert.throws(() => resolveLoginEmail('ABC1234'), /plate lookup/)
+  })
+
+  it('accepts PH plates with letters and numbers', () => {
+    assert.equal(isValidCustomerPlate('ABC 1234'), true)
+    assert.equal(isValidCustomerPlate('WASH-88'), true)
+    assert.equal(isValidCustomerPlate('AAA'), false)
+    assert.equal(isValidCustomerPlate('12'), false)
+    assert.equal(isValidCustomerPlate(''), false)
+  })
+
+  it('only keeps http(s) vehicle photo URLs', () => {
+    assert.equal(safeVehiclePhotoUrl('https://cdn.example.com/car.jpg'), 'https://cdn.example.com/car.jpg')
+    assert.equal(safeVehiclePhotoUrl('javascript:alert(1)'), null)
+    assert.equal(safeVehiclePhotoUrl(''), null)
   })
 })

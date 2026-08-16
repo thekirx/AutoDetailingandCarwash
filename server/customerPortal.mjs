@@ -4,6 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { getQueueCounts, buildVisitProgress, formatQueueNumber, normalizePlate } from '../src/queue/queueLogic.js'
+import { isValidCustomerPlate, safeVehiclePhotoUrl } from '../src/lib/customerAuth.js'
 import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
 import { CUSTOMER_ACTIVE_VISIT_STATUSES } from '../src/lib/customerPortalActive.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
@@ -83,7 +84,7 @@ export async function loadCustomerPortal({ accessToken }) {
       admin.from('customers').select('loyalty_stamps, loyalty_points, phone, email, full_name, date_of_birth').eq('id', userId).maybeSingle(),
       admin
         .from('vehicles')
-        .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color')
+        .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url')
         .eq('customer_id', userId)
         .eq('is_archived', false)
         .order('plate_number'),
@@ -206,6 +207,9 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const plate = String(body.plate_number || body.vehicle_plate || '').trim()
     const normalized = normalizePlate(plate)
     if (!normalized) throw Object.assign(new Error('Plate number is required.'), { status: 400 })
+    if (!isValidCustomerPlate(plate)) {
+      throw Object.assign(new Error('Enter a plate with letters and numbers (e.g. ABC 1234).'), { status: 400 })
+    }
 
     const payload = {
       customer_id: userId,
@@ -215,6 +219,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       vehicle_model: String(body.vehicle_model || '').trim() || null,
       vehicle_type: String(body.vehicle_type || 'sedan').trim() || 'sedan',
       color: String(body.color || '').trim() || null,
+      photo_url: safeVehiclePhotoUrl(body.photo_url),
       is_archived: false,
     }
 
@@ -224,7 +229,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       .update(payload)
       .eq('normalized_plate_number', normalized)
       .eq('customer_id', userId)
-      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color')
+      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url')
       .maybeSingle()
     if (ownErr) throw Object.assign(new Error(ownErr.message), { status: 400 })
     if (ownUpdate) return { ok: true, vehicle: ownUpdate }
@@ -241,7 +246,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const { data, error } = await admin
       .from('vehicles')
       .insert(payload)
-      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color')
+      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url')
       .single()
     if (error) {
       // Race: another writer claimed the plate between select and insert

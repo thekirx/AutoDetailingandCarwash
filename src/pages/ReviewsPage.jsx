@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { VISIT_REVIEW_AXES } from '@/lib/serviceReviews'
 
 export default function ReviewsPage() {
   const { profile } = useAuth()
@@ -47,10 +48,16 @@ export default function ReviewsPage() {
     load()
   }, [load])
 
-  const avg = useMemo(() => {
-    if (!reviews.length) return 0
-    return reviews.reduce((s, r) => s + Number(r.overall_rating || 0), 0) / reviews.length
+  const axisAvgs = useMemo(() => {
+    return VISIT_REVIEW_AXES.map((axis) => {
+      const vals = reviews.map((r) => Number(r[axis.field])).filter((n) => Number.isInteger(n) && n >= 1 && n <= 5)
+      return {
+        ...axis,
+        avg: vals.length ? vals.reduce((s, n) => s + n, 0) / vals.length : 0,
+      }
+    })
   }, [reviews])
+  const avg = axisAvgs[0]?.avg || 0
 
   if (!canAccessReviews(profile)) return <Navigate to="/operations/access-denied" replace />
 
@@ -75,7 +82,7 @@ export default function ReviewsPage() {
       <div className="flex flex-wrap gap-3">
         {(seeAll || branchOptions.length > 1) && (
           <Select value={branchFilter} onValueChange={setBranchFilter}>
-            <SelectTrigger className="min-h-11 w-48">
+            <SelectTrigger className="min-h-11 w-full sm:w-48">
               <SelectValue placeholder="Branch" />
             </SelectTrigger>
             <SelectContent>
@@ -92,10 +99,10 @@ export default function ReviewsPage() {
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Reviews" value={reviews.length} />
-        <StatCard label="Average rating" value={avg ? avg.toFixed(1) : '—'} />
-        <StatCard label="5-star" value={reviews.filter((r) => Number(r.overall_rating) === 5).length} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {axisAvgs.map((axis) => (
+          <StatCard key={axis.id} label={axis.label} value={axis.avg ? axis.avg.toFixed(1) : '—'} />
+        ))}
       </div>
 
       {loading ? (
@@ -103,7 +110,7 @@ export default function ReviewsPage() {
       ) : reviews.length === 0 ? (
         <p className="text-sm text-muted-foreground">No reviews yet.</p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {reviews.map((r) => (
             <Card key={r.id}>
               <CardHeader className="pb-2">
@@ -115,16 +122,29 @@ export default function ReviewsPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Star
-                      key={i}
-                      className={`size-4 ${i < (r.overall_rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30'}`}
-                    />
-                  ))}
-                  <span className="ml-2 text-sm font-semibold tabular-nums">{r.overall_rating}/5</span>
+                <div className="grid gap-2">
+                  {VISIT_REVIEW_AXES.map((axis) => {
+                    const score = Number(r[axis.field])
+                    if (!Number.isInteger(score) || score < 1) return null
+                    return (
+                      <div key={axis.id} className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                          {axis.label}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <Star
+                              key={i}
+                              className={`size-3.5 ${i < score ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30'}`}
+                            />
+                          ))}
+                          <span className="ml-1 text-xs font-semibold tabular-nums">{score}/5</span>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-                {r.comment && <p className="mt-2 text-sm text-muted-foreground">{r.comment}</p>}
+                {r.comment && <p className="mt-3 text-sm text-muted-foreground">{r.comment}</p>}
                 <p className="mt-2 text-xs text-muted-foreground">
                   {new Date(r.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>

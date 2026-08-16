@@ -167,8 +167,13 @@ export function formatBacoorReportText(report, formatMoney) {
     'Approved CA:',
     ...(report.approved_ca || []).map((row) => `${row.label}-${m(row.amount_minor)}`),
     '',
-    'Daily Expenses:',
+    `Daily Expenses:`,
     ...(report.daily_expenses || []).map((row) => `${row.label}-${m(row.amount_minor)}`),
+    '',
+    '━━━━━━━━━━━',
+    'Cash Advance Payment',
+    '━━━━━━━━━━━',
+    ...(report.approved_ca || []).map((row) => `${row.label}-${m(row.amount_minor)}`),
   ]
   return lines.join('\n')
 }

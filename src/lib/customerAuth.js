@@ -35,6 +35,24 @@ export function normalizePlate(value = '') {
   return String(value).trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
 }
 
+/** PH plate: letters + digits after normalize, at least 3 chars (e.g. ABC1234). */
+export function isValidCustomerPlate(value) {
+  const plate = normalizePlate(value)
+  return plate.length >= 3 && /[A-Z]/.test(plate) && /\d/.test(plate)
+}
+
+export function safeVehiclePhotoUrl(value) {
+  const url = String(value || '').trim()
+  if (!url) return null
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+    return url
+  } catch {
+    return null
+  }
+}
+
 /**
  * Classify sign-in identifier: email, PH-ish phone, or plate.
  * Plates win when input has letters + digits and is not an email.

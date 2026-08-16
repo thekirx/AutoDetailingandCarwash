@@ -11,6 +11,7 @@ import NotificationBell, { useUserNotifications } from '@/components/Notificatio
 import PushToggle from '@/components/PushToggle'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Link } from 'react-router-dom'
+import { isValidCustomerPlate, safeVehiclePhotoUrl } from '@/lib/customerAuth'
 
 async function portalAction(action, payload) {
   const token = await getAccessTokenFresh()
@@ -58,6 +59,7 @@ export default function CustomerSettingsModal({
   const [smsOptIn, setSmsOptIn] = useState(true)
   const [smsBusy, setSmsBusy] = useState(false)
   const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+  const [plateError, setPlateError] = useState('')
   const [photoPreview, setPhotoPreview] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
   const photoRef = useRef(null)
@@ -75,6 +77,7 @@ export default function CustomerSettingsModal({
     setPassword('')
     setPassword2('')
     setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+    setPlateError('')
     setPhotoPreview('')
     setPhotoUploading(false)
     setTab(initialTab || 'alerts')
@@ -207,11 +210,21 @@ export default function CustomerSettingsModal({
 
   async function saveCar(e) {
     e.preventDefault()
+    if (!isValidCustomerPlate(car.plate_number)) {
+      setPlateError('Enter a plate with letters and numbers (e.g. ABC 1234).')
+      return
+    }
+    if (car.photo_url && !safeVehiclePhotoUrl(car.photo_url)) {
+      toast.error('Photo URL must start with http:// or https://')
+      return
+    }
+    setPlateError('')
     setBusy(true)
     try {
       await portalAction('add-vehicle', car)
       toast.success('Car saved to your garage')
       setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+      setPlateError('')
       setPhotoPreview('')
       onUpdated?.()
       onOpenChange(false)
@@ -407,7 +420,28 @@ export default function CustomerSettingsModal({
           <p className="capp-meta">Prefer adding plates in person or at POS. Use this if you already know the plate.</p>
           <label className="capp-field">
             <span>Plate number</span>
-            <input id="car-plate" required value={car.plate_number} onChange={(e) => setCar((c) => ({ ...c, plate_number: e.target.value }))} />
+            <input
+              id="car-plate"
+              required
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              aria-invalid={plateError ? 'true' : 'false'}
+              aria-describedby="car-plate-hint"
+              value={car.plate_number}
+              onChange={(e) => {
+                setPlateError('')
+                setCar((c) => ({ ...c, plate_number: e.target.value }))
+              }}
+            />
+            <p id="car-plate-hint" className="capp-field-hint">
+              Letters and numbers, e.g. ABC 1234
+            </p>
+            {plateError ? (
+              <p className="capp-field-error" role="alert">
+                {plateError}
+              </p>
+            ) : null}
           </label>
           <VehicleMakeModelFields
             make={car.vehicle_make}
