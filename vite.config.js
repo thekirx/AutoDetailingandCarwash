@@ -142,12 +142,25 @@ export default defineConfig({
       workbox: {
         importScripts: ['/push-sw.js'],
         cleanupOutdatedCaches: true,
-        navigateFallback: '/index.html',
+        navigateFallback: null,
         // Missing hashed assets must 404, not fall back to index.html (MIME text/html breaks modules).
         navigateFallbackDenylist: [/^\/api\//, /^\/assets\//],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'hakum-navigation',
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 24,
+                maxAgeSeconds: 24 * 60 * 60,
+              },
+              precacheFallback: { fallbackURL: '/index.html' },
+            },
+          },
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkOnly',

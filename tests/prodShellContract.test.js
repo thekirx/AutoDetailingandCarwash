@@ -39,6 +39,13 @@ describe('Production shell contract (CSP + stale chunks)', () => {
     assert.match(vite, /cleanupOutdatedCaches:\s*true/)
   })
 
+  it('checks the network for a new app shell before using the offline fallback', () => {
+    assert.doesNotMatch(vite, /navigateFallback:\s*['"]\/index\.html['"]/)
+    assert.match(vite, /request\.mode\s*===\s*['"]navigate['"]/)
+    assert.match(vite, /handler:\s*['"]NetworkFirst['"]/)
+    assert.match(vite, /precacheFallback:\s*\{\s*fallbackURL:\s*['"]\/index\.html['"]/)
+  })
+
   it('registers the PWA service worker so push can subscribe', () => {
     assert.match(main, /virtual:pwa-register/)
     assert.match(main, /registerSW/)
