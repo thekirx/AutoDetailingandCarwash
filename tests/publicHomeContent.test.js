@@ -82,6 +82,8 @@ describe('Public homepage content assets', () => {
       'branches',
     ])
     assert.deepEqual(ppfInformation.features.map(({ title }) => title), ['Clarity', 'Stretch', 'Adhesion', 'Warranty'])
+    assert.equal(new URL(ppfInformation.image).pathname.split('/').at(-1), 'ppf-information-blue-truck.jpg')
+    assert.equal(ppfInformation.imageAlt, 'Blue pickup truck protected by Hakum Auto Care')
     assert.equal(nanoCeramicTint.title, 'Cooler cabin. Clearer drive.')
     assert.deepEqual(mediaGallery.map(({ title }) => title), ['DETAILING', 'PAINT PROTECTION FILM', 'CERAMIC COATING'])
   })
