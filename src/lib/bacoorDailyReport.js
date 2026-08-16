@@ -1,5 +1,23 @@
 /** Bacoor-style daily close report fields (minor units). */
 
+export function manilaDayStamp(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return String(iso).slice(0, 10)
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
+}
+
+export function approvedCaForCloseDay(row, dayIso) {
+  const status = String(row?.status || '').toLowerCase()
+  if (status !== 'resolved' && status !== 'approved') return false
+  return manilaDayStamp(row.resolved_at) === String(dayIso || '')
+}
+
 export function emptyBacoorDailyReport(meta = {}) {
   return {
     branch: meta.branch || 'bacoor',

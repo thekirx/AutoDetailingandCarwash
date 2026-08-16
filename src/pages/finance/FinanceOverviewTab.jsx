@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatMoney } from '@/queue/queueApi'
-import { rollupPl, salesByBranch, sumMinor } from '@/lib/financeData'
+import { rollupPl, salesByBranch, shareOfTotal, sumMinor } from '@/lib/financeData'
 
 const NAVY = '#020a31'
 const ACCENT = '#38bdf8'
@@ -58,6 +58,8 @@ export default function FinanceOverviewTab({
     ],
     [pl],
   )
+  const incomeExpenseTotal = (pl.income + pl.expenses) / 100
+  const paymentTotal = paymentBreakdown.reduce((sum, row) => sum + row.value, 0)
 
   if (loading) {
     return <OverviewSkeleton />
@@ -111,7 +113,12 @@ export default function FinanceOverviewTab({
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.08)" />
                   <XAxis dataKey="name" stroke="#475569" fontSize={12} />
                   <YAxis stroke="#475569" fontSize={11} tickFormatter={(v) => `₱${v.toLocaleString()}`} />
-                  <Tooltip formatter={(v) => formatMoney(Math.round(v * 100))} />
+                  <Tooltip
+                    formatter={(v) => {
+                      const { percent } = shareOfTotal(v, incomeExpenseTotal)
+                      return `${formatMoney(Math.round(v * 100))} · ${percent}%`
+                    }}
+                  />
                   <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={120} />
                 </BarChart>
               </ResponsiveContainer>
@@ -144,7 +151,12 @@ export default function FinanceOverviewTab({
                       <Cell key={p.name} fill={p.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => formatMoney(v)} />
+                  <Tooltip
+                    formatter={(v) => {
+                      const { percent } = shareOfTotal(v, paymentTotal)
+                      return `${formatMoney(v)} · ${percent}%`
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             )}

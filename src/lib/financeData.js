@@ -360,3 +360,11 @@ export function retentionBuckets(customers) {
   }
   return { fresh, returning, loyal, total: fresh + returning + loyal }
 }
+
+/** Chart hover: peso amount's share of the series total. */
+export function shareOfTotal(value, total) {
+  const n = Number(value) || 0
+  const t = Number(total) || 0
+  const percent = t <= 0 ? 0 : Math.round((Math.abs(n) / t) * 1000) / 10
+  return { value: n, percent }
+}

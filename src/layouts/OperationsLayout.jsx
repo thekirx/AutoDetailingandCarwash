@@ -393,11 +393,12 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
 
   return (
     <SidebarProvider>
-      <div className="command-shell flex min-h-svh w-full bg-background text-foreground">
+      <div className="command-shell flex min-h-svh w-full min-w-0 overflow-x-hidden bg-background text-foreground">
         <Sidebar collapsible="icon" variant="inset">
           <SidebarHeader>
             <div className="flex items-center gap-3 px-2 py-1">
-              <div className="grid size-9 place-items-center overflow-hidden rounded-xl bg-primary text-primary-foreground">
+              {/* Collapsed rail: mark only. Expanded: LW wordmark — never both (double H). */}
+              <div className="hidden size-9 place-items-center overflow-hidden rounded-xl bg-primary text-primary-foreground group-data-[collapsible=icon]:grid">
                 <img
                   src="/branding/hakum-mark-ow.png"
                   alt=""
@@ -411,10 +412,10 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
                 <img
                   src="/branding/hakum-lw-blue.png"
                   alt="Hakum"
-                  className="h-5 w-auto object-contain object-left"
+                  className="h-6 w-auto object-contain object-left"
                   decoding="async"
                 />
-                <p className="truncate text-[10px] tracking-[0.18em] text-muted-foreground uppercase">{label}</p>
+                <p className="mt-0.5 truncate text-[10px] tracking-[0.18em] text-muted-foreground uppercase">{label}</p>
               </div>
             </div>
           </SidebarHeader>
@@ -471,8 +472,8 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset>
-          <header className="ops-inset-topbar sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/90 backdrop-blur-xl">
+        <SidebarInset className="min-w-0 overflow-x-hidden">
+          <header className="ops-inset-topbar sticky top-0 z-20 flex min-w-0 items-center gap-3 border-b border-border bg-background/90 backdrop-blur-xl">
             <SidebarTrigger />
             <Separator orientation="vertical" className="h-5" />
             <div className="min-w-0 flex-1">
@@ -504,7 +505,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
               <Settings size={16} />
             </button>
           </header>
-          <main className="ops-page-chrome flex-1 p-4 sm:p-6 lg:p-8">
+          <main className="ops-page-chrome min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
             <Outlet />
           </main>
         </SidebarInset>

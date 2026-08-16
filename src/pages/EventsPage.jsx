@@ -15,7 +15,7 @@ export default function EventsPage() {
   useEffect(() => {
     supabase
       .from('events')
-      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, form_id, ops_forms ( id, name, slug, public_enabled, status )')
+      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, form_id, ops_forms!form_id ( id, name, slug, public_enabled, status )')
       .eq('is_published', true)
       .order('starts_at')
       .then(({ data, error: e }) => {

@@ -76,6 +76,12 @@ describe('system notification catalog', () => {
     assert.equal(map['booking.completed.customer'].title, 'Service complete')
   })
 
+  it('Failed QA customer default is an apology', () => {
+    const t = templateByKey('booking.redo.customer')
+    assert.match(t.body, /sorry/i)
+    assert.match(t.sms_body, /sorry/i)
+  })
+
   it('migration creates birthday perk + template tables', async () => {
     const { readFile } = await import('node:fs/promises')
     const { dirname, resolve } = await import('node:path')

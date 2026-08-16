@@ -127,9 +127,9 @@ export const SYSTEM_TEMPLATES = [
     label: 'Redo in progress',
     description: 'Customer when a job is sent back for redo',
     kind: 'booking_status',
-    title: 'We are redoing your service',
-    body: '{plate} is back on the floor for a redo at {branch}.',
-    sms_body: 'Hakum Auto Care: We are redoing {plate} at {branch}. We will update you shortly.',
+    title: 'We are sorry — redoing your service',
+    body: 'We are sorry. {plate} is back on the floor for a redo at {branch}.',
+    sms_body: 'Hakum Auto Care: We are sorry. We are redoing {plate} at {branch}. We will update you shortly.',
     display_order: 90,
   }),
 

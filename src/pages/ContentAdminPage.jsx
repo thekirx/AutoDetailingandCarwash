@@ -67,7 +67,7 @@ export default function ContentAdminPage() {
       supabase.from('blogs').select('*').order('updated_at', { ascending: false }).limit(100),
       supabase
         .from('events')
-        .select('id, title, description, branch, starts_at, ends_at, is_published, slug, form_id, banner_url, content_blocks, ops_forms ( id, name, slug )')
+        .select('id, title, description, branch, starts_at, ends_at, is_published, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug )')
         .order('starts_at', { ascending: false })
         .limit(80),
       supabase

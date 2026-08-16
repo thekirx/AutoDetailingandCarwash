@@ -16,7 +16,7 @@ export default function CustomerEventsPage() {
     Promise.all([
       supabase
         .from('events')
-        .select('id, title, slug, description, branch, starts_at, ends_at, banner_url, content_blocks, form_id, ops_forms ( id, name, slug, public_enabled, status )')
+        .select('id, title, slug, description, branch, starts_at, ends_at, banner_url, content_blocks, form_id, ops_forms!form_id ( id, name, slug, public_enabled, status )')
         .eq('is_published', true)
         .order('starts_at', { ascending: true }),
       supabase.from('ops_forms').select('id, name, slug, public_enabled, status').eq('is_active', true),

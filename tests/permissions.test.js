@@ -86,7 +86,7 @@ describe('RBAC Part 1 matrix', () => {
   it('Admin keeps planning capability; Command nav includes Floor + queues + POS + ops tools', () => {
     const p = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor', 'imus'] }
     assert.equal(canViewPlanning(p), true)
-    assert.equal(canEditPlanning(p), false)
+    assert.equal(canEditPlanning(p), true)
     assert.equal(canAccessReports(p), false)
     assert.equal(canAccessPos(p), true)
     assert.deepEqual(getBranchScopeList(p), ['bacoor', 'imus'])
@@ -100,11 +100,24 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/attendance',
         '/operations/inventory',
         '/operations/history',
+        '/operations/planning',
         '/operations/reviews',
         '/operations/audit',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
+  })
+
+  it('Planner nav: Branch Admin, staff Tasks, video editor calendar only', () => {
+    const ba = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
+    assert.ok(getOperationsNav(ba).some((i) => i.to === '/operations/planning' && i.label === 'Planner'))
+    const staff = { role: ROLES.STAFF, branch_slug: 'bacoor' }
+    assert.ok(getOperationsNav(staff).some((i) => i.to === '/operations/planning'))
+    assert.ok(!getOperationsNav(staff).some((i) => String(i.to).includes('tab=forms')))
+    assert.deepEqual(
+      getOperationsNav({ role: ROLES.VIDEO_EDITOR }).map((i) => i.to),
+      ['/operations/planning?tab=calendar', '/operations/my-tasks'],
+    )
   })
 
   it('marketing CRM + bookings + planner + notifications + history', () => {

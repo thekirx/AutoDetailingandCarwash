@@ -1,14 +1,14 @@
 /** Detailing / coating board status labels (client pipeline). Maps to booking_status enum. */
 
 export const DETAILING_BOARD_STATUSES = [
-  { id: 'pending', label: 'Booking Placeholder', shortLabel: 'Placeholder', hint: 'Hold / draft booking', tone: 'border-l-blue-500' },
-  { id: 'confirmed', label: 'Assign to branch', shortLabel: 'Assign', hint: 'Sent to the shop', tone: 'border-l-emerald-500' },
-  { id: 'waiting', label: 'Vehicle intake', shortLabel: 'Intake', hint: 'Car arrived on floor', tone: 'border-l-violet-500' },
-  { id: 'in_progress', label: 'In progress', shortLabel: 'In progress', hint: 'Work in progress', tone: 'border-l-amber-500' },
-  { id: 'final_checking', label: 'Final checking', shortLabel: 'Final check', hint: 'QC in progress', tone: 'border-l-cyan-500' },
-  { id: 'for_releasing', label: 'For releasing', shortLabel: 'Releasing', hint: 'Ready to release', tone: 'border-l-sky-500' },
-  { id: 'for_payment', label: 'For payment', shortLabel: 'Payment', hint: 'Collect at POS', tone: 'border-l-orange-500' },
-  { id: 'completed', label: 'Completed', shortLabel: 'Done', hint: 'Released to customer', tone: 'border-l-slate-400' },
+  { id: 'pending', label: 'Booking Placeholder', shortLabel: 'Placeholder', hint: 'Hold / draft booking', tone: 'is-placeholder' },
+  { id: 'confirmed', label: 'Assign to branch', shortLabel: 'Assign', hint: 'Sent to the shop', tone: 'is-assign' },
+  { id: 'waiting', label: 'Vehicle intake', shortLabel: 'Intake', hint: 'Car arrived on floor', tone: 'is-intake' },
+  { id: 'in_progress', label: 'In progress', shortLabel: 'In progress', hint: 'Work in progress', tone: 'is-progress' },
+  { id: 'final_checking', label: 'Final checking', shortLabel: 'Final check', hint: 'QC in progress', tone: 'is-check' },
+  { id: 'for_releasing', label: 'For releasing', shortLabel: 'Releasing', hint: 'Ready to release', tone: 'is-release' },
+  { id: 'for_payment', label: 'For payment', shortLabel: 'Payment', hint: 'Collect at POS', tone: 'is-pay' },
+  { id: 'completed', label: 'Completed', shortLabel: 'Done', hint: 'Released to customer', tone: 'is-done' },
 ]
 
 /** Statuses Sales may set on the Bookings board (API + RLS). */

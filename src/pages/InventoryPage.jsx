@@ -16,19 +16,21 @@ export default function InventoryPage() {
   }
 
   return (
-    <section className="pb-8">
-      <header className="mb-4 border-b border-border pb-4">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Catalog</p>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Inventory Management</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Services and merch stock. Branch Admin POS can only sell tagged sellables onto jobs.
-        </p>
+    <section className="planner-v2 pb-8">
+      <header className="planner-v2-head mb-4">
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">Catalog</p>
+          <h1>Inventory</h1>
+          <p>
+            Services and merch stock. Branch Admin POS can only sell tagged sellables onto jobs.
+          </p>
+        </div>
       </header>
       <Tabs
         value={tab}
         onValueChange={(next) => setSearchParams(next === 'services' ? {} : { tab: next }, { replace: true })}
       >
-        <TabsList className="mb-4 grid w-full max-w-md grid-cols-2">
+        <TabsList variant="line" className="hakum-pos-tabs planner-v2-tabs mb-4">
           <TabsTrigger value="services" className="min-h-11">Services</TabsTrigger>
           <TabsTrigger value="merch" className="min-h-11">Merch / sellables</TabsTrigger>
         </TabsList>

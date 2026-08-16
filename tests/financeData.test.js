@@ -16,6 +16,7 @@ import {
   toCsv,
   toExcelHtml,
   branchScopeList,
+  shareOfTotal,
 } from '../src/lib/financeData.js'
 
 const FIXED_NOW = new Date(2026, 7, 11, 13, 0, 0) // Aug 11, 2026 1pm PHT
@@ -249,5 +250,13 @@ describe('branchScopeList', () => {
       branchScopeList({ role: 'assistant_super_admin', grants: ['branches_all'] }),
       null,
     )
+  })
+})
+
+describe('shareOfTotal', () => {
+  it('returns amount percent of the chart total', () => {
+    assert.deepEqual(shareOfTotal(2500, 10000), { value: 2500, percent: 25 })
+    assert.deepEqual(shareOfTotal(1, 3), { value: 1, percent: 33.3 })
+    assert.deepEqual(shareOfTotal(10, 0), { value: 10, percent: 0 })
   })
 })

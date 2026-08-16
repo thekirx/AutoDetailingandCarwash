@@ -77,6 +77,7 @@ import {
   updateCrewStaffMember,
 } from '../queue/queueApi'
 import { allowedStaffPlanAssigneePatch } from '../queue/staffTaskLogic'
+import { isHttpProofUrl, planProofObjectPath } from '../lib/plannerTasks'
 import { createCoalescedReload } from '../lib/coalesceReload'
 import { toast } from 'sonner'
 
@@ -1522,8 +1523,8 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
       if (error.code === '23505' || /duplicate|unique/i.test(error.message || '')) {
         toast.message('Already posted today')
         load()
-        return
-      }
+      return
+    }
       return toast.error(error.message)
     }
     toast.success(pending.length === 1 ? 'Salary pool posted to Finance as draft' : `${pending.length} branch salary pools posted to Finance as draft`)
@@ -1578,7 +1579,7 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
       <p className="mt-3 text-xs text-muted-foreground">
         Estimate from today's paid sales × compensation_settings, split per branch. SA/admin posts a draft `salary_carwash` expense to Finance (once per branch per day).
       </p>
-    </Panel>
+      </Panel>
   )
 }
 
@@ -1678,7 +1679,7 @@ export function MyTasksPage() {
   const empty = !loading && !queueRows.length && !planRows.length
   const isStaff = profile?.role === ROLES.STAFF
   return (
-    <section className="px-1 sm:px-0">
+    <section className="planner-v2 px-1 sm:px-0">
       <PageHeader
         eyebrow="My Tasks"
         title="Assigned work"
@@ -1703,23 +1704,28 @@ export function MyTasksPage() {
           {planRows.length ? planRows.map((row) => {
             const card = row.plan_cards
             return (
-              <article key={row.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
+              <article key={row.id} className="planner-ticket rounded-2xl border border-border bg-card p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="truncate text-lg font-semibold">{card?.title || 'Planning card'}</p>
-                    <p className="mt-1 text-xs capitalize text-slate-400">{row.status === 'for_review' ? 'For review' : row.status.replace('_', ' ')}{card?.due_at ? ` · due ${new Date(card.due_at).toLocaleString()}` : ''}{row.proof_submitted_at ? ` · proof sent ${new Date(row.proof_submitted_at).toLocaleDateString()}` : ''}</p>
-                    {row.proof_url && <a href={row.proof_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-blue-400 underline">View proof</a>}
-                    {card?.description && <p className="mt-2 text-sm text-slate-400 line-clamp-2">{card.description}</p>}
+                    <p className="mt-1 text-xs capitalize text-muted-foreground">{row.status === 'for_review' ? 'For review' : row.status.replace('_', ' ')}{card?.due_at ? ` · due ${new Date(card.due_at).toLocaleString()}` : ''}{row.proof_submitted_at ? ` · proof sent ${new Date(row.proof_submitted_at).toLocaleDateString()}` : ''}</p>
+                    {row.proof_url && isHttpProofUrl(row.proof_url) && (
+                      <a href={row.proof_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-primary underline">View proof</a>
+                    )}
+                    {row.proof_url && !isHttpProofUrl(row.proof_url) && (
+                      <p className="mt-1 text-xs text-muted-foreground">Photo attached</p>
+                    )}
+                    {card?.description && <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{card.description}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {row.status === 'todo' && (
                       <button type="button" disabled={saving === row.id} onClick={() => updatePlanTask(row, 'in_progress')} className="min-h-11 rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white disabled:opacity-40">Start</button>
                     )}
                     {row.status === 'in_progress' && (
-                      <ProofSubmit row={row} saving={saving} onSubmit={(proofFields) => updatePlanTask(row, 'for_review', proofFields)} onSkip={() => updatePlanTask(row, 'done')} />
+                      <ProofSubmit row={row} saving={saving} userId={user.id} onSubmit={(proofFields) => updatePlanTask(row, 'for_review', proofFields)} onSkip={() => updatePlanTask(row, 'done')} />
                     )}
                     {row.status === 'for_review' && (
-                      <span className="inline-flex items-center rounded-full bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-300">Waiting for review</span>
+                      <span className="inline-flex items-center rounded-full bg-amber-500/15 px-3 py-1.5 text-xs font-bold text-amber-800">Waiting for review</span>
                     )}
                   </div>
                 </div>
@@ -1785,25 +1791,50 @@ export function MyTasksPage() {
 
 export { default as AccessDeniedPage } from './AccessDeniedPage'
 
-function ProofSubmit({ row, saving, onSubmit, onSkip }) {
+function ProofSubmit({ row, saving, userId, onSubmit, onSkip }) {
   const [open, setOpen] = useState(false)
-  const [proofUrl, setProofUrl] = useState('')
   const [proofNote, setProofNote] = useState('')
+  const [proofFile, setProofFile] = useState(null)
+  const [proofLink, setProofLink] = useState('')
+  const [uploading, setUploading] = useState(false)
   if (!open) {
     return (
       <>
-        <button type="button" disabled={saving === row.id} onClick={() => setOpen(true)} className="min-h-11 rounded-2xl bg-amber-500 px-4 text-sm font-semibold text-white disabled:opacity-40">Submit for review</button>
-        <button type="button" disabled={saving === row.id} onClick={onSkip} className="min-h-11 rounded-2xl border border-emerald-300/30 px-4 text-sm font-semibold text-emerald-100 disabled:opacity-40">Mark done</button>
+        <button type="button" disabled={saving === row.id} onClick={() => setOpen(true)} className="min-h-11 rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-40">Submit for review</button>
+        <button type="button" disabled={saving === row.id} onClick={onSkip} className="min-h-11 rounded-2xl border border-border px-4 text-sm font-semibold disabled:opacity-40">Mark done</button>
       </>
     )
   }
+
+  async function submit() {
+    let proof_url = proofLink.trim() || null
+    if (proofFile) {
+      const cardId = row.card_id || row.plan_cards?.id
+      if (!userId || !cardId) return
+      setUploading(true)
+      const path = planProofObjectPath(userId, cardId, proofFile.name)
+      const { error } = await supabase.storage.from('plan-proofs').upload(path, proofFile, { upsert: true })
+      setUploading(false)
+      if (error) {
+        toast.error(error.message)
+        return
+      }
+      proof_url = path
+    }
+    onSubmit({ proof_url, proof_note: proofNote.trim() || null })
+  }
+
+  const busy = uploading || saving === row.id
   return (
-    <div className="flex w-full flex-col gap-2">
-      <input placeholder="Proof link (optional)" value={proofUrl} onChange={(e) => setProofUrl(e.target.value)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-foreground placeholder:text-slate-500" />
-      <input placeholder="Proof note (optional)" value={proofNote} onChange={(e) => setProofNote(e.target.value)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-foreground placeholder:text-slate-500" />
+    <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-card p-3">
+      <label className="text-xs font-medium text-muted-foreground">Photo (optional)
+        <input type="file" accept="image/*" className="mt-1 block w-full text-sm" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
+      </label>
+      <input placeholder="Note (optional)" value={proofNote} onChange={(e) => setProofNote(e.target.value)} className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm" />
+      <input placeholder="Link (optional)" value={proofLink} onChange={(e) => setProofLink(e.target.value)} className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm" />
       <div className="flex gap-2">
-        <button type="button" disabled={saving === row.id} onClick={() => onSubmit({ proof_url: proofUrl.trim() || null, proof_note: proofNote.trim() || null })} className="min-h-11 rounded-2xl bg-amber-500 px-4 text-sm font-semibold text-white disabled:opacity-40">{saving === row.id ? 'Saving…' : 'Submit'}</button>
-        <button type="button" onClick={() => setOpen(false)} className="min-h-11 rounded-2xl border border-white/10 px-4 text-sm font-semibold text-slate-300">Cancel</button>
+        <button type="button" disabled={busy} onClick={submit} className="min-h-11 rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-40">{busy ? 'Saving…' : 'Submit'}</button>
+        <button type="button" onClick={() => setOpen(false)} className="min-h-11 rounded-2xl border border-border px-4 text-sm font-semibold">Cancel</button>
       </div>
     </div>
   )

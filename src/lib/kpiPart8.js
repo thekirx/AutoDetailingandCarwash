@@ -1,3 +1,5 @@
+import { shareOfTotal } from './financeData.js'
+
 /** Part 8 KPI helpers — booking cycle mins + comparisons */
 
 export function bookingCycleMinutes(booking) {
@@ -38,6 +40,53 @@ export function averageCycleMinutes(bookings = []) {
 /** Failed QA = tickets that entered redo (redo_at set) in the sample. */
 export function failedQaCount(bookings = []) {
   return bookings.filter((b) => b?.redo_at || String(b?.status || '') === 'redo').length
+}
+
+function hoverBlock(label, lines) {
+  return { label, lines }
+}
+
+function shareLine(part, total) {
+  return `${shareOfTotal(part, total).percent}%`
+}
+
+/** Hover copy for KPI tiles. Values are display strings; sales stay minor units. */
+export function kpiStatHover(bookings = [], { salesTotal = 0, complaintsCount = 0 } = {}) {
+  const n = bookings.length
+  const cycleN = bookings.map(bookingCycleMinutes).filter((m) => Number.isFinite(m) && m >= 0).length
+  const waitN = bookings.map(bookingWaitMinutes).filter((m) => Number.isFinite(m) && m >= 0).length
+  const cancelled = bookings.filter((b) => String(b?.status || '') === 'cancelled').length
+  const failed = failedQaCount(bookings)
+  return {
+    cycle: hoverBlock('Avg cycle (min)', [
+      { label: 'What', value: 'in_progress → payment/complete' },
+      { label: 'Tickets timed', value: String(cycleN) },
+      { label: 'Missing stamps', value: String(Math.max(0, n - cycleN)) },
+    ]),
+    wait: hoverBlock('Avg wait (min)', [
+      { label: 'What', value: 'waiting → in_progress' },
+      { label: 'Tickets timed', value: String(waitN) },
+      { label: 'Missing stamps', value: String(Math.max(0, n - waitN)) },
+    ]),
+    bookings: hoverBlock('Bookings in range', [
+      { label: 'Tickets', value: String(n) },
+      { label: 'Open / other', value: String(Math.max(0, n - cancelled)) },
+    ]),
+    sales: hoverBlock('Sales revenue', [
+      { label: 'Paid sales', value: String(Number(salesTotal) || 0) },
+    ]),
+    cancelled: hoverBlock('Cancelled', [
+      { label: 'Cancelled', value: String(cancelled) },
+      { label: 'Share of range', value: shareLine(cancelled, n) },
+    ]),
+    failedQa: hoverBlock('Failed QA', [
+      { label: 'Redo tickets', value: String(failed) },
+      { label: 'Share of range', value: shareLine(failed, n) },
+    ]),
+    complaints: hoverBlock('Complaints', [
+      { label: 'Open complaints', value: String(Number(complaintsCount) || 0) },
+    ]),
+  }
 }
 
 export function compareBranchesByCompleted(rows = []) {

@@ -20,7 +20,7 @@ export default function EventSharePage() {
     Promise.all([
       supabase
         .from('events')
-        .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, is_published, form_id, content_blocks, ops_forms ( id, name, slug, public_enabled, status )')
+        .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, is_published, form_id, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
         .eq('slug', slug)
         .eq('is_published', true)
         .maybeSingle(),

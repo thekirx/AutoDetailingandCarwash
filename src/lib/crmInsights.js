@@ -55,6 +55,47 @@ export function aggregateLineItemsByService(lines = []) {
   return Object.values(map).sort((a, b) => b.total_minor - a.total_minor)
 }
 
+/** Paid POS sales that came from a booking (queue / detailing ticket). */
+export function bookingSalesTotal(sales = []) {
+  let total = 0
+  for (const row of sales || []) {
+    const status = String(row.status || 'paid')
+    if (status !== 'paid' && status !== 'completed') continue
+    if (!row.booking_id) continue
+    total += Number(row.total_minor || 0)
+  }
+  return total
+}
+
+const DETAILING_NAME = /ceramic|ppf|tint|coating|paint.?maint/i
+
+/** Wash/packages vs detailing for CRM insights. Products are ignored. */
+export function insightLineFamily(line) {
+  if (line?.item_type && line.item_type !== 'service') return 'other'
+  const pay = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
+  if (pay === 'detailing' || pay === 'ppf') return 'detailing'
+  const slug = String(line?.slug || line?.services?.slug || '').toLowerCase()
+  if (slug.includes('ceramic') || slug.includes('ppf') || slug.includes('tint') || slug.includes('paint-maintenance')) {
+    return 'detailing'
+  }
+  if (DETAILING_NAME.test(String(line?.name || ''))) return 'detailing'
+  return 'wash'
+}
+
+export function aggregateLineItemsByFamily(lines = []) {
+  const washLines = []
+  const detailingLines = []
+  for (const line of lines || []) {
+    const family = insightLineFamily(line)
+    if (family === 'detailing') detailingLines.push(line)
+    else if (family === 'wash') washLines.push(line)
+  }
+  return {
+    wash: aggregateLineItemsByService(washLines),
+    detailing: aggregateLineItemsByService(detailingLines),
+  }
+}
+
 /** Split ids for PostgREST `.in()` (URL/filter cap ~200). */
 export function chunkIds(ids, size = 200) {
   const list = (ids || []).filter((id) => id != null && id !== '')

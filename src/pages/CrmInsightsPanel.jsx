@@ -3,10 +3,11 @@ import { Download } from 'lucide-react'
 import { canSeeAllBranches, getBranchScopeList } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import {
-  aggregateLineItemsByService,
+  aggregateLineItemsByFamily,
   aggregateSalesByBranch,
   aggregateSalesByHour,
   applyBranchScope,
+  bookingSalesTotal,
   collectInChunks,
   collectPaged,
   peakSalesHour,
@@ -67,7 +68,7 @@ export default function CrmInsightsPanel({ profile }) {
       rows = await collectPaged(async (from, to) => {
         let q = supabase
           .from('sales')
-          .select('id, branch, total_minor, occurred_at, status, customer_id, customers(id, full_name, phone)')
+          .select('id, branch, total_minor, occurred_at, status, customer_id, booking_id, customers(id, full_name, phone)')
           .gte('occurred_at', startIso)
           .lte('occurred_at', endIso)
           .in('status', ['paid', 'completed'])
@@ -94,7 +95,7 @@ export default function CrmInsightsPanel({ profile }) {
       const lineRows = await collectInChunks(ids, async (chunk, from, to) => {
         const { data, error: lineErr } = await supabase
           .from('sale_line_items')
-          .select('sale_id, item_type, service_id, name, quantity, line_total_minor')
+          .select('sale_id, item_type, service_id, name, quantity, line_total_minor, services(pay_category, slug)')
           .in('sale_id', chunk)
           .order('id', { ascending: true })
           .range(from, to)
@@ -119,9 +120,10 @@ export default function CrmInsightsPanel({ profile }) {
   const hourly = useMemo(() => aggregateSalesByHour(sales), [sales])
   const peak = useMemo(() => peakSalesHour(hourly), [hourly])
   const byBranch = useMemo(() => aggregateSalesByBranch(sales), [sales])
-  const byService = useMemo(() => aggregateLineItemsByService(lines), [lines])
+  const byFamily = useMemo(() => aggregateLineItemsByFamily(lines), [lines])
   const topCustomers = useMemo(() => topCustomersBySpend(sales, 20), [sales])
   const totalMinor = sales.reduce((s, r) => s + Number(r.total_minor || 0), 0)
+  const bookingMinor = useMemo(() => bookingSalesTotal(sales), [sales])
 
   const branchOptions = canSeeAllBranches(profile)
     ? [{ slug: 'all', name: 'All branches' }, ...branches]
@@ -162,9 +164,10 @@ export default function CrmInsightsPanel({ profile }) {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Stat label="Paid sales" value={sales.length} />
         <Stat label="Revenue" value={formatMoney(totalMinor)} />
+        <Stat label="Booking sales" value={formatMoney(bookingMinor)} />
         <Stat label="Peak hour" value={peak ? `${String(peak.hour).padStart(2, '0')}:00 (${peak.count})` : '—'} />
         <Stat label="Top branch" value={byBranch[0]?.branch || '—'} />
       </div>
@@ -219,32 +222,18 @@ export default function CrmInsightsPanel({ profile }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader><CardTitle>Per service</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Qty</TableHead>
-                  <TableHead>Revenue</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byService.map((row) => (
-                  <TableRow key={row.key}>
-                    <TableCell>{row.name}</TableCell>
-                    <TableCell>{row.count}</TableCell>
-                    <TableCell>{formatMoney(row.total_minor)}</TableCell>
-                  </TableRow>
-                ))}
-                {!byService.length && (
-                  <TableRow><TableCell colSpan={3} className="text-muted-foreground">No service lines.</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <ServiceRollup
+          title="Top wash / packages"
+          rows={byFamily.wash}
+          range={range}
+          filename={`hakum-wash-packages-${range.start}.csv`}
+        />
+        <ServiceRollup
+          title="Top detailing"
+          rows={byFamily.detailing}
+          range={range}
+          filename={`hakum-detailing-${range.start}.csv`}
+        />
       </div>
 
       <Card>
@@ -303,6 +292,64 @@ export default function CrmInsightsPanel({ profile }) {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function serviceCsv(rows) {
+  return insightsToCsv(rows, [
+    { key: 'name', label: 'Service' },
+    { key: 'count', label: 'Qty' },
+    { key: 'total_minor', label: 'Revenue (centavos)' },
+    { key: 'total_pesos', label: 'Revenue (₱)', get: (r) => (r.total_minor / 100).toFixed(2) },
+  ])
+}
+
+function ServiceRollup({ title, rows, range, filename }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{range.start} → {range.end}</CardDescription>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          disabled={!rows.length}
+          onClick={() => {
+            downloadCsv(filename, serviceCsv(rows))
+            toast.success('CSV downloaded')
+          }}
+        >
+          <Download className="size-4" /> Export CSV
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Service</TableHead>
+              <TableHead>Qty</TableHead>
+              <TableHead>Revenue</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.key}>
+                <TableCell>{row.name}</TableCell>
+                <TableCell>{row.count}</TableCell>
+                <TableCell>{formatMoney(row.total_minor)}</TableCell>
+              </TableRow>
+            ))}
+            {!rows.length && (
+              <TableRow><TableCell colSpan={3} className="text-muted-foreground">No service lines.</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   )
 }
 

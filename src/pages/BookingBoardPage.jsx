@@ -63,7 +63,7 @@ const COLUMNS = [
     tone: s.tone,
     hint: s.hint,
   })),
-  { id: 'cancelled', label: 'Cancelled', shortLabel: 'Cancelled', tone: 'border-l-red-500', hint: 'Cancelled with reason' },
+  { id: 'cancelled', label: 'Cancelled', shortLabel: 'Cancelled', tone: 'is-cancelled', hint: 'Cancelled with reason' },
 ]
 
 const localizer = dateFnsLocalizer({
@@ -796,7 +796,7 @@ export default function BookingBoardPage() {
               const startAt = formatBookingStamp(booking.scheduled_start)
               const endAt = booking.status === 'completed' ? formatBookingStamp(booking.completed_at || booking.scheduled_end) : null
               return (
-                <article key={booking.id} className="bk-card">
+                <article key={booking.id} className={cn('bk-card planner-ticket', visibleColumns.find((c) => c.id === boardFilter)?.tone)}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-semibold text-foreground">{booking.customer_name}</p>
                     {canEditServicePrice && (
@@ -873,7 +873,7 @@ export default function BookingBoardPage() {
                     return (
                       <article
                         key={booking.id}
-                        className={cn('floor-ticket !cursor-default border-l-4', col.tone)}
+                        className={cn('floor-ticket planner-ticket !cursor-default', col.tone)}
                       >
                         <div className="flex items-start justify-between gap-1">
                           <p className="font-semibold text-foreground leading-snug">{booking.customer_name}</p>

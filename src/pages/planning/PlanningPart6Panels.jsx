@@ -14,195 +14,7 @@ import { toast } from 'sonner'
 
 export { default as PlanningFormsPanel } from './PlanningFormsSmartPanel'
 
-export function PlanningSettingsPanel({ canEdit, onPresetsChanged }) {
-  const [labels, setLabels] = useState([])
-  const [templates, setTemplates] = useState([])
-  const [labelForm, setLabelForm] = useState({ name: '', color: '#38bdf8' })
-  const [tmplForm, setTmplForm] = useState({ name: '', items: '' })
-
-  const load = useCallback(async () => {
-    const [lab, tmpl] = await Promise.all([
-      supabase.from('plan_label_presets').select('id, name, color, position').order('position'),
-      supabase
-        .from('plan_checklist_templates')
-        .select('id, name, position, plan_checklist_template_items ( id, title, position )')
-        .order('position'),
-    ])
-    if (lab.error) toast.error(lab.error.message)
-    else {
-      setLabels(lab.data || [])
-      onPresetsChanged?.(lab.data || [])
-    }
-    if (tmpl.error) toast.error(tmpl.error.message)
-    else setTemplates(tmpl.data || [])
-  }, [onPresetsChanged])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  async function addLabel(e) {
-    e.preventDefault()
-    if (!canEdit) return
-    const name = labelForm.name.trim()
-    if (!name) return
-    const { error } = await supabase.from('plan_label_presets').insert({
-      name,
-      color: labelForm.color,
-      position: labels.length,
-    })
-    if (error) toast.error(error.message)
-    else {
-      toast.success('Label preset added')
-      setLabelForm({ name: '', color: '#38bdf8' })
-      load()
-    }
-  }
-
-  async function deleteLabel(id) {
-    if (!canEdit || !window.confirm('Delete label preset?')) return
-    const { error } = await supabase.from('plan_label_presets').delete().eq('id', id)
-    if (error) toast.error(error.message)
-    else {
-      toast.success('Deleted')
-      load()
-    }
-  }
-
-  async function addTemplate(e) {
-    e.preventDefault()
-    if (!canEdit) return
-    const name = tmplForm.name.trim()
-    const titles = tmplForm.items.split('\n').map((s) => s.trim()).filter(Boolean)
-    if (!name || !titles.length) return toast.error('Name and at least one checklist line required')
-    const { data, error } = await supabase
-      .from('plan_checklist_templates')
-      .insert({ name, position: templates.length })
-      .select('id')
-      .single()
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    const { error: itemErr } = await supabase.from('plan_checklist_template_items').insert(
-      titles.map((title, i) => ({ template_id: data.id, title, position: i })),
-    )
-    if (itemErr) toast.error(itemErr.message)
-    else {
-      toast.success('Checklist template saved')
-      setTmplForm({ name: '', items: '' })
-      load()
-    }
-  }
-
-  async function deleteTemplate(id) {
-    if (!canEdit || !window.confirm('Delete checklist template?')) return
-    const { error } = await supabase.from('plan_checklist_templates').delete().eq('id', id)
-    if (error) toast.error(error.message)
-    else {
-      toast.success('Deleted')
-      load()
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Card labels</CardTitle>
-          <CardDescription>Colors you can tap onto a task so the team can spot it.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {canEdit && (
-            <form onSubmit={addLabel} className="flex flex-wrap gap-2">
-              <Input className="max-w-xs" required placeholder="Label name" value={labelForm.name} onChange={(e) => setLabelForm({ ...labelForm, name: e.target.value })} />
-              <Input type="color" className="h-11 w-16 p-1" value={labelForm.color} onChange={(e) => setLabelForm({ ...labelForm, color: e.target.value })} />
-              <Button type="submit">Add label</Button>
-            </form>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {labels.map((l) => (
-              <div key={l.id} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm">
-                <span className="size-3 rounded-full" style={{ backgroundColor: l.color }} />
-                {l.name}
-                {canEdit && (
-                  <button type="button" className="text-xs text-muted-foreground hover:text-destructive" onClick={() => deleteLabel(l.id)}>×</button>
-                )}
-              </div>
-            ))}
-            {!labels.length && <p className="text-sm text-muted-foreground">No presets yet.</p>}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Checklist templates</CardTitle>
-          <CardDescription>Saved checklists you can apply when you open a card.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {canEdit && (
-            <form onSubmit={addTemplate} className="grid max-w-xl gap-3">
-              <Input required placeholder="Template name" value={tmplForm.name} onChange={(e) => setTmplForm({ ...tmplForm, name: e.target.value })} />
-              <Textarea required placeholder={'One checklist item per line\nInspect exterior\nVacuum cabin'} value={tmplForm.items} onChange={(e) => setTmplForm({ ...tmplForm, items: e.target.value })} />
-              <Button type="submit" className="w-fit">Save template</Button>
-            </form>
-          )}
-          <div className="planning-event-list">
-            {templates.map((t) => (
-              <article key={`m-${t.id}`} className="planning-event-card">
-                <div>
-                  <h3>{t.name}</h3>
-                  <p>
-                    {(t.plan_checklist_template_items || [])
-                      .sort((a, b) => a.position - b.position)
-                      .map((i) => i.title)
-                      .join(' · ') || 'No items'}
-                  </p>
-                </div>
-                {canEdit ? (
-                  <Button size="sm" variant="ghost" onClick={() => deleteTemplate(t.id)}>Delete</Button>
-                ) : null}
-              </article>
-            ))}
-            {!templates.length ? <p className="text-sm text-muted-foreground">No templates yet.</p> : null}
-          </div>
-          <div className="planning-event-table">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Items</TableHead>
-                {canEdit && <TableHead />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {templates.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>{t.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {(t.plan_checklist_template_items || []).sort((a, b) => a.position - b.position).map((i) => i.title).join(' · ') || '—'}
-                  </TableCell>
-                  {canEdit && (
-                    <TableCell>
-                      <Button size="sm" variant="ghost" onClick={() => deleteTemplate(t.id)}>Delete</Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-              {!templates.length && (
-                <TableRow><TableCell colSpan={3} className="text-muted-foreground">No templates yet.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-export function PlanningEventsPanel({ canEdit }) {
+export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
   const [events, setEvents] = useState([])
   const [opsForms, setOpsForms] = useState([])
   const [form, setForm] = useState({
@@ -216,12 +28,14 @@ export function PlanningEventsPanel({ canEdit }) {
   })
 
   const load = useCallback(async () => {
+    let eventsQ = supabase
+      .from('events')
+      .select('id, title, description, branch, starts_at, ends_at, is_published, slug, form_id, ops_forms!form_id ( id, name, slug )')
+      .order('starts_at', { ascending: false })
+      .limit(50)
+    if (!canEdit) eventsQ = eventsQ.eq('is_published', true)
     const [ev, forms] = await Promise.all([
-      supabase
-        .from('events')
-        .select('id, title, description, branch, starts_at, ends_at, is_published, slug, form_id, ops_forms ( id, name, slug )')
-        .order('starts_at', { ascending: false })
-        .limit(50),
+      eventsQ,
       supabase
         .from('ops_forms')
         .select('id, name, slug, status, public_enabled')
@@ -232,7 +46,7 @@ export function PlanningEventsPanel({ canEdit }) {
     if (ev.error) toast.error(ev.error.message)
     else setEvents(ev.data || [])
     if (!forms.error) setOpsForms(forms.data || [])
-  }, [])
+  }, [canEdit])
 
   useEffect(() => {
     load()
@@ -281,6 +95,8 @@ export function PlanningEventsPanel({ canEdit }) {
     else load()
   }
 
+  const visibleEvents = canEdit ? events : events.filter((ev) => ev.is_published)
+
   function shareUrl(ev) {
     return `${window.location.origin}/events/${ev.slug}`
   }
@@ -295,12 +111,17 @@ export function PlanningEventsPanel({ canEdit }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="planner-events flex flex-col gap-6">
       {canEdit && (
-        <Card>
-          <CardHeader>
-            <CardTitle>New event</CardTitle>
-            <CardDescription>Creates a public page you can share. Attach a form if people need to RSVP.</CardDescription>
+        <Card className="planner-ticket">
+          <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle>New event</CardTitle>
+              <CardDescription>Creates a public page you can share. Attach a form if people need to RSVP.</CardDescription>
+            </div>
+            {onCreateForm ? (
+              <Button type="button" variant="outline" onClick={onCreateForm}>Create event form</Button>
+            ) : null}
           </CardHeader>
           <CardContent>
             <form onSubmit={createEvent} className="grid gap-3 md:grid-cols-2">
@@ -351,15 +172,15 @@ export function PlanningEventsPanel({ canEdit }) {
         </Card>
       )}
 
-      <Card>
+      <Card className="planner-ticket">
         <CardHeader>
           <CardTitle>Events</CardTitle>
           <CardDescription>Share links and optional attached smart forms.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="planning-event-list">
-            {events.map((ev) => (
-              <article key={`m-${ev.id}`} className="planning-event-card">
+            {visibleEvents.map((ev) => (
+              <article key={`m-${ev.id}`} className={`planning-event-card planner-ticket${ev.id === highlightId ? ' is-highlight' : ''}`}>
                 <div>
                   <h3>{ev.title}</h3>
                   <p>{new Date(ev.starts_at).toLocaleString()}{ev.branch ? ` · ${ev.branch}` : ''}</p>
@@ -385,9 +206,9 @@ export function PlanningEventsPanel({ canEdit }) {
                 ) : null}
               </article>
             ))}
-            {!events.length ? <p className="text-sm text-muted-foreground">No events yet.</p> : null}
+            {!visibleEvents.length ? <p className="text-sm text-muted-foreground">{canEdit ? 'No events yet.' : 'No published events yet.'}</p> : null}
           </div>
-          <div className="planning-event-table">
+          <div className="planning-event-table min-w-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -399,8 +220,8 @@ export function PlanningEventsPanel({ canEdit }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((ev) => (
-                <TableRow key={ev.id}>
+              {visibleEvents.map((ev) => (
+                <TableRow key={ev.id} className={ev.id === highlightId ? 'is-highlight' : undefined}>
                   <TableCell>
                     <div className="font-medium text-foreground">{ev.title}</div>
                     <div className="text-xs text-muted-foreground capitalize">{ev.branch}</div>
@@ -441,8 +262,8 @@ export function PlanningEventsPanel({ canEdit }) {
                   </TableCell>
                 </TableRow>
               ))}
-              {!events.length && (
-                <TableRow><TableCell colSpan={5} className="text-muted-foreground">No events yet.</TableCell></TableRow>
+              {!visibleEvents.length && (
+                <TableRow><TableCell colSpan={5} className="text-muted-foreground">{canEdit ? 'No events yet.' : 'No published events yet.'}</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

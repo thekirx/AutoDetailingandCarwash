@@ -224,7 +224,7 @@ function emptyEditorFromForm(form) {
   }
 }
 
-export default function PlanningFormsSmartPanel({ canEdit, lists }) {
+export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateKind, resultsId }) {
   const { profile } = useAuth()
   const manageTemplates = canEdit && canManageOpsFormTemplates(profile)
   const [forms, setForms] = useState([])
@@ -272,6 +272,16 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
   }, [fillFormId, kindFilter, listId, lists])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (initialCreateKind === 'event') setKindFilter('event')
+  }, [initialCreateKind])
+
+  useEffect(() => {
+    if (!resultsId) return
+    setResultsFormId(resultsId)
+    setResultsOpen(true)
+  }, [resultsId])
 
   const templatesByKind = useMemo(() => {
     const map = new Map()
@@ -426,7 +436,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
   const qrUrl = formQrImageUrl(shareUrl, 180)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="planner-forms flex flex-col gap-6">
       <div>
         <h2 className="text-lg font-semibold text-foreground">Forms</h2>
         <p className="mt-1 max-w-[65ch] text-sm text-muted-foreground">
@@ -444,7 +454,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
         />
       </div>
 
-      <Card>
+      <Card className="planner-ticket">
         <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle>{selectedTemplate?.name || formKindLabel(kindFilter)}</CardTitle>
@@ -523,7 +533,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists }) {
       </Card>
 
       {fillableForms.length > 0 && (
-        <Card>
+        <Card className="planner-ticket">
           <CardHeader>
             <CardTitle>Fill a form</CardTitle>
             <CardDescription>
