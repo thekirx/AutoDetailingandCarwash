@@ -33,7 +33,19 @@ describe('homepage production content adapters', () => {
       { id: 'premium', title: 'Premium Protection', thickness: '7.5 mil premium-grade PPF' },
       { id: 'platinum', title: 'Platinum Protection', thickness: '8.5 mil premium-grade PPF' },
     ])
-    assert.deepEqual(cards[0].coverageAreas, ['Hood', 'Headlights', 'Taillights', 'All four doors'])
+    assert.deepEqual(Object.keys(cards[0]).sort(), [
+      'bookingState',
+      'coverageType',
+      'ctaLabel',
+      'description',
+      'id',
+      'number',
+      'recommendedLabel',
+      'thickness',
+      'title',
+      'warrantySummary',
+    ].sort())
+    assert.equal(cards[0].warrantySummary, '5-year PPF warranty for manufacturer defects only')
     assert.equal(cards[1].recommendedLabel, 'Most Popular')
     assert.equal(cards[2].bookingState.packageId, 'platinum')
     assert.equal(cards[2].ctaLabel, 'Book Platinum Protection')

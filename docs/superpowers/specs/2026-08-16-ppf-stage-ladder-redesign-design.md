@@ -10,7 +10,7 @@ The supplied grey pickup photograph is the edit target. Remove the blue `NEW` ri
 
 Preserve the truck, camera angle, body color, reflections, lighting, wheels, surrounding workshop, and photographic realism. Do not add copy, logos, watermarks, badges, or invented vehicle details. Prepare a clean wide landscape composition suitable for the existing PPF information-stage crop. The implementation will use a new project asset rather than overwriting or reusing the previous blue-truck file.
 
-The existing PPF film overlay and decorative linework remain separate HTML/CSS layers so later motion work can target them independently. The image retains meaningful alternative text and lazy loading.
+The existing PPF film overlay and decorative linework remain separate HTML/CSS layers so later motion work can target them independently. The image is delivered as an optimized JPEG and retains meaningful alternative text and lazy loading.
 
 ## Protection Ladder Layout
 

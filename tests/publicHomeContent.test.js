@@ -67,7 +67,7 @@ describe('Public homepage content assets', () => {
     await Promise.all(otherServices.map(({ image }) => access(new URL(image))))
   })
 
-  it('exposes the approved service-focused homepage flow', () => {
+  it('exposes the approved service-focused homepage flow', async () => {
     assert.deepEqual(HOME_SECTION_IDS, [
       'hero',
       'ceramic',
@@ -82,8 +82,9 @@ describe('Public homepage content assets', () => {
       'branches',
     ])
     assert.deepEqual(ppfInformation.features.map(({ title }) => title), ['Clarity', 'Stretch', 'Adhesion', 'Warranty'])
-    assert.equal(new URL(ppfInformation.image).pathname.split('/').at(-1), 'ppf-information-blue-truck.jpg')
-    assert.equal(ppfInformation.imageAlt, 'Blue pickup truck protected by Hakum Auto Care')
+    assert.equal(new URL(ppfInformation.image).pathname.split('/').at(-1), 'ppf-information-grey-truck-clean.jpg')
+    assert.equal(ppfInformation.imageAlt, 'Grey pickup truck prepared for paint protection film')
+    await access(new URL(ppfInformation.image))
     assert.equal(nanoCeramicTint.title, 'Cooler cabin. Clearer drive.')
     assert.deepEqual(mediaGallery.map(({ title }) => title), ['DETAILING', 'PAINT PROTECTION FILM', 'CERAMIC COATING'])
   })

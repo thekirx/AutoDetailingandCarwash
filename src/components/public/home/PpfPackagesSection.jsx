@@ -9,49 +9,37 @@ const packageCards = buildPpfPackageCards(PPF_PACKAGES)
 export default function PpfPackagesSection() {
   return (
     <section id="ppf-packages" className="ppf-packages-section" data-motion-section="ppf-packages">
-      <div className="public-shell ppf-packages-heading">
-        <div>
-          <p className="eyebrow eyebrow-light">Protection, clearly packaged</p>
-          <h2 className="section-title light">Paint Protection<br />Film Packages</h2>
-        </div>
-        <p>{"Choose focused or full-body coverage using the same proven package information available in Hakum's booking experience."}</p>
-      </div>
+      <div className="public-shell ppf-package-ladder-layout">
+        <header className="ppf-package-ladder-intro" data-motion="heading">
+          <div>
+            <p className="eyebrow eyebrow-light">Paint protection film</p>
+            <h2>More coverage.<br />More defense.</h2>
+          </div>
+          <p>Three clear protection levels, ordered by coverage and film strength—not a wall of specifications.</p>
+        </header>
 
-      <div className="public-shell ppf-package-card-grid">
-        {packageCards.map((card) => (
-          <article className={`ppf-static-card is-${card.id}`} key={card.id} data-motion-item>
-            <div className="ppf-static-visual" aria-hidden="true">
-              <span>{card.number}</span>
-              <div className="ppf-static-car-outline"><i /><i /><i /></div>
-              <strong>{card.coverageType}</strong>
-            </div>
-            <div className="ppf-static-card-body">
-              <div className="ppf-static-card-title">
-                <div>
-                  <p>{card.subtitle}</p>
-                  <h3>{card.title}</h3>
+        <ol className="ppf-protection-ladder" aria-label="Paint Protection Film packages">
+          {packageCards.map((card) => (
+            <li className={`ppf-ladder-row is-${card.id}`} key={card.id} data-motion-item>
+              <span className="ppf-ladder-number" aria-hidden="true">{card.number}</span>
+              <div className="ppf-ladder-copy">
+                <div className="ppf-ladder-labels">
+                  <span>{card.coverageType}</span>
+                  {card.recommendedLabel ? <strong>{card.recommendedLabel}</strong> : null}
                 </div>
-                {card.recommendedLabel ? <span>{card.recommendedLabel}</span> : null}
+                <h3>{card.title}</h3>
+                <p>{card.description}</p>
               </div>
-              <p className="ppf-static-description">{card.description}</p>
-              <p className="ppf-static-thickness">{card.thickness}</p>
-              <div className="ppf-static-detail">
-                <h4>Coverage</h4>
-                <div className="ppf-static-tags">{card.coverageAreas.map((area) => <span key={area}>{area}</span>)}</div>
+              <div className="ppf-ladder-meta">
+                <strong>{card.thickness}</strong>
+                <span>{card.warrantySummary}</span>
               </div>
-              <div className="ppf-static-lists">
-                <div><h4>Preparation &amp; installation</h4><ul>{card.enhancements.map((item) => <li key={item}>{item}</li>)}</ul></div>
-                <div><h4>Benefits</h4><ul>{card.benefits.map((item) => <li key={item}>{item}</li>)}</ul></div>
-                <div><h4>Coverage support</h4><ul>{[...card.warranty, ...card.replacementClause].map((item) => <li key={item}>{item}</li>)}</ul></div>
-              </div>
-              <details className="ppf-static-addons">
-                <summary>Included complimentary treatments</summary>
-                <ul>{card.freeAddOns.map((item) => <li key={item}>{item}</li>)}</ul>
-              </details>
-              <Link className="ppf-book-button" to="/book" state={card.bookingState}>{card.ctaLabel} <ArrowRight size={18} /></Link>
-            </div>
-          </article>
-        ))}
+              <Link className="ppf-ladder-book" to="/book" state={card.bookingState} aria-label={card.ctaLabel}>
+                Book package <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   )

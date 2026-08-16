@@ -15,8 +15,8 @@ export const HOME_SECTION_IDS = [
 ]
 
 export const ppfInformation = {
-  image: new URL('../assets/services/ppf-information-blue-truck.jpg', import.meta.url).href,
-  imageAlt: 'Blue pickup truck protected by Hakum Auto Care',
+  image: new URL('../assets/services/ppf-information-grey-truck-clean.jpg', import.meta.url).href,
+  imageAlt: 'Grey pickup truck prepared for paint protection film',
   title: 'Protection engineered for every drive.',
   copy: 'Paint Protection Film is a clear, precision-applied layer that helps defend your vehicle from stone chips, light scratches, road debris, and daily wear while preserving the original finish.',
   features: [

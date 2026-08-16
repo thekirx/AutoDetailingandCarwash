@@ -21,7 +21,7 @@
 ### Task 1: Clean PPF Information Image
 
 **Files:**
-- Create: `src/assets/services/ppf-information-grey-truck-clean.png`
+- Create: `src/assets/services/ppf-information-grey-truck-clean.jpg`
 - Modify: `src/data/publicHomeContent.js:17-20`
 - Test: `tests/publicHomeContent.test.js`
 
@@ -34,7 +34,7 @@
 ```js
 assert.equal(
   new URL(ppfInformation.image).pathname.split('/').at(-1),
-  'ppf-information-grey-truck-clean.png',
+  'ppf-information-grey-truck-clean.jpg',
 )
 assert.equal(ppfInformation.imageAlt, 'Grey pickup truck prepared for paint protection film')
 ```
@@ -46,13 +46,13 @@ Expected: FAIL because `ppfInformation` still references `ppf-information-blue-t
 
 - [ ] **Step 3: Edit and validate the photograph**
 
-Use the built-in image editor with the supplied image as the edit target. Remove the `NEW` ribbon, bottom serial text, camera badge, and all marketplace overlays; naturally reconstruct the covered workshop, pavement, and vehicle edges; preserve the truck and photographic realism; create a wide text-free composition. Inspect the result before copying it to `src/assets/services/ppf-information-grey-truck-clean.png`.
+Use the built-in image editor with the supplied image as the edit target. Remove the `NEW` ribbon, bottom serial text, camera badge, and all marketplace overlays; naturally reconstruct the covered workshop, pavement, and vehicle edges; preserve the truck and photographic realism; create a wide text-free composition. Inspect the result, then optimize it to `src/assets/services/ppf-information-grey-truck-clean.jpg` for web delivery.
 
 - [ ] **Step 4: Point the PPF information model at the cleaned asset**
 
 ```js
 export const ppfInformation = {
-  image: new URL('../assets/services/ppf-information-grey-truck-clean.png', import.meta.url).href,
+  image: new URL('../assets/services/ppf-information-grey-truck-clean.jpg', import.meta.url).href,
   imageAlt: 'Grey pickup truck prepared for paint protection film',
   // existing title, copy, and feature data stay unchanged
 }
@@ -150,7 +150,7 @@ Expected: all focused tests pass, ESLint exits 0, and Vite produces the cleaned 
 ```bash
 git diff --check
 git status -sb
-git add src/assets/services/ppf-information-grey-truck-clean.png src/data/publicHomeContent.js src/lib/homepageContent.js src/components/public/home/PpfPackagesSection.jsx src/styles.css tests/homepageContent.test.js tests/publicBranding.test.js tests/publicHomeContent.test.js
+git add src/assets/services/ppf-information-grey-truck-clean.jpg src/data/publicHomeContent.js src/lib/homepageContent.js src/components/public/home/PpfPackagesSection.jsx src/styles.css tests/homepageContent.test.js tests/publicBranding.test.js tests/publicHomeContent.test.js
 git commit -m "Redesign PPF package ladder"
 ```
 

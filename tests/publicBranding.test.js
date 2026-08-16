@@ -70,6 +70,7 @@ describe('Public branding assets and scope', () => {
 
   it('scopes reference alignment to the approved homepage sections', async () => {
     const css = await readFile(projectFile('src/styles.css'), 'utf8')
+    const packages = await readFile(projectFile('src/components/public/home/PpfPackagesSection.jsx'), 'utf8')
 
     assert.match(css, /\.hero-actions\s*\{[^}]*width:max-content[^}]*margin:27px auto 0/s)
     assert.match(css, /\.hero-experience\s*\{[^}]*text-align:center/s)
@@ -80,7 +81,11 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /\.ceramic-package-name\s*\{[^}]*writing-mode:vertical-rl/s)
     assert.match(css, /\.ceramic-package-overlay\s*\{[^}]*rgba\(5,38,153,\.3/s)
     assert.match(css, /\.ppf-information-stage\s*\{[^}]*background:#050505/s)
-    assert.match(css, /\.ppf-package-card-grid\s*\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/s)
+    assert.match(css, /\.ppf-package-ladder-layout\s*\{/)
+    assert.match(css, /\.ppf-protection-ladder\s*\{/)
+    assert.match(packages, /ppf-package-ladder-layout/)
+    assert.match(packages, /ppf-protection-ladder/)
+    assert.doesNotMatch(packages, /ppf-static-lists|ppf-static-addons|ppf-static-tags/)
     assert.match(css, /\.partnership-layout\s*\{[^}]*grid-template-columns:minmax\(0,\.76fr\)/s)
     assert.match(css, /\.home-branch-card\.is-coming-soon\s*\{/s)
     assert.match(css, /\.public-header\s*\{[^}]*padding-top:\s*env\(safe-area-inset-top,\s*0px\)/s)
@@ -91,7 +96,8 @@ describe('Public branding assets and scope', () => {
 
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.hero-metrics\s*\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(0,1fr\)/)
-    assert.match(css, /@media\(max-width:900px\)\{[\s\S]*?\.ppf-package-card-grid\{grid-template-columns:1fr\}/)
+    assert.match(css, /@media\(max-width:900px\)\{[\s\S]*?\.ppf-package-ladder-layout\{grid-template-columns:1fr\}/)
+    assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.ppf-ladder-book\{[^}]*min-height:48px/)
     assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.partnership-field-row\{grid-template-columns:1fr\}/)
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.home-branch-grid\{grid-template-columns:1fr\}/)
   })
