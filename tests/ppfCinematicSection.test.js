@@ -19,4 +19,12 @@ describe('PPF cinematic section', () => {
     assert.doesNotMatch(section, /aria-live=/)
     assert.doesNotMatch(section, /aria-hidden=\{story\.activeChapter/)
   })
+
+  it('scopes the opening typography hooks to the PPF introduction', async () => {
+    const section = await readFile(projectFile('src/components/public/home/HomeServiceSections.jsx'), 'utf8')
+
+    assert.match(section, /className="ppf-hero-eyebrow"/)
+    assert.match(section, /className="ppf-hero-headline"/)
+    assert.match(section, /className="ppf-hero-subhead"/)
+  })
 })

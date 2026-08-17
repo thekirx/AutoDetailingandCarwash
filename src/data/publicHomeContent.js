@@ -18,7 +18,7 @@ export const ppfInformation = {
   image: '/media/ppf-install/desktop/frame-0001.webp',
   imageAlt: 'Ford Ranger Raptor beginning a paint protection film installation sequence',
   eyebrow: 'Paint Protection Film',
-  title: 'Between your paint\nAnd everything out there.',
+  title: 'Invisible protection.',
   copy: 'Precision-installed protection designed to disappear into the finish.',
   introEnd: 0.12,
   chapters: [

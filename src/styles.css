@@ -5701,6 +5701,9 @@ a.home-branch-card:hover { background:#052699; }
 .ppf-information-pin .ppf-information-heading h2 { max-width:460px; margin:0; font-size:clamp(2.35rem,min(3vw,6.5vh),2.9rem); line-height:.88; text-wrap:balance; }
 .ppf-information-pin .ppf-information-heading h2>span { display:block; white-space:nowrap; }
 .ppf-information-pin .ppf-information-heading>span { display:block; max-width:390px; margin:19px 0 0; color:rgba(255,255,255,.74); font-size:clamp(11px,.75vw,13px); line-height:1.6; }
+.ppf-information-pin .ppf-information-heading .ppf-hero-eyebrow { font-size:14px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; }
+.ppf-information-pin .ppf-information-heading .ppf-hero-headline { width:max-content; max-width:100%; margin:.5rem 0 1.5rem; font-size:clamp(2.75rem,5.5vw,7rem); font-weight:800; line-height:.94; letter-spacing:-.02em; text-transform:uppercase; text-wrap:wrap; }
+.ppf-information-pin .ppf-information-heading .ppf-hero-subhead { display:block; max-width:30ch; margin:0; color:rgba(255,255,255,.7); font-size:clamp(1rem,1.15vw,1.25rem); font-weight:400; line-height:1.55; }
 .ppf-information-chapters { position:absolute; z-index:3; left:50%; bottom:clamp(40px,6vh,72px); height:220px; transform:translateX(-50%); pointer-events:none; }
 .ppf-information-chapter { position:absolute; left:0; bottom:0; width:min(420px,36vw); padding:2px 0 4px clamp(18px,1.5vw,24px); border-left:2px solid #2f78ff; opacity:0; transform:translateY(18px); transition:opacity .36s ease,transform .48s cubic-bezier(.22,.61,.36,1); }
 .ppf-information-chapter[data-active="true"] { opacity:1; transform:none; }

@@ -81,9 +81,9 @@ export function PpfInformationSection() {
           data-motion="heading"
           data-active={captionKey === 'introduction' ? 'true' : 'false'}
         >
-          <p>{ppfInformation.eyebrow}</p>
-          <h2>{cinematicLines(ppfInformation.title)}</h2>
-          <span>{ppfInformation.copy}</span>
+          <p className="ppf-hero-eyebrow">{ppfInformation.eyebrow}</p>
+          <h2 className="ppf-hero-headline">{ppfInformation.title}</h2>
+          <span className="ppf-hero-subhead">{ppfInformation.copy}</span>
         </div>
 
         <div className="public-shell ppf-information-chapters" data-motion="cards">
