@@ -3,6 +3,8 @@ import { ceramicPackages, ceramicSection, mediaGallery, nanoCeramicTint, ppfInfo
 import { getPpfStoryState } from '../../../lib/ppfScrollStory'
 import PpfInstallSequence from './PpfInstallSequence'
 
+const cinematicLines = (text) => text.split('\n').map((line) => <span key={line}>{line}</span>)
+
 export function CeramicSection() {
   return (
     <section id="ceramic" className="coating-section" data-motion-section="ceramic">
@@ -78,8 +80,8 @@ export function PpfInformationSection() {
           data-motion="heading"
           data-active={activeChapter === -1 ? 'true' : 'false'}
         >
-          <p>Superior protection, edge to edge</p>
-          <h2>{ppfInformation.title}</h2>
+          <p>{ppfInformation.eyebrow}</p>
+          <h2>{cinematicLines(ppfInformation.title)}</h2>
           <span>{ppfInformation.copy}</span>
         </div>
 
@@ -95,7 +97,7 @@ export function PpfInformationSection() {
                 <span aria-hidden="true">{chapter.number}</span>
                 <strong>{chapter.label}</strong>
               </div>
-              <h3>{chapter.heading}</h3>
+              <h3>{cinematicLines(chapter.heading)}</h3>
               <p>{chapter.copy}</p>
             </article>
           ))}

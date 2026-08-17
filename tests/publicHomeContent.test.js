@@ -81,13 +81,18 @@ describe('Public homepage content assets', () => {
       'queue',
       'branches',
     ])
-    assert.deepEqual(ppfInformation.chapters.map(({ label }) => label), [
-      'Clarity',
-      'Stretch',
-      'Adhesion',
-      'Finished protection',
+    assert.equal(ppfInformation.eyebrow, 'Paint Protection Film')
+    assert.deepEqual(ppfInformation.title.split('\n'), [
+      'Between your paint',
+      'And everything',
+      'Out there.',
     ])
+    assert.deepEqual(ppfInformation.chapters.map(({ label }) => label), ['Align', 'Form', 'Seal', 'Protected'])
     assert.deepEqual(ppfInformation.chapters.map(({ start }) => start), [0.15, 0.35, 0.55, 0.75])
+    assert.deepEqual(ppfInformation.chapters.at(-1).heading.split('\n'), [
+      'Now you see the paint.',
+      'Not the protection.',
+    ])
     assert.equal(ppfInformation.image, '/media/ppf-install/desktop/frame-0001.webp')
     assert.equal(ppfInformation.imageAlt, 'Ford Ranger Raptor beginning a paint protection film installation sequence')
     assert.equal(nanoCeramicTint.title, 'Cooler cabin. Clearer drive.')
