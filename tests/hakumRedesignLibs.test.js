@@ -12,7 +12,7 @@ import {
   findPostedCompensationExpense,
   buildCompensationPostPlan,
 } from '../src/lib/compensation.js'
-import { buildBacoorDailyReport } from '../src/lib/bacoorDailyReport.js'
+import { approvedCaForCloseDay, buildBacoorDailyReport } from '../src/lib/bacoorDailyReport.js'
 import { topCustomersBySpend, insightsToCsv } from '../src/lib/crmInsightsExport.js'
 import { DETAILING_BOARD_STATUSES, detailingBoardStatusLabel } from '../src/lib/detailingBoardStatuses.js'
 
@@ -168,6 +168,20 @@ describe('bacoor report + crm export', () => {
     assert.equal(report.carwash_salary_minor, 377300)
   })
 
+  it('counts cash advances on the approve day, not the submit day', () => {
+    const overnight = {
+      status: 'resolved',
+      created_at: '2026-08-15T22:10:00+08:00',
+      resolved_at: '2026-08-16T09:05:00+08:00',
+    }
+    assert.equal(approvedCaForCloseDay(overnight, '2026-08-16'), true)
+    assert.equal(approvedCaForCloseDay(overnight, '2026-08-15'), false)
+    assert.equal(
+      approvedCaForCloseDay({ status: 'new', created_at: '2026-08-16T08:00:00+08:00' }, '2026-08-16'),
+      false,
+    )
+  })
+
   it('exports top customers csv', () => {
     const top = topCustomersBySpend([
       { status: 'paid', customer_id: 'c1', customer_name: 'Ann', total_minor: 500 },
@@ -190,5 +204,7 @@ describe('detailing status labels', () => {
     assert.equal(detailingBoardStatusLabel('waiting'), 'Vehicle intake')
     assert.equal(detailingBoardStatusLabel('for_releasing'), 'For releasing')
     assert.ok(DETAILING_BOARD_STATUSES.some((s) => s.id === 'for_payment'))
+    assert.ok(DETAILING_BOARD_STATUSES.every((s) => String(s.tone || '').startsWith('is-')))
+    assert.ok(!DETAILING_BOARD_STATUSES.some((s) => /border-l-/.test(s.tone || '')))
   })
 })

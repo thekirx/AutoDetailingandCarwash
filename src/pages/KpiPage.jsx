@@ -4,7 +4,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { applyBranchScope, collectPaged, resolveKpiRpcBranch } from '@/lib/crmInsights'
-import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaCount } from '@/lib/kpiPart8'
+import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaCount, kpiStatHover } from '@/lib/kpiPart8'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import {
@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 
 function todayISO() {
@@ -176,6 +177,10 @@ export default function KpiPage() {
   const branchCompare = useMemo(() => compareBranchesByCompleted(bookings), [bookings])
   const byService = useMemo(() => aggregateByService(bookings, serviceNames), [bookings, serviceNames])
   const salesTotal = sales.reduce((s, r) => s + Number(r.total_minor || 0), 0)
+  const hover = useMemo(
+    () => kpiStatHover(bookings, { salesTotal, complaintsCount: complaints.length }),
+    [bookings, salesTotal, complaints.length],
+  )
 
   if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) {
@@ -194,13 +199,13 @@ export default function KpiPage() {
       }))
 
   return (
-    <section className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <section className="planner-v2 flex flex-col gap-6">
+      <header className="planner-v2-head">
         <div>
-          <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">Queue KPI</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Crew & branch performance</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Avg cycle = in_progress → payment/complete · {range.start} → {range.end}
+          <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">Queue KPI</p>
+          <h1>Crew and branch</h1>
+          <p>
+            Hover a number for sample size and share of this range · {range.start} → {range.end}
             {loading ? ' · Loading…' : ''}
           </p>
         </div>
@@ -238,17 +243,25 @@ export default function KpiPage() {
           </Select>
           <Button variant="outline" onClick={load}>Refresh</Button>
         </div>
-      </div>
+      </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Avg cycle (min)" value={avgCycle == null ? '—' : Math.round(avgCycle)} title="Average in_progress → complete/payment" />
-        <Stat label="Avg wait (min)" value={avgWait == null ? '—' : Math.round(avgWait)} title="Average waiting → in_progress" />
-        <Stat label="Bookings in range" value={bookings.length} />
-        <Stat label="Sales revenue" value={formatMoney(salesTotal)} />
-        <Stat label="Cancelled" value={cancelCount} title="Tickets cancelled in this range" />
-        <Stat label="Failed QA" value={failedQa} title="Tickets sent to redo (redo_at set)" />
-        <Stat label="Complaints" value={complaints.length} />
-      </div>
+      <TooltipProvider delay={120}>
+        <div className="flex flex-col gap-4">
+          <div className="kpi-board">
+            <Stat label="Avg cycle (min)" value={avgCycle == null ? '—' : Math.round(avgCycle)} lines={hover.cycle.lines} hero />
+            <div className="kpi-strip">
+              <Stat label="Avg wait (min)" value={avgWait == null ? '—' : Math.round(avgWait)} lines={hover.wait.lines} />
+              <Stat label="Cancelled" value={cancelCount} lines={hover.cancelled.lines} />
+              <Stat label="Failed QA" value={failedQa} lines={hover.failedQa.lines} />
+            </div>
+          </div>
+          <div className="kpi-secondary">
+            <Stat label="Bookings in range" value={bookings.length} lines={hover.bookings.lines} />
+            <Stat label="Sales revenue" value={formatMoney(salesTotal)} lines={hover.sales.lines} />
+            <Stat label="Complaints" value={complaints.length} lines={hover.complaints.lines} />
+          </div>
+        </div>
+      </TooltipProvider>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex h-auto flex-wrap gap-1">
@@ -266,14 +279,14 @@ export default function KpiPage() {
         <TabsContent value="crew" className="mt-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {crewRows.length ? crewRows.map((row) => (
-              <article key={`${row.staff_id}-${row.branch}`} className="rounded-2xl border border-white/10 bg-[#0d1726] p-4">
+              <article key={`${row.staff_id}-${row.branch}`} className="planner-ticket rounded-2xl border border-border bg-card p-4">
                 <p className="text-base font-semibold">{row.staff_name}</p>
-                <p className="mt-1 text-xs tracking-wide text-slate-500 uppercase">{row.branch || 'All'}</p>
+                <p className="mt-1 text-xs tracking-wide text-muted-foreground uppercase">{row.branch || 'All'}</p>
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Assigned</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.total_assigned}</dd></div>
-                  <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Released</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.total_completed}</dd></div>
-                  <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Active</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.active_jobs}</dd></div>
-                  <div><dt className="text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">Avg min</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{Math.round(row.average_service_minutes || 0)}</dd></div>
+                  <div><dt className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Assigned</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.total_assigned}</dd></div>
+                  <div><dt className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Released</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.total_completed}</dd></div>
+                  <div><dt className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Active</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{row.active_jobs}</dd></div>
+                  <div><dt className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Avg min</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{Math.round(row.average_service_minutes || 0)}</dd></div>
                 </dl>
               </article>
             )) : (
@@ -410,13 +423,35 @@ export default function KpiPage() {
   )
 }
 
-function Stat({ label, value, title }) {
+function formatHoverValue(line) {
+  if (line.label === 'Paid sales') return formatMoney(Number(line.value) || 0)
+  return line.value
+}
+
+function Stat({ label, value, lines = [], hero = false }) {
+  const body = (
+    <div className={hero ? 'hakum-pos-hero planner-ticket' : 'kpi-stat planner-ticket'}>
+      <p>{label}</p>
+      <strong>{value}</strong>
+    </div>
+  )
+  if (!lines.length) return body
   return (
-    <Card title={title}>
-      <CardContent className="pt-5">
-        <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">{label}</p>
-        <p className="mt-3 text-2xl font-semibold tabular-nums">{value}</p>
-      </CardContent>
-    </Card>
+    <Tooltip>
+      <TooltipTrigger className="kpi-stat-hover w-full text-left">
+        {body}
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="start" className="kpi-stat-pop">
+        <p className="kpi-stat-pop-title">{label}</p>
+        <dl>
+          {lines.map((line) => (
+            <div key={line.label}>
+              <dt>{line.label}</dt>
+              <dd>{formatHoverValue(line)}</dd>
+            </div>
+          ))}
+        </dl>
+      </TooltipContent>
+    </Tooltip>
   )
 }

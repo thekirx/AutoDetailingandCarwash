@@ -23,6 +23,7 @@ import LoyaltyCard from '@/components/LoyaltyCard'
 import NotificationBell from '@/components/NotificationBell'
 import CustomerBookingModal from '@/components/CustomerBookingModal'
 import CustomerSettingsModal from '@/components/CustomerSettingsModal'
+import { buildCompletedVisitReview, VISIT_REVIEW_AXES } from '@/lib/serviceReviews'
 
 async function fetchPortal() {
   const token = await getAccessTokenFresh()
@@ -75,14 +76,16 @@ export default function CustomerAccountPage() {
   const [bookVehicle, setBookVehicle] = useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState('alerts')
-  const [ratingStars, setRatingStars] = useState(0)
+  const [editVehicle, setEditVehicle] = useState(null)
+  const [ratingScores, setRatingScores] = useState({ overall: 0, app: 0, service: 0, detailing: 0 })
   const [ratingComment, setRatingComment] = useState('')
   const [ratingSaving, setRatingSaving] = useState(false)
   const [ratingDone, setRatingDone] = useState(false)
   const { countsBySlug } = usePublicQueueCounts()
 
-  function openSettings(next = 'alerts') {
+  function openSettings(next = 'alerts', vehicle = null) {
     setSettingsTab(next)
+    setEditVehicle(vehicle)
     setSettingsOpen(true)
   }
 
@@ -101,6 +104,17 @@ export default function CustomerAccountPage() {
       setPortalProfile(data.profile || null)
       setLoyalty(data.loyalty || null)
       setBirthday(data.birthday || null)
+      const latest = (data.history || [])[0]
+      if (latest?.id && latest.status === 'completed') {
+        const { data: existing } = await supabase
+          .from('service_reviews')
+          .select('id')
+          .eq('booking_id', latest.id)
+          .maybeSingle()
+        setRatingDone(Boolean(existing))
+      } else {
+        setRatingDone(false)
+      }
       setSelectedBranch((current) => {
         if (current && nextBranches.some((b) => b.slug === current)) return current
         const fromVisit = nextBookings[0]?.branch
@@ -246,10 +260,15 @@ export default function CustomerAccountPage() {
       <>
         <CustomerSettingsModal
           open
-          onOpenChange={setSettingsOpen}
+          onOpenChange={(open) => {
+            setSettingsOpen(open)
+            if (!open) setEditVehicle(null)
+          }}
           profile={settingsProfile}
           onUpdated={load}
           initialTab={settingsTab}
+          vehicles={vehicles}
+          initialVehicle={editVehicle}
         />
         <CustomerBookingModal
           open={bookOpen}
@@ -354,48 +373,56 @@ export default function CustomerAccountPage() {
         )}
 
         {!loading && !ratingDone && history.length > 0 && history[0]?.status === 'completed' && (
-          <div className="capp-ticket">
+          <div className="capp-ticket capp-ticket-rate">
             <p className="capp-label">Rate your last visit</p>
             <p className="capp-meta" style={{ marginBottom: '0.5rem' }}>
-              {history[0].vehicle_plate || 'Visit'} · {branchLabel(branches, history[0].branch)}
+              {history[0].vehicle_plate || 'Visit'} · {branchLabel(branches, history[0].branch)}. Rate overall, the app,
+              services / packages, and detailing.
             </p>
-            <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '0.6rem' }}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setRatingStars(n)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.15rem' }}
-                  aria-label={`${n} star`}
-                >
-                  <Star
-                    size={28}
-                    className={n <= ratingStars ? 'fill-amber-400 text-amber-400' : 'text-[color:var(--capp-steel)]'}
-                  />
-                </button>
-              ))}
-            </div>
+            {VISIT_REVIEW_AXES.map((axis) => (
+              <div key={axis.id} className="capp-rate">
+                <p className="capp-rate-label">{axis.label}</p>
+                <div className="capp-rate-stars" role="group" aria-label={axis.label}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={n <= (ratingScores[axis.id] || 0) ? 'is-on' : ''}
+                      aria-label={`${axis.label} ${n} of 5`}
+                      aria-pressed={n === ratingScores[axis.id]}
+                      onClick={() => setRatingScores((s) => ({ ...s, [axis.id]: n }))}
+                    >
+                      <Star
+                        size={22}
+                        className={n <= (ratingScores[axis.id] || 0) ? 'fill-amber-400 text-amber-400' : 'text-[color:var(--capp-steel)]'}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
             <textarea
               className="account-field"
               rows={2}
               placeholder="Optional comment…"
               value={ratingComment}
               onChange={(e) => setRatingComment(e.target.value)}
-              style={{ marginBottom: '0.5rem' }}
+              style={{ margin: '0.6rem 0 0.5rem' }}
             />
             <button
               type="button"
               className="capp-btn capp-btn-fill"
-              disabled={!ratingStars || ratingSaving}
+              disabled={!buildCompletedVisitReview(ratingScores, ratingComment) || ratingSaving}
               onClick={async () => {
+                const scores = buildCompletedVisitReview(ratingScores, ratingComment)
+                if (!scores) return
                 setRatingSaving(true)
                 const { error } = await supabase.from('service_reviews').insert({
                   booking_id: history[0].id,
                   customer_id: user.id,
                   customer_name: portalProfile?.full_name || authProfile?.full_name || 'Customer',
                   branch: history[0].branch || '',
-                  overall_rating: ratingStars,
-                  comment: ratingComment.trim() || null,
+                  ...scores,
                 })
                 setRatingSaving(false)
                 if (error) {
@@ -409,9 +436,9 @@ export default function CustomerAccountPage() {
             </button>
           </div>
         )}
-        {ratingDone && (
+        {ratingDone && history[0]?.status === 'completed' && (
           <div className="capp-note">
-            <strong>Thank you for your feedback!</strong>
+            <strong>You rated this visit.</strong>
           </div>
         )}
 
@@ -444,11 +471,17 @@ export default function CustomerAccountPage() {
             <div className="capp-chips">
               {vehicles.map((v) => (
                 <div key={v.id} className="capp-chip">
+                  {v.photo_url ? (
+                    <img className="capp-chip-photo" src={v.photo_url} alt="" />
+                  ) : null}
                   <strong>{v.plate_number}</strong>
                   <em>{[v.vehicle_make, v.vehicle_model, v.color].filter(Boolean).join(' · ') || 'Saved vehicle'}</em>
                   <div className="capp-actions" style={{ marginTop: '0.65rem' }}>
                     <button type="button" className="capp-btn capp-btn-fill" onClick={() => { setBookVehicle(v); setBookOpen(true) }}>
                       Book
+                    </button>
+                    <button type="button" className="capp-btn capp-btn-ghost" onClick={() => openSettings('car', v)}>
+                      Change plate
                     </button>
                     <button type="button" className="capp-btn capp-btn-ghost" onClick={() => removeVehicle(v)}>
                       Remove

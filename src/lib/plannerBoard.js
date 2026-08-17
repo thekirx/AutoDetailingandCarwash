@@ -1,11 +1,11 @@
 /** Planner board visibility + tab IA. Complaints boards stay out of the task board. */
 
 export const PLANNER_TABS = [
-  { id: 'board', label: 'Tasks', hint: 'Move cards across columns', icon: 'tasks' },
-  { id: 'calendar', label: 'Calendar', hint: 'Due dates, forms, events, bookings', icon: 'calendar' },
-  { id: 'forms', label: 'Forms', hint: 'Fill, share, and review answers', icon: 'forms' },
+  { id: 'board', label: 'Tasks', hint: 'Filter, create, and assign work', icon: 'tasks' },
+  { id: 'calendar', label: 'Calendar', hint: 'Tasks, bookings, and events', icon: 'calendar' },
+  { id: 'forms', label: 'Forms', hint: 'List, edit, and results', icon: 'forms' },
   { id: 'events', label: 'Events', hint: 'Meets and RSVP links', icon: 'events' },
-  { id: 'settings', label: 'Setup', hint: 'Labels and checklist templates', icon: 'setup' },
+  { id: 'review', label: 'Review', hint: 'Accept or send back proof', icon: 'review' },
 ]
 
 export const PLANNER_TAB_IDS = PLANNER_TABS.map((t) => t.id)
@@ -29,6 +29,15 @@ export function pickPlannerBoard(boards, wantedIdOrName) {
   return rows.find((b) => b.id === key || b.name === key) || rows[0]
 }
 
-export function plannerTabFromSearch(value) {
-  return PLANNER_TAB_IDS.includes(value) ? value : 'board'
+export function plannerTabsForAccess({ canEdit, role } = {}) {
+  if (role === 'video_editor') {
+    return PLANNER_TABS.filter((t) => t.id === 'board' || t.id === 'calendar')
+  }
+  return PLANNER_TABS.filter((t) => t.id !== 'review' || canEdit)
+}
+
+export function plannerTabFromSearch(value, allowedIds) {
+  const raw = value && typeof value.get === 'function' ? value.get('tab') : value
+  const ids = Array.isArray(allowedIds) && allowedIds.length ? allowedIds : PLANNER_TAB_IDS
+  return ids.includes(raw) ? raw : 'board'
 }

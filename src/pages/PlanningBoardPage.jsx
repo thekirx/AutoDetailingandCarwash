@@ -1,698 +1,260 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
-import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar'
-import { format, getDay, parse, startOfWeek } from 'date-fns'
-import { enUS } from 'date-fns/locale'
-import {
-  CalendarDays,
-  CheckSquare,
-  ClipboardList,
-  Columns3,
-  FileText,
-  LoaderCircle,
-  Plus,
-  Settings2,
-  Trash2,
-  Users,
-  X,
-} from 'lucide-react'
-import 'react-big-calendar/lib/css/react-big-calendar.css'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/auth/AuthProvider'
 import { canEditPlanning, canViewPlanning } from '@/auth/permissions'
-import { Badge } from '@/components/ui/badge'
+import { PLANNER_TABS, plannerTabFromSearch, plannerTabsForAccess } from '@/lib/plannerBoard'
+import { hrefForCalendarItem } from '@/lib/plannerCalendar'
+import { cardsFromAssigneeRows, filterPlannerCards, flattenPlannerCards, reviewItemsFromAssigneeRows } from '@/lib/plannerTasks'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { NamedSelect } from '@/components/ui/named-select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { supabase } from '@/lib/supabase'
-import { createCoalescedReload } from '@/lib/coalesceReload'
-import { pickPlannerBoard, PLANNER_TABS, plannerTabFromSearch, visiblePlannerBoards } from '@/lib/plannerBoard'
-import {
-  PlanningEventsPanel,
-  PlanningFormsPanel,
-  PlanningSettingsPanel,
-} from '@/pages/planning/PlanningPart6Panels'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
+import { CalendarDays, ClipboardList, FileText, FolderKanban, Inbox, LayoutList, Plus, Table2 } from 'lucide-react'
+import PlanningFormsSmartPanel from '@/pages/planning/PlanningFormsSmartPanel'
+import { PlanningEventsPanel } from '@/pages/planning/PlanningPart6Panels'
+import PlanningCategoryDrawer from '@/pages/planning/PlanningCategoryDrawer'
+import PlanningReviewPanel from '@/pages/planning/PlanningReviewPanel'
+import TaskModal from '@/pages/planning/TaskModal'
 
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: (date) => startOfWeek(date, { weekStartsOn: 1 }),
-  getDay,
-  locales: { 'en-US': enUS },
-})
-
-const FALLBACK_LABELS = [
-  { name: 'Marketing', color: '#f97316' },
-  { name: 'Ops', color: '#38bdf8' },
-  { name: 'Legal', color: '#4ade80' },
-  { name: 'Design', color: '#a78bfa' },
-  { name: 'Production', color: '#fb7185' },
-]
+const TAB_ICONS = {
+  board: FolderKanban,
+  calendar: CalendarDays,
+  forms: ClipboardList,
+  events: FileText,
+  review: Inbox,
+}
 
 const BOARD_SELECT = `
-  id, name,
+  id, title, kind,
   plan_lists (
     id, title, position,
     plan_cards (
-      id, title, description, due_at, position, labels,
+      id, title, description, labels, due_at, position, created_at, updated_at, created_by, category_id,
       plan_checklist_items ( id, title, done, position ),
-      plan_card_assignees ( id, staff_id, status, notes, proof_url, proof_note, proof_submitted_at, staff_profiles ( id, full_name, username ) )
+      plan_card_assignees (
+        id, staff_id, status, proof_url, proof_note, proof_submitted_at, reviewed_at, staff_profiles ( id, full_name )
+      )
     )
   )
 `
 
-function sortByPos(a, b) {
-  return (a.position ?? 0) - (b.position ?? 0)
-}
-
-function checklistStats(card) {
-  const items = card.plan_checklist_items || []
-  const done = items.filter((i) => i.done).length
-  return { done, total: items.length }
-}
-
-const TAB_ICONS = {
-  tasks: Columns3,
-  calendar: CalendarDays,
-  forms: FileText,
-  events: ClipboardList,
-  setup: Settings2,
-}
-
-function assigneeNames(card) {
-  return (card.plan_card_assignees || [])
-    .map((a) => a.staff_profiles?.full_name || a.staff_profiles?.username)
-    .filter(Boolean)
-}
-
-function CardModal({ card, canEdit, labelPresets, checklistTemplates, onClose, onSaved, onDeleted }) {
-  const { user } = useAuth()
-  const [title, setTitle] = useState(card.title)
-  const [description, setDescription] = useState(card.description || '')
-  const [dueAt, setDueAt] = useState(card.due_at ? card.due_at.slice(0, 16) : '')
-  const [labels, setLabels] = useState(Array.isArray(card.labels) ? card.labels : [])
-  const [items, setItems] = useState([...(card.plan_checklist_items || [])].sort(sortByPos))
-  const [assignees, setAssignees] = useState([...(card.plan_card_assignees || [])])
-  const [staffPool, setStaffPool] = useState([])
-  const [newItem, setNewItem] = useState('')
-  const [saving, setSaving] = useState(false)
-  const presets = labelPresets?.length ? labelPresets : FALLBACK_LABELS
-
-  useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  useEffect(() => {
-    if (!canEdit) return
-    supabase
-      .from('staff_profiles')
-      .select('id, full_name, username, role, is_active')
-      .eq('is_active', true)
-      .in('role', ['staff', 'team_lead', 'admin', 'assistant_super_admin', 'BossMich', 'marketing', 'video_editor'])
-      .order('full_name')
-      .then(({ data, error }) => {
-        if (error) toast.error(error.message)
-        else setStaffPool(data || [])
-      })
-  }, [canEdit])
-
-  const toggleLabel = (preset) => {
-    setLabels((prev) => {
-      const has = prev.some((l) => l.name === preset.name)
-      return has ? prev.filter((l) => l.name !== preset.name) : [...prev, preset]
-    })
-  }
-
-  const toggleAssignee = async (staff) => {
-    if (!canEdit) return
-    const existing = assignees.find((a) => a.staff_id === staff.id)
-    if (existing) {
-      const { error } = await supabase.from('plan_card_assignees').delete().eq('id', existing.id)
-      if (error) {
-        toast.error(error.message)
-        return
-      }
-      setAssignees((prev) => prev.filter((a) => a.id !== existing.id))
-      toast.success(`Unassigned ${staff.full_name}`)
-      return
-    }
-    const { data, error } = await supabase
-      .from('plan_card_assignees')
-      .insert({
-        card_id: card.id,
-        staff_id: staff.id,
-        assigned_by: user?.id || null,
-        status: 'todo',
-      })
-      .select('id, staff_id, status, notes, proof_url, proof_note, proof_submitted_at, staff_profiles ( id, full_name, username )')
-      .single()
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    setAssignees((prev) => [...prev, data])
-    toast.success(`Assigned ${staff.full_name}`)
-    const { error: notifyErr } = await supabase.from('user_notifications').insert({
-      user_id: staff.id,
-      kind: 'planner_task',
-      title: 'Planner task assigned',
-      body: card.title || 'You have a new Planner task',
-      url: '/operations/my-tasks',
-      tag: `plan-card:${card.id}`,
-    })
-    if (notifyErr) console.warn('planner notify', notifyErr.message)
-  }
-
-  const save = async () => {
-    if (!canEdit) return onClose()
-    setSaving(true)
-    const { error } = await supabase
-      .from('plan_cards')
-      .update({
-        title: title.trim() || card.title,
-        description,
-        due_at: dueAt ? new Date(dueAt).toISOString() : null,
-        labels,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', card.id)
-    setSaving(false)
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    toast.success('Card saved')
-    onSaved()
-    onClose()
-  }
-
-  const remove = async () => {
-    if (!canEdit || !window.confirm('Delete this card?')) return
-    const { error } = await supabase.from('plan_cards').delete().eq('id', card.id)
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    toast.success('Card deleted')
-    onDeleted()
-    onClose()
-  }
-
-  const addChecklist = async () => {
-    const t = newItem.trim()
-    if (!t || !canEdit) return
-    const { data, error } = await supabase
-      .from('plan_checklist_items')
-      .insert({ card_id: card.id, title: t, position: items.length })
-      .select('id, title, done, position')
-      .single()
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    setItems((prev) => [...prev, data])
-    setNewItem('')
-  }
-
-  const toggleCheck = async (item) => {
-    if (!canEdit) return
-    const next = !item.done
-    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, done: next } : i)))
-    const { error } = await supabase.from('plan_checklist_items').update({ done: next }).eq('id', item.id)
-    if (error) {
-      toast.error(error.message)
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, done: item.done } : i)))
-    }
-  }
-
-  const removeCheck = async (item) => {
-    if (!canEdit) return
-    const { error } = await supabase.from('plan_checklist_items').delete().eq('id', item.id)
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    setItems((prev) => prev.filter((i) => i.id !== item.id))
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4 backdrop-blur-[2px]"
-      role="presentation"
-      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="plan-card-title"
-        className="max-h-[90svh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-xl sm:p-7"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
-              {canEdit ? 'Edit card' : 'View card'}
-            </p>
-            {canEdit ? (
-              <input
-                id="plan-card-title"
-                className="mt-2 w-full rounded-xl border border-input bg-background px-3 py-2 text-xl font-semibold text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            ) : (
-              <h2 id="plan-card-title" className="mt-2 text-2xl font-semibold text-foreground">
-                {card.title}
-              </h2>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid size-10 place-items-center rounded-xl border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            aria-label="Close"
-          >
-            <X size={19} />
-          </button>
-        </div>
-
-        <label className="mt-5 block text-xs font-medium text-muted-foreground">
-          Description
-          <textarea
-            className="mt-1 min-h-24 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-70"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={!canEdit}
-          />
-        </label>
-
-        <label className="mt-4 block text-xs font-medium text-muted-foreground">
-          Due date
-          <input
-            type="datetime-local"
-            className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-70"
-            value={dueAt}
-            onChange={(e) => setDueAt(e.target.value)}
-            disabled={!canEdit}
-          />
-        </label>
-
-        <div className="mt-4">
-          <p className="text-xs font-medium text-muted-foreground">Labels</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {presets.map((preset) => {
-              const on = labels.some((l) => l.name === preset.name)
-              return (
-                <button
-                  key={preset.name}
-                  type="button"
-                  disabled={!canEdit}
-                  onClick={() => toggleLabel({ name: preset.name, color: preset.color })}
-                  className="rounded-full px-3 py-1 text-xs font-semibold text-slate-950 transition disabled:cursor-default"
-                  style={{
-                    backgroundColor: preset.color,
-                    opacity: on ? 1 : 0.4,
-                    outline: on ? '2px solid var(--foreground)' : 'none',
-                    outlineOffset: 2,
-                  }}
-                >
-                  {preset.name}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <p className="text-xs font-medium text-muted-foreground">Assignees</p>
-          {assignees.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {assignees.map((a) => (
-                <Badge key={a.id} variant="secondary" className="gap-1">
-                  {a.staff_profiles?.full_name || a.staff_id}
-                  {a.staff_profiles?.username ? ` · @${a.staff_profiles.username}` : ''}
-                  <span className="opacity-70">· {a.status === 'for_review' ? 'For review' : a.status}</span>
-                  {a.proof_url && <a href={a.proof_url} target="_blank" rel="noreferrer" className="ml-1 underline text-xs text-blue-400" onClick={e => e.stopPropagation()}>proof</a>}
-                </Badge>
-              ))}
-            </div>
-          )}
-          {canEdit && (
-            <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-border bg-muted/30 p-2">
-              {staffPool.length ? staffPool.map((staff) => {
-                const on = assignees.some((a) => a.staff_id === staff.id)
-                return (
-                  <button
-                    key={staff.id}
-                    type="button"
-                    onClick={() => toggleAssignee(staff)}
-                    className={`flex w-full min-h-10 items-center justify-between rounded-lg px-3 text-left text-sm ${on ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-muted'}`}
-                  >
-                    <span>{staff.full_name}{staff.username ? ` · @${staff.username}` : ''}</span>
-                    <span className="text-xs uppercase tracking-wide opacity-70">{on ? 'Assigned' : 'Add'}</span>
-                  </button>
-                )
-              }) : <p className="px-2 py-3 text-xs text-muted-foreground">No staff profiles found.</p>}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-5">
-          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <CheckSquare size={14} /> Checklist
-          </p>
-          <ul className="mt-2 space-y-2">
-            {items.map((item) => (
-              <li key={item.id} className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
-                <input
-                  type="checkbox"
-                  checked={!!item.done}
-                  disabled={!canEdit}
-                  onChange={() => toggleCheck(item)}
-                  className="size-4 accent-primary"
-                />
-                <span className={`flex-1 text-sm ${item.done ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                  {item.title}
-                </span>
-                {canEdit && (
-                  <button type="button" className="text-muted-foreground hover:text-destructive" onClick={() => removeCheck(item)} aria-label="Remove item">
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-          {canEdit && (
-            <div className="mt-2 flex flex-col gap-2">
-              <div className="flex gap-2">
-                <input
-                  className="min-w-0 flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
-                  placeholder="Add checklist item"
-                  value={newItem}
-                  onChange={(e) => setNewItem(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addChecklist())}
-                />
-                <Button type="button" size="sm" onClick={addChecklist}>
-                  Add
-                </Button>
-              </div>
-              {checklistTemplates?.length > 0 && (
-                <select
-                  className="rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground"
-                  defaultValue=""
-                  onChange={async (e) => {
-                    const tid = e.target.value
-                    e.target.value = ''
-                    if (!tid) return
-                    const tmpl = checklistTemplates.find((t) => t.id === tid)
-                    const rows = [...(tmpl?.plan_checklist_template_items || [])].sort(sortByPos)
-                    if (!rows.length) return
-                    const { data, error } = await supabase
-                      .from('plan_checklist_items')
-                      .insert(rows.map((r, i) => ({ card_id: card.id, title: r.title, position: items.length + i })))
-                      .select('id, title, done, position')
-                    if (error) toast.error(error.message)
-                    else {
-                      setItems((prev) => [...prev, ...(data || [])])
-                      toast.success(`Applied “${tmpl.name}”`)
-                    }
-                  }}
-                >
-                  <option value="">Apply checklist template…</option>
-                  {checklistTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-6 flex flex-wrap gap-2 border-t border-border pt-4">
-          {canEdit && (
-            <>
-              <Button type="button" onClick={save} disabled={saving}>
-                {saving ? 'Saving…' : 'Save'}
-              </Button>
-              <Button type="button" variant="outline" className="text-destructive" onClick={remove}>
-                Delete
-              </Button>
-            </>
-          )}
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </div>
-    </div>
+const ASSIGNEE_CARD_SELECT = `
+  id, staff_id, status, proof_url, proof_note, proof_submitted_at, reviewed_at,
+  staff_profiles ( id, full_name ),
+  plan_cards (
+    id, title, description, labels, due_at, position, created_at, updated_at, created_by, category_id, list_id,
+    plan_checklist_items ( id, title, done, position ),
+    plan_lists ( id, title )
   )
-}
+`
+
+const DUE_OPTIONS = [
+  { id: 'all', label: 'Any date' },
+  { id: 'overdue', label: 'Overdue' },
+  { id: 'today', label: 'Today' },
+  { id: 'week', label: 'This week' },
+  { id: 'none', label: 'No deadline' },
+]
+
+const STATUS_OPTIONS = [
+  { id: 'all', label: 'Any status' },
+  { id: 'todo', label: 'To do' },
+  { id: 'in_progress', label: 'In progress' },
+  { id: 'for_review', label: 'For review' },
+  { id: 'done', label: 'Done' },
+]
 
 export default function PlanningBoardPage() {
   const { profile } = useAuth()
-  const canEdit = canEditPlanning(profile)
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = plannerTabFromSearch(searchParams.get('tab'))
-  const [board, setBoard] = useState(null)
+  const canEdit = canEditPlanning(profile)
+  const tabs = useMemo(() => plannerTabsForAccess({ canEdit, role: profile?.role }), [canEdit, profile?.role])
+  const tab = plannerTabFromSearch(searchParams, tabs.map((t) => t.id))
   const [boards, setBoards] = useState([])
+  const [board, setBoard] = useState(null)
+  const [categories, setCategories] = useState([])
+  const [staff, setStaff] = useState([])
+  const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeCard, setActiveCard] = useState(null)
-  const [dragCardId, setDragCardId] = useState(null)
-  const [newListTitle, setNewListTitle] = useState('')
-  const [addingCardFor, setAddingCardFor] = useState(null)
-  const [newCardTitle, setNewCardTitle] = useState('')
-  const [labelPresets, setLabelPresets] = useState(FALLBACK_LABELS)
-  const [checklistTemplates, setChecklistTemplates] = useState([])
-  const [calSources, setCalSources] = useState({ planning: true, forms: true, events: true, bookings: true })
-  const [calExtra, setCalExtra] = useState({ formSubs: [], meetEvents: [], bookings: [] })
+  const [view, setView] = useState(canEdit ? 'table' : 'list')
+  const [q, setQ] = useState('')
+  const [status, setStatus] = useState('all')
+  const [categoryId, setCategoryId] = useState('all')
+  const [assigneeId, setAssigneeId] = useState('all')
+  const [due, setDue] = useState('all')
+  const [assignedCards, setAssignedCards] = useState([])
+  const [reviewItems, setReviewItems] = useState([])
+  const [cardId, setCardId] = useState(searchParams.get('card'))
+  const [catsOpen, setCatsOpen] = useState(false)
+  const [calCursor, setCalCursor] = useState(() => new Date())
+  const [calSources, setCalSources] = useState({ tasks: true, events: true, bookings: canEdit, forms: canEdit })
+  const [calExtra, setCalExtra] = useState({ events: [], bookings: [], forms: [] })
+
+  const lists = useMemo(() => [...(board?.plan_lists || [])].sort((a, b) => a.position - b.position), [board])
+  const cards = useMemo(
+    () => (canEdit ? flattenPlannerCards(board) : assignedCards),
+    [canEdit, board, assignedCards],
+  )
+  const visibleCards = useMemo(
+    () =>
+      filterPlannerCards(cards, {
+        q,
+        status,
+        categoryId,
+        assigneeId,
+        due,
+        assignedOnly: !canEdit,
+        viewerId: profile?.id,
+      }),
+    [cards, q, status, categoryId, assigneeId, due, canEdit, profile?.id],
+  )
+  const reviewCount = reviewItems.length
+  const activeCard = useMemo(() => {
+    if (cardId === 'new') return canEdit ? { id: 'new' } : null
+    return cards.find((c) => c.id === cardId) || null
+  }, [cardId, cards, canEdit])
 
   const load = useCallback(async () => {
-    const { data: boardRows, error: boardsErr } = await supabase
-      .from('plan_boards')
-      .select('id, name, created_at')
-      .order('created_at', { ascending: true })
-    if (boardsErr) {
-      toast.error(boardsErr.message)
-      setBoard(null)
+    const requested = searchParams.get('board')
+    const catQ = supabase.from('plan_categories').select('id, name, color, position').order('position')
+    if (!canEdit) {
+      const [{ data: catRows }, { data: mine, error: mineErr }] = await Promise.all([
+        catQ,
+        supabase.from('plan_card_assignees').select(ASSIGNEE_CARD_SELECT).eq('staff_id', profile?.id),
+      ])
+      if (mineErr) toast.error(mineErr.message)
+      setCategories(catRows || [])
+      setAssignedCards(cardsFromAssigneeRows(mine))
       setBoards([])
+      setBoard(null)
+      setStaff([])
+      setTemplates([])
+      setReviewItems([])
       setLoading(false)
       return
     }
-    const visibleBoards = visiblePlannerBoards(boardRows)
-    setBoards(visibleBoards)
-    const wanted = pickPlannerBoard(visibleBoards, searchParams.get('board'))
-    if (!wanted) {
-      setBoard(null)
-      setLoading(false)
-      return
-    }
-    const { data, error } = await supabase
-      .from('plan_boards')
-      .select(BOARD_SELECT)
-      .eq('id', wanted.id)
-      .maybeSingle()
-    if (error) {
-      toast.error(error.message)
-      setBoard(null)
-    } else {
-      setBoard(data)
-    }
-    setLoading(false)
-  }, [searchParams])
-
-  const loadCatalogs = useCallback(async () => {
-    const [lab, tmpl] = await Promise.all([
-      supabase.from('plan_label_presets').select('id, name, color, position').order('position'),
-      supabase
-        .from('plan_checklist_templates')
-        .select('id, name, plan_checklist_template_items ( id, title, position )')
-        .order('position'),
+    const [{ data: boardRows }, { data: catRows }, { data: staffRows }, { data: tplRows }, { data: reviewRows, error: reviewErr }] = await Promise.all([
+      supabase.from('plan_boards').select('id, title, kind, position').order('position'),
+      catQ,
+      supabase.from('staff_profiles').select('id, full_name, role').eq('is_active', true).order('full_name'),
+      supabase.from('plan_checklist_templates').select('id, name, position, plan_checklist_template_items ( id, title, position )').order('position'),
+      supabase.from('plan_card_assignees').select(ASSIGNEE_CARD_SELECT).eq('status', 'for_review'),
     ])
-    if (!lab.error && lab.data?.length) setLabelPresets(lab.data)
-    if (!tmpl.error) setChecklistTemplates(tmpl.data || [])
-  }, [])
+    if (reviewErr) toast.error(reviewErr.message)
+    const visible = (boardRows || []).filter((b) => b.kind !== 'complaints')
+    setBoards(visible)
+    setCategories(catRows || [])
+    setStaff(staffRows || [])
+    setTemplates(tplRows || [])
+    setReviewItems(reviewItemsFromAssigneeRows(reviewRows))
+    const next = visible.find((b) => b.id === requested) || visible[0]
+    if (!next) {
+      setBoard(null)
+      setLoading(false)
+      return
+    }
+    const { data, error } = await supabase.from('plan_boards').select(BOARD_SELECT).eq('id', next.id).maybeSingle()
+    if (error) toast.error(error.message)
+    setBoard(data || null)
+    setLoading(false)
+  }, [searchParams, canEdit, profile?.id])
 
   useEffect(() => {
     load()
-    loadCatalogs()
-  }, [load, loadCatalogs])
-
-  useEffect(() => {
-    const scheduleReload = createCoalescedReload(() => load(), 500)
-    const channel = supabase
-      .channel('planning-board')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_cards' }, scheduleReload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_lists' }, scheduleReload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_checklist_items' }, scheduleReload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_card_assignees' }, scheduleReload)
-      .subscribe()
-    return () => {
-      scheduleReload.cancel()
-      supabase.removeChannel(channel)
-    }
   }, [load])
 
-  const lists = useMemo(() => [...(board?.plan_lists || [])].sort(sortByPos), [board])
-  const laneBoardRef = useRef(null)
-  const [focusListId, setFocusListId] = useState(null)
+  useEffect(() => {
+    setCardId(searchParams.get('card'))
+  }, [searchParams])
 
   useEffect(() => {
-    if (!lists.length) return
-    if (!focusListId || !lists.some((l) => l.id === focusListId)) setFocusListId(lists[0].id)
-  }, [lists, focusListId])
-
-  function scrollToLane(listId) {
-    setFocusListId(listId)
-    const el = laneBoardRef.current?.querySelector(`[data-lane-id="${listId}"]`)
-    el?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
-  }
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const [subs, meets, books] = await Promise.all([
-        supabase
-          .from('ops_form_submissions')
-          .select('id, calendar_at, due_at, respondent_label, status, ops_forms ( name, kind )')
-          .or('calendar_at.not.is.null,due_at.not.is.null')
-          .limit(300),
-        supabase
-          .from('events')
-          .select('id, title, starts_at, ends_at, is_published, slug')
-          .order('starts_at', { ascending: false })
-          .limit(200),
-        supabase
-          .from('bookings')
-          .select('id, customer_name, scheduled_start, scheduled_end, status, branch, vehicle_plate')
-          .eq('is_archived', false)
-          .not('scheduled_start', 'is', null)
-          .order('scheduled_start', { ascending: false })
-          .limit(300),
-      ])
-      if (cancelled) return
+    if (tab !== 'calendar') return
+    const y = calCursor.getFullYear()
+    const m = calCursor.getMonth()
+    const from = new Date(y, m, 1).toISOString()
+    const to = new Date(y, m + 1, 1).toISOString()
+    const eventsQ = supabase.from('events').select('id, title, starts_at, ends_at, is_published').gte('starts_at', from).lt('starts_at', to)
+    Promise.all([
+      canEdit ? eventsQ : eventsQ.eq('is_published', true),
+      canEdit
+        ? supabase
+            .from('bookings')
+            .select('id, customer_name, scheduled_start, status')
+            .gte('scheduled_start', from)
+            .lt('scheduled_start', to)
+        : Promise.resolve({ data: [] }),
+      canEdit
+        ? supabase
+            .from('ops_form_submissions')
+            .select('id, form_id, due_at, calendar_at, ops_forms ( name )')
+            .not('calendar_at', 'is', null)
+            .gte('calendar_at', from)
+            .lt('calendar_at', to)
+        : Promise.resolve({ data: [] }),
+    ]).then(([ev, bk, fm]) => {
       setCalExtra({
-        formSubs: subs.error ? [] : subs.data || [],
-        meetEvents: meets.error ? [] : meets.data || [],
-        bookings: books.error ? [] : books.data || [],
+        events: ev.data || [],
+        bookings: bk.data || [],
+        forms: fm.data || [],
       })
-    })()
-    return () => { cancelled = true }
-  }, [tab])
+    })
+  }, [calCursor, canEdit, tab])
 
-  const calendarEvents = useMemo(() => {
-    const out = []
-    if (calSources.planning) {
-      for (const list of lists) {
-        for (const card of list.plan_cards || []) {
-          if (!card.due_at) continue
-          const start = new Date(card.due_at)
-          out.push({
-            id: `plan-${card.id}`,
-            title: `[Plan] ${card.title}`,
-            start,
-            end: new Date(start.getTime() + 60 * 60_000),
-            resource: { type: 'planning', card },
-          })
-        }
-      }
+  const calItems = useMemo(() => {
+    const y = calCursor.getFullYear()
+    const m = calCursor.getMonth()
+    const inMonth = (iso) => {
+      if (!iso) return false
+      const d = new Date(iso)
+      return d.getFullYear() === y && d.getMonth() === m
     }
-    if (calSources.forms) {
-      for (const s of calExtra.formSubs) {
-        const iso = s.calendar_at || s.due_at
-        if (!iso) continue
-        const start = new Date(iso)
+    const out = []
+    if (calSources.tasks) {
+      visibleCards.filter((c) => inMonth(c.due_at)).forEach((c) => {
         out.push({
-          id: `form-${s.id}`,
-          title: `[Form] ${s.ops_forms?.name || 'Form'}: ${s.respondent_label || s.status}`,
-          start,
-          end: new Date(start.getTime() + 60 * 60_000),
-          resource: { type: 'form', submission: s },
+          id: `t-${c.id}`,
+          date: c.due_at,
+          title: c.title,
+          kind: 'task',
+          href: hrefForCalendarItem({ type: 'planning', card: { id: c.id } }),
         })
-      }
+      })
     }
     if (calSources.events) {
-      for (const ev of calExtra.meetEvents) {
-        if (!ev.starts_at) continue
-        const start = new Date(ev.starts_at)
-        const end = ev.ends_at ? new Date(ev.ends_at) : new Date(start.getTime() + 60 * 60_000)
+      calExtra.events.forEach((e) => {
         out.push({
-          id: `event-${ev.id}`,
-          title: `[Event] ${ev.title}${ev.is_published ? '' : ' (draft)'}`,
-          start,
-          end,
-          resource: { type: 'event', event: ev },
+          id: `e-${e.id}`,
+          date: e.starts_at,
+          title: e.title,
+          kind: 'event',
+          href: hrefForCalendarItem({ type: 'event', event: { id: e.id } }),
         })
-      }
+      })
     }
     if (calSources.bookings) {
-      for (const b of calExtra.bookings) {
-        const start = new Date(b.scheduled_start)
-        const end = b.scheduled_end ? new Date(b.scheduled_end) : new Date(start.getTime() + 60 * 60_000)
+      calExtra.bookings.forEach((b) => {
         out.push({
-          id: `booking-${b.id}`,
-          title: `[Booking] ${b.customer_name}${b.vehicle_plate ? ` · ${b.vehicle_plate}` : ''}`,
-          start,
-          end,
-          resource: { type: 'booking', booking: b },
+          id: `b-${b.id}`,
+          date: b.scheduled_start,
+          title: b.customer_name || 'Booking',
+          kind: 'booking',
+          href: hrefForCalendarItem({ type: 'booking', booking: { id: b.id } }),
         })
-      }
+      })
+    }
+    if (calSources.forms) {
+      calExtra.forms.forEach((f) => {
+        out.push({
+          id: `f-${f.id}`,
+          date: f.calendar_at || f.due_at,
+          title: f.ops_forms?.name || 'Form',
+          kind: 'form',
+          href: hrefForCalendarItem({ type: 'form', submission: { form_id: f.form_id } }),
+        })
+      })
     }
     return out
-  }, [lists, calSources, calExtra])
-
-  const moveCard = async (cardId, targetListId) => {
-    if (!canEdit) return
-    const { error } = await supabase
-      .from('plan_cards')
-      .update({
-        list_id: targetListId,
-        position: Date.now() % 1_000_000,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', cardId)
-    if (error) toast.error(error.message)
-    else load()
-  }
-
-  const addList = async () => {
-    if (!canEdit || !board || !newListTitle.trim()) return
-    const { error } = await supabase.from('plan_lists').insert({
-      board_id: board.id,
-      title: newListTitle.trim(),
-      position: lists.length,
-    })
-    if (error) toast.error(error.message)
-    else {
-      setNewListTitle('')
-      load()
-    }
-  }
-
-  const addCard = async (listId) => {
-    if (!canEdit || !newCardTitle.trim()) return
-    const list = lists.find((l) => l.id === listId)
-    const { error } = await supabase.from('plan_cards').insert({
-      list_id: listId,
-      title: newCardTitle.trim(),
-      position: (list?.plan_cards || []).length,
-      created_by: profile?.id || null,
-    })
-    if (error) toast.error(error.message)
-    else {
-      setNewCardTitle('')
-      setAddingCardFor(null)
-      load()
-    }
-  }
-
-  const renameList = async (list, title) => {
-    if (!canEdit || !title.trim() || title === list.title) return
-    const { error } = await supabase.from('plan_lists').update({ title: title.trim() }).eq('id', list.id)
-    if (error) toast.error(error.message)
-    else load()
-  }
+  }, [visibleCards, calSources, calExtra, calCursor])
 
   function setTab(next) {
     setSearchParams((prev) => {
@@ -700,332 +262,303 @@ export default function PlanningBoardPage() {
       if (next === 'board') params.delete('tab')
       else params.set('tab', next)
       if (board?.id) params.set('board', board.id)
+      params.delete('create')
       return params
     }, { replace: true })
   }
 
-  function selectBoard(boardId) {
+  function openCard(id) {
+    setCardId(id)
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev)
-      params.set('board', boardId)
+      if (id) params.set('card', id)
+      else params.delete('card')
       return params
     }, { replace: true })
   }
 
   if (!canViewPlanning(profile)) return <Navigate to="/operations/access-denied" replace />
-
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center gap-2 text-muted-foreground">
-        <LoaderCircle className="animate-spin" size={20} /> Loading Planner
+      <div className="planner-v2" aria-busy="true" aria-label="Loading planner">
+        <div className="planner-skel planner-skel-head" />
+        <div className="planner-skel-tabs">
+          <span className="planner-skel" />
+          <span className="planner-skel" />
+          <span className="planner-skel" />
+        </div>
+        <div className="planner-skel-grid">
+          <span className="planner-skel planner-ticket" />
+          <span className="planner-skel planner-ticket" />
+          <span className="planner-skel planner-ticket" />
+        </div>
       </div>
     )
   }
 
-  if (!board) {
-    return (
-      <section className="rounded-2xl border border-border bg-card p-6 text-foreground">
-        <h1 className="text-xl font-semibold">Planner is not set up yet</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Ask a Super Admin to run the latest Planner migration, then refresh this page.
-        </p>
-      </section>
-    )
-  }
-
   return (
-    <section className="planning-shell flex min-h-0 flex-col gap-4">
-      <header className="planning-hero">
-        <div className="planning-hero-copy">
-          <h1 className="planning-title">
-            <Columns3 className="size-6 text-primary sm:size-7" aria-hidden />
-            Planner
-          </h1>
-          <p className="planning-lead">
-            {canEdit
-              ? 'Add cards, assign people, and share forms. Assigned staff get an in-app notice.'
-              : 'View tasks, calendar, and forms. You can fill forms you are allowed to use.'}
-          </p>
-          {boards.length > 1 ? (
-            <div className="planning-board-picker">
-              <Label htmlFor="planner-board-filter">Board</Label>
-              <NamedSelect
-                id="planner-board-filter"
-                value={board.id}
-                onChange={selectBoard}
-                options={boards.map((b) => ({ value: b.id, label: b.name }))}
-              />
-            </div>
-          ) : (
-            <p className="planning-board-name">{board.name}</p>
-          )}
+    <div className="planner-v2">
+      <header className="planner-v2-head">
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">Shop floor</p>
+          <h1>Planner</h1>
+          <p>{canEdit ? 'Assign work, attach a form to an event, review proof.' : 'Your assigned work and published events.'}</p>
         </div>
-        <Badge variant={canEdit ? 'default' : 'secondary'} className="planning-role-badge">
-          {canEdit ? 'Can edit' : 'View only'}
-        </Badge>
+        {canEdit && tab === 'board' && (
+          <Button type="button" onClick={() => openCard('new')}>
+            <Plus className="size-4" /> New task
+          </Button>
+        )}
       </header>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="planning-tabs-list">
-          {PLANNER_TABS.map((item) => {
-            const Icon = TAB_ICONS[item.icon]
-            return (
-              <TabsTrigger key={item.id} value={item.id} title={item.hint}>
-                {Icon ? <Icon className="size-4" aria-hidden /> : null}
-                {item.label}
-              </TabsTrigger>
-            )
-          })}
-        </TabsList>
-        <p className="planning-tab-hint">{PLANNER_TABS.find((item) => item.id === tab)?.hint}</p>
+      <nav className="planner-v2-tabs" aria-label="Planner">
+        {tabs.map((t) => {
+          const Icon = TAB_ICONS[t.id]
+          return (
+            <button key={t.id} type="button" className={tab === t.id ? 'is-on' : ''} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+              <Icon className="size-4" />
+              {t.label}
+              {t.id === 'review' && reviewCount > 0 ? <span className="planner-v2-count">{reviewCount}</span> : null}
+            </button>
+          )
+        })}
+      </nav>
 
-        <TabsContent value="board" className="mt-4">
-          {lists.length > 1 ? (
-            <div className="planning-lane-jump" role="navigation" aria-label="Columns">
-              {lists.map((list) => (
-                <button
-                  key={list.id}
-                  type="button"
-                  className={`planning-lane-jump-btn${focusListId === list.id ? ' is-active' : ''}`}
-                  onClick={() => scrollToLane(list.id)}
-                >
-                  {list.title}
-                  <span>{(list.plan_cards || []).length}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <div ref={laneBoardRef} className="planning-lane-board" role="region" aria-label="Task columns">
-            {lists.map((list) => {
-              const cards = [...(list.plan_cards || [])].sort(sortByPos)
-              return (
-                <section
-                  key={list.id}
-                  data-lane-id={list.id}
-                  className="floor-lane planning-lane"
-                  aria-label={list.title}
-                  onDragOver={(e) => canEdit && e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    if (!canEdit || !dragCardId) return
-                    moveCard(dragCardId, list.id)
-                    setDragCardId(null)
-                  }}
-                >
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    {canEdit ? (
-                      <input
-                        className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-foreground outline-none"
-                        defaultValue={list.title}
-                        onBlur={(e) => renameList(list, e.target.value)}
-                        aria-label="Column name"
-                      />
-                    ) : (
-                      <h2 className="text-sm font-semibold text-foreground">{list.title}</h2>
-                    )}
-                    <Badge variant="secondary" className="tabular-nums">{cards.length}</Badge>
-                  </div>
-                  <div className="floor-lane-body">
-                    {cards.map((card) => {
-                      const { done, total } = checklistStats(card)
-                      const labels = Array.isArray(card.labels) ? card.labels : []
-                      const people = assigneeNames(card)
+      {tab === 'board' && (
+        <div className={`planner-v2-body ${canEdit ? 'has-rail' : ''}`}>
+          {canEdit && (
+            <aside className="planner-v2-rail">
+              <label>
+                Search
+                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Title or note" />
+              </label>
+              <label>
+                Status
+                <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                  {STATUS_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </label>
+              <label>
+                Category
+                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                  <option value="all">Any category</option>
+                  <option value="none">Uncategorized</option>
+                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <label>
+                Assignee
+                <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+                  <option value="all">Anyone</option>
+                  <option value="unassigned">Unassigned</option>
+                  {staff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                </select>
+              </label>
+              <label>
+                Deadline
+                <select value={due} onChange={(e) => setDue(e.target.value)}>
+                  {DUE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </label>
+              <label>
+                Board
+                <select value={board?.id || ''} onChange={(e) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set('board', e.target.value); return n }, { replace: true })}>
+                  {boards.map((b) => <option key={b.id} value={b.id}>{b.title}</option>)}
+                </select>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant={view === 'table' ? 'default' : 'outline'} onClick={() => setView('table')}>
+                  <Table2 className="size-3.5" /> Table
+                </Button>
+                <Button type="button" size="sm" variant={view === 'board' ? 'default' : 'outline'} onClick={() => setView('board')}>
+                  <LayoutList className="size-3.5" /> Board
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => setCatsOpen(true)}>Categories</Button>
+              </div>
+            </aside>
+          )}
+
+          <div className="min-w-0">
+            {!canEdit && (
+              <label className="mb-3 block max-w-sm text-xs font-medium text-muted-foreground">
+                Search
+                <Input className="mt-1" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Your tasks" />
+              </label>
+            )}
+            {!visibleCards.length ? (
+              <div className="planner-empty">
+                <strong>{canEdit ? 'No tasks match' : 'Nothing assigned to you'}</strong>
+                <p>{canEdit ? 'Clear a filter or create a task.' : 'When someone assigns you work, it shows up here.'}</p>
+                {canEdit && <Button type="button" onClick={() => openCard('new')}>New task</Button>}
+              </div>
+            ) : view === 'board' && canEdit ? (
+              <div className="planner-v2-cols" style={{ '--planning-list-cols': Math.min(Math.max(lists.length, 1), 5) }}>
+                {lists.map((list) => {
+                  const col = visibleCards.filter((c) => c.list_id === list.id)
+                  return (
+                    <section key={list.id}>
+                      <h2>{list.title} <span>{col.length}</span></h2>
+                      {col.map((card) => (
+                        <button key={card.id} type="button" className="planner-v2-card planner-ticket" onClick={() => openCard(card.id)}>
+                          <strong>{card.title}</strong>
+                          <span>{card.plan_card_assignees?.[0]?.staff_profiles?.full_name || 'Unassigned'}</span>
+                          <em>{(card.plan_card_assignees?.[0]?.status || 'todo').replace('_', ' ')}{card.due_at ? ` · ${new Date(card.due_at).toLocaleDateString()}` : ''}</em>
+                        </button>
+                      ))}
+                    </section>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="planner-v2-table-wrap">
+                <table className="planner-v2-table">
+                  <thead>
+                    <tr>
+                      <th>Task</th>
+                      <th>List</th>
+                      <th>Who</th>
+                      <th>Due</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleCards.map((card) => {
+                      const a = card.plan_card_assignees?.[0]
                       return (
-                        <article
-                          key={card.id}
-                          className="floor-ticket planning-card"
-                          draggable={canEdit}
-                          onDragStart={() => setDragCardId(card.id)}
-                          onDragEnd={() => setDragCardId(null)}
-                        >
-                          <button
-                            type="button"
-                            className="planning-card-open"
-                            onClick={() => setActiveCard(card)}
-                          >
-                            {labels.length > 0 && (
-                              <div className="mb-2 flex flex-wrap gap-1">
-                                {labels.map((l) => (
-                                  <span
-                                    key={l.name}
-                                    className="rounded-full px-2 py-0.5 text-[10px] font-bold text-[#020a31]"
-                                    style={{ backgroundColor: l.color || '#94a3b8' }}
-                                  >
-                                    {l.name}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                            <p className="font-medium text-foreground">{card.title}</p>
-                            <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                              {card.due_at && (
-                                <span className="inline-flex items-center gap-1">
-                                  <CalendarDays size={12} />
-                                  {format(new Date(card.due_at), 'MMM d')}
-                                </span>
-                              )}
-                              {total > 0 && (
-                                <span className="inline-flex items-center gap-1">
-                                  <CheckSquare size={12} />
-                                  {done}/{total}
-                                </span>
-                              )}
-                              {people.length > 0 && (
-                                <span className="inline-flex items-center gap-1">
-                                  <Users size={12} />
-                                  {people.join(', ')}
-                                </span>
-                              )}
-                              {(card.plan_card_assignees || []).some((a) => a.status === 'for_review') && (
-                                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">For review</span>
-                              )}
-                            </div>
-                          </button>
-                          {canEdit && lists.length > 1 ? (
-                            <label className="planning-card-move">
-                              <span className="planning-visually-hidden">Move {card.title}</span>
-                              <select
-                                value={list.id}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
-                                  e.stopPropagation()
-                                  if (e.target.value !== list.id) moveCard(card.id, e.target.value)
-                                }}
-                              >
-                                {lists.map((opt) => (
-                                  <option key={opt.id} value={opt.id}>{opt.title}</option>
-                                ))}
-                              </select>
-                            </label>
-                          ) : null}
-                        </article>
+                        <tr key={card.id} onClick={() => openCard(card.id)}>
+                          <td>{card.title}</td>
+                          <td>{card.list_title}</td>
+                          <td>{a?.staff_profiles?.full_name || '—'}</td>
+                          <td>{card.due_at ? new Date(card.due_at).toLocaleDateString() : '—'}</td>
+                          <td>{a?.status?.replace('_', ' ') || 'unassigned'}</td>
+                        </tr>
                       )
                     })}
-                    {!cards.length && (
-                      <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-                        No cards in this column yet.
-                      </p>
-                    )}
-                    {canEdit && (
-                      addingCardFor === list.id ? (
-                        <div className="mt-1 space-y-2 rounded-xl border border-border bg-background p-2">
-                          <input
-                            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
-                            placeholder="What needs to get done?"
-                            value={newCardTitle}
-                            onChange={(e) => setNewCardTitle(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && addCard(list.id)}
-                            autoFocus
-                          />
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => addCard(list.id)}>Add card</Button>
-                            <Button size="sm" variant="ghost" onClick={() => { setAddingCardFor(null); setNewCardTitle('') }}>Cancel</Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="mt-1 flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed border-border px-2 text-sm text-muted-foreground transition hover:border-primary/40 hover:bg-background hover:text-foreground"
-                          onClick={() => setAddingCardFor(list.id)}
-                        >
-                          <Plus size={16} /> Add card
-                        </button>
-                      )
-                    )}
-                  </div>
-                </section>
-              )
-            })}
-            {canEdit && (
-              <section className="floor-lane planning-lane planning-lane-new">
-                <input
-                  className="mb-3 w-full bg-transparent text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase outline-none placeholder:text-muted-foreground"
-                  placeholder="New list…"
-                  value={newListTitle}
-                  onChange={(e) => setNewListTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addList()}
-                />
-                <Button size="sm" variant="outline" className="w-full cursor-pointer" onClick={addList} disabled={!newListTitle.trim()}>
-                  Add list
-                </Button>
-              </section>
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="calendar" className="mt-4">
-          <div className="planning-cal-filters" role="group" aria-label="Calendar sources">
-            <span className="planning-cal-filters-label">Show</span>
-            {[
-              { key: 'planning', label: 'Tasks' },
-              { key: 'forms', label: 'Form answers' },
-              { key: 'events', label: 'Events' },
-              { key: 'bookings', label: 'Bookings' },
-            ].map((src) => (
-              <button
-                key={src.key}
-                type="button"
-                className="planning-cal-filter"
-                aria-pressed={calSources[src.key]}
-                onClick={() => setCalSources((s) => ({ ...s, [src.key]: !s[src.key] }))}
-              >
-                <span className="planning-cal-filter-dot" aria-hidden />
-                {src.label}
-              </button>
-            ))}
-          </div>
-          <div className="planning-calendar min-h-[28rem] rounded-2xl border border-border bg-card p-3 text-foreground shadow-sm sm:p-4">
-            <BigCalendar
-              localizer={localizer}
-              events={calendarEvents}
-              defaultView={Views.MONTH}
-              views={[Views.MONTH, Views.WEEK, Views.AGENDA]}
-              style={{ minHeight: 420 }}
-              onSelectEvent={(ev) => {
-                if (ev.resource?.type === 'planning' && ev.resource.card) setActiveCard(ev.resource.card)
-                else if (ev.resource?.type === 'event' && ev.resource.event?.slug) {
-                  window.open(`/events/${ev.resource.event.slug}`, '_blank', 'noopener,noreferrer')
-                } else if (ev.resource?.type === 'form') {
-                  setTab('forms')
-                  toast.message('Open Forms → Results to manage this submission')
-                } else if (ev.resource?.type === 'booking') {
-                  toast.message(`Booking · ${ev.resource.booking?.status || 'scheduled'}`)
-                }
-              }}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="settings" className="mt-4">
-          <PlanningSettingsPanel
-            canEdit={canEdit}
-            onPresetsChanged={(rows) => {
-              if (rows?.length) setLabelPresets(rows)
-              loadCatalogs()
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="forms" className="mt-4">
-          <PlanningFormsPanel canEdit={canEdit} lists={lists} />
-        </TabsContent>
-
-        <TabsContent value="events" className="mt-4">
-          <PlanningEventsPanel canEdit={canEdit} />
-        </TabsContent>
-      </Tabs>
-
-      {activeCard && (
-        <CardModal
-          card={activeCard}
+      {tab === 'calendar' && (
+        <CalendarMonth
+          cursor={calCursor}
+          onCursor={setCalCursor}
+          items={calItems}
+          sources={calSources}
+          onSources={setCalSources}
           canEdit={canEdit}
-          labelPresets={labelPresets}
-          checklistTemplates={checklistTemplates}
-          onClose={() => setActiveCard(null)}
-          onSaved={() => load()}
-          onDeleted={() => { setActiveCard(null); load() }}
         />
       )}
-    </section>
+
+      {tab === 'forms' && (
+        <PlanningFormsSmartPanel
+          canEdit={canEdit}
+          lists={lists}
+          initialCreateKind={searchParams.get('create')}
+          resultsId={searchParams.get('results')}
+        />
+      )}
+
+      {tab === 'events' && (
+        <PlanningEventsPanel
+          canEdit={canEdit}
+          highlightId={searchParams.get('event')}
+          onCreateForm={() =>
+            setSearchParams((prev) => {
+              const params = new URLSearchParams(prev)
+              params.set('tab', 'forms')
+              params.set('create', 'event')
+              return params
+            }, { replace: true })
+          }
+        />
+      )}
+
+      {tab === 'review' && canEdit && (
+        <PlanningReviewPanel items={reviewItems} canEdit={canEdit} onChanged={load} />
+      )}
+
+      {canEdit && tab === 'board' && (
+        <button type="button" className="planner-v2-fab md:hidden" onClick={() => openCard('new')} aria-label="New task">
+          <Plus className="size-5" />
+        </button>
+      )}
+
+      {activeCard && (
+        <TaskModal
+          card={activeCard.id === 'new' ? null : activeCard}
+          listId={lists[0]?.id}
+          lists={lists}
+          categories={categories}
+          checklistTemplates={templates}
+          canEdit={canEdit}
+          onClose={() => openCard(null)}
+          onSaved={load}
+        />
+      )}
+
+      <PlanningCategoryDrawer
+        open={catsOpen}
+        categories={categories}
+        templates={templates}
+        canEdit={canEdit}
+        onClose={() => setCatsOpen(false)}
+        onChanged={load}
+      />
+    </div>
+  )
+}
+
+function CalendarMonth({ cursor, onCursor, items, sources, onSources, canEdit }) {
+  const y = cursor.getFullYear()
+  const m = cursor.getMonth()
+  const start = new Date(y, m, 1)
+  const pad = (start.getDay() + 6) % 7
+  const days = new Date(y, m + 1, 0).getDate()
+  const cells = [...Array(pad).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)]
+  const byDay = new Map()
+  items.forEach((item) => {
+    const d = new Date(item.date).getDate()
+    byDay.set(d, [...(byDay.get(d) || []), item])
+  })
+
+  const today = new Date()
+  const isToday = (day) =>
+    day && y === today.getFullYear() && m === today.getMonth() && day === today.getDate()
+
+  return (
+    <div className="planner-cal">
+      <div className="planner-cal-toolbar">
+        <Button type="button" variant="outline" size="sm" onClick={() => onCursor(new Date(y, m - 1, 1))}>Prev</Button>
+        <strong>{cursor.toLocaleString(undefined, { month: 'long', year: 'numeric' })}</strong>
+        <Button type="button" variant="outline" size="sm" onClick={() => onCursor(new Date(y, m + 1, 1))}>Next</Button>
+      </div>
+      <div className="planner-cal-filters">
+        {Object.entries({ tasks: 'Tasks', events: 'Events', ...(canEdit ? { bookings: 'Bookings', forms: 'Forms' } : {}) }).map(([key, label]) => (
+          <label key={key}>
+            <input
+              type="checkbox"
+              checked={!!sources[key]}
+              onChange={(e) => onSources((s) => ({ ...s, [key]: e.target.checked }))}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+      <div className="planner-cal-grid">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => <span key={d} className="planner-cal-dow">{d}</span>)}
+        {cells.map((day, i) => (
+          <div key={i} className={`planner-cal-cell ${day ? '' : 'is-pad'} ${isToday(day) ? 'is-today' : ''}`}>
+            {day ? <b>{day}</b> : null}
+            {(byDay.get(day) || []).map((item) => (
+              <Link key={item.id} to={item.href} className={`planner-cal-chip is-${item.kind}`}>{item.title}</Link>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }

@@ -2,7 +2,7 @@
  * First-account wizard: steps, field validation, Team Lead prefill merge.
  * Interface is the test surface — signup UI and /api/customer-signup both call this.
  */
-import { canonicalPhMobile, normalizePlate, phoneDigits } from './customerAuth.js'
+import { canonicalPhMobile, phoneDigits, plateValidationError } from './customerAuth.js'
 import { parseDateOnly } from './birthdayPerk.js'
 
 export const ONBOARDING_STEPS = [
@@ -66,10 +66,7 @@ export function validateOnboardingField(key, value, draft = {}) {
       return ''
     }
     case 'plate': {
-      const plate = normalizePlate(raw)
-      if (plate.length < 3) return 'Enter your plate number.'
-      if (!/[A-Z]/.test(plate) || !/\d/.test(plate)) return 'Plate should mix letters and numbers.'
-      return ''
+      return plateValidationError(raw) || ''
     }
     case 'date_of_birth': {
       const parsed = parseDateOnly(raw)

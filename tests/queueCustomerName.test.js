@@ -64,5 +64,29 @@ describe('queueCustomerName', () => {
       }),
       null,
     )
+    assert.equal(
+      validateQueueTicketIdentity({
+        customer_phone: '09171234567',
+        vehicle_plate: '847291',
+        service_ids: ['svc-1'],
+      }),
+      null,
+    )
+    assert.equal(
+      validateQueueTicketIdentity({
+        customer_phone: '09171234567',
+        vehicle_plate: 'TMP 1234',
+        service_ids: ['svc-1'],
+      }),
+      null,
+    )
+    assert.match(
+      validateQueueTicketIdentity({
+        customer_phone: '09171234567',
+        vehicle_plate: 'AAA',
+        service_ids: ['svc-1'],
+      }),
+      /plate|sticker|temporary/i,
+    )
   })
 })

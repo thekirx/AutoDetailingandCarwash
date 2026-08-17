@@ -45,7 +45,7 @@ describe('Staff capability matrix', () => {
     assert.equal(allowRoute(p, 'planning'), true)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/attendance', '/operations/my-tasks', '/operations/planning?tab=forms'],
+      ['/operations/attendance', '/operations/my-tasks', '/operations/planning'],
     )
   })
 })

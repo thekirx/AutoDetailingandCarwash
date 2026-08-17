@@ -731,6 +731,12 @@ button { cursor: pointer; }
   font-weight: 600;
   color: #991b1b;
 }
+.hakum-auth-field-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #5b6478;
+}
 .hakum-auth-form input[aria-invalid='true'] {
   border-color: rgba(185, 28, 28, 0.45);
 }
@@ -2032,7 +2038,11 @@ html:not(.dark) .queue-ticket-editor-modal .floor-actions-sticky {
   letter-spacing: -0.02em;
 }
 .command-shell .ops-page-chrome {
-  max-width: 1400px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: min(1400px, 100%);
+  min-width: 0;
+  overflow-x: hidden;
 }
 .command-shell a[data-active='true'],
 .command-shell [aria-current='page'] {
@@ -2513,25 +2523,48 @@ html:not(.dark) .floor-shell .floor-alert-error {
     letter-spacing: 0.1em;
   }
 }
-/* Planning: always horizontal scroll so custom lists aren't forced into 3 cols */
+/* Planning: fit columns beside sidebar; scroll only when many lists */
 .planning-lane-board {
   display: grid;
-  gap: 0.75rem;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(17rem, 18.5rem);
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  padding-bottom: 0.25rem;
-  scroll-snap-type: x proximity;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  grid-template-columns: repeat(var(--planning-list-cols, 3), minmax(0, 1fr));
   min-height: min(62svh, 36rem);
-  align-items: start;
+  align-items: stretch;
+  padding-bottom: 0.25rem;
+}
+.planning-lane-board.has-new-list {
+  grid-template-columns:
+    repeat(var(--planning-list-cols, 3), minmax(0, 1fr))
+    minmax(9rem, 12rem);
 }
 .planning-lane-board .floor-lane {
+  min-width: 0;
+  max-width: 100%;
   max-height: calc(100svh - 13.5rem);
+}
+.planning-lane-board-scroll {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(16rem, 18rem);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+.planning-lane-board-scroll.has-new-list {
+  grid-template-columns: none;
+}
+.planning-lane-board-scroll .floor-lane {
+  scroll-snap-align: start;
 }
 .planning-lane {
   background: color-mix(in oklab, var(--muted) 88%, var(--card));
   box-shadow: inset 0 1px 0 color-mix(in oklab, var(--foreground) 4%, transparent);
+  padding: 0.55rem;
+  border-radius: 0.85rem;
 }
 .planning-lane-new {
   border-style: dashed;
@@ -2627,8 +2660,14 @@ html:not(.dark) .floor-shell .floor-alert-error {
     flex: 1 1 auto;
     min-height: 44px;
   }
-  .planning-lane-board {
+  .planning-lane-board,
+  .planning-lane-board.has-new-list,
+  .planning-lane-board-scroll,
+  .planning-lane-board-scroll.has-new-list {
+    grid-template-columns: none;
+    grid-auto-flow: column;
     grid-auto-columns: minmax(16.5rem, 85vw);
+    overflow-x: auto;
     scroll-snap-type: x mandatory;
   }
   .planning-lane {
@@ -2686,6 +2725,29 @@ html:not(.dark) .floor-shell .floor-alert-error {
   box-shadow: 0 4px 14px rgba(5, 38, 153, 0.1);
   outline: none;
 }
+.floor-ticket.planner-ticket,
+.bk-card.planner-ticket {
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+.floor-ticket.is-placeholder,
+.bk-card.is-placeholder { border-left-color: #052699; }
+.floor-ticket.is-assign,
+.bk-card.is-assign { border-left-color: color-mix(in oklab, #052699 72%, #c4a35a); }
+.floor-ticket.is-intake,
+.bk-card.is-intake,
+.floor-ticket.is-release,
+.bk-card.is-release,
+.floor-ticket.is-pay,
+.bk-card.is-pay { border-left-color: #c4a35a; }
+.floor-ticket.is-progress,
+.bk-card.is-progress,
+.floor-ticket.is-check,
+.bk-card.is-check { border-left-color: #052699; }
+.floor-ticket.is-done,
+.bk-card.is-done { border-left-color: color-mix(in oklab, #052699 35%, #c4a35a); }
+.floor-ticket.is-cancelled,
+.bk-card.is-cancelled { border-left-color: #7a2e2e; }
 .dark .floor-ticket {
   box-shadow: none;
 }
@@ -3486,6 +3548,14 @@ html:not(.dark) .floor-shell .suggest-option:hover {
   min-height: 2.75rem;
   display: flex;
   align-items: center;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
 }
 .suggest-option-active,
 .suggest-option:hover {
@@ -4766,8 +4836,16 @@ html:not(.dark) .floor-shell .suggest-option:hover {
   align-items: center;
   gap: 0.5rem;
 }
+.planning-event-card.is-highlight,
+.planning-event-table tr.is-highlight {
+  outline: 2px solid #052699;
+  outline-offset: 2px;
+}
 .planning-event-table {
   display: none;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
 }
 @media (min-width: 801px) {
   .planning-event-list { display: none; }
@@ -5678,4 +5756,541 @@ a.home-branch-card:hover { background:#052699; }
 @media (max-width:600px) and (prefers-reduced-motion:reduce){
   .ppf-sequence { min-height:360px; aspect-ratio:4/5; }
   .ppf-information-chapters { grid-template-columns:1fr; gap:34px; }
+}
+
+/* Planner v2 — shop dispatch board */
+.planner-v2 {
+  --planner-ink: #020a31;
+  --planner-navy: #052699;
+  --planner-paper: #f1f1ed;
+  --planner-stub: #c4a35a;
+  display: grid;
+  gap: 1.1rem;
+  min-width: 0;
+}
+.planner-v2-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.85rem 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--planner-navy) 14%, var(--border));
+}
+.planner-v2-head h1 {
+  margin: 0.15rem 0 0;
+  font-size: clamp(1.55rem, 4vw, 2rem);
+  letter-spacing: -0.035em;
+  color: var(--planner-ink);
+}
+.planner-v2-head p:last-child {
+  margin: 0.35rem 0 0;
+  max-width: 40rem;
+  color: var(--muted-foreground);
+  font-size: 0.9375rem;
+}
+.planner-v2-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-bottom: 0.15rem;
+}
+.planner-v2-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--planner-ink);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s, border-color 0.2s;
+}
+.planner-v2-tabs button.is-on {
+  border-color: var(--planner-navy);
+  background: color-mix(in oklab, var(--planner-navy) 10%, var(--card));
+  color: var(--planner-navy);
+}
+.planner-v2-tabs button:active {
+  transform: scale(0.98);
+}
+.planner-v2-tabs button:focus-visible {
+  outline: 2px solid var(--planner-navy);
+  outline-offset: 2px;
+}
+.planner-v2-count {
+  min-width: 1.25rem;
+  border-radius: 999px;
+  background: var(--planner-navy);
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.planner-v2-body.has-rail {
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 960px) {
+  .planner-v2-body.has-rail {
+    grid-template-columns: 16.5rem minmax(0, 1fr);
+    align-items: start;
+  }
+}
+.planner-v2-rail {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.95rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--planner-stub);
+  border-radius: 1rem;
+  background: var(--card);
+}
+.planner-v2-rail label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.planner-v2-rail select,
+.planner-v2-rail input {
+  min-height: 44px;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0 0.7rem;
+  font-size: 0.875rem;
+}
+.planner-v2-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+}
+.planner-v2-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.planner-v2-table th,
+.planner-v2-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.planner-v2-table th {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.planner-v2-table tbody tr {
+  cursor: pointer;
+}
+.planner-v2-table tbody tr:hover {
+  background: color-mix(in oklab, var(--planner-navy) 6%, transparent);
+}
+.planner-v2-table td:first-child {
+  font-weight: 650;
+  color: var(--planner-ink);
+  box-shadow: inset 3px 0 0 var(--planner-navy);
+}
+.planner-v2-cols {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(var(--planning-list-cols, 3), minmax(0, 1fr));
+}
+.planner-v2-cols section {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+}
+.planner-v2-cols h2 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.planner-v2-card {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 0.5rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: var(--planner-paper);
+  text-align: left;
+  cursor: pointer;
+}
+.planner-v2-card strong { color: var(--planner-ink); }
+.planner-v2-card span { font-size: 0.75rem; color: var(--muted-foreground); }
+.planner-v2-card em {
+  font-style: normal;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--planner-navy);
+}
+.planner-ticket {
+  border-left: 4px solid var(--planner-stub, #c4a35a);
+}
+button.planner-ticket,
+a.planner-ticket {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+button.planner-ticket:active,
+a.planner-ticket:active {
+  transform: scale(0.98);
+}
+.planner-skel {
+  display: block;
+  border-radius: 0.85rem;
+  background-color: color-mix(in oklab, var(--planner-navy, #052699) 8%, var(--planner-paper, #f1f1ed));
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, #fff 55%, transparent),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: planner-skel-shimmer 1.2s ease-in-out infinite;
+}
+.planner-skel-head { height: 4.5rem; }
+.planner-skel-tabs {
+  display: flex;
+  gap: 0.4rem;
+}
+.planner-skel-tabs .planner-skel {
+  height: 44px;
+  width: 6.5rem;
+  border-radius: 999px;
+}
+.planner-skel-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.planner-skel-grid .planner-skel { min-height: 5.5rem; }
+@keyframes planner-skel-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+.planner-cal-cell.is-today {
+  background: color-mix(in oklab, var(--planner-navy) 8%, var(--card));
+  box-shadow: inset 0 2px 0 var(--planner-stub);
+}
+.hakum-pos {
+  min-width: 0;
+}
+.hakum-pos-hero {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+}
+.hakum-pos-hero > p {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.hakum-pos-hero > strong {
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--planner-ink, #020a31);
+}
+.hakum-pos-hero dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.85rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.hakum-pos-hero dt {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.hakum-pos-hero dd {
+  margin: 0.2rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--planner-ink, #020a31);
+}
+.hakum-pos-families {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.hakum-pos-families > div {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.7rem 0.85rem;
+  border-top: 1px solid var(--border);
+}
+@media (min-width: 768px) {
+  .hakum-pos-families {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 479px) {
+  .hakum-pos-hero dl {
+    grid-template-columns: 1fr;
+  }
+}
+.hakum-pos-families span {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.hakum-pos-families b {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--planner-ink, #020a31);
+}
+.hakum-pos-tabs {
+  height: auto !important;
+  width: 100%;
+  max-width: 100%;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  background: transparent;
+  padding: 0;
+  gap: 0.4rem;
+}
+.hakum-pos-tabs [data-slot="tabs-trigger"] {
+  height: auto !important;
+  flex: 0 0 auto !important;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--planner-ink, #020a31);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+.hakum-pos-tabs [data-slot="tabs-trigger"]::after { content: none !important; }
+.hakum-pos-tabs [data-slot="tabs-trigger"][data-active] {
+  border-color: var(--planner-navy, #052699);
+  background: color-mix(in oklab, var(--planner-navy, #052699) 10%, var(--card));
+  color: var(--planner-navy, #052699);
+}
+.kpi-board {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.35fr) minmax(12rem, 0.9fr);
+  align-items: stretch;
+}
+.kpi-strip,
+.kpi-secondary {
+  display: grid;
+  gap: 0.75rem;
+}
+.kpi-secondary {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(9.5rem, 1fr);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.kpi-stat {
+  display: grid;
+  gap: 0.2rem;
+  min-height: 44px;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+}
+.kpi-stat p,
+.kpi-stat-hover p {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.kpi-stat strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--planner-ink, #020a31);
+}
+.kpi-stat-hover {
+  display: block;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: help;
+}
+.kpi-stat-hover:focus-visible {
+  outline: 2px solid var(--planner-navy, #052699);
+  outline-offset: 2px;
+}
+.kpi-stat-pop {
+  min-width: 14rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.85rem;
+  background: #020a31;
+  color: #f1f1ed;
+  box-shadow: 0 16px 40px -20px rgba(2, 10, 49, 0.55);
+}
+.kpi-stat-pop-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c4a35a;
+}
+.kpi-stat-pop dl {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+.kpi-stat-pop dt {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, #f1f1ed 55%, #020a31);
+}
+.kpi-stat-pop dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.planner-empty {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: start;
+  padding: 2rem 1.25rem;
+  border: 1px dashed var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+}
+.planner-empty strong { font-size: 1.05rem; color: var(--planner-ink); }
+.planner-empty p { margin: 0; color: var(--muted-foreground); }
+.planner-review-card {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--planner-stub);
+  border-radius: 1rem;
+  background: var(--card);
+}
+.planner-v2-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 1.25rem;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--planner-navy);
+  color: #fff;
+  box-shadow: 0 12px 28px -12px rgba(5, 38, 153, 0.7);
+}
+.planner-cal-toolbar,
+.planner-cal-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.planner-cal-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  font-size: 0.875rem;
+}
+.planner-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+.planner-cal-dow,
+.planner-cal-cell {
+  min-height: 6.5rem;
+  padding: 0.45rem;
+  background: var(--card);
+}
+.planner-cal-dow {
+  min-height: auto;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.planner-cal-cell.is-pad { background: color-mix(in oklab, var(--planner-paper) 70%, var(--card)); }
+.planner-cal-cell b { display: block; margin-bottom: 0.3rem; font-size: 0.75rem; }
+.planner-cal-chip {
+  display: block;
+  margin-top: 0.2rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.35rem;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  color: var(--planner-ink);
+  background: color-mix(in oklab, var(--planner-navy) 10%, var(--card));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planner-cal-chip.is-event { background: color-mix(in oklab, var(--planner-stub) 28%, var(--card)); }
+.planner-cal-chip.is-booking { background: #e8ecf8; }
+.planner-cal-chip.is-form { background: #f3eee3; }
+@media (max-width: 799px) {
+  .planner-v2-cols { grid-template-columns: 1fr; }
+  .planner-cal-cell { min-height: 4.5rem; }
+  .planner-skel-grid { grid-template-columns: 1fr; }
+  .hakum-pos-hero dl { grid-template-columns: 1fr; }
+  .kpi-board { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .planner-v2-tabs button,
+  .planner-v2-table tbody tr,
+  .planner-v2-fab,
+  button.planner-ticket,
+  a.planner-ticket { transition: none; transform: none; }
+  .planner-skel { animation: none; }
 }

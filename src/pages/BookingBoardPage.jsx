@@ -25,6 +25,7 @@ import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope } from '@/lib/crmInsights'
 import { supabase } from '@/lib/supabase'
+import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import {
   BOOKING_PRIMARY_ACTION_LABELS,
   getBookingBoardStatuses,
@@ -63,7 +64,7 @@ const COLUMNS = [
     tone: s.tone,
     hint: s.hint,
   })),
-  { id: 'cancelled', label: 'Cancelled', shortLabel: 'Cancelled', tone: 'border-l-red-500', hint: 'Cancelled with reason' },
+  { id: 'cancelled', label: 'Cancelled', shortLabel: 'Cancelled', tone: 'is-cancelled', hint: 'Cancelled with reason' },
 ]
 
 const localizer = dateFnsLocalizer({
@@ -586,6 +587,11 @@ export default function BookingBoardPage() {
       toast.error('Vehicle make and model are required.')
       return
     }
+    const plateError = plateValidationError(form.vehicle_plate)
+    if (plateError) {
+      toast.error(plateError)
+      return
+    }
     if (!editing && formBookingsOnly && !['pending', 'confirmed'].includes(form.status)) {
       toast.error('New bookings start as Booking Placeholder or Assigned to Branch.')
       return
@@ -796,7 +802,7 @@ export default function BookingBoardPage() {
               const startAt = formatBookingStamp(booking.scheduled_start)
               const endAt = booking.status === 'completed' ? formatBookingStamp(booking.completed_at || booking.scheduled_end) : null
               return (
-                <article key={booking.id} className="bk-card">
+                <article key={booking.id} className={cn('bk-card planner-ticket', visibleColumns.find((c) => c.id === boardFilter)?.tone)}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-semibold text-foreground">{booking.customer_name}</p>
                     {canEditServicePrice && (
@@ -873,7 +879,7 @@ export default function BookingBoardPage() {
                     return (
                       <article
                         key={booking.id}
-                        className={cn('floor-ticket !cursor-default border-l-4', col.tone)}
+                        className={cn('floor-ticket planner-ticket !cursor-default', col.tone)}
                       >
                         <div className="flex items-start justify-between gap-1">
                           <p className="font-semibold text-foreground leading-snug">{booking.customer_name}</p>
@@ -1186,8 +1192,9 @@ export default function BookingBoardPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="bk-plate">Plate</Label>
-                <Input id="bk-plate" value={form.vehicle_plate} onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} />
+                <Label htmlFor="bk-plate">Plate / sticker</Label>
+                <Input id="bk-plate" required value={form.vehicle_plate} onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} placeholder="ABC 1234" />
+                <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="bk-make">Make</Label>

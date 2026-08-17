@@ -11,6 +11,7 @@ import NotificationBell, { useUserNotifications } from '@/components/Notificatio
 import PushToggle from '@/components/PushToggle'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Link } from 'react-router-dom'
+import { isValidCustomerPlate, plateValidationError, PLATE_FIELD_HINT, safeVehiclePhotoUrl } from '@/lib/customerAuth'
 
 async function portalAction(action, payload) {
   const token = await getAccessTokenFresh()
@@ -45,6 +46,8 @@ export default function CustomerSettingsModal({
   profile,
   onUpdated,
   initialTab = 'alerts',
+  vehicles = [],
+  initialVehicle = null,
 }) {
   const { theme, setTheme, resolvedTheme } = useTheme()
   const { rows, markRead } = useUserNotifications()
@@ -58,6 +61,8 @@ export default function CustomerSettingsModal({
   const [smsOptIn, setSmsOptIn] = useState(true)
   const [smsBusy, setSmsBusy] = useState(false)
   const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+  const [editingId, setEditingId] = useState('')
+  const [plateError, setPlateError] = useState('')
   const [photoPreview, setPhotoPreview] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
   const photoRef = useRef(null)
@@ -75,13 +80,26 @@ export default function CustomerSettingsModal({
     setPassword('')
     setPassword2('')
     setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+    setEditingId('')
+    setPlateError('')
     setPhotoPreview('')
     setPhotoUploading(false)
     setTab(initialTab || 'alerts')
+    if (initialVehicle) {
+      setCar({
+        plate_number: initialVehicle.plate_number || '',
+        vehicle_make: initialVehicle.vehicle_make || '',
+        vehicle_model: initialVehicle.vehicle_model || '',
+        color: initialVehicle.color || '',
+        photo_url: initialVehicle.photo_url || '',
+      })
+      setEditingId(initialVehicle.id || '')
+      setPhotoPreview(initialVehicle.photo_url || '')
+    }
     loadUserSettings()
       .then((s) => setSmsOptIn(s.sms_opt_in !== false))
       .catch(() => setSmsOptIn(true))
-  }, [open, profile, initialTab])
+  }, [open, profile, initialTab, initialVehicle])
 
   if (!open) return null
 
@@ -207,11 +225,25 @@ export default function CustomerSettingsModal({
 
   async function saveCar(e) {
     e.preventDefault()
+    if (!isValidCustomerPlate(car.plate_number)) {
+      setPlateError(plateValidationError(car.plate_number))
+      return
+    }
+    if (car.photo_url && !safeVehiclePhotoUrl(car.photo_url)) {
+      toast.error('Photo URL must start with http:// or https://')
+      return
+    }
+    setPlateError('')
     setBusy(true)
     try {
-      await portalAction('add-vehicle', car)
-      toast.success('Car saved to your garage')
+      await portalAction(editingId ? 'update-vehicle' : 'add-vehicle', {
+        ...car,
+        vehicle_id: editingId || undefined,
+      })
+      toast.success(editingId ? 'Plate updated' : 'Car saved to your garage')
       setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+      setEditingId('')
+      setPlateError('')
       setPhotoPreview('')
       onUpdated?.()
       onOpenChange(false)
@@ -403,11 +435,75 @@ export default function CustomerSettingsModal({
 
       {tab === 'car' ? (
         <form className="capp-ticket" onSubmit={saveCar}>
-          <p className="capp-label">Add a plate</p>
-          <p className="capp-meta">Prefer adding plates in person or at POS. Use this if you already know the plate.</p>
+          <p className="capp-label">{editingId ? 'Change plate' : 'Add a plate'}</p>
+          <p className="capp-meta">
+            {editingId
+              ? 'Use this when a conduction sticker becomes an LTO plate, or the number was typed wrong.'
+              : 'Prefer adding plates in person or at POS. Use this if you already know the plate.'}
+          </p>
+          {vehicles.length ? (
+            <div className="capp-chips" style={{ marginBottom: '0.75rem' }}>
+              {vehicles.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  className={`capp-chip capp-chip-btn${editingId === v.id ? ' is-active' : ''}`}
+                  onClick={() => {
+                    setEditingId(v.id)
+                    setCar({
+                      plate_number: v.plate_number || '',
+                      vehicle_make: v.vehicle_make || '',
+                      vehicle_model: v.vehicle_model || '',
+                      color: v.color || '',
+                      photo_url: v.photo_url || '',
+                    })
+                    setPhotoPreview(v.photo_url || '')
+                    setPlateError('')
+                  }}
+                >
+                  <strong>{v.plate_number}</strong>
+                  <em>{[v.vehicle_make, v.vehicle_model].filter(Boolean).join(' ') || 'Saved car'}</em>
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`capp-chip capp-chip-btn${!editingId ? ' is-active' : ''}`}
+                onClick={() => {
+                  setEditingId('')
+                  setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+                  setPhotoPreview('')
+                  setPlateError('')
+                }}
+              >
+                <strong>New car</strong>
+                <em>Add another plate</em>
+              </button>
+            </div>
+          ) : null}
           <label className="capp-field">
             <span>Plate number</span>
-            <input id="car-plate" required value={car.plate_number} onChange={(e) => setCar((c) => ({ ...c, plate_number: e.target.value }))} />
+            <input
+              id="car-plate"
+              required
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              aria-invalid={plateError ? 'true' : 'false'}
+              aria-describedby="car-plate-hint"
+              value={car.plate_number}
+              onChange={(e) => {
+                setPlateError('')
+                setCar((c) => ({ ...c, plate_number: e.target.value.toUpperCase() }))
+              }}
+            />
+            <p id="car-plate-hint" className="capp-field-hint">
+              {PLATE_FIELD_HINT}
+            </p>
+            {plateError ? (
+              <p className="capp-field-error" role="alert">
+                {plateError}
+              </p>
+            ) : null}
           </label>
           <VehicleMakeModelFields
             make={car.vehicle_make}
@@ -463,7 +559,7 @@ export default function CustomerSettingsModal({
 
           <button type="submit" className="capp-btn capp-btn-fill" disabled={busy}>
             <Plus size={16} strokeWidth={1.75} aria-hidden />
-            {busy ? 'Saving…' : 'Save plate'}
+            {busy ? 'Saving…' : editingId ? 'Save plate change' : 'Save plate'}
           </button>
         </form>
       ) : null}

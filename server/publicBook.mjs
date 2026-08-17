@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notifyBookingStatus } from './notifyBooking.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
+import { plateValidationError } from '../src/lib/customerAuth.js'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -43,6 +44,8 @@ export async function handlePublicBookRequest(req, res) {
       return json(res, 400, { error: 'Name, phone, service, branch, and schedule are required.' })
     }
     if (!vehicle_plate) return json(res, 400, { error: 'Plate number is required.' })
+    const plateError = plateValidationError(vehicle_plate)
+    if (plateError) return json(res, 400, { error: plateError })
     if (!vehicle_make || !vehicle_model) {
       return json(res, 400, { error: 'Vehicle brand and model are required.' })
     }

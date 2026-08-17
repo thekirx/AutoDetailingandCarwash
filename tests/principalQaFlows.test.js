@@ -61,6 +61,7 @@ describe('C5 POS / C6 finance contracts', () => {
     assert.ok(report.carwash_salary_minor >= 0)
     const text = formatBacoorReportText(report, (n) => String(n))
     assert.match(String(text), /car.?wash|refresh|salary|CA|cash/i)
+    assert.match(String(text), /Cash Advance Payment/)
   })
 
   it('PosPage exposes expense + cash advance + pending tabs', async () => {

@@ -4,7 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { authCreateUserIdForCrm, buildProvisionInviteMessage } from './provisionSms.mjs'
-import { phoneLoginEmail } from '../src/lib/customerAuth.js'
+import { phoneLoginEmail, plateValidationError } from '../src/lib/customerAuth.js'
 import {
   mergeCustomerDisplayName,
   resolveQueueCustomerDisplayName,
@@ -80,6 +80,10 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
   const allowWalkInName = body.allow_walk_in_name === true || body.allow_walk_in_name === 'true'
 
   if (!phone) throw Object.assign(new Error('Phone number is required.'), { status: 400 })
+  if (plate) {
+    const plateError = plateValidationError(plate)
+    if (plateError) throw Object.assign(new Error(plateError), { status: 400 })
+  }
 
   // Queue walk-ins may omit name; other callers still require a real name.
   let fullName = String(body.customer_name || body.full_name || `${first} ${last}`).trim()

@@ -35,6 +35,7 @@ describe('Branch Admin simplified shell', () => {
         '/operations/attendance',
         '/operations/inventory',
         '/operations/history',
+        '/operations/planning',
         '/operations/reviews',
         '/operations/audit',
       ],

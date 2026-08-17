@@ -34,5 +34,7 @@ describe('bookings board contrast tokens', () => {
     assert.doesNotMatch(page, /bg-\[#0d1726\]/)
     assert.match(page, /text-muted-foreground/)
     assert.match(page, /text-foreground/)
+    assert.match(page, /planner-ticket/)
+    assert.doesNotMatch(page, /border-l-blue-500/)
   })
 })

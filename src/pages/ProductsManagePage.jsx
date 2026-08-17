@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageServices } from '@/auth/permissions'
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { MERCH_FAMILIES, productMatchesMerchFamily } from '@/lib/posSellables'
 import { toast } from 'sonner'
 
 const empty = { name: '', sku: '', category: 'merch', price: '', stock_qty: '0', branch_slug: '', tags: 'sellable,merch' }
@@ -23,6 +24,8 @@ export default function ProductsManagePage({ embedded = false }) {
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [familyFilter, setFamilyFilter] = useState('all')
+  const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -37,6 +40,16 @@ export default function ProductsManagePage({ embedded = false }) {
   useEffect(() => {
     if (canManageServices(profile)) load()
   }, [load, profile])
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return products.filter((row) => {
+      if (!productMatchesMerchFamily(row, familyFilter)) return false
+      if (!q) return true
+      const hay = `${row.name} ${row.sku || ''} ${(row.tags || []).join(' ')}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }, [products, familyFilter, query])
 
   if (!canManageServices(profile)) {
     if (embedded) return null
@@ -134,7 +147,7 @@ export default function ProductsManagePage({ embedded = false }) {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-        <Card>
+        <Card className="planner-ticket">
           <CardHeader>
             <CardTitle>Add merch item</CardTitle>
             <CardDescription>Shows under Checkout → Merch on POS.</CardDescription>
@@ -144,7 +157,17 @@ export default function ProductsManagePage({ embedded = false }) {
               <div className="flex flex-col gap-2"><Label>Name</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Microfiber towel set" /></div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-2"><Label>SKU</Label><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} /></div>
-                <div className="flex flex-col gap-2"><Label>Category</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="merch" /></div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="merch-cat">Category</Label>
+                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                    <SelectTrigger id="merch-cat"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {MERCH_FAMILIES.filter((f) => f.id !== 'all').map((f) => (
+                        <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-2"><Label>Price (₱)</Label><Input required type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
@@ -176,12 +199,29 @@ export default function ProductsManagePage({ embedded = false }) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="planner-ticket">
           <CardHeader>
             <CardTitle>Catalog</CardTitle>
-            <CardDescription>{products.length} items</CardDescription>
+            <CardDescription>{visible.length} of {products.length} items</CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+              <Input
+                className="min-h-11"
+                placeholder="Search name, SKU, tag"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search merch"
+              />
+              <Select value={familyFilter} onValueChange={setFamilyFilter}>
+                <SelectTrigger className="min-h-11 sm:w-56" aria-label="Filter merch family"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MERCH_FAMILIES.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -195,7 +235,7 @@ export default function ProductsManagePage({ embedded = false }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((row) => (
+                {visible.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium">{row.name}</TableCell>
                     <TableCell className="text-muted-foreground">{row.sku || '—'}</TableCell>
@@ -222,8 +262,8 @@ export default function ProductsManagePage({ embedded = false }) {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!products.length && (
-                  <TableRow><TableCell colSpan={7} className="text-muted-foreground">No merch items yet.</TableCell></TableRow>
+                {!visible.length && (
+                  <TableRow><TableCell colSpan={7} className="text-muted-foreground">No merch items match.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -239,7 +279,20 @@ export default function ProductsManagePage({ embedded = false }) {
               <div className="flex flex-col gap-2"><Label>Name</Label><Input required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-2"><Label>SKU</Label><Input value={editing.sku} onChange={(e) => setEditing({ ...editing, sku: e.target.value })} /></div>
-                <div className="flex flex-col gap-2"><Label>Category</Label><Input value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })} /></div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="edit-merch-cat">Category</Label>
+                  <Select
+                    value={['coffee', 'accessories', 'clothing', 'merch'].includes(editing.category) ? editing.category : 'merch'}
+                    onValueChange={(v) => setEditing({ ...editing, category: v })}
+                  >
+                    <SelectTrigger id="edit-merch-cat"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {MERCH_FAMILIES.filter((f) => f.id !== 'all').map((f) => (
+                        <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-2"><Label>Price (₱)</Label><Input required type="number" min="0" step="0.01" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} /></div>

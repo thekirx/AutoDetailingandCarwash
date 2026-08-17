@@ -4,6 +4,7 @@ import {
   isPlannerBoardVisible,
   pickPlannerBoard,
   plannerTabFromSearch,
+  plannerTabsForAccess,
   PLANNER_TABS,
   visiblePlannerBoards,
 } from '../src/lib/plannerBoard.js'
@@ -28,7 +29,26 @@ describe('plannerBoard', () => {
     assert.equal(pickPlannerBoard(boards, 'missing').name, 'Planner')
     assert.equal(plannerTabFromSearch('forms'), 'forms')
     assert.equal(plannerTabFromSearch('nope'), 'board')
-    assert.deepEqual(PLANNER_TABS.map((t) => t.label), ['Tasks', 'Calendar', 'Forms', 'Events', 'Setup'])
+    assert.equal(plannerTabFromSearch(new URLSearchParams('tab=review')), 'review')
+    assert.equal(plannerTabFromSearch(new URLSearchParams('tab=review'), ['board', 'calendar', 'events']), 'board')
+    assert.deepEqual(PLANNER_TABS.map((t) => t.label), ['Tasks', 'Calendar', 'Forms', 'Events', 'Review'])
     assert.ok(PLANNER_TABS.every((t) => t.icon && t.hint))
+    assert.deepEqual(plannerTabsForAccess({ canEdit: false }).map((t) => t.id), ['board', 'calendar', 'forms', 'events'])
+    assert.ok(plannerTabsForAccess({ canEdit: true }).some((t) => t.id === 'review'))
+  })
+
+  it('hides Forms, Events, and Review for video editors', () => {
+    assert.deepEqual(
+      plannerTabsForAccess({ canEdit: false, role: 'video_editor' }).map((t) => t.id),
+      ['board', 'calendar'],
+    )
+    assert.deepEqual(
+      plannerTabsForAccess({ canEdit: true, role: 'video_editor' }).map((t) => t.id),
+      ['board', 'calendar'],
+    )
+    assert.deepEqual(
+      plannerTabsForAccess({ canEdit: false, role: 'staff' }).map((t) => t.id),
+      ['board', 'calendar', 'forms', 'events'],
+    )
   })
 })

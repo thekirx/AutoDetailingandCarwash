@@ -22,6 +22,10 @@ Short vocabulary for audits and architecture reviews. Expand as seams deepen.
 | Unactivated account | Team Lead queue provision: CRM row (+ optional Auth) with no customer-chosen password. Status `needs_password` or `needs_invite` |
 | Account activate | Customer finishes the wizard on that same `customers.id` so visit history stays linked |
 | Customer account lifecycle | Intent router for sign-in / signup / claim. Interface: `src/lib/customerAccountLifecycle.js` |
+| Planner task | `plan_cards` + optional `category_id` / `due_at`. Editors create and assign; staff see assigned rows only |
+| Planner category | First-class `plan_categories` (name, color). Boards stay a workspace filter (Planner / Equipment / Cash Advance) |
+| Planner proof | Optional note and/or photo in private `plan-proofs` bucket. Path `{uid}/{cardId}/file` |
+| Review inbox | Planner Review tab: assignees in `for_review`. Accept → `done`, send back → `in_progress` |
 
 ## Intentional denorm
 

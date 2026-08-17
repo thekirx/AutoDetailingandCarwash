@@ -2,9 +2,11 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   aggregateBestSellers,
+  aggregateLineItemsByFamily,
   aggregateLineItemsByService,
   aggregateSalesByBranch,
   aggregateSalesByHour,
+  bookingSalesTotal,
   peakSalesHour,
   resolveKpiRpcBranch,
   chunkIds,
@@ -37,6 +39,27 @@ describe('CRM insights Part 7', () => {
     ])
     assert.equal(rows.length, 1)
     assert.equal(rows[0].count, 2)
+  })
+
+  it('splits wash vs detailing and sums booking sales', () => {
+    assert.equal(
+      bookingSalesTotal([
+        { status: 'paid', booking_id: 'b1', total_minor: 500 },
+        { status: 'paid', total_minor: 100 },
+        { status: 'void', booking_id: 'b2', total_minor: 999 },
+      ]),
+      500,
+    )
+    const split = aggregateLineItemsByFamily([
+      { item_type: 'service', name: 'Wash', quantity: 1, line_total_minor: 200 },
+      { item_type: 'service', name: 'Ceramic Coating', quantity: 1, line_total_minor: 800 },
+      { item_type: 'service', pay_category: 'detailing', name: 'Tint', quantity: 1, line_total_minor: 300 },
+      { item_type: 'product', name: 'Freshener', quantity: 1, line_total_minor: 50 },
+    ])
+    assert.equal(split.wash.length, 1)
+    assert.equal(split.wash[0].name, 'Wash')
+    assert.equal(split.wash[0].total_minor, 200)
+    assert.equal(split.detailing.reduce((sum, row) => sum + row.total_minor, 0), 1100)
   })
 
   it('aggregates best sellers in pesos with limit', () => {

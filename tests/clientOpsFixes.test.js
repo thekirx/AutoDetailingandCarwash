@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { attendanceRowsToCsv } from '../src/lib/attendanceExport.js'
 import { DETAILING_BOARD_STATUSES, nextDetailingBoardStatus } from '../src/lib/detailingBoardStatuses.js'
-import { accumulatePosCategoryTotals, productIsPosSellable } from '../src/lib/posSellables.js'
+import { accumulatePosCategoryTotals, merchFamily, paidSalesToBacoorRows, posBucketToBacoor, productIsPosSellable, productMatchesMerchFamily } from '../src/lib/posSellables.js'
 import { canAccessBookingBoard, canCreateBookings, canEditBookings, ROLES } from '../src/auth/permissions.js'
 import { STATUS_LABELS } from '../src/queue/queueLogic.js'
 
@@ -65,7 +65,33 @@ describe('client ops fixes batch', () => {
     assert.equal(totals.ceramic_coating, 100)
     assert.equal(totals.ppf, 200)
     assert.equal(totals.sellables, 50)
+    assert.equal(totals.merch, 50)
     assert.equal(totals.car_wash, 75)
+    const coffee = accumulatePosCategoryTotals([{ total_minor: 80, itemType: 'product', productTags: ['coffee'] }])
+    assert.equal(coffee.coffee, 80)
+    assert.equal(coffee.sellables, 80)
+    const clothes = accumulatePosCategoryTotals([{ total_minor: 40, itemType: 'product', productTags: ['apparel'] }])
+    assert.equal(clothes.clothing, 40)
+    assert.equal(merchFamily({ tags: ['coffee'] }), 'coffee')
+    assert.equal(merchFamily({ name: 'Iced Coffee' }), 'coffee')
+    assert.equal(merchFamily({ tags: ['apparel'] }), 'clothing')
+    assert.equal(merchFamily({ category: 'accessories' }), 'accessories')
+    assert.equal(merchFamily({ tags: ['sellable'] }), 'merch')
+    assert.equal(productMatchesMerchFamily({ tags: ['coffee'] }, 'all'), true)
+    assert.equal(productMatchesMerchFamily({ tags: ['coffee'] }, 'clothing'), false)
+    assert.equal(posBucketToBacoor('coffee'), 'refreshment')
+    assert.equal(posBucketToBacoor('car_wash'), 'carwash')
+    const bacoorRows = paidSalesToBacoorRows([
+      {
+        status: 'paid',
+        payment_method: 'gcash',
+        sale_line_items: [
+          { item_type: 'product', line_total_minor: 62000, products: { tags: ['coffee'], name: 'Iced Coffee' } },
+        ],
+      },
+    ])
+    assert.equal(bacoorRows[0].bucket, 'refreshment')
+    assert.equal(bacoorRows[0].total_minor, 62000)
   })
 
   it('wires attendance gate migration, inventory page, logout, import script', () => {
@@ -82,6 +108,49 @@ describe('client ops fixes batch', () => {
     assert.match(crew, /Export CSV/)
     assert.match(app, /inventory/)
     assert.ok(exists(join(root, 'scripts/import-ceramic-coatings.mjs')))
+  })
+
+  it('revokes anon execute on trigger-only helpers', () => {
+    const mig = readFileSync(
+      join(root, 'supabase/migrations/20260816220000_revoke_trigger_rpc_anon.sql'),
+      'utf8',
+    )
+    assert.match(mig, /guard_plan_card_assignee_self_update/)
+    assert.match(mig, /trg_assign_booking_queue_number/)
+    assert.match(mig, /revoke execute/)
+    assert.match(mig, /from public, anon/)
+  })
+
+  it('POS merch catalog filters by family', () => {
+    const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
+    const products = readFileSync(join(root, 'src/pages/ProductsManagePage.jsx'), 'utf8')
+    const inventory = readFileSync(join(root, 'src/pages/InventoryPage.jsx'), 'utf8')
+    assert.match(pos, /productMatchesMerchFamily/)
+    assert.match(pos, /MERCH_FAMILIES/)
+    assert.match(pos, /paidSalesToBacoorRows/)
+    assert.match(pos, /Coffee \/ refreshments/)
+    assert.match(pos, /products\(name, tags, category\)/)
+    assert.match(products, /MERCH_FAMILIES/)
+    assert.match(inventory, /planner-v2/)
+    assert.match(pos, /approvedCaForCloseDay/)
+    assert.match(pos, /resolved_at/)
+  })
+
+  it('POS family tiles wrap on a phone instead of a single horizontal row', () => {
+    const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
+    assert.match(css, /\.hakum-pos-families\s*\{[^}]*repeat\(2/)
+    assert.match(css, /@media \(min-width: 768px\)[\s\S]*?\.hakum-pos-families[\s\S]*?repeat\(4/)
+    assert.match(css, /\.planner-v2-tabs\s*\{[^}]*flex-wrap:\s*wrap/)
+  })
+
+  it('stamps ops form resolved_at for daily close', () => {
+    const mig = readFileSync(
+      join(root, 'supabase/migrations/20260816230000_ops_form_resolved_at.sql'),
+      'utf8',
+    )
+    assert.match(mig, /resolved_at timestamptz/)
+    assert.match(mig, /stamp_ops_form_resolved_at/)
+    assert.match(mig, /ops_form_submissions_resolved_at_idx/)
   })
 })
 

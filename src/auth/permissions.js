@@ -356,6 +356,7 @@ export function canViewPlanning(profile) {
 
 export function canEditPlanning(profile) {
   if (isSuperAdmin(profile)) return true
+  if (isBranchAdmin(profile)) return true
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'planning_edit')
 }
 
@@ -527,6 +528,7 @@ export function getOperationsNav(profile) {
       { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
       { label: 'Inventory', to: '/operations/inventory', icon: 'Package' },
       { label: 'History', to: '/operations/history', icon: 'History' },
+      { label: 'Planner', to: '/operations/planning', icon: 'Columns3' },
       { label: 'Reviews', to: '/operations/reviews', icon: 'Star' },
       { label: 'Audit', to: '/operations/audit', icon: 'ScrollText' },
     ]
@@ -537,7 +539,7 @@ export function getOperationsNav(profile) {
     return [
       { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
       { label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
-      { label: 'Planner', to: '/operations/planning?tab=forms', icon: 'Columns3' },
+      { label: 'Planner', to: '/operations/planning', icon: 'Columns3' },
     ]
   }
 
@@ -651,7 +653,7 @@ export function getTeamLeadMore(profile) {
   if (canViewQueueOperations(profile)) more.push({ label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' })
   if (canViewQueueOperations(profile)) more.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
   if (canViewAssignedTasks(profile)) more.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
-  if (canViewPlanning(profile)) more.push({ label: 'Planner', to: '/operations/planning?tab=forms', icon: 'Columns3' })
+  if (canViewPlanning(profile)) more.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
   return more
 }
 
@@ -675,6 +677,9 @@ export function getBranchAdminMore(profile) {
   }
   if (canAccessHistory(profile)) {
     more.push({ label: 'History', to: '/operations/history', icon: 'History' })
+  }
+  if (canViewPlanning(profile)) {
+    more.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
   }
   return more
 }
