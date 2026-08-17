@@ -146,6 +146,9 @@ export default defineConfig({
         // Missing hashed assets must 404, not fall back to index.html (MIME text/html breaks modules).
         navigateFallbackDenylist: [/^\/api\//, /^\/assets\//],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        // Scroll-sequence frames are fetched on demand by the PPF section —
+        // precaching ~220 of them would balloon the install payload.
+        globIgnores: ['**/media/ppf-install/**'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {
