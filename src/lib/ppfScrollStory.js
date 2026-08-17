@@ -9,16 +9,18 @@ export function getPpfFrameIndex(progress, frameCount) {
   return Math.round(frameProgress * (safeFrameCount - 1))
 }
 
-export function getPpfStoryState(progress, chapters, frameCount) {
+export function getPpfStoryState(progress, story, frameCount) {
   const safeProgress = clampProgress(progress)
-  const activeChapter = chapters.reduce(
-    (active, chapter, index) => (safeProgress >= chapter.start ? index : active),
-    -1,
-  )
+  const showIntroduction = safeProgress < story.introEnd
+  const activeChapter = story.chapters.findIndex((chapter) => (
+    safeProgress >= chapter.start
+      && (safeProgress < chapter.end || (chapter.end === 1 && safeProgress === 1))
+  ))
 
   return {
     frame: getPpfFrameIndex(safeProgress, frameCount),
     activeChapter,
-    phase: activeChapter === -1 ? 'introduction' : 'process',
+    showIntroduction,
+    phase: showIntroduction ? 'introduction' : activeChapter === -1 ? 'clear' : 'process',
   }
 }

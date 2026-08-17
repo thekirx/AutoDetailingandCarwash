@@ -84,11 +84,12 @@ describe('Public homepage content assets', () => {
     assert.equal(ppfInformation.eyebrow, 'Paint Protection Film')
     assert.deepEqual(ppfInformation.title.split('\n'), [
       'Between your paint',
-      'And everything',
-      'Out there.',
+      'And everything out there.',
     ])
     assert.deepEqual(ppfInformation.chapters.map(({ label }) => label), ['Align', 'Form', 'Seal', 'Protected'])
-    assert.deepEqual(ppfInformation.chapters.map(({ start }) => start), [0.15, 0.35, 0.55, 0.75])
+    assert.equal(ppfInformation.introEnd, 0.12)
+    assert.deepEqual(ppfInformation.chapters.map(({ start }) => start), [0.2, 0.45, 0.65, 0.84])
+    assert.deepEqual(ppfInformation.chapters.map(({ end }) => end), [0.35, 0.55, 0.75, 1])
     assert.deepEqual(ppfInformation.chapters.at(-1).heading.split('\n'), [
       'Now you see the paint.',
       'Not the protection.',

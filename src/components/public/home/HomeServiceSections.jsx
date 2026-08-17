@@ -55,9 +55,10 @@ function SplitFeature({ id, eyebrow, item, reverse = false }) {
 }
 
 export function PpfInformationSection() {
-  const [activeChapter, setActiveChapter] = useState(-1)
+  const [captionKey, setCaptionKey] = useState('introduction')
   const handleProgress = useCallback((progress) => {
-    setActiveChapter(getPpfStoryState(progress, ppfInformation.chapters, 110).activeChapter)
+    const story = getPpfStoryState(progress, ppfInformation, 110)
+    setCaptionKey(story.showIntroduction ? 'introduction' : story.activeChapter)
   }, [])
 
   return (
@@ -78,7 +79,7 @@ export function PpfInformationSection() {
         <div
           className="public-shell ppf-information-heading"
           data-motion="heading"
-          data-active={activeChapter === -1 ? 'true' : 'false'}
+          data-active={captionKey === 'introduction' ? 'true' : 'false'}
         >
           <p>{ppfInformation.eyebrow}</p>
           <h2>{cinematicLines(ppfInformation.title)}</h2>
@@ -91,7 +92,7 @@ export function PpfInformationSection() {
               className="ppf-information-chapter"
               key={chapter.label}
               data-motion-item
-              data-active={activeChapter === index ? 'true' : 'false'}
+              data-active={captionKey === index ? 'true' : 'false'}
             >
               <div className="ppf-information-chapter-meta">
                 <span aria-hidden="true">{chapter.number}</span>
