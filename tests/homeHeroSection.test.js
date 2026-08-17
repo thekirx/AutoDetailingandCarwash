@@ -35,4 +35,15 @@ describe('Home cinematic hero', () => {
     assert.match(source, /removeEventListener\(['"]error['"]/)
     assert.doesNotMatch(source, /pin:\s*true/)
   })
+
+  it('keeps the media full-bleed, the left copy protected, and reduced motion still', async () => {
+    const css = await readFile(projectFile('src/styles.css'), 'utf8')
+
+    assert.match(css, /\.hero-cinematic-overlay[\s\S]*?linear-gradient/)
+    assert.match(css, /\.hero-cinematic-video[\s\S]*?object-fit:\s*cover/)
+    assert.match(css, /\.hero-cinematic-copy[\s\S]*?max-width:\s*42%/)
+    assert.match(css, /\.hero-cinematic-actions[\s\S]*?:focus-visible/)
+    assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.hero-cinematic-video[\s\S]*?display:\s*none/)
+    assert.match(css, /@media\s*\(max-width:\s*767px\)[\s\S]*?\.hero-cinematic-video[\s\S]*?display:\s*none/)
+  })
 })
