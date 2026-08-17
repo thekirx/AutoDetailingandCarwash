@@ -11,6 +11,7 @@ import { applyPublicBookPrefill, matchServiceIdByPrefillName } from '../lib/uiDe
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import FormLegalNotice from '../components/FormLegalNotice'
 import { usePageMeta } from '../lib/pageMeta'
+import { plateValidationError, PLATE_FIELD_HINT } from '../lib/customerAuth'
 
 function formatPeso(minor) {
   return `₱${(Number(minor || 0) / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`
@@ -152,7 +153,7 @@ export function BookingPage() {
 
   useEffect(() => {
     const plate = form.vehicle_plate.trim()
-    if (plate.length < 2) {
+    if (plateValidationError(plate)) {
       setPlateHint('')
       return undefined
     }
@@ -183,6 +184,8 @@ export function BookingPage() {
     setStatus('loading')
     setError('')
     try {
+      const plateError = plateValidationError(form.vehicle_plate)
+      if (plateError) throw new Error(plateError)
       const headers = { 'Content-Type': 'application/json' }
       const token = await getAccessTokenFresh()
       if (token) headers.Authorization = `Bearer ${token}`
@@ -242,9 +245,9 @@ export function BookingPage() {
           <label>Last name<input required value={form.customer_last_name} placeholder="Dela Cruz" onChange={update('customer_last_name')} /></label>
           <label>Mobile number<input required value={form.customer_phone} placeholder="09XX XXX XXXX" onChange={update('customer_phone')} /></label>
           <label>
-            Plate number
-            <input required value={form.vehicle_plate} placeholder="ABC 1234" onChange={update('vehicle_plate')} autoComplete="off" />
-            {plateHint ? <span className="field-hint">{plateHint}</span> : null}
+            Plate / sticker
+            <input required value={form.vehicle_plate} placeholder="ABC 1234 or CS 123456" onChange={update('vehicle_plate')} autoComplete="off" autoCapitalize="characters" />
+            <span className="field-hint">{plateHint || PLATE_FIELD_HINT}</span>
           </label>
           <VehicleMakeModelFields
             make={form.vehicle_make}

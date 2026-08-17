@@ -13,6 +13,7 @@ import {
   validateOnboardingField,
   validateOnboardingStep,
 } from '../lib/customerOnboarding'
+import { PLATE_FIELD_HINT } from '../lib/customerAuth'
 
 async function authLookup(identifier) {
   const res = await fetch('/api/customer-auth-lookup', {
@@ -255,17 +256,18 @@ export default function CustomerSignUpPage() {
               <FieldError id="err-name" message={errors.full_name} />
             </label>
             <label>
-              <span>Plate number</span>
+              <span>Plate / sticker</span>
               <input
                 required
                 autoComplete="off"
                 value={form.plate}
                 onChange={update('plate')}
                 onBlur={blur('plate')}
-                placeholder="ABC 1234"
+                placeholder="ABC 1234 or conduction / TMP"
                 aria-invalid={Boolean(errors.plate)}
-                aria-describedby={errors.plate ? 'err-plate' : undefined}
+                aria-describedby={errors.plate ? 'err-plate' : 'hint-plate'}
               />
+              <p id="hint-plate" className="hakum-auth-field-hint">{PLATE_FIELD_HINT}</p>
               <FieldError id="err-plate" message={errors.plate} />
             </label>
           </>

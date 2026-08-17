@@ -1,3 +1,5 @@
+import { plateValidationError } from './customerAuth.js'
+
 /**
  * Team Lead walk-in tickets: name is optional; plate + phone are required.
  * bookings.customer_name / customers.full_name stay NOT NULL — we store a
@@ -61,7 +63,8 @@ export function validateQueueTicketIdentity({
 } = {}) {
   const phoneDigits = String(customer_phone || '').replace(/\D/g, '')
   if (phoneDigits.length < 10) return 'Phone number is required (at least 10 digits).'
-  if (!normalizeQueuePlate(vehicle_plate)) return 'Plate number is required.'
+  const plateError = plateValidationError(vehicle_plate)
+  if (plateError) return plateError
   const ids = Array.isArray(service_ids) && service_ids.length
     ? service_ids.filter(Boolean)
     : service_id

@@ -4,7 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { getQueueCounts, buildVisitProgress, formatQueueNumber, normalizePlate } from '../src/queue/queueLogic.js'
-import { isValidCustomerPlate, safeVehiclePhotoUrl } from '../src/lib/customerAuth.js'
+import { isValidCustomerPlate, plateValidationError, safeVehiclePhotoUrl } from '../src/lib/customerAuth.js'
 import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
 import { CUSTOMER_ACTIVE_VISIT_STATUSES } from '../src/lib/customerPortalActive.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
@@ -208,7 +208,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const normalized = normalizePlate(plate)
     if (!normalized) throw Object.assign(new Error('Plate number is required.'), { status: 400 })
     if (!isValidCustomerPlate(plate)) {
-      throw Object.assign(new Error('Enter a plate with letters and numbers (e.g. ABC 1234).'), { status: 400 })
+      throw Object.assign(new Error(plateValidationError(plate)), { status: 400 })
     }
 
     const payload = {

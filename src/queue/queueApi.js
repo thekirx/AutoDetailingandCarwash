@@ -38,6 +38,7 @@ import {
   resolveQueueCustomerDisplayName,
   validateQueueTicketIdentity,
 } from '../lib/queueCustomerName'
+import { isValidCustomerPlate } from '../lib/customerAuth'
 import { collectPaged } from '../lib/crmInsights'
 
 const timingWarningsCache = createTtlCache(120_000)
@@ -703,7 +704,7 @@ export async function deactivateCrewStaffMember(memberId) {
 
 export async function lookupPlate(plateNumber, profile) {
   const normalizedPlate = normalizePlate(plateNumber || '')
-  if (normalizedPlate.length < 2) return null
+  if (!isValidCustomerPlate(plateNumber)) return null
   if (requiresTeamLeadBranchSetup(profile)) return null
   const { data, error } = await supabase
     .from('customer_vehicle_masterlist')

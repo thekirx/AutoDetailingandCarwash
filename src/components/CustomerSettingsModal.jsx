@@ -11,7 +11,7 @@ import NotificationBell, { useUserNotifications } from '@/components/Notificatio
 import PushToggle from '@/components/PushToggle'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Link } from 'react-router-dom'
-import { isValidCustomerPlate, safeVehiclePhotoUrl } from '@/lib/customerAuth'
+import { isValidCustomerPlate, plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 
 async function portalAction(action, payload) {
   const token = await getAccessTokenFresh()
@@ -211,7 +211,7 @@ export default function CustomerSettingsModal({
   async function saveCar(e) {
     e.preventDefault()
     if (!isValidCustomerPlate(car.plate_number)) {
-      setPlateError('Enter a plate with letters and numbers (e.g. ABC 1234).')
+      setPlateError(plateValidationError(car.plate_number))
       return
     }
     if (car.photo_url && !safeVehiclePhotoUrl(car.photo_url)) {
@@ -435,7 +435,7 @@ export default function CustomerSettingsModal({
               }}
             />
             <p id="car-plate-hint" className="capp-field-hint">
-              Letters and numbers, e.g. ABC 1234
+              {PLATE_FIELD_HINT}
             </p>
             {plateError ? (
               <p className="capp-field-error" role="alert">

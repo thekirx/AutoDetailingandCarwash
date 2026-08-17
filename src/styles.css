@@ -731,6 +731,12 @@ button { cursor: pointer; }
   font-weight: 600;
   color: #991b1b;
 }
+.hakum-auth-field-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #5b6478;
+}
 .hakum-auth-form input[aria-invalid='true'] {
   border-color: rgba(185, 28, 28, 0.45);
 }

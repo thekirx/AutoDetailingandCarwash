@@ -8,6 +8,7 @@ import { loadUserSettings, saveSmsOptIn } from '@/lib/userSettings'
 import PushToggle from '@/components/PushToggle'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { useAuth } from '@/auth/AuthProvider'
+import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -152,6 +153,11 @@ export default function UserSettingsModal({
 
   async function saveCar(e) {
     e.preventDefault()
+    const plateError = plateValidationError(car.plate_number)
+    if (plateError) {
+      toast.error(plateError)
+      return
+    }
     setBusy(true)
     try {
       await portalAction('add-vehicle', car)
@@ -425,8 +431,9 @@ export default function UserSettingsModal({
                 Prefer adding plates in-person or at POS. Use this only if you already know your plate.
               </p>
               <div className="grid gap-1.5">
-                <Label htmlFor="car-plate">Plate number</Label>
-                <Input id="car-plate" required className="min-h-11" value={car.plate_number} onChange={(e) => setCar((c) => ({ ...c, plate_number: e.target.value }))} />
+                <Label htmlFor="car-plate">Plate / sticker</Label>
+                <Input id="car-plate" required className="min-h-11" value={car.plate_number} onChange={(e) => setCar((c) => ({ ...c, plate_number: e.target.value }))} placeholder="ABC 1234 or CS 123456" />
+                <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
               </div>
               <VehicleMakeModelFields
                 make={car.vehicle_make}

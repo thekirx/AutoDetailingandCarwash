@@ -15,6 +15,7 @@ import {
 } from '@/lib/crmSmartGroups'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
+import { plateValidationError, PLATE_FIELD_HINT, normalizePlate } from '@/lib/customerAuth'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import CrmInsightsPanel from '@/pages/CrmInsightsPanel'
 import SmsPage from '@/pages/SmsPage'
@@ -201,6 +202,11 @@ export default function CrmPage() {
     event.preventDefault()
     setSaving(true)
     try {
+      const plate = form.plate.trim()
+      if (plate) {
+        const plateError = plateValidationError(plate)
+        if (plateError) throw new Error(plateError)
+      }
       // Always provision Auth + customers row so portal visits link correctly
       await provisionCustomer({
         first_name: form.first_name,
@@ -208,7 +214,7 @@ export default function CrmPage() {
         full_name: `${form.first_name} ${form.last_name}`.trim(),
         phone: form.phone,
         email: form.email || null,
-        plate: form.plate || null,
+        plate: plate || null,
         vehicle_make: form.vehicle_make || null,
         vehicle_model: form.vehicle_model || null,
         vehicle_type: form.vehicle_type || 'sedan',
@@ -262,10 +268,12 @@ export default function CrmPage() {
     setSaving(true)
     try {
       const plate = vehicleForm.plate_number.trim().toUpperCase()
-      if (!plate) throw new Error('Plate is required.')
+      const plateError = plateValidationError(plate)
+      if (plateError) throw new Error(plateError)
       const { error } = await supabase.from('vehicles').insert({
         customer_id: selected.id,
         plate_number: plate,
+        normalized_plate_number: normalizePlate(plate),
         vehicle_make: vehicleForm.vehicle_make.trim() || null,
         vehicle_model: vehicleForm.vehicle_model.trim() || null,
         vehicle_type: vehicleForm.vehicle_type || 'sedan',
@@ -765,7 +773,11 @@ export default function CrmPage() {
             </div>
             <div className="flex flex-col gap-2"><Label>Phone</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="09XXXXXXXXX" /></div>
             <div className="flex flex-col gap-2"><Label>Email (optional)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div className="flex flex-col gap-2"><Label>Plate (optional)</Label><Input value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value.toUpperCase() })} placeholder="ABC 1234" /></div>
+            <div className="flex flex-col gap-2">
+              <Label>Plate / sticker (optional)</Label>
+              <Input value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value.toUpperCase() })} placeholder="ABC 1234 or 847291" />
+              <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <VehicleMakeModelFields
                 make={form.vehicle_make}
@@ -810,7 +822,11 @@ export default function CrmPage() {
         <DialogContent>
           <DialogHeader><DialogTitle>Add vehicle</DialogTitle></DialogHeader>
           <form onSubmit={addVehicle} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2"><Label>Plate</Label><Input required value={vehicleForm.plate_number} onChange={(e) => setVehicleForm({ ...vehicleForm, plate_number: e.target.value.toUpperCase() })} /></div>
+            <div className="flex flex-col gap-2">
+              <Label>Plate / sticker</Label>
+              <Input required value={vehicleForm.plate_number} onChange={(e) => setVehicleForm({ ...vehicleForm, plate_number: e.target.value.toUpperCase() })} placeholder="ABC 1234 or 847291" />
+              <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-2"><Label>Make</Label><Input value={vehicleForm.vehicle_make} onChange={(e) => setVehicleForm({ ...vehicleForm, vehicle_make: e.target.value })} /></div>
               <div className="flex flex-col gap-2"><Label>Model</Label><Input value={vehicleForm.vehicle_model} onChange={(e) => setVehicleForm({ ...vehicleForm, vehicle_model: e.target.value })} /></div>

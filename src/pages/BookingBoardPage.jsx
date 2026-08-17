@@ -25,6 +25,7 @@ import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope } from '@/lib/crmInsights'
 import { supabase } from '@/lib/supabase'
+import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import {
   BOOKING_PRIMARY_ACTION_LABELS,
   getBookingBoardStatuses,
@@ -584,6 +585,11 @@ export default function BookingBoardPage() {
     }
     if (!make || !model) {
       toast.error('Vehicle make and model are required.')
+      return
+    }
+    const plateError = plateValidationError(form.vehicle_plate)
+    if (plateError) {
+      toast.error(plateError)
       return
     }
     if (!editing && formBookingsOnly && !['pending', 'confirmed'].includes(form.status)) {
@@ -1186,8 +1192,9 @@ export default function BookingBoardPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="bk-plate">Plate</Label>
-                <Input id="bk-plate" value={form.vehicle_plate} onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} />
+                <Label htmlFor="bk-plate">Plate / sticker</Label>
+                <Input id="bk-plate" required value={form.vehicle_plate} onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} placeholder="ABC 1234" />
+                <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="bk-make">Make</Label>

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '@/lib/servicePricing'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
+import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Button } from '@/components/ui/button'
 import {
@@ -110,6 +111,12 @@ export default function CustomerBookingModal({
 
   async function submit(e) {
     e.preventDefault()
+    const plateError = plateValidationError(form.vehicle_plate)
+    if (plateError) {
+      setError(plateError)
+      toast.error(plateError)
+      return
+    }
     setBusy(true)
     setError('')
     try {
@@ -182,8 +189,9 @@ export default function CustomerBookingModal({
             <Input id="book-phone" required className="min-h-11" inputMode="tel" value={form.customer_phone} onChange={(e) => set('customer_phone', e.target.value)} />
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="book-plate">Plate</Label>
-            <Input id="book-plate" required className="min-h-11" value={form.vehicle_plate} onChange={(e) => set('vehicle_plate', e.target.value)} />
+            <Label htmlFor="book-plate">Plate / sticker</Label>
+            <Input id="book-plate" required className="min-h-11" value={form.vehicle_plate} onChange={(e) => set('vehicle_plate', e.target.value.toUpperCase())} placeholder="ABC 1234 or CS 123456" />
+            <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
           </div>
           <VehicleMakeModelFields
             make={form.vehicle_make}

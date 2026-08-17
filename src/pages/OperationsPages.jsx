@@ -80,6 +80,7 @@ import { allowedStaffPlanAssigneePatch } from '../queue/staffTaskLogic'
 import { isHttpProofUrl, planProofObjectPath } from '../lib/plannerTasks'
 import { createCoalescedReload } from '../lib/coalesceReload'
 import { toast } from 'sonner'
+import { plateKindLabel, plateValidationError, PLATE_FIELD_HINT } from '../lib/customerAuth'
 
 const statusTone = {
   confirmed: 'queue-status-pill queue-status-waiting',
@@ -1088,7 +1089,7 @@ export function NewQueueTicketPage() {
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       const plate = form.vehicle_plate.trim()
-      if (plate.length < 2) {
+      if (plateValidationError(plate)) {
         setPlateMatch(null)
         setPlateLookupState('idle')
         return
@@ -1175,7 +1176,8 @@ export function NewQueueTicketPage() {
     try {
       const phoneDigits = String(form.customer_phone || '').replace(/\D/g, '')
       if (phoneDigits.length < 10) throw new Error('Phone number is required (at least 10 digits).')
-      if (!String(form.vehicle_plate || '').trim()) throw new Error('Plate number is required.')
+      const plateError = plateValidationError(form.vehicle_plate)
+      if (plateError) throw new Error(plateError)
       if (!form.service_ids?.length) throw new Error('Select at least one service, package, or detailing service.')
       if (showFormLowPriceWarning && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) {
         setSubmitting(false)
@@ -1205,18 +1207,45 @@ export function NewQueueTicketPage() {
 
   return (
     <section>
-      <PageHeader eyebrow="Create Queue Ticket" title="Add vehicle to queue" description="Required: plate, phone, and at least one Service / Package / Detailing. Name is optional for fast walk-ins." />
+      <PageHeader eyebrow="Create Queue Ticket" title="Add vehicle to queue" description="Required: LTO plate, conduction sticker, or temporary / TOP; phone; and at least one Service / Package / Detailing. Name is optional for fast walk-ins." />
       {error && <p className="floor-alert floor-alert-error mt-5">{error}</p>}
       <div className="mt-8">
         <Panel title="Ticket Form" icon={Plus}>
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Plate number *<input value={form.vehicle_plate} onChange={update('vehicle_plate')} required autoFocus placeholder="ABC 1234" className="floor-control" /></label>
-            {form.vehicle_plate.trim().length >= 2 && plateLookupState !== 'idle' && (
+            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+              Plate / sticker *
+              <input
+                value={form.vehicle_plate}
+                onChange={update('vehicle_plate')}
+                required
+                autoFocus
+                autoCapitalize="characters"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="ABC 1234 · CS 123456 · TMP 1234"
+                className="floor-control"
+                aria-invalid={Boolean(form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate))}
+              />
+            </label>
+            <p className="sm:col-span-2 text-xs text-slate-400">{PLATE_FIELD_HINT}</p>
+            {form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate) ? (
+              <p className="sm:col-span-2 floor-alert floor-alert-error" role="alert">
+                {plateValidationError(form.vehicle_plate)}
+              </p>
+            ) : plateKindLabel(form.vehicle_plate) ? (
+              <p className="sm:col-span-2 text-xs font-semibold text-slate-500">{plateKindLabel(form.vehicle_plate)}</p>
+            ) : null}
+            {form.vehicle_plate.trim().length >= 2 && !plateValidationError(form.vehicle_plate) && plateLookupState !== 'idle' && (
               <p className={`sm:col-span-2 floor-alert ${plateLookupState === 'found' ? 'floor-alert-ok' : 'floor-alert-warn'}`}>
                 {plateLookupState === 'loading' ? 'Checking plate number...' : getPlateLookupStatus(form.vehicle_plate, Boolean(plateMatch))}
               </p>
             )}
             <FormField label="Phone number *" value={form.customer_phone} onChange={update('customer_phone')} required />
+            {form.customer_phone.trim() && String(form.customer_phone).replace(/\D/g, '').length < 10 ? (
+              <p className="sm:col-span-2 floor-alert floor-alert-error" role="alert">
+                Phone number is required (at least 10 digits).
+              </p>
+            ) : null}
             <FormField label="Email (optional)" value={form.customer_email} onChange={update('customer_email')} type="email" />
             <FormField label="First name (optional)" value={form.customer_first_name} onChange={update('customer_first_name')} />
             <FormField label="Last name (optional)" value={form.customer_last_name} onChange={update('customer_last_name')} />
@@ -1798,7 +1827,7 @@ function ProofSubmit({ row, saving, userId, onSubmit, onSkip }) {
   const [proofLink, setProofLink] = useState('')
   const [uploading, setUploading] = useState(false)
   if (!open) {
-    return (
+  return (
       <>
         <button type="button" disabled={saving === row.id} onClick={() => setOpen(true)} className="min-h-11 rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-40">Submit for review</button>
         <button type="button" disabled={saving === row.id} onClick={onSkip} className="min-h-11 rounded-2xl border border-border px-4 text-sm font-semibold disabled:opacity-40">Mark done</button>
