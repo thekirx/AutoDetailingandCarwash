@@ -39,6 +39,7 @@ import {
   validateQueueTicketIdentity,
 } from '../lib/queueCustomerName'
 import { isValidCustomerPlate } from '../lib/customerAuth'
+import { plateSuggestPrefix, PLATE_SUGGEST_LIMIT, rankPlateSuggestions } from '../lib/plateSuggest'
 import { collectPaged } from '../lib/crmInsights'
 
 const timingWarningsCache = createTtlCache(120_000)
@@ -706,35 +707,39 @@ export async function lookupPlate(plateNumber, profile) {
   const normalizedPlate = normalizePlate(plateNumber || '')
   if (!isValidCustomerPlate(plateNumber)) return null
   if (requiresTeamLeadBranchSetup(profile)) return null
+  const hits = await searchPlates(plateNumber, profile)
+  const row = hits.find((item) => normalizePlate(item.normalized_plate_number || item.plate_number) === normalizedPlate)
+  return row || null
+}
+
+/** Prefix typeahead after 3 characters. Queries vehicles (indexed), not the masterlist view. */
+export async function searchPlates(prefix, profile) {
+  const q = plateSuggestPrefix(prefix)
+  if (!q) return []
+  if (requiresTeamLeadBranchSetup(profile)) return []
   const { data, error } = await supabase
-    .from('customer_vehicle_masterlist')
-    .select('vehicle_id, customer_id, plate_number, normalized_plate_number, customer_name, customer_phone, vehicle_make, vehicle_model, vehicle_type, last_branch, total_visits')
-    .eq('normalized_plate_number', normalizedPlate)
-    .limit(1)
-
+    .from('vehicles')
+    .select('id, customer_id, plate_number, normalized_plate_number, vehicle_make, vehicle_model, vehicle_type, vehicle_year, color, customers(full_name, phone)')
+    .eq('is_archived', false)
+    .ilike('normalized_plate_number', `${q}%`)
+    .order('normalized_plate_number')
+    .limit(PLATE_SUGGEST_LIMIT)
   if (error) throw error
-  const row = data?.[0]
-  if (!row) return null
-
-  // Enrich with year/color from vehicles when available
-  if (row.vehicle_id) {
-    const { data: vehicle } = await supabase
-      .from('vehicles')
-      .select('vehicle_year, color, vehicle_make, vehicle_model, vehicle_type')
-      .eq('id', row.vehicle_id)
-      .maybeSingle()
-    if (vehicle) {
-      return {
-        ...row,
-        vehicle_make: vehicle.vehicle_make || row.vehicle_make,
-        vehicle_model: vehicle.vehicle_model || row.vehicle_model,
-        vehicle_type: vehicle.vehicle_type || row.vehicle_type,
-        vehicle_year: vehicle.vehicle_year != null ? String(vehicle.vehicle_year) : '',
-        vehicle_color: vehicle.color || '',
-      }
-    }
-  }
-  return { ...row, vehicle_year: '', vehicle_color: '' }
+  const rows = (data || []).map((row) => ({
+    id: row.id,
+    vehicle_id: row.id,
+    customer_id: row.customer_id,
+    plate_number: row.plate_number,
+    normalized_plate_number: row.normalized_plate_number,
+    customer_name: (Array.isArray(row.customers) ? row.customers[0] : row.customers)?.full_name || '',
+    customer_phone: (Array.isArray(row.customers) ? row.customers[0] : row.customers)?.phone || '',
+    vehicle_make: row.vehicle_make || '',
+    vehicle_model: row.vehicle_model || '',
+    vehicle_type: row.vehicle_type || '',
+    vehicle_year: row.vehicle_year != null ? String(row.vehicle_year) : '',
+    vehicle_color: row.color || '',
+  }))
+  return rankPlateSuggestions(rows, prefix)
 }
 
 /** POS loyalty attach — plate first, then name/phone. Limit 8 (ponytail: no trigram index yet). */

@@ -28,7 +28,6 @@ import {
   QUEUE_FAMILIES,
   QUEUE_FAMILY_DETAILING,
 } from '../lib/queueFamilies'
-import { splitCustomerName } from '../lib/phVehicles'
 import { canAccessPos, canSeeAllBranches, canViewRedoLane, canWriteFinance, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
 import {
   DEFAULT_COMPENSATION_RULES,
@@ -72,7 +71,7 @@ import {
   fetchOperationsSnapshot,
   fetchServices,
   formatMoney,
-  lookupPlate,
+  searchPlates,
   setStaffAttendance,
   updateCrewStaffMember,
 } from '../queue/queueApi'
@@ -81,6 +80,7 @@ import { isHttpProofUrl, planProofObjectPath } from '../lib/plannerTasks'
 import { createCoalescedReload } from '../lib/coalesceReload'
 import { toast } from 'sonner'
 import { plateKindLabel, plateValidationError, PLATE_FIELD_HINT } from '../lib/customerAuth'
+import { applyPlateSuggestion, plateSuggestPrefix, rankPlateSuggestions } from '../lib/plateSuggest'
 
 const statusTone = {
   confirmed: 'queue-status-pill queue-status-waiting',
@@ -1021,6 +1021,7 @@ export function NewQueueTicketPage() {
   const [branches, setBranches] = useState([])
   const [plateMatch, setPlateMatch] = useState(null)
   const [plateLookupState, setPlateLookupState] = useState('idle')
+  const [plateSuggestions, setPlateSuggestions] = useState([])
   const [form, setForm] = useState({
     customer_id: '',
     vehicle_id: '',
@@ -1089,40 +1090,43 @@ export function NewQueueTicketPage() {
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       const plate = form.vehicle_plate.trim()
-      if (plateValidationError(plate)) {
+      const prefix = plateSuggestPrefix(plate)
+      if (!prefix) {
         setPlateMatch(null)
+        setPlateSuggestions([])
         setPlateLookupState('idle')
         return
       }
 
       setPlateLookupState('loading')
-      lookupPlate(plate, profile)
-        .then((match) => {
-          setPlateMatch(match)
-          if (!match) {
+      searchPlates(plate, profile)
+        .then((rows) => {
+          const ranked = rankPlateSuggestions(rows, plate)
+          setPlateSuggestions(ranked)
+          const exact = ranked.find(
+            (row) => (row.normalized_plate_number || '') === prefix && prefix.length === (row.normalized_plate_number || '').length,
+          )
+          if (exact && !plateValidationError(plate)) {
+            setPlateMatch(exact)
+            setPlateLookupState('found')
+            setForm((current) => {
+              if (current.vehicle_id && current.vehicle_id === (exact.vehicle_id || exact.id)) return current
+              return {
+                ...applyPlateSuggestion(current, exact),
+                vehicle_type: normalizeVehicleType(exact.vehicle_type || current.vehicle_type),
+                _sizeReady: true,
+              }
+            })
+            return
+          }
+          if (!plateValidationError(plate) && ranked.length === 0) {
+            setPlateMatch(null)
             setPlateLookupState('not_found')
             setForm((current) => ({ ...current, customer_id: '', vehicle_id: '' }))
             return
           }
-
-          setPlateLookupState('found')
-          const names = splitCustomerName(match.customer_name)
-          setForm((current) => ({
-            ...current,
-            customer_id: match.customer_id || '',
-            vehicle_id: match.vehicle_id || '',
-            customer_name: match.customer_name || current.customer_name,
-            customer_first_name: names.first || current.customer_first_name,
-            customer_last_name: names.last || current.customer_last_name,
-            customer_phone: match.customer_phone || current.customer_phone,
-            vehicle_plate: match.plate_number || current.vehicle_plate,
-            vehicle_make: match.vehicle_make || current.vehicle_make,
-            vehicle_model: match.vehicle_model || current.vehicle_model,
-            vehicle_year: match.vehicle_year || current.vehicle_year,
-            vehicle_color: match.vehicle_color || current.vehicle_color,
-            vehicle_type: normalizeVehicleType(match.vehicle_type || current.vehicle_type),
-            _sizeReady: true,
-          }))
+          setPlateMatch(null)
+          setPlateLookupState(ranked.length ? 'suggest' : 'idle')
         })
         .catch((err) => setError(err.message))
     }, 250)
@@ -1130,7 +1134,7 @@ export function NewQueueTicketPage() {
   }, [form.vehicle_plate, profile])
 
   const update = (key) => (event) => {
-    const value = event.target.value
+    const value = key === 'vehicle_plate' ? event.target.value.toUpperCase() : event.target.value
     setForm((current) => {
       const next = { ...current, [key]: value }
       if (key === 'customer_first_name' || key === 'customer_last_name') {
@@ -1138,6 +1142,16 @@ export function NewQueueTicketPage() {
       }
       return next
     })
+  }
+  const pickPlateSuggestion = (row) => {
+    setForm((current) => ({
+      ...applyPlateSuggestion(current, row),
+      vehicle_type: normalizeVehicleType(row.vehicle_type || current.vehicle_type),
+      _sizeReady: true,
+    }))
+    setPlateSuggestions([])
+    setPlateMatch(row)
+    setPlateLookupState('found')
   }
   const setMake = (vehicle_make) => setForm((current) => ({ ...current, vehicle_make }))
   const setModel = (vehicle_model) => setForm((current) => ({ ...current, vehicle_model }))
@@ -1212,7 +1226,7 @@ export function NewQueueTicketPage() {
       <div className="mt-8">
         <Panel title="Ticket Form" icon={Plus}>
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase suggest-field">
               Plate / sticker *
               <input
                 value={form.vehicle_plate}
@@ -1224,22 +1238,46 @@ export function NewQueueTicketPage() {
                 spellCheck={false}
                 placeholder="ABC 1234 · CS 123456 · TMP 1234"
                 className="floor-control"
-                aria-invalid={Boolean(form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate))}
+                aria-autocomplete="list"
+                aria-expanded={plateSuggestions.length > 0}
+                aria-invalid={Boolean(form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate) && !plateSuggestions.length)}
               />
+              {plateSuggestions.length > 0 ? (
+                <ul className="suggest-list" role="listbox">
+                  {plateSuggestions.map((row) => (
+                    <li key={row.vehicle_id || row.id}>
+                      <button
+                        type="button"
+                        className="suggest-option"
+                        onMouseDown={(event) => {
+                          event.preventDefault()
+                          pickPlateSuggestion(row)
+                        }}
+                      >
+                        {row.plate_number}
+                        {row.customer_name ? ` · ${row.customer_name}` : ''}
+                        {row.vehicle_make ? ` · ${[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ')}` : ''}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </label>
-            <p className="sm:col-span-2 text-xs text-slate-400">{PLATE_FIELD_HINT}</p>
-            {form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate) ? (
+            <p className="sm:col-span-2 text-xs text-slate-400">{PLATE_FIELD_HINT}. Matches appear after 3 characters.</p>
+            {form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate) && !plateSuggestions.length ? (
               <p className="sm:col-span-2 floor-alert floor-alert-error" role="alert">
                 {plateValidationError(form.vehicle_plate)}
               </p>
             ) : plateKindLabel(form.vehicle_plate) ? (
               <p className="sm:col-span-2 text-xs font-semibold text-slate-500">{plateKindLabel(form.vehicle_plate)}</p>
             ) : null}
-            {form.vehicle_plate.trim().length >= 2 && !plateValidationError(form.vehicle_plate) && plateLookupState !== 'idle' && (
+            {plateLookupState === 'found' || plateLookupState === 'not_found' ? (
               <p className={`sm:col-span-2 floor-alert ${plateLookupState === 'found' ? 'floor-alert-ok' : 'floor-alert-warn'}`}>
-                {plateLookupState === 'loading' ? 'Checking plate number...' : getPlateLookupStatus(form.vehicle_plate, Boolean(plateMatch))}
+                {plateLookupState === 'found' ? getPlateLookupStatus(form.vehicle_plate, true) : getPlateLookupStatus(form.vehicle_plate, false)}
               </p>
-            )}
+            ) : plateLookupState === 'loading' ? (
+              <p className="sm:col-span-2 floor-alert">Checking plate number...</p>
+            ) : null}
             <FormField label="Phone number *" value={form.customer_phone} onChange={update('customer_phone')} required />
             {form.customer_phone.trim() && String(form.customer_phone).replace(/\D/g, '').length < 10 ? (
               <p className="sm:col-span-2 floor-alert floor-alert-error" role="alert">

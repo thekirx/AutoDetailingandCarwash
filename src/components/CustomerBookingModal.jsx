@@ -6,6 +6,7 @@ import { getAccessTokenFresh } from '@/lib/authToken'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '@/lib/servicePricing'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
 import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
+import { rankPlateSuggestions } from '@/lib/plateSuggest'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Button } from '@/components/ui/button'
 import {
@@ -142,6 +143,7 @@ export default function CustomerBookingModal({
   }
 
   const selected = services.find((s) => s.id === form.service_id)
+  const garageHits = rankPlateSuggestions(vehicles, form.vehicle_plate)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -188,9 +190,30 @@ export default function CustomerBookingModal({
             <Label htmlFor="book-phone">Mobile</Label>
             <Input id="book-phone" required className="min-h-11" inputMode="tel" value={form.customer_phone} onChange={(e) => set('customer_phone', e.target.value)} />
           </div>
-          <div className="grid gap-1.5">
+          <div className="grid gap-1.5 suggest-field">
             <Label htmlFor="book-plate">Plate / sticker</Label>
-            <Input id="book-plate" required className="min-h-11" value={form.vehicle_plate} onChange={(e) => set('vehicle_plate', e.target.value.toUpperCase())} placeholder="ABC 1234 or CS 123456" />
+            <Input id="book-plate" required className="min-h-11" value={form.vehicle_plate} onChange={(e) => set('vehicle_plate', e.target.value.toUpperCase())} placeholder="ABC 1234 or CS 123456" autoComplete="off" />
+            {garageHits.length > 0 ? (
+              <ul className="suggest-list" role="listbox">
+                {garageHits.map((v) => (
+                  <li key={v.id}>
+                    <button
+                      type="button"
+                      className="suggest-option"
+                      onMouseDown={(event) => {
+                        event.preventDefault()
+                        applyVehicle(v.id)
+                      }}
+                    >
+                      {v.plate_number}
+                      {[v.vehicle_make, v.vehicle_model].filter(Boolean).length
+                        ? ` · ${[v.vehicle_make, v.vehicle_model].filter(Boolean).join(' ')}`
+                        : ''}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
           </div>
           <VehicleMakeModelFields

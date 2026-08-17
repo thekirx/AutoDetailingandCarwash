@@ -1,12 +1,13 @@
 /**
  * Customer portal data (service role) — JWT customer → history / garage / queue / loyalty.
- * POST actions: add-vehicle | archive-vehicle | sync-email | update-phone
+ * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone
  */
 import { createClient } from '@supabase/supabase-js'
 import { getQueueCounts, buildVisitProgress, formatQueueNumber, normalizePlate } from '../src/queue/queueLogic.js'
 import { isValidCustomerPlate, plateValidationError, safeVehiclePhotoUrl } from '../src/lib/customerAuth.js'
 import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
 import { CUSTOMER_ACTIVE_VISIT_STATUSES } from '../src/lib/customerPortalActive.js'
+import { prepareGaragePlateChange } from '../src/lib/customerGarage.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 
 function adminClient() {
@@ -255,6 +256,69 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       }
       throw Object.assign(new Error(error.message), { status: 400 })
     }
+    return { ok: true, vehicle: data }
+  }
+
+  if (action === 'update-vehicle') {
+    const vehicleId = String(body.vehicle_id || '').trim()
+    const plate = String(body.plate_number || body.vehicle_plate || '').trim()
+    const { data: current, error: currentErr } = await admin
+      .from('vehicles')
+      .select('id, plate_number, normalized_plate_number, customer_id')
+      .eq('id', vehicleId)
+      .eq('customer_id', userId)
+      .maybeSingle()
+    if (currentErr) throw Object.assign(new Error(currentErr.message), { status: 400 })
+    if (!current) throw Object.assign(new Error('Vehicle not found.'), { status: 404 })
+
+    const nextNorm = normalizePlate(plate)
+    const { data: occupant } = nextNorm
+      ? await admin.from('vehicles').select('id').eq('normalized_plate_number', nextNorm).maybeSingle()
+      : { data: null }
+
+    const prepared = prepareGaragePlateChange({
+      vehicleId,
+      currentPlate: current.plate_number,
+      nextPlate: plate,
+      occupantVehicleId: occupant?.id || null,
+    })
+    if (!prepared.ok) throw Object.assign(new Error(prepared.error), { status: prepared.status || 400 })
+
+    const payload = {
+      plate_number: prepared.plate_number,
+      normalized_plate_number: prepared.normalized_plate_number,
+      vehicle_make: String(body.vehicle_make || '').trim() || null,
+      vehicle_model: String(body.vehicle_model || '').trim() || null,
+      vehicle_type: String(body.vehicle_type || 'sedan').trim() || 'sedan',
+      color: String(body.color || '').trim() || null,
+      photo_url: safeVehiclePhotoUrl(body.photo_url),
+      is_archived: false,
+    }
+
+    const { data, error } = await admin
+      .from('vehicles')
+      .update(payload)
+      .eq('id', vehicleId)
+      .eq('customer_id', userId)
+      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url')
+      .single()
+    if (error) {
+      if (error.code === '23505') {
+        throw Object.assign(new Error('This plate is already linked to another account.'), { status: 409 })
+      }
+      throw Object.assign(new Error(error.message), { status: 400 })
+    }
+
+    if (prepared.plateChanged) {
+      await admin
+        .from('bookings')
+        .update({ vehicle_plate: prepared.plate_number })
+        .eq('vehicle_id', vehicleId)
+        .eq('customer_id', userId)
+        .eq('is_archived', false)
+        .in('status', CUSTOMER_ACTIVE_VISIT_STATUSES)
+    }
+
     return { ok: true, vehicle: data }
   }
 

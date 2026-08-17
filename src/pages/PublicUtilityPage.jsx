@@ -177,7 +177,11 @@ export function BookingPage() {
     return () => window.clearTimeout(t)
   }, [form.vehicle_plate])
 
-  const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+  const update = (key) => (event) =>
+    setForm((current) => ({
+      ...current,
+      [key]: key === 'vehicle_plate' ? event.target.value.toUpperCase() : event.target.value,
+    }))
 
   const submit = async (event) => {
     event.preventDefault()

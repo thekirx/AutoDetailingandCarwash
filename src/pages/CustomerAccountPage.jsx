@@ -76,14 +76,16 @@ export default function CustomerAccountPage() {
   const [bookVehicle, setBookVehicle] = useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState('alerts')
+  const [editVehicle, setEditVehicle] = useState(null)
   const [ratingScores, setRatingScores] = useState({ overall: 0, app: 0, service: 0, detailing: 0 })
   const [ratingComment, setRatingComment] = useState('')
   const [ratingSaving, setRatingSaving] = useState(false)
   const [ratingDone, setRatingDone] = useState(false)
   const { countsBySlug } = usePublicQueueCounts()
 
-  function openSettings(next = 'alerts') {
+  function openSettings(next = 'alerts', vehicle = null) {
     setSettingsTab(next)
+    setEditVehicle(vehicle)
     setSettingsOpen(true)
   }
 
@@ -258,10 +260,15 @@ export default function CustomerAccountPage() {
       <>
         <CustomerSettingsModal
           open
-          onOpenChange={setSettingsOpen}
+          onOpenChange={(open) => {
+            setSettingsOpen(open)
+            if (!open) setEditVehicle(null)
+          }}
           profile={settingsProfile}
           onUpdated={load}
           initialTab={settingsTab}
+          vehicles={vehicles}
+          initialVehicle={editVehicle}
         />
         <CustomerBookingModal
           open={bookOpen}
@@ -472,6 +479,9 @@ export default function CustomerAccountPage() {
                   <div className="capp-actions" style={{ marginTop: '0.65rem' }}>
                     <button type="button" className="capp-btn capp-btn-fill" onClick={() => { setBookVehicle(v); setBookOpen(true) }}>
                       Book
+                    </button>
+                    <button type="button" className="capp-btn capp-btn-ghost" onClick={() => openSettings('car', v)}>
+                      Change plate
                     </button>
                     <button type="button" className="capp-btn capp-btn-ghost" onClick={() => removeVehicle(v)}>
                       Remove

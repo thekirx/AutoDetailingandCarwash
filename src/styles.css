@@ -3548,6 +3548,14 @@ html:not(.dark) .floor-shell .suggest-option:hover {
   min-height: 2.75rem;
   display: flex;
   align-items: center;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
 }
 .suggest-option-active,
 .suggest-option:hover {
