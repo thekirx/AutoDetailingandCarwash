@@ -13,7 +13,7 @@ const HERO_CLIP_TWO = '/media/hero/PLACEHOLDER-hakum-protection-02.mp4'
 const HERO_MEDIA_READY = false
 
 const headline = 'Pamper it. Protect it.'
-const headlineWords = headline.split(' ')
+const headlineLines = [['Pamper', 'it.'], ['Protect', 'it.']]
 
 export default function HomeHeroSection() {
   const sectionRef = useRef(null)
@@ -240,9 +240,15 @@ export default function HomeHeroSection() {
 
       <div ref={contentRef} className="hero-cinematic-content public-shell">
         <div className="hero-cinematic-copy">
-          <h1 className="hero-cinematic-title">
-            {headlineWords.map((word) => (
-              <span className="hero-cinematic-word" key={word}>{word}</span>
+          <h1 className="hero-cinematic-title" aria-label={headline}>
+            {headlineLines.map((line, lineIndex) => (
+              <span className="hero-cinematic-line" aria-hidden="true" key={lineIndex}>
+                {line.map((word, wordIndex) => (
+                  <span className="hero-cinematic-word" key={`${lineIndex}-${wordIndex}`}>
+                    {word}{wordIndex < line.length - 1 ? '\u00a0' : ''}
+                  </span>
+                ))}
+              </span>
             ))}
           </h1>
           <p className="hero-cinematic-subhead">

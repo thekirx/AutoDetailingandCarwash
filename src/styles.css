@@ -5739,11 +5739,11 @@ a.home-branch-card:hover { background:#052699; }
   padding-top: clamp(24px, 5vh, 64px);
 }
 .hero-cinematic-title {
-  max-width: 9ch;
+  max-width: 12ch;
   margin: 0;
   color: #f1f1f1;
   font-family: var(--font-public-display);
-  font-size: clamp(3.75rem, 6.5vw, 6.75rem);
+  font-size: clamp(3.5rem, 5.5vw, 5.75rem);
   font-style: italic;
   font-weight: 600;
   line-height: .88;
@@ -5754,9 +5754,8 @@ a.home-branch-card:hover { background:#052699; }
 }
 .hero-cinematic-word {
   display: inline-block;
-  margin-right: .2em;
 }
-.hero-cinematic-word:last-child { margin-right: 0; }
+.hero-cinematic-line { display: block; width: max-content; white-space: nowrap; }
 .hero-cinematic-subhead {
   max-width: 34rem;
   margin: clamp(28px, 4vh, 42px) 0 0;

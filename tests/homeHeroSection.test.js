@@ -19,6 +19,8 @@ describe('Home cinematic hero', () => {
     assert.match(source, /PLACEHOLDER-hakum-precision-01\.mp4/)
     assert.match(source, /PLACEHOLDER-hakum-protection-02\.mp4/)
     assert.match(source, /hakum-hero\.webp/)
+    assert.match(source, /hero-cinematic-line/)
+    assert.match(source, /key=\{`\$\{lineIndex\}-\$\{wordIndex\}`\}/)
     assert.doesNotMatch(source, /Hakum milestones|Experience/)
   })
 
