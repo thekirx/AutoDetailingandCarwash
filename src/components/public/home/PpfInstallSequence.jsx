@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { getPpfFrameIndex } from '../../../lib/ppfScrollStory'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -39,6 +40,7 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     const isMobile = mobileMQ.matches
     const reduced = reducedMQ.matches
     const dir = isMobile ? MOBILE_DIR : DESKTOP_DIR
+    const initialFrame = reduced ? FRAME_COUNT - 1 : 0
 
     const ctx = canvas.getContext('2d', { alpha: false })
     let disposed = false
@@ -89,10 +91,11 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     const start = async () => {
       sizeCanvas()
 
-      // First frame immediately so the section never shows an empty canvas.
-      await load(0)
+      // Show the opening frame normally, or the completed result for reduced motion.
+      await load(initialFrame)
       if (disposed) return
-      draw(0)
+      stateRef.current.frame = initialFrame
+      draw(initialFrame)
       setReady(true)
 
       if (reduced) return
@@ -127,7 +130,7 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
         anticipatePin: 1,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
-          const frame = self.progress * (FRAME_COUNT - 1)
+          const frame = getPpfFrameIndex(self.progress, FRAME_COUNT)
           stateRef.current.frame = frame
           draw(frame)
           if (onProgress) onProgress(self.progress)

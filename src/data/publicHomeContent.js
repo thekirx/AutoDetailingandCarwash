@@ -18,12 +18,36 @@ export const ppfInformation = {
   image: '/media/ppf-install/desktop/frame-0001.webp',
   imageAlt: 'Ford Ranger Raptor beginning a paint protection film installation sequence',
   title: 'Protection engineered for every drive.',
-  copy: 'Paint Protection Film is a clear, precision-applied layer that helps defend your vehicle from stone chips, light scratches, road debris, and daily wear while preserving the original finish.',
-  features: [
-    { title: 'Clarity', copy: 'A clear, smooth finish designed to preserve the depth, color, and gloss of your paint.' },
-    { title: 'Stretch', copy: 'Flexible film follows complex curves and body lines for precise, edge-to-edge coverage.' },
-    { title: 'Adhesion', copy: 'Professional installation helps the film settle securely around panels, corners, and contours.' },
-    { title: 'Warranty', copy: 'Coverage details are explained before installation so you know how your selected film is supported.' },
+  copy: 'Clear protection against stone chips, light scratches, road debris, and everyday wear.',
+  chapters: [
+    {
+      number: '01',
+      label: 'Clarity',
+      heading: 'Virtually invisible.',
+      copy: 'Optically clear film preserves the depth, color, and gloss of your factory finish.',
+      start: 0.15,
+    },
+    {
+      number: '02',
+      label: 'Stretch',
+      heading: 'Precision around every curve.',
+      copy: 'Flexible protection conforms to complex body lines for a clean, panel-by-panel fit.',
+      start: 0.35,
+    },
+    {
+      number: '03',
+      label: 'Adhesion',
+      heading: 'Secure from edge to edge.',
+      copy: 'The film settles around panels, edges, and contours for dependable everyday coverage.',
+      start: 0.55,
+    },
+    {
+      number: '04',
+      label: 'Finished protection',
+      heading: 'Protected for every drive.',
+      copy: 'A virtually invisible layer of defense, with the original finish still leading the view.',
+      start: 0.75,
+    },
   ],
 }
 

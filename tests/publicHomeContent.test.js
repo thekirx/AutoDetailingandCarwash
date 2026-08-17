@@ -81,10 +81,15 @@ describe('Public homepage content assets', () => {
       'queue',
       'branches',
     ])
-    assert.deepEqual(ppfInformation.features.map(({ title }) => title), ['Clarity', 'Stretch', 'Adhesion', 'Warranty'])
-    assert.equal(new URL(ppfInformation.image).pathname.split('/').at(-1), 'ppf-information-grey-truck-clean.jpg')
-    assert.equal(ppfInformation.imageAlt, 'Grey pickup truck prepared for paint protection film')
-    await access(new URL(ppfInformation.image))
+    assert.deepEqual(ppfInformation.chapters.map(({ label }) => label), [
+      'Clarity',
+      'Stretch',
+      'Adhesion',
+      'Finished protection',
+    ])
+    assert.deepEqual(ppfInformation.chapters.map(({ start }) => start), [0.15, 0.35, 0.55, 0.75])
+    assert.equal(ppfInformation.image, '/media/ppf-install/desktop/frame-0001.webp')
+    assert.equal(ppfInformation.imageAlt, 'Ford Ranger Raptor beginning a paint protection film installation sequence')
     assert.equal(nanoCeramicTint.title, 'Cooler cabin. Clearer drive.')
     assert.deepEqual(mediaGallery.map(({ title }) => title), ['DETAILING', 'PAINT PROTECTION FILM', 'CERAMIC COATING'])
   })

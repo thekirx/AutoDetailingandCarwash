@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { ceramicPackages, ceramicSection, mediaGallery, nanoCeramicTint, ppfInformation } from '../../../data/publicHomeContent'
+import { getPpfStoryState } from '../../../lib/ppfScrollStory'
 import PpfInstallSequence from './PpfInstallSequence'
 
 export function CeramicSection() {
@@ -52,10 +53,10 @@ function SplitFeature({ id, eyebrow, item, reverse = false }) {
 }
 
 export function PpfInformationSection() {
-  const [progress, setProgress] = useState(0)
-
-  // Each callout reveals as its stage of the installation is reached.
-  const stageAt = (index) => (index + 1) / (ppfInformation.features.length + 1)
+  const [activeChapter, setActiveChapter] = useState(-1)
+  const handleProgress = useCallback((progress) => {
+    setActiveChapter(getPpfStoryState(progress, ppfInformation.chapters, 110).activeChapter)
+  }, [])
 
   return (
     <section
@@ -66,29 +67,36 @@ export function PpfInformationSection() {
     >
       <div className="ppf-information-pin" data-ppf-pin>
         <PpfInstallSequence
-          onProgress={setProgress}
+          onProgress={handleProgress}
           poster={ppfInformation.image}
           posterAlt={ppfInformation.imageAlt}
         />
         <div className="ppf-information-scrim" aria-hidden="true" />
 
-        <div className="public-shell ppf-information-heading" data-motion="heading">
+        <div
+          className="public-shell ppf-information-heading"
+          data-motion="heading"
+          data-active={activeChapter === -1 ? 'true' : 'false'}
+        >
           <p>Superior protection, edge to edge</p>
           <h2>{ppfInformation.title}</h2>
           <span>{ppfInformation.copy}</span>
         </div>
 
-        <div className="public-shell ppf-information-features" data-motion="cards">
-          {ppfInformation.features.map((feature, index) => (
+        <div className="public-shell ppf-information-chapters" data-motion="cards">
+          {ppfInformation.chapters.map((chapter, index) => (
             <article
-              className="ppf-information-callout"
-              key={feature.title}
+              className="ppf-information-chapter"
+              key={chapter.label}
               data-motion-item
-              data-revealed={progress >= stageAt(index) ? 'true' : 'false'}
+              data-active={activeChapter === index ? 'true' : 'false'}
             >
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <h3>{feature.title}</h3>
-              <p>{feature.copy}</p>
+              <div className="ppf-information-chapter-meta">
+                <span aria-hidden="true">{chapter.number}</span>
+                <strong>{chapter.label}</strong>
+              </div>
+              <h3>{chapter.heading}</h3>
+              <p>{chapter.copy}</p>
             </article>
           ))}
         </div>
