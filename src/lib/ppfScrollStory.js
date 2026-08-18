@@ -1,4 +1,4 @@
-export const PPF_INTRO_END = 0.15
+export const PPF_INTRO_END = 0.12
 
 const clampProgress = (progress) => Math.max(0, Math.min(1, Number.isFinite(progress) ? progress : 0))
 

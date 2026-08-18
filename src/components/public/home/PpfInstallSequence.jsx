@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { getPpfFrameIndex } from '../../../lib/ppfScrollStory'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -13,16 +14,6 @@ const REDUCED_QUERY = '(prefers-reduced-motion: reduce)'
 
 const framePath = (dir, index) => `${dir}/frame-${String(index).padStart(4, '0')}.webp`
 
-/**
- * Scroll-driven PPF installation canvas.
- *
- * Loads ONE frame set per device (never both), draws to a canvas, and lets a
- * scrubbed ScrollTrigger timeline drive the frame index so scroll position
- * directly controls installation progress in both directions.
- *
- * With prefers-reduced-motion the canvas renders a single static frame and no
- * ScrollTrigger is created — the surrounding content stays fully visible.
- */
 export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
   const canvasRef = useRef(null)
   const wrapRef = useRef(null)
@@ -41,6 +32,7 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     const reduced = reducedMQ.matches
     const dir = isMobile ? MOBILE_DIR : DESKTOP_DIR
     const frameCount = isMobile ? MOBILE_FRAMES : DESKTOP_FRAMES
+    const initialFrame = reduced ? frameCount - 1 : 0
 
     const ctx = canvas.getContext('2d', { alpha: false })
     let disposed = false
@@ -49,7 +41,6 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     imagesRef.current = images
 
     const sizeCanvas = () => {
-      // On mobile use svh-aware sizing to avoid address-bar jank.
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       const rect = wrap.getBoundingClientRect()
       canvas.width = Math.round(rect.width * dpr)
@@ -58,7 +49,6 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
       canvas.style.height = `${rect.height}px`
     }
 
-    // Nearest already-loaded frame, so a gap never paints blank.
     const resolveFrame = (index) => {
       if (images[index]) return images[index]
       for (let step = 1; step < frameCount; step += 1) {
@@ -91,17 +81,14 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
 
     const start = async () => {
       sizeCanvas()
-
-      // First frame immediately so the section never shows an empty canvas.
-      await load(0)
+      await load(initialFrame)
       if (disposed) return
-      draw(0)
+      stateRef.current.frame = initialFrame
+      draw(initialFrame)
       setReady(true)
 
       if (reduced) return
 
-      // Critical frames first (evenly spaced), then fill in the rest.
-      // On mobile, load fewer at first to reduce data usage.
       const step = isMobile ? Math.floor(frameCount / 4) : Math.floor(frameCount / 5)
       const critical = [0]
       for (let i = step; i < frameCount; i += step) critical.push(i)
@@ -111,7 +98,6 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
       if (disposed) return
       draw(stateRef.current.frame)
 
-      // Fill remaining frames in batches — smaller batches on mobile.
       const batchSize = isMobile ? 4 : 8
       const remaining = []
       for (let i = 0; i < frameCount; i += 1) {
@@ -130,8 +116,6 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
       trigger = ScrollTrigger.create({
         trigger: wrap.closest('[data-ppf-stage]') || wrap,
         start: 'top top',
-        // Mobile: shorter pin so the scrub doesn't feel sluggish on touch.
-        // Desktop: longer dwell for the premium cinematic pace.
         end: isMobile ? '+=200%' : '+=350%',
         scrub: isMobile ? 0.3 : 0.6,
         pin: wrap.closest('[data-ppf-pin]') || wrap,
@@ -139,7 +123,7 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
         anticipatePin: 1,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
-          const frame = self.progress * (frameCount - 1)
+          const frame = getPpfFrameIndex(self.progress, frameCount)
           stateRef.current.frame = frame
           draw(frame)
           if (onProgress) onProgress(self.progress)
