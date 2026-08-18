@@ -2,15 +2,15 @@ import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
-import heroPoster from '../../../assets/hakum-hero.webp'
+import heroFallback from '../../../assets/hakum-hero.webp'
 import { PrimaryButton, SecondaryButton } from '../../ui'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// HIGGSFIELD PLACEHOLDERS: replace these paths after the approved generation pass.
-const HERO_CLIP_ONE = '/media/hero/PLACEHOLDER-hakum-precision-01.mp4'
-const HERO_CLIP_TWO = '/media/hero/PLACEHOLDER-hakum-protection-02.mp4'
-const HERO_MEDIA_READY = false
+const HERO_CLIP_ONE = '/media/hero/hakum-precision-01.mp4'
+const HERO_CLIP_TWO = '/media/hero/hakum-protection-02.mp4'
+const HERO_POSTER = '/media/hero/hakum-precision-poster.webp'
+const HERO_MEDIA_READY = true
 
 const headline = 'Pamper it. Protect it.'
 const headlineLines = [['Pamper', 'it.'], ['Protect', 'it.']]
@@ -206,17 +206,20 @@ export default function HomeHeroSection() {
       aria-label="Hakum Auto Care introduction"
     >
       <div ref={mediaRef} className="hero-cinematic-media" aria-hidden="true">
-        <div className="hero-cinematic-poster" style={{ backgroundImage: `url(${heroPoster})` }} />
+        <div
+          className="hero-cinematic-poster"
+          style={{ backgroundImage: `url(${HERO_POSTER}), url(${heroFallback})` }}
+        />
         <div ref={mediaTrackRef} className="hero-cinematic-track">
           <video
             ref={firstVideoRef}
             className="hero-cinematic-video is-active"
             src={HERO_MEDIA_READY ? HERO_CLIP_ONE : undefined}
-            poster={heroPoster}
+            poster={HERO_POSTER}
             autoPlay
             muted
             playsInline
-            preload="metadata"
+            preload="auto"
             aria-hidden="true"
             role="presentation"
           />
@@ -224,10 +227,10 @@ export default function HomeHeroSection() {
             ref={secondVideoRef}
             className="hero-cinematic-video"
             src={HERO_MEDIA_READY ? HERO_CLIP_TWO : undefined}
-            poster={heroPoster}
+            poster={HERO_POSTER}
             muted
             playsInline
-            preload="metadata"
+            preload="auto"
             aria-hidden="true"
             role="presentation"
           />
