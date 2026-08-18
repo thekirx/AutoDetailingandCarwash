@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { getPpfFrameIndex } from '../../../lib/ppfScrollStory'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const FRAME_COUNT = 110
+const DESKTOP_FRAMES = 120
+const MOBILE_FRAMES = 120
 const DESKTOP_DIR = '/media/ppf-install/desktop'
 const MOBILE_DIR = '/media/ppf-install/mobile'
 const MOBILE_QUERY = '(max-width: 767px)'
@@ -40,15 +40,16 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     const isMobile = mobileMQ.matches
     const reduced = reducedMQ.matches
     const dir = isMobile ? MOBILE_DIR : DESKTOP_DIR
-    const initialFrame = reduced ? FRAME_COUNT - 1 : 0
+    const frameCount = isMobile ? MOBILE_FRAMES : DESKTOP_FRAMES
 
     const ctx = canvas.getContext('2d', { alpha: false })
     let disposed = false
     let trigger = null
-    const images = new Array(FRAME_COUNT).fill(null)
+    const images = new Array(frameCount).fill(null)
     imagesRef.current = images
 
     const sizeCanvas = () => {
+      // On mobile use svh-aware sizing to avoid address-bar jank.
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       const rect = wrap.getBoundingClientRect()
       canvas.width = Math.round(rect.width * dpr)
@@ -60,7 +61,7 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     // Nearest already-loaded frame, so a gap never paints blank.
     const resolveFrame = (index) => {
       if (images[index]) return images[index]
-      for (let step = 1; step < FRAME_COUNT; step += 1) {
+      for (let step = 1; step < frameCount; step += 1) {
         if (images[index - step]) return images[index - step]
         if (images[index + step]) return images[index + step]
       }
@@ -68,7 +69,7 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     }
 
     const draw = (index) => {
-      const img = resolveFrame(Math.max(0, Math.min(FRAME_COUNT - 1, Math.round(index))))
+      const img = resolveFrame(Math.max(0, Math.min(frameCount - 1, Math.round(index))))
       if (!img) return
       const cw = canvas.width
       const ch = canvas.height
@@ -91,28 +92,34 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     const start = async () => {
       sizeCanvas()
 
-      // Show the opening frame normally, or the completed result for reduced motion.
-      await load(initialFrame)
+      // First frame immediately so the section never shows an empty canvas.
+      await load(0)
       if (disposed) return
-      stateRef.current.frame = initialFrame
-      draw(initialFrame)
+      draw(0)
       setReady(true)
 
       if (reduced) return
 
       // Critical frames first (evenly spaced), then fill in the rest.
-      const critical = [0, 27, 54, 81, FRAME_COUNT - 1]
+      // On mobile, load fewer at first to reduce data usage.
+      const step = isMobile ? Math.floor(frameCount / 4) : Math.floor(frameCount / 5)
+      const critical = [0]
+      for (let i = step; i < frameCount; i += step) critical.push(i)
+      if (!critical.includes(frameCount - 1)) critical.push(frameCount - 1)
+
       await Promise.all(critical.map(load))
       if (disposed) return
       draw(stateRef.current.frame)
 
+      // Fill remaining frames in batches — smaller batches on mobile.
+      const batchSize = isMobile ? 4 : 8
       const remaining = []
-      for (let i = 0; i < FRAME_COUNT; i += 1) {
+      for (let i = 0; i < frameCount; i += 1) {
         if (!critical.includes(i)) remaining.push(i)
       }
-      for (let i = 0; i < remaining.length; i += 8) {
+      for (let i = 0; i < remaining.length; i += batchSize) {
         if (disposed) return
-        await Promise.all(remaining.slice(i, i + 8).map(load))
+        await Promise.all(remaining.slice(i, i + batchSize).map(load))
         draw(stateRef.current.frame)
       }
     }
@@ -123,14 +130,16 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
       trigger = ScrollTrigger.create({
         trigger: wrap.closest('[data-ppf-stage]') || wrap,
         start: 'top top',
-        end: isMobile ? '+=180%' : '+=320%',
-        scrub: isMobile ? 0.4 : 0.8,
+        // Mobile: shorter pin so the scrub doesn't feel sluggish on touch.
+        // Desktop: longer dwell for the premium cinematic pace.
+        end: isMobile ? '+=200%' : '+=350%',
+        scrub: isMobile ? 0.3 : 0.6,
         pin: wrap.closest('[data-ppf-pin]') || wrap,
         pinSpacing: true,
         anticipatePin: 1,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
-          const frame = getPpfFrameIndex(self.progress, FRAME_COUNT)
+          const frame = self.progress * (frameCount - 1)
           stateRef.current.frame = frame
           draw(frame)
           if (onProgress) onProgress(self.progress)
