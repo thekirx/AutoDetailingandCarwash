@@ -21,8 +21,8 @@ describe('PPF scroll story mapping', () => {
   })
 
   it('leaves deliberate text-free intervals between captions', () => {
-    assert.equal(getPpfStoryState(0.119, ppfInformation, 110).showIntroduction, true)
-    assert.equal(getPpfStoryState(0.121, ppfInformation, 110).phase, 'clear')
+    assert.equal(getPpfStoryState(0.149, ppfInformation, 110).showIntroduction, true)
+    assert.equal(getPpfStoryState(0.151, ppfInformation, 110).phase, 'clear')
     assert.equal(getPpfStoryState(0.199, ppfInformation, 110).activeChapter, -1)
     assert.equal(getPpfStoryState(0.2, ppfInformation, 110).activeChapter, 0)
     assert.equal(getPpfStoryState(0.349, ppfInformation, 110).activeChapter, 0)

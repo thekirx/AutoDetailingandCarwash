@@ -8,8 +8,8 @@ describe('PPF cinematic section', () => {
   it('uses the protected final frame for reduced motion', async () => {
     const sequence = await readFile(projectFile('src/components/public/home/PpfInstallSequence.jsx'), 'utf8')
 
-    assert.match(sequence, /const initialFrame = reduced \? FRAME_COUNT - 1 : 0/)
-    assert.match(sequence, /getPpfFrameIndex\(self\.progress, FRAME_COUNT\)/)
+    assert.match(sequence, /const initialFrame = reduced \? frameCount - 1 : 0/)
+    assert.match(sequence, /const frame = self\.progress \* \(frameCount - 1\)/)
   })
 
   it('keeps every chapter in the document without disruptive live announcements', async () => {

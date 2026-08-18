@@ -86,12 +86,25 @@ describe('Public homepage content assets', () => {
       'Between your paint',
       'And everything out there.',
     ])
+    assert.equal(ppfInformation.copy, 'Invisible, precision-fit film that shields your paint from stone chips, scratches, and road debris.')
     assert.deepEqual(ppfInformation.chapters.map(({ label }) => label), ['Align', 'Form', 'Seal', 'Protected'])
-    assert.equal(ppfInformation.introEnd, 0.12)
+    assert.deepEqual(ppfInformation.chapters.map(({ heading }) => heading), [
+      'Measured for every panel.',
+      'Made to follow every curve.',
+      'Finished edge to edge.',
+      'See the paint.\nNot the protection.',
+    ])
+    assert.deepEqual(ppfInformation.chapters.map(({ copy }) => copy), [
+      'Each section is positioned precisely for accurate coverage.',
+      'The film is shaped around contours and body lines for a close, natural fit.',
+      'Every edge is carefully secured for a clean, lasting installation.',
+      'Your finish stays visible while the film takes the impact from everyday driving.',
+    ])
+    assert.equal(ppfInformation.introEnd, 0.15)
     assert.deepEqual(ppfInformation.chapters.map(({ start }) => start), [0.2, 0.45, 0.65, 0.84])
     assert.deepEqual(ppfInformation.chapters.map(({ end }) => end), [0.35, 0.55, 0.75, 1])
     assert.deepEqual(ppfInformation.chapters.at(-1).heading.split('\n'), [
-      'Now you see the paint.',
+      'See the paint.',
       'Not the protection.',
     ])
     assert.equal(ppfInformation.image, '/media/ppf-install/desktop/frame-0001.webp')
