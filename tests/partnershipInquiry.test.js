@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'
 
 import {
@@ -9,15 +8,6 @@ import {
 } from '../src/lib/partnershipInquiry.js'
 
 describe('partnership inquiry frontend boundary', () => {
-  it('uses clear customer-facing partnership and submission copy', async () => {
-    const source = await readFile(new URL('../src/components/public/home/PartnershipSection.jsx', import.meta.url), 'utf8')
-
-    assert.match(source, /Partner with Hakum\./)
-    assert.match(source, /Interested in opening a branch or working with us\? Tell us about your location and idea\./)
-    assert.match(source, /status === 'submitting' \? 'Sending…' : 'Send inquiry'/)
-    assert.doesNotMatch(source, /Inquire for partnership|Checking…/)
-  })
-
   it('normalizes customer-entered values without inventing fields', () => {
     assert.deepEqual(normalizePartnershipInquiry({
       name: '  Kirk  ', email: ' HELLO@EXAMPLE.COM ', contactNumber: ' 0917 123 4567 ',

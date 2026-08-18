@@ -46,8 +46,8 @@ export default function PartnershipSection() {
       <div className="public-shell partnership-layout">
         <div className="partnership-intro" data-motion="heading">
           <p className="eyebrow eyebrow-light">Grow with Hakum</p>
-          <h2 className="section-title light">Partner with Hakum.</h2>
-          <p>Interested in opening a branch or working with us? Tell us about your location and idea.</p>
+          <h2 className="section-title light">Inquire for partnership.</h2>
+          <p>Tell us where you are and how you would like to work with Hakum Auto Care.</p>
         </div>
 
         <form className="partnership-form" onSubmit={submit} noValidate data-motion="form">
@@ -81,7 +81,7 @@ export default function PartnershipSection() {
             <FieldError id="partnership-message-error">{errors.message}</FieldError>
           </label>
           <div className="partnership-submit-row">
-            <button type="submit" disabled={status === 'submitting'}>{status === 'submitting' ? 'Sending…' : 'Send inquiry'}</button>
+            <button type="submit" disabled={status === 'submitting'}>{status === 'submitting' ? 'Checking…' : 'Send inquiry'}</button>
             <p aria-live="polite">{notice}</p>
           </div>
         </form>

@@ -41,7 +41,6 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     const reduced = reducedMQ.matches
     const dir = isMobile ? MOBILE_DIR : DESKTOP_DIR
     const frameCount = isMobile ? MOBILE_FRAMES : DESKTOP_FRAMES
-    const initialFrame = reduced ? frameCount - 1 : 0
 
     const ctx = canvas.getContext('2d', { alpha: false })
     let disposed = false
@@ -93,11 +92,10 @@ export default function PpfInstallSequence({ onProgress, poster, posterAlt }) {
     const start = async () => {
       sizeCanvas()
 
-      // Reduced motion shows the completed protection; motion mode starts at frame one.
-      stateRef.current.frame = initialFrame
-      await load(initialFrame)
+      // First frame immediately so the section never shows an empty canvas.
+      await load(0)
       if (disposed) return
-      draw(initialFrame)
+      draw(0)
       setReady(true)
 
       if (reduced) return
