@@ -178,4 +178,3 @@ Run `git diff --name-only HEAD~2..HEAD` plus `git status --short`. Confirm no pr
 - [ ] **Step 5: Stop for user review**
 
 Deliver the live-site read-back, final component file link, CSS/test links, GSAP/Motion coexistence note, verification evidence, and explicit confirmation that Higgsfield usage remains zero for this pass.
-
