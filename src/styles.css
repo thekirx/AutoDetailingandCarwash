@@ -5631,8 +5631,12 @@ a.home-branch-card:hover { background:#052699; }
 .ppf-information-callout:after { display:none; }
 
 @media (max-width:767px){
-  .ppf-information-pin { min-height:100svh; padding:74px 0 40px; }
+  .ppf-information-pin { min-height:100svh; padding:calc(env(safe-area-inset-top,0px) + 64px) 0 calc(env(safe-area-inset-bottom,0px) + 28px); }
+  .ppf-information-scrim { background:linear-gradient(180deg,rgba(5,5,5,.92) 0,rgba(5,5,5,.36) 22%,rgba(5,5,5,.18) 50%,rgba(5,5,5,.88) 100%); }
   .ppf-information-callout { transform:translateY(16px); }
+  .ppf-information-pin .ppf-information-features { gap:0; }
+  .ppf-information-callout { padding:14px 0; border-bottom:1px solid rgba(255,255,255,.1); }
+  .ppf-information-callout:last-child { border-bottom:none; }
 }
 
 /* Reduced motion: no scrub, nothing hidden behind an animation that never runs. */
