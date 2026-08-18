@@ -59,12 +59,13 @@ describe('Public branding assets and scope', () => {
     assert.equal((layout.match(/aria-label="Hakum Auto Care home"/g) || []).length, 2)
   })
 
-  it('keeps the approved cinematic hero free of the retired milestone block', async () => {
+  it('keeps the approved centered hero experience composition', async () => {
     const page = await readFile(projectFile('src/components/public/home/HomeHeroSection.jsx'), 'utf8')
 
-    assert.equal((page.match(/<h1/g) || []).length, 1)
-    assert.match(page, /Pamper it\. Protect it\./)
-    assert.doesNotMatch(page, /hero-experience|experience-heading|<StatCard/)
+    assert.doesNotMatch(page, /hero-experience-layout/)
+    assert.doesNotMatch(page, /hero-experience-card/)
+    assert.match(page, /<div className="hero-experience"[^>]*>\s*<h2 id="experience-heading">Experience<\/h2>/s)
+    assert.equal((page.match(/<StatCard key=/g) || []).length, 1)
   })
 
   it('scopes reference alignment to the approved homepage sections', async () => {
