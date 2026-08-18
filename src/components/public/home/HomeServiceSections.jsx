@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { Check } from 'lucide-react'
 import { ceramicPackages, ceramicSection, mediaGallery, nanoCeramicTint, ppfInformation } from '../../../data/publicHomeContent'
 import PpfInstallSequence from './PpfInstallSequence'
 import { getPpfStoryState } from '../../../lib/ppfScrollStory'
@@ -22,6 +23,10 @@ export function CeramicSection() {
               <div className="ceramic-package-body">
                 <h3 className="ceramic-package-name">{item.title}</h3>
                 <div className="ceramic-package-content">
+                  <div className="ceramic-package-warranty">
+                    <Check size={14} strokeWidth={3} aria-hidden="true" />
+                    <span>{item.warrantyYears}-year warranty</span>
+                  </div>
                   <p>{item.copy}</p>
                   <div className="ceramic-package-inclusions">
                     <strong>Inclusions:</strong>

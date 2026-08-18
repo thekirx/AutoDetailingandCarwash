@@ -20,6 +20,11 @@ const OPERATIONAL_DISCLAIMERS = [
   'Pricing may change for oversized or heavily modified vehicles',
 ]
 
+export const PPF_FILM_BRAND = {
+  name: 'ClearPro',
+  url: 'https://www.clearpro.com/',
+}
+
 export const PPF_PACKAGES = [
   {
     id: 'basic', title: 'Basic Protection', subtitle: 'Partial PPF + Ceramic Coating',

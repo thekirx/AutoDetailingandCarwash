@@ -57,6 +57,13 @@ describe('Public homepage content assets', () => {
     ])
   })
 
+  it('exposes the approved ceramic package warranties', () => {
+    assert.deepEqual(ceramicPackages.map(({ title, warrantyYears }) => [title, warrantyYears]), [
+      ['PREMIUM', 5],
+      ['PLATINUM', 8],
+    ])
+  })
+
   it('keeps exactly four bookable other services with local images', async () => {
     assert.deepEqual(otherServices.map(({ title }) => title), [
       'CARWASH',
@@ -88,8 +95,8 @@ describe('Public homepage content assets', () => {
     ])
     assert.deepEqual(ppfInformation.chapters.map(({ label }) => label), ['Align', 'Form', 'Seal', 'Protected'])
     assert.equal(ppfInformation.introEnd, 0.12)
-    assert.deepEqual(ppfInformation.chapters.map(({ start }) => start), [0.2, 0.45, 0.65, 0.84])
-    assert.deepEqual(ppfInformation.chapters.map(({ end }) => end), [0.35, 0.55, 0.75, 1])
+    assert.deepEqual(ppfInformation.chapters.map(({ start }) => start), [0.12, 0.32, 0.55, 0.78])
+    assert.deepEqual(ppfInformation.chapters.map(({ end }) => end), [0.32, 0.55, 0.78, 1])
     assert.deepEqual(ppfInformation.chapters.at(-1).heading.split('\n'), [
       'Now you see the paint.',
       'Not the protection.',

@@ -105,6 +105,7 @@ export const ceramicSection = {
 export const ceramicPackages = [
   {
     title: 'PREMIUM',
+    warrantyYears: 5,
     bgImage: new URL('../assets/services/ceramic-premium.webp', import.meta.url).href,
     copy: 'Enhanced protection with deeper gloss and stronger hydrophobic performance for drivers who want more lasting results.',
     includes: [
@@ -116,6 +117,7 @@ export const ceramicPackages = [
   },
   {
     title: 'PLATINUM',
+    warrantyYears: 8,
     bgImage: new URL('../assets/services/ceramic-platinum.webp', import.meta.url).href,
     copy: 'Our highest level of ceramic protection, created for maximum gloss, durability, and long-term paint preservation.',
     includes: [

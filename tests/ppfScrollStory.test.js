@@ -11,27 +11,24 @@ describe('PPF scroll story mapping', () => {
       showIntroduction: true,
       phase: 'introduction',
     })
-    assert.equal(getPpfStoryState(0.149, ppfInformation, 110).frame, 0)
+    assert.equal(getPpfStoryState(0.119, ppfInformation, 110).frame, 0)
   })
 
   it('maps the remaining scroll distance across every frame', () => {
-    assert.equal(getPpfFrameIndex(0.15, 110), 0)
+    assert.equal(getPpfFrameIndex(0.12, 110), 0)
     assert.equal(getPpfFrameIndex(1, 110), 109)
     assert.ok(getPpfStoryState(0.575, ppfInformation, 110).frame > 50)
   })
 
-  it('leaves deliberate text-free intervals between captions', () => {
+  it('keeps a chapter visible throughout the installation sequence', () => {
     assert.equal(getPpfStoryState(0.119, ppfInformation, 110).showIntroduction, true)
-    assert.equal(getPpfStoryState(0.121, ppfInformation, 110).phase, 'clear')
-    assert.equal(getPpfStoryState(0.199, ppfInformation, 110).activeChapter, -1)
-    assert.equal(getPpfStoryState(0.2, ppfInformation, 110).activeChapter, 0)
-    assert.equal(getPpfStoryState(0.349, ppfInformation, 110).activeChapter, 0)
-    assert.equal(getPpfStoryState(0.35, ppfInformation, 110).phase, 'clear')
-    assert.equal(getPpfStoryState(0.45, ppfInformation, 110).activeChapter, 1)
-    assert.equal(getPpfStoryState(0.55, ppfInformation, 110).phase, 'clear')
-    assert.equal(getPpfStoryState(0.65, ppfInformation, 110).activeChapter, 2)
-    assert.equal(getPpfStoryState(0.75, ppfInformation, 110).phase, 'clear')
-    assert.equal(getPpfStoryState(0.84, ppfInformation, 110).activeChapter, 3)
+    assert.equal(getPpfStoryState(0.12, ppfInformation, 110).activeChapter, 0)
+    assert.equal(getPpfStoryState(0.319, ppfInformation, 110).activeChapter, 0)
+    assert.equal(getPpfStoryState(0.32, ppfInformation, 110).activeChapter, 1)
+    assert.equal(getPpfStoryState(0.549, ppfInformation, 110).activeChapter, 1)
+    assert.equal(getPpfStoryState(0.55, ppfInformation, 110).activeChapter, 2)
+    assert.equal(getPpfStoryState(0.779, ppfInformation, 110).activeChapter, 2)
+    assert.equal(getPpfStoryState(0.78, ppfInformation, 110).activeChapter, 3)
     assert.equal(getPpfStoryState(1, ppfInformation, 110).activeChapter, 3)
   })
 

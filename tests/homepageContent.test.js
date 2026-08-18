@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { PPF_PACKAGES } from '../src/data/ppfPackages.js'
+import { PPF_FILM_BRAND, PPF_PACKAGES } from '../src/data/ppfPackages.js'
 import {
   buildPpfPackageCards,
   loadHomepageContent,
@@ -25,6 +25,13 @@ function queryResultByTable(results) {
 }
 
 describe('homepage production content adapters', () => {
+  it('links the PPF package overview to the approved film partner', () => {
+    assert.deepEqual(PPF_FILM_BRAND, {
+      name: 'ClearPro',
+      url: 'https://www.clearpro.com/',
+    })
+  })
+
   it('derives static package cards from the production PPF package model', () => {
     const cards = buildPpfPackageCards(PPF_PACKAGES)
 

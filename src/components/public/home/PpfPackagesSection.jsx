@@ -1,7 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { PPF_PACKAGES } from '../../../data/ppfPackages'
+import { PPF_FILM_BRAND, PPF_PACKAGES } from '../../../data/ppfPackages'
 import { buildPpfPackageCards } from '../../../lib/homepageContent'
 
 const packageCards = buildPpfPackageCards(PPF_PACKAGES)
@@ -14,6 +14,9 @@ export default function PpfPackagesSection() {
           <div>
             <p className="eyebrow eyebrow-light">Paint protection film</p>
             <h2>More coverage.<br />More defense.</h2>
+            <a className="ppf-film-brand" href={PPF_FILM_BRAND.url} target="_blank" rel="noreferrer">
+              Film by {PPF_FILM_BRAND.name} <span aria-hidden="true">↗</span>
+            </a>
           </div>
           <p>Three clear protection levels, ordered by coverage and film strength—not a wall of specifications.</p>
         </header>
