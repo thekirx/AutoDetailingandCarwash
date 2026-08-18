@@ -355,6 +355,14 @@ button { cursor: pointer; }
 @media(max-width:500px){.display-title{font-size:clamp(41px,13.2vw,59px);line-height:.87}.hero-line-three{font-size:.72em}.hero-subheading{margin-top:30px;font-size:9px}.hero-actions{align-items:stretch;flex-direction:column;width:min(100%,260px);margin:30px auto 0}.hero-location{left:16px}.scroll-note{display:none}.section-title{font-size:47px}.stats-grid{width:100%;grid-template-columns:1fr 1fr}.stats-grid strong{font-size:26px}.coating-card{padding:28px}.home-branch-grid>a{padding:24px;grid-template-columns:24px 28px 1fr 20px}.footer-grid{grid-template-columns:1fr}.footer-base{flex-direction:column;gap:12px}.cta-strip>div{align-items:flex-start;flex-direction:column}.car-canvas{height:340px}.package-tabs button{padding:9px}.booking-page{padding-top:120px}.booking-form{margin-inline:-16px}}
 @media(max-width:500px){.stats-band .ui-stat-card{min-height:180px;padding:28px 16px 23px;gap:25px}.stats-band .ui-stat-card:before{left:16px}.stats-band .ui-stat-card>strong{font-size:clamp(30px,9.5vw,42px);letter-spacing:-.055em}.stats-band .ui-stat-card>div>span{font-size:7.5px;letter-spacing:.12em}}
 @media(max-width:500px){.about-heading .section-title{font-size:clamp(3.8rem,20vw,5.5rem)}.about-visual{min-height:330px}.about-visual>span{left:20px;bottom:20px}.about-visual>strong{top:20px;right:20px}.about-copy{padding:34px 24px 38px}.about-copy p{font-size:13px}.about-copy .about-lead{font-size:18px}.about-link{width:100%;justify-content:space-between}}
+
+/* Prevent long single-word section titles (e.g. "Partnership") from overflowing narrow mobile viewports */
+@media (max-width:500px) {
+  .section-title { font-size:clamp(2.4rem,11.5vw,47px); overflow-wrap:break-word; hyphens:auto; }
+}
+@media (max-width:390px) {
+  .section-title { font-size:clamp(2.1rem,11vw,42px); }
+}
 @media(max-width:800px){.hero-line-one,.hero-line-two,.hero-line-three{transform:skewX(-6deg)}}
 @media(max-width:800px){.hero-stage{min-height:980px}.hero-content{padding-bottom:58px}.hero-experience{margin-top:66px}.hero-experience h2{margin-bottom:30px}.hero-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 20px}.hero-metrics .ui-stat-card>strong{font-size:clamp(28px,8vw,40px)}.hero-metrics .ui-stat-card>div>span{max-width:170px;font-size:9px}}
 @media(max-width:500px){.hero-stage{min-height:1020px}.hero-experience{margin-top:58px}.hero-metrics{gap:32px 12px}.hero-metrics .ui-stat-card{gap:10px}.hero-metrics .ui-stat-card>strong{font-size:clamp(23px,7.5vw,34px)}.hero-metrics .ui-stat-card>div>span{font-size:8px}}
