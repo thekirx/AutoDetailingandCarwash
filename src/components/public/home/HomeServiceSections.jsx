@@ -54,9 +54,6 @@ function SplitFeature({ id, eyebrow, item, reverse = false }) {
 export function PpfInformationSection() {
   const [progress, setProgress] = useState(0)
 
-  // Each callout reveals as its stage of the installation is reached.
-  const stageAt = (index) => (index + 1) / (ppfInformation.features.length + 1)
-
   return (
     <section
       id="ppf-information"
@@ -73,22 +70,22 @@ export function PpfInformationSection() {
         <div className="ppf-information-scrim" aria-hidden="true" />
 
         <div className="public-shell ppf-information-heading" data-motion="heading">
-          <p>Superior protection, edge to edge</p>
+          <p>{ppfInformation.eyebrow}</p>
           <h2>{ppfInformation.title}</h2>
           <span>{ppfInformation.copy}</span>
         </div>
 
         <div className="public-shell ppf-information-features" data-motion="cards">
-          {ppfInformation.features.map((feature, index) => (
+          {ppfInformation.chapters.map((chapter, index) => (
             <article
               className="ppf-information-callout"
-              key={feature.title}
+              key={chapter.label}
               data-motion-item
-              data-revealed={progress >= stageAt(index) ? 'true' : 'false'}
+              data-revealed={progress >= chapter.start ? 'true' : 'false'}
             >
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <h3>{feature.title}</h3>
-              <p>{feature.copy}</p>
+              <span>{chapter.number}</span>
+              <h3>{chapter.label}</h3>
+              <p>{chapter.copy}</p>
             </article>
           ))}
         </div>
