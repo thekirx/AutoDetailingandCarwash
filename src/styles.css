@@ -6528,3 +6528,18 @@ a.planner-ticket:active {
   .ba-grid { grid-template-columns:1fr; }
   .ba-frame { aspect-ratio:3/4; }
 }
+
+/* Live board: opening-hours states */
+.live-board-hours { color:rgba(255,255,255,.55); font-size:9px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+.live-board-closed { display:grid; gap:7px; margin:0; color:rgba(255,255,255,.62); font-size:12px; line-height:1.5; }
+.live-board-closed span { color:rgba(255,255,255,.42); font-size:11px; }
+.live-board-card[data-tone="closed"] { border-color:rgba(255,255,255,.1); background:rgba(255,255,255,.02); }
+.live-board-card[data-tone="closed"] .live-board-state { background:rgba(255,255,255,.08); color:rgba(255,255,255,.62); }
+
+/* Hero pill: nearest-branch marker and the opt-in locate control */
+.hero-live-wrap { display:inline-flex; align-items:center; gap:8px; }
+.hero-live-near { padding:3px 8px; border-radius:var(--radius-pill); background:rgba(255,255,255,.16); font-size:7px; letter-spacing:.16em; }
+.hero-live[data-tone="closed"] .hero-live-dot { background:#93a2c7; animation:none; }
+.hero-live-locate { display:grid; place-items:center; width:42px; height:42px; border:1px solid rgba(255,255,255,.28); border-radius:50%; background:rgba(2,10,49,.34); backdrop-filter:blur(6px); color:#fff; cursor:pointer; transition:border-color var(--transition-fast), background var(--transition-fast); }
+.hero-live-locate:hover:not(:disabled) { border-color:rgba(255,255,255,.7); background:rgba(2,10,49,.55); }
+.hero-live-locate:disabled { opacity:.5; cursor:wait; }

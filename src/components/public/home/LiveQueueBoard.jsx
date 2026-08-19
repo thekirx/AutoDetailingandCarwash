@@ -42,14 +42,26 @@ export default function LiveQueueBoard({ branches }) {
                 <h3>{branch.name}</h3>
                 <span className="live-board-state">{branch.label}</span>
               </div>
-              <dl className="live-board-lanes" aria-hidden={!branch.known}>
-                {LANES.map((lane) => (
-                  <div key={lane.key}>
-                    <dt>{lane.label}</dt>
-                    <dd>{branch.known ? branch.counts[lane.key] : '—'}</dd>
-                  </div>
-                ))}
-              </dl>
+              {!branch.closed && branch.hours.state === 'open' ? (
+                <span className="live-board-hours">{branch.hours.label}</span>
+              ) : null}
+              {branch.closed ? (
+                /* Counts for a closed branch are noise: they describe a floor
+                   nobody can join until it opens again. */
+                <p className="live-board-closed">
+                  Closed right now
+                  {branch.address ? <span>{branch.address}</span> : null}
+                </p>
+              ) : (
+                <dl className="live-board-lanes" aria-hidden={!branch.known}>
+                  {LANES.map((lane) => (
+                    <div key={lane.key}>
+                      <dt>{lane.label}</dt>
+                      <dd>{branch.known ? branch.counts[lane.key] : '—'}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
               <span className="live-board-cta">
                 Open live queue <ArrowRight size={15} aria-hidden="true" />
               </span>

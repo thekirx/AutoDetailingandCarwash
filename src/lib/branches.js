@@ -3,16 +3,16 @@ import { supabase } from './supabase.js'
 
 const BRANCH_SELECT = 'slug, name, address, code, latitude, longitude, coming_soon, is_active'
 
-/**
- * Public branch lists.
- * @param {{ mode?: 'bookable' | 'visible' }} opts
- * - bookable: open for queue/booking (active, not coming soon)
- * - visible: active OR coming soon (marketing / branches page)
- */
-export async function fetchPublicBranches({ mode = 'bookable' } = {}) {
+/* Added by the branch_operating_hours migration. Selected separately so the
+   site keeps working on an environment where that migration has not been
+   applied yet — PostgREST rejects the whole select for one unknown column,
+   which would otherwise take out every branch list on the public site. */
+const BRANCH_HOURS_SELECT = 'opens_at, closes_at, closed_weekdays'
+
+function branchQuery(select, mode) {
   let q = supabase
     .from('branches')
-    .select(BRANCH_SELECT)
+    .select(select)
     .eq('is_archived', false)
     .order('name')
 
@@ -21,8 +21,20 @@ export async function fetchPublicBranches({ mode = 'bookable' } = {}) {
   } else {
     q = q.or('is_active.eq.true,coming_soon.eq.true')
   }
+  return q
+}
 
-  const { data, error } = await q
+/**
+ * Public branch lists.
+ * @param {{ mode?: 'bookable' | 'visible' }} opts
+ * - bookable: open for queue/booking (active, not coming soon)
+ * - visible: active OR coming soon (marketing / branches page)
+ */
+export async function fetchPublicBranches({ mode = 'bookable' } = {}) {
+  const withHours = await branchQuery(`${BRANCH_SELECT}, ${BRANCH_HOURS_SELECT}`, mode)
+  if (!withHours.error) return withHours.data || []
+
+  const { data, error } = await branchQuery(BRANCH_SELECT, mode)
   if (error) throw new Error(error.message)
   return data || []
 }
