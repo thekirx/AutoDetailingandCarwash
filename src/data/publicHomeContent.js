@@ -15,15 +15,45 @@ export const HOME_SECTION_IDS = [
 ]
 
 export const ppfInformation = {
-  image: new URL('../assets/services/ppf-information-grey-truck-clean.jpg', import.meta.url).href,
-  imageAlt: 'Grey pickup truck prepared for paint protection film',
-  title: 'Protection engineered for every drive.',
-  copy: 'Paint Protection Film is a clear, precision-applied layer that helps defend your vehicle from stone chips, light scratches, road debris, and daily wear while preserving the original finish.',
-  features: [
-    { title: 'Clarity', copy: 'A clear, smooth finish designed to preserve the depth, color, and gloss of your paint.' },
-    { title: 'Stretch', copy: 'Flexible film follows complex curves and body lines for precise, edge-to-edge coverage.' },
-    { title: 'Adhesion', copy: 'Professional installation helps the film settle securely around panels, corners, and contours.' },
-    { title: 'Warranty', copy: 'Coverage details are explained before installation so you know how your selected film is supported.' },
+  image: '/ppf-frames/desktop/ppf_001.webp',
+  imageAlt: 'Ford Ranger Raptor beginning a paint protection film installation sequence',
+  eyebrow: 'Paint Protection Film',
+  title: 'Between your paint\nAnd everything out there.',
+  copy: 'Precision-installed protection designed to disappear into the finish.',
+  introEnd: 0.12,
+  chapters: [
+    {
+      number: '01',
+      label: 'Align',
+      heading: 'It starts with precision.',
+      copy: 'Every panel is carefully positioned for accurate coverage.',
+      start: 0.12,
+      end: 0.32,
+    },
+    {
+      number: '02',
+      label: 'Form',
+      heading: 'Shaped to every curve.',
+      copy: 'The film conforms to every contour and body line.',
+      start: 0.32,
+      end: 0.55,
+    },
+    {
+      number: '03',
+      label: 'Seal',
+      heading: 'Locked edge to edge.',
+      copy: 'Edges are carefully finished for a clean, secure fit.',
+      start: 0.55,
+      end: 0.78,
+    },
+    {
+      number: '04',
+      label: 'Protected',
+      heading: 'Now you see the paint.\nNot the protection.',
+      copy: 'Stone chips, scratches, and road debris meet the film first.',
+      start: 0.78,
+      end: 1,
+    },
   ],
 }
 

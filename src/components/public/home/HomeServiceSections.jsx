@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { ceramicPackages, ceramicSection, mediaGallery, nanoCeramicTint, ppfInformation } from '../../../data/publicHomeContent'
 import PpfInstallSequence from './PpfInstallSequence'
+import { getPpfCaptionKey } from '../../../lib/ppfScrollStory'
+
+const cinematicLines = (text) => text.split('\n').map((line) => <span key={line}>{line}</span>)
 
 export function CeramicSection() {
   return (
@@ -52,10 +55,11 @@ function SplitFeature({ id, eyebrow, item, reverse = false }) {
 }
 
 export function PpfInformationSection() {
-  const [progress, setProgress] = useState(0)
+  const [captionKey, setCaptionKey] = useState('introduction')
 
-  // Each callout reveals as its stage of the installation is reached.
-  const stageAt = (index) => (index + 1) / (ppfInformation.features.length + 1)
+  const handleProgress = useCallback((progress) => {
+    setCaptionKey(getPpfCaptionKey(progress, ppfInformation))
+  }, [])
 
   return (
     <section
@@ -65,30 +69,33 @@ export function PpfInformationSection() {
       data-ppf-stage
     >
       <div className="ppf-information-pin" data-ppf-pin>
-        <PpfInstallSequence
-          onProgress={setProgress}
-          poster={ppfInformation.image}
-          posterAlt={ppfInformation.imageAlt}
-        />
+        <PpfInstallSequence onProgress={handleProgress} />
+
         <div className="ppf-information-scrim" aria-hidden="true" />
 
-        <div className="public-shell ppf-information-heading" data-motion="heading">
-          <p>Superior protection, edge to edge</p>
-          <h2>{ppfInformation.title}</h2>
+        <div
+          className="public-shell ppf-information-heading"
+          data-active={captionKey === 'introduction' ? 'true' : 'false'}
+        >
+          <p>{ppfInformation.eyebrow}</p>
+          <h2>{cinematicLines(ppfInformation.title)}</h2>
           <span>{ppfInformation.copy}</span>
         </div>
 
-        <div className="public-shell ppf-information-features" data-motion="cards">
-          {ppfInformation.features.map((feature, index) => (
+        <div className="public-shell ppf-information-chapters">
+          {ppfInformation.chapters.map((chapter, index) => (
             <article
-              className="ppf-information-callout"
-              key={feature.title}
-              data-motion-item
-              data-revealed={progress >= stageAt(index) ? 'true' : 'false'}
+              className="ppf-information-chapter"
+              key={chapter.label}
+              data-active={captionKey === index ? 'true' : 'false'}
             >
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <h3>{feature.title}</h3>
-              <p>{feature.copy}</p>
+              <div className="ppf-information-chapter-meta">
+                <span aria-hidden="true">{chapter.number}</span>
+                <strong>{chapter.label}</strong>
+              </div>
+
+              <h3>{cinematicLines(chapter.heading)}</h3>
+              <p>{chapter.copy}</p>
             </article>
           ))}
         </div>
