@@ -5702,9 +5702,7 @@ a.home-branch-card:hover { background:#052699; }
 /* ---- PPF Information: scroll-driven installation sequence ---- */
 .ppf-information-stage { padding-bottom:0; }
 .ppf-information-pin { position:relative; display:block; min-height:100vh; padding:0; overflow:hidden; width:100%; }
-.ppf-sequence { position:absolute; inset:0; z-index:0; background:#08090b; contain:strict; }
-.ppf-sequence-canvas { display:block; width:100%; height:100%; transform:translateZ(0); backface-visibility:hidden; }
-.ppf-sequence-poster { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:saturate(.78) contrast(1.08) brightness(.72); }
+.ppf-sequence { z-index:0; background:#08090b; contain:layout paint; }
 .ppf-information-scrim { position:absolute; inset:0; z-index:1; pointer-events:none;
   background:linear-gradient(180deg,rgba(5,5,5,.55) 0,rgba(5,5,5,.15) 30%,rgba(5,5,5,.15) 70%,rgba(5,5,5,.65) 100%); }
 
