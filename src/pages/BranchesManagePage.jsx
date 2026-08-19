@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { Building2, Pencil, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canCreateBranches, canManageBranches } from '@/auth/permissions'
-import { archiveBranch, createBranch, listBranches, updateBranch } from '@/lib/adminApi'
+import { archiveBranch, createBranch, listBranches, setBranchHours, updateBranch } from '@/lib/adminApi'
 import { filterBranchesForProfile } from '@/queue/queueLogic'
 import { branchStatusLabel } from '@/lib/branches'
 import BranchLocationPicker from '@/components/BranchLocationPicker'
@@ -23,6 +23,26 @@ const empty = {
   latitude: null,
   longitude: null,
   status: 'active',
+  opensAt: '',
+  closesAt: '',
+  closedWeekdays: [],
+}
+
+/* ISO weekday numbering, matching branches.closed_weekdays (1 = Monday). */
+const WEEKDAYS = [
+  { iso: 1, label: 'Mon' },
+  { iso: 2, label: 'Tue' },
+  { iso: 3, label: 'Wed' },
+  { iso: 4, label: 'Thu' },
+  { iso: 5, label: 'Fri' },
+  { iso: 6, label: 'Sat' },
+  { iso: 7, label: 'Sun' },
+]
+
+/** Postgres hands back "08:00:00"; <input type="time"> wants "08:00". */
+function timeForInput(value) {
+  const match = /^(\d{2}:\d{2})/.exec(String(value || ''))
+  return match ? match[1] : ''
 }
 
 function statusFromRow(row) {
@@ -51,6 +71,26 @@ export default function BranchesManagePage() {
 
   if (!canManageBranches(profile)) return <Navigate to="/operations/access-denied" replace />
 
+  /* Hours ride on the same save button but go through their own RPC, so a
+     branch whose hours fail to write still keeps the rest of the edit. */
+  async function saveHours(slug) {
+    await setBranchHours({
+      slug,
+      opensAt: form.opensAt || null,
+      closesAt: form.closesAt || null,
+      closedWeekdays: form.closedWeekdays,
+    })
+  }
+
+  function toggleClosedWeekday(iso) {
+    setForm((f) => ({
+      ...f,
+      closedWeekdays: f.closedWeekdays.includes(iso)
+        ? f.closedWeekdays.filter((day) => day !== iso)
+        : [...f.closedWeekdays, iso].sort((a, b) => a - b),
+    }))
+  }
+
   async function onSubmit(event) {
     event.preventDefault()
     setSaving(true)
@@ -66,11 +106,13 @@ export default function BranchesManagePage() {
       }
       if (editingSlug) {
         await updateBranch({ slug: editingSlug, ...payload })
+        await saveHours(editingSlug)
         toast.success('Branch updated')
         setEditingSlug(null)
       } else {
         if (!canCreate) throw new Error('Only Super Admin can open new company sites.')
         await createBranch(payload)
+        await saveHours(form.slug)
         toast.success(
           form.status === 'coming_soon'
             ? 'Branch announced as coming soon'
@@ -96,6 +138,9 @@ export default function BranchesManagePage() {
       latitude: row.latitude,
       longitude: row.longitude,
       status: statusFromRow(row),
+      opensAt: timeForInput(row.opens_at),
+      closesAt: timeForInput(row.closes_at),
+      closedWeekdays: row.closed_weekdays || [],
     })
   }
 
@@ -247,6 +292,57 @@ export default function BranchesManagePage() {
                   placeholder="Filled from search or pin — editable"
                 />
               </div>
+
+              <fieldset className="flex flex-col gap-3 rounded-lg border border-border p-4">
+                <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Opening hours
+                </legend>
+                <p className="text-[11px] text-muted-foreground">
+                  Shown on the public homepage. Leave both times empty to hide open/closed status
+                  and show queue length only.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="b-opens">Opens</Label>
+                    <Input
+                      id="b-opens"
+                      type="time"
+                      value={form.opensAt}
+                      onChange={(e) => setForm((f) => ({ ...f, opensAt: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="b-closes">Closes</Label>
+                    <Input
+                      id="b-closes"
+                      type="time"
+                      value={form.closesAt}
+                      onChange={(e) => setForm((f) => ({ ...f, closesAt: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <span className="text-[11px] text-muted-foreground">Closed on</span>
+                  <div className="flex flex-wrap gap-2">
+                    {WEEKDAYS.map((day) => {
+                      const isClosed = form.closedWeekdays.includes(day.iso)
+                      return (
+                        <button
+                          key={day.iso}
+                          type="button"
+                          onClick={() => toggleClosedWeekday(day.iso)}
+                          aria-pressed={isClosed}
+                          className={`min-h-9 rounded-md border px-3 text-[11px] font-semibold uppercase tracking-wider ${
+                            isClosed ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'
+                          }`}
+                        >
+                          {day.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </fieldset>
 
               <div className="flex gap-2">
                 <Button type="submit" disabled={saving} className="flex-1">

@@ -84,6 +84,31 @@ export async function updateBranch({ slug, name, code, address, is_active, latit
   return data
 }
 
+/**
+ * Opening hours drive the public "open / opens at" state on the homepage.
+ * Kept off updateBranch so that function's signature stays as-is.
+ *
+ * @param {{ slug: string, opensAt: string|null, closesAt: string|null, closedWeekdays?: number[] }} input
+ *   Times as "HH:MM"; pass null for both to clear the schedule, which puts the
+ *   public site back to showing queue length only.
+ */
+export async function setBranchHours({ slug, opensAt, closesAt, closedWeekdays = [] }) {
+  if (!String(slug || '').trim()) throw new Error('Branch slug is required.')
+  const opens = String(opensAt || '').trim() || null
+  const closes = String(closesAt || '').trim() || null
+  if (!!opens !== !!closes) throw new Error('Set both opening and closing time, or clear both.')
+
+  const { data, error } = await supabase.rpc('set_branch_hours', {
+    input_branch_slug: slug,
+    input_opens_at: opens,
+    input_closes_at: closes,
+    input_closed_weekdays: closedWeekdays,
+  })
+  if (error) throw mapDbError(error)
+  branchesCache.clear()
+  return data
+}
+
 export async function archiveBranch(slug) {
   if (!String(slug || '').trim()) throw new Error('Branch slug is required.')
   const { data, error } = await supabase.rpc('archive_branch', { input_branch_slug: slug })
