@@ -15,7 +15,7 @@ export const HOME_SECTION_IDS = [
 ]
 
 export const ppfInformation = {
-  image: '/media/ppf-install/desktop/frame-0001.webp',
+  image: '/ppf-frames/desktop/ppf_001.webp',
   imageAlt: 'Ford Ranger Raptor beginning a paint protection film installation sequence',
   eyebrow: 'Paint Protection Film',
   title: 'Between your paint\nAnd everything out there.',

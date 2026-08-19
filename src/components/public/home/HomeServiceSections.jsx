@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { Check } from 'lucide-react'
 import { ceramicPackages, ceramicSection, mediaGallery, nanoCeramicTint, ppfInformation } from '../../../data/publicHomeContent'
 import PpfInstallSequence from './PpfInstallSequence'
-import { getPpfStoryState } from '../../../lib/ppfScrollStory'
+import { getPpfCaptionKey } from '../../../lib/ppfScrollStory'
 
 const cinematicLines = (text) => text.split('\n').map((line) => <span key={line}>{line}</span>)
 
@@ -63,8 +63,7 @@ export function PpfInformationSection() {
   const [captionKey, setCaptionKey] = useState('introduction')
 
   const handleProgress = useCallback((progress) => {
-    const story = getPpfStoryState(progress, ppfInformation, 120)
-    setCaptionKey(story.showIntroduction ? 'introduction' : story.activeChapter)
+    setCaptionKey(getPpfCaptionKey(progress, ppfInformation))
   }, [])
 
   return (
@@ -75,16 +74,11 @@ export function PpfInformationSection() {
       data-ppf-stage
     >
       <div className="ppf-information-pin" data-ppf-pin>
-        <PpfInstallSequence
-          onProgress={handleProgress}
-          poster={ppfInformation.image}
-          posterAlt={ppfInformation.imageAlt}
-        />
+        <PpfInstallSequence onProgress={handleProgress} />
         <div className="ppf-information-scrim" aria-hidden="true" />
 
         <div
           className="public-shell ppf-information-heading"
-          data-motion="heading"
           data-active={captionKey === 'introduction' ? 'true' : 'false'}
         >
           <p>{ppfInformation.eyebrow}</p>
@@ -92,12 +86,11 @@ export function PpfInformationSection() {
           <span>{ppfInformation.copy}</span>
         </div>
 
-        <div className="public-shell ppf-information-chapters" data-motion="cards">
+        <div className="public-shell ppf-information-chapters">
           {ppfInformation.chapters.map((chapter, index) => (
             <article
               className="ppf-information-chapter"
               key={chapter.label}
-              data-motion-item
               data-active={captionKey === index ? 'true' : 'false'}
             >
               <div className="ppf-information-chapter-meta">

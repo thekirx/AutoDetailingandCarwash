@@ -1,0 +1,25 @@
+.ppf-sequence { position: relative; }
+
+.ppf-stage {
+  position: relative;
+  height: 100svh;
+  width: 100%;
+  overflow: hidden;
+  background: #0b0d10;
+}
+
+.ppf-canvas { display: block; width: 100%; height: 100%; }
+
+.ppf-loading {
+  position: absolute; left: 50%; bottom: 3rem; transform: translateX(-50%);
+  display: grid; gap: .6rem; justify-items: center; width: min(20rem, 70vw);
+}
+.ppf-loading-bar {
+  width: 100%; height: 2px; background: rgba(255,255,255,.16); overflow: hidden;
+}
+.ppf-loading-fill {
+  display: block; height: 100%; background: #f2f4f7; transition: width .2s linear;
+}
+.ppf-loading-label {
+  font-size: .8rem; color: rgba(242,244,247,.7); letter-spacing: .01em;
+}

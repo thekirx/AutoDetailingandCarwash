@@ -101,7 +101,8 @@ describe('Public homepage content assets', () => {
       'Now you see the paint.',
       'Not the protection.',
     ])
-    assert.equal(ppfInformation.image, '/media/ppf-install/desktop/frame-0001.webp')
+    assert.equal(ppfInformation.image, '/ppf-frames/desktop/ppf_001.webp')
+    await access(new URL(`../public${ppfInformation.image}`, import.meta.url))
     assert.equal(ppfInformation.imageAlt, 'Ford Ranger Raptor beginning a paint protection film installation sequence')
     assert.equal(nanoCeramicTint.title, 'Cooler cabin. Clearer drive.')
     assert.deepEqual(mediaGallery.map(({ title }) => title), ['DETAILING', 'PAINT PROTECTION FILM', 'CERAMIC COATING'])

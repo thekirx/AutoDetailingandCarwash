@@ -24,3 +24,8 @@ export function getPpfStoryState(progress, story, frameCount) {
     phase: showIntroduction ? 'introduction' : activeChapter === -1 ? 'clear' : 'process',
   }
 }
+
+export function getPpfCaptionKey(progress, story) {
+  const { activeChapter, showIntroduction } = getPpfStoryState(progress, story, 1)
+  return showIntroduction ? 'introduction' : activeChapter
+}
