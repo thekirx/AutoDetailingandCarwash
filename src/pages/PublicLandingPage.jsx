@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+import BeforeAfterSection from '../components/public/home/BeforeAfterSection'
 import EventsPreviewSection from '../components/public/home/EventsPreviewSection'
 import HomeEndingSections from '../components/public/home/HomeEndingSections'
 import HomeHeroSection from '../components/public/home/HomeHeroSection'
@@ -46,11 +47,12 @@ export default function PublicLandingPage() {
 
   return (
     <>
-      <HomeHeroSection locationLine={locationLine} />
+      <HomeHeroSection locationLine={locationLine} branches={branches} />
       <CeramicSection />
       <PpfInformationSection />
       <PpfPackagesSection />
       <NanoCeramicTintSection />
+      <BeforeAfterSection />
       <MediaGallerySection />
       <LatestPostSection state={content.post} />
       <EventsPreviewSection state={content.event} />
