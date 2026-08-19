@@ -133,7 +133,7 @@ export default function PpfInstallSequence({ onProgress }) {
         return;
       }
 
-      ScrollTrigger.create({
+      const trigger = ScrollTrigger.create({
         trigger: rootRef.current.closest("[data-ppf-stage]") || rootRef.current,
         start: "top top",
         end: isMobile ? "+=260%" : "+=340%",
@@ -150,6 +150,7 @@ export default function PpfInstallSequence({ onProgress }) {
           onProgress?.(self.progress);
         },
       });
+      return () => trigger.kill();
     }, rootRef);
 
     const onResize = () => paint(drawnRef.current < 0 ? 0 : drawnRef.current);

@@ -73,7 +73,7 @@ describe('homepage production content adapters', () => {
     }), {
       id: 'event-1', kind: 'event', title: 'Bacoor meet', excerpt: 'Cars and coffee',
       mediaUrl: 'https://example.com/event.webp', href: '/events/bacoor-meet', platform: 'Bacoor',
-      ctaLabel: 'Event details', date: '2026-09-01T02:00:00Z',
+      ctaLabel: 'Event details', date: '2026-09-01T02:00:00Z', dateLabel: '',
     })
   })
 

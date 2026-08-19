@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/auth/AuthProvider'
 import { canAccessInquiries } from '@/auth/permissions'
 import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
@@ -21,7 +20,6 @@ export default function FinanceReportsTab({
   profile,
   branchFilter,
 }) {
-  const { profile } = useAuth()
   // Complaints are readable by Super Admin / Assistant Super Admin only; for anyone
   // else RLS silently returns 0, so skip the query rather than show a false zero.
   const showComplaints = canAccessInquiries(profile)
