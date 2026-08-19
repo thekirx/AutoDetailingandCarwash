@@ -37,6 +37,7 @@ export default function PpfInstallSequence({ onProgress }) {
   const boxRef = useRef({ w: 0, h: 0, dpr: 0 });
   const onProgressRef = useRef(onProgress);
 
+  const [inView, setInView] = useState(false);
   const [primed, setPrimed] = useState(false);
   const [loadPct, setLoadPct] = useState(0);
 
@@ -107,8 +108,33 @@ export default function PpfInstallSequence({ onProgress }) {
     });
   }, [paint]);
 
+  /* ---- start fetching only once the section is worth paying for --------- */
+  useEffect(() => {
+    const node = rootRef.current;
+    if (!node) return;
+
+    /* The sequence is ~9 MB on desktop and ~5.5 MB on mobile. Fetching it on
+       mount bills every visitor for it, including the ones who bounce from the
+       hero. The margin is tuned to clear the hero and no more: the section
+       sits roughly three quarters of a viewport below the fold, so anyone who
+       starts scrolling still gets the ceramic section's worth of lead time
+       before the pin engages — and an un-primed sequence is a poster, not a
+       hole. */
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        setInView(true);
+      },
+      { rootMargin: '80% 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   /* ---- decode frames to ImageBitmap ------------------------------------ */
   useEffect(() => {
+    if (!inView) return;
     let cancelled = false;
     const isMobile = window.matchMedia(MOBILE_QUERY).matches;
     const dir = isMobile ? MOBILE_DIR : DESKTOP_DIR;
@@ -168,7 +194,7 @@ export default function PpfInstallSequence({ onProgress }) {
       frames.forEach((f) => f?.close?.());
       framesRef.current = [];
     };
-  }, [paint]);
+  }, [paint, inView]);
 
   /* ---- scroll wiring --------------------------------------------------- */
   useLayoutEffect(() => {

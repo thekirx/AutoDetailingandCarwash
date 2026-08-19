@@ -56,8 +56,11 @@ export default function PublicLandingPage() {
       <MediaGallerySection />
       <LatestPostSection state={content.post} />
       <EventsPreviewSection state={content.event} />
-      <PartnershipSection />
+      {/* Site partnerships are a B2B ask. Kept on the page, but after the
+          booking path — it was sitting between the gallery and the queue /
+          branch CTAs, interrupting the visitor who came to book a wash. */}
       <HomeEndingSections branches={branches} />
+      <PartnershipSection />
     </>
   )
 }
