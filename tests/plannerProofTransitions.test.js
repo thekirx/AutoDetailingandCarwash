@@ -37,4 +37,14 @@ describe('planner proof transitions', () => {
     assert.match(sql, /for_review/)
     assert.match(sql, /in_progress' and new\.status in \('for_review', 'done'\)/)
   })
+
+  it('DB guard blocks complete when proof_required and proof_url is empty', async () => {
+    const sql = await readFile(
+      join(root, 'supabase/migrations/20260818053000_plan_cards_proof_required.sql'),
+      'utf8',
+    )
+    assert.match(sql, /proof_required boolean not null default false/)
+    assert.match(sql, /Photo proof is required for this task/)
+    assert.match(sql, /revoke execute on function public\.guard_plan_card_assignee_self_update/)
+  })
 })

@@ -95,13 +95,12 @@ describe('RBAC Part 1 matrix', () => {
       [
         '/operations/dashboard',
         '/operations/queue',
-        '/operations/queue?family=detailing',
-        '/operations/pos',
         '/operations/attendance',
-        '/operations/inventory',
-        '/operations/history',
-        '/operations/planning',
+        '/operations/pos',
         '/operations/reviews',
+        '/operations/planning',
+        '/operations/history',
+        '/operations/my-pay',
         '/operations/audit',
       ],
     )
@@ -116,7 +115,7 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(!getOperationsNav(staff).some((i) => String(i.to).includes('tab=forms')))
     assert.deepEqual(
       getOperationsNav({ role: ROLES.VIDEO_EDITOR }).map((i) => i.to),
-      ['/operations/planning?tab=calendar', '/operations/my-tasks'],
+      ['/operations/planning?tab=calendar', '/operations/my-tasks', '/operations/my-pay'],
     )
   })
 
@@ -133,6 +132,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/planning',
         '/operations/notifications',
         '/operations/history',
+        '/operations/my-pay',
       ],
     )
   })
@@ -152,5 +152,31 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(dock.some((i) => i.to === '/operations/attendance'))
     assert.equal(dock.some((i) => i.to === '/operations/bookings'), false)
     assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 0)
+  })
+
+  it('Command nav never links a page the role cannot open', () => {
+    const routeKey = (to) => {
+      const rest = String(to).split('?')[0].replace(/^\/operations\//, '')
+      if (rest === 'queue/new') return 'queue-new'
+      return rest.split('/')[0]
+    }
+    const samples = [
+      { role: ROLES.SUPER_ADMIN },
+      { role: ROLES.ASSISTANT_SUPER_ADMIN, permission_grants: {} },
+      { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor'] },
+      { role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' },
+      { role: ROLES.STAFF, branch_slug: 'bacoor' },
+      { role: ROLES.SALES, branch_slug: 'bacoor' },
+      { role: ROLES.MARKETING, branch_slug: 'bacoor' },
+      { role: ROLES.DETAILER, branch_slug: 'bacoor' },
+      { role: ROLES.VIDEO_EDITOR, branch_slug: 'bacoor' },
+      { role: ROLES.INVESTOR },
+    ]
+    for (const p of samples) {
+      for (const item of getOperationsNav(p)) {
+        const key = routeKey(item.to)
+        assert.equal(allowRoute(p, key), true, `${p.role} ${item.to} -> ${key}`)
+      }
+    }
   })
 })

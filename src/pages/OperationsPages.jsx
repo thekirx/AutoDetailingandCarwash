@@ -4,6 +4,8 @@ import {
   BadgeCheck,
   CarFront,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Clock3,
   LoaderCircle,
@@ -28,7 +30,7 @@ import {
   QUEUE_FAMILIES,
   QUEUE_FAMILY_DETAILING,
 } from '../lib/queueFamilies'
-import { canAccessPos, canSeeAllBranches, canViewRedoLane, canWriteFinance, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
+import { canAccessPayroll, canAccessPos, canSeeAllBranches, canViewRedoLane, canWriteFinance, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
 import {
   DEFAULT_COMPENSATION_RULES,
   normalizeCompensationSettings,
@@ -76,8 +78,18 @@ import {
   updateCrewStaffMember,
 } from '../queue/queueApi'
 import { allowedStaffPlanAssigneePatch } from '../queue/staffTaskLogic'
-import { isHttpProofUrl, planProofObjectPath } from '../lib/plannerTasks'
+import { hasPlannerProof, isHttpProofUrl, planProofObjectPath } from '../lib/plannerTasks'
 import { createCoalescedReload } from '../lib/coalesceReload'
+import {
+  BOOKING_TABLE_DEFAULT_PAGE_SIZE,
+  BOOKING_TABLE_PAGE_SIZES,
+  QUEUE_LANE_PAGE_SIZE,
+  bookingVehicleText,
+  paginateBookingTableRows,
+  paginateRows,
+} from '../lib/bookingTable'
+import { Button } from '../components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { toast } from 'sonner'
 import { plateKindLabel, plateValidationError, PLATE_FIELD_HINT } from '../lib/customerAuth'
 import { applyPlateSuggestion, plateSuggestPrefix, rankPlateSuggestions } from '../lib/plateSuggest'
@@ -107,6 +119,35 @@ const FALLBACK_VEHICLE_TYPES = [
   { label: 'Large', value: 'large' },
   { label: 'Extra Large', value: 'extra_large' },
 ]
+
+function QueueLanePager({ slice, onPage, label }) {
+  if (!slice || slice.totalPages <= 1) return null
+  return (
+    <div className="queue-lane-pager">
+      <button
+        type="button"
+        className="queue-lane-pager-btn"
+        disabled={slice.page <= 1}
+        aria-label={`Previous ${label} page`}
+        onClick={() => onPage(slice.page - 1)}
+      >
+        Prev
+      </button>
+      <p className="queue-lane-pager-range tabular-nums">
+        {slice.from}–{slice.to} of {slice.total}
+      </p>
+      <button
+        type="button"
+        className="queue-lane-pager-btn"
+        disabled={slice.page >= slice.totalPages}
+        aria-label={`Next ${label} page`}
+        onClick={() => onPage(slice.page + 1)}
+      >
+        Next
+      </button>
+    </div>
+  )
+}
 
 function PageHeader({ eyebrow, title, description, action, live = false }) {
   return (
@@ -665,6 +706,7 @@ function OperationsQueueBoardPage() {
   const queueFamily = parseQueueFamilyParam(searchParams.get('family'))
   const familyMeta = QUEUE_FAMILIES.find((f) => f.id === queueFamily) || QUEUE_FAMILIES[0]
   const requestedLane = parseQueueLaneParam(searchParams.get('lane'))
+  const view = searchParams.get('view') === 'table' ? 'table' : 'board'
   const branchFromUrl = String(searchParams.get('branch') || '').trim()
   const [branchFilter, setBranchFilter] = useState(() => {
     if (branchFromUrl) return branchFromUrl
@@ -675,6 +717,9 @@ function OperationsQueueBoardPage() {
   })
   const [branches, setBranches] = useState([])
   const [editBookingId, setEditBookingId] = useState(null)
+  const [lanePage, setLanePage] = useState({})
+  const [tablePage, setTablePage] = useState(1)
+  const [tablePageSize, setTablePageSize] = useState(BOOKING_TABLE_DEFAULT_PAGE_SIZE)
   const { activeQueue, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter, queueFamily)
   const boardStatuses = useMemo(() => getOpsBoardStatuses(profile, { family: queueFamily }), [profile, queueFamily])
   const familyQueue = useMemo(() => filterTicketsByFamily(activeQueue || [], queueFamily), [activeQueue, queueFamily])
@@ -689,6 +734,25 @@ function OperationsQueueBoardPage() {
   )
   const counts = useMemo(() => getQueueCounts(visibleQueue, { statuses: boardStatuses }), [visibleQueue, boardStatuses])
   const focusLane = requestedLane && boardStatuses.includes(requestedLane) ? requestedLane : null
+  const tableSource = useMemo(() => {
+    const list = focusLane ? grouped[focusLane] || [] : boardTickets
+    return [...list].sort((a, b) => {
+      const ai = boardStatuses.indexOf(a.status)
+      const bi = boardStatuses.indexOf(b.status)
+      if (ai !== bi) return ai - bi
+      return String(a.customer_name || '').localeCompare(String(b.customer_name || ''), undefined, { sensitivity: 'base' })
+    })
+  }, [boardTickets, boardStatuses, focusLane, grouped])
+  const tableSlice = paginateBookingTableRows(tableSource, { page: tablePage, pageSize: tablePageSize })
+  const branchNameBySlug = useMemo(
+    () => Object.fromEntries((branches || []).map((b) => [b.slug, b.name || b.slug])),
+    [branches],
+  )
+
+  useEffect(() => {
+    setLanePage({})
+    setTablePage(1)
+  }, [queueFamily, focusLane, branchFilter])
 
   useEffect(() => {
     if (!branchFromUrl || branchFromUrl === branchFilter) return
@@ -703,6 +767,15 @@ function OperationsQueueBoardPage() {
     })
     return () => window.cancelAnimationFrame(id)
   }, [focusLane, loading, boardTickets.length])
+
+  const setQueueView = useCallback((nextView) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (nextView === 'table') next.set('view', 'table')
+      else next.delete('view')
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
 
   const setLaneFilter = useCallback((lane) => {
     setSearchParams((prev) => {
@@ -765,66 +838,54 @@ function OperationsQueueBoardPage() {
   return (
     <section className="queue-board flex min-h-0 flex-col">
       <PageHeader
-        eyebrow={profile?.role === 'admin' ? 'Branch Admin' : familyMeta.label}
-        title={familyMeta.label}
+        eyebrow="Floor"
+        title="Queue"
         description={
           queueFamily === QUEUE_FAMILY_DETAILING
-            ? 'Detailing jobs from Bookings (Assigned to Branch) through release. Same lane logic as car wash.'
-            : profile?.role === 'admin'
-              ? 'Car wash / same-day tickets — open POS when payment is ready.'
-              : seeRedo
-                ? 'Same-day wash & package tickets until payment. Redo is the owner QC lane.'
-                : 'Same-day wash & package tickets — waiting, in progress, and final checking.'
+            ? 'Multi-day detailing from Assigned to Branch through release. Switch to Wash for same-day jobs.'
+            : seeRedo
+              ? 'Same-day wash and package tickets until payment. Redo is the owner QC lane.'
+              : 'Same-day wash and package tickets — waiting, on the bay, and final check.'
         }
         live={live}
-        action={(
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <div className="flex rounded-2xl border border-white/10 p-1">
-              {QUEUE_FAMILIES.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setQueueFamily(f.id)}
-                  className={`rounded-xl px-3 py-2 text-xs font-semibold ${
-                    queueFamily === f.id ? 'bg-primary text-primary-foreground' : 'text-slate-300'
-                  }`}
-                >
-                  {f.shortLabel}
-                </button>
-              ))}
-          </div>
-            <RefreshButton loading={loading} onClick={reload} />
-            {branchFilter && branchFilter !== 'all' ? (
-              <>
-                <Link
-                  to={`/queue/${branchFilter}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline"
-                >
-                  Customer kiosk
-                </Link>
-                <Link
-                  to={`/queue/${branchFilter}/tv`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="floor-touch-btn inline-flex items-center rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 no-underline"
-                >
-                  Shop TV
-                </Link>
-              </>
-            ) : null}
-            {canManageQueue && (
-              <Link to="/operations/queue/new" className="floor-touch-btn inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 font-semibold text-primary-foreground no-underline transition hover:opacity-90 sm:px-5">
-                <Plus size={18} aria-hidden />
-                New ticket
-              </Link>
-            )}
-            </div>
-        )}
+        action={
+          canManageQueue ? (
+            <Link to="/operations/queue/new" className="floor-touch-btn inline-flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 font-semibold text-primary-foreground no-underline transition hover:opacity-90 sm:px-5">
+              <Plus size={18} aria-hidden />
+              New ticket
+            </Link>
+          ) : null
+        }
       />
 
-      <div className="queue-board-toolbar mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="queue-board-toolbar mt-3 flex flex-col gap-3">
+        <div className="queue-board-controls">
+          <div className="queue-seg" role="group" aria-label="Service family">
+            {QUEUE_FAMILIES.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                aria-pressed={queueFamily === f.id}
+                onClick={() => setQueueFamily(f.id)}
+              >
+                {f.shortLabel}
+              </button>
+            ))}
+          </div>
+          <div className="queue-seg" role="group" aria-label="Queue layout">
+            {['board', 'table'].map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={view === mode}
+                onClick={() => setQueueView(mode)}
+              >
+                {mode === 'board' ? 'Board' : 'Table'}
+              </button>
+            ))}
+          </div>
+          <RefreshButton loading={loading} onClick={reload} />
+        </div>
         <div className="flex flex-wrap items-end gap-3">
           {(seeAll || branchOptions.length > 1) ? (
             <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
@@ -842,7 +903,27 @@ function OperationsQueueBoardPage() {
               Branch · {getBranchScope(profile) || 'unassigned'}
             </p>
           )}
+          {branchFilter && branchFilter !== 'all' ? (
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={`/queue/${branchFilter}`}
+                target="_blank"
+                rel="noreferrer"
+                className="floor-touch-btn inline-flex min-h-11 items-center rounded-xl border border-border px-3 text-sm font-semibold text-foreground no-underline"
+              >
+                Customer kiosk
+              </Link>
+              <Link
+                to={`/queue/${branchFilter}/tv`}
+                target="_blank"
+                rel="noreferrer"
+                className="floor-touch-btn inline-flex min-h-11 items-center rounded-xl border border-border px-3 text-sm font-semibold text-foreground no-underline"
+              >
+                Shop TV
+              </Link>
             </div>
+          ) : null}
+        </div>
         <div
           className="floor-status-chips flex w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
           role="toolbar"
@@ -886,29 +967,145 @@ function OperationsQueueBoardPage() {
         </div>
       </div>
 
-      {/* Mobile / tablet: one readable list driven by smart status chips */}
-      <div className="queue-card-list mt-3 xl:hidden" aria-label="Queue tickets">
-        {loading ? (
-          Array.from({ length: 3 }, (_, index) => (
-            <div key={index} className="h-28 animate-pulse rounded-2xl bg-muted" />
-          ))
-        ) : (focusLane ? grouped[focusLane] || [] : boardTickets).length ? (
-          (focusLane ? grouped[focusLane] || [] : boardTickets).map((ticket) => (
-            <TicketCard
-              key={ticket.booking_id}
-              ticket={ticket}
-              timingWarnings={timingWarnings}
-              onOpen={canManageQueue ? setEditBookingId : undefined}
-            />
-          ))
-        ) : (
-          <EmptyLine text={focusLane ? 'No tickets in this lane.' : 'No active tickets.'} />
-        )}
-      </div>
-
-      {/* Desktop: all lanes on one screen */}
+      {view === 'table' ? (
+        <div className="mt-3">
+        <div className="bk-table">
+          <div className="bk-table-toolbar">
+            <div>
+              <p className="bk-table-count">{familyMeta.shortLabel} ledger</p>
+              <p className="bk-table-range">
+                {tableSlice.total
+                  ? `${tableSlice.from}–${tableSlice.to} of ${tableSlice.total} cars`
+                  : 'No cars in this family and lane.'}
+              </p>
+            </div>
+          </div>
+          <Table className="bk-data-grid">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Customer</TableHead>
+                <TableHead>Vehicle</TableHead>
+                <TableHead className="q-col-service">Service</TableHead>
+                <TableHead>Lane</TableHead>
+                <TableHead className="q-col-queue">Queue</TableHead>
+                <TableHead className="q-col-branch">Branch</TableHead>
+                <TableHead className="q-col-crew">Crew</TableHead>
+                <TableHead className="q-col-open">Open</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }, (_, index) => (
+                  <TableRow key={index}>
+                    <TableCell colSpan={8}>
+                      <div className="h-10 animate-pulse rounded-lg bg-muted" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : tableSlice.rows.length ? (
+                tableSlice.rows.map((ticket) => (
+                  <TableRow
+                    key={ticket.booking_id}
+                    className={canManageQueue ? 'cursor-pointer' : undefined}
+                    onClick={() => {
+                      if (canManageQueue) setEditBookingId(ticket.booking_id)
+                    }}
+                  >
+                    <TableCell>
+                      <div className="font-semibold text-foreground">{ticket.customer_name}</div>
+                      <div className="text-xs text-muted-foreground">{ticket.customer_phone || 'No phone'}</div>
+                    </TableCell>
+                    <TableCell className="text-foreground">{bookingVehicleText(ticket)}</TableCell>
+                    <TableCell className="q-col-service font-medium text-primary">{ticket.service_name || '—'}</TableCell>
+                    <TableCell>
+                      <span className={statusTone[ticket.status] || statusTone.completed}>
+                        {statusShortLabel(ticket.status)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="q-col-queue tabular-nums font-semibold text-foreground">
+                      {formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}
+                    </TableCell>
+                    <TableCell className="q-col-branch capitalize text-foreground">
+                      {branchNameBySlug[ticket.branch] || ticket.branch || '—'}
+                    </TableCell>
+                    <TableCell className="q-col-crew text-muted-foreground">
+                      {ticket.assigned_staff_name || 'Unassigned'}
+                    </TableCell>
+                    <TableCell className="q-col-open">
+                      {canManageQueue ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-11 cursor-pointer"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setEditBookingId(ticket.booking_id)
+                          }}
+                        >
+                          Open ticket
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">View only</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    No tickets in this family. Switch lane chips or create a ticket.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          <div className="bk-table-pager">
+            <label className="bk-table-page-size">
+              Rows per page
+              <select
+                value={tablePageSize}
+                onChange={(e) => {
+                  setTablePageSize(Number(e.target.value))
+                  setTablePage(1)
+                }}
+                aria-label="Rows per page"
+              >
+                {BOOKING_TABLE_PAGE_SIZES.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+            <p className="bk-table-page-range tabular-nums">
+              {tableSlice.from}-{tableSlice.to} of {tableSlice.total}
+            </p>
+            <div className="bk-table-page-nav">
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 min-w-11 cursor-pointer px-0"
+                disabled={tableSlice.page <= 1}
+                aria-label="Previous page"
+                onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft size={16} strokeWidth={2} />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 min-w-11 cursor-pointer px-0"
+                disabled={tableSlice.page >= tableSlice.totalPages}
+                aria-label="Next page"
+                onClick={() => setTablePage((p) => p + 1)}
+              >
+                <ChevronRight size={16} strokeWidth={2} />
+              </Button>
+            </div>
+          </div>
+        </div>
+        </div>
+      ) : (
       <div
-        className="queue-lane-board-fit mt-3 hidden xl:grid sm:mt-4"
+        className="queue-lane-board-fit mt-3 sm:mt-4"
         style={{ '--queue-lane-count': boardStatuses.length }}
         role="region"
         aria-label="Active queue lanes"
@@ -917,6 +1114,10 @@ function OperationsQueueBoardPage() {
           const meta = LANE_META[status] || LANE_META.waiting
           const Icon = meta.icon
           const tickets = grouped[status] || []
+          const slice = paginateRows(tickets, {
+            page: lanePage[status] || 1,
+            pageSize: QUEUE_LANE_PAGE_SIZE,
+          })
           const laneFocused = focusLane === status
           const laneDimmed = Boolean(focusLane) && !laneFocused
               return (
@@ -960,8 +1161,8 @@ function OperationsQueueBoardPage() {
                   ? Array.from({ length: 2 }, (_, index) => (
                       <div key={index} className="h-20 animate-pulse rounded-xl bg-muted" />
                     ))
-                  : tickets.length
-                    ? tickets.map((ticket) => (
+                  : slice.rows.length
+                    ? slice.rows.map((ticket) => (
                         <TicketCard
                           key={ticket.booking_id}
                           ticket={ticket}
@@ -972,10 +1173,16 @@ function OperationsQueueBoardPage() {
                       ))
                     : <EmptyLine text="Empty" />}
           </div>
+              <QueueLanePager
+                slice={slice}
+                label={statusShortLabel(status)}
+                onPage={(page) => setLanePage((cur) => ({ ...cur, [status]: page }))}
+              />
             </section>
           )
         })}
         </div>
+      )}
 
       {canManageQueue ? (
         <QueueTicketEditModal
@@ -1502,12 +1709,9 @@ export function CrewPage() {
 function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
   const [salesRows, setSalesRows] = useState([])
   const [rules, setRules] = useState(DEFAULT_COMPENSATION_RULES)
-  const [posted, setPosted] = useState([])
   const [loading, setLoading] = useState(true)
-  const [posting, setPosting] = useState(false)
   const isTL = profile?.role === ROLES.TEAM_LEAD
   const canSeePay = isSuperAdmin(profile) || isTL
-  const canPost = canWriteFinance(profile)
   const today = getLocalCalendarDate()
 
   const load = useCallback(async () => {
@@ -1515,11 +1719,11 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
     const startIso = `${today}T00:00:00+08:00`
     const endIso = `${today}T23:59:59.999+08:00`
     try {
-      const [sales, r, existing] = await Promise.all([
+      const [sales, r] = await Promise.all([
         collectPaged(async (from, to) => {
           let q = supabase
             .from('sales')
-            .select('id, branch, total_minor')
+            .select('id, branch, total_minor, sale_line_items(line_total_minor, services(pay_category))')
             .eq('status', 'paid')
             .gte('occurred_at', startIso)
             .lte('occurred_at', endIso)
@@ -1541,28 +1745,15 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
             if (error) throw error
             return normalizeCompensationSettings(data)
           }),
-        canPost
-          ? supabase
-              .from('expenses')
-              .select('id, description, branch, total_minor')
-              .eq('expense_kind', 'salary_carwash')
-              .like('description', 'compensation:%')
-              .gte('created_at', startIso)
-              .then(({ data, error }) => {
-                if (error) throw error
-                return data || []
-              })
-          : Promise.resolve([]),
       ])
       setSalesRows(sales)
       setRules({ ...DEFAULT_COMPENSATION_RULES, ...r })
-      setPosted(existing)
     } catch (err) {
       toast.error(err.message)
     } finally {
       setLoading(false)
     }
-  }, [branchFilter, today, canPost])
+  }, [branchFilter, today])
 
   useEffect(() => {
     load()
@@ -1574,29 +1765,15 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
     salesRows,
     roster,
     poolPct: rules.wash_pool_pct,
-    posted,
+    posted: [],
     branchFilter,
   })
   const totalSales = result.totalSales
-  const pending = result.pending
   const showBranch = new Set(result.rows.map((row) => row.branch)).size > 1
-
-  async function postPool() {
-    if (!pending.length) return
-    setPosting(true)
-    const { error } = await supabase.from('expenses').insert(pending)
-    setPosting(false)
-    if (error) {
-      if (error.code === '23505' || /duplicate|unique/i.test(error.message || '')) {
-        toast.message('Already posted today')
-        load()
-      return
-    }
-      return toast.error(error.message)
-    }
-    toast.success(pending.length === 1 ? 'Salary pool posted to Finance as draft' : `${pending.length} branch salary pools posted to Finance as draft`)
-    load()
-  }
+  const myPayRows = result.rows.filter(
+    (row) => row.id === profile?.id || row.staff_id === profile?.id,
+  )
+  const visiblePayRows = canSeePay ? result.rows : myPayRows
 
   if (loading) return <Panel title="Compensation estimate" icon={Wallet} className="mt-5"><p className="text-sm text-muted-foreground">Loading…</p></Panel>
 
@@ -1616,12 +1793,15 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
           <p className="mt-1 text-2xl font-semibold tabular-nums">{roster.length}</p>
         </div>
       </div>
-      {canSeePay && result.rows.length > 0 ? (
+      {visiblePayRows.length > 0 ? (
         <div className="grid gap-2">
-          {result.rows.map((row) => (
+          {!canSeePay ? (
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Your pay</p>
+          ) : null}
+          {visiblePayRows.map((row) => (
             <div key={`${row.branch}-${row.id || row.staff_id}`} className="flex items-center justify-between rounded-xl border border-border bg-muted/20 px-4 py-3">
               <div>
-                <p className="font-medium text-foreground">{row.full_name}</p>
+                <p className="font-medium text-foreground">{canSeePay ? row.full_name : 'Wash pool share'}</p>
                 <p className="text-xs text-muted-foreground">Weight {row.weight}{showBranch ? ` · ${row.branch}` : ''}</p>
               </div>
               <p className="text-lg font-semibold tabular-nums text-foreground">{formatMoney(row.pay_minor)}</p>
@@ -1629,22 +1809,20 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">{!canSeePay ? 'Salary breakdown visible to TL and Super Admin.' : 'No present crew for salary split.'}</p>
+        <p className="text-sm text-muted-foreground">{!canSeePay ? 'Your pay shows here after you time in and wash sales post.' : 'No present crew for salary split.'}</p>
       )}
-      {canPost ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled={posting || !pending.length}
-            onClick={postPool}
-            className="floor-touch-btn inline-flex items-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+      {canAccessPayroll(profile) ? (
+        <div className="mt-4">
+          <Link
+            to="/operations/payroll"
+            className="floor-touch-btn inline-flex min-h-11 items-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
           >
-            {posting ? 'Posting…' : pending.length ? `Post ${pending.length === 1 ? 'today\'s pool' : `${pending.length} branch pools`} to Finance` : 'Already posted today'}
-          </button>
+            Run payroll
+          </Link>
         </div>
       ) : null}
       <p className="mt-3 text-xs text-muted-foreground">
-        Estimate from today's paid sales × compensation_settings, split per branch. SA/admin posts a draft `salary_carwash` expense to Finance (once per branch per day).
+        Estimate from today's paid wash sales. Confirmed pay is posted once from Payroll, not from this tab.
       </p>
       </Panel>
   )
@@ -1661,20 +1839,21 @@ export function MyTasksPage() {
   const [saving, setSaving] = useState('')
 
   const load = useCallback(async () => {
-    if (!user?.id) return
+    const staffId = profile?.id || user?.id
+    if (!staffId) return
     setError('')
     setLoading(true)
     const [queueRes, planRes] = await Promise.all([
       supabase
       .from('queue_assignments')
         .select('id, booking_id, task_name, task_notes, status, started_at, completed_at, released_at, created_at, bookings(vehicle_plate, branch, status, queue_number)')
-      .eq('staff_id', user.id)
+      .eq('staff_id', staffId)
         .in('status', ['active', 'pending'])
         .order('created_at', { ascending: false }),
       supabase
         .from('plan_card_assignees')
-        .select('id, status, notes, proof_url, proof_note, proof_submitted_at, created_at, updated_at, card_id, plan_cards(id, title, description, due_at, labels)')
-        .eq('staff_id', user.id)
+        .select('id, status, notes, proof_url, proof_note, proof_submitted_at, created_at, updated_at, card_id, plan_cards(id, title, description, due_at, labels, proof_required)')
+        .eq('staff_id', staffId)
         .in('status', ['todo', 'in_progress', 'for_review'])
         .order('created_at', { ascending: false }),
     ])
@@ -1683,21 +1862,27 @@ export function MyTasksPage() {
     if (planRes.error) setError((prev) => prev || planRes.error.message)
     else setPlanRows(planRes.data || [])
     setLoading(false)
-  }, [user?.id])
+  }, [user?.id, profile?.id])
+
+  const myTasksLoadRef = useRef(load)
+  myTasksLoadRef.current = load
+  const scheduleMyTasks = useMemo(() => createCoalescedReload(() => myTasksLoadRef.current(), 400), [])
 
   useEffect(() => { load() }, [load])
 
   useEffect(() => {
-    if (!user?.id) return undefined
+    const staffId = profile?.id || user?.id
+    if (!staffId) return undefined
     const channel = supabase
-      .channel(`my-tasks-${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments', filter: `staff_id=eq.${user.id}` }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_card_assignees', filter: `staff_id=eq.${user.id}` }, load)
+      .channel(`my-tasks-${staffId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments', filter: `staff_id=eq.${staffId}` }, scheduleMyTasks)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_card_assignees', filter: `staff_id=eq.${staffId}` }, scheduleMyTasks)
       .subscribe()
     return () => {
+      scheduleMyTasks.cancel()
       supabase.removeChannel(channel)
     }
-  }, [load, user?.id])
+  }, [scheduleMyTasks, user?.id, profile?.id])
 
   if (!canViewAssignedTasks) return <Navigate to="/operations/access-denied" replace />
 
@@ -1726,7 +1911,12 @@ export function MyTasksPage() {
   }
 
   const updatePlanTask = async (row, nextStatus, proofFields = {}) => {
-    const patch = allowedStaffPlanAssigneePatch(row, { status: nextStatus, ...proofFields })
+    const proofRequired = Boolean(row.plan_cards?.proof_required)
+    const patch = allowedStaffPlanAssigneePatch(
+      { ...row, proof_required: proofRequired },
+      { status: nextStatus, ...proofFields },
+      { proofRequired },
+    )
     if (!patch) {
       setError('Illegal planning status change.')
       return
@@ -1775,7 +1965,7 @@ export function MyTasksPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="truncate text-lg font-semibold">{card?.title || 'Planning card'}</p>
-                    <p className="mt-1 text-xs capitalize text-muted-foreground">{row.status === 'for_review' ? 'For review' : row.status.replace('_', ' ')}{card?.due_at ? ` · due ${new Date(card.due_at).toLocaleString()}` : ''}{row.proof_submitted_at ? ` · proof sent ${new Date(row.proof_submitted_at).toLocaleDateString()}` : ''}</p>
+                    <p className="mt-1 text-xs capitalize text-muted-foreground">{row.status === 'for_review' ? 'For review' : row.status.replace('_', ' ')}{card?.due_at ? ` · due ${new Date(card.due_at).toLocaleString()}` : ''}{card?.proof_required ? ' · photo required' : ''}{row.proof_submitted_at ? ` · proof sent ${new Date(row.proof_submitted_at).toLocaleDateString()}` : ''}</p>
                     {row.proof_url && isHttpProofUrl(row.proof_url) && (
                       <a href={row.proof_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-primary underline">View proof</a>
                     )}
@@ -1864,17 +2054,24 @@ function ProofSubmit({ row, saving, userId, onSubmit, onSkip }) {
   const [proofFile, setProofFile] = useState(null)
   const [proofLink, setProofLink] = useState('')
   const [uploading, setUploading] = useState(false)
+  const proofRequired = Boolean(row.plan_cards?.proof_required)
   if (!open) {
   return (
       <>
         <button type="button" disabled={saving === row.id} onClick={() => setOpen(true)} className="min-h-11 rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-40">Submit for review</button>
-        <button type="button" disabled={saving === row.id} onClick={onSkip} className="min-h-11 rounded-2xl border border-border px-4 text-sm font-semibold disabled:opacity-40">Mark done</button>
+        {!proofRequired && (
+          <button type="button" disabled={saving === row.id} onClick={onSkip} className="min-h-11 rounded-2xl border border-border px-4 text-sm font-semibold disabled:opacity-40">Mark done</button>
+        )}
       </>
     )
   }
 
   async function submit() {
-    let proof_url = proofLink.trim() || null
+    if (proofRequired && !hasPlannerProof(row.proof_url, proofFile)) {
+      toast.error('Photo proof is required for this task')
+      return
+    }
+    let proof_url = proofLink.trim() || row.proof_url || null
     if (proofFile) {
       const cardId = row.card_id || row.plan_cards?.id
       if (!userId || !cardId) return
@@ -1894,11 +2091,13 @@ function ProofSubmit({ row, saving, userId, onSubmit, onSkip }) {
   const busy = uploading || saving === row.id
   return (
     <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-card p-3">
-      <label className="text-xs font-medium text-muted-foreground">Photo (optional)
+      <label className="text-xs font-medium text-muted-foreground">{proofRequired ? 'Photo (required)' : 'Photo (optional)'}
         <input type="file" accept="image/*" className="mt-1 block w-full text-sm" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
       </label>
       <input placeholder="Note (optional)" value={proofNote} onChange={(e) => setProofNote(e.target.value)} className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm" />
-      <input placeholder="Link (optional)" value={proofLink} onChange={(e) => setProofLink(e.target.value)} className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm" />
+      {!proofRequired && (
+        <input placeholder="Link (optional)" value={proofLink} onChange={(e) => setProofLink(e.target.value)} className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm" />
+      )}
       <div className="flex gap-2">
         <button type="button" disabled={busy} onClick={submit} className="min-h-11 rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-40">{busy ? 'Saving…' : 'Submit'}</button>
         <button type="button" onClick={() => setOpen(false)} className="min-h-11 rounded-2xl border border-border px-4 text-sm font-semibold">Cancel</button>

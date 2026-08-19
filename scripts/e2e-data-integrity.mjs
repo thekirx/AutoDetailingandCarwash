@@ -43,8 +43,8 @@ const results = []
 // --- Static: App redirects + package ceilings ---
 const app = readFileSync(join(root, 'src/App.jsx'), 'utf8')
 assert(app.includes('OpsRoleGate'), 'App missing OpsRoleGate')
-assert(app.includes('/operations/pos?tab=services'), 'services redirect missing')
-assert(app.includes('/operations/pos?tab=merch'), 'products redirect missing')
+assert(app.includes('/operations/inventory?tab=services'), 'services redirect missing')
+assert(app.includes('/operations/inventory?tab=merch'), 'products redirect missing')
 assert(/sms.*crm\?tab=sms|Navigate to=.*crm\?tab=sms/s.test(app) || app.includes('crm?tab=sms'), 'sms→crm redirect missing')
 assert(app.includes('cars') || app.includes('routeKey="cars"'), 'cars route missing')
 results.push('static.app_redirects: ok')

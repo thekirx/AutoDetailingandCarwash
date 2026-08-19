@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
 import { Cake, Check, Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X, XCircle } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, canManageServices, canSeeAllBranches, getBranchScopeList, isAdmin, isBranchAdmin, isSuperAdmin, isAssistantSuperAdmin } from '@/auth/permissions'
+import { canAccessPos, canEditPlanning, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
-import { getAccessTokenFresh } from '@/lib/authToken'
+import { writeAudit } from '@/lib/audit'
+import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { buildHandoffCartLine, buildPosSalePayload, priceCartForMembership } from '@/lib/posSale'
+import { buildPosSalePayload, buildVisitHandoffCartLines, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange } from '@/lib/servicePricing'
 import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
@@ -24,6 +25,14 @@ import { toast } from 'sonner'
 import { PAYMENT_METHODS } from '@/lib/paymentMethods'
 import { accumulatePosCategoryTotals, emptyPosCategoryTotals, MERCH_FAMILIES, paidSalesToBacoorRows, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
 import { collectPaged } from '@/lib/crmInsights'
+import {
+  DEFAULT_COMPENSATION_RULES,
+  normalizeCompensationSettings,
+  detailingAmountMinor,
+  buildCeramicCompensationExpenses,
+  computeCeramicPay,
+  effectiveCeramicToggles,
+} from '@/lib/compensation'
 
 const PAYMENT_OPTIONS = PAYMENT_METHODS
 
@@ -37,7 +46,7 @@ const EXPENSE_KINDS = [
   { value: 'other', label: 'Other' },
 ]
 
-const SHELL_TABS = ['checkout', 'pending', 'expenses', 'cash-advance', 'dashboard', 'services', 'merch']
+const SHELL_TABS = ['checkout', 'pending', 'expenses', 'cash-advance', 'dashboard']
 
 export default function PosPage() {
   const { profile } = useAuth()
@@ -47,9 +56,7 @@ export default function PosPage() {
   const requestedShellTab = SHELL_TABS.includes(searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'checkout'
-  // Branch Admin (and anyone without catalog CRUD) can't access services/merch manage tabs.
-  const manageTabs = ['services', 'merch']
-  const shellTab = !canManageCatalog && manageTabs.includes(requestedShellTab) ? 'checkout' : requestedShellTab
+  const shellTab = requestedShellTab
   const scopeList = getBranchScopeList(profile)
   const canPickPosBranch = canSeeAllBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
   const branchLocked = !canPickPosBranch
@@ -66,12 +73,6 @@ export default function PosPage() {
   useEffect(() => {
     if (branchAdmin && tab !== 'merch') setTab('merch')
   }, [branchAdmin, tab])
-
-  useEffect(() => {
-    if (!canManageCatalog && manageTabs.includes(searchParams.get('tab'))) {
-      setSearchParams({}, { replace: true })
-    }
-  }, [canManageCatalog, searchParams, setSearchParams])
   const [cart, setCart] = useState([])
   const [branch, setBranch] = useState(assignedBranch)
   const [branches, setBranches] = useState([])
@@ -87,6 +88,7 @@ export default function PosPage() {
   const [cartOpen, setCartOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [compToggles, setCompToggles] = useState({ freeShirt: false, cardPayment: false, crewAssisted: true, detailerAssigned: false })
+  const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
   const [todayStats, setTodayStats] = useState(null)
   const [todaySales, setTodaySales] = useState([])
   const [categoryTotals, setCategoryTotals] = useState(emptyPosCategoryTotals())
@@ -107,7 +109,7 @@ export default function PosPage() {
   const [approvedCas, setApprovedCas] = useState([])
   const [caLoading, setCaLoading] = useState(false)
 
-  const canApproveCa = isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || isBranchAdmin(profile)
+  const canApproveCa = canEditPlanning(profile)
 
   const membershipContext = useMemo(
     () => ({
@@ -143,7 +145,7 @@ export default function PosPage() {
     const startIso = `${today}T00:00:00+08:00`
     const endIso = `${today}T23:59:59.999+08:00`
     let saleRows = []
-    const [svc, prod, stats, handoffRes] = await Promise.all([
+    const [svc, prod, stats, handoffRes, compRes] = await Promise.all([
       supabase
         .from('services')
         .select('id, name, slug, pay_category, price_minor, service_size_prices(size_slug, price_minor)')
@@ -157,17 +159,24 @@ export default function PosPage() {
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
       supabase
         .from('pos_handoffs')
-        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, vehicle_plate, service_id, final_price_minor, vehicle_type, status, queue_number)')
+        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, vehicle_plate, service_id, final_price_minor, price_minor, vehicle_type, status, queue_number, visit_group_id)')
         .eq('status', 'pending')
         .eq('branch', branch)
         .order('created_at', { ascending: true }),
+      supabase
+        .from('compensation_settings')
+        .select(
+          'wash_pool_pct, ceramic_shirt_deduction_minor, ceramic_card_fee_pct, ceramic_crew_solo_pct, ceramic_crew_split_pct, ceramic_detailer_split_pct',
+        )
+        .eq('id', 1)
+        .maybeSingle(),
     ])
     try {
       saleRows = await collectPaged(async (from, to) => {
         const { data, error } = await supabase
           .from('sales')
           .select(
-            'id, total_minor, payment_method, booking_id, sale_line_items(item_type, line_total_minor, name, service_id, product_id, services(name, slug, pay_category), products(name, tags, category))',
+            'id, total_minor, payment_method, booking_id, bookings(services(name, pay_category)), sale_line_items(item_type, line_total_minor, name, service_id, product_id, services(name, slug, pay_category), products(name, tags, category))',
           )
           .eq('status', 'paid')
           .eq('branch', branch)
@@ -185,6 +194,8 @@ export default function PosPage() {
     if (prod.error) toast.error(prod.error.message)
     if (stats.error) toast.error(stats.error.message)
     if (handoffRes.error) toast.error(handoffRes.error.message)
+    if (compRes.error) toast.error(compRes.error.message)
+    else setCompRules(normalizeCompensationSettings(compRes.data))
     setServices(
       (svc.data || []).map((row) => ({
         ...row,
@@ -245,7 +256,7 @@ export default function PosPage() {
     const today = getLocalCalendarDate()
     const { data, error } = await supabase
       .from('expenses')
-      .select('id, title, total_minor, expense_kind, branch, created_at')
+      .select('id, title, description, total_minor, expense_kind, branch, status, created_at')
       .eq('branch', branch)
       .gte('created_at', `${today}T00:00:00+08:00`)
       .order('created_at', { ascending: false })
@@ -258,18 +269,20 @@ export default function PosPage() {
     if (!branch) return
     setCaLoading(true)
     const today = getLocalCalendarDate()
-    const select = 'id, form_id, payload, status, respondent_label, created_at, resolved_at, ops_forms ( name, kind, slug )'
+    const select = 'id, form_id, payload, status, respondent_label, created_at, resolved_at, ops_forms!inner ( name, kind, slug )'
     const [pendingRes, resolvedRes] = await Promise.all([
       supabase
         .from('ops_form_submissions')
         .select(select)
         .eq('status', 'new')
+        .eq('ops_forms.kind', 'cash_advance')
         .order('created_at', { ascending: false })
         .limit(100),
       supabase
         .from('ops_form_submissions')
         .select(select)
         .eq('status', 'resolved')
+        .eq('ops_forms.kind', 'cash_advance')
         .gte('resolved_at', `${today}T00:00:00+08:00`)
         .order('resolved_at', { ascending: false })
         .limit(100),
@@ -277,17 +290,18 @@ export default function PosPage() {
     setCaLoading(false)
     if (pendingRes.error) { toast.error(pendingRes.error.message); return }
     if (resolvedRes.error) toast.error(resolvedRes.error.message)
-    const inScope = (row) => {
-      if (row.ops_forms?.kind !== 'cash_advance') return false
-      const subBranch = row.payload?.branch || ''
-      if (!subBranch) return true
-      const scope = getBranchScopeList(profile)
-      if (scope === null) return true
-      return scope.includes(subBranch)
-    }
+    const scope = getBranchScopeList(profile)
+    const inScope = (row) => cashAdvanceVisibleOnPos(row, { posBranch: branch, branchScopeList: scope })
     setCaSubmissions((pendingRes.data || []).filter(inScope))
     setApprovedCas((resolvedRes.data || []).filter(inScope).filter((row) => approvedCaForCloseDay(row, today)))
   }, [branch, profile])
+
+  const loadRef = useRef(load)
+  loadRef.current = load
+  const expensesRef = useRef(loadExpenses)
+  expensesRef.current = loadExpenses
+  const scheduleReload = useMemo(() => createCoalescedReload(() => loadRef.current(), 400), [])
+  const scheduleExpenses = useMemo(() => createCoalescedReload(() => expensesRef.current(), 400), [])
 
   useEffect(() => {
     if (!branch) return
@@ -295,15 +309,17 @@ export default function PosPage() {
     loadExpenses()
     loadCashAdvances()
     const channel = supabase
-      .channel(`pos-sales:${branch}:${crypto.randomUUID()}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, loadExpenses)
+      .channel(`pos-${branch}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales', filter: `branch=eq.${branch}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs', filter: `branch=eq.${branch}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `branch=eq.${branch}` }, scheduleExpenses)
       .subscribe()
     return () => {
+      scheduleReload.cancel()
+      scheduleExpenses.cancel()
       supabase.removeChannel(channel)
     }
-  }, [load, loadExpenses, loadCashAdvances, branch])
+  }, [load, loadExpenses, loadCashAdvances, branch, scheduleReload, scheduleExpenses])
 
   const serviceItems = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -315,6 +331,7 @@ export default function PosPage() {
           item_type: 'service',
           id: s.id,
           name: s.name,
+          pay_category: s.pay_category,
           price_minor,
           meta: `Size: ${PRICING_SIZES.find((x) => x.slug === carSize)?.label || carSize} · range ${formatSizePriceRange(s, formatMoney)}`,
         }
@@ -338,6 +355,15 @@ export default function PosPage() {
   }, [products, query, merchFamilyFilter])
 
   const cartTotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price_minor, 0)
+  const ceramicPreview = useMemo(() => {
+    const salesMinor = detailingAmountMinor(cart)
+    if (!salesMinor) return null
+    return computeCeramicPay({
+      salesMinor,
+      rules: compRules,
+      toggles: effectiveCeramicToggles(compToggles, paymentMethod),
+    })
+  }, [cart, compRules, compToggles, paymentMethod])
 
   async function refreshMembershipForCustomer(cid) {
     if (!cid) {
@@ -429,7 +455,7 @@ export default function PosPage() {
   }
 
   function addToCart(item, { loyaltyAward = false, birthdayAward = false } = {}) {
-    setActiveHandoff(null)
+    if (!keepQueueHandoffWhenAdding(item)) setActiveHandoff(null)
     const listPrice = item.price_minor
     const free = loyaltyAward || birthdayAward
     const priced = priceCartForMembership(
@@ -459,7 +485,21 @@ export default function PosPage() {
     setCartOpen(true)
   }
 
-  function loadHandoff(row) {
+  async function notifyPosStaff(payload) {
+    try {
+      const token = await getAccessTokenFresh()
+      if (!token) return
+      await fetch('/api/notify-pos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+    } catch {
+      /* ponytail: durable POS write already succeeded */
+    }
+  }
+
+  async function loadHandoff(row) {
     const booking = row.bookings || {}
     const serviceId = booking.service_id
     const svc = serviceId ? services.find((s) => s.id === serviceId) : null
@@ -488,10 +528,22 @@ export default function PosPage() {
     setGuestPhone('')
     setCustomerSearch('')
     setCustomerHits([])
-    setTab('services')
-    const line = buildHandoffCartLine({ handoff: row, services, amountMinor: amount })
-    setCart([line])
-    if (line.missing_service) {
+    setTab(branchAdmin ? 'merch' : 'services')
+    let siblings = []
+    if (booking.visit_group_id) {
+      const { data } = await supabase
+        .from('bookings')
+        .select('id, service_id, final_price_minor, price_minor, vehicle_plate, customer_id, customer_name, vehicle_type, status')
+        .eq('visit_group_id', booking.visit_group_id)
+      siblings = (data || []).filter((row) => !['completed', 'cancelled'].includes(String(row.status || '')))
+    }
+    const lines = buildVisitHandoffCartLines({
+      handoff: { ...row, amount_minor: amount },
+      siblings,
+      services,
+    })
+    setCart(lines)
+    if (lines.some((line) => line.missing_service)) {
       toast.message('Queue ticket has no linked service — checkout will record the amount without loyalty stamps.')
     }
     setCartOpen(true)
@@ -536,6 +588,10 @@ export default function PosPage() {
 
   async function checkout() {
     if (!cart.length || !branch) return
+    if (posCartBlocksCheckout(cart)) {
+      toast.error('This queue ticket has no linked service. Ask a Team Lead to set the service on the booking, then send it to payment again.')
+      return
+    }
     setSaving(true)
     const handoff = activeHandoff
     let resolvedCustomerId = customerId
@@ -635,11 +691,36 @@ export default function PosPage() {
         .catch(() => {})
     }
     const loyalty = data?.loyalty_awarded || data?.stamps_awarded
+    const saleId = data?.sale_id
+    const detailingMinor = detailingAmountMinor(cart)
+    if (saleId && detailingMinor && canWriteFinance(profile)) {
+      const drafts = buildCeramicCompensationExpenses({
+        saleId,
+        date: getLocalCalendarDate(),
+        branch,
+        salesMinor: detailingMinor,
+        rules: compRules,
+        toggles: compToggles,
+        paymentMethod,
+      })
+      if (drafts.length) {
+        const { error: ceramicErr } = await supabase.from('expenses').insert(drafts)
+        if (ceramicErr) toast.warning(`Sale saved — ceramic salary draft failed: ${ceramicErr.message}`)
+      }
+    }
     toast.success(
       handoff
         ? `Ticket paid · ${formatMoney(data?.total_minor || cartTotal)}`
         : `Sale complete · ${formatMoney(data?.total_minor || cartTotal)}${loyalty ? ' · loyalty updated' : ''}`,
     )
+    if (!handoff) {
+      notifyPosStaff({
+        event: 'sale',
+        branch,
+        amount_minor: data?.total_minor || cartTotal,
+        entity_id: saleId || '',
+      })
+    }
     setCart([])
     setActiveHandoff(null)
     resetCheckoutExtras()
@@ -654,19 +735,21 @@ export default function PosPage() {
   const catalogTab = branchAdmin ? 'merch' : tab
 
   function setShellTab(next) {
-    if (!canManageCatalog && manageTabs.includes(next)) return
     setSearchParams(next === 'checkout' ? {} : { tab: next }, { replace: true })
   }
 
   async function submitExpense(e) {
     e.preventDefault()
+    if (!canWriteFinance(profile)) {
+      return toast.error('You do not have Finance write access to record expenses.')
+    }
     const pesos = Number(String(expenseForm.amount).replace(/,/g, '').trim())
     if (!expenseForm.title.trim() || !Number.isFinite(pesos) || pesos <= 0) {
       return toast.error('Enter a title and valid amount')
     }
     setSavingExpense(true)
     const total = Math.round(pesos * 100)
-    const { error } = await supabase.from('expenses').insert({
+    const { data: expRow, error } = await supabase.from('expenses').insert({
       title: expenseForm.title.trim(),
       total_minor: total,
       unit_cost_minor: total,
@@ -674,19 +757,49 @@ export default function PosPage() {
       expense_kind: expenseForm.expense_kind,
       branch,
       status: 'draft',
-    })
+    }).select('id').maybeSingle()
     setSavingExpense(false)
     if (error) return toast.error(error.message)
     toast.success('Expense recorded')
+    writeAudit({
+      action: 'pos.expense',
+      entityType: 'expense',
+      entityId: expRow?.id,
+      summary: `POS expense · ${expenseForm.title.trim()} · ${branch}`,
+      meta: { expense_title: expenseForm.title.trim(), amount_minor: total, branch },
+    })
+    notifyPosStaff({
+      event: 'expense',
+      branch,
+      amount_minor: total,
+      title: expenseForm.title.trim(),
+      entity_id: expRow?.id || '',
+    })
     setExpenseForm({ title: '', amount: '', expense_kind: 'daily' })
     loadExpenses()
   }
 
-  async function updateCaStatus(id, status) {
-    const { error } = await supabase.from('ops_form_submissions').update({ status }).eq('id', id)
+  async function updateCaStatus(row, status) {
+    const { error } = await supabase.from('ops_form_submissions').update({ status }).eq('id', row.id)
     if (error) toast.error(error.message)
     else {
       toast.success(`Cash advance ${status === 'resolved' ? 'approved' : 'declined'}`)
+      const p = row.payload || {}
+      writeAudit({
+        action: 'pos.cash_advance',
+        entityType: 'ops_form_submission',
+        entityId: row.id,
+        summary: `Cash advance ${status === 'resolved' ? 'approved' : 'declined'} · ${branch}`,
+        meta: { branch, amount_minor: Math.round(Number(p.amount || 0) * 100), status },
+      })
+      notifyPosStaff({
+        event: 'cash_advance',
+        branch,
+        amount_minor: Math.round(Number(p.amount || 0) * 100),
+        title: p.employee_name || row.respondent_label || 'Employee',
+        status,
+        entity_id: row.id,
+      })
       loadCashAdvances()
     }
   }
@@ -856,10 +969,12 @@ export default function PosPage() {
       date: getLocalCalendarDate(),
       sales: paidSalesToBacoorRows(todaySales),
       classifyBucket: (row) => row.bucket,
-      expenses: todayExpenses.map((e) => ({
+      expenses: todayExpenses.filter(expenseCountsOnDailyClose).map((e) => ({
         expense_kind: e.expense_kind,
         amount_minor: e.total_minor,
         label: e.title,
+        status: e.status,
+        description: e.description,
       })),
       cashAdvances: approvedCas.map((r) => ({
         status: 'approved',
@@ -910,6 +1025,9 @@ export default function PosPage() {
           <CardTitle className="text-lg">Submit expense</CardTitle>
         </CardHeader>
         <CardContent>
+          {!canWriteFinance(profile) ? (
+            <p className="text-sm text-muted-foreground">Expense entry needs Finance write. Super Admin can grant it on People.</p>
+          ) : (
           <form onSubmit={submitExpense} className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="pos-exp-title">Description</Label>
@@ -951,6 +1069,7 @@ export default function PosPage() {
               </Button>
             </div>
           </form>
+          )}
         </CardContent>
       </Card>
 
@@ -979,7 +1098,7 @@ export default function PosPage() {
               <div className="flex items-center justify-between border-t border-border pt-2">
                 <p className="text-sm font-medium text-muted-foreground">Total</p>
                 <p className="text-lg font-semibold tabular-nums">
-                  {formatMoney(todayExpenses.reduce((s, r) => s + Number(r.total_minor || 0), 0))}
+                  {formatMoney(todayExpenses.filter(expenseCountsOnDailyClose).reduce((s, r) => s + Number(r.total_minor || 0), 0))}
                 </p>
               </div>
             </div>
@@ -1020,10 +1139,10 @@ export default function PosPage() {
                   </p>
                   {canApproveCa && (
                     <div className="flex gap-2 pt-1">
-                      <Button size="sm" className="gap-1.5" onClick={() => updateCaStatus(row.id, 'resolved')}>
+                      <Button size="sm" className="gap-1.5" onClick={() => updateCaStatus(row, 'resolved')}>
                         <Check className="size-3.5" /> Approve
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => updateCaStatus(row.id, 'archived')}>
+                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => updateCaStatus(row, 'archived')}>
                         <XCircle className="size-3.5" /> Decline
                       </Button>
                     </div>
@@ -1046,7 +1165,7 @@ export default function PosPage() {
         avg={formatMoney(todayStats?.average_ticket_minor || 0)}
         families={[
           ...familyTiles,
-          { label: 'Today expenses', value: formatMoney(todayExpenses.reduce((s, r) => s + Number(r.total_minor || 0), 0)) },
+          { label: 'Today expenses', value: formatMoney(todayExpenses.filter(expenseCountsOnDailyClose).reduce((s, r) => s + Number(r.total_minor || 0), 0)) },
         ]}
       />
       <div className="flex flex-wrap gap-2">
@@ -1078,7 +1197,7 @@ export default function PosPage() {
             <span>
               {branchAdmin
                 ? `Queue payment + merch · ${branchLocked ? 'your branch' : 'all branches'}`
-                : `Checkout, catalog, and merch · ${branchLocked ? 'your assigned branch' : 'all branches'}`}
+                : `Checkout, queue pay, and merch · ${branchLocked ? 'your assigned branch' : 'all branches'}`}
             </span>
           </p>
         </div>
@@ -1097,16 +1216,12 @@ export default function PosPage() {
           <TabsTrigger value="expenses" className="min-h-11">Expenses</TabsTrigger>
           <TabsTrigger value="cash-advance" className="min-h-11">Cash Advance{caSubmissions.length ? ` (${caSubmissions.length})` : ''}</TabsTrigger>
           <TabsTrigger value="dashboard" className="min-h-11">Dashboard</TabsTrigger>
-          {canManageCatalog && <TabsTrigger value="services" className="min-h-11">Services</TabsTrigger>}
-          {canManageCatalog && <TabsTrigger value="merch" className="min-h-11">Merch</TabsTrigger>}
         </TabsList>
         <TabsContent value="checkout">{checkoutBody}</TabsContent>
         <TabsContent value="pending">{pendingBody}</TabsContent>
         <TabsContent value="expenses">{expensesBody}</TabsContent>
         <TabsContent value="cash-advance">{cashAdvanceBody}</TabsContent>
         <TabsContent value="dashboard">{dashboardBody}</TabsContent>
-        {canManageCatalog && <TabsContent value="services">{checkoutBody}</TabsContent>}
-        {canManageCatalog && <TabsContent value="merch">{checkoutBody}</TabsContent>}
       </Tabs>
 
       <Sheet open={dailyReportOpen} onOpenChange={setDailyReportOpen}>
@@ -1345,12 +1460,26 @@ export default function PosPage() {
                 <label key={t.key} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    checked={compToggles[t.key]}
+                    checked={
+                      t.key === 'cardPayment'
+                        ? effectiveCeramicToggles(compToggles, paymentMethod).cardPayment
+                        : compToggles[t.key]
+                    }
+                    disabled={t.key === 'cardPayment' && (paymentMethod === 'card' || paymentMethod === 'credit')}
                     onChange={(e) => setCompToggles((prev) => ({ ...prev, [t.key]: e.target.checked }))}
                   />
                   {t.label}
                 </label>
               ))}
+              {ceramicPreview ? (
+                <p className="text-xs tabular-nums text-muted-foreground">
+                  Crew {formatMoney(ceramicPreview.crew_minor)}
+                  {' · '}
+                  Detailer {formatMoney(ceramicPreview.detailer_minor)} posts as Finance drafts on pay
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Applies when the cart has detailing / coating lines.</p>
+              )}
             </div>
           </div>
 
@@ -1365,8 +1494,8 @@ export default function PosPage() {
                 {linkedCustomer ? 'Loyalty' : 'Walk-in'}
               </div>
             </div>
-            <Button className="min-h-12 w-full text-base" disabled={!cart.length || !branch || saving} onClick={checkout}>
-              {saving ? 'Processing…' : 'Complete payment'}
+            <Button className="min-h-12 w-full text-base" disabled={!cart.length || !branch || saving || posCartBlocksCheckout(cart)} onClick={checkout}>
+              {saving ? 'Processing…' : posCartBlocksCheckout(cart) ? 'Ticket missing service' : 'Complete payment'}
             </Button>
           </div>
         </SheetContent>

@@ -39,7 +39,7 @@ describe('sales role — detailing bookings board', () => {
     assert.equal(redirectForRole(ROLES.SALES), '/operations/bookings')
     assert.deepEqual(
       getOperationsNav(sales).map((i) => i.to),
-      ['/operations/bookings', '/operations/history'],
+      ['/operations/bookings', '/operations/history', '/operations/my-pay'],
     )
     assert.deepEqual(
       getSalesDock(sales).map((i) => i.to),

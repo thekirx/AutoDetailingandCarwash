@@ -4,13 +4,14 @@
  */
 export function buildHandoffCartLine({ handoff, services = [], amountMinor }) {
   const booking = handoff?.bookings || {}
+  const bookingId = booking.id || null
   const serviceId = booking.service_id || null
   const svc = serviceId ? services.find((s) => s.id === serviceId) : null
   const amount = Number(
     amountMinor ?? handoff?.amount_minor ?? booking.final_price_minor ?? 0,
   ) || 0
   return {
-    key: `handoff-${handoff.id}`,
+    key: `handoff-${handoff.id}-${bookingId || 'solo'}`,
     item_type: 'service',
     id: serviceId,
     name: svc?.name || `Queue · ${booking.vehicle_plate || 'ticket'}`,
@@ -20,7 +21,30 @@ export function buildHandoffCartLine({ handoff, services = [], amountMinor }) {
     price_minor: amount,
     missing_service: !serviceId,
     from_handoff: true,
+    pay_category: svc?.pay_category || null,
   }
+}
+
+/** Merch/addons stay on the open queue ticket. A walk-in service starts a new sale. */
+export function keepQueueHandoffWhenAdding(item) {
+  return String(item?.item_type || '') === 'product'
+}
+
+/** complete_pos_sale CHECKs service lines must have service_id. */
+export function posCartBlocksCheckout(cart = []) {
+  return (cart || []).some(
+    (line) =>
+      String(line?.item_type || '') === 'service' && (Boolean(line.missing_service) || !line.id),
+  )
+}
+
+/** POS CA inbox: cash_advance + this register's branch. Empty payload.branch is out. */
+export function cashAdvanceVisibleOnPos(row, { posBranch, branchScopeList } = {}) {
+  if ((row?.ops_forms?.kind || row?.kind) !== 'cash_advance') return false
+  const subBranch = String(row?.payload?.branch || '').trim()
+  if (!subBranch || !posBranch || subBranch !== posBranch) return false
+  if (branchScopeList === null) return true
+  return Array.isArray(branchScopeList) && branchScopeList.includes(subBranch)
 }
 
 function normalizeName(value) {
@@ -151,4 +175,28 @@ export function buildPosSalePayload({ branch, customerId, paymentMethod, cart, a
       is_membership_included: Boolean(line.is_membership_included),
     })),
   }
+}
+
+/** Ceramic/payroll drafts are proof rows — they must not inflate Bacoor close until paid. */
+export function expenseCountsOnDailyClose(row = {}) {
+  const status = String(row?.status || 'draft').toLowerCase()
+  if (status === 'void' || status === 'rejected' || status === 'cancelled') return false
+  const desc = String(row?.description || '')
+  if (/^(ceramic|compensation|payroll):/i.test(desc)) return status === 'paid' || status === 'approved'
+  return true
+}
+
+/** One receipt line per visit-group booking; single tickets stay one line. */
+export function buildVisitHandoffCartLines({ handoff, siblings = [], services = [] }) {
+  const rows = (siblings || []).filter((row) => row?.id)
+  if (rows.length > 1) {
+    return rows.map((booking) =>
+      buildHandoffCartLine({
+        handoff: { ...handoff, bookings: { ...(handoff?.bookings || {}), ...booking } },
+        services,
+        amountMinor: booking.final_price_minor ?? booking.price_minor ?? 0,
+      }),
+    )
+  }
+  return [buildHandoffCartLine({ handoff, services, amountMinor: handoff?.amount_minor })]
 }

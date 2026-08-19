@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { createCoalescedReload } from '@/lib/coalesceReload'
 
 export function useUserNotifications() {
   const [rows, setRows] = useState([])
@@ -28,23 +29,30 @@ export function useUserNotifications() {
     }
   }, [])
 
+  const loadRef = useRef(load)
+  loadRef.current = load
+  const scheduleReload = useMemo(() => createCoalescedReload(() => loadRef.current(), 400), [])
+
   useEffect(() => {
     let alive = true
+    let channel
     load()
-    const channel = supabase.channel(`user-notifications-bell:${crypto.randomUUID()}`)
-    channel.on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'user_notifications' },
-      () => {
-        if (alive) load()
-      },
-    )
-    channel.subscribe()
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!alive || !data.user) return
+      channel = supabase.channel(`user-notifications-bell:${data.user.id}`)
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${data.user.id}` },
+        scheduleReload,
+      )
+      channel.subscribe()
+    })
     return () => {
       alive = false
-      void supabase.removeChannel(channel)
+      scheduleReload.cancel()
+      if (channel) void supabase.removeChannel(channel)
     }
-  }, [load])
+  }, [load, scheduleReload])
 
   const markRead = useCallback(
     async (row) => {

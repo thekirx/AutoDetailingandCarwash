@@ -29,8 +29,10 @@ import {
   UserPlus,
   Users,
   Wallet,
+  Banknote,
   X,
   Newspaper,
+  Star,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -41,6 +43,7 @@ import {
   getMarketingDock,
   getMarketingMore,
   getOperationsNav,
+  groupOperationsNav,
   getSalesDock,
   getSalesMore,
   getStaffDock,
@@ -75,6 +78,7 @@ import {
   SidebarProvider,
   SidebarSeparator,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 
@@ -108,6 +112,8 @@ const iconMap = {
   History,
   Clock,
   Newspaper,
+  Star,
+  Banknote,
 }
 
 function formatRole(role) {
@@ -381,6 +387,53 @@ function DetailerFloorShell({ profile, signOut }) {
   )
 }
 
+function commandNavIsActive(pathname, to) {
+  const path = String(to || '').split('?')[0]
+  if (!path) return false
+  if (path.endsWith('/console') || path.endsWith('/dashboard')) return pathname === path
+  return pathname === path || pathname.startsWith(`${path}/`)
+}
+
+function CommandNavList({ items }) {
+  const location = useLocation()
+  const { setOpenMobile } = useSidebar()
+  const groups = groupOperationsNav(items)
+
+  return groups.map((group) => (
+    <SidebarGroup key={group.id} className="command-nav-group">
+      <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {group.items.map(({ label: itemLabel, to, icon }) => {
+            const Icon = iconMap[icon] || ClipboardList
+            const path = to.split('?')[0]
+            const end = path.endsWith('/console') || path.endsWith('/dashboard')
+            return (
+              <SidebarMenuItem key={to}>
+                <SidebarMenuButton
+                  className="command-nav-btn"
+                  isActive={commandNavIsActive(location.pathname, to)}
+                  tooltip={itemLabel}
+                  render={
+                    <NavLink
+                      to={to}
+                      end={end}
+                      onClick={() => setOpenMobile(false)}
+                    />
+                  }
+                >
+                  <Icon />
+                  <span>{itemLabel}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  ))
+}
+
 /** CommandShell — web-first sidebar for SA / ASA / Branch Admin / Investor. */
 function CommandShell({ profile, user, signOut, navigation, adminShell }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -394,10 +447,12 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           : 'Command'
 
   return (
-    <SidebarProvider>
-      <div className="command-shell flex min-h-svh w-full min-w-0 overflow-x-hidden bg-background text-foreground">
-        <Sidebar collapsible="icon" variant="inset">
-          <SidebarHeader>
+    <SidebarProvider
+      className="command-shell min-w-0 overflow-x-hidden bg-background text-foreground"
+      style={{ '--sidebar-width': '15rem' }}
+    >
+        <Sidebar collapsible="icon" variant="inset" className="command-rail">
+          <SidebarHeader className="command-rail-header">
             <div className="flex items-center gap-3 px-2 py-1">
               {/* Collapsed rail: mark only. Expanded: LW wordmark — never both (double H). */}
               <div className="hidden size-9 place-items-center overflow-hidden rounded-xl bg-primary text-primary-foreground group-data-[collapsible=icon]:grid">
@@ -417,40 +472,16 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
                   className="h-6 w-auto object-contain object-left"
                   decoding="async"
                 />
-                <p className="mt-0.5 truncate text-[10px] tracking-[0.18em] text-muted-foreground uppercase">{label}</p>
+                <p className="command-rail-kicker">{label}</p>
               </div>
             </div>
           </SidebarHeader>
-          <SidebarSeparator />
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Command</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {navigation.map(({ label: itemLabel, to, icon }) => {
-                    const Icon = iconMap[icon] || ClipboardList
-                    return (
-                      <SidebarMenuItem key={to}>
-                        <SidebarMenuButton
-                          render={
-                            <NavLink
-                              to={to}
-                              end={to.endsWith('/console') || to.endsWith('/dashboard')}
-                            />
-                          }
-                        >
-                          <Icon />
-                          <span>{itemLabel}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+          <SidebarSeparator className="command-rail-rule" />
+          <SidebarContent className="command-rail-body">
+            <CommandNavList items={navigation} />
           </SidebarContent>
-          <SidebarFooter>
-            <div className="rounded-xl bg-sidebar-accent/50 px-3 py-3 group-data-[collapsible=icon]:hidden">
+          <SidebarFooter className="command-rail-footer">
+            <div className="command-rail-who group-data-[collapsible=icon]:hidden">
               <p className="truncate text-sm font-semibold">{profile?.full_name || 'Operations'}</p>
               <p className="truncate text-xs text-muted-foreground">
                 {formatRole(profile?.role)} · {formatScope(profile)}
@@ -459,13 +490,13 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
             </div>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setSettingsOpen(true)}>
+                <SidebarMenuButton className="command-nav-btn" tooltip="Account" onClick={() => setSettingsOpen(true)}>
                   <Settings />
-                  <span>Settings</span>
+                  <span>Account</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={signOut}>
+                <SidebarMenuButton className="command-nav-btn" tooltip="Sign out" onClick={signOut}>
                   <LogOut />
                   <span>Sign out</span>
                 </SidebarMenuButton>
@@ -476,7 +507,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
 
         <SidebarInset className="min-w-0 overflow-x-hidden">
           <header className="ops-inset-topbar sticky top-0 z-20 flex min-w-0 items-center gap-3 border-b border-border bg-background/90 backdrop-blur-xl">
-            <SidebarTrigger />
+            <SidebarTrigger className="min-h-11 min-w-11" />
             <Separator orientation="vertical" className="h-5" />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold tracking-[0.18em] text-primary uppercase">Hakum Auto Care</p>
@@ -500,8 +531,8 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
             />
             <button
               type="button"
-              className="inline-flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
-              aria-label="Settings"
+              className="inline-flex size-11 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
+              aria-label="Account"
               onClick={() => setSettingsOpen(true)}
             >
               <Settings size={16} />
@@ -511,7 +542,6 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
             <Outlet />
           </main>
         </SidebarInset>
-      </div>
       <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
       <OpsInstallPopup />
     </SidebarProvider>

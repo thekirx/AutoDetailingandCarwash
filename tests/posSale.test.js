@@ -98,13 +98,14 @@ const linked = buildHandoffCartLine({
     id: 'hand-9',
     bookings: { service_id: 'svc-1', vehicle_plate: 'ABC', final_price_minor: 10000 },
   },
-  services: [{ id: 'svc-1', name: 'Premium Wash' }],
+  services: [{ id: 'svc-1', name: 'Premium Wash', pay_category: 'wash' }],
   amountMinor: 12000,
 })
 assert.equal(linked.id, 'svc-1')
 assert.equal(linked.name, 'Premium Wash')
 assert.equal(linked.missing_service, false)
 assert.equal(linked.unit_price_minor, 12000)
+assert.equal(linked.pay_category, 'wash')
 
 const nullServicePayload = buildPosSalePayload({
   branch: 'bacoor',

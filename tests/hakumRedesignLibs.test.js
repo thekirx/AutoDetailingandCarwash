@@ -89,6 +89,8 @@ describe('compensation engine', () => {
       ceramic_crew_solo_pct: 15,
       ceramic_crew_split_pct: 8,
       ceramic_detailer_split_pct: 12,
+      payout_frequency: 'weekly',
+      payout_weekday: 5,
     })
     assert.equal(normalizeCompensationSettings(null).wash_pool_pct, 35)
   })

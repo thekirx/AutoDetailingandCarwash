@@ -1,18 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/auth/AuthProvider'
 import { canEditPlanning, canViewPlanning } from '@/auth/permissions'
-import { PLANNER_TABS, plannerTabFromSearch, plannerTabsForAccess } from '@/lib/plannerBoard'
+import { createCoalescedReload } from '@/lib/coalesceReload'
+import { PLAN_BOARD_DETAIL_SELECT, PLAN_BOARDS_LIST_SELECT, PLANNER_TABS, defaultPlanListId, pickPlannerBoard, plannerTabFromSearch, plannerTabsForAccess, visiblePlannerBoards } from '@/lib/plannerBoard'
 import { hrefForCalendarItem } from '@/lib/plannerCalendar'
 import { cardsFromAssigneeRows, filterPlannerCards, flattenPlannerCards, reviewItemsFromAssigneeRows } from '@/lib/plannerTasks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { CalendarDays, ClipboardList, FileText, FolderKanban, Inbox, LayoutList, Plus, Table2 } from 'lucide-react'
+import { CalendarDays, ClipboardList, FileText, FolderKanban, Inbox, LayoutList, Plus, Settings2, Table2 } from 'lucide-react'
 import PlanningFormsSmartPanel from '@/pages/planning/PlanningFormsSmartPanel'
 import { PlanningEventsPanel } from '@/pages/planning/PlanningPart6Panels'
-import PlanningCategoryDrawer from '@/pages/planning/PlanningCategoryDrawer'
+import PlanningConfigurePanel from '@/pages/planning/PlanningConfigurePanel'
 import PlanningReviewPanel from '@/pages/planning/PlanningReviewPanel'
 import TaskModal from '@/pages/planning/TaskModal'
 
@@ -22,27 +23,14 @@ const TAB_ICONS = {
   forms: ClipboardList,
   events: FileText,
   review: Inbox,
+  configure: Settings2,
 }
-
-const BOARD_SELECT = `
-  id, title, kind,
-  plan_lists (
-    id, title, position,
-    plan_cards (
-      id, title, description, labels, due_at, position, created_at, updated_at, created_by, category_id,
-      plan_checklist_items ( id, title, done, position ),
-      plan_card_assignees (
-        id, staff_id, status, proof_url, proof_note, proof_submitted_at, reviewed_at, staff_profiles ( id, full_name )
-      )
-    )
-  )
-`
 
 const ASSIGNEE_CARD_SELECT = `
   id, staff_id, status, proof_url, proof_note, proof_submitted_at, reviewed_at,
   staff_profiles ( id, full_name ),
   plan_cards (
-    id, title, description, labels, due_at, position, created_at, updated_at, created_by, category_id, list_id,
+    id, title, description, labels, due_at, position, created_at, updated_at, created_by, category_id, proof_required, list_id,
     plan_checklist_items ( id, title, done, position ),
     plan_lists ( id, title )
   )
@@ -82,10 +70,10 @@ export default function PlanningBoardPage() {
   const [categoryId, setCategoryId] = useState('all')
   const [assigneeId, setAssigneeId] = useState('all')
   const [due, setDue] = useState('all')
+  const [listFilter, setListFilter] = useState('all')
   const [assignedCards, setAssignedCards] = useState([])
   const [reviewItems, setReviewItems] = useState([])
   const [cardId, setCardId] = useState(searchParams.get('card'))
-  const [catsOpen, setCatsOpen] = useState(false)
   const [calCursor, setCalCursor] = useState(() => new Date())
   const [calSources, setCalSources] = useState({ tasks: true, events: true, bookings: canEdit, forms: canEdit })
   const [calExtra, setCalExtra] = useState({ events: [], bookings: [], forms: [] })
@@ -103,10 +91,11 @@ export default function PlanningBoardPage() {
         categoryId,
         assigneeId,
         due,
+        listId: listFilter,
         assignedOnly: !canEdit,
         viewerId: profile?.id,
       }),
-    [cards, q, status, categoryId, assigneeId, due, canEdit, profile?.id],
+    [cards, q, status, categoryId, assigneeId, due, listFilter, canEdit, profile?.id],
   )
   const reviewCount = reviewItems.length
   const activeCard = useMemo(() => {
@@ -133,27 +122,28 @@ export default function PlanningBoardPage() {
       setLoading(false)
       return
     }
-    const [{ data: boardRows }, { data: catRows }, { data: staffRows }, { data: tplRows }, { data: reviewRows, error: reviewErr }] = await Promise.all([
-      supabase.from('plan_boards').select('id, title, kind, position').order('position'),
+    const [{ data: boardRows, error: boardErr }, { data: catRows }, { data: staffRows }, { data: tplRows }, { data: reviewRows, error: reviewErr }] = await Promise.all([
+      supabase.from('plan_boards').select(PLAN_BOARDS_LIST_SELECT).order('name'),
       catQ,
       supabase.from('staff_profiles').select('id, full_name, role').eq('is_active', true).order('full_name'),
       supabase.from('plan_checklist_templates').select('id, name, position, plan_checklist_template_items ( id, title, position )').order('position'),
       supabase.from('plan_card_assignees').select(ASSIGNEE_CARD_SELECT).eq('status', 'for_review'),
     ])
+    if (boardErr) toast.error(boardErr.message)
     if (reviewErr) toast.error(reviewErr.message)
-    const visible = (boardRows || []).filter((b) => b.kind !== 'complaints')
+    const visible = visiblePlannerBoards(boardRows)
     setBoards(visible)
     setCategories(catRows || [])
     setStaff(staffRows || [])
     setTemplates(tplRows || [])
     setReviewItems(reviewItemsFromAssigneeRows(reviewRows))
-    const next = visible.find((b) => b.id === requested) || visible[0]
+    const next = pickPlannerBoard(boardRows, requested)
     if (!next) {
       setBoard(null)
       setLoading(false)
       return
     }
-    const { data, error } = await supabase.from('plan_boards').select(BOARD_SELECT).eq('id', next.id).maybeSingle()
+    const { data, error } = await supabase.from('plan_boards').select(PLAN_BOARD_DETAIL_SELECT).eq('id', next.id).maybeSingle()
     if (error) toast.error(error.message)
     setBoard(data || null)
     setLoading(false)
@@ -163,9 +153,30 @@ export default function PlanningBoardPage() {
     load()
   }, [load])
 
+  const loadRef = useRef(load)
+  loadRef.current = load
+  const scheduleReload = useMemo(() => createCoalescedReload(() => loadRef.current(), 450), [])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('planner-board')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_cards' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_card_assignees' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_lists' }, scheduleReload)
+      .subscribe()
+    return () => {
+      scheduleReload.cancel()
+      supabase.removeChannel(channel)
+    }
+  }, [scheduleReload])
+
   useEffect(() => {
     setCardId(searchParams.get('card'))
   }, [searchParams])
+
+  useEffect(() => {
+    if (listFilter !== 'all' && !lists.some((l) => l.id === listFilter)) setListFilter('all')
+  }, [lists, listFilter])
 
   useEffect(() => {
     if (tab !== 'calendar') return
@@ -302,7 +313,13 @@ export default function PlanningBoardPage() {
         <div>
           <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">Shop floor</p>
           <h1>Planner</h1>
-          <p>{canEdit ? 'Assign work, attach a form to an event, review proof.' : 'Your assigned work and published events.'}</p>
+          <p>
+            {tab === 'configure'
+              ? 'Lists, categories, checklists, and boards.'
+              : canEdit
+                ? 'Assign work, attach a form to an event, review proof.'
+                : 'Your assigned work and published events.'}
+          </p>
         </div>
         {canEdit && tab === 'board' && (
           <Button type="button" onClick={() => openCard('new')}>
@@ -339,6 +356,13 @@ export default function PlanningBoardPage() {
                 </select>
               </label>
               <label>
+                List
+                <select value={listFilter} onChange={(e) => setListFilter(e.target.value)}>
+                  <option value="all">Any list</option>
+                  {lists.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+                </select>
+              </label>
+              <label>
                 Category
                 <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
                   <option value="all">Any category</option>
@@ -363,7 +387,7 @@ export default function PlanningBoardPage() {
               <label>
                 Board
                 <select value={board?.id || ''} onChange={(e) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set('board', e.target.value); return n }, { replace: true })}>
-                  {boards.map((b) => <option key={b.id} value={b.id}>{b.title}</option>)}
+                  {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </label>
               <div className="flex flex-wrap gap-2">
@@ -373,7 +397,7 @@ export default function PlanningBoardPage() {
                 <Button type="button" size="sm" variant={view === 'board' ? 'default' : 'outline'} onClick={() => setView('board')}>
                   <LayoutList className="size-3.5" /> Board
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => setCatsOpen(true)}>Categories</Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => setTab('configure')}>Configure</Button>
               </div>
             </aside>
           )}
@@ -481,7 +505,27 @@ export default function PlanningBoardPage() {
         <PlanningReviewPanel items={reviewItems} canEdit={canEdit} onChanged={load} />
       )}
 
-      {canEdit && tab === 'board' && (
+      {tab === 'configure' && canEdit && (
+        <PlanningConfigurePanel
+          boards={boards}
+          board={board}
+          lists={lists}
+          categories={categories}
+          templates={templates}
+          canEdit={canEdit}
+          onChanged={load}
+          onSelectBoard={(id) => {
+            setSearchParams((prev) => {
+              const params = new URLSearchParams(prev)
+              params.set('board', id)
+              params.set('tab', 'configure')
+              return params
+            }, { replace: true })
+          }}
+        />
+      )}
+
+      {canEdit && tab === 'board' && !activeCard && (
         <button type="button" className="planner-v2-fab md:hidden" onClick={() => openCard('new')} aria-label="New task">
           <Plus className="size-5" />
         </button>
@@ -490,24 +534,16 @@ export default function PlanningBoardPage() {
       {activeCard && (
         <TaskModal
           card={activeCard.id === 'new' ? null : activeCard}
-          listId={lists[0]?.id}
+          listId={defaultPlanListId(lists)}
           lists={lists}
           categories={categories}
           checklistTemplates={templates}
           canEdit={canEdit}
           onClose={() => openCard(null)}
           onSaved={load}
+          onDeleted={load}
         />
       )}
-
-      <PlanningCategoryDrawer
-        open={catsOpen}
-        categories={categories}
-        templates={templates}
-        canEdit={canEdit}
-        onClose={() => setCatsOpen(false)}
-        onChanged={load}
-      />
     </div>
   )
 }

@@ -49,3 +49,28 @@ export const BOOKING_TERMINAL_STATUSES = Object.freeze(['completed', 'cancelled'
 export function isOpenBookingStatus(status) {
   return !BOOKING_TERMINAL_STATUSES.includes(String(status || ''))
 }
+
+/** DOM id for a bookings board lane — chips scroll this node into view. */
+export function bookingLaneDomId(statusId) {
+  const id = String(statusId || '').trim()
+  return id ? `bk-lane-${id}` : ''
+}
+
+export function scrollBookingLaneIntoView(
+  statusId,
+  root = typeof document !== 'undefined' ? document : null,
+  { reduceMotion } = {},
+) {
+  const id = bookingLaneDomId(statusId)
+  if (!id || !root || typeof root.getElementById !== 'function') return false
+  const el = root.getElementById(id)
+  if (!el || typeof el.scrollIntoView !== 'function') return false
+  if (typeof el.getClientRects === 'function' && el.getClientRects().length === 0) return false
+  const motion =
+    reduceMotion === true ||
+    (reduceMotion == null &&
+      typeof window !== 'undefined' &&
+      Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches))
+  el.scrollIntoView({ inline: 'start', block: 'nearest', behavior: motion ? 'auto' : 'smooth' })
+  return true
+}

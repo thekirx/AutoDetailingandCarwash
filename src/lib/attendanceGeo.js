@@ -13,9 +13,19 @@ export function haversineMeters(lat1, lng1, lat2, lng2) {
 }
 
 export function isInsideGeofence({ userLat, userLng, branchLat, branchLng, radiusM }) {
-  if (![userLat, userLng, branchLat, branchLng].every((n) => Number.isFinite(Number(n)))) return false
+  if (![userLat, userLng, branchLat, branchLng].every((n) => Number.isFinite(Number(n)))) {
+    return { ok: false, distanceM: 0 }
+  }
   const dist = haversineMeters(userLat, userLng, branchLat, branchLng)
   return { ok: dist <= Number(radiusM || 20), distanceM: Math.round(dist) }
+}
+
+export function canClockAttendance(profile) {
+  return profile?.attendance_enabled !== false
+}
+
+export function shouldEnforceGeofence(profile) {
+  return profile?.geofence_enabled !== false
 }
 
 /** @param {'daily'|'weekly'|'monthly'} period */

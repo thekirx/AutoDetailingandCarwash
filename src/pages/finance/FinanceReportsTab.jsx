@@ -11,13 +11,15 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canAccessInquiries } from '@/auth/permissions'
 import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
-import { downloadCsv, downloadExcel, printAsPdf, retentionBuckets, salesByBranch, salesByDay } from '@/lib/financeData'
+import { downloadCsv, downloadExcel, printAsPdf, retentionBuckets, rollupRetentionByCustomer, salesByBranch, salesByDay, scopeBranch, branchScopeList } from '@/lib/financeData'
 
 export default function FinanceReportsTab({
   salesRows,
   branchOptions,
   range,
   loading,
+  profile,
+  branchFilter,
 }) {
   const { profile } = useAuth()
   // Complaints are readable by Super Admin / Assistant Super Admin only; for anyone
@@ -30,29 +32,44 @@ export default function FinanceReportsTab({
   const load = useCallback(async () => {
     const startIso = `${range.start}T00:00:00+08:00`
     const endIso = `${range.end}T23:59:59.999+08:00`
+    const allSites = branchScopeList(profile) === null && (!branchFilter || branchFilter === 'all')
     const [books, comps, crew, retentionRes] = await Promise.all([
-      supabase
-        .from('bookings')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_archived', false)
-        .in('status', ['completed', 'for_payment'])
-        .gte('scheduled_start', startIso)
-        .lte('scheduled_start', endIso),
+      scopeBranch(
+        supabase
+          .from('bookings')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_archived', false)
+          .in('status', ['completed', 'for_payment'])
+          .gte('scheduled_start', startIso)
+          .lte('scheduled_start', endIso),
+        profile,
+        branchFilter,
+      ),
       showComplaints
-        ? supabase
-            .from('complaints')
-            .select('id', { count: 'exact', head: true })
-            .gte('created_at', startIso)
-            .lte('created_at', endIso)
+        ? scopeBranch(
+            supabase
+              .from('complaints')
+              .select('id', { count: 'exact', head: true })
+              .gte('created_at', startIso)
+              .lte('created_at', endIso),
+            profile,
+            branchFilter,
+          )
         : Promise.resolve({ count: 0, error: null }),
-      supabase
-        .from('crew_kpi_summary')
-        .select('staff_id', { count: 'exact', head: true }),
-      supabase
-        .from('finance_customer_retention')
-        .select('customer_id, full_name, phone, paid_sales, total_spent_minor, first_paid_at, last_paid_at')
-        .order('total_spent_minor', { ascending: false })
-        .limit(50),
+      scopeBranch(
+        supabase.from('crew_kpi_summary').select('staff_id', { count: 'exact', head: true }),
+        profile,
+        branchFilter,
+      ),
+      scopeBranch(
+        supabase
+          .from('finance_customer_retention')
+          .select('branch, customer_id, full_name, phone, paid_sales, total_spent_minor, first_paid_at, last_paid_at')
+          .order('total_spent_minor', { ascending: false })
+          .limit(allSites ? 200 : 50),
+        profile,
+        branchFilter,
+      ),
     ])
     if (books.error) toast.error(books.error.message)
     if (comps.error) toast.error(comps.error.message)
@@ -63,10 +80,11 @@ export default function FinanceReportsTab({
       complaints: comps.count || 0,
       crew: crew.count || 0,
     })
-    const retentionRows = retentionRes.data || []
+    let retentionRows = retentionRes.data || []
+    if (allSites) retentionRows = rollupRetentionByCustomer(retentionRows).slice(0, 50)
     setRetention(retentionRows)
     setRetentionSummary(retentionBuckets(retentionRows))
-  }, [range.start, range.end, showComplaints])
+  }, [range.start, range.end, profile, branchFilter, showComplaints])
 
   useEffect(() => {
     load()

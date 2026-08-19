@@ -11,6 +11,7 @@ import {
   canViewAssignedTasks,
   canViewQueueOperations,
   getOperationsNav,
+  getStaffMore,
   redirectForRole,
 } from '../src/auth/permissions.js'
 import {
@@ -43,9 +44,11 @@ describe('Staff capability matrix', () => {
     assert.equal(canAccessConsole(p), false)
     assert.equal(canManageCrew(p), false)
     assert.equal(allowRoute(p, 'planning'), true)
+    assert.equal(allowRoute(p, 'history'), false)
+    assert.deepEqual(getStaffMore(p), [])
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/attendance', '/operations/my-tasks', '/operations/planning'],
+      ['/operations/attendance', '/operations/my-tasks', '/operations/planning', '/operations/my-pay'],
     )
   })
 })
@@ -94,6 +97,31 @@ describe('Staff plan assignee patch whitelist (STF-H4)', () => {
     assert.equal(
       allowedStaffPlanAssigneePatch({ status: 'todo', card_id: '1' }, { status: 'in_progress', card_id: '2' }),
       null,
+    )
+  })
+
+  it('blocks complete when photo proof is required and missing', () => {
+    assert.equal(
+      allowedStaffPlanAssigneePatch(
+        { status: 'in_progress', proof_required: true },
+        { status: 'done' },
+      ),
+      null,
+    )
+    assert.equal(
+      allowedStaffPlanAssigneePatch(
+        { status: 'in_progress' },
+        { status: 'for_review' },
+        { proofRequired: true },
+      ),
+      null,
+    )
+    assert.equal(
+      allowedStaffPlanAssigneePatch(
+        { status: 'in_progress', proof_required: true },
+        { status: 'for_review', proof_url: 'uid/card/shot.jpg' },
+      )?.status,
+      'for_review',
     )
   })
 })

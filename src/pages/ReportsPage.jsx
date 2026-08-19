@@ -62,7 +62,7 @@ export default function ReportsPage() {
       ;[sales, saleIdRows, expRows, crew, comps, books] = await Promise.all([
         salesQ,
         collectPaged(async (from, to) => {
-          let q = supabase.from('sales').select('id').gte('occurred_at', startIso).order('occurred_at', { ascending: false }).range(from, to)
+          let q = supabase.from('sales').select('id').eq('status', 'paid').gte('occurred_at', startIso).order('occurred_at', { ascending: false }).range(from, to)
           q = applyBranchScope(q, branchFilter)
           const { data, error } = await q
           if (error) throw error

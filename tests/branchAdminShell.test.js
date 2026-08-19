@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   ROLES,
+  allowRoute,
   canManageServices,
   canAccessPos,
   getBranchAdminDock,
@@ -24,33 +25,36 @@ describe('Branch Admin simplified shell', () => {
     assert.equal(redirectForRole(ROLES.SUPER_ADMIN), '/operations/console')
   })
 
-  it('Command nav: Floor, wash/detail queues, POS, attendance, inventory, history, reviews, audit', () => {
+  it('Command nav: Floor, Queue, attendance, POS, reviews, planner, history, audit — no Inventory (checkout-only)', () => {
+    assert.equal(allowRoute(p, 'inventory'), false)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
         '/operations/dashboard',
         '/operations/queue',
-        '/operations/queue?family=detailing',
-        '/operations/pos',
         '/operations/attendance',
-        '/operations/inventory',
-        '/operations/history',
-        '/operations/planning',
+        '/operations/pos',
         '/operations/reviews',
+        '/operations/planning',
+        '/operations/history',
+        '/operations/my-pay',
         '/operations/audit',
       ],
     )
     assert.ok(getOperationsNav(p).some((i) => i.label === 'Floor'))
-    assert.ok(getOperationsNav(p).some((i) => i.label === 'Detailing Queue'))
+    assert.ok(getOperationsNav(p).some((i) => i.label === 'Queue'))
+    assert.equal(getOperationsNav(p).some((i) => i.label === 'Detailing Queue'), false)
+    assert.equal(getOperationsNav(p).some((i) => i.label === 'Car Wash Queue'), false)
   })
 
-  it('dock is Floor, Wash, Attendance, POS (POS primary)', () => {
+  it('dock is Floor, Queue, Attendance, POS (POS primary)', () => {
     const dock = getBranchAdminDock(p)
     assert.deepEqual(
       dock.map((i) => i.to),
       ['/operations/dashboard', '/operations/queue', '/operations/attendance', '/operations/pos'],
     )
     assert.equal(dock[0].label, 'Floor')
+    assert.equal(dock.find((i) => i.to === '/operations/queue')?.label, 'Queue')
     assert.equal(dock.find((i) => i.to === '/operations/pos')?.primary, true)
     assert.equal(getBranchAdminDock({ role: ROLES.TEAM_LEAD }).length, 0)
   })

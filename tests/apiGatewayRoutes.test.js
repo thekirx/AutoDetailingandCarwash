@@ -39,7 +39,7 @@ const domains = [
     'notifications',
     notificationsGateway,
     notifications,
-    ['birthday-greetings', 'busybee', 'lifecycle-sms', 'notification-broadcast', 'notification-broadcast-kinds', 'notification-settings', 'notification-templates', 'notify-booking', 'notify-ops-form', 'push-subscribe', 'send-push'],
+    ['birthday-greetings', 'busybee', 'lifecycle-sms', 'notification-broadcast', 'notification-broadcast-kinds', 'notification-settings', 'notification-templates', 'notify-booking', 'notify-ops-form', 'notify-planner', 'notify-pos', 'push-subscribe', 'send-push'],
   ],
   ['finance', financeGateway, finance, ['send-finance-quote']],
   ['data-center', dataCenterGateway, dataCenter, ['data-center']],

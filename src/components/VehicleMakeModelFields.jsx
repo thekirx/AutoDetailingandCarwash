@@ -76,7 +76,7 @@ export default function VehicleMakeModelFields({
     loadCatalogMap().then(apply).catch(fail)
 
     const channel = supabase
-      .channel(`vehicle-catalog-picker:${crypto.randomUUID()}`)
+      .channel('vehicle-catalog')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicle_catalog' }, () => {
         clearVehicleCatalogCache()
         loadCatalogMap().then(apply).catch(fail)

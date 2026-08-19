@@ -49,13 +49,12 @@ describe('Admin capability matrix', () => {
       [
         '/operations/dashboard',
         '/operations/queue',
-        '/operations/queue?family=detailing',
-        '/operations/pos',
         '/operations/attendance',
-        '/operations/inventory',
-        '/operations/history',
-        '/operations/planning',
+        '/operations/pos',
         '/operations/reviews',
+        '/operations/planning',
+        '/operations/history',
+        '/operations/my-pay',
         '/operations/audit',
       ],
     )

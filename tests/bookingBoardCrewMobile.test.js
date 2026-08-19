@@ -4,6 +4,10 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  bookingLaneDomId,
+  scrollBookingLaneIntoView,
+} from '../src/lib/detailingBoardStatuses.js'
+import {
   crewRequiredForPayCategory,
   getBookingPrimaryNextStatus,
   isAssignableAttendanceStatus,
@@ -44,15 +48,49 @@ describe('crew assign + booking board mobile', () => {
     assert.match(layout, /hakum-mark-ow\.png/)
     assert.match(page, /hakum-mark-blue\.png/)
     assert.match(page, /bk-status-strip/)
-    assert.match(page, /bk-card-list xl:hidden/)
-    assert.match(page, /booking-lane-board hidden xl:grid/)
+    assert.match(page, /className="bk-board"/)
+    assert.match(page, /bookingLaneDomId/)
+    assert.match(page, /scrollBookingLaneIntoView/)
+    assert.doesNotMatch(page, /bk-card-list xl:hidden/)
+    assert.doesNotMatch(page, /booking-lane-board hidden xl:grid/)
+    assert.doesNotMatch(page, /min-h-9 w-full/)
+    assert.doesNotMatch(page, /min-h-8 w-full/)
+    assert.match(page, /createCoalescedReload/)
+    assert.match(page, /from '@\/lib\/coalesceReload'/)
     assert.match(page, /isOpenBookingStatus/)
     assert.match(page, /fetchPresentAssignableStaff/)
     assert.match(page, /Assign present crew/)
     assert.match(css, /\.bk-card\s*\{/)
+    assert.match(css, /\.bk-board\s*\{[^}]*container-name:\s*bk-board/s)
+    assert.match(css, /@container bk-board/)
+    assert.match(css, /\.booking-lane-board\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s)
+    assert.match(css, /@container bk-board \(min-width: 44rem\)[\s\S]*?grid-auto-columns:\s*minmax\(16\.5rem/)
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.booking-lane-board/)
+    assert.doesNotMatch(css, /\.booking-lane-board\s*\{[^}]*overflow-x:\s*hidden/s)
+    assert.doesNotMatch(css, /grid-template-columns:\s*repeat\(var\(--bk-cols/)
     assert.match(api, /Assign at least one present crew member before starting/)
     assert.match(api, /\.in\('status', \['present', 'late'\]\)/)
     assert.match(migration, /between 20 and 5000/)
     assert.match(migration, /set default 20/)
+  })
+
+  it('lane ids are stable so chips can jump a stage', () => {
+    assert.equal(bookingLaneDomId('waiting'), 'bk-lane-waiting')
+    assert.equal(bookingLaneDomId(''), '')
+    const hidden = { scrollIntoView() {}, getClientRects: () => [] }
+    assert.equal(scrollBookingLaneIntoView('waiting', { getElementById: () => hidden }), false)
+    let opts = null
+    const visible = {
+      scrollIntoView(next) {
+        opts = next
+      },
+      getClientRects: () => [{ width: 264 }],
+    }
+    assert.equal(
+      scrollBookingLaneIntoView('waiting', { getElementById: (id) => (id === 'bk-lane-waiting' ? visible : null) }, { reduceMotion: true }),
+      true,
+    )
+    assert.equal(opts.behavior, 'auto')
+    assert.equal(opts.inline, 'start')
   })
 })

@@ -3,6 +3,8 @@ import { handleBusybeeRequest } from '../server/busybeeApi.mjs'
 import { handleLifecycleSmsRequest } from '../server/lifecycleSmsApi.mjs'
 import { handleNotifyBookingRequest } from '../server/notifyBookingApi.mjs'
 import { handleNotifyOpsFormRequest } from '../server/notifyOpsFormApi.mjs'
+import { handleNotifyPlannerRequest } from '../server/notifyPlannerApi.mjs'
+import { handleNotifyPosRequest } from '../server/notifyPosApi.mjs'
 import { handlePushSubscribeRequest, handleSendPushRequest } from '../server/pushApi.mjs'
 import { handleNotificationSettingsRequest } from '../server/notificationSettingsApi.mjs'
 import { handleNotificationBroadcastRequest } from '../server/notificationBroadcastApi.mjs'
@@ -15,6 +17,8 @@ export const operations = Object.freeze({
   'lifecycle-sms': handleLifecycleSmsRequest,
   'notify-booking': handleNotifyBookingRequest,
   'notify-ops-form': handleNotifyOpsFormRequest,
+  'notify-planner': handleNotifyPlannerRequest,
+  'notify-pos': handleNotifyPosRequest,
   'push-subscribe': handlePushSubscribeRequest,
   'send-push': handleSendPushRequest,
   'notification-settings': handleNotificationSettingsRequest,

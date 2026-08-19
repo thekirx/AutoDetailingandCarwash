@@ -3,16 +3,25 @@
  * Export / import / purge / status — BossMich only.
  */
 import { createClient } from '@supabase/supabase-js'
+import { collectInChunks, collectPaged } from '../src/lib/crmInsights.js'
 import {
   DATA_CENTER_EXPORT_TABLES,
   DATA_CENTER_IMPORT_TABLES,
   DATA_CENTER_PURGE_TARGETS,
+  exportOrderColumns,
+  backupHealth,
   buildExportManifest,
-  isBackupOverdue,
+  chunkRows,
+  eligiblePurgeIds,
+  listPurgeTargets,
+  planImport,
   platformBackupGuidance,
-  validateImportBundle,
+  purgeCutoffIso,
 } from '../src/lib/dataCenterLogic.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+
+const PAGE = 1000
+const UPSERT_CHUNK = 200
 
 function adminClient() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -47,7 +56,6 @@ async function logEvent(admin, { actorId, action, summary, meta }) {
     summary,
     meta: meta || {},
   })
-  // also mirror to audit_logs when RPC available
   try {
     await admin.rpc('write_audit_event', {
       input_action: `data_center_${action}`,
@@ -72,13 +80,86 @@ async function touchSettings(admin, patch) {
   return next
 }
 
-async function fetchTable(admin, table, { limit = 5000 } = {}) {
-  const { data, error } = await admin.from(table).select('*').limit(limit)
-  if (error) {
-    // table may not exist in older envs
-    return { rows: [], error: error.message }
+async function fetchTable(admin, table) {
+  try {
+    const rows = await collectPaged(async (from, to) => {
+      let q = admin.from(table).select('*')
+      for (const col of exportOrderColumns(table)) q = q.order(col)
+      const { data, error } = await q.range(from, to)
+      if (error) throw error
+      return data || []
+    }, PAGE)
+    return { rows, error: null }
+  } catch (err) {
+    return { rows: [], error: err.message || String(err) }
   }
-  return { rows: data || [], error: null }
+}
+
+async function fetchIds(admin, table, apply) {
+  const rows = await collectPaged(async (from, to) => {
+    let q = admin.from(table).select('id').order('id').range(from, to)
+    if (apply) q = apply(q)
+    const { data, error } = await q
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return data || []
+  }, PAGE)
+  return rows.map((r) => r.id)
+}
+
+async function fetchBlockingIds(admin, spec, candidateIds) {
+  if (!candidateIds.length || !spec.blockers?.length) return []
+  const found = []
+  for (const ref of spec.blockers) {
+    const [table, column] = String(ref).split('.')
+    if (!table || !column) continue
+    const rows = await collectInChunks(candidateIds, async (chunk, from, to) => {
+      const { data, error } = await admin
+        .from(table)
+        .select(`id, ${column}`)
+        .in(column, chunk)
+        .order('id')
+        .range(from, to)
+      if (error) throw Object.assign(new Error(error.message), { status: 400 })
+      return data || []
+    })
+    for (const row of rows) {
+      if (row[column]) found.push(row[column])
+    }
+  }
+  return found
+}
+
+async function countExact(admin, table, apply) {
+  let q = admin.from(table).select('*', { count: 'exact', head: true })
+  if (apply) q = apply(q)
+  const { count, error } = await q
+  if (error) return null
+  return count
+}
+
+async function previewPurge(admin, target) {
+  const spec = DATA_CENTER_PURGE_TARGETS[target]
+  if (!spec) throw Object.assign(new Error('Unknown purge target.'), { status: 400 })
+
+  if (spec.kind === 'retention') {
+    const cutoff = purgeCutoffIso(spec.retention_days)
+    const eligible = await countExact(admin, spec.table, (q) => q.lt('created_at', cutoff))
+    if (eligible == null) {
+      return { id: target, eligible: 0, blocked: 0, cutoff, error: `Cannot read ${spec.table}` }
+    }
+    return { id: target, eligible, blocked: 0, cutoff }
+  }
+
+  const candidateIds = await fetchIds(admin, spec.table, (q) => q.eq('is_archived', true))
+  const blockingIds = await fetchBlockingIds(admin, spec, candidateIds)
+  const split = eligiblePurgeIds(candidateIds, blockingIds)
+  return {
+    id: target,
+    eligible: split.eligible.length,
+    blocked: split.blocked.length,
+    eligible_ids: split.eligible,
+    blocked_ids: split.blocked,
+  }
 }
 
 async function buildStatus(admin, staff) {
@@ -86,19 +167,36 @@ async function buildStatus(admin, staff) {
     admin.from('data_center_settings').select('*').eq('id', 1).maybeSingle(),
     admin.from('data_center_events').select('*').order('created_at', { ascending: false }).limit(40),
     Promise.all(
-      ['bookings', 'customers', 'sales', 'expenses', 'vehicles', 'staff_profiles', 'audit_logs'].map(async (t) => {
-        const { count, error } = await admin.from(t).select('*', { count: 'exact', head: true })
-        return [t, error ? null : count]
+      DATA_CENTER_EXPORT_TABLES.map(async (t) => {
+        const n = await countExact(admin, t)
+        return [t, n]
       }),
     ),
   ])
 
   const s = settings || {}
-  const overdue = isBackupOverdue({
+  const health = backupHealth({
     lastExportAt: s.last_export_at,
+    lastPlatformAckAt: s.last_platform_backup_ack_at,
     snoozeUntil: s.snooze_until,
     reminderDays: s.reminder_days ?? 7,
   })
+
+  const purgePreviews = await Promise.all(
+    listPurgeTargets().map(async (t) => {
+      try {
+        const preview = await previewPurge(admin, t.id)
+        return {
+          ...t,
+          eligible: preview.eligible,
+          blocked: preview.blocked,
+          cutoff: preview.cutoff || null,
+        }
+      } catch {
+        return { ...t, eligible: null, blocked: null, cutoff: null }
+      }
+    }),
+  )
 
   return {
     ok: true,
@@ -111,19 +209,23 @@ async function buildStatus(admin, staff) {
       reminder_days: s.reminder_days ?? 7,
       snooze_until: s.snooze_until || null,
     },
-    backup_reminder: {
-      overdue,
-      message: overdue
-        ? 'Owner export is overdue. Download a fresh snapshot and confirm Supabase PITR in the dashboard.'
-        : 'Owner export is within the reminder window.',
-    },
+    backup_reminder: health,
     platform: platformBackupGuidance(),
     row_counts: Object.fromEntries(counts),
     recent_events: events || [],
-    purge_targets: Object.entries(DATA_CENTER_PURGE_TARGETS).map(([id, t]) => ({ id, label: t.label })),
+    purge_targets: purgePreviews,
     import_tables: DATA_CENTER_IMPORT_TABLES,
     export_tables: DATA_CENTER_EXPORT_TABLES,
   }
+}
+
+function stripSecrets(table, rows) {
+  if (table !== 'staff_profiles') return rows
+  return rows.map((r) => {
+    const copy = { ...r }
+    delete copy.password_hash
+    return copy
+  })
 }
 
 async function runExport(admin, user) {
@@ -137,16 +239,7 @@ async function runExport(admin, user) {
       counts[table] = 0
       continue
     }
-    // strip sensitive staff fields
-    if (table === 'staff_profiles') {
-      data[table] = rows.map((r) => {
-        const copy = { ...r }
-        delete copy.password_hash
-        return copy
-      })
-    } else {
-      data[table] = rows
-    }
+    data[table] = stripSecrets(table, rows)
     counts[table] = rows.length
   }
 
@@ -165,23 +258,26 @@ async function runExport(admin, user) {
 }
 
 async function runImport(admin, user, bundle, { dryRun = false } = {}) {
-  const check = validateImportBundle(bundle)
-  if (!check.ok) throw Object.assign(new Error(check.error), { status: 400 })
+  const plan = planImport(bundle)
+  if (!plan.ok) throw Object.assign(new Error(plan.error), { status: 400 })
 
   const results = {}
-  for (const table of DATA_CENTER_IMPORT_TABLES) {
-    const rows = bundle.data[table]
-    if (!Array.isArray(rows) || !rows.length) {
-      results[table] = { upserted: 0, skipped: true }
+  for (const item of plan.importable) {
+    if (!item.count) {
+      results[item.table] = { upserted: 0, skipped: true }
       continue
     }
     if (dryRun) {
-      results[table] = { upserted: rows.length, dry_run: true }
+      results[item.table] = { upserted: item.count, dry_run: true }
       continue
     }
-    const { error } = await admin.from(table).upsert(rows, { onConflict: 'id' })
-    if (error) throw Object.assign(new Error(`${table}: ${error.message}`), { status: 400 })
-    results[table] = { upserted: rows.length }
+    let upserted = 0
+    for (const chunk of chunkRows(item.rows, UPSERT_CHUNK)) {
+      const { error } = await admin.from(item.table).upsert(chunk, { onConflict: 'id' })
+      if (error) throw Object.assign(new Error(`${item.table}: ${error.message}`), { status: 400 })
+      upserted += chunk.length
+    }
+    results[item.table] = { upserted }
   }
 
   if (!dryRun) {
@@ -190,11 +286,11 @@ async function runImport(admin, user, bundle, { dryRun = false } = {}) {
       actorId: user.id,
       action: 'import',
       summary: `Imported snapshot from ${bundle.exported_at || 'unknown'}`,
-      meta: { results },
+      meta: { results, skipped: plan.skipped },
     })
   }
 
-  return { ok: true, dry_run: dryRun, results }
+  return { ok: true, dry_run: dryRun, results, skipped: plan.skipped }
 }
 
 async function runPurge(admin, user, { target, confirm }) {
@@ -204,35 +300,34 @@ async function runPurge(admin, user, { target, confirm }) {
     throw Object.assign(new Error('Type DELETE to confirm destructive purge.'), { status: 400 })
   }
 
-  let query = admin.from(spec.table).delete()
-  if (spec.filter) {
-    for (const [k, v] of Object.entries(spec.filter)) {
-      query = query.eq(k, v)
+  const preview = await previewPurge(admin, target)
+  if (preview.error) throw Object.assign(new Error(preview.error), { status: 400 })
+
+  let deleted = 0
+  if (spec.kind === 'retention' && preview.eligible > 0) {
+    const { error, count } = await admin
+      .from(spec.table)
+      .delete({ count: 'exact' })
+      .lt('created_at', preview.cutoff)
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    deleted = count ?? preview.eligible
+  } else if (preview.eligible_ids?.length) {
+    for (const chunk of chunkRows(preview.eligible_ids, UPSERT_CHUNK)) {
+      const { error, count } = await admin.from(spec.table).delete({ count: 'exact' }).in('id', chunk)
+      if (error) throw Object.assign(new Error(error.message), { status: 400 })
+      deleted += count ?? chunk.length
     }
-  } else {
-    // PostgREST requires a filter for DELETE — match all non-null ids
-    query = query.not('id', 'is', null)
   }
-  // count first
-  let countQuery = admin.from(spec.table).select('*', { count: 'exact', head: true })
-  if (spec.filter) {
-    for (const [k, v] of Object.entries(spec.filter)) {
-      countQuery = countQuery.eq(k, v)
-    }
-  }
-  const { count } = await countQuery
-  const { error } = await query
-  if (error) throw Object.assign(new Error(error.message), { status: 400 })
 
   await touchSettings(admin, { last_purge_at: new Date().toISOString() })
   await logEvent(admin, {
     actorId: user.id,
     action: 'purge',
-    summary: `Purged ${count ?? '?'} rows from ${spec.table} (${spec.label})`,
-    meta: { target, table: spec.table, deleted_count: count },
+    summary: `Purged ${deleted} rows from ${spec.table} (${spec.label}); kept ${preview.blocked} blocked`,
+    meta: { target, table: spec.table, deleted_count: deleted, blocked_count: preview.blocked },
   })
 
-  return { ok: true, target, deleted_count: count }
+  return { ok: true, target, deleted_count: deleted, blocked_count: preview.blocked }
 }
 
 export async function handleDataCenterRequest(req, res) {
@@ -270,6 +365,18 @@ export async function handleDataCenterRequest(req, res) {
       }
       const result = await runImport(admin, user, body.bundle, { dryRun })
       return json(res, 200, result)
+    }
+
+    if (action === 'purge_preview') {
+      const preview = await previewPurge(admin, body.target)
+      return json(res, 200, {
+        ok: true,
+        id: preview.id,
+        eligible: preview.eligible,
+        blocked: preview.blocked,
+        cutoff: preview.cutoff || null,
+        error: preview.error || null,
+      })
     }
 
     if (action === 'purge') {

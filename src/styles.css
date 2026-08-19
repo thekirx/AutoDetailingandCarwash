@@ -2002,22 +2002,125 @@ button { cursor: pointer; }
 
 /* Queue board ticket edit modal — tablet-friendly, scroll inside dialog */
 .queue-ticket-dialog {
+  container-type: inline-size;
+  container-name: qt;
   border-radius: 1.25rem;
   background: var(--popover, #0f172a);
 }
 .floor-shell .queue-ticket-dialog {
-  max-width: min(42rem, calc(100vw - 1rem));
+  max-width: min(48rem, calc(100vw - 1rem));
 }
-.queue-ticket-editor-modal .floor-actions-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  margin: -0.25rem 0 0.5rem;
-  padding-bottom: 0.25rem;
-  background: linear-gradient(to bottom, var(--popover, #0f172a) 70%, transparent);
+.queue-ticket-editor-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
 }
-html:not(.dark) .queue-ticket-editor-modal .floor-actions-sticky {
-  background: linear-gradient(to bottom, #ffffff 70%, transparent);
+.queue-ticket-identity {
+  min-width: 0;
+  padding: 0.85rem 2.25rem 0.85rem 0.95rem;
+  border: 1px solid color-mix(in oklab, #052699 16%, var(--border));
+  border-radius: 1rem;
+  background: color-mix(in oklab, #052699 5%, var(--card));
+  box-shadow: inset 4px 0 0 #c4a35a;
+}
+.queue-ticket-bay-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #052699;
+}
+.queue-ticket-bay-plate {
+  margin: 0.35rem 0 0;
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 1.45rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  color: var(--foreground);
+}
+.queue-ticket-bay-title {
+  margin: 0.35rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+.queue-ticket-bay-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+}
+.queue-ticket-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-areas:
+    "identity"
+    "actions"
+    "crew"
+    "services"
+    "price";
+}
+.queue-ticket-identity-details { grid-area: identity; }
+.queue-ticket-actions { grid-area: actions; }
+.queue-ticket-crew { grid-area: crew; }
+.queue-ticket-services { grid-area: services; }
+.queue-ticket-price { grid-area: price; }
+.queue-ticket-actions .queue-action-stack {
+  display: grid;
+  gap: 0.5rem;
+}
+.queue-action-secondary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+.queue-ticket-facts {
+  display: grid;
+  gap: 0.55rem 1rem;
+  margin: 0;
+}
+.queue-ticket-fact dt {
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.queue-ticket-fact dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+.queue-ticket-crew-fold > summary {
+  list-style: none;
+}
+.queue-ticket-crew-fold > summary::-webkit-details-marker {
+  display: none;
+}
+@container qt (min-width: 36rem) {
+  .queue-ticket-grid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(16rem, 0.85fr);
+    grid-template-areas:
+      "identity actions"
+      "crew actions"
+      "services services"
+      "price price";
+    align-items: start;
+  }
+  .queue-action-secondary {
+    grid-template-columns: 1fr 1fr;
+  }
+  .queue-ticket-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .queue-ticket-editor-modal .floor-touch-btn {
+    transition: none;
+  }
 }
 
 /* Team Lead / Branch Admin tablet floor shell — full viewport, large touch, live branch ops */
@@ -2063,6 +2166,74 @@ html:not(.dark) .queue-ticket-editor-modal .floor-actions-sticky {
 .command-shell a[data-active='true'],
 .command-shell [aria-current='page'] {
   color: var(--color-brand-primary, #052699);
+}
+
+/* Hakum command rail: shop-day groups, gold bay tick, 44px targets. */
+.command-rail-kicker {
+  margin: 0.2rem 0 0;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #052699;
+}
+.command-rail-rule {
+  background: color-mix(in oklab, #c4a35a 55%, var(--border));
+}
+.command-rail-body {
+  gap: 0.15rem;
+  padding-bottom: 0.5rem;
+}
+.command-nav-group {
+  padding: 0.15rem 0.35rem 0.35rem;
+}
+.command-nav-group [data-slot="sidebar-group-label"] {
+  height: auto;
+  min-height: 1.5rem;
+  padding: 0.55rem 0.65rem 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #052699;
+}
+.command-nav-btn {
+  min-height: 2.75rem;
+  height: auto;
+  border-radius: 0.55rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: #020a31;
+}
+.command-nav-btn[data-active],
+.command-nav-btn[aria-current="page"] {
+  background: color-mix(in oklab, #052699 9%, #f1f1ed);
+  color: #052699;
+  box-shadow: inset 3px 0 0 #c4a35a;
+  font-weight: 750;
+}
+.command-nav-btn:focus-visible {
+  outline: 2px solid #052699;
+  outline-offset: 2px;
+}
+.command-rail-who {
+  margin: 0 0.35rem 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.75rem;
+  background: color-mix(in oklab, #052699 6%, #f1f1ed);
+  box-shadow: inset 0 2px 0 #c4a35a;
+}
+.command-rail-footer {
+  border-top: 1px solid color-mix(in oklab, #c4a35a 40%, var(--border));
+}
+.command-shell [data-slot="sidebar-inner"] {
+  background: #f1f1ed;
+  color: #020a31;
+}
+@media (prefers-reduced-motion: reduce) {
+  .command-nav-btn {
+    transition: none;
+  }
 }
 .floor-app-frame {
   background: var(--color-page, #f1f1ed);
@@ -2486,57 +2657,102 @@ html:not(.dark) .floor-shell .floor-alert-error {
   min-height: min(62svh, 36rem);
 }
 
-/* Bookings board: all statuses on one screen — no horizontal scroll. */
+.bk-page {
+  min-width: 0;
+  overflow-x: clip;
+}
+.bk-tabs {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.bk-tabs::-webkit-scrollbar {
+  display: none;
+}
+.bk-tabs [data-slot="tabs-trigger"] {
+  min-width: 4.25rem;
+  font-size: 0.8rem;
+}
+
+/* Bookings board: pipeline strip always visible. Lanes stack in a narrow pane
+   (ops sidebar shrinks the container). Snap-scroll columns when the board is wide. */
+.bk-board {
+  container-type: inline-size;
+  container-name: bk-board;
+  min-width: 0;
+  display: grid;
+  gap: 0.75rem;
+}
 .booking-lane-board {
   display: grid;
-  gap: 0.4rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
-  grid-template-columns: repeat(var(--bk-cols, 6), minmax(0, 1fr));
-  min-height: min(58svh, 34rem);
-  align-items: stretch;
+  min-width: 0;
+  overflow-x: clip;
+  touch-action: pan-y;
 }
 .booking-lane-board .floor-lane {
   min-width: 0;
-  max-width: 100%;
-  padding: 0.45rem;
+  max-width: none;
+  padding: 0.7rem;
   border-radius: 0.85rem;
-  max-height: calc(100svh - 12.5rem);
-  scroll-snap-align: none;
+  max-height: none;
 }
 .booking-lane-board .floor-lane-title {
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  line-height: 1.25;
-  white-space: normal;
-  hyphens: auto;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 .booking-lane-board .floor-lane-body {
-  gap: 0.45rem;
+  gap: 0.55rem;
 }
 .booking-lane-board .floor-ticket {
-  padding: 0.55rem 0.55rem;
+  padding: 0.75rem 0.8rem;
   min-height: 0;
-  border-radius: 0.7rem;
+  border-radius: 0.85rem;
 }
 .booking-lane-board .floor-ticket p {
-  font-size: 0.78rem;
-  line-height: 1.3;
+  font-size: 0.84rem;
+  line-height: 1.35;
 }
 .booking-lane-board .floor-ticket .bk-meta {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
 }
-@media (min-width: 1280px) {
+@media (prefers-reduced-motion: reduce) {
   .booking-lane-board {
-    gap: 0.5rem;
+    scroll-snap-type: none;
+  }
+  .bk-status-chip {
+    transition: none;
+  }
+}
+@container bk-board (max-width: 43.99rem) {
+  .bk-lane-dimmed {
+    display: none;
+  }
+}
+@container bk-board (min-width: 44rem) {
+  .booking-lane-board {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(16.5rem, 19rem);
+    grid-template-columns: none;
+    padding-bottom: 0.5rem;
+    scroll-snap-type: x mandatory;
+    min-height: min(58svh, 34rem);
+    scrollbar-width: thin;
+    touch-action: pan-x pan-y;
   }
   .booking-lane-board .floor-lane {
-    padding: 0.55rem;
-  }
-  .booking-lane-board .floor-lane-title {
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
+    min-width: 16.5rem;
+    max-width: 19rem;
+    max-height: calc(100svh - 12.5rem);
+    scroll-snap-align: start;
+    scroll-margin-inline: 0.5rem;
   }
 }
 /* Planning: fit columns beside sidebar; scroll only when many lists */
@@ -2801,11 +3017,12 @@ html:not(.dark) .floor-shell .floor-alert-error {
 .queue-lane-dimmed {
   opacity: 0.42;
 }
-.queue-lane[data-status='waiting'] {
-  border-top-color: #2563eb;
+.queue-lane[data-status='waiting'],
+.queue-lane[data-status='confirmed'] {
+  border-top-color: #052699;
 }
 .queue-lane[data-status='in_progress'] {
-  border-top-color: #059669;
+  border-top-color: #c4a35a;
 }
 .queue-lane[data-status='final_checking'] {
   border-top-color: #d97706;
@@ -2914,50 +3131,156 @@ html:not(.dark) .floor-shell .floor-alert-error {
   }
 }
 
-/* SA/ASA queue: all lanes on one screen (desktop); mobile uses chip + list. */
+/* SA/ASA queue: stacked lanes on a narrow pane; snap columns when the board is wide. */
+.queue-board {
+  container-type: inline-size;
+  container-name: q-board;
+  min-width: 0;
+  overflow-x: clip;
+}
+.queue-board-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.queue-seg {
+  display: inline-flex;
+  padding: 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+}
+.queue-seg button {
+  min-height: 2.75rem;
+  min-width: 4.25rem;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-transform: capitalize;
+}
+.queue-seg button[aria-pressed="true"] {
+  background: #052699;
+  color: #f1f1ed;
+}
+.queue-seg button:focus-visible {
+  outline: 2px solid #052699;
+  outline-offset: 2px;
+}
 .queue-lane-board-fit {
   display: grid;
-  gap: 0.4rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
-  grid-template-columns: repeat(var(--queue-lane-count, 5), minmax(0, 1fr));
-  min-height: min(58svh, 34rem);
-  align-items: stretch;
+  min-width: 0;
+  overflow-x: clip;
+  touch-action: pan-y;
 }
 .queue-lane-board-fit .floor-lane {
   min-width: 0;
-  max-width: 100%;
-  padding: 0.45rem;
+  max-width: none;
+  padding: 0.7rem;
   border-radius: 0.85rem;
-  max-height: calc(100svh - 12.5rem);
-  scroll-snap-align: none;
+  max-height: none;
 }
 .queue-lane-board-fit .queue-lane-title {
   white-space: normal;
   line-height: 1.2;
 }
 .queue-lane-board-fit .queue-lane-hint {
-  display: none;
+  display: block;
 }
 .queue-lane-board-fit .floor-lane-body {
-  gap: 0.4rem;
+  gap: 0.55rem;
 }
 .queue-ticket-compact {
-  padding: 0.55rem;
+  padding: 0.85rem;
   min-height: 0;
   border-radius: 0.7rem;
 }
-.queue-card-list {
-  display: grid;
-  gap: 0.75rem;
+.queue-lane-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
 }
-@media (min-width: 1280px) {
+.queue-lane-pager-btn {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--card);
+  color: #020a31;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+.queue-lane-pager-btn:disabled {
+  opacity: 0.4;
+}
+.queue-lane-pager-range {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: var(--muted-foreground);
+}
+.queue-board .bk-data-grid {
+  min-width: 0;
+}
+@container q-board (max-width: 43.99rem) {
+  .queue-lane-dimmed {
+    display: none;
+  }
+  .q-col-service,
+  .q-col-queue,
+  .q-col-branch,
+  .q-col-crew,
+  .q-col-open {
+    display: none;
+  }
+}
+@container q-board (min-width: 44rem) {
   .queue-lane-board-fit {
-    gap: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(15.5rem, 17.5rem);
+    grid-template-columns: none;
+    padding-bottom: 0.5rem;
+    scroll-snap-type: x mandatory;
+    min-height: min(58svh, 34rem);
+    scrollbar-width: thin;
+    touch-action: pan-x pan-y;
+  }
+  .queue-lane-board-fit .floor-lane {
+    min-width: 15.5rem;
+    max-width: 17.5rem;
+    padding: 0.55rem;
+    scroll-snap-align: start;
+    max-height: calc(100svh - 12.5rem);
   }
   .queue-lane-board-fit .queue-lane-hint {
     display: block;
+  }
+  .queue-ticket-compact {
+    padding: 0.55rem;
+  }
+  .queue-board .bk-data-grid {
+    min-width: 48rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .queue-lane-board-fit {
+    scroll-snap-type: none;
+  }
+  .queue-seg button {
+    transition: none;
   }
 }
 .floor-actions-sticky {
@@ -3091,15 +3414,186 @@ html:not(.dark) .floor-shell .floor-alert-error {
   width: 100%;
   box-sizing: border-box;
 }
-.bk-table-cards {
+.bk-table {
+  container-type: inline-size;
+  container-name: bk-table;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--card);
+  overflow: hidden;
+}
+.bk-table-toolbar {
   display: grid;
   gap: 0.75rem;
+  padding: 0.9rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--border);
 }
-.bk-table-card-row {
-  border: 1px solid var(--border);
-  border-radius: 1rem;
+.bk-table-count {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #020a31;
+}
+.bk-table-range {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.bk-table-toolbar-filters {
+  min-width: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+@media (min-width: 640px) {
+  .bk-table-toolbar-filters {
+    grid-template-columns: minmax(10rem, 12rem) minmax(9rem, 11rem);
+  }
+}
+.bk-table [data-slot="table-container"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+.bk-data-grid {
+  min-width: 56rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.bk-data-grid thead th {
+  height: 2.75rem;
+  padding-inline: 0.85rem;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #020a31;
+  background: color-mix(in oklab, #052699 6%, var(--card));
+  border-bottom: 2px solid #052699;
+}
+.bk-th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.bk-th-sort:focus-visible {
+  outline: 2px solid #052699;
+  outline-offset: 2px;
+}
+.bk-th-sort[aria-sort="ascending"],
+.bk-th-sort[aria-sort="descending"] {
+  color: #c4a35a;
+}
+.bk-data-grid tbody td {
+  padding: 0.7rem 0.85rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+.bk-data-grid tbody tr:hover td {
+  background: color-mix(in oklab, #052699 4%, var(--card));
+}
+.bk-data-grid thead th:first-child,
+.bk-data-grid tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 11.5rem;
   background: var(--card);
-  padding: 0.95rem 1rem;
+  box-shadow: 1px 0 0 var(--border);
+}
+.bk-data-grid thead th:first-child {
+  z-index: 2;
+  background: color-mix(in oklab, #052699 6%, var(--card));
+}
+.bk-data-grid tbody tr:hover td:first-child {
+  background: color-mix(in oklab, #052699 4%, var(--card));
+}
+.bk-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  background: color-mix(in oklab, #052699 10%, var(--card));
+  color: #052699;
+}
+.bk-status-pill.is-placeholder { background: color-mix(in oklab, #052699 12%, var(--card)); color: #052699; }
+.bk-status-pill.is-assign { background: color-mix(in oklab, #c4a35a 18%, var(--card)); color: #020a31; }
+.bk-status-pill.is-intake,
+.bk-status-pill.is-release,
+.bk-status-pill.is-pay { background: color-mix(in oklab, #c4a35a 22%, var(--card)); color: #020a31; }
+.bk-status-pill.is-progress,
+.bk-status-pill.is-check { background: #052699; color: #f1f1ed; }
+.bk-status-pill.is-done { background: color-mix(in oklab, #c4a35a 28%, var(--card)); color: #020a31; }
+.bk-status-pill.is-cancelled { background: color-mix(in oklab, #7a2e2e 16%, var(--card)); color: #7a2e2e; }
+.bk-table-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.bk-table-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem 1rem;
+  padding: 0.7rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--muted) 55%, var(--card));
+}
+.bk-table-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--muted-foreground);
+}
+.bk-table-page-size select {
+  min-height: 2.75rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+}
+.bk-table-page-range {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #020a31;
+}
+.bk-table-page-nav {
+  display: flex;
+  gap: 0.35rem;
+}
+@media (min-width: 640px) {
+  .bk-table-toolbar {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bk-data-grid tbody tr td {
+    transition: none;
+  }
 }
 @media (min-width: 640px) {
   .bk-hero {
@@ -3116,6 +3610,20 @@ html:not(.dark) .floor-shell .floor-alert-error {
     flex: 1 1 14rem;
     min-width: 12rem;
   }
+}
+.bk-board-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+.bk-board > .bk-status-strip {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding-top: 0.15rem;
+  padding-bottom: 0.45rem;
+  background: color-mix(in oklab, var(--background) 92%, var(--card));
 }
 .bk-status-strip {
   display: flex;
@@ -3156,6 +3664,7 @@ html:not(.dark) .floor-shell .floor-alert-error {
   border-color: color-mix(in oklab, var(--color-brand-primary, #052699) 45%, var(--border));
   background: color-mix(in oklab, var(--color-brand-primary, #052699) 12%, var(--card));
   color: var(--color-brand-primary, #052699);
+  box-shadow: inset 0 -3px 0 #c4a35a;
 }
 .bk-status-chip-count {
   font-variant-numeric: tabular-nums;
@@ -3165,6 +3674,69 @@ html:not(.dark) .floor-shell .floor-alert-error {
 .bk-card-list {
   display: grid;
   gap: 0.75rem;
+}
+.bk-list {
+  container-type: inline-size;
+  container-name: bk-list;
+  min-width: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+.bk-list-toolbar {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--card);
+}
+.bk-list-filters {
+  display: grid;
+  gap: 0.5rem;
+}
+.bk-list-search {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+.bk-card-plate {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: #020a31;
+  box-shadow: inset 0 -2px 0 #c4a35a;
+  padding-bottom: 0.12rem;
+  width: fit-content;
+  max-width: 100%;
+}
+.bk-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.bk-card-primary {
+  flex: 1 1 10rem;
+  min-height: 2.75rem;
+}
+.bk-card-cancel {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+@container bk-list (min-width: 40rem) {
+  .bk-list-filters {
+    grid-template-columns: minmax(12rem, 1fr) minmax(9rem, 12rem) minmax(8rem, 10.5rem);
+    align-items: stretch;
+  }
+}
+.bk-list .bk-table-pager {
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
 }
 .bk-card {
   border-radius: 1.1rem;
@@ -6339,10 +6911,55 @@ a.planner-ticket:active {
   border-radius: 1rem;
   background: var(--card);
 }
+.planner-configure {
+  display: grid;
+  gap: 1rem;
+  max-width: 46rem;
+}
+.planner-configure .planner-ticket {
+  border-left: 4px solid var(--planner-stub);
+}
+.planner-configure-field {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.planner-configure-field select {
+  min-height: 44px;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0 0.7rem;
+  font-size: 0.875rem;
+}
+.planner-swatch {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.planner-swatch.is-on {
+  outline: 2px solid var(--planner-navy);
+  outline-offset: 2px;
+}
+.planner-swatch:focus-visible {
+  outline: 2px solid var(--planner-navy);
+  outline-offset: 2px;
+}
+.planner-swatch:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
 .planner-v2-fab {
   position: fixed;
-  right: 1rem;
-  bottom: 1.25rem;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   z-index: 30;
   display: grid;
   place-items: center;
@@ -6409,6 +7026,80 @@ a.planner-ticket:active {
 .planner-cal-chip.is-event { background: color-mix(in oklab, var(--planner-stub) 28%, var(--card)); }
 .planner-cal-chip.is-booking { background: #e8ecf8; }
 .planner-cal-chip.is-form { background: #f3eee3; }
+.planner-task-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  padding: 0;
+  background: color-mix(in oklab, #020a31 48%, transparent);
+  overscroll-behavior: contain;
+  touch-action: manipulation;
+}
+.planner-task-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 32rem);
+  max-height: min(94svh, 100%);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.5rem 1.5rem 0 0;
+  background: var(--card);
+  box-shadow: 0 -18px 48px -24px rgba(2, 10, 49, 0.4);
+  animation: planner-sheet-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.planner-task-handle {
+  display: block;
+  width: 2.5rem;
+  height: 0.3rem;
+  margin: 0.55rem auto 0;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+}
+.planner-task-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem 0.75rem;
+}
+.planner-task-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 1.25rem 1rem;
+}
+.planner-task-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+@keyframes planner-sheet-up {
+  from { transform: translateY(0.75rem); opacity: 0.72; }
+  to { transform: none; opacity: 1; }
+}
+@media (min-width: 640px) {
+  .planner-task-scrim {
+    align-items: center;
+    padding: 1rem;
+  }
+  .planner-task-sheet {
+    max-height: 92svh;
+    border-radius: 1.5rem;
+    box-shadow: 0 24px 60px -24px rgba(2, 10, 49, 0.35);
+  }
+  .planner-task-handle { display: none; }
+  .planner-task-head,
+  .planner-task-body { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .planner-task-head { padding-top: 1.25rem; }
+  .planner-task-foot { padding: 0.85rem 1.5rem 1.25rem; }
+}
 @media (max-width: 799px) {
   .planner-v2-cols { grid-template-columns: 1fr; }
   .planner-cal-cell { min-height: 4.5rem; }
@@ -6421,8 +7112,75 @@ a.planner-ticket:active {
   .planner-v2-table tbody tr,
   .planner-v2-fab,
   button.planner-ticket,
-  a.planner-ticket { transition: none; transform: none; }
+  a.planner-ticket,
+  .planner-task-sheet { transition: none; transform: none; animation: none; }
   .planner-skel { animation: none; }
+  .planner-swatch { outline: none; }
+}
+
+.hakum-payroll {
+  container-type: inline-size;
+}
+.hakum-payroll-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hakum-payroll-steps button {
+  display: flex;
+  min-height: 2.75rem;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: var(--card);
+  color: var(--foreground);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  text-align: left;
+}
+.hakum-payroll-steps button span {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, #052699 12%, var(--card));
+  color: #052699;
+  font-size: 0.75rem;
+}
+.hakum-payroll-steps button.is-on {
+  border-color: #052699;
+  background: color-mix(in oklab, #052699 10%, var(--card));
+}
+.hakum-payroll-table {
+  display: grid;
+  gap: 0.65rem;
+}
+.hakum-payroll-row {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--card);
+  padding: 0.85rem 1rem;
+}
+@container (min-width: 40rem) {
+  .hakum-payroll-row {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto minmax(7rem, 9rem);
+    align-items: center;
+  }
+}
+@media (max-width: 639px) {
+  .hakum-payroll-steps {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 /* ---- Operations: inquiries inbox ---- */

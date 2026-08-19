@@ -63,7 +63,7 @@ export function classifySaleBucket({
   const cat = String(payCategory || '').toLowerCase()
   if (slug.includes('ceramic-coating') || name.includes('ceramic coating')) return 'ceramic_coating'
   if (slug.includes('nano-ceramic') || name.includes('nano ceramic') || name.includes('tint')) return 'nano_tint'
-  if (slug.includes('paint-protection') || slug.includes('ppf') || name.includes('ppf')) return 'ppf'
+  if (slug.includes('paint-protection') || slug.includes('ppf') || name.includes('ppf') || cat === 'ppf') return 'ppf'
   if (cat === 'detailing') return 'ceramic_coating'
   if (itemType === 'product') {
     return merchFamily({
@@ -122,8 +122,13 @@ export function paidSalesToBacoorRows(sales = []) {
         total_minor: sale.total_minor,
         payment_method: sale.payment_method,
         booking_id: sale.booking_id,
+        pay_category: sale.bookings?.services?.pay_category || sale.pay_category,
         bucket: posBucketToBacoor(
-          classifySaleBucket({ itemType: sale.booking_id ? 'service' : 'product' }),
+          classifySaleBucket({
+            itemType: sale.booking_id ? 'service' : 'product',
+            payCategory: sale.bookings?.services?.pay_category || sale.pay_category,
+            serviceName: sale.bookings?.services?.name || sale.service_name,
+          }),
         ),
       })
       continue

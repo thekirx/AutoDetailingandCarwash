@@ -42,6 +42,8 @@ const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
 const PosPage = lazy(() => import('./pages/PosPage'))
 const InventoryPage = lazy(() => import('./pages/InventoryPage'))
 const FinancePage = lazy(() => import('./pages/FinancePage'))
+const PayrollPage = lazy(() => import('./pages/PayrollPage'))
+const MyPayPage = lazy(() => import('./pages/MyPayPage'))
 const CrmPage = lazy(() => import('./pages/CrmPage'))
 const BookingBoardPage = lazy(() => import('./pages/BookingBoardPage'))
 const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
@@ -193,6 +195,8 @@ export default function App() {
             <Route path="pos" element={gate('pos', <PosPage />)} />
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
+            <Route path="payroll" element={gate('payroll', <PayrollPage />)} />
+            <Route path="my-pay" element={gate('my-pay', <MyPayPage />)} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
             <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory?tab=services" replace />)} />
             <Route path="products" element={gate('inventory', <Navigate to="/operations/inventory?tab=merch" replace />)} />

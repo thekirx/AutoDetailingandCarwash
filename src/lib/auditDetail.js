@@ -30,8 +30,13 @@ export function formatAuditDetail(row = {}) {
     }
   }
 
-  if (meta.expense_title && /expense/i.test(entity)) {
+  if (meta.expense_title && /expense/i.test(entity + action)) {
     return summary || `${action} expense “${meta.expense_title}”`
+  }
+
+  if (action === 'pos.sale' || entity === 'sale') {
+    const label = peso(meta.total_minor)
+    if (label && !summary.includes('₱')) return `${summary || 'POS sale'} · ${label}`
   }
 
   if (summary) return summary

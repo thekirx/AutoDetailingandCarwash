@@ -264,6 +264,8 @@ export default function FinancePage() {
             branchOptions={branchOptions.filter((b) => b.slug !== 'all')}
             range={range}
             loading={loading}
+            profile={profile}
+            branchFilter={branchFilter}
           />
         </TabsContent>
       </Tabs>

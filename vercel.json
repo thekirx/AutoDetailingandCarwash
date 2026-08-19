@@ -13,6 +13,8 @@
     { "source": "/api/lifecycle-sms", "destination": "/api/notifications?operation=lifecycle-sms" },
     { "source": "/api/notify-booking", "destination": "/api/notifications?operation=notify-booking" },
     { "source": "/api/notify-ops-form", "destination": "/api/notifications?operation=notify-ops-form" },
+    { "source": "/api/notify-planner", "destination": "/api/notifications?operation=notify-planner" },
+    { "source": "/api/notify-pos", "destination": "/api/notifications?operation=notify-pos" },
     { "source": "/api/notification-settings", "destination": "/api/notifications?operation=notification-settings" },
     { "source": "/api/notification-broadcast", "destination": "/api/notifications?operation=notification-broadcast" },
     { "source": "/api/notification-broadcast-kinds", "destination": "/api/notifications?operation=notification-broadcast-kinds" },
