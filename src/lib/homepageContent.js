@@ -26,14 +26,15 @@ export function buildPpfPackageCards(packages = []) {
 
 export function mapBlogToHybridCard(row) {
   if (!row) return null
+  const external = String(row.external_url || '').trim()
   return {
     id: row.id,
     kind: 'post',
     title: row.title,
     excerpt: row.excerpt || '',
     mediaUrl: row.cover_url || '',
-    href: row.slug ? `/blog/${row.slug}` : '/blog',
-    platform: 'Hakum Blog',
+    href: external || (row.slug ? `/blog/${row.slug}` : '/blog'),
+    platform: external ? 'Instagram' : 'Hakum Blog',
     ctaLabel: 'Read post',
     date: row.published_at || null,
   }
@@ -51,7 +52,8 @@ export function mapEventToHybridCard(row) {
     href: row.slug ? `/events/${row.slug}` : '/events',
     platform: branch ? branch.charAt(0).toUpperCase() + branch.slice(1) : 'Hakum',
     ctaLabel: 'Event details',
-    date: row.starts_at || null,
+    date: row.is_date_tba ? null : row.starts_at || null,
+    dateLabel: row.is_date_tba ? 'To be announced' : '',
   }
 }
 
@@ -59,14 +61,14 @@ export async function loadHomepageContent(client) {
   const [blogsResult, eventsResult] = await Promise.all([
     client
       .from('blogs')
-      .select('id, title, slug, excerpt, cover_url, published_at')
+      .select('id, title, slug, excerpt, cover_url, published_at, external_url')
       .eq('is_published', true)
       .eq('status', 'published')
       .order('published_at', { ascending: false })
       .limit(1),
     client
       .from('events')
-      .select('id, title, slug, description, starts_at, banner_url, branch')
+      .select('id, title, slug, description, starts_at, banner_url, branch, is_date_tba')
       .eq('is_published', true)
       .order('starts_at', { ascending: true })
       .limit(1),

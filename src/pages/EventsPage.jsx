@@ -15,7 +15,7 @@ export default function EventsPage() {
   useEffect(() => {
     supabase
       .from('events')
-      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, form_id, ops_forms!form_id ( id, name, slug, public_enabled, status )')
+      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, form_id, is_date_tba, ops_forms!form_id ( id, name, slug, public_enabled, status )')
       .eq('is_published', true)
       .order('starts_at')
       .then(({ data, error: e }) => {
@@ -77,7 +77,7 @@ export default function EventsPage() {
                 <div className="hakum-event-card-body">
                   <p className="hakum-blog-meta">
                     {item.branch ? `${item.branch} · ` : ''}
-                    {new Date(item.starts_at).toLocaleString()}
+                    {item.is_date_tba ? 'To be announced' : new Date(item.starts_at).toLocaleString()}
                   </p>
                   <h2>
                     <Link to={`/events/${item.slug}`}>{item.title}</Link>

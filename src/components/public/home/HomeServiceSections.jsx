@@ -117,7 +117,7 @@ export function MediaGallerySection() {
       <div className="public-shell home-media-heading">
         <div data-motion="heading">
           <p className="eyebrow eyebrow-light">Inside Hakum</p>
-          <h2 className="section-title light">Videos &amp; photos.</h2>
+          <h2 className="section-title light">Photos.</h2>
         </div>
         <p>See the finish, process, and precision behind the work our teams deliver every day.</p>
       </div>

@@ -33,6 +33,7 @@ export const DEFAULT_ASSISTANT_GRANTS = {
   kpi_all: true,
   audit: true,
   memberships: true,
+  inquiries: true,
   rbac_edit: false,
 }
 
@@ -53,6 +54,7 @@ export const ASSISTANT_GRANT_LABELS = {
   kpi_all: 'KPI all sites',
   audit: 'Audit log',
   memberships: 'Memberships',
+  inquiries: 'Inquiries inbox',
   rbac_edit: 'Edit other ASA grants',
 }
 
@@ -128,6 +130,13 @@ export function canSeeAllKpiBranches(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'kpi_all')
   return canSeeAllBranches(profile)
+}
+
+/** Inquiries inbox (partnership / contact / complaints). Super Admin + ASA only. */
+export function canAccessInquiries(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'inquiries')
+  return false
 }
 
 export function canAccessPos(profile) {
@@ -578,6 +587,9 @@ export function getOperationsNav(profile) {
   if (canAccessDataCenter(profile)) {
     items.push({ label: 'Data Center', to: '/operations/data-center', icon: 'Database' })
   }
+  if (canAccessInquiries(profile)) {
+    items.push({ label: 'Inquiries', to: '/operations/inquiries', icon: 'Inbox' })
+  }
 
   if (canViewQueueOperations(profile)) {
     items.push(
@@ -782,6 +794,7 @@ export function allowRoute(profile, key) {
     cars: canManageVehicleCatalog,
     audit: canAccessAudit,
     'data-center': canAccessDataCenter,
+    inquiries: canAccessInquiries,
     dashboard: canViewQueueOperations,
     queue: canViewQueueOperations,
     'queue-new': canEditQueueOperations,

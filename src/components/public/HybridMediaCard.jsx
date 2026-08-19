@@ -15,7 +15,7 @@ function formatCardDate(value) {
 export default function HybridMediaCard({ card, className = '' }) {
   if (!card) return null
   const isInternal = card.href?.startsWith('/')
-  const dateLabel = formatCardDate(card.date)
+  const dateLabel = card.dateLabel || formatCardDate(card.date)
   const cta = (
     <>
       <span>{card.ctaLabel}</span>
@@ -36,7 +36,11 @@ export default function HybridMediaCard({ card, className = '' }) {
       <div className="hybrid-media-body">
         <div className="hybrid-media-meta">
           <span>{card.kind === 'event' ? 'Event' : 'Latest post'}</span>
-          {dateLabel ? <time dateTime={card.date}><CalendarDays aria-hidden="true" size={13} />{dateLabel}</time> : null}
+          {dateLabel ? (
+            card.date
+              ? <time dateTime={card.date}><CalendarDays aria-hidden="true" size={13} />{dateLabel}</time>
+              : <span className="hybrid-media-date"><CalendarDays aria-hidden="true" size={13} />{dateLabel}</span>
+          ) : null}
         </div>
         <h3>{card.title}</h3>
         {card.excerpt ? <p>{card.excerpt}</p> : null}

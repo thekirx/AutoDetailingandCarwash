@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
-import { canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
+import { canAccessInquiries, canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { applyBranchScope, collectPaged, resolveKpiRpcBranch } from '@/lib/crmInsights'
 import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaCount, kpiStatHover } from '@/lib/kpiPart8'
@@ -140,16 +140,20 @@ export default function KpiPage() {
       }, 1000)
       setSales(saleRows)
 
-      let cq = supabase
-        .from('complaints')
-        .select('id, branch, category, status, created_at, customer_name')
-        .gte('created_at', startIso)
-        .lte('created_at', endIso)
-        .order('created_at', { ascending: false })
-        .limit(100)
-      cq = applyBranchScope(cq, branchScope)
-      const { data: complaintRows } = await cq
-      setComplaints(complaintRows || [])
+      if (canAccessInquiries(profile)) {
+        let cq = supabase
+          .from('complaints')
+          .select('id, branch, category, status, created_at, customer_name')
+          .gte('created_at', startIso)
+          .lte('created_at', endIso)
+          .order('created_at', { ascending: false })
+          .limit(100)
+        cq = applyBranchScope(cq, branchScope)
+        const { data: complaintRows } = await cq
+        setComplaints(complaintRows || [])
+      } else {
+        setComplaints([])
+      }
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -258,7 +262,9 @@ export default function KpiPage() {
           <div className="kpi-secondary">
             <Stat label="Bookings in range" value={bookings.length} lines={hover.bookings.lines} />
             <Stat label="Sales revenue" value={formatMoney(salesTotal)} lines={hover.sales.lines} />
-            <Stat label="Complaints" value={complaints.length} lines={hover.complaints.lines} />
+            {canAccessInquiries(profile) && (
+              <Stat label="Complaints" value={complaints.length} lines={hover.complaints.lines} />
+            )}
           </div>
         </div>
       </TooltipProvider>
@@ -271,7 +277,7 @@ export default function KpiPage() {
           {(isTl || canSeeAllBranches(profile) || profile?.role === ROLES.ADMIN) && (
             <>
               <TabsTrigger value="sales">Sales</TabsTrigger>
-              <TabsTrigger value="complaints">Complaints</TabsTrigger>
+              {canAccessInquiries(profile) && <TabsTrigger value="complaints">Complaints</TabsTrigger>}
             </>
           )}
         </TabsList>
@@ -388,7 +394,7 @@ export default function KpiPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="complaints" className="mt-4">
+        <TabsContent value="complaints" className="mt-4" hidden={!canAccessInquiries(profile)}>
           <Card>
             <CardHeader><CardTitle>Complaints</CardTitle></CardHeader>
             <CardContent>

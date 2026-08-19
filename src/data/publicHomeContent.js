@@ -159,5 +159,8 @@ export const otherServices = [
 export const mediaGallery = [
   featuredServices[2],
   featuredServices[0],
-  featuredServices[1],
+  {
+    ...featuredServices[1],
+    image: new URL('../assets/services/ceramic-coating-gallery.webp', import.meta.url).href,
+  },
 ]

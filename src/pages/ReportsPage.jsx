@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessReports, getBranchScopeList } from '@/auth/permissions'
+import { canAccessInquiries, canAccessReports, getBranchScopeList } from '@/auth/permissions'
 import { aggregateBestSellers, applyBranchScope, collectInChunks, collectPaged } from '@/lib/crmInsights'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
@@ -20,6 +20,10 @@ export default function ReportsPage() {
   const [kpiCrew, setKpiCrew] = useState(0)
   const [complaints, setComplaints] = useState(0)
   const [bookingsDone, setBookingsDone] = useState(0)
+
+  // Complaints are readable by Super Admin / Assistant Super Admin only; for anyone
+  // else RLS silently returns 0, so skip the query rather than show a false zero.
+  const showComplaints = canAccessInquiries(profile)
 
   const load = useCallback(async () => {
     const scope = getBranchScopeList(profile)
@@ -42,8 +46,11 @@ export default function ReportsPage() {
 
     let crewQ = supabase.from('crew_kpi_summary').select('staff_id', { count: 'exact', head: true })
     crewQ = applyBranchScope(crewQ, branchFilter)
-    let compsQ = supabase.from('complaints').select('id', { count: 'exact', head: true }).gte('created_at', startIso)
-    compsQ = applyBranchScope(compsQ, branchFilter)
+    let compsQ = null
+    if (showComplaints) {
+      compsQ = supabase.from('complaints').select('id', { count: 'exact', head: true }).gte('created_at', startIso)
+      compsQ = applyBranchScope(compsQ, branchFilter)
+    }
 
     let saleIdRows = []
     let expRows = []
@@ -69,7 +76,7 @@ export default function ReportsPage() {
           return data || []
         }, 1000),
         crewQ,
-        compsQ,
+        compsQ || Promise.resolve({ count: 0 }),
         booksQ,
       ])
     } catch (err) {
@@ -110,7 +117,7 @@ export default function ReportsPage() {
     setKpiCrew(crew.count || 0)
     setComplaints(comps.count || 0)
     setBookingsDone(books.count || 0)
-  }, [profile])
+  }, [profile, showComplaints])
 
   useEffect(() => {
     load()
@@ -143,7 +150,7 @@ export default function ReportsPage() {
         <Metric label="Expenses (30d)" value={formatMoney(expenseTotal)} />
         <Metric label="Net (sales − expenses)" value={formatMoney(revenue - expenseTotal)} />
         <Metric label="Crew in KPI view" value={kpiCrew} />
-        <Metric label="Complaints (30d)" value={complaints} />
+        {showComplaints && <Metric label="Complaints (30d)" value={complaints} />}
         <Metric label="Completed bookings (30d)" value={bookingsDone} />
         <Metric label="Expense rows" value={expenseCount} />
         <Metric label="Top SKUs" value={services.length} />

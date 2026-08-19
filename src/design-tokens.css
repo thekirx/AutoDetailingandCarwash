@@ -34,6 +34,10 @@
   --font-weight-display: 800;
   --tracking-display: -0.025em;
   --tracking-label: 0.18em;
+  /* Public display headings: the single standard, matched to the hero/tint/media sections */
+  --font-weight-public-display: 600;
+  --tracking-public-display: -0.025em;
+  --leading-public-display: 0.87;
   --leading-display: 0.87;
   --leading-body: 1.75;
   --text-display-hero: clamp(3.875rem, 8.2vw, 7.875rem);

@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/auth/AuthProvider'
+import { canAccessInquiries } from '@/auth/permissions'
 import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
 import { downloadCsv, downloadExcel, printAsPdf, retentionBuckets, salesByBranch, salesByDay } from '@/lib/financeData'
@@ -17,6 +19,10 @@ export default function FinanceReportsTab({
   range,
   loading,
 }) {
+  const { profile } = useAuth()
+  // Complaints are readable by Super Admin / Assistant Super Admin only; for anyone
+  // else RLS silently returns 0, so skip the query rather than show a false zero.
+  const showComplaints = canAccessInquiries(profile)
   const [operations, setOperations] = useState({ bookings: 0, complaints: 0, crew: 0 })
   const [retention, setRetention] = useState([])
   const [retentionSummary, setRetentionSummary] = useState({ fresh: 0, returning: 0, loyal: 0, total: 0 })
@@ -32,11 +38,13 @@ export default function FinanceReportsTab({
         .in('status', ['completed', 'for_payment'])
         .gte('scheduled_start', startIso)
         .lte('scheduled_start', endIso),
-      supabase
-        .from('complaints')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', startIso)
-        .lte('created_at', endIso),
+      showComplaints
+        ? supabase
+            .from('complaints')
+            .select('id', { count: 'exact', head: true })
+            .gte('created_at', startIso)
+            .lte('created_at', endIso)
+        : Promise.resolve({ count: 0, error: null }),
       supabase
         .from('crew_kpi_summary')
         .select('staff_id', { count: 'exact', head: true }),
@@ -58,7 +66,7 @@ export default function FinanceReportsTab({
     const retentionRows = retentionRes.data || []
     setRetention(retentionRows)
     setRetentionSummary(retentionBuckets(retentionRows))
-  }, [range.start, range.end])
+  }, [range.start, range.end, showComplaints])
 
   useEffect(() => {
     load()
@@ -91,11 +99,11 @@ export default function FinanceReportsTab({
   const operationsRows = useMemo(
     () => [
       { metric: 'Completed bookings', value: operations.bookings },
-      { metric: 'Complaints', value: operations.complaints },
+      ...(showComplaints ? [{ metric: 'Complaints', value: operations.complaints }] : []),
       { metric: 'Crew in KPI view', value: operations.crew },
       { metric: 'Branches with sales', value: salesByBranchRows.length },
     ],
-    [operations, salesByBranchRows.length],
+    [operations, salesByBranchRows.length, showComplaints],
   )
 
   const retentionColumns = useMemo(
@@ -158,14 +166,16 @@ export default function FinanceReportsTab({
       <ReportSection
         icon={<Wrench className="size-4" aria-hidden />}
         title="Operations report"
-        description={`${operations.bookings} completed bookings · ${operations.complaints} complaints`}
+        description={showComplaints
+          ? `${operations.bookings} completed bookings · ${operations.complaints} complaints`
+          : `${operations.bookings} completed bookings`}
         onCsv={() => downloadCsv(operationsRows, operationsColumns, `hakum-operations-report-${range.start}-to-${range.end}.csv`)}
         onExcel={() => downloadExcel(operationsRows, operationsColumns, `hakum-operations-report-${range.start}-to-${range.end}.xls`, 'Hakum Operations Report')}
         onPdf={() => printAsPdf(operationsRows, operationsColumns, 'Hakum Operations Report', subtitle)}
       >
         <div className="finance-kpi-row">
           <Kpi label="Completed bookings" value={operations.bookings} />
-          <Kpi label="Complaints" value={operations.complaints} />
+          {showComplaints && <Kpi label="Complaints" value={operations.complaints} />}
           <Kpi label="Crew in KPI" value={operations.crew} />
           <Kpi label="Branches with sales" value={salesByBranchRows.length} />
         </div>

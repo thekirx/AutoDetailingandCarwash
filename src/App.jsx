@@ -38,6 +38,7 @@ const BranchesManagePage = lazy(() => import('./pages/BranchesManagePage'))
 const CarsCatalogPage = lazy(() => import('./pages/CarsCatalogPage'))
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'))
 const DataCenterPage = lazy(() => import('./pages/DataCenterPage'))
+const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
 const PosPage = lazy(() => import('./pages/PosPage'))
 const InventoryPage = lazy(() => import('./pages/InventoryPage'))
 const FinancePage = lazy(() => import('./pages/FinancePage'))
@@ -180,6 +181,7 @@ export default function App() {
             <Route path="cars" element={gate('cars', <CarsCatalogPage />)} />
             <Route path="audit" element={gate('audit', <AuditLogPage />)} />
             <Route path="data-center" element={gate('data-center', <DataCenterPage />)} />
+            <Route path="inquiries" element={gate('inquiries', <InquiriesPage />)} />
             <Route path="dashboard" element={gate('dashboard', <OperationsDashboardPage />)} />
             <Route path="queue" element={gate('queue', <OperationsQueuePage />)} />
             <Route path="queue/new" element={gate('queue-new', <NewQueueTicketPage />)} />
