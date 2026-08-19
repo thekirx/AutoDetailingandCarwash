@@ -36,7 +36,11 @@ export async function listBranches({ includeArchived = false } = {}) {
 
   let q = supabase
     .from('branches')
-    .select('id, slug, name, code, address, latitude, longitude, coming_soon, is_active, is_archived')
+    /* opens_at/closes_at/closed_weekdays must stay in this list: the branch
+       form seeds its hours fields from these rows, and a missing column would
+       load them empty and then clear the branch's real schedule on the next
+       save of any unrelated field. */
+    .select('id, slug, name, code, address, latitude, longitude, coming_soon, is_active, is_archived, opens_at, closes_at, closed_weekdays')
     .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
