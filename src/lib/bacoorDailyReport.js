@@ -1,5 +1,7 @@
 /** Bacoor-style daily close report fields (minor units). */
 
+import { expenseCountsOnDailyClose } from './posSale.js'
+
 export function manilaDayStamp(iso) {
   if (!iso) return ''
   const d = new Date(iso)
@@ -51,6 +53,25 @@ export function emptyBacoorDailyReport(meta = {}) {
  * expenses: { expense_kind, amount_minor|total_minor, label|notes }
  * cashAdvances: { status, amount_minor, employee_name, notes }
  */
+export function classifySaleBucket(row) {
+  const cat = String(
+    row?.pay_category || row?.services?.pay_category || row?.bookings?.services?.pay_category || '',
+  ).toLowerCase()
+  const name = String(row?.service_name || row?.bucket || row?.name || '').toLowerCase()
+  const type = String(row?.item_type || '').toLowerCase()
+  if (cat === 'ppf' || name.includes('ppf')) return 'ppf'
+  if (name.includes('tint') || name.includes('nano ceramic')) return 'tint'
+  if (cat === 'detailing' || name.includes('ceramic')) return 'coating'
+  if (name.includes('coffee') || name.includes('refresh') || (type === 'product' && name.includes('drink'))) {
+    return 'refreshment'
+  }
+  if (name.includes('cloth')) return 'clothing'
+  if (name.includes('accessor') || name.includes('merch')) return 'accessories'
+  if (cat === 'wash' || cat === 'package' || cat === 'addon' || row?.pos_handoff_id) return 'carwash'
+  if (row?.booking_id && cat !== 'detailing') return 'carwash'
+  return 'accessories'
+}
+
 export function buildBacoorDailyReport({
   branch = 'bacoor',
   date,
@@ -60,19 +81,7 @@ export function buildBacoorDailyReport({
   classifyBucket,
 } = {}) {
   const report = emptyBacoorDailyReport({ branch, date })
-  const classify =
-    classifyBucket ||
-    ((row) => {
-      const name = String(row.service_name || row.bucket || '').toLowerCase()
-      if (name.includes('ppf')) return 'ppf'
-      if (name.includes('tint')) return 'tint'
-      if (name.includes('ceramic')) return 'coating'
-      if (name.includes('coffee') || name.includes('refresh')) return 'refreshment'
-      if (name.includes('cloth')) return 'clothing'
-      if (name.includes('accessor') || name.includes('merch')) return 'accessories'
-      if (row.booking_id) return 'carwash'
-      return 'accessories'
-    })
+  const classify = classifyBucket || classifySaleBucket
 
   for (const row of sales || []) {
     if (String(row.status || 'paid') !== 'paid') continue
@@ -96,6 +105,7 @@ export function buildBacoorDailyReport({
   }
 
   for (const row of expenses || []) {
+    if (!expenseCountsOnDailyClose(row)) continue
     const amount = Number(row.amount_minor ?? row.total_minor ?? 0)
     if (!Number.isFinite(amount)) continue
     report.total_expenses_minor += amount

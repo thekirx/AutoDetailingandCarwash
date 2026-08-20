@@ -1,4 +1,4 @@
-import { canEditAttendanceRoles, canEditAttendanceSettings } from '../auth/permissions'
+import { canEditAttendanceRoles, canEditAttendanceSettings } from '../auth/permissions.js'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { supabase } from '../lib/supabase'
 import {
@@ -7,7 +7,9 @@ import {
   isLateVsShift,
   haversineMeters,
   mergeAttendancePeople,
-} from '../lib/attendanceGeo'
+  canClockAttendance,
+  shouldEnforceGeofence,
+} from '../lib/attendanceGeo.js'
 import {
   DEFAULT_ATTENDANCE_ROLES,
   normalizeAttendanceRoles,
@@ -187,27 +189,33 @@ export async function fetchAttendanceMatrix({ branchSlug, period, anchor }) {
 }
 
 /** Staff self time-in via browser geolocation + branch geofence. */
-export async function geoTimeIn({ profile, coords }) {
+export async function geoTimeIn({ profile, coords, branchSlug: branchOverride }) {
+  if (!canClockAttendance(profile)) {
+    throw new Error('Attendance is turned off for this account.')
+  }
   const currentProfile = await getCurrentProfile({ required: true })
-  const branchSlug = profile?.branch_slug || getBranchScope(profile)
+  const branchSlug = branchOverride || profile?.branch_slug || getBranchScope(profile)
   if (!branchSlug || branchSlug === NO_BRANCH_SCOPE) {
     throw new Error('No branch assigned — cannot time in.')
   }
 
   const branch = await fetchBranchAttendanceSettings(branchSlug)
-  if (branch?.latitude == null || branch?.longitude == null) {
-    throw new Error('Branch has no map pin yet. Ask Super Admin to set location in Branches.')
-  }
-
-  const fence = isInsideGeofence({
-    userLat: coords.latitude,
-    userLng: coords.longitude,
-    branchLat: branch.latitude,
-    branchLng: branch.longitude,
-    radiusM: branch.geofence_radius_m ?? 20,
-  })
-  if (!fence.ok) {
-    throw new Error(`Outside geofence (${fence.distanceM}m away; allowed ${branch.geofence_radius_m || 20}m). Move closer to ${branch.name}.`)
+  let distanceM = 0
+  if (shouldEnforceGeofence(profile)) {
+    if (branch?.latitude == null || branch?.longitude == null) {
+      throw new Error('Branch has no map pin yet. Ask Super Admin to set location in Branches.')
+    }
+    const fence = isInsideGeofence({
+      userLat: coords.latitude,
+      userLng: coords.longitude,
+      branchLat: branch.latitude,
+      branchLng: branch.longitude,
+      radiusM: branch.geofence_radius_m ?? 20,
+    })
+    if (!fence.ok) {
+      throw new Error(`Outside geofence (${fence.distanceM}m away; allowed ${branch.geofence_radius_m || 20}m). Move closer to ${branch.name}.`)
+    }
+    distanceM = fence.distanceM
   }
 
   const late = isLateVsShift(branch.shift_start)
@@ -230,12 +238,13 @@ export async function geoTimeIn({ profile, coords }) {
         marked_by: currentProfile.id,
         notes: late ? `Late vs shift ${String(branch.shift_start).slice(0, 5)}` : null,
       },
+      // ponytail: unique is (staff_id, attendance_date) — one clock row per person per day, not per branch. Clock at the selected site; include branch_slug in the unique if the same person must clock two sites same day.
       { onConflict: 'staff_id,attendance_date' },
     )
     .select('id, status, checked_in_at')
     .single()
   if (error) throw formatQueueActionError(error)
-  return { ...data, distanceM: fence.distanceM, branch }
+  return { ...data, distanceM, branch }
 }
 
 export async function geoTimeOut({ profile, coords }) {

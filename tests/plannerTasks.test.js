@@ -6,10 +6,13 @@ import {
   cardsFromAssigneeRows,
   filterPlannerCards,
   flattenPlannerCards,
+  hasPlannerProof,
   isHttpProofUrl,
   planProofObjectPath,
   reviewItemsFromAssigneeRows,
   reviewItemsFromBoard,
+  toggleStaffId,
+  buildPlannerAssignNotify,
 } from '../src/lib/plannerTasks.js'
 
 const board = {
@@ -59,7 +62,40 @@ describe('planner tasks', () => {
     assert.equal(filterPlannerCards(rows, { status: 'todo' })[0].id, 'c1')
     assert.equal(filterPlannerCards(rows, { assigneeId: 'unassigned' }).length, 0)
     assert.equal(filterPlannerCards(rows, { due: 'today', now: '2026-01-01T12:00:00.000Z' })[0].id, 'c1')
+    assert.equal(
+      filterPlannerCards([{ ...rows[0], due_at: '2026-01-01T16:00:00.000Z' }], { due: 'today', now: '2026-01-01T12:00:00.000Z' }).length,
+      0,
+    )
     assert.equal(filterPlannerCards([{ ...rows[0], category_id: null }], { categoryId: 'none' }).length, 1)
+    assert.equal(filterPlannerCards(rows, { listId: 'l2' })[0].id, 'c2')
+    assert.equal(filterPlannerCards(rows, { listId: 'all' }).length, 2)
+  })
+
+  it('filters Status by assignee progress, not the list column name', () => {
+    const rows = flattenPlannerCards(board)
+    assert.equal(filterPlannerCards(rows, { status: 'in_progress' }).length, 0)
+    assert.equal(filterPlannerCards(rows, { status: 'for_review' })[0].id, 'c2')
+    const parked = [{
+      id: 'c3',
+      title: 'Parked',
+      list_id: 'l-done',
+      list_title: 'Done',
+      plan_card_assignees: [{ staff_id: 'u1', status: 'todo' }],
+    }]
+    assert.equal(filterPlannerCards(parked, { status: 'done' }).length, 0)
+    assert.equal(filterPlannerCards(parked, { status: 'todo' })[0].id, 'c3')
+  })
+
+  it('toggles assignees and builds assign notify copy', () => {
+    assert.deepEqual(toggleStaffId(['a'], 'b').sort(), ['a', 'b'])
+    assert.deepEqual(toggleStaffId(['a', 'b'], 'a'), ['b'])
+    assert.equal(hasPlannerProof('', null), false)
+    assert.equal(hasPlannerProof('', { name: 'x.jpg' }), true)
+    const copy = buildPlannerAssignNotify({ title: 'Pad wash bay 2', cardId: 'c9' })
+    assert.equal(copy.kind, 'planner_task')
+    assert.equal(copy.url, '/operations/my-tasks')
+    assert.equal(copy.tag, 'plan-card:c9')
+    assert.match(copy.body, /Pad wash/)
   })
 
   it('builds a review inbox and accept/return patches', () => {

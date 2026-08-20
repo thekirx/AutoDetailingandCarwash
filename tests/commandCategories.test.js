@@ -10,7 +10,7 @@ import {
 } from '../src/lib/queueFamilies.js'
 import { filterCustomersBySmartGroup, CRM_SMART_GROUP_PRESETS } from '../src/lib/crmSmartGroups.js'
 import { getOpsBoardStatuses } from '../src/queue/queueLogic.js'
-import { canAccessSettings, getOperationsNav, getTeamLeadDock } from '../src/auth/permissions.js'
+import { canAccessSettings, getOperationsNav, groupOperationsNav, getTeamLeadDock } from '../src/auth/permissions.js'
 import { FORM_KINDS, templateFields } from '../src/lib/opsForms.js'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -46,19 +46,48 @@ describe('command category IA', () => {
     assert.ok(lanes.includes('waiting'))
   })
 
-  it('nav exposes command categories', () => {
+  it('nav exposes one Queue command, not separate wash and detailing links', () => {
     const sa = getOperationsNav({ role: 'BossMich' })
     const labels = sa.map((i) => i.label)
+    const queueLinks = sa.filter((i) => String(i.to).startsWith('/operations/queue') && !String(i.to).includes('/new'))
     assert.ok(labels.includes('Floor Board'))
-    assert.ok(labels.includes('Car Wash Queue'))
-    assert.ok(labels.includes('Detailing Queue'))
+    assert.equal(queueLinks.length, 1)
+    assert.equal(queueLinks[0].label, 'Queue')
+    assert.equal(queueLinks[0].to, '/operations/queue')
+    assert.equal(labels.includes('Car Wash Queue'), false)
+    assert.equal(labels.includes('Detailing Queue'), false)
     assert.ok(labels.includes('Planner'))
     assert.equal(labels.includes('Hakum Planner'), false)
     assert.ok(labels.includes('Settings'))
     assert.equal(canAccessSettings({ role: 'BossMich' }), true)
     const dock = getTeamLeadDock({ role: 'team_lead', branch_slug: 'bacoor' })
-    assert.ok(dock.some((i) => i.label === 'Wash'))
-    assert.ok(dock.some((i) => i.label === 'Detail'))
+    assert.ok(dock.some((i) => i.label === 'Queue' && i.to === '/operations/queue'))
+    assert.equal(dock.some((i) => i.label === 'Wash'), false)
+    assert.equal(dock.some((i) => i.label === 'Detail'), false)
+  })
+
+  it('Command sidebar groups SA nav by shop day, not one dump', () => {
+    const sa = getOperationsNav({ role: 'BossMich' })
+    const groups = groupOperationsNav(sa)
+    const ids = groups.map((g) => g.id)
+    assert.deepEqual(ids, ['floor', 'counter', 'customers', 'books', 'work', 'company'])
+    assert.equal(groups.find((g) => g.id === 'floor').items[0].label, 'Console')
+    assert.ok(groups.find((g) => g.id === 'floor').items.some((i) => i.label === 'Queue'))
+    assert.ok(groups.find((g) => g.id === 'floor').items.some((i) => i.label === 'Bookings'))
+    assert.ok(groups.find((g) => g.id === 'counter').items.some((i) => i.to === '/operations/pos'))
+    assert.ok(groups.find((g) => g.id === 'books').items.some((i) => i.to === '/operations/payroll'))
+    assert.ok(groups.find((g) => g.id === 'company').items.some((i) => i.to === '/operations/settings'))
+    const labels = sa.map((i) => i.label)
+    assert.ok(labels.indexOf('Queue') < labels.indexOf('POS'))
+    assert.ok(labels.indexOf('Bookings') < labels.indexOf('Settings'))
+    const layout = readFileSync(join(root, 'src/layouts/OperationsLayout.jsx'), 'utf8')
+    const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
+    assert.match(layout, /groupOperationsNav/)
+    assert.match(layout, /CommandNavList/)
+    assert.doesNotMatch(layout, /SidebarGroupLabel>Command</)
+    assert.match(layout, /--sidebar-width': '15rem'/)
+    assert.match(css, /\.command-nav-btn\s*\{[^}]*min-height:\s*2\.75rem/s)
+    assert.match(css, /\.command-nav-btn\[aria-current="page"\]\s*\{[^}]*#c4a35a/s)
   })
 
   it('CRM smart groups filter by visit timeline', () => {

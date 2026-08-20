@@ -18,9 +18,20 @@ import {
 } from '@/auth/permissions'
 import {
   DETAILING_BOARD_STATUSES,
+  bookingLaneDomId,
   detailingBoardStatusLabel,
   isOpenBookingStatus,
+  scrollBookingLaneIntoView,
 } from '@/lib/detailingBoardStatuses'
+import {
+  BOOKING_TABLE_DEFAULT_PAGE_SIZE,
+  BOOKING_TABLE_PAGE_SIZES,
+  bookingServiceText,
+  bookingVehicleText,
+  filterBookingList,
+  paginateBookingTableRows,
+  sortBookingTableRows,
+} from '@/lib/bookingTable'
 import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope } from '@/lib/crmInsights'
@@ -43,7 +54,7 @@ import { filterFloorDetailingServices } from '@/lib/serviceKinds'
 import CancellationReasonDialog from '@/components/CancellationReasonDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -52,10 +63,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
 import { createCoalescedReload } from '@/lib/coalesceReload'
+import { cn } from '@/lib/utils'
+import { ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
-const BOOKING_TABS = ['board', 'table', 'calendar']
+const BOOKING_TABS = ['board', 'list', 'table', 'calendar']
 const COLUMNS = [
   ...DETAILING_BOARD_STATUSES.map((s) => ({
     id: s.id,
@@ -94,20 +106,6 @@ function todayISO() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
 }
 
-function vehicleLine(booking) {
-  const car = [booking.vehicle_make, booking.vehicle_model].filter(Boolean).join(' ')
-  if (booking.vehicle_plate && car) return `${booking.vehicle_plate} · ${car}`
-  return booking.vehicle_plate || car || 'No vehicle details'
-}
-
-function serviceLine(booking) {
-  const name = booking.services?.name || booking.service_name
-  const kind = booking.services?.pay_category || booking.service_pay_category
-  if (!name && !kind) return null
-  if (kind === 'detailing') return name ? `${name} · Detailing` : 'Detailing'
-  return name || null
-}
-
 function formatBookingStamp(iso) {
   if (!iso) return null
   try {
@@ -120,6 +118,176 @@ function formatBookingStamp(iso) {
   } catch {
     return null
   }
+}
+
+function bookingTableWhen(iso) {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return '—'
+  }
+}
+
+function BookingPager({ slice, pageSize, onPageSize, onPage }) {
+  return (
+    <div className="bk-table-pager">
+      <label className="bk-table-page-size">
+        Rows per page
+        <select
+          value={pageSize}
+          onChange={(e) => onPageSize(Number(e.target.value))}
+          aria-label="Rows per page"
+        >
+          {BOOKING_TABLE_PAGE_SIZES.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+      </label>
+      <p className="bk-table-page-range tabular-nums">
+        {slice.from}-{slice.to} of {slice.total}
+      </p>
+      <div className="bk-table-page-nav">
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 min-w-11 cursor-pointer px-0"
+          disabled={slice.page <= 1}
+          aria-label="First page"
+          onClick={() => onPage(1)}
+        >
+          <ChevronsLeft size={16} strokeWidth={2} />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 min-w-11 cursor-pointer px-0"
+          disabled={slice.page <= 1}
+          aria-label="Previous page"
+          onClick={() => onPage(Math.max(1, slice.page - 1))}
+        >
+          <ChevronLeft size={16} strokeWidth={2} />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 min-w-11 cursor-pointer px-0"
+          disabled={slice.page >= slice.totalPages}
+          aria-label="Next page"
+          onClick={() => onPage(slice.page + 1)}
+        >
+          <ChevronRight size={16} strokeWidth={2} />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 min-w-11 cursor-pointer px-0"
+          disabled={slice.page >= slice.totalPages}
+          aria-label="Last page"
+          onClick={() => onPage(slice.totalPages)}
+        >
+          <ChevronsRight size={16} strokeWidth={2} />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function BookingTableSortButton({ label, column, sort, onSort }) {
+  const active = sort.key === column
+  return (
+    <button
+      type="button"
+      className="bk-th-sort"
+      aria-sort={active ? (sort.dir === 'desc' ? 'descending' : 'ascending') : 'none'}
+      onClick={() => onSort(column)}
+    >
+      <span>{label}</span>
+      <ArrowUpDown size={14} strokeWidth={2} aria-hidden="true" />
+    </button>
+  )
+}
+
+function BookingStageTicket({
+  booking,
+  tone,
+  variant,
+  branchLabel,
+  canEditServicePrice,
+  canAdvanceStatus,
+  canCancelForm,
+  canSeePayment,
+  canCheckIn,
+  onEdit,
+  onMove,
+  onCancel,
+}) {
+  const next = getBookingPrimaryNextStatus(booking.status, {
+    canSeePayment,
+    canCheckIn,
+    detailingPipeline: true,
+  })
+  const statusAt = formatBookingStamp(booking.updated_at || booking.scheduled_start)
+  const startAt = formatBookingStamp(booking.scheduled_start)
+  const endAt = booking.status === 'completed' ? formatBookingStamp(booking.completed_at || booking.scheduled_end) : null
+  const showCancel = canCancelForm && booking.status !== 'cancelled' && booking.status !== 'completed'
+  const isList = variant === 'list'
+  return (
+    <article className={cn(isList ? 'bk-card planner-ticket' : 'floor-ticket planner-ticket !cursor-default', tone)}>
+      <div className="flex items-start justify-between gap-2">
+        <p className={isList ? 'bk-card-plate' : 'font-semibold leading-snug text-foreground'}>
+          {bookingVehicleText(booking)}
+        </p>
+        {canEditServicePrice ? (
+          <Button size="sm" variant="ghost" className="h-11 shrink-0 cursor-pointer px-2" onClick={() => onEdit(booking)}>
+            Edit
+          </Button>
+        ) : null}
+      </div>
+      <p className="mt-1 leading-snug text-foreground">{booking.customer_name}</p>
+      {bookingServiceText(booking) ? (
+        <p className="mt-1 text-xs font-semibold leading-snug text-primary">{bookingServiceText(booking)}</p>
+      ) : null}
+      <p className="bk-meta mt-1 text-xs font-medium capitalize text-muted-foreground">
+        {branchLabel || booking.branch}
+        {isList ? ` · ${detailingBoardStatusLabel(booking.status) || STATUS_LABELS[booking.status] || booking.status}` : ''}
+      </p>
+      <div className="bk-meta mt-2 space-y-0.5 text-xs text-muted-foreground tabular-nums">
+        {statusAt ? <p>Status · {statusAt}</p> : null}
+        {startAt ? <p>Start · {startAt}</p> : null}
+        {endAt ? <p className="font-medium text-foreground">End · {endAt}</p> : null}
+      </div>
+      {(canAdvanceStatus && next) || showCancel ? (
+        <div className={isList ? 'bk-card-actions' : undefined}>
+          {canAdvanceStatus && next ? (
+            <Button
+              type="button"
+              className={cn('min-h-11 cursor-pointer', isList ? 'bk-card-primary' : 'mt-3 w-full')}
+              onClick={() => onMove(booking, next)}
+            >
+              {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
+            </Button>
+          ) : null}
+          {showCancel ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className={cn('min-h-11 cursor-pointer text-destructive', isList ? 'bk-card-cancel' : 'mt-2 w-full')}
+              onClick={() => onCancel(booking)}
+            >
+              Cancel booking
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </article>
+  )
 }
 
 /** Prefer live ops shops (Bacoor / Batangas) over test / Dasmarinas audit slugs. */
@@ -163,6 +331,10 @@ export default function BookingBoardPage() {
   const [customEnd, setCustomEnd] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [kindFilter, setKindFilter] = useState('all')
+  const [tableSort, setTableSort] = useState({ key: 'start', dir: 'asc' })
+  const [tablePage, setTablePage] = useState(1)
+  const [tablePageSize, setTablePageSize] = useState(BOOKING_TABLE_DEFAULT_PAGE_SIZE)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyBooking)
@@ -187,6 +359,9 @@ export default function BookingBoardPage() {
     () => COLUMNS.filter((c) => boardStatuses.includes(c.id)),
     [boardStatuses],
   )
+  const focusedBoardStatus = visibleColumns.some((c) => c.id === boardFilter)
+    ? boardFilter
+    : (visibleColumns[0]?.id || 'pending')
 
   const range = useMemo(() => {
     if (datePreset === 'all' || datePreset === 'any') {
@@ -361,21 +536,45 @@ export default function BookingBoardPage() {
   )
 
   const filteredBookings = useMemo(() => {
-    let rows = bookings
-    if (statusFilter !== 'all') rows = rows.filter((b) => b.status === statusFilter)
-    const q = searchQuery.trim()
-    if (!q) return rows
-    return rows.filter((b) =>
-      matchesBookingSmartSearch(
-        {
-          ...b,
-          status_label: detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status],
-        },
-        q,
-        branchNameBySlug,
-      ),
-    )
-  }, [bookings, searchQuery, statusFilter, branchNameBySlug])
+    const searched = searchQuery.trim()
+      ? bookings.filter((b) =>
+          matchesBookingSmartSearch(
+            {
+              ...b,
+              status_label: detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status],
+            },
+            searchQuery,
+            branchNameBySlug,
+          ),
+        )
+      : bookings
+    return filterBookingList(searched, { status: statusFilter, kind: kindFilter })
+  }, [bookings, searchQuery, statusFilter, kindFilter, branchNameBySlug])
+
+  const sortedBookings = useMemo(
+    () => sortBookingTableRows(filteredBookings, { ...tableSort, branchNames: branchNameBySlug }),
+    [filteredBookings, tableSort, branchNameBySlug],
+  )
+  const tableSlice = useMemo(
+    () => paginateBookingTableRows(sortedBookings, { page: tablePage, pageSize: tablePageSize }),
+    [sortedBookings, tablePage, tablePageSize],
+  )
+
+  useEffect(() => {
+    setTablePage(1)
+  }, [searchQuery, statusFilter, kindFilter, tablePageSize, datePreset, branchFilter])
+
+  useEffect(() => {
+    if (tableSlice.page !== tablePage) setTablePage(tableSlice.page)
+  }, [tableSlice.page, tablePage])
+
+  function toggleTableSort(column) {
+    setTableSort((prev) => (
+      prev.key === column
+        ? { key: column, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key: column, dir: 'asc' }
+    ))
+  }
 
   async function move(booking, status) {
     if (!canAdvanceStatus) return
@@ -678,6 +877,11 @@ export default function BookingBoardPage() {
     { value: 'all', label: 'All statuses' },
     ...visibleColumns.map((c) => ({ value: c.id, label: c.label })),
   ])
+  const kindFilterItems = selectItems([
+    { value: 'all', label: 'All services' },
+    { value: 'wash', label: 'Wash & packages' },
+    { value: 'detailing', label: 'Detailing' },
+  ])
   const rangeLabel =
     datePreset === 'all'
       ? 'All dates'
@@ -690,7 +894,7 @@ export default function BookingBoardPage() {
             : `${range.start} → ${range.end}`
 
   return (
-    <section className="bk-page flex min-h-0 flex-col gap-4 sm:gap-5">
+    <section className="bk-page flex min-h-0 min-w-0 flex-col gap-4 sm:gap-5">
       <header className="bk-hero">
         <div className="bk-hero-brand">
           <img
@@ -714,6 +918,7 @@ export default function BookingBoardPage() {
           </div>
         </div>
         <div className="bk-hero-actions">
+          {tab !== 'list' ? (
           <div className="bk-search-wrap">
             <Label htmlFor="bk-smart-search" className="sr-only">Search bookings</Label>
             <Input
@@ -726,6 +931,7 @@ export default function BookingBoardPage() {
               autoComplete="off"
             />
           </div>
+          ) : null}
           {(canSeeAllBranches(profile) || branchOptions.length > 1) && (
             <Select value={branchFilter} onValueChange={setBranchFilter} items={filterBranchItems}>
               <SelectTrigger className="min-h-11 w-full cursor-pointer sm:w-44" aria-label="Filter by branch">
@@ -764,195 +970,115 @@ export default function BookingBoardPage() {
         </div>
       </header>
 
-      <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'board' ? {} : { tab: next }, { replace: true })}>
+      <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'board' ? {} : { tab: next }, { replace: true })} className="min-w-0">
         <TabsList className="bk-tabs flex h-auto w-full justify-stretch gap-1 p-1">
           <TabsTrigger value="board" className="min-h-11 flex-1 cursor-pointer">Board</TabsTrigger>
+          <TabsTrigger value="list" className="min-h-11 flex-1 cursor-pointer">List</TabsTrigger>
           <TabsTrigger value="table" className="min-h-11 flex-1 cursor-pointer">Table</TabsTrigger>
           <TabsTrigger value="calendar" className="min-h-11 flex-1 cursor-pointer">Calendar</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="board" className="mt-4 space-y-4">
-          <div className="bk-status-strip" role="toolbar" aria-label="Filter bookings by status">
-            {visibleColumns.map((col) => {
-              const active = boardFilter === col.id
-              const n = grouped[col.id]?.length || 0
-              return (
-                <button
-                  key={col.id}
-                  type="button"
-                  className={cn('bk-status-chip', active && 'bk-status-chip-active')}
-                  aria-pressed={active}
-                  onClick={() => setBoardFilter(col.id)}
-                >
-                  <span>{col.shortLabel || col.label}</span>
-                  <span className="bk-status-chip-count">{n}</span>
-                </button>
-              )
-            })}
-          </div>
+        <TabsContent value="board" className="mt-4 min-w-0">
+          <div className="bk-board">
+            <p className="bk-board-hint">Tap a stage to open its bay. On a wide desk, scroll the columns.</p>
+            <div className="bk-status-strip" role="toolbar" aria-label="Filter bookings by status">
+              {visibleColumns.map((col) => {
+                const active = focusedBoardStatus === col.id
+                const n = grouped[col.id]?.length || 0
+                return (
+                  <button
+                    key={col.id}
+                    type="button"
+                    className={cn('bk-status-chip', active && 'bk-status-chip-active')}
+                    aria-pressed={active}
+                    aria-controls={bookingLaneDomId(col.id)}
+                    onClick={() => {
+                      setBoardFilter(col.id)
+                      scrollBookingLaneIntoView(col.id)
+                    }}
+                  >
+                    <span>{col.shortLabel || col.label}</span>
+                    <span className="bk-status-chip-count">{n}</span>
+                  </button>
+                )
+              })}
+            </div>
 
-          <div className="bk-card-list xl:hidden" aria-label={`${boardFilter} bookings`}>
-            {(grouped[boardFilter] || []).map((booking) => {
-              const next = getBookingPrimaryNextStatus(booking.status, {
-                canSeePayment,
-                canCheckIn,
-                detailingPipeline: true,
-              })
-              const statusAt = formatBookingStamp(booking.updated_at || booking.scheduled_start)
-              const startAt = formatBookingStamp(booking.scheduled_start)
-              const endAt = booking.status === 'completed' ? formatBookingStamp(booking.completed_at || booking.scheduled_end) : null
-              return (
-                <article key={booking.id} className={cn('bk-card planner-ticket', visibleColumns.find((c) => c.id === boardFilter)?.tone)}>
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold text-foreground">{booking.customer_name}</p>
-                    {canEditServicePrice && (
-                      <Button size="sm" variant="ghost" className="h-9 shrink-0 cursor-pointer px-2" onClick={() => openEdit(booking)}>
-                        Edit
-                      </Button>
+            <div className="booking-lane-board" role="region" aria-label="Booking columns">
+              {visibleColumns.map((col) => {
+                const laneFocused = col.id === focusedBoardStatus
+                return (
+                <section
+                  key={col.id}
+                  id={bookingLaneDomId(col.id)}
+                  className={cn('floor-lane', laneFocused ? 'bk-lane-focused' : 'bk-lane-dimmed')}
+                  aria-label={`${col.label} column`}
+                  aria-current={laneFocused ? 'true' : undefined}
+                >
+                  <div className="mb-2 flex items-start justify-between gap-1">
+                    <h2 className="floor-lane-title font-bold text-muted-foreground uppercase" title={col.label}>
+                      {col.shortLabel || col.label}
+                    </h2>
+                    <Badge variant="secondary" className="shrink-0 tabular-nums text-[10px]">{grouped[col.id].length}</Badge>
+                  </div>
+                  <div className="floor-lane-body">
+                    {grouped[col.id].map((booking) => (
+                      <BookingStageTicket
+                        key={booking.id}
+                        booking={booking}
+                        variant="lane"
+                        tone={col.tone}
+                        branchLabel={branchNameBySlug[booking.branch] || booking.branch}
+                        canEditServicePrice={canEditServicePrice}
+                        canAdvanceStatus={canAdvanceStatus}
+                        canCancelForm={canCancelForm}
+                        canSeePayment={canSeePayment}
+                        canCheckIn={canCheckIn}
+                        onEdit={openEdit}
+                        onMove={move}
+                        onCancel={setCancelTarget}
+                      />
+                    ))}
+                    {!grouped[col.id].length && (
+                      <p className="rounded-xl border border-dashed border-border bg-background/50 p-3 text-center text-sm text-muted-foreground">
+                        Empty
+                      </p>
                     )}
                   </div>
-                  <p className="mt-1 text-sm text-foreground/85">{vehicleLine(booking)}</p>
-                  {serviceLine(booking) ? (
-                    <p className="mt-1 text-xs font-semibold text-primary">{serviceLine(booking)}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs font-medium capitalize text-muted-foreground">
-                    {branchNameBySlug[booking.branch] || booking.branch}
-                  </p>
-                  <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground tabular-nums">
-                    {statusAt ? <p>Status · {statusAt}</p> : null}
-                    {startAt ? <p>Start · {startAt}</p> : null}
-                    {endAt ? <p>End · {endAt}</p> : null}
-                  </div>
-                  {canAdvanceStatus && next ? (
-                    <Button
-                      type="button"
-                      className="mt-3 min-h-11 w-full cursor-pointer"
-                      onClick={() => move(booking, next)}
-                    >
-                      {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
-                    </Button>
-                  ) : null}
-                  {canCancelForm ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="mt-2 min-h-11 w-full cursor-pointer text-destructive"
-                      onClick={() => setCancelTarget(booking)}
-                    >
-                      Cancel booking
-                    </Button>
-                  ) : null}
-                </article>
-              )
-            })}
-            {!(grouped[boardFilter] || []).length && (
-              <p className="rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center text-sm text-muted-foreground">
-                No {visibleColumns.find((c) => c.id === boardFilter)?.label?.toLowerCase() || boardFilter} bookings
-              </p>
-            )}
-          </div>
-
-          <div
-            className="booking-lane-board hidden xl:grid"
-            role="region"
-            aria-label="Booking columns"
-            style={{ ['--bk-cols']: String(visibleColumns.length) }}
-          >
-            {visibleColumns.map((col) => (
-              <section key={col.id} className="floor-lane" aria-label={`${col.label} column`}>
-                <div className="mb-2 flex items-start justify-between gap-1">
-                  <h2 className="floor-lane-title font-bold text-muted-foreground uppercase" title={col.label}>
-                    {col.shortLabel || col.label}
-                  </h2>
-                  <Badge variant="secondary" className="shrink-0 tabular-nums text-[10px]">{grouped[col.id].length}</Badge>
-                </div>
-                <div className="floor-lane-body">
-                  {grouped[col.id].map((booking) => {
-                    const next = getBookingPrimaryNextStatus(booking.status, {
-                      canSeePayment,
-                      canCheckIn,
-                      detailingPipeline: true,
-                    })
-                    const statusAt = formatBookingStamp(booking.updated_at || booking.scheduled_start)
-                    const startAt = formatBookingStamp(booking.scheduled_start)
-                    const endAt = booking.status === 'completed' ? formatBookingStamp(booking.completed_at || booking.scheduled_end) : null
-                    return (
-                      <article
-                        key={booking.id}
-                        className={cn('floor-ticket planner-ticket !cursor-default', col.tone)}
-                      >
-                        <div className="flex items-start justify-between gap-1">
-                          <p className="font-semibold text-foreground leading-snug">{booking.customer_name}</p>
-                          {canEditServicePrice && (
-                            <Button size="sm" variant="ghost" className="h-7 shrink-0 cursor-pointer px-1.5 text-xs" onClick={() => openEdit(booking)}>
-                              Edit
-                            </Button>
-                          )}
-                        </div>
-                        <p className="mt-1 text-foreground/80 leading-snug">{vehicleLine(booking)}</p>
-                        {serviceLine(booking) ? (
-                          <p className="mt-0.5 font-semibold text-primary leading-snug">{serviceLine(booking)}</p>
-                        ) : null}
-                        <p className="bk-meta mt-1 font-medium capitalize text-muted-foreground">
-                          {branchNameBySlug[booking.branch] || booking.branch}
-                        </p>
-                        <div className="bk-meta mt-1.5 space-y-0.5 text-muted-foreground tabular-nums">
-                          {statusAt ? <p>Status · {statusAt}</p> : null}
-                          {startAt ? <p>Start · {startAt}</p> : null}
-                          {endAt ? <p className="font-medium text-foreground">End · {endAt}</p> : null}
-                        </div>
-                        {canAdvanceStatus && next ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="mt-2 min-h-9 w-full cursor-pointer text-xs"
-                            onClick={() => move(booking, next)}
-                          >
-                            {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
-                          </Button>
-                        ) : null}
-                        {canCancelForm && booking.status !== 'cancelled' && booking.status !== 'completed' ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="mt-1 min-h-8 w-full cursor-pointer text-xs text-destructive"
-                            onClick={() => setCancelTarget(booking)}
-                          >
-                            Cancel
-                          </Button>
-                        ) : null}
-                      </article>
-                    )
-                  })}
-                  {!grouped[col.id].length && (
-                    <p className="rounded-xl border border-dashed border-border bg-background/50 p-3 text-center text-[11px] text-muted-foreground">
-                      Empty
-                    </p>
-                  )}
-                </div>
-              </section>
-            ))}
+                </section>
+                )
+              })}
+            </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="table" className="mt-4">
-          <Card className="bk-table-card overflow-hidden">
-            <CardHeader className="gap-3 space-y-0 sm:flex-row sm:items-end sm:justify-between">
+        <TabsContent value="list" className="mt-4 min-w-0">
+          <div className="bk-list">
+            <div className="bk-list-toolbar">
               <div className="min-w-0">
-                <CardTitle className="text-lg sm:text-xl">
-                  {filteredBookings.length} booking{filteredBookings.length === 1 ? '' : 's'}
-                </CardTitle>
-                <CardDescription>
+                <p className="bk-table-count">
+                  {tableSlice.total} booking{tableSlice.total === 1 ? '' : 's'}
+                </p>
+                <p className="bk-table-range">
                   {rangeLabel}
                   {searchQuery.trim() ? ` · “${searchQuery.trim()}”` : ''}
-                  {statusFilter !== 'all' ? ` · ${detailingBoardStatusLabel(statusFilter) || statusFilter}` : ''}
-                </CardDescription>
+                </p>
               </div>
-              <div className="w-full sm:w-48">
-                <Label htmlFor="bk-status-filter" className="sr-only">Status filter</Label>
+              <div className="bk-list-filters">
+                <div className="bk-search-wrap">
+                  <Label htmlFor="bk-list-search" className="sr-only">Search bookings</Label>
+                  <Input
+                    id="bk-list-search"
+                    type="search"
+                    className="bk-list-search min-h-11 w-full"
+                    placeholder="Search name, phone, plate, branch…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter} items={statusFilterItems}>
-                  <SelectTrigger id="bk-status-filter" className="min-h-11 w-full cursor-pointer" aria-label="Filter by status">
+                  <SelectTrigger id="bk-list-status" className="min-h-11 w-full cursor-pointer" aria-label="Filter by status">
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
@@ -962,135 +1088,184 @@ export default function BookingBoardPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Select value={kindFilter} onValueChange={setKindFilter} items={kindFilterItems}>
+                  <SelectTrigger id="bk-list-kind" className="min-h-11 w-full cursor-pointer" aria-label="Filter by service">
+                    <SelectValue placeholder="All services" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All services</SelectItem>
+                    <SelectItem value="wash">Wash & packages</SelectItem>
+                    <SelectItem value="detailing">Detailing</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </CardHeader>
-            <CardContent className="px-3 pb-4 sm:px-6">
-              {/* Mobile-first cards */}
-              <div className="bk-table-cards md:hidden" aria-label="Bookings list">
-                {filteredBookings.map((b) => {
+            </div>
+
+            <div className="bk-card-list" aria-label="Booking list">
+              {tableSlice.rows.map((booking) => (
+                <BookingStageTicket
+                  key={booking.id}
+                  booking={booking}
+                  variant="list"
+                  tone={visibleColumns.find((c) => c.id === booking.status)?.tone}
+                  branchLabel={branchNameBySlug[booking.branch] || booking.branch}
+                  canEditServicePrice={canEditServicePrice}
+                  canAdvanceStatus={canAdvanceStatus}
+                  canCancelForm={canCancelForm}
+                  canSeePayment={canSeePayment}
+                  canCheckIn={canCheckIn}
+                  onEdit={openEdit}
+                  onMove={move}
+                  onCancel={setCancelTarget}
+                />
+              ))}
+              {!tableSlice.total ? (
+                <p className="rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center text-sm text-muted-foreground">
+                  No bookings match this search and filters.
+                </p>
+              ) : null}
+            </div>
+
+            <BookingPager
+              slice={tableSlice}
+              pageSize={tablePageSize}
+              onPageSize={setTablePageSize}
+              onPage={setTablePage}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="table" className="mt-4 min-w-0">
+          <div className="bk-table">
+            <div className="bk-table-toolbar">
+              <div className="min-w-0">
+                <p className="bk-table-count">
+                  {tableSlice.total} booking{tableSlice.total === 1 ? '' : 's'}
+                </p>
+                <p className="bk-table-range">
+                  {rangeLabel}
+                  {searchQuery.trim() ? ` · “${searchQuery.trim()}”` : ''}
+                </p>
+              </div>
+              <div className="bk-table-toolbar-filters">
+                <Label htmlFor="bk-status-filter" className="sr-only">Status filter</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter} items={statusFilterItems}>
+                  <SelectTrigger id="bk-status-filter" className="min-h-11 w-full cursor-pointer sm:w-48" aria-label="Filter by status">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    {visibleColumns.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={kindFilter} onValueChange={setKindFilter} items={kindFilterItems}>
+                  <SelectTrigger id="bk-table-kind" className="min-h-11 w-full cursor-pointer sm:w-44" aria-label="Filter by service">
+                    <SelectValue placeholder="All services" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All services</SelectItem>
+                    <SelectItem value="wash">Wash & packages</SelectItem>
+                    <SelectItem value="detailing">Detailing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Table className="bk-data-grid" aria-label="Bookings ledger">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <BookingTableSortButton label="Customer" column="customer" sort={tableSort} onSort={toggleTableSort} />
+                  </TableHead>
+                  <TableHead>
+                    <BookingTableSortButton label="Vehicle" column="vehicle" sort={tableSort} onSort={toggleTableSort} />
+                  </TableHead>
+                  <TableHead>
+                    <BookingTableSortButton label="Service" column="service" sort={tableSort} onSort={toggleTableSort} />
+                  </TableHead>
+                  <TableHead>
+                    <BookingTableSortButton label="Branch" column="branch" sort={tableSort} onSort={toggleTableSort} />
+                  </TableHead>
+                  <TableHead>
+                    <BookingTableSortButton label="Start" column="start" sort={tableSort} onSort={toggleTableSort} />
+                  </TableHead>
+                  <TableHead>
+                    <BookingTableSortButton label="Status" column="status" sort={tableSort} onSort={toggleTableSort} />
+                  </TableHead>
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tableSlice.rows.map((b) => {
                   const next = getBookingPrimaryNextStatus(b.status, {
                     canSeePayment,
                     canCheckIn,
                     detailingPipeline: true,
                   })
+                  const tone = visibleColumns.find((c) => c.id === b.status)?.tone
                   return (
-                    <article key={b.id} className="bk-table-card-row">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold text-foreground">{b.customer_name}</p>
-                          <p className="text-xs text-muted-foreground">{b.customer_phone || 'No phone'}</p>
-                        </div>
-                        <Badge variant="secondary" className="shrink-0">
+                    <TableRow key={b.id}>
+                      <TableCell>
+                        <div className="font-semibold text-foreground">{b.customer_name}</div>
+                        <div className="text-xs text-muted-foreground">{b.customer_phone || 'No phone'}</div>
+                      </TableCell>
+                      <TableCell className="text-foreground">{bookingVehicleText(b)}</TableCell>
+                      <TableCell className="font-medium text-primary">{bookingServiceText(b) || '—'}</TableCell>
+                      <TableCell className="capitalize text-foreground">{branchNameBySlug[b.branch] || b.branch}</TableCell>
+                      <TableCell className="tabular-nums text-foreground">{bookingTableWhen(b.scheduled_start)}</TableCell>
+                      <TableCell>
+                        <span className={cn('bk-status-pill', tone)}>
                           {detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status] || b.status}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-sm text-foreground/85">{vehicleLine(b)}</p>
-                      {serviceLine(b) ? (
-                        <p className="mt-1 text-xs font-semibold text-primary">{serviceLine(b)}</p>
-                      ) : null}
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {branchNameBySlug[b.branch] || b.branch}
-                        {' · '}
-                        {new Date(b.scheduled_start).toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {canAdvanceStatus && next ? (
-                          <Button type="button" className="min-h-11 flex-1 cursor-pointer" onClick={() => move(b, next)}>
-                            {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
-                          </Button>
-                        ) : null}
-                        {canEditServicePrice ? (
-                          <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => openEdit(b)}>
-                            Edit
-                          </Button>
-                        ) : null}
-                        {canCancelForm ? (
-                          <Button type="button" variant="ghost" className="min-h-11 cursor-pointer text-destructive" onClick={() => setCancelTarget(b)}>
-                            Cancel
-                          </Button>
-                        ) : null}
-                      </div>
-                    </article>
-                  )
-                })}
-                {!filteredBookings.length ? (
-                  <p className="rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center text-sm text-muted-foreground">
-                    No bookings match this search and date range.
-                  </p>
-                ) : null}
-              </div>
-
-              {/* Desktop table */}
-              <div className="hidden overflow-x-auto md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>When</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Branch</TableHead>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Service</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredBookings.map((b) => (
-                      <TableRow key={b.id}>
-                        <TableCell className="whitespace-nowrap text-sm text-foreground">
-                          {new Date(b.scheduled_start).toLocaleString([], {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium text-foreground">{b.customer_name}</div>
-                          <div className="text-xs text-muted-foreground">{b.customer_phone || '—'}</div>
-                        </TableCell>
-                        <TableCell className="text-foreground">{branchNameBySlug[b.branch] || b.branch}</TableCell>
-                        <TableCell className="text-foreground">{vehicleLine(b)}</TableCell>
-                        <TableCell className="text-foreground">{serviceLine(b) || '—'}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status] || b.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="flex flex-wrap gap-1">
-                          {canEditServicePrice && (
-                            <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => openEdit(b)}>
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="bk-table-actions">
+                          {canAdvanceStatus && next ? (
+                            <Button type="button" className="min-h-11 cursor-pointer" onClick={() => move(b, next)}>
+                              {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
+                            </Button>
+                          ) : null}
+                          {canEditServicePrice ? (
+                            <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => openEdit(b)}>
                               Edit
                             </Button>
-                          )}
+                          ) : null}
                           {canEdit && !formBookingsOnly ? (
-                            <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => archiveBooking(b)}>Archive</Button>
+                            <Button type="button" variant="ghost" className="min-h-11 cursor-pointer" onClick={() => archiveBooking(b)}>
+                              Archive
+                            </Button>
                           ) : null}
-                          {canCancelForm ? (
-                            <Button size="sm" variant="ghost" className="cursor-pointer text-destructive" onClick={() => setCancelTarget(b)}>Cancel</Button>
+                          {canCancelForm && b.status !== 'cancelled' && b.status !== 'completed' ? (
+                            <Button type="button" variant="ghost" className="min-h-11 cursor-pointer text-destructive" onClick={() => setCancelTarget(b)}>
+                              Cancel
+                            </Button>
                           ) : null}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {!filteredBookings.length && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-muted-foreground">
-                          No bookings match this search and date range.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                {!tableSlice.total ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                      No bookings match this search and date range.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+
+            <BookingPager
+              slice={tableSlice}
+              pageSize={tablePageSize}
+              onPageSize={setTablePageSize}
+              onPage={setTablePage}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-4">

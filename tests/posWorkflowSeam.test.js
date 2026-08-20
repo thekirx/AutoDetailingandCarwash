@@ -1,0 +1,156 @@
+import assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  keepQueueHandoffWhenAdding,
+  posCartBlocksCheckout,
+  cashAdvanceVisibleOnPos,
+  expenseCountsOnDailyClose,
+  buildVisitHandoffCartLines,
+} from '../src/lib/posSale.js'
+import { buildBacoorDailyReport } from '../src/lib/bacoorDailyReport.js'
+import { classifySaleBucket, paidSalesToBacoorRows, posBucketToBacoor } from '../src/lib/posSellables.js'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+describe('POS checkout workflow seam', () => {
+  it('keeps a queue handoff when adding merch, detaches when adding a walk-in service', () => {
+    assert.equal(keepQueueHandoffWhenAdding({ item_type: 'product', id: 'p1' }), true)
+    assert.equal(keepQueueHandoffWhenAdding({ item_type: 'service', id: 's1' }), false)
+  })
+
+  it('blocks pay when a service line has no catalog service_id', () => {
+    assert.equal(
+      posCartBlocksCheckout([{ item_type: 'service', missing_service: true, id: null }]),
+      true,
+    )
+    assert.equal(
+      posCartBlocksCheckout([{ item_type: 'service', id: 'svc-1' }, { item_type: 'product', id: 'p1' }]),
+      false,
+    )
+  })
+
+  it('cash advance inbox is fail-closed: kind + POS branch, never empty-branch leak', () => {
+    const ca = (branch) => ({
+      ops_forms: { kind: 'cash_advance' },
+      payload: { branch },
+    })
+    assert.equal(cashAdvanceVisibleOnPos(ca(''), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), false)
+    assert.equal(cashAdvanceVisibleOnPos(ca('imus'), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), false)
+    assert.equal(cashAdvanceVisibleOnPos(ca('bacoor'), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), true)
+    assert.equal(cashAdvanceVisibleOnPos({ ops_forms: { kind: 'complaint' }, payload: { branch: 'bacoor' } }, { posBranch: 'bacoor', branchScopeList: null }), false)
+    assert.equal(cashAdvanceVisibleOnPos(ca('bacoor'), { posBranch: 'bacoor', branchScopeList: null }), true)
+  })
+
+  it('PPF pay_category is PPF on tiles and Bacoor close, not Queue wash', () => {
+    assert.equal(classifySaleBucket({ payCategory: 'ppf' }), 'ppf')
+    assert.equal(posBucketToBacoor('ppf'), 'ppf')
+    const rows = paidSalesToBacoorRows([
+      { status: 'paid', total_minor: 150000, payment_method: 'cash', pay_category: 'ppf' },
+    ])
+    assert.equal(rows[0].bucket, 'ppf')
+  })
+
+  it('POS page keeps handoff on merch add, gates expense/CA, blocks orphan pay', () => {
+    const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
+    assert.match(pos, /keepQueueHandoffWhenAdding/)
+    assert.match(pos, /posCartBlocksCheckout/)
+    assert.match(pos, /cashAdvanceVisibleOnPos/)
+    assert.match(pos, /canWriteFinance\(profile\)/)
+    assert.match(pos, /canEditPlanning\(profile\)/)
+    assert.match(pos, /const SHELL_TABS = \['checkout', 'pending', 'expenses', 'cash-advance', 'dashboard'\]/)
+    assert.doesNotMatch(pos, /SHELL_TABS = \[[^\]]*'services'/)
+    assert.match(pos, /writeAudit/)
+    assert.match(pos, /notify-pos/)
+    assert.match(pos, /buildVisitHandoffCartLines/)
+    assert.match(pos, /expenseCountsOnDailyClose/)
+  })
+
+  it('complete_pos_sale rejects null service_id and settles pending_payment transactions', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260819081507_complete_pos_sale_settle_txn.sql'),
+      'utf8',
+    )
+    assert.match(sql, /create or replace function public\.complete_pos_sale/)
+    assert.match(sql, /service_id is required/)
+    assert.match(sql, /pending_payment/)
+    assert.match(sql, /pos_handoff_id = v_handoff/)
+  })
+
+  it('complete_pos_sale refuses a second pay on the same handoff', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260819133000_pos_handoff_one_sale.sql'),
+      'utf8',
+    )
+    assert.match(sql, /already paid/)
+    assert.match(sql, /for update/)
+    assert.match(sql, /sales_pos_handoff_paid_uidx/)
+    assert.match(sql, /status = 'voided'/)
+    assert.match(sql, /sales_status_check/)
+  })
+
+  it('daily close skips ceramic/payroll drafts and counts POS day expenses', () => {
+    assert.equal(
+      expenseCountsOnDailyClose({
+        status: 'draft',
+        description: 'ceramic:sale-1:crew',
+        expense_kind: 'salary_carwash',
+      }),
+      false,
+    )
+    assert.equal(
+      expenseCountsOnDailyClose({
+        status: 'paid',
+        description: 'ceramic:sale-1:crew',
+        expense_kind: 'salary_carwash',
+      }),
+      true,
+    )
+    assert.equal(
+      expenseCountsOnDailyClose({ status: 'draft', description: null, expense_kind: 'daily', title: 'ice' }),
+      true,
+    )
+    const report = buildBacoorDailyReport({
+      branch: 'bacoor',
+      date: '2026-08-19',
+      sales: [],
+      expenses: [
+        { status: 'draft', description: 'ceramic:x:crew', expense_kind: 'salary_carwash', amount_minor: 40000, label: 'crew' },
+        { status: 'draft', expense_kind: 'daily', amount_minor: 2000, label: 'ice' },
+      ],
+    })
+    assert.equal(report.carwash_salary_minor, 0)
+    assert.equal(report.total_expenses_minor, 2000)
+  })
+
+  it('visit-group handoff explodes into one receipt line per booking', () => {
+    const lines = buildVisitHandoffCartLines({
+      handoff: { id: 'h1', amount_minor: 80000, bookings: { id: 'b1', service_id: 's1', vehicle_plate: 'ABC' } },
+      siblings: [
+        { id: 'b1', service_id: 's1', final_price_minor: 50000, vehicle_plate: 'ABC' },
+        { id: 'b2', service_id: 's2', final_price_minor: 30000, vehicle_plate: 'ABC' },
+      ],
+      services: [
+        { id: 's1', name: 'Wash', pay_category: 'wash' },
+        { id: 's2', name: 'Interior', pay_category: 'wash' },
+      ],
+    })
+    assert.equal(lines.length, 2)
+    assert.equal(lines[0].unit_price_minor + lines[1].unit_price_minor, 80000)
+    assert.equal(lines[0].id, 's1')
+    assert.equal(lines[1].id, 's2')
+    assert.notEqual(lines[0].key, lines[1].key)
+  })
+
+  it('complete_pos_sale writes an audit row for Super Admin proof', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260819120000_pos_sale_audit.sql'),
+      'utf8',
+    )
+    assert.match(sql, /create or replace function public\.complete_pos_sale/)
+    assert.match(sql, /insert into public\.audit_logs/)
+    assert.match(sql, /pos\.sale/)
+  })
+})

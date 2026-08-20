@@ -159,6 +159,26 @@ export function canWriteFinance(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+/** SA + ASA with finance_view: open the payroll register. Branch Admin runs Finance, not payroll. */
+export function canAccessPayroll(profile) {
+  if (isSuperAdmin(profile)) return true
+  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'finance_view')
+}
+
+/** SA + ASA with finance_write: confirm a payroll run. */
+export function canRunPayroll(profile) {
+  if (isSuperAdmin(profile)) return true
+  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'finance_write')
+}
+
+/** Employees see their own payouts. Super Admin uses Payroll instead. */
+export function canViewOwnPay(profile) {
+  if (!profile?.role) return false
+  if (isSuperAdmin(profile)) return false
+  if (profile.role === ROLES.INVESTOR) return false
+  return true
+}
+
 export function canAccessReports(profile) {
   if (isSuperAdmin(profile)) return true
   if (profile?.role === ROLES.INVESTOR) return true
@@ -436,6 +456,7 @@ export function canOverrideQueueStatus(profile) {
 export function canViewAssignedTasks(profile) {
   return has(profile, [
     ROLES.STAFF,
+    ROLES.DETAILER,
     ROLES.TEAM_LEAD,
     ROLES.ADMIN,
     ROLES.SUPER_ADMIN,
@@ -487,160 +508,216 @@ export function usesFloorAppShell(profile) {
   )
 }
 
+/** Shop-day order for the Command sidebar. Flatten order follows this. */
+export const COMMAND_NAV_GROUP_ORDER = Object.freeze([
+  'floor',
+  'counter',
+  'customers',
+  'books',
+  'work',
+  'company',
+])
+
+export const COMMAND_NAV_GROUP_LABELS = Object.freeze({
+  floor: 'Floor',
+  counter: 'Counter',
+  customers: 'Customers',
+  books: 'Books',
+  work: 'Work',
+  company: 'Company',
+})
+
+function nav(label, to, icon, group) {
+  return { label, to, icon, group }
+}
+
+/** Cluster nav items into labeled Command groups without reshuffling within a group. */
+export function groupOperationsNav(items = []) {
+  const groups = []
+  for (const item of items) {
+    const id = COMMAND_NAV_GROUP_ORDER.includes(item.group) ? item.group : 'more'
+    const last = groups[groups.length - 1]
+    if (last && last.id === id) {
+      last.items.push(item)
+      continue
+    }
+    groups.push({
+      id,
+      label: COMMAND_NAV_GROUP_LABELS[id] || 'More',
+      items: [item],
+    })
+  }
+  return groups
+}
+
 /** Nav items for the shared ops shell — filtered by role + grants. */
 export function getOperationsNav(profile) {
   if (profile?.role === ROLES.INVESTOR) {
     return [
-      { label: 'Finance', to: '/operations/finance', icon: 'Wallet' },
-      { label: 'Reports', to: '/operations/reports', icon: 'LineChart' },
+      nav('Finance', '/operations/finance', 'Wallet', 'books'),
+      nav('Reports', '/operations/reports', 'LineChart', 'books'),
     ]
   }
 
   if (profile?.role === ROLES.VIDEO_EDITOR) {
     return [
-      { label: 'Calendar', to: '/operations/planning?tab=calendar', icon: 'Columns3' },
-      { label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
+      nav('Calendar', '/operations/planning?tab=calendar', 'Columns3', 'work'),
+      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
+      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
   if (profile?.role === ROLES.DETAILER) {
     return [
-      { label: 'My Detailing', to: '/operations/queue?family=detailing', icon: 'Layers' },
-      { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
+      nav('Queue', '/operations/queue?family=detailing', 'ClipboardList', 'floor'),
+      nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
+      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
+      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
   if (profile?.role === ROLES.MARKETING) {
     return [
-      { label: 'CRM', to: '/operations/crm', icon: 'Contact' },
-      { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' },
-      { label: 'Planner', to: '/operations/planning', icon: 'Columns3' },
-      { label: 'Notifications', to: '/operations/notifications', icon: 'Bell' },
-      { label: 'History', to: '/operations/history', icon: 'History' },
+      nav('CRM', '/operations/crm', 'Contact', 'customers'),
+      nav('Bookings', '/operations/bookings', 'Kanban', 'floor'),
+      nav('Planner', '/operations/planning', 'Columns3', 'work'),
+      nav('Notifications', '/operations/notifications', 'Bell', 'work'),
+      nav('History', '/operations/history', 'History', 'work'),
+      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
   if (profile?.role === ROLES.SALES) {
     return [
-      { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' },
-      { label: 'History', to: '/operations/history', icon: 'History' },
+      nav('Bookings', '/operations/bookings', 'Kanban', 'floor'),
+      nav('History', '/operations/history', 'History', 'work'),
+      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
-  // Branch Admin: Command sidebar (web-first).
+  // Branch Admin: live floor → counter → customers → work → company.
   if (isBranchAdmin(profile)) {
     return [
-      { label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' },
-      { label: 'Car Wash Queue', to: '/operations/queue', icon: 'ClipboardList' },
-      { label: 'Detailing Queue', to: '/operations/queue?family=detailing', icon: 'Layers' },
-      { label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' },
-      { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
-      { label: 'Inventory', to: '/operations/inventory', icon: 'Package' },
-      { label: 'History', to: '/operations/history', icon: 'History' },
-      { label: 'Planner', to: '/operations/planning', icon: 'Columns3' },
-      { label: 'Reviews', to: '/operations/reviews', icon: 'Star' },
-      { label: 'Audit', to: '/operations/audit', icon: 'ScrollText' },
+      nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
+      nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
+      nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
+      nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
+      nav('Reviews', '/operations/reviews', 'Star', 'customers'),
+      nav('Planner', '/operations/planning', 'Columns3', 'work'),
+      nav('History', '/operations/history', 'History', 'work'),
+      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
+      nav('Audit', '/operations/audit', 'ScrollText', 'company'),
     ]
   }
 
   // Crew (staff): clock + assigned work only.
   if (profile?.role === ROLES.STAFF) {
     return [
-      { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
-      { label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
-      { label: 'Planner', to: '/operations/planning', icon: 'Columns3' },
+      nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
+      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
+      nav('Planner', '/operations/planning', 'Columns3', 'work'),
+      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
   const items = []
+  const floorBoardLabel =
+    isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
+      ? 'Floor Board'
+      : isAdmin(profile)
+        ? 'Queue View'
+        : profile?.role === ROLES.TEAM_LEAD
+          ? 'Floor'
+          : 'Dashboard'
 
   if (canAccessConsole(profile)) {
-    items.push({ label: 'Console', to: '/operations/console', icon: 'LayoutDashboard' })
+    items.push(nav('Console', '/operations/console', 'LayoutDashboard', 'floor'))
   }
-  if (canAccessHistory(profile)) {
-    items.push({ label: 'History', to: '/operations/history', icon: 'History' })
-  }
-  if (canAccessNotifications(profile)) {
-    items.push({ label: 'Notifications', to: '/operations/notifications', icon: 'Bell' })
-  }
-  if (canAccessSettings(profile)) {
-    items.push({ label: 'Settings', to: '/operations/settings', icon: 'Settings' })
-  }
-  if (canManageSiteContent(profile)) {
-    items.push({ label: 'Content', to: '/operations/content', icon: 'Newspaper' })
-  }
-  if (canViewPlanning(profile)) {
-    items.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
-  }
-  if (canManagePeople(profile)) {
-    items.push({ label: 'People', to: '/operations/people', icon: 'UserPlus' })
-  }
-  if (canManageBranches(profile)) {
-    items.push({ label: 'Branches', to: '/operations/branches', icon: 'Building2' })
-  }
-  if (canManageVehicleCatalog(profile)) {
-    items.push({ label: 'Cars', to: '/operations/cars', icon: 'CarFront' })
-  }
-  if (canAccessAudit(profile)) {
-    items.push({ label: 'Audit', to: '/operations/audit', icon: 'ScrollText' })
-  }
-  if (canAccessDataCenter(profile)) {
-    items.push({ label: 'Data Center', to: '/operations/data-center', icon: 'Database' })
-  }
-  if (canAccessInquiries(profile)) {
-    items.push({ label: 'Inquiries', to: '/operations/inquiries', icon: 'Inbox' })
-  }
-
   if (canViewQueueOperations(profile)) {
     items.push(
-      {
-        label: isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
-          ? 'Floor Board'
-          : isAdmin(profile)
-            ? 'Queue View'
-            : profile?.role === ROLES.TEAM_LEAD
-              ? 'Floor'
-              : 'Dashboard',
-        to: '/operations/dashboard',
-        icon: 'Gauge',
-      },
-      { label: 'Car Wash Queue', to: '/operations/queue', icon: 'ClipboardList' },
-      { label: 'Detailing Queue', to: '/operations/queue?family=detailing', icon: 'Layers' },
-      { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
-      { label: 'Crew', to: '/operations/crew', icon: 'Users' },
-      { label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' },
+      nav(floorBoardLabel, '/operations/dashboard', 'Gauge', 'floor'),
+      nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
     )
   }
-  if (canAccessAttendance(profile) && !canViewQueueOperations(profile) && profile?.role !== ROLES.STAFF) {
-    items.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
+  if (canAccessBookingBoard(profile)) {
+    items.push(nav('Bookings', '/operations/bookings', 'Kanban', 'floor'))
   }
-  if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF) {
-    items.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
+  if (canViewQueueOperations(profile)) {
+    items.push(
+      nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
+      nav('Crew', '/operations/crew', 'Users', 'floor'),
+      nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
+    )
+  } else if (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF) {
+    items.push(nav('Attendance', '/operations/attendance', 'Clock', 'floor'))
   }
+
   if (canAccessPos(profile)) {
-    items.push({ label: 'POS', to: '/operations/pos', icon: 'ShoppingCart' })
+    items.push(nav('POS', '/operations/pos', 'ShoppingCart', 'counter'))
   }
   if (canAccessInventory(profile)) {
-    items.push({ label: 'Inventory', to: '/operations/inventory', icon: 'Package' })
+    items.push(nav('Inventory', '/operations/inventory', 'Package', 'counter'))
   }
-  if (canAccessFinance(profile)) {
-    items.push({ label: 'Finance', to: '/operations/finance', icon: 'Wallet' })
-  }
+
   if (canAccessCrm(profile)) {
-    items.push({ label: 'CRM', to: '/operations/crm', icon: 'Contact' })
-  }
-  // Services / Merch / SMS — folded into POS / CRM (redirects in App.jsx)
-  if (canAccessBookingBoard(profile)) {
-    items.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
+    items.push(nav('CRM', '/operations/crm', 'Contact', 'customers'))
   }
   if (canAccessReviews(profile)) {
-    items.push({ label: 'Reviews', to: '/operations/reviews', icon: 'Star' })
-  }
-  if (canAccessReports(profile)) {
-    items.push({ label: 'Reports', to: '/operations/reports', icon: 'LineChart' })
+    items.push(nav('Reviews', '/operations/reviews', 'Star', 'customers'))
   }
   if (canAccessMemberships(profile)) {
-    items.push({ label: 'Memberships', to: '/operations/memberships', icon: 'Crown' })
+    items.push(nav('Memberships', '/operations/memberships', 'Crown', 'customers'))
+  }
+
+  if (canAccessFinance(profile)) {
+    items.push(nav('Finance', '/operations/finance', 'Wallet', 'books'))
+  }
+  if (canAccessPayroll(profile)) {
+    items.push(nav('Payroll', '/operations/payroll', 'Banknote', 'books'))
+  }
+  if (canViewOwnPay(profile)) {
+    items.push(nav('My pay', '/operations/my-pay', 'Banknote', 'books'))
+  }
+  if (canAccessReports(profile)) {
+    items.push(nav('Reports', '/operations/reports', 'LineChart', 'books'))
+  }
+
+  if (canViewPlanning(profile)) {
+    items.push(nav('Planner', '/operations/planning', 'Columns3', 'work'))
+  }
+  if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF) {
+    items.push(nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'))
+  }
+  if (canAccessHistory(profile)) {
+    items.push(nav('History', '/operations/history', 'History', 'work'))
+  }
+  if (canAccessNotifications(profile)) {
+    items.push(nav('Notifications', '/operations/notifications', 'Bell', 'work'))
+  }
+
+  if (canManagePeople(profile)) {
+    items.push(nav('People', '/operations/people', 'UserPlus', 'company'))
+  }
+  if (canManageBranches(profile)) {
+    items.push(nav('Branches', '/operations/branches', 'Building2', 'company'))
+  }
+  if (canManageVehicleCatalog(profile)) {
+    items.push(nav('Cars', '/operations/cars', 'CarFront', 'company'))
+  }
+  if (canManageSiteContent(profile)) {
+    items.push(nav('Content', '/operations/content', 'Newspaper', 'company'))
+  }
+  if (canAccessAudit(profile)) {
+    items.push(nav('Audit', '/operations/audit', 'ScrollText', 'company'))
+  }
+  if (canAccessDataCenter(profile)) {
+    items.push(nav('Data Center', '/operations/data-center', 'Database', 'company'))
+  }
+  if (canAccessInquiries(profile)) {
+    items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'company'))
+  }
+  if (canAccessSettings(profile)) {
+    items.push(nav('Settings', '/operations/settings', 'Settings', 'company'))
   }
   return items
 }
@@ -650,8 +727,7 @@ export function getTeamLeadDock(profile) {
   const canQueue = canViewQueueOperations(profile)
   const canEdit = canEditQueueOperations(profile)
   const dock = []
-  if (canQueue) dock.push({ label: 'Wash', to: '/operations/queue', icon: 'ClipboardList', end: true })
-  if (canQueue) dock.push({ label: 'Detail', to: '/operations/queue?family=detailing', icon: 'Layers' })
+  if (canQueue) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
   if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
   if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
   if (canQueue) dock.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
@@ -674,7 +750,7 @@ export function getBranchAdminDock(profile) {
   if (!isBranchAdmin(profile)) return []
   const dock = []
   if (canViewQueueOperations(profile)) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
-  if (canViewQueueOperations(profile)) dock.push({ label: 'Wash', to: '/operations/queue', icon: 'ClipboardList', end: true })
+  if (canViewQueueOperations(profile)) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
   if (canAccessAttendance(profile)) dock.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
   if (canAccessPos(profile)) dock.push({ label: 'POS', to: '/operations/pos', icon: 'ShoppingCart', primary: true })
   return dock
@@ -684,9 +760,6 @@ export function getBranchAdminDock(profile) {
 export function getBranchAdminMore(profile) {
   if (!isBranchAdmin(profile)) return []
   const more = []
-  if (canViewQueueOperations(profile)) {
-    more.push({ label: 'Detail', to: '/operations/queue?family=detailing', icon: 'Layers' })
-  }
   if (canAccessHistory(profile)) {
     more.push({ label: 'History', to: '/operations/history', icon: 'History' })
   }
@@ -716,13 +789,14 @@ export function getStaffDock(profile) {
   return [
     { label: 'Attendance', to: '/operations/attendance', icon: 'Clock', primary: true, end: true },
     { label: 'Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
+    { label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' },
     { label: 'Forms', to: '/operations/planning?tab=forms', icon: 'Columns3' },
   ]
 }
 
 export function getStaffMore(profile) {
   if (profile?.role !== ROLES.STAFF) return []
-  return [{ label: 'History', to: '/operations/history', icon: 'History' }]
+  return []
 }
 
 /** Marketing FloorApp dock. */
@@ -758,8 +832,9 @@ export function getVideoEditorMore() {
 export function getDetailerDock(profile) {
   if (profile?.role !== ROLES.DETAILER) return []
   return [
-    { label: 'Detailing', to: '/operations/queue?family=detailing', icon: 'Layers', primary: true },
+    { label: 'Queue', to: '/operations/queue?family=detailing', icon: 'ClipboardList', primary: true },
     { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
+    { label: 'Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
   ]
 }
 
@@ -805,6 +880,8 @@ export function allowRoute(profile, key) {
     pos: canAccessPos,
     inventory: canAccessInventory,
     finance: canAccessFinance,
+    payroll: canAccessPayroll,
+    'my-pay': canViewOwnPay,
     crm: canAccessCrm,
     bookings: canAccessBookingBoard,
     reviews: canAccessReviews,

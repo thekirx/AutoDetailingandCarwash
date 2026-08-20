@@ -60,13 +60,13 @@ describe('booking smart search', () => {
     assert.equal(matchesBookingSmartSearch(booking, 'zzz', names), false)
   })
 
-  it('table tab wires all-dates search and mobile cards', async () => {
+  it('table tab wires all-dates search into the data grid', async () => {
     const jsx = await readFile(resolve(root, 'src/pages/BookingBoardPage.jsx'), 'utf8')
     assert.match(jsx, /All dates/)
     assert.match(jsx, /Upcoming/)
     assert.match(jsx, /matchesBookingSmartSearch/)
     assert.match(jsx, /bk-smart-search|Search name, phone, plate/)
-    assert.match(jsx, /bk-table-cards/)
+    assert.match(jsx, /bk-data-grid/)
     assert.match(jsx, /filteredBookings/)
     assert.match(jsx, /datePreset === 'all'/)
   })

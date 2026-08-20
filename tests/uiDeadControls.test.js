@@ -109,6 +109,7 @@ describe('P0 residual fixes (full-system 2026-08-01)', () => {
     assert.match(src, /crew\.error/)
     assert.match(src, /comps\.error/)
     assert.match(src, /books\.error/)
+    assert.match(src, /from\('sales'\)\.select\('id'\)\.eq\('status', 'paid'\)/)
   })
 
   it('Memberships hides Save for non-SA (OPS-M7)', () => {

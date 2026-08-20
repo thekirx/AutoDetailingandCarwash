@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { AlertTriangle, Database, Download, ShieldCheck, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessDataCenter } from '@/auth/permissions'
 import { getAccessTokenFresh } from '@/lib/authToken'
-import { daysSince } from '@/lib/dataCenterLogic'
+import {
+  DATA_CENTER_CATALOG_TABLES,
+  DATA_CENTER_CRM_TABLES,
+  DATA_CENTER_OPS_TABLES,
+  daysSince,
+} from '@/lib/dataCenterLogic'
+import { usePageMeta } from '@/lib/pageMeta'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,8 +45,25 @@ function formatWhen(iso) {
   }
 }
 
+function CountList({ tables, counts }) {
+  return (
+    <ul className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+      {tables.map((k) => (
+        <li key={k}>
+          {k}: <span className="font-semibold text-foreground">{counts?.[k] ?? '—'}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export default function DataCenterPage() {
   const { profile } = useAuth()
+  usePageMeta({
+    title: 'Data Center',
+    description: 'Super Admin export, import, and standard purge for Hakum business data.',
+    path: '/operations/data-center',
+  })
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState('')
@@ -48,6 +71,7 @@ export default function DataCenterPage() {
   const [purgeConfirm, setPurgeConfirm] = useState('')
   const [importConfirm, setImportConfirm] = useState('')
   const [importBundle, setImportBundle] = useState(null)
+  const [dryRun, setDryRun] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -65,9 +89,15 @@ export default function DataCenterPage() {
     if (canAccessDataCenter(profile)) load()
   }, [load, profile])
 
+  const selectedPurge = useMemo(
+    () => (status?.purge_targets || []).find((t) => t.id === purgeTarget) || null,
+    [status, purgeTarget],
+  )
+
   if (!canAccessDataCenter(profile)) return <Navigate to="/operations/access-denied" replace />
 
   const overdue = status?.backup_reminder?.overdue
+  const ackOverdue = status?.backup_reminder?.platform_ack_overdue
 
   async function exportSnapshot() {
     setBusy('export')
@@ -95,32 +125,33 @@ export default function DataCenterPage() {
       const text = await file.text()
       const parsed = JSON.parse(text)
       setImportBundle(parsed)
+      setDryRun(null)
       toast.message('Import file loaded — run Dry run, then confirm IMPORT.')
     } catch {
       toast.error('Invalid JSON export file.')
       setImportBundle(null)
+      setDryRun(null)
     }
   }
 
-  async function runImport(dryRun) {
+  async function runImport(isDryRun) {
     if (!importBundle) {
       toast.error('Choose an export JSON first.')
       return
     }
-    setBusy(dryRun ? 'dry' : 'import')
+    setBusy(isDryRun ? 'dry' : 'import')
     try {
       const result = await dataCenter('import', {
         bundle: importBundle,
-        dry_run: dryRun,
-        confirm: dryRun ? undefined : importConfirm,
+        dry_run: isDryRun,
+        confirm: isDryRun ? undefined : importConfirm,
       })
-      toast.success(dryRun ? 'Dry run OK — review counts, then type IMPORT.' : 'Import applied.')
-      if (!dryRun) {
+      setDryRun(result)
+      toast.success(isDryRun ? 'Dry run OK — review counts, then type IMPORT.' : 'Import applied.')
+      if (!isDryRun) {
         setImportConfirm('')
         setImportBundle(null)
         await load()
-      } else {
-        console.info('[data-center] dry-run', result.results)
       }
     } catch (err) {
       toast.error(err.message)
@@ -133,7 +164,7 @@ export default function DataCenterPage() {
     setBusy('purge')
     try {
       const result = await dataCenter('purge', { target: purgeTarget, confirm: purgeConfirm })
-      toast.success(`Deleted ${result.deleted_count ?? 0} rows.`)
+      toast.success(`Deleted ${result.deleted_count ?? 0} rows${result.blocked_count ? ` · kept ${result.blocked_count} blocked` : ''}.`)
       setPurgeConfirm('')
       await load()
     } catch (err) {
@@ -177,8 +208,8 @@ export default function DataCenterPage() {
             Data Center
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Super Admin only. Business data lives in Supabase Postgres (permanent). Use this page for owner-controlled
-            export / import / purge and backup reminders. Automatic PITR snapshots are managed in the Supabase Dashboard.
+            Super Admin only. Catalog and CRM can be exported and re-imported. Floor, sales, and finance restore from
+            Supabase PITR. Purge is retention-based and skips rows blocked by live tickets or transactions.
           </p>
         </div>
         <Button variant="outline" onClick={load} disabled={loading}>
@@ -198,6 +229,7 @@ export default function DataCenterPage() {
               {status?.settings?.last_export_at
                 ? ` Last export ${daysSince(status.settings.last_export_at)} day(s) ago.`
                 : ' No owner export on file yet.'}
+              {ackOverdue ? ' Platform PITR has not been acknowledged in the reminder window.' : ''}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
@@ -236,7 +268,9 @@ export default function DataCenterPage() {
           <CardDescription>{status?.platform?.body}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
-          <Badge variant="secondary">{status?.platform?.dashboard_hint || 'Database → Backups'}</Badge>
+          <Badge variant={ackOverdue ? 'destructive' : 'secondary'}>
+            {ackOverdue ? 'PITR ack overdue' : status?.platform?.dashboard_hint || 'Database → Backups'}
+          </Badge>
           <Button variant="outline" size="sm" onClick={ackPlatform} disabled={!!busy}>
             Confirm I reviewed PITR / daily backups
           </Button>
@@ -250,8 +284,8 @@ export default function DataCenterPage() {
               <Download className="size-5" /> Export snapshot
             </CardTitle>
             <CardDescription>
-              Download a JSON snapshot of business tables (customers, vehicles, bookings, sales, finance, catalog…). Store
-              offline. Auth passwords are never included.
+              Full JSON of catalog, CRM, and ops tables. Auth passwords are never included. Ops tables are for inspection
+              and PITR — they are skipped on import.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -259,13 +293,20 @@ export default function DataCenterPage() {
               {busy === 'export' ? 'Exporting…' : 'Download export JSON'}
             </Button>
             {status?.row_counts ? (
-              <ul className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                {Object.entries(status.row_counts).map(([k, v]) => (
-                  <li key={k}>
-                    {k}: <span className="font-semibold text-foreground">{v ?? '—'}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Catalog (importable)</p>
+                  <CountList tables={DATA_CENTER_CATALOG_TABLES} counts={status.row_counts} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">CRM (importable)</p>
+                  <CountList tables={DATA_CENTER_CRM_TABLES} counts={status.row_counts} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Ops (export only · restore via PITR)</p>
+                  <CountList tables={DATA_CENTER_OPS_TABLES} counts={status.row_counts} />
+                </div>
+              </div>
             ) : null}
           </CardContent>
         </Card>
@@ -276,8 +317,8 @@ export default function DataCenterPage() {
               <Upload className="size-5" /> Import snapshot
             </CardTitle>
             <CardDescription>
-              Upserts catalog + CRM core tables only ({(status?.import_tables || []).join(', ') || '…'}). Bookings/sales
-              are export-only (restore via Supabase PITR for those).
+              Upserts catalog + CRM in FK order. Floor/sales in the same file are skipped, not overwritten. Not atomic —
+              prefer PITR for a full restore.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
@@ -292,6 +333,23 @@ export default function DataCenterPage() {
                 {busy === 'dry' ? 'Checking…' : 'Dry run'}
               </Button>
             </div>
+            {dryRun ? (
+              <div className="rounded-md border border-border p-3 text-xs">
+                <p className="font-medium text-foreground">{dryRun.dry_run ? 'Dry run' : 'Applied'} — catalog/CRM upserts</p>
+                <ul className="mt-2 space-y-1 text-muted-foreground">
+                  {Object.entries(dryRun.results || {}).map(([table, row]) => (
+                    <li key={table}>
+                      {table}: {row.skipped ? 'empty' : `${row.upserted} row(s)`}
+                    </li>
+                  ))}
+                </ul>
+                {dryRun.skipped?.length ? (
+                  <p className="mt-2 text-muted-foreground">
+                    Skipped export-only: {dryRun.skipped.map((s) => `${s.table} (${s.count})`).join(', ')}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <Label htmlFor="import-confirm">Type IMPORT to apply</Label>
             <Input id="import-confirm" value={importConfirm} onChange={(e) => setImportConfirm(e.target.value)} placeholder="IMPORT" />
             <Button onClick={() => runImport(false)} disabled={!!busy || !importBundle || importConfirm !== 'IMPORT'}>
@@ -303,10 +361,10 @@ export default function DataCenterPage() {
 
       <Card className="border-red-500/30">
         <CardHeader>
-          <CardTitle className="text-red-200">Destructive purge</CardTitle>
+          <CardTitle className="text-red-200">Standard purge</CardTitle>
           <CardDescription>
-            Hard-deletes selected rows and writes an event so you know exactly what was removed. Prefer archive in CRM/queue
-            first. Type DELETE to confirm.
+            Archive-first for tickets, vehicles, and customers. Logs use retention (90 days ops / 365 days audit). Blocked
+            rows stay — live bookings and finance transactions are never deleted this way. Type DELETE to confirm.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:max-w-lg">
@@ -317,13 +375,27 @@ export default function DataCenterPage() {
             <SelectContent>
               {(status?.purge_targets || []).map((t) => (
                 <SelectItem key={t.id} value={t.id}>
-                  {t.label}
+                  {t.system}: {t.label}
+                  {typeof t.eligible === 'number' ? ` · ${t.eligible} eligible` : ''}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {selectedPurge ? (
+            <p className="text-xs text-muted-foreground">
+              {selectedPurge.description}{' '}
+              <span className="text-foreground">
+                {selectedPurge.eligible ?? '—'} eligible
+                {selectedPurge.blocked ? ` · ${selectedPurge.blocked} blocked` : ''}
+              </span>
+            </p>
+          ) : null}
           <Input value={purgeConfirm} onChange={(e) => setPurgeConfirm(e.target.value)} placeholder="DELETE" />
-          <Button variant="destructive" onClick={runPurge} disabled={!!busy || purgeConfirm !== 'DELETE'}>
+          <Button
+            variant="destructive"
+            onClick={runPurge}
+            disabled={!!busy || purgeConfirm !== 'DELETE' || (selectedPurge?.eligible ?? 0) < 1}
+          >
             {busy === 'purge' ? 'Purging…' : 'Purge permanently'}
           </Button>
         </CardContent>
@@ -333,8 +405,7 @@ export default function DataCenterPage() {
         <CardHeader>
           <CardTitle>What changed (owner trail)</CardTitle>
           <CardDescription>
-            Every export, import, purge, and platform-backup acknowledgement. This is how Hakum informs you what was
-            snapshotted or deleted by the Super Admin — separate from Supabase automatic backups.
+            Every export, import, purge, and platform-backup acknowledgement. Separate from Supabase automatic backups.
           </CardDescription>
         </CardHeader>
         <CardContent>

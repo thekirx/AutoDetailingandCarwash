@@ -210,7 +210,7 @@ export default function PpfInstallSequence({ onProgress }) {
         return;
       }
 
-      ScrollTrigger.create({
+      const trigger = ScrollTrigger.create({
         trigger: rootRef.current.closest("[data-ppf-stage]") || rootRef.current,
         start: "top top",
         end: isMobile ? "+=260%" : "+=340%",
@@ -226,6 +226,7 @@ export default function PpfInstallSequence({ onProgress }) {
           scheduleDraw();
         },
       });
+      return () => trigger.kill();
     }, rootRef);
 
     // Repaint on resize, but debounced and only when the box really changed —

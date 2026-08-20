@@ -1,6 +1,8 @@
 /** Finance pure helpers: date presets, P&L rollup, payment-method breakdown, exports.
- * No React, no Supabase. Everything here is testable in isolation.
+ * No React, no Supabase. Branch scope reuses the ops RBAC seam.
  */
+
+import { getBranchScopeList } from '../auth/permissions.js'
 
 export const FINANCE_TABS = [
   { id: 'overview', label: 'Overview', hint: 'Income, expenses, and net for the window' },
@@ -148,23 +150,17 @@ export function scopeBranch(query, profile, branchFilter) {
     return query.eq('branch', branchFilter)
   }
   if (list.length === 1) return query.eq('branch', list[0])
-  if (list.length > 1) return query.in('branch', list)
+  if (list.length > 1) {
+    if (branchFilter && branchFilter !== 'all') return query.eq('branch', '__none__')
+    return query.in('branch', list)
+  }
   return query.eq('branch', '__none__')
 }
 
+/** Same Branch scope seam as ops RBAC. BossMich is `BossMich`, never `super_admin`. */
 export function branchScopeList(profile) {
-  if (!profile) return null
-  if (profile.role === 'super_admin') return null
-  if (profile.role === 'assistant_super_admin') {
-    if (Array.isArray(profile.grants) && profile.grants.includes('branches_all')) return null
-    if (Array.isArray(profile.branch_slugs) && profile.branch_slugs.length) return profile.branch_slugs
-    return []
-  }
-  if (profile.role === 'sales') return null
-  const multi = Array.isArray(profile.branch_slugs) ? profile.branch_slugs.filter(Boolean) : []
-  if (multi.length) return multi
-  if (profile.branch_slug) return [profile.branch_slug]
-  return []
+  if (!profile) return []
+  return getBranchScopeList(profile)
 }
 
 /** Sum a key across rows (minor units). */
@@ -359,6 +355,33 @@ export function retentionBuckets(customers) {
     else loyal += 1
   }
   return { fresh, returning, loyal, total: fresh + returning + loyal }
+}
+
+/** Collapse per-branch retention rows into one customer when Finance is on All branches. */
+export function rollupRetentionByCustomer(rows = []) {
+  const byId = new Map()
+  for (const row of rows || []) {
+    const id = row?.customer_id
+    if (!id) continue
+    const cur = byId.get(id)
+    if (!cur) {
+      byId.set(id, {
+        ...row,
+        paid_sales: Number(row.paid_sales) || 0,
+        total_spent_minor: Number(row.total_spent_minor) || 0,
+      })
+      continue
+    }
+    cur.paid_sales += Number(row.paid_sales) || 0
+    cur.total_spent_minor += Number(row.total_spent_minor) || 0
+    if (row.first_paid_at && (!cur.first_paid_at || row.first_paid_at < cur.first_paid_at)) {
+      cur.first_paid_at = row.first_paid_at
+    }
+    if (row.last_paid_at && (!cur.last_paid_at || row.last_paid_at > cur.last_paid_at)) {
+      cur.last_paid_at = row.last_paid_at
+    }
+  }
+  return [...byId.values()].sort((a, b) => b.total_spent_minor - a.total_spent_minor)
 }
 
 /** Chart hover: peso amount's share of the series total. */

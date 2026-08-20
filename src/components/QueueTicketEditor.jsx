@@ -56,13 +56,17 @@ function Panel({ title, icon: Icon, children, className = '' }) {
   )
 }
 
-function ActionButton({ children, loading, disabled, onClick }) {
+function ActionButton({ children, loading, disabled, onClick, tone = 'primary' }) {
+  const look =
+    tone === 'secondary'
+      ? 'border border-primary/25 bg-primary/10 text-foreground hover:bg-primary/15'
+      : 'bg-primary text-primary-foreground hover:opacity-90'
   return (
     <button
       type="button"
       disabled={disabled || loading}
       onClick={onClick}
-      className="floor-touch-btn inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
+      className={`floor-touch-btn inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98] ${look}`}
     >
       {loading ? <LoaderCircle className="animate-spin" size={17} aria-hidden /> : null}
       {children}
@@ -75,6 +79,83 @@ function Info({ label, value }) {
     <div className="rounded-2xl border border-border bg-muted/30 p-3.5 sm:p-4">
       <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">{label}</p>
       <p className="mt-2 text-sm text-foreground">{value || '-'}</p>
+    </div>
+  )
+}
+
+function Fact({ label, value }) {
+  return (
+    <div className="queue-ticket-fact">
+      <dt>{label}</dt>
+      <dd>{value || '—'}</dd>
+    </div>
+  )
+}
+
+function CrewPicker({
+  staff,
+  selectedStaff,
+  setSelectedStaff,
+  assignments,
+  staffById,
+  saving,
+  onSave,
+  compact = false,
+}) {
+  return (
+    <div className={`grid gap-4 ${compact ? '' : 'lg:grid-cols-[1fr_280px]'}`}>
+      <div className={`grid gap-3 ${compact ? '' : 'sm:grid-cols-2'}`}>
+        {staff.map((member) => {
+          const active = selectedStaff.includes(member.id)
+          const busy = Boolean(member.is_busy_today)
+          return (
+            <label
+              key={member.id}
+              className={`flex min-h-11 items-center justify-between gap-3 rounded-2xl border p-3 transition ${!busy ? 'cursor-pointer' : ''} ${active ? 'border-primary/40 bg-primary/10' : 'border-border bg-muted/20'} ${busy ? 'opacity-55' : ''}`}
+            >
+              <span>
+                <span className="block font-medium text-foreground">{member.full_name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {busy ? 'Busy on another job' : member.branch_slug || 'Timed in'}
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                className="size-5 accent-primary"
+                checked={active}
+                disabled={busy}
+                onChange={(event) =>
+                  setSelectedStaff((current) =>
+                    event.target.checked ? [...current, member.id] : current.filter((idValue) => idValue !== member.id),
+                  )
+                }
+              />
+            </label>
+          )
+        })}
+        {!staff.length && (
+          <p className="text-sm text-muted-foreground">
+            No present crew for this branch. Have staff time in inside the 20m geofence first.
+          </p>
+        )}
+      </div>
+      <div>
+        <ActionButton tone={compact ? 'secondary' : 'primary'} loading={saving === 'assign'} onClick={onSave}>
+          Save crew
+        </ActionButton>
+        <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+          {assignments.length ? (
+            assignments.map((assignment) => (
+              <p key={assignment.id}>
+                {staffById.get(assignment.staff_id)?.full_name || assignment.staff_id}:{' '}
+                <span className="capitalize text-foreground">{assignment.status}</span>
+              </p>
+            ))
+          ) : (
+            <p>No assignment history yet.</p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -301,16 +382,20 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
           )}
         </div>
       ) : (
-        <div className="mb-3 min-w-0 pr-8">
-          <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">
+        <div className="queue-ticket-identity">
+          <p className="queue-ticket-bay-kicker">
             {STATUS_LABELS[ticket.status] || ticket.status}
             {ticket.branch ? ` · ${ticket.branch}` : ''}
           </p>
-          <h2 className="mt-1 text-xl font-semibold tracking-tight text-foreground">
+          <p className="queue-ticket-bay-plate">{ticket.vehicle_plate || 'No plate'}</p>
+          <h2 className="queue-ticket-bay-title">
             {qLabel} · {ticket.customer_name}
           </h2>
-          <p className="mt-1 truncate text-sm text-muted-foreground">
-            {ticket.vehicle_plate || 'No plate'} · {ticket.service_name || 'Service'}
+          <p className="queue-ticket-bay-meta">
+            {ticket.service_name || 'Service'} · {formatMoney(ticket.final_price_minor ?? ticket.base_price_minor)}
+          </p>
+          <p className="queue-ticket-bay-meta">
+            {[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'}
           </p>
         </div>
       )}
@@ -354,77 +439,59 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
         </Panel>
       ) : null}
 
-      <div className="grid gap-3">
+      <div className={variant === 'modal' ? 'queue-ticket-grid' : 'grid gap-3'}>
         {showEditActions ? (
-          <div ref={crewPanelRef} className={variant === 'modal' ? 'order-first' : 'order-1'}>
-            <Panel title="1 · Assign crew" icon={UserPlus}>
-              <p className="mb-3 text-sm text-muted-foreground">
-                {needCrewToStart
-                  ? 'Required before Start Service. Only staff timed in today (present or late). Busy crew stay locked.'
-                  : 'Optional for packages. Only staff timed in today (present or late).'}
-              </p>
-              <div className={`grid gap-4 ${variant === 'modal' ? '' : 'lg:grid-cols-[1fr_280px]'}`}>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {staff.map((member) => {
-                    const active = selectedStaff.includes(member.id)
-                    const busy = Boolean(member.is_busy_today)
-                    return (
-                      <label
-                        key={member.id}
-                        className={`flex min-h-14 items-center justify-between gap-3 rounded-2xl border p-4 transition ${!busy ? 'cursor-pointer' : ''} ${active ? 'border-primary/40 bg-primary/10' : 'border-border bg-muted/20'} ${busy ? 'opacity-55' : ''}`}
-                      >
-                        <span>
-                          <span className="block font-medium text-foreground">{member.full_name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {busy ? 'Busy on another job' : member.branch_slug || 'Timed in'}
-                          </span>
-                        </span>
-                        <input
-                          type="checkbox"
-                          className="size-5 accent-blue-500"
-                          checked={active}
-                          disabled={busy}
-                          onChange={(event) =>
-                            setSelectedStaff((current) =>
-                              event.target.checked ? [...current, member.id] : current.filter((idValue) => idValue !== member.id),
-                            )
-                          }
-                        />
-                      </label>
-                    )
-                  })}
-                  {!staff.length && (
-                    <p className="text-sm text-muted-foreground">
-                      No present crew for this branch. Have staff time in inside the 20m geofence first.
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <ActionButton loading={saving === 'assign'} onClick={() => runAction('assign', () => assignStaff(ticket, selectedStaff))}>
-                    Save crew
-                  </ActionButton>
-                  <div className="mt-4 grid gap-2 text-sm text-muted-foreground">
-                    {assignments.length ? (
-                      assignments.map((assignment) => (
-                        <p key={assignment.id}>
-                          {staffById.get(assignment.staff_id)?.full_name || assignment.staff_id}:{' '}
-                          <span className="capitalize text-foreground">{assignment.status}</span>
-                        </p>
-                      ))
-                    ) : (
-                      <p>No assignment history yet.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Panel>
+          <div ref={crewPanelRef} className={variant === 'modal' ? 'queue-ticket-crew' : 'order-1'}>
+            {variant === 'modal' ? (
+              <details
+                className="queue-ticket-crew-fold rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm"
+                defaultOpen={startBlockedByCrew}
+              >
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 font-semibold text-foreground">
+                  <UserPlus className="text-primary" size={18} aria-hidden />
+                  1 · Assign crew
+                </summary>
+                <p className="mb-3 mt-3 text-sm text-muted-foreground">
+                  {needCrewToStart
+                    ? 'Open this list, tick a present crew member, then Start.'
+                    : 'Optional for packages. Only staff timed in today (present or late).'}
+                </p>
+                <CrewPicker
+                  staff={staff}
+                  selectedStaff={selectedStaff}
+                  setSelectedStaff={setSelectedStaff}
+                  assignments={assignments}
+                  staffById={staffById}
+                  saving={saving}
+                  onSave={() => runAction('assign', () => assignStaff(ticket, selectedStaff))}
+                  compact
+                />
+              </details>
+            ) : (
+              <Panel title="1 · Assign crew" icon={UserPlus}>
+                <p className="mb-3 text-sm text-muted-foreground">
+                  {needCrewToStart
+                    ? 'Required before Start Service. Only staff timed in today (present or late). Busy crew stay locked.'
+                    : 'Optional for packages. Only staff timed in today (present or late).'}
+                </p>
+                <CrewPicker
+                  staff={staff}
+                  selectedStaff={selectedStaff}
+                  setSelectedStaff={setSelectedStaff}
+                  assignments={assignments}
+                  staffById={staffById}
+                  saving={saving}
+                  onSave={() => runAction('assign', () => assignStaff(ticket, selectedStaff))}
+                />
+              </Panel>
+            )}
           </div>
         ) : null}
 
         {showEditActions ? (
-          <div className={variant === 'modal' ? 'floor-actions-sticky order-2' : 'order-2'}>
+          <div className={variant === 'modal' ? 'queue-ticket-actions' : 'order-2'}>
             <Panel title="2 · Status actions" icon={ArrowRight} className={variant === 'modal' ? 'shadow-none' : ''}>
-              <div className="grid gap-2.5">
+              <div className={variant === 'modal' ? 'queue-action-stack' : 'grid gap-2.5'}>
                 <ActionButton
                   disabled={!actions.canStart}
                   loading={saving === 'start'}
@@ -437,43 +504,56 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                     Tick at least one present crew member in Assign crew, then Start.
                   </p>
                 ) : null}
-                <ActionButton
-                  disabled={!actions.canFinalCheck}
-                  loading={saving === 'check'}
-                  onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}
-                >
-                  {finalCheckActionLabel(canOpenPos)}
-                </ActionButton>
-                {canSeePayment ? (
+                <div className={variant === 'modal' ? 'queue-action-secondary' : 'contents'}>
                   <ActionButton
-                    disabled={!actions.canSendToPayment}
-                    loading={saving === 'payment'}
-                    onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}
+                    tone="secondary"
+                    disabled={!actions.canFinalCheck}
+                    loading={saving === 'check'}
+                    onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}
                   >
-                    <Send size={17} aria-hidden />
-                    {sendToPaymentActionLabel(canOpenPos)}
+                    {finalCheckActionLabel(canOpenPos)}
                   </ActionButton>
-                ) : null}
-                {showRedoBtn ? (
-                  <ActionButton disabled={!actions.canMarkRedo} loading={saving === 'redo'} onClick={() => runAction('redo', runRedo)}>
-                    <ShieldAlert size={17} aria-hidden />
-                    Mark redo
-                  </ActionButton>
-                ) : null}
-                {showFailedQa && actions.canMarkFailedQa ? (
-                  <ActionButton loading={saving === 'failqa'} onClick={() => runAction('failqa', () => {
-                    const reason = window.prompt('Failed QA reason (visible in audit):', '')
-                    if (reason === null) return Promise.resolve()
-                    return markTicketRedo(ticket, reason || 'Failed QA')
-                  })}>
-                    <Undo2 size={17} aria-hidden />
-                    Failed QA
-                  </ActionButton>
-                ) : null}
+                  {canSeePayment ? (
+                    <ActionButton
+                      tone="secondary"
+                      disabled={!actions.canSendToPayment}
+                      loading={saving === 'payment'}
+                      onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}
+                    >
+                      <Send size={17} aria-hidden />
+                      {sendToPaymentActionLabel(canOpenPos)}
+                    </ActionButton>
+                  ) : null}
+                  {showRedoBtn ? (
+                    <ActionButton
+                      tone="secondary"
+                      disabled={!actions.canMarkRedo}
+                      loading={saving === 'redo'}
+                      onClick={() => runAction('redo', runRedo)}
+                    >
+                      <ShieldAlert size={17} aria-hidden />
+                      Mark redo
+                    </ActionButton>
+                  ) : null}
+                  {showFailedQa && actions.canMarkFailedQa ? (
+                    <ActionButton
+                      tone="secondary"
+                      loading={saving === 'failqa'}
+                      onClick={() => runAction('failqa', () => {
+                        const reason = window.prompt('Failed QA reason (visible in audit):', '')
+                        if (reason === null) return Promise.resolve()
+                        return markTicketRedo(ticket, reason || 'Failed QA')
+                      })}
+                    >
+                      <Undo2 size={17} aria-hidden />
+                      Failed QA
+                    </ActionButton>
+                  ) : null}
+                </div>
                 {actions.canCancel ? (
                   <button
                     type="button"
-                    className="floor-touch-btn inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 px-5 py-3 font-semibold text-destructive transition disabled:opacity-40"
+                    className="floor-touch-btn inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 px-5 py-3 font-semibold text-destructive transition disabled:opacity-40 active:scale-[0.98]"
                     disabled={saving === 'cancel'}
                     onClick={() => setCancelOpen(true)}
                   >
@@ -494,18 +574,32 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
           </div>
         ) : null}
 
-        <Panel title="Ticket details" icon={CarFront} className="order-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Info label="Customer" value={ticket.customer_name} />
-            <Info label="Contact" value={ticket.customer_phone || 'No contact'} />
-            <Info label="Plate" value={ticket.vehicle_plate || 'No plate'} />
-            <Info label="Vehicle" value={[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ')} />
-            <Info label="Service" value={ticket.service_name || 'Service'} />
-            <Info label="Price" value={formatMoney(ticket.final_price_minor ?? ticket.base_price_minor)} />
-            <Info label="Created" value={new Date(ticket.created_at).toLocaleString()} />
-            <Info label="Notes" value={ticket.notes || 'No internal notes'} />
-            {ticket.redo_reason && <Info label="Redo reason" value={ticket.redo_reason} />}
-          </div>
+        <Panel title="Ticket details" icon={CarFront} className={variant === 'modal' ? 'queue-ticket-identity-details' : 'order-3'}>
+          {variant === 'modal' ? (
+            <dl className="queue-ticket-facts">
+              <Fact label="Customer" value={ticket.customer_name} />
+              <Fact label="Contact" value={ticket.customer_phone || 'No contact'} />
+              <Fact label="Plate" value={ticket.vehicle_plate || 'No plate'} />
+              <Fact label="Vehicle" value={[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ')} />
+              <Fact label="Service" value={ticket.service_name || 'Service'} />
+              <Fact label="Price" value={formatMoney(ticket.final_price_minor ?? ticket.base_price_minor)} />
+              <Fact label="Created" value={new Date(ticket.created_at).toLocaleString()} />
+              <Fact label="Notes" value={ticket.notes || 'No internal notes'} />
+              {ticket.redo_reason ? <Fact label="Redo reason" value={ticket.redo_reason} /> : null}
+            </dl>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Info label="Customer" value={ticket.customer_name} />
+              <Info label="Contact" value={ticket.customer_phone || 'No contact'} />
+              <Info label="Plate" value={ticket.vehicle_plate || 'No plate'} />
+              <Info label="Vehicle" value={[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ')} />
+              <Info label="Service" value={ticket.service_name || 'Service'} />
+              <Info label="Price" value={formatMoney(ticket.final_price_minor ?? ticket.base_price_minor)} />
+              <Info label="Created" value={new Date(ticket.created_at).toLocaleString()} />
+              <Info label="Notes" value={ticket.notes || 'No internal notes'} />
+              {ticket.redo_reason && <Info label="Redo reason" value={ticket.redo_reason} />}
+            </div>
+          )}
           {showEditActions && canEditServicePrice ? (
             <div className="mt-4 grid gap-3 rounded-2xl border border-border bg-muted/20 p-3 sm:grid-cols-[1fr_auto] sm:items-end">
               <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
@@ -546,7 +640,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
           )}
         </Panel>
 
-        <Panel title="Services on this visit" icon={Layers} className="order-4">
+        <Panel title="Services on this visit" icon={Layers} className={variant === 'modal' ? 'queue-ticket-services' : 'order-4'}>
           <p className="mb-3 text-sm text-muted-foreground">
             Line items billed for this car today.
             {canEditServicePrice
@@ -615,7 +709,11 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
 
         {showEditActions && canEditServicePrice ? (
           <details
-            className="order-5 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-5"
+            className={
+              variant === 'modal'
+                ? 'queue-ticket-price rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-5'
+                : 'order-5 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-5'
+            }
             open={priceOpen}
             onToggle={(event) => setPriceOpen(event.currentTarget.open)}
           >

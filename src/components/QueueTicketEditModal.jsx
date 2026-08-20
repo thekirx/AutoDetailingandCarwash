@@ -12,7 +12,7 @@ export default function QueueTicketEditModal({ bookingId, open, onOpenChange, on
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="queue-ticket-dialog flex max-h-[min(92dvh,920px)] w-full max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+        className="queue-ticket-dialog flex max-h-[min(92dvh,920px)] w-full max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
         showCloseButton
       >
         <DialogHeader className="sr-only">

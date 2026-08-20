@@ -93,6 +93,14 @@ function provisionApiPlugin() {
         const { handleNotifyOpsFormRequest } = await import('./server/notifyOpsFormApi.mjs')
         return handleNotifyOpsFormRequest(req, res)
       })
+      mount('/api/notify-planner', async (req, res) => {
+        const { handleNotifyPlannerRequest } = await import('./server/notifyPlannerApi.mjs')
+        return handleNotifyPlannerRequest(req, res)
+      })
+      mount('/api/notify-pos', async (req, res) => {
+        const { handleNotifyPosRequest } = await import('./server/notifyPosApi.mjs')
+        return handleNotifyPosRequest(req, res)
+      })
       mount('/api/lifecycle-sms', async (req, res) => {
         const { handleLifecycleSmsRequest } = await import('./server/lifecycleSmsApi.mjs')
         return handleLifecycleSmsRequest(req, res)

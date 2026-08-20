@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { getLocalCalendarDate, OPS_TIME_ZONE } from '../src/lib/localCalendarDate.js'
+import { getLocalCalendarDate, OPS_TIME_ZONE, isoToDatetimeLocalValue, datetimeLocalToIso } from '../src/lib/localCalendarDate.js'
 
 describe('local calendar date (ops attendance)', () => {
   it('exports Asia/Manila as ops zone', () => {
@@ -23,5 +23,12 @@ describe('local calendar date (ops attendance)', () => {
     const d = new Date('2026-07-27T16:30:00.000Z')
     assert.notEqual(getLocalCalendarDate(d), d.toISOString().slice(0, 10))
     assert.equal(getLocalCalendarDate(d), '2026-07-28')
+  })
+
+  it('maps planner due_at to Manila datetime-local, not a UTC slice', () => {
+    assert.equal(isoToDatetimeLocalValue('2026-08-18T02:00:00.000Z'), '2026-08-18T10:00')
+    assert.equal(datetimeLocalToIso('2026-08-18T10:00'), '2026-08-18T02:00:00.000Z')
+    assert.equal(datetimeLocalToIso(''), null)
+    assert.notEqual(isoToDatetimeLocalValue('2026-08-18T02:00:00.000Z'), String('2026-08-18T02:00:00.000Z').slice(0, 16))
   })
 })

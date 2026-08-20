@@ -34,10 +34,11 @@ export function allowedStaffAssignmentPatch(current, next) {
 }
 
 /**
- * @param {{ status?: string, card_id?: string, staff_id?: string }} current
- * @param {{ status?: string, card_id?: string, staff_id?: string }} next
+ * @param {{ status?: string, card_id?: string, staff_id?: string, proof_url?: string, proof_required?: boolean }} current
+ * @param {{ status?: string, card_id?: string, staff_id?: string, proof_url?: string, proof_note?: string }} next
+ * @param {{ proofRequired?: boolean }} [opts]
  */
-export function allowedStaffPlanAssigneePatch(current, next) {
+export function allowedStaffPlanAssigneePatch(current, next, opts = {}) {
   if (!current || !next) return null
   if (next.card_id != null && next.card_id !== current.card_id) return null
   if (next.staff_id != null && next.staff_id !== current.staff_id) return null
@@ -45,11 +46,22 @@ export function allowedStaffPlanAssigneePatch(current, next) {
   const from = String(current.status || '')
   const to = String(next.status || '')
   if (!PLAN_TRANSITIONS[from]?.has(to)) return null
+
+  const proofRequired = Boolean(opts.proofRequired ?? current.proof_required)
+  const proofUrl = next.proof_url || current.proof_url || null
+  if ((to === 'for_review' || to === 'done') && proofRequired && !String(proofUrl || '').trim()) {
+    return null
+  }
+
   const patch = { status: to, updated_at: new Date().toISOString() }
   if (to === 'for_review') {
-    patch.proof_url = next.proof_url ?? null
+    patch.proof_url = proofUrl
     patch.proof_note = next.proof_note ?? null
     patch.proof_submitted_at = new Date().toISOString()
+  }
+  if (to === 'done' && proofRequired) {
+    patch.proof_url = proofUrl
+    if (next.proof_note != null) patch.proof_note = next.proof_note
   }
   return patch
 }

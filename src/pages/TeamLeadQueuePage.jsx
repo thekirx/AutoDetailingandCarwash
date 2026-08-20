@@ -280,7 +280,7 @@ export default function TeamLeadQueuePage() {
   useEffect(() => {
     const channel = supabase
       .channel(`tl-queue-manager-${branch}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `branch=eq.${branch}` }, scheduleReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_assignments' }, scheduleReload)
       .subscribe()
     return () => {

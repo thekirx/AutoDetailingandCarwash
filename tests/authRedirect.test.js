@@ -24,6 +24,8 @@ describe('resolvePostLoginPath', () => {
     assert.equal(opsRouteKeyFromPath('/operations/queue/new'), 'queue-new')
     assert.equal(opsRouteKeyFromPath('/operations/queue/abc'), 'queue')
     assert.equal(opsRouteKeyFromPath('/operations/settings'), 'settings')
+    assert.equal(opsRouteKeyFromPath('/operations/payroll'), 'payroll')
+    assert.equal(opsRouteKeyFromPath('/operations/my-pay'), 'my-pay')
     assert.equal(opsRouteKeyFromPath('/operations/access-denied'), null)
   })
 

@@ -1,0 +1,273 @@
+-- One paid sale per queue handoff. Void existing double-pays, then lock in RPC.
+
+alter table public.sales drop constraint if exists sales_status_check;
+alter table public.sales add constraint sales_status_check
+  check (status = any (array['pending'::text, 'paid'::text, 'cancelled'::text, 'refunded'::text, 'voided'::text]));
+
+-- Keep the earliest paid row; later clicks become voided (dropped from Finance paid totals).
+update public.sales s
+set status = 'voided',
+    notes = trim(both ' · ' from coalesce(s.notes, '') || ' · voided duplicate handoff pay'),
+    updated_at = clock_timestamp()
+where s.id in (
+  select id from (
+    select s2.id,
+      row_number() over (
+        partition by s2.pos_handoff_id
+        order by s2.occurred_at nulls last, s2.created_at, s2.id
+      ) as rn
+    from public.sales s2
+    where s2.status = 'paid'
+      and s2.pos_handoff_id is not null
+  ) ranked
+  where ranked.rn > 1
+);
+
+update public.transactions t
+set status = 'completed', updated_at = clock_timestamp()
+from public.pos_handoffs h
+where t.pos_handoff_id = h.id
+  and h.status = 'completed'
+  and t.status = 'pending_payment';
+
+create unique index if not exists sales_pos_handoff_paid_uidx
+  on public.sales (pos_handoff_id)
+  where status = 'paid' and pos_handoff_id is not null;
+
+create or replace function public.complete_pos_sale(payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  caller uuid := auth.uid();
+  caller_role text;
+  v_branch text := payload->>'branch';
+  v_customer uuid := nullif(payload->>'customer_id', '')::uuid;
+  v_booking uuid := nullif(payload->>'booking_id', '')::uuid;
+  v_handoff uuid := nullif(payload->>'pos_handoff_id', '')::uuid;
+  v_method text := coalesce(payload->>'payment_method', 'cash');
+  v_status text := coalesce(payload->>'status', 'paid');
+  v_notes text := nullif(trim(coalesce(payload->>'notes', '')), '');
+  line jsonb;
+  sale_id uuid;
+  subtotal integer := 0;
+  service_total integer := 0;
+  line_total integer;
+  qty integer;
+  unit integer;
+  prod_id uuid;
+  svc_id uuid;
+  item_name text;
+  loyalty_delta integer := 0;
+  stamps_awarded integer := 0;
+  line_stamps integer;
+  multiplier numeric := 1;
+  settings public.loyalty_program_settings%rowtype;
+  skip_loyalty boolean;
+  sib record;
+  completed_booking_count integer := 0;
+  v_handoff_status text;
+begin
+  if caller is null then
+    raise exception 'Authentication required';
+  end if;
+
+  caller_role := public.current_user_role();
+  if caller_role not in ('admin', 'BossMich', 'assistant_super_admin') then
+    raise exception using errcode = '42501',
+      message = 'Only Super Admin, Assistant Super Admin, or Admin may run POS sales';
+  end if;
+
+  if caller_role = 'assistant_super_admin' and not public.asa_has_grant('pos') then
+    raise exception using errcode = '42501', message = 'POS checkout grant required';
+  end if;
+
+  if caller_role is distinct from 'BossMich'
+     and not public.user_has_branch_access(v_branch) then
+    raise exception using errcode = '42501',
+      message = 'POS sales are limited to your assigned branch(es)';
+  end if;
+
+  if v_branch is null or not exists (
+    select 1 from public.branches b where b.slug = v_branch and b.is_active and not b.is_archived
+  ) then
+    raise exception 'Invalid branch';
+  end if;
+  if v_status not in ('pending', 'paid') then
+    raise exception 'Invalid sale status';
+  end if;
+  if jsonb_typeof(payload->'lines') is distinct from 'array' or jsonb_array_length(payload->'lines') < 1 then
+    raise exception 'At least one line item is required';
+  end if;
+
+  if v_handoff is not null then
+    select ph.status into v_handoff_status
+    from public.pos_handoffs ph
+    where ph.id = v_handoff
+    for update;
+    if not found then
+      raise exception 'POS handoff not found';
+    end if;
+    if v_handoff_status = 'completed'
+       or exists (
+         select 1 from public.sales s
+         where s.pos_handoff_id = v_handoff and s.status = 'paid'
+       ) then
+      raise exception 'This ticket is already paid';
+    end if;
+  end if;
+
+  select * into settings from public.loyalty_program_settings where id = 1;
+
+  insert into public.sales (
+    branch, customer_id, booking_id, pos_handoff_id, status, payment_method,
+    subtotal_minor, total_minor, notes, recorded_by
+  ) values (
+    v_branch, v_customer, v_booking, v_handoff, v_status, v_method, 0, 0, v_notes, caller
+  ) returning id into sale_id;
+
+  for line in select * from jsonb_array_elements(payload->'lines')
+  loop
+    qty := greatest(coalesce((line->>'quantity')::int, 1), 1);
+    unit := coalesce((line->>'unit_price_minor')::int, 0);
+    line_total := qty * unit;
+    subtotal := subtotal + line_total;
+    item_name := coalesce(line->>'name', 'Item');
+    skip_loyalty := coalesce((line->>'is_loyalty_award')::boolean, false)
+      or coalesce((line->>'is_membership_included')::boolean, false);
+
+    if line->>'item_type' = 'product' then
+      prod_id := (line->>'product_id')::uuid;
+      update public.products p
+      set stock_qty = p.stock_qty - qty, updated_at = clock_timestamp()
+      where p.id = prod_id and p.stock_qty >= qty and p.is_active and not p.is_archived;
+      if not found then
+        raise exception 'Insufficient stock for product %', prod_id;
+      end if;
+      insert into public.product_stock_movements (product_id, delta, reason, sale_id, created_by)
+      values (prod_id, -qty, 'pos_sale', sale_id, caller);
+      insert into public.sale_line_items (
+        sale_id, item_type, product_id, name, quantity, unit_price_minor, line_total_minor
+      ) values (sale_id, 'product', prod_id, item_name, qty, unit, line_total);
+    elsif line->>'item_type' = 'service' then
+      svc_id := nullif(line->>'service_id', '')::uuid;
+      if svc_id is null then
+        raise exception 'service_id is required for service lines';
+      end if;
+      service_total := service_total + line_total;
+      insert into public.sale_line_items (
+        sale_id, item_type, service_id, name, quantity, unit_price_minor, line_total_minor
+      ) values (sale_id, 'service', svc_id, item_name, qty, unit, line_total);
+      if v_status = 'paid' and v_customer is not null and not skip_loyalty
+         and coalesce(settings.stamps_enabled, true) then
+        line_stamps := public.award_loyalty_stamps(v_customer, svc_id, qty);
+        stamps_awarded := stamps_awarded + coalesce(line_stamps, 0);
+      end if;
+    else
+      raise exception 'Invalid item_type';
+    end if;
+  end loop;
+
+  update public.sales
+  set subtotal_minor = subtotal, total_minor = subtotal, updated_at = clock_timestamp()
+  where id = sale_id;
+
+  if v_status = 'paid' and v_customer is not null and service_total > 0
+     and coalesce(settings.points_enabled, true) then
+    multiplier := 1;
+    if coalesce(settings.memberships_enabled, true) then
+      select coalesce(mt.loyalty_multiplier, 1) into multiplier
+      from public.customer_memberships cm
+      join public.membership_tiers mt on mt.id = cm.tier_id
+      where cm.customer_id = v_customer
+        and cm.is_active
+        and mt.is_active
+        and (cm.ends_at is null or cm.ends_at >= (timezone('Asia/Manila', now()))::date)
+      order by cm.created_at desc
+      limit 1;
+    end if;
+
+    loyalty_delta := greatest(floor((service_total / 100.0) * coalesce(multiplier, 1))::int, 0);
+    if loyalty_delta > 0 then
+      insert into public.loyalty_ledger (customer_id, delta, reason, sale_id)
+      values (v_customer, loyalty_delta, 'service_sale', sale_id);
+      update public.customers
+      set loyalty_points = loyalty_points + loyalty_delta, updated_at = clock_timestamp()
+      where id = v_customer;
+    end if;
+  end if;
+
+  if v_handoff is not null and v_status = 'paid' then
+    update public.pos_handoffs
+    set status = 'completed', completed_at = clock_timestamp(), updated_at = clock_timestamp()
+    where id = v_handoff;
+    update public.transactions t
+    set status = 'completed', updated_at = clock_timestamp()
+    where t.status = 'pending_payment'
+      and (
+        t.pos_handoff_id = v_handoff
+        or (v_booking is not null and t.booking_id = v_booking)
+      );
+  end if;
+
+  if v_booking is not null and v_status = 'paid' then
+    update public.bookings
+    set status = 'completed', completed_at = coalesce(completed_at, clock_timestamp()), updated_at = clock_timestamp()
+    where id = v_booking;
+    completed_booking_count := 1;
+
+    for sib in
+      select b.id, b.customer_id, b.service_id
+      from public.bookings b
+      where b.visit_group_id is not null
+        and b.visit_group_id = (select vb.visit_group_id from public.bookings vb where vb.id = v_booking)
+        and b.id <> v_booking
+        and not coalesce(b.is_archived, false)
+        and b.status::text in ('waiting', 'in_progress', 'final_checking', 'for_payment')
+    loop
+      update public.bookings
+      set status = 'completed', completed_at = coalesce(completed_at, clock_timestamp()), updated_at = clock_timestamp()
+      where id = sib.id;
+      completed_booking_count := completed_booking_count + 1;
+
+      if v_status = 'paid' and sib.customer_id is not null and sib.service_id is not null
+         and coalesce(settings.stamps_enabled, true) then
+        line_stamps := public.award_loyalty_stamps(sib.customer_id, sib.service_id, 1);
+        stamps_awarded := stamps_awarded + coalesce(line_stamps, 0);
+      end if;
+    end loop;
+  end if;
+
+  insert into public.audit_logs (actor_id, actor_role, action, entity_type, entity_id, summary, meta)
+  values (
+    caller,
+    caller_role,
+    'pos.sale',
+    'sale',
+    sale_id::text,
+    format('POS sale · %s · %s', coalesce(v_branch, '?'), coalesce(v_method, 'cash')),
+    jsonb_build_object(
+      'branch', v_branch,
+      'total_minor', subtotal,
+      'payment_method', v_method,
+      'status', v_status,
+      'pos_handoff_id', v_handoff,
+      'booking_id', v_booking,
+      'completed_booking_count', completed_booking_count
+    )
+  );
+
+  return jsonb_build_object(
+    'sale_id', sale_id,
+    'total_minor', subtotal,
+    'loyalty_awarded', coalesce(loyalty_delta, 0),
+    'stamps_awarded', coalesce(stamps_awarded, 0),
+    'completed_booking_count', completed_booking_count
+  );
+end;
+$$;
+
+revoke all on function public.complete_pos_sale(jsonb) from public, anon;
+grant execute on function public.complete_pos_sale(jsonb) to authenticated;

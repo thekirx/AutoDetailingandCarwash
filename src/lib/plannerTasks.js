@@ -1,5 +1,7 @@
 /** Task list filters + flatten. Interface for Planner Tasks / Review. */
 
+import { getLocalCalendarDate } from './localCalendarDate.js'
+
 export function flattenPlannerCards(board) {
   const lists = [...(board?.plan_lists || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
   const rows = []
@@ -24,19 +26,8 @@ function assigneeStatus(card) {
   return 'todo'
 }
 
-function listBucket(title) {
-  const t = String(title || '').toLowerCase()
-  if (/done|complete/.test(t)) return 'done'
-  if (/progress|doing|active/.test(t)) return 'in_progress'
-  return 'upcoming'
-}
-
 function isAll(value) {
   return !value || value === 'all' || value === 'any'
-}
-
-function sameDay(a, b) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
 
 export function filterPlannerCards(cards, filters = {}) {
@@ -45,6 +36,7 @@ export function filterPlannerCards(cards, filters = {}) {
   const categoryId = filters.categoryId || 'all'
   const assigneeId = filters.assigneeId || 'all'
   const due = filters.due || 'all'
+  const listId = filters.listId || 'all'
   const assignedOnly = Boolean(filters.assignedOnly)
   const viewerId = filters.viewerId || filters.staffId || ''
   const now = filters.now ? new Date(filters.now) : new Date()
@@ -64,26 +56,20 @@ export function filterPlannerCards(cards, filters = {}) {
         if (card.category_id) return false
       } else if (String(card.category_id || '') !== categoryId) return false
     }
+    if (!isAll(listId) && String(card.list_id || '') !== listId) return false
     if (!isAll(assigneeId)) {
       const rows = card.plan_card_assignees || []
       if (assigneeId === 'unassigned') {
         if (rows.length) return false
       } else if (!rows.some((a) => a.staff_id === assigneeId)) return false
     }
-    if (!isAll(status)) {
-      const st = assigneeStatus(card)
-      if (status === 'todo' || status === 'for_review') {
-        if (st !== status) return false
-      } else if (status === 'upcoming' || status === 'in_progress' || status === 'done') {
-        if (listBucket(card.list_title) !== status && st !== status) return false
-      }
-    }
+    if (!isAll(status) && assigneeStatus(card) !== status) return false
     if (due === 'none' && card.due_at) return false
     if (due === 'overdue') {
       if (!card.due_at || new Date(card.due_at) >= now) return false
     }
     if (due === 'today') {
-      if (!card.due_at || !sameDay(new Date(card.due_at), now)) return false
+      if (!card.due_at || getLocalCalendarDate(card.due_at) !== getLocalCalendarDate(now)) return false
     }
     if (due === 'week') {
       if (!card.due_at) return false
@@ -168,4 +154,29 @@ export function allowedReviewAssigneePatch(current, action) {
     return { status: 'in_progress', reviewed_at: null }
   }
   return null
+}
+
+export function toggleStaffId(ids, staffId) {
+  const id = String(staffId || '')
+  if (!id) return [...(ids || [])].filter(Boolean)
+  const next = new Set((ids || []).filter(Boolean).map(String))
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  return [...next]
+}
+
+export function buildPlannerAssignNotify({ title, cardId } = {}) {
+  const name = String(title || '').trim() || 'Planner task'
+  return {
+    kind: 'planner_task',
+    title: 'Planner task assigned',
+    body: name,
+    url: '/operations/my-tasks',
+    tag: cardId ? `plan-card:${cardId}` : 'plan-card',
+  }
+}
+
+export function hasPlannerProof(proofUrl, file) {
+  if (file) return true
+  return Boolean(String(proofUrl || '').trim())
 }

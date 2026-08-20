@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { AttendanceHeatmap } from '@/components/ui/attendance-heatmap'
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { canEditAttendanceRoles, canEditAttendanceSettings, canOverrideAttendance, getBranchScopeList, isSuperAdmin } from '@/auth/permissions'
+import { canEditAttendanceRoles, canEditAttendanceSettings, canOverrideAttendance, canViewOwnPay, getBranchScopeList, isSuperAdmin } from '@/auth/permissions'
 import {
   ATTENDANCE_ROLE_OPTIONS,
   DEFAULT_ATTENDANCE_ROLES,
@@ -19,6 +20,7 @@ import {
   isoToLocalHhmm,
   shiftTimeToLabel,
 } from '@/lib/attendanceGeo'
+import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
 import {
@@ -33,9 +35,14 @@ import {
   resetAttendanceRoleSettings,
   updateAttendanceRoleSettings,
 } from '@/queue/attendanceApi'
-import { fetchBranches } from '@/queue/queueApi'
+import { fetchBranches, formatMoney } from '@/queue/queueApi'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { attendanceRowsToCsv, downloadTextFile } from '@/lib/attendanceExport'
+import {
+  buildCompensationPostPlan,
+  normalizeCompensationSettings,
+} from '@/lib/compensation'
+import { collectPaged } from '@/lib/crmInsights'
 
 /** Client page size — swap load() to server range when row volume needs it. */
 const ATTENDANCE_PAGE_SIZE = 25
@@ -85,6 +92,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   const [showHeatmap, setShowHeatmap] = useState(true)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(ATTENDANCE_PAGE_SIZE)
+  const [myPayMinor, setMyPayMinor] = useState(null)
   const canOverride = canOverrideAttendance(profile)
   const scope = getBranchScopeList(profile)
 
@@ -96,16 +104,53 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
       setStaff(staffRows)
       setAttendance(attRows)
       setDates(range.dates)
-      if (profile?.id) {
+      if (canViewOwnPay(profile) && profile?.id) {
         const today = getLocalCalendarDate()
         setMyToday(attRows.find((r) => r.staff_id === profile.id && r.attendance_date === today) || null)
+        const startIso = `${today}T00:00:00+08:00`
+        const endIso = `${today}T23:59:59.999+08:00`
+        const [sales, rulesRes] = await Promise.all([
+          collectPaged(async (from, to) => {
+            const { data, error } = await supabase
+              .from('sales')
+              .select('id, branch, total_minor, sale_line_items(line_total_minor, services(pay_category))')
+              .eq('status', 'paid')
+              .eq('branch', branchSlug)
+              .gte('occurred_at', startIso)
+              .lte('occurred_at', endIso)
+              .order('occurred_at', { ascending: false })
+              .range(from, to)
+            if (error) throw error
+            return data || []
+          }, 1000),
+          supabase.from('compensation_settings').select('wash_pool_pct').eq('id', 1).maybeSingle(),
+        ])
+        const roster = staffRows.map((member) => {
+          const rec = attRows.find((r) => r.staff_id === member.id && r.attendance_date === today)
+          return {
+            ...member,
+            attendance_status: rec?.status,
+            branch_slug: member.branch_slug || branchSlug,
+          }
+        })
+        const plan = buildCompensationPostPlan({
+          date: today,
+          salesRows: sales,
+          roster,
+          poolPct: normalizeCompensationSettings(rulesRes.data).wash_pool_pct,
+          branchFilter: branchSlug,
+        })
+        const mine = plan.rows.find((row) => row.id === profile.id || row.staff_id === profile.id)
+        setMyPayMinor(mine ? mine.pay_minor : null)
+      } else {
+        setMyPayMinor(null)
       }
     } catch (err) {
       toast.error(err.message)
     } finally {
       setLoading(false)
     }
-  }, [branchSlug, period, profile?.id])
+  }, [branchSlug, period, profile?.id, profile])
 
   useEffect(() => {
     fetchBranches()
@@ -121,6 +166,10 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
       .catch((err) => toast.error(err.message))
   }, [profile?.branch_slug, scope])
 
+  const loadRef = useRef(load)
+  loadRef.current = load
+  const scheduleReload = useMemo(() => createCoalescedReload(() => loadRef.current(), 400), [])
+
   useEffect(() => {
     load()
   }, [load])
@@ -128,13 +177,14 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   useEffect(() => {
     if (!branchSlug) return undefined
     const channel = supabase
-      .channel(`attendance-table:${branchSlug}:${crypto.randomUUID()}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_attendance' }, () => load())
+      .channel(`attendance-table:${branchSlug}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_attendance' }, scheduleReload)
       .subscribe()
     return () => {
+      scheduleReload.cancel()
       supabase.removeChannel(channel)
     }
-  }, [branchSlug, load])
+  }, [branchSlug, scheduleReload])
 
   const matrix = useMemo(() => buildAttendanceHeatmap(staff, attendance, dates), [staff, attendance, dates])
   const tableRows = useMemo(() => buildAttendanceTableRows(staff, attendance, dates), [staff, attendance, dates])
@@ -178,8 +228,12 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
     try {
       const coords = await readBrowserPosition()
       if (kind === 'in') {
-        const res = await geoTimeIn({ profile, coords })
-        toast.success(`Timed in (${res.status}) · ${res.distanceM}m from branch`)
+        const res = await geoTimeIn({ profile, coords, branchSlug })
+        toast.success(
+          profile?.geofence_enabled === false
+            ? `Timed in (${res.status})`
+            : `Timed in (${res.status}) · ${res.distanceM}m from branch`,
+        )
       } else {
         await geoTimeOut({ profile, coords })
         toast.success('Timed out')
@@ -253,6 +307,17 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                 {myToday.checked_out_at ? ` · out ${fmtTime(myToday.checked_out_at)}` : ''}
               </p>
             )}
+            {canViewOwnPay(profile) && myPayMinor != null ? (
+              <p className="mt-2 text-sm text-foreground">
+                <span className="font-semibold">Your pay</span>
+                {' · '}
+                wash pool estimate {formatMoney(myPayMinor)}
+                {' · '}
+                <Link className="text-primary underline-offset-4 hover:underline" to="/operations/my-pay">
+                  Posted payouts
+                </Link>
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" className="min-h-11" disabled={!!busy} onClick={() => runGeo('in')}>

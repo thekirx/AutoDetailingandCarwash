@@ -136,8 +136,8 @@ export default function ProductsManagePage({ embedded = false }) {
               Same product name shares stock automatically (stock group). Distinct SKU allowed for variants.
             </p>
           </div>
-          <Link to="/operations/pos?tab=merch" className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
-            Open POS merch
+          <Link to="/operations/pos" className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
+            Open POS
           </Link>
         </div>
       ) : (

@@ -230,8 +230,8 @@ describe('exports', () => {
 })
 
 describe('branchScopeList', () => {
-  it('super_admin sees all branches', () => {
-    assert.equal(branchScopeList({ role: 'super_admin' }), null)
+  it('BossMich sees all branches even with a home slug', () => {
+    assert.equal(branchScopeList({ role: 'BossMich', branch_slug: 'bacoor' }), null)
   })
 
   it('admin with one branch slug is scoped to that branch', () => {
@@ -245,9 +245,12 @@ describe('branchScopeList', () => {
     )
   })
 
-  it('assistant_super_admin with branches_all grant sees all', () => {
+  it('assistant_super_admin with permission_grants.branches_all sees all', () => {
     assert.equal(
-      branchScopeList({ role: 'assistant_super_admin', grants: ['branches_all'] }),
+      branchScopeList({
+        role: 'assistant_super_admin',
+        permission_grants: { branches_all: true },
+      }),
       null,
     )
   })

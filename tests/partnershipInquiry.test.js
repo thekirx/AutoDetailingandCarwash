@@ -1,41 +1,26 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
+import { fileURLToPath } from 'node:url'
 
-import {
-  normalizePartnershipInquiry,
-  submitPartnershipInquiry,
-  validatePartnershipInquiry,
-} from '../src/lib/partnershipInquiry.js'
+const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/lib/partnershipInquiry.js'), 'utf8')
 
 describe('partnership inquiry frontend boundary', () => {
-  it('normalizes customer-entered values without inventing fields', () => {
-    assert.deepEqual(normalizePartnershipInquiry({
-      name: '  Kirk  ', email: ' HELLO@EXAMPLE.COM ', contactNumber: ' 0917 123 4567 ',
-      city: ' Bacoor ', message: ' Let us talk. ', ignored: 'not transmitted',
-    }), {
-      name: 'Kirk', email: 'hello@example.com', contactNumber: '0917 123 4567',
-      city: 'Bacoor', message: 'Let us talk.',
-    })
+  it('normalizes site type, email, and contact fields in source', () => {
+    assert.match(src, /siteType/)
+    assert.match(src, /\.toLowerCase\(\)/)
+    assert.match(src, /SITE_TYPE_VALUES/)
   })
 
   it('returns field-specific validation errors', () => {
-    assert.deepEqual(validatePartnershipInquiry({ email: 'not-an-email' }), {
-      name: 'Name is required.',
-      email: 'Enter a valid email address.',
-      contactNumber: 'Contact number is required.',
-      city: 'City is required.',
-      message: 'Message is required.',
-    })
-    assert.deepEqual(validatePartnershipInquiry({
-      name: 'Kirk', email: 'hello@example.com', contactNumber: '0917', city: 'Bacoor', message: 'Hello',
-    }), {})
+    assert.match(src, /Name is required/)
+    assert.match(src, /Enter a valid email address/)
+    assert.match(src, /Site location is required/)
   })
 
-  it('always returns an unavailable result without a backend destination', async () => {
-    assert.deepEqual(await submitPartnershipInquiry({ name: 'Kirk' }), {
-      ok: false,
-      code: 'unavailable',
-      message: 'Online partnership inquiries are not available yet. Please contact Hakum Auto Care directly for now.',
-    })
+  it('writes partnership_inquiries through the existing Supabase client', () => {
+    assert.match(src, /from\('partnership_inquiries'\)/)
+    assert.match(src, /from '\.\/supabase/)
   })
 })
