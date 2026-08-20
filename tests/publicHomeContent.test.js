@@ -85,12 +85,12 @@ describe('Public homepage content assets', () => {
       'media-gallery',
       'latest-post',
       'events',
-      /* Partnership is a B2B ask, so it sits after the booking path rather than
-         interrupting the visitor between the gallery and the queue/branch CTAs. */
       'queue',
       'branches',
-      'partnership',
     ])
+    /* Partnership moved to its own page at /partnerships — a B2B ask with its
+       own audience, kept out of the path of a visitor who came to book a wash.
+       publicHomeContent.test.mjs guards its absence. */
     assert.equal(ppfInformation.eyebrow, 'Paint Protection Film')
     assert.deepEqual(ppfInformation.title.split('\n'), [
       'Between your paint',
