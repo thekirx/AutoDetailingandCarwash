@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { ArrowRight, ShieldCheck, Sparkles, Waves } from 'lucide-react'
+import { ArrowRight, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { CeramicSection } from '../components/public/home/HomeServiceSections'
 
 const PPFVisualizer = lazy(() => import('../components/PPFVisualizer'))
 import { usePublicBranches, branchLabel } from '../lib/branches'
@@ -54,30 +55,23 @@ export function PackagesPage() {
   return (
     <>
       <PageHero
-        eyebrow="Protection packages · Marketing overview"
+        eyebrow="Protection packages"
         title={
           <>
-            Shine beyond limits.
+            Shield beyond
             <br />
-            <i>Shield beyond compare.</i>
+            <i>compare.</i>
           </>
         }
         copy="Long-term ceramic gloss and precision-fit PPF, built around how much protection your vehicle needs. Confirm availability and pricing when you book."
       />
-      <section className="package-section">
-        <p className="public-shell mb-4 text-sm text-slate-500">Marketing packages — live options are selected during booking.</p>
-        <div className="public-shell package-columns">
-          <Package title="Ceramic coating" icon={Waves} plans={['Essential gloss', 'Signature ceramic', 'Ultimate ceramic']} />
-          <Package title="Paint protection film" icon={ShieldCheck} plans={['Essential front', 'Signature full front', 'Ultimate full body']} />
-        </div>
-      </section>
+      <CeramicSection />
       <Suspense fallback={null}>
         <PPFVisualizer />
       </Suspense>
     </>
   )
 }
-function Package({title,icon:Icon,plans}){return <article className="package-card"><Icon/><p className="eyebrow">Protection system</p><h2>{title}</h2>{plans.map((p,i)=><div className="plan-row" key={p}><span>0{i+1}</span><strong>{p}</strong><Link to="/book"><ArrowRight/></Link></div>)}</article>}
 
 export function BranchesPage() {
   const { branches, loading, error } = usePublicBranches({ mode: 'visible' })

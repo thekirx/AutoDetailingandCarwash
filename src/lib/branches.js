@@ -65,6 +65,17 @@ export function usePublicBranches({ mode = 'bookable' } = {}) {
   return { branches, loading, error }
 }
 
+/**
+ * Short display name for a branch — the city, without the brand prefix or a
+ * trailing "Branch". Keeps mixed records ("Hakum Auto Care Bacoor",
+ * "Dasmarinas Branch") reading consistently in lists and the hero location line.
+ */
+export function branchCityName(row) {
+  const name = row?.name || ''
+  const short = name.replace(/^Hakum Auto Care\s*/i, '').replace(/\s*Branch$/i, '').trim()
+  return short || name
+}
+
 export function branchLabel(count) {
   if (count === 1) return 'One branch'
   return `${count} branches`

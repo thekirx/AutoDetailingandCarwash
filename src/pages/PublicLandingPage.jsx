@@ -13,7 +13,7 @@ import {
 import LatestPostSection from '../components/public/home/LatestPostSection'
 import PartnershipSection from '../components/public/home/PartnershipSection'
 import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
-import { usePublicBranches } from '../lib/branches'
+import { usePublicBranches, branchCityName } from '../lib/branches'
 import { loadHomepageContent } from '../lib/homepageContent'
 import { supabase } from '../lib/supabase'
 
@@ -24,10 +24,15 @@ const INITIAL_CONTENT = {
 
 export default function PublicLandingPage() {
   const { branches } = usePublicBranches()
+  /* The hero location line names every branch we want people to know about, so it
+     reads the visible list (active + coming soon). `branches` stays bookable-only —
+     the live queue and hero status cards below have nothing to show for a branch
+     that has not opened yet. */
+  const { branches: visibleBranches } = usePublicBranches({ mode: 'visible' })
   const [content, setContent] = useState(INITIAL_CONTENT)
-  const locationLine = branches.length
-    ? branches.map((branch) => branch.name.replace('Hakum Auto Care ', '')).join(' / ')
-    : 'Bacoor / Batangas'
+  const locationLine = visibleBranches.length
+    ? visibleBranches.map((branch) => branchCityName(branch)).join(' / ')
+    : 'Dasmariñas / Bacoor / Batangas'
 
   useEffect(() => {
     let active = true
@@ -47,7 +52,7 @@ export default function PublicLandingPage() {
 
   return (
     <>
-      <HomeHeroSection locationLine={locationLine} branches={branches} />
+      <HomeHeroSection locationLine={locationLine} />
       <CeramicSection />
       <PpfInformationSection />
       <PpfPackagesSection />
