@@ -1,3 +1,4 @@
+import { isoToDayOfWeek } from './branchHours'
 import { supabase } from './supabase'
 import { getAccessTokenFresh } from './authToken'
 import { getBranchScope } from '../queue/queueLogic'
@@ -36,16 +37,31 @@ export async function listBranches({ includeArchived = false } = {}) {
 
   let q = supabase
     .from('branches')
-    /* opens_at/closes_at/closed_weekdays must stay in this list: the branch
-       form seeds its hours fields from these rows, and a missing column would
-       load them empty and then clear the branch's real schedule on the next
-       save of any unrelated field. */
-    .select('id, slug, name, code, address, latitude, longitude, coming_soon, is_active, is_archived, opens_at, closes_at, closed_weekdays')
+    .select('id, slug, name, code, address, latitude, longitude, coming_soon, is_active, is_archived')
     .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
   if (error) throw mapDbError(error)
-  const rows = data || []
+
+  /* Hours live in branch_operating_hours, one row per weekday. They must be
+     loaded with the branch: the form seeds its hours fields from these rows,
+     and loading them empty would clear the branch's real schedule on the next
+     save of any unrelated field. */
+  const base = data || []
+  const { data: hours, error: hoursError } = base.length
+    ? await supabase
+        .from('branch_operating_hours')
+        .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+        .in('branch_slug', base.map((row) => row.slug))
+    : { data: [], error: null }
+  if (hoursError) throw mapDbError(hoursError)
+
+  const bySlug = new Map()
+  for (const entry of hours || []) {
+    if (!bySlug.has(entry.branch_slug)) bySlug.set(entry.branch_slug, [])
+    bySlug.get(entry.branch_slug).push(entry)
+  }
+  const rows = base.map((row) => ({ ...row, hours: bySlug.get(row.slug) || [] }))
   branchesCache.set({ key, rows })
   return rows
 }
@@ -92,9 +108,15 @@ export async function updateBranch({ slug, name, code, address, is_active, latit
  * Opening hours drive the public "open / opens at" state on the homepage.
  * Kept off updateBranch so that function's signature stays as-is.
  *
+ * Writes the whole week to branch_operating_hours as seven rows. The editor
+ * offers one opening window plus per-day closed toggles, so every trading day
+ * gets the same times; the table itself allows per-day times if the UI ever
+ * grows into them.
+ *
  * @param {{ slug: string, opensAt: string|null, closesAt: string|null, closedWeekdays?: number[] }} input
- *   Times as "HH:MM"; pass null for both to clear the schedule, which puts the
- *   public site back to showing queue length only.
+ *   Times as "HH:MM"; ISO weekdays (1=Mon…7=Sun) in closedWeekdays. Pass null
+ *   for both times to clear the schedule, which puts the public site back to
+ *   showing queue length only.
  */
 export async function setBranchHours({ slug, opensAt, closesAt, closedWeekdays = [] }) {
   if (!String(slug || '').trim()) throw new Error('Branch slug is required.')
@@ -102,12 +124,35 @@ export async function setBranchHours({ slug, opensAt, closesAt, closedWeekdays =
   const closes = String(closesAt || '').trim() || null
   if (!!opens !== !!closes) throw new Error('Set both opening and closing time, or clear both.')
 
-  const { data, error } = await supabase.rpc('set_branch_hours', {
-    input_branch_slug: slug,
-    input_opens_at: opens,
-    input_closes_at: closes,
-    input_closed_weekdays: closedWeekdays,
+  /* Clearing the schedule removes the week outright — the check constraint
+     rejects an open day with null times, and "no rows" is what the public
+     site reads as "make no claim about availability". */
+  if (!opens) {
+    const { error } = await supabase.from('branch_operating_hours').delete().eq('branch_slug', slug)
+    if (error) throw mapDbError(error)
+    branchesCache.clear()
+    return null
+  }
+
+  const closedDays = new Set((closedWeekdays || []).map(isoToDayOfWeek))
+  const rows = [0, 1, 2, 3, 4, 5, 6].map((day) => {
+    const isClosed = closedDays.has(day)
+    return {
+      branch_slug: slug,
+      day_of_week: day,
+      /* A closed day keeps null times: the open-window check only applies to
+         days that actually trade. */
+      opens_at: isClosed ? null : opens,
+      closes_at: isClosed ? null : closes,
+      is_closed: isClosed,
+      updated_at: new Date().toISOString(),
+    }
   })
+
+  const { data, error } = await supabase
+    .from('branch_operating_hours')
+    .upsert(rows, { onConflict: 'branch_slug,day_of_week' })
+    .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
   if (error) throw mapDbError(error)
   branchesCache.clear()
   return data

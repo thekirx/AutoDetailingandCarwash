@@ -6,6 +6,7 @@ import { canCreateBranches, canManageBranches } from '@/auth/permissions'
 import { archiveBranch, createBranch, listBranches, setBranchHours, updateBranch } from '@/lib/adminApi'
 import { filterBranchesForProfile } from '@/queue/queueLogic'
 import { branchStatusLabel } from '@/lib/branches'
+import { dayOfWeekToIso } from '@/lib/branchHours'
 import BranchLocationPicker from '@/components/BranchLocationPicker'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,7 +29,8 @@ const empty = {
   closedWeekdays: [],
 }
 
-/* ISO weekday numbering, matching branches.closed_weekdays (1 = Monday). */
+/* ISO weekday numbering (1 = Monday); converted to the table's 0=Sunday
+   day_of_week when saved. */
 const WEEKDAYS = [
   { iso: 1, label: 'Mon' },
   { iso: 2, label: 'Tue' },
@@ -43,6 +45,22 @@ const WEEKDAYS = [
 function timeForInput(value) {
   const match = /^(\d{2}:\d{2})/.exec(String(value || ''))
   return match ? match[1] : ''
+}
+
+/* branch_operating_hours holds a row per weekday. The editor exposes one
+   opening window plus closed-day toggles, so the form takes its times from the
+   first trading day and lists the rest as closed. */
+function hoursForForm(rows) {
+  const week = Array.isArray(rows) ? rows : []
+  const open = week.find((row) => !row.is_closed && row.opens_at && row.closes_at)
+  return {
+    opensAt: timeForInput(open?.opens_at),
+    closesAt: timeForInput(open?.closes_at),
+    closedWeekdays: week
+      .filter((row) => row.is_closed)
+      .map((row) => dayOfWeekToIso(row.day_of_week))
+      .sort((a, b) => a - b),
+  }
 }
 
 function statusFromRow(row) {
@@ -138,9 +156,7 @@ export default function BranchesManagePage() {
       latitude: row.latitude,
       longitude: row.longitude,
       status: statusFromRow(row),
-      opensAt: timeForInput(row.opens_at),
-      closesAt: timeForInput(row.closes_at),
-      closedWeekdays: row.closed_weekdays || [],
+      ...hoursForForm(row.hours),
     })
   }
 

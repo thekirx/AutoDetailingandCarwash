@@ -3,11 +3,25 @@ import { supabase } from './supabase.js'
 
 const BRANCH_SELECT = 'slug, name, address, code, latitude, longitude, coming_soon, is_active'
 
-/* Added by the branch_operating_hours migration. Selected separately so the
-   site keeps working on an environment where that migration has not been
-   applied yet — PostgREST rejects the whole select for one unknown column,
-   which would otherwise take out every branch list on the public site. */
-const BRANCH_HOURS_SELECT = 'opens_at, closes_at, closed_weekdays'
+/* Opening hours live in their own table (one row per weekday per branch), so
+   they are fetched separately and attached as `hours`. Fetched best-effort:
+   on an environment without that table the branch lists still render, just
+   without any open/closed claim. */
+async function attachHours(rows) {
+  if (!rows.length) return rows
+  const { data, error } = await supabase
+    .from('branch_operating_hours')
+    .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+    .in('branch_slug', rows.map((row) => row.slug))
+  if (error) return rows.map((row) => ({ ...row, hours: [] }))
+
+  const bySlug = new Map()
+  for (const entry of data || []) {
+    if (!bySlug.has(entry.branch_slug)) bySlug.set(entry.branch_slug, [])
+    bySlug.get(entry.branch_slug).push(entry)
+  }
+  return rows.map((row) => ({ ...row, hours: bySlug.get(row.slug) || [] }))
+}
 
 function branchQuery(select, mode) {
   let q = supabase
@@ -31,12 +45,9 @@ function branchQuery(select, mode) {
  * - visible: active OR coming soon (marketing / branches page)
  */
 export async function fetchPublicBranches({ mode = 'bookable' } = {}) {
-  const withHours = await branchQuery(`${BRANCH_SELECT}, ${BRANCH_HOURS_SELECT}`, mode)
-  if (!withHours.error) return withHours.data || []
-
   const { data, error } = await branchQuery(BRANCH_SELECT, mode)
   if (error) throw new Error(error.message)
-  return data || []
+  return attachHours(data || [])
 }
 
 export function usePublicBranches({ mode = 'bookable' } = {}) {
