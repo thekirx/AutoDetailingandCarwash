@@ -12,8 +12,8 @@ export default function HomeEndingSections({ branches }) {
     <>
       <section id="queue" className="queue-teaser" data-motion-section="queue">
         <div className="public-shell queue-grid">
-          <div data-motion="heading"><p className="eyebrow eyebrow-light"><Radio size={13} /> Live branch status</p><h2 className="section-title light">Know the queue.<br />Own your time.</h2></div>
-          <div data-motion="copy"><p>See the customer-safe live service queue before you leave home. No internal records, no clutter — just the status you need.</p><Link className="button button-white" to="/queue">View live queue <ArrowRight size={18} /></Link></div>
+          <div data-motion="heading"><p className="eyebrow eyebrow-light"><Radio size={13} /> Live branch status</p><h2 className="section-title light">Live queue.</h2></div>
+          <div data-motion="copy"><p>Know the queue. Own your time. See the customer-safe live service queue before you leave home. No internal records, no clutter — just the status you need.</p><Link className="button button-white" to="/queue">View live queue <ArrowRight size={18} /></Link></div>
         </div>
         <div className="public-shell" data-motion="cards">
           <LiveQueueBoard branches={branches} />
