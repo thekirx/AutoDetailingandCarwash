@@ -7,13 +7,23 @@ const PPFVisualizer = lazy(() => import('../components/PPFVisualizer'))
 import { usePublicBranches, branchLabel } from '../lib/branches'
 import { usePageMeta } from '../lib/pageMeta'
 
+// Photos are looked up by filename so a card without artwork simply falls back to the icon.
+const serviceImages = import.meta.glob('../assets/services/*.{webp,jpg,jpeg,png}', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+})
+// Accepts one filename or a preference list; the first file present wins.
+const serviceImage = (files) =>
+  [files].flat().reduce((hit, file) => hit ?? serviceImages[`../assets/services/${file}`], undefined)
+
 const serviceItems = [
-  ['Premium car wash','A careful exterior clean, wheel treatment, and hand finish for a crisp everyday reset.'],
-  ['Interior deep clean','Extraction, steam, detail brushing, and conditioning for a cabin that feels renewed.'],
-  ['Paint correction','Multi-stage refinement to reduce swirls, haze, and defects while restoring deep gloss.'],
-  ['Ceramic coating','Durable hydrophobic protection with richer color, easier upkeep, and serious shine.'],
-  ['Paint protection film','Virtually invisible impact protection, precisely installed around every edge and contour.'],
-  ['Maintenance detailing','A tailored care plan that preserves your finish between major detailing sessions.'],
+  ['Premium car wash','A careful exterior clean, wheel treatment, and hand finish for a crisp everyday reset.','carwash.webp'],
+  ['Interior deep clean','Extraction, steam, detail brushing, and conditioning for a cabin that feels renewed.','interior-detailing.webp'],
+  ['Paint correction','Multi-stage refinement to reduce swirls, haze, and defects while restoring deep gloss.','paint-correction.webp'],
+  ['Ceramic coating','Durable hydrophobic protection with richer color, easier upkeep, and serious shine.',['ceramic.webp','ceramic.jpg','ceramic.jpeg','ceramic.png','ceramic-coating.webp']],
+  ['Paint protection film','Virtually invisible impact protection, precisely installed around every edge and contour.','paint-protection-film.webp'],
+  ['Maintenance detailing','A tailored care plan that preserves your finish between major detailing sessions.','detailing.webp'],
 ]
 
 export function ServicesPage() {
@@ -34,17 +44,24 @@ export function ServicesPage() {
           This page is a marketing overview — not the live catalog. Book to see current services from Hakum.
         </p>
         <div className="public-shell numbered-grid">
-          {serviceItems.map(([name, copy], i) => (
-            <article key={name}>
-              <span>0{i + 1}</span>
-              <Sparkles />
-              <h2>{name}</h2>
-              <p>{copy}</p>
-              <Link to="/book">
-                Book this service <ArrowRight />
-              </Link>
-            </article>
-          ))}
+          {serviceItems.map(([name, copy, file], i) => {
+            const image = serviceImage(file)
+            return (
+              <article key={name} className={image ? 'has-photo' : undefined}>
+                <span>0{i + 1}</span>
+                {image ? (
+                  <img src={image} alt={`${name} at Hakum Auto Care`} loading="lazy" decoding="async" />
+                ) : (
+                  <Sparkles />
+                )}
+                <h2>{name}</h2>
+                <p>{copy}</p>
+                <Link to="/book">
+                  Book this service <ArrowRight />
+                </Link>
+              </article>
+            )
+          })}
         </div>
       </section>
     </PageHero>
