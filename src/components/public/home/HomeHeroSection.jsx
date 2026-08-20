@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowDown } from 'lucide-react'
 
+import desktopHeroVideo from '../../../assets/hero/desktop-hero.mp4'
+import mobileHeroVideo from '../../../assets/hero/mobile-hero.mp4'
 import { PrimaryButton, SecondaryButton, StatCard } from '../../ui'
 
 const stats = [
@@ -41,7 +43,12 @@ function AnimatedNumber({ value, suffix }) {
 export default function HomeHeroSection({ locationLine }) {
   return (
     <section id="hero" className="hero-stage" data-motion-section="hero">
-      <div className="hero-media" aria-hidden="true" data-motion="hero-media" />
+      <div className="hero-media" aria-hidden="true" data-motion="hero-media">
+        <video autoPlay loop muted playsInline preload="metadata" tabIndex={-1}>
+          <source src={mobileHeroVideo} type="video/mp4" media="(max-width: 800px)" />
+          <source src={desktopHeroVideo} type="video/mp4" />
+        </video>
+      </div>
       <div className="hero-content">
         <p className="hero-location" data-motion="eyebrow">{locationLine}</p>
         <h1 className="display-title" data-motion="heading">
