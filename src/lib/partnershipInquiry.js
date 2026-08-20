@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { submitPublicInquiry } from './publicInquiryApi'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -39,18 +39,11 @@ export function validatePartnershipInquiry(input = {}) {
   return errors
 }
 
-export async function submitPartnershipInquiry(inquiry) {
+export async function submitPartnershipInquiry(inquiry, guard) {
   const payload = normalizePartnershipInquiry(inquiry)
-  const { error } = await supabase.from('partnership_inquiries').insert({
-    site_type: payload.siteType,
-    name: payload.name,
-    email: payload.email,
-    contact_number: payload.contactNumber,
-    city: payload.city,
-    message: payload.message,
-  })
+  const result = await submitPublicInquiry('partnership', payload, guard)
 
-  if (error) {
+  if (!result.ok) {
     return {
       ok: false,
       code: 'failed',

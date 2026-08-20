@@ -19,8 +19,13 @@ describe('partnership inquiry frontend boundary', () => {
     assert.match(src, /Site location is required/)
   })
 
-  it('writes partnership_inquiries through the existing Supabase client', () => {
-    assert.match(src, /from\('partnership_inquiries'\)/)
-    assert.match(src, /from '\.\/supabase/)
+  /* anon lost direct INSERT on partnership_inquiries (migration
+     public_inquiry_api_geofence), so the browser must not reach the table
+     itself — submissions go through the service-role API. */
+  it('submits through the public inquiry API, never straight to the table', () => {
+    assert.match(src, /submitPublicInquiry\('partnership'/)
+    assert.match(src, /from '\.\/publicInquiryApi'/)
+    assert.doesNotMatch(src, /from\('partnership_inquiries'\)/)
+    assert.doesNotMatch(src, /from '\.\/supabase'/)
   })
 })

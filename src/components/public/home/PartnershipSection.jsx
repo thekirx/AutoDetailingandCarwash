@@ -55,7 +55,7 @@ export default function PartnershipSection() {
     }
 
     setStatus('submitting')
-    const result = await submitPartnershipInquiry(normalizePartnershipInquiry(form))
+    const result = await submitPartnershipInquiry(normalizePartnershipInquiry(form), guard)
     setStatus(result.ok ? 'submitted' : result.code)
     setNotice(result.message || '')
     if (result.ok) {

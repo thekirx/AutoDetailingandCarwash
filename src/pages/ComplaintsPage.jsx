@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
 import { usePublicBranches } from '@/lib/branches'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
+import { submitPublicInquiry } from '../lib/publicInquiryApi'
 import FormLegalNotice from '@/components/FormLegalNotice'
 
 export default function ComplaintsPage() {
@@ -33,15 +33,18 @@ export default function ComplaintsPage() {
       setStatus('idle')
       return
     }
-    const { error: e } = await supabase.from('complaints').insert({
-      customer_name: form.customer_name.trim(),
-      branch: form.branch,
-      category: form.category,
-      description: form.description.trim(),
-      status: 'submitted',
-    })
-    if (e) {
-      setError(e.message)
+    const result = await submitPublicInquiry(
+      'complaint',
+      {
+        customerName: form.customer_name.trim(),
+        branch: form.branch,
+        category: form.category,
+        description: form.description.trim(),
+      },
+      guard,
+    )
+    if (!result.ok) {
+      setError(result.error)
       setStatus('idle')
       return
     }
