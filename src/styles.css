@@ -1612,8 +1612,9 @@ button { cursor: pointer; }
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.18);
+  font-family: var(--font-public-body);
   font-size: 0.625rem;
-  font-weight: 800;
+  font-weight: var(--font-weight-public-label);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -1645,8 +1646,9 @@ button { cursor: pointer; }
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
   color: rgba(241, 241, 241, 0.78);
+  font-family: var(--font-public-body);
   font-size: clamp(1rem, 2.4vw, 1.25rem);
-  font-weight: 600;
+  font-weight: var(--font-weight-public-label);
   letter-spacing: 0.01em;
   text-align: center;
 }
