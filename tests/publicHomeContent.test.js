@@ -81,12 +81,15 @@ describe('Public homepage content assets', () => {
       'ppf-information',
       'ppf-packages',
       'nano-ceramic-tint',
+      'before-after',
       'media-gallery',
       'latest-post',
       'events',
-      'partnership',
+      /* Partnership is a B2B ask, so it sits after the booking path rather than
+         interrupting the visitor between the gallery and the queue/branch CTAs. */
       'queue',
       'branches',
+      'partnership',
     ])
     assert.equal(ppfInformation.eyebrow, 'Paint Protection Film')
     assert.deepEqual(ppfInformation.title.split('\n'), [

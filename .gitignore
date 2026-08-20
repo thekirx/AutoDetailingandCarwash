@@ -9,3 +9,10 @@ dev-dist
 .superpowers/
 .worktrees/
 supabase/.temp
+
+# Local scratch copies — keep them on disk, never in the repo
+*.backup
+
+# Local-only backups, never committed
+local-backups/
+.claude/

@@ -3,16 +3,30 @@ import { supabase } from './supabase.js'
 
 const BRANCH_SELECT = 'slug, name, address, code, latitude, longitude, coming_soon, is_active'
 
-/**
- * Public branch lists.
- * @param {{ mode?: 'bookable' | 'visible' }} opts
- * - bookable: open for queue/booking (active, not coming soon)
- * - visible: active OR coming soon (marketing / branches page)
- */
-export async function fetchPublicBranches({ mode = 'bookable' } = {}) {
+/* Opening hours live in their own table (one row per weekday per branch), so
+   they are fetched separately and attached as `hours`. Fetched best-effort:
+   on an environment without that table the branch lists still render, just
+   without any open/closed claim. */
+async function attachHours(rows) {
+  if (!rows.length) return rows
+  const { data, error } = await supabase
+    .from('branch_operating_hours')
+    .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+    .in('branch_slug', rows.map((row) => row.slug))
+  if (error) return rows.map((row) => ({ ...row, hours: [] }))
+
+  const bySlug = new Map()
+  for (const entry of data || []) {
+    if (!bySlug.has(entry.branch_slug)) bySlug.set(entry.branch_slug, [])
+    bySlug.get(entry.branch_slug).push(entry)
+  }
+  return rows.map((row) => ({ ...row, hours: bySlug.get(row.slug) || [] }))
+}
+
+function branchQuery(select, mode) {
   let q = supabase
     .from('branches')
-    .select(BRANCH_SELECT)
+    .select(select)
     .eq('is_archived', false)
     .order('name')
 
@@ -21,10 +35,19 @@ export async function fetchPublicBranches({ mode = 'bookable' } = {}) {
   } else {
     q = q.or('is_active.eq.true,coming_soon.eq.true')
   }
+  return q
+}
 
-  const { data, error } = await q
+/**
+ * Public branch lists.
+ * @param {{ mode?: 'bookable' | 'visible' }} opts
+ * - bookable: open for queue/booking (active, not coming soon)
+ * - visible: active OR coming soon (marketing / branches page)
+ */
+export async function fetchPublicBranches({ mode = 'bookable' } = {}) {
+  const { data, error } = await branchQuery(BRANCH_SELECT, mode)
   if (error) throw new Error(error.message)
-  return data || []
+  return attachHours(data || [])
 }
 
 export function usePublicBranches({ mode = 'bookable' } = {}) {
@@ -51,6 +74,17 @@ export function usePublicBranches({ mode = 'bookable' } = {}) {
   }, [mode])
 
   return { branches, loading, error }
+}
+
+/**
+ * Short display name for a branch — the city, without the brand prefix or a
+ * trailing "Branch". Keeps mixed records ("Hakum Auto Care Bacoor",
+ * "Dasmarinas Branch") reading consistently in lists and the hero location line.
+ */
+export function branchCityName(row) {
+  const name = row?.name || ''
+  const short = name.replace(/^Hakum Auto Care\s*/i, '').replace(/\s*Branch$/i, '').trim()
+  return short || name
 }
 
 export function branchLabel(count) {

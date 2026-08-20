@@ -6,12 +6,13 @@ export const HOME_SECTION_IDS = [
   'ppf-information',
   'ppf-packages',
   'nano-ceramic-tint',
+  'before-after',
   'media-gallery',
   'latest-post',
   'events',
-  'partnership',
   'queue',
   'branches',
+  'partnership',
 ]
 
 export const ppfInformation = {
@@ -164,3 +165,30 @@ export const mediaGallery = [
     image: new URL('../assets/services/ceramic-coating-gallery.webp', import.meta.url).href,
   },
 ]
+
+/**
+ * Draggable before/after pairs.
+ *
+ * Deliberately empty: the section renders nothing until real Hakum jobs are
+ * added here, because a stand-in comparison would be a claim we cannot back.
+ * Add pairs as:
+ *
+ *   {
+ *     title: 'Toyota Innova Zenix',
+ *     service: 'Premium ceramic coating',
+ *     branch: 'Bacoor',
+ *     before: new URL('../assets/before-after/innova-before.webp', import.meta.url).href,
+ *     after: new URL('../assets/before-after/innova-after.webp', import.meta.url).href,
+ *     beforeAlt: 'Innova paint before correction, swirl marks visible under shop lighting',
+ *     afterAlt: 'The same Innova after correction and ceramic coating',
+ *   }
+ *
+ * Shoot both frames from the same spot under the same lighting — a slider
+ * exposes a changed camera angle instantly.
+ */
+export const beforeAfterShowcase = {
+  eyebrow: 'Proof',
+  title: 'Drag the line.',
+  copy: 'Same car, same light, same angle. The only thing that changed is the work.',
+  items: [],
+}

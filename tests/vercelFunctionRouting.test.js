@@ -24,6 +24,7 @@ const expected = {
   '/api/birthday-greetings': '/api/notifications?operation=birthday-greetings',
   '/api/notification-settings': '/api/notifications?operation=notification-settings',
   '/api/plate-lookup': '/api/bookings?operation=plate-lookup',
+  '/api/public-inquiry': '/api/customer?operation=public-inquiry',
   '/api/provision-customer': '/api/customer?operation=provision-customer',
   '/api/provision-staff': '/api/staff?operation=provision-staff',
   '/api/public-book': '/api/bookings?operation=public-book',

@@ -36,6 +36,10 @@
   --tracking-label: 0.18em;
   /* Public display headings: the single standard, matched to the hero/tint/media sections */
   --font-weight-public-display: 600;
+  /* Public body copy: Gilmer Medium; labels/CTAs step up to Gilmer Bold (700 is the
+     heaviest real Gilmer cut, so anything above it renders as faux bold). */
+  --font-weight-public-body: 500;
+  --font-weight-public-label: 700;
   --tracking-public-display: -0.025em;
   --leading-public-display: 0.87;
   --leading-display: 0.87;

@@ -180,7 +180,7 @@ export default function PublicLayout() {
               <Link key={b.slug} to={b.coming_soon ? '/branches' : `/queue/${b.slug}`}>
                 <span>{String(i + 1).padStart(2, '0')}</span>
                 <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name}</strong>
-                <small>{b.coming_soon ? 'Coming soon' : (b.address || b.slug)}</small>
+                <small>{b.coming_soon ? 'Coming soon' : (b.address || 'Open daily')}</small>
                 <ArrowUpRight />
               </Link>
             )) : (

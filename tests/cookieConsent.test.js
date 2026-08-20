@@ -77,8 +77,9 @@ describe('customer legal surface', () => {
   })
 
   it('customer PII forms require FormLegalNotice', () => {
+    /* ContactPage is not in this list: it collects nothing. It lists the phone,
+       emails, and socials instead of a form, so there is no PII to consent to. */
     for (const file of [
-      'src/pages/ContactPage.jsx',
       'src/pages/ComplaintsPage.jsx',
       'src/pages/EventsPage.jsx',
       'src/pages/EventSharePage.jsx',
@@ -86,6 +87,7 @@ describe('customer legal surface', () => {
     ]) {
       assert.match(read(file), /FormLegalNotice/, `${file} missing FormLegalNotice`)
     }
+    assert.doesNotMatch(read('src/pages/ContactPage.jsx'), /<form/)
     assert.match(read('src/pages/PublicFormPage.jsx'), /acceptedLegal/)
     assert.match(read('src/pages/PublicFormPage.jsx'), /to="\/terms"/)
   })

@@ -21,6 +21,7 @@
     { "source": "/api/notification-templates", "destination": "/api/notifications?operation=notification-templates" },
     { "source": "/api/birthday-greetings", "destination": "/api/notifications?operation=birthday-greetings" },
     { "source": "/api/plate-lookup", "destination": "/api/bookings?operation=plate-lookup" },
+    { "source": "/api/public-inquiry", "destination": "/api/customer?operation=public-inquiry" },
     { "source": "/api/provision-customer", "destination": "/api/customer?operation=provision-customer" },
     { "source": "/api/provision-staff", "destination": "/api/staff?operation=provision-staff" },
     { "source": "/api/public-book", "destination": "/api/bookings?operation=public-book" },
