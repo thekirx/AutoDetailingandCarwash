@@ -50,6 +50,8 @@ export default function HomeHeroSection({ locationLine }) {
   const [videoVariant, setVideoVariant] = useState(() => getHeroVideoVariant(window.innerWidth))
   const [logoMoment, setLogoMoment] = useState(() => getHeroVideoVariant(window.innerWidth) === 'desktop')
   const [revealOverride, setRevealOverride] = useState(false)
+  const [videoBlocked, setVideoBlocked] = useState(false)
+  const videoRef = useRef(null)
   const videoTimeRef = useRef(0)
   const videoSrc = videoVariant === 'mobile' ? mobileHeroVideo : desktopHeroVideo
 
@@ -64,7 +66,19 @@ export default function HomeHeroSection({ locationLine }) {
   useEffect(() => {
     setLogoMoment(videoVariant === 'desktop')
     setRevealOverride(false)
+    setVideoBlocked(false)
     videoTimeRef.current = 0
+  }, [videoVariant])
+
+  /* The desktop cut opens on the logo, so the overlay starts hidden and waits
+     for playback to clear it. If autoplay is refused the clock never starts,
+     which would leave the hero permanently blank — so a refusal reveals the
+     content instead of hiding it behind a frozen frame. */
+  useEffect(() => {
+    const node = videoRef.current
+    if (!node) return
+    const attempt = node.play()
+    if (attempt?.catch) attempt.catch(() => setVideoBlocked(true))
   }, [videoVariant])
 
   const updateLogoMoment = (event) => {
@@ -80,7 +94,7 @@ export default function HomeHeroSection({ locationLine }) {
     if (logoMoment) setRevealOverride(true)
   }
 
-  const hideHeroContent = logoMoment && !revealOverride
+  const hideHeroContent = logoMoment && !revealOverride && !videoBlocked
 
   return (
     <section
@@ -92,6 +106,7 @@ export default function HomeHeroSection({ locationLine }) {
       <div className="hero-media" aria-hidden="true" data-motion="hero-media">
         <video
           key={videoVariant}
+          ref={videoRef}
           src={videoSrc}
           data-variant={videoVariant}
           autoPlay
@@ -102,6 +117,7 @@ export default function HomeHeroSection({ locationLine }) {
           tabIndex={-1}
           onLoadedMetadata={updateLogoMoment}
           onTimeUpdate={updateLogoMoment}
+          onError={() => setVideoBlocked(true)}
         />
       </div>
       <div className="hero-content">

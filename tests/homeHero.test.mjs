@@ -22,8 +22,12 @@ test('desktop content waits five seconds and clears again for the closing logo',
 
 test('mobile overlay clears only for its closing logo reveal', () => {
   assert.equal(homeHero.isHeroLogoMoment?.('mobile', 0), false)
-  assert.equal(homeHero.isHeroLogoMoment?.('mobile', 9.5), false)
+  assert.equal(homeHero.isHeroLogoMoment?.('mobile', 9), false)
+  // The mark reads clearly from ~9.3s in mobile-hero.mp4, so the overlay is
+  // already gone by then rather than sitting on top of it.
+  assert.equal(homeHero.isHeroLogoMoment?.('mobile', 9.2), true)
   assert.equal(homeHero.isHeroLogoMoment?.('mobile', 10), true)
+  assert.equal(homeHero.isHeroLogoMoment?.('mobile', 13), true)
 })
 
 test('click override is cleared when the closing desktop logo begins', () => {
