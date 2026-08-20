@@ -17,6 +17,7 @@ const PublicQueueTvPage = lazy(() =>
   import('./pages/PublicQueuePage').then((m) => ({ default: m.PublicQueueTvPage })),
 )
 const ContactPage = lazy(() => import('./pages/ContactPage'))
+const PartnershipsPage = lazy(() => import('./pages/PartnershipsPage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
 const EventSharePage = lazy(() => import('./pages/EventSharePage'))
@@ -132,6 +133,7 @@ export default function App() {
           <Route path="/booking" element={<Navigate to="/book" replace />} />
           <Route path="/queue" element={<QueuePage />} />
           <Route path="/branches" element={<BranchesPage />} />
+          <Route path="/partnerships" element={<PartnershipsPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/complaints" element={<ComplaintsPage />} />
           <Route path="/events" element={<EventsPage />} />

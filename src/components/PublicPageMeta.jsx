@@ -12,6 +12,7 @@ const PAGE_META = {
   '/book': { title: 'Book a service', description: 'Book a Hakum Auto Care visit at Bacoor or Batangas.' },
   '/queue': { title: 'Live queue', description: 'Customer count board or shop TV floor board at Hakum Auto Care branches.' },
   '/branches': { title: 'Branches', description: 'Find Hakum Auto Care branches in Bacoor and Batangas.' },
+  '/partnerships': { title: 'Partnerships', description: 'Offer a commercial site for a potential Hakum Auto Care partnership.' },
   '/contact': { title: 'Contact', description: 'Contact Hakum Auto Care for bookings, services, and branch questions.' },
   '/complaints': { title: 'Complaints', description: 'Submit a complaint or feedback to Hakum Auto Care.' },
   '/events': { title: 'Events', description: 'Hakum Auto Care events and registrations.' },

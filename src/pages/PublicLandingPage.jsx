@@ -11,7 +11,6 @@ import {
   PpfInformationSection,
 } from '../components/public/home/HomeServiceSections'
 import LatestPostSection from '../components/public/home/LatestPostSection'
-import PartnershipSection from '../components/public/home/PartnershipSection'
 import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
 import { usePublicBranches, branchCityName } from '../lib/branches'
 import { loadHomepageContent } from '../lib/homepageContent'
@@ -61,11 +60,7 @@ export default function PublicLandingPage() {
       <MediaGallerySection />
       <LatestPostSection state={content.post} />
       <EventsPreviewSection state={content.event} />
-      {/* Site partnerships are a B2B ask. Kept on the page, but after the
-          booking path — it was sitting between the gallery and the queue /
-          branch CTAs, interrupting the visitor who came to book a wash. */}
       <HomeEndingSections branches={branches} />
-      <PartnershipSection />
     </>
   )
 }

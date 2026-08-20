@@ -12,7 +12,6 @@ export const HOME_SECTION_IDS = [
   'events',
   'queue',
   'branches',
-  'partnership',
 ]
 
 export const ppfInformation = {

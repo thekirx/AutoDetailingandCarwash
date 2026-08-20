@@ -13,6 +13,7 @@ const navItems = [
   ['Services', '/services'],
   ['Packages', '/packages'],
   ['Branch', '/branches'],
+  ['Partnerships', '/partnerships'],
   ['Events', '/events'],
   ['Blog', '/blog'],
   ['Live Queue', '/queue'],
