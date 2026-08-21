@@ -23,14 +23,10 @@ import { listVehicleSizes } from '../lib/adminApi'
 import { resolveServicePriceMinor } from '../lib/servicePricing'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import ServiceKindPicker from '../components/ServiceKindPicker'
-import { serviceKindFromPayCategory } from '../lib/serviceKinds'
 import {
-  canSwitchQueueFamily,
   filterTicketsByFamily,
-  parseQueueFamilyParam,
   queueFamilyForProfile,
   QUEUE_FAMILIES,
-  QUEUE_FAMILY_DETAILING,
 } from '../lib/queueFamilies'
 import { canAccessPayroll, canAccessPos, canSeeAllBranches, canViewRedoLane, canWriteFinance, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
 import {
@@ -209,42 +205,26 @@ function MetricCard({ label, value, icon: Icon, tone = 'blue', to, hint }) {
 function TicketCard({ ticket, timingWarnings, onOpen, compact = false }) {
   const warn = isSuspiciousTiming(ticket, timingWarnings)
   const linked = (ticket.linked_booking_ids?.length || 1) > 1
-  const kind = serviceKindFromPayCategory(ticket.service_pay_category)
+  const plate = String(ticket.vehicle_plate || '').trim().toUpperCase() || 'No plate'
+  const car = [ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle TBD'
+  const service = ticket.service_name || 'Service TBD'
+  const qNum = formatQueueNumber(ticket.queue_number, ticket.service_pay_category)
+  const label = `${qNum} · ${plate}, ${car}, ${service}`
   const body = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className={`font-black tabular-nums text-foreground ${compact ? 'text-base' : 'text-xl sm:text-2xl'}`}>
-            {formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}
-          </p>
-          <p className={`mt-1 font-semibold text-foreground ${compact ? 'text-xs leading-snug break-words' : 'truncate text-sm'}`}>
-            {ticket.customer_name}
-          </p>
-        </div>
-        {!compact ? (
-          <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusTone[ticket.status] || statusTone.completed}`}>
-            {statusShortLabel(ticket.status)}
-          </span>
-        ) : null}
-      </div>
-      <div className={`mt-2 grid gap-0.5 text-muted-foreground ${compact ? 'text-[11px] leading-snug' : 'mt-3 text-xs'}`}>
-        <span className="font-medium break-words text-foreground/80">{ticket.branch || '—'}</span>
-        <span className="capitalize">{kind === 'detailing' ? 'Detailing · multi-day' : kind}</span>
-        <span className="break-words">
-          {[ticket.vehicle_year, ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'}
-        </span>
-        <span className="break-words">
-          {ticket.vehicle_plate || 'No plate'} · {ticket.service_name || 'Service'}
-        </span>
-        {!compact ? <span className="truncate">{ticket.assigned_staff_name || 'No staff assigned'}</span> : null}
-        {linked && <span className="font-medium text-primary">{ticket.linked_booking_ids.length} services · one visit</span>}
-        {warn && (
-          <span className="flex items-center gap-1 font-medium text-amber-700 dark:text-amber-200">
-            <ShieldAlert size={12} aria-hidden />
-            Fast in-progress → check
-          </span>
-        )}
-      </div>
+      <p className="bk-ticket-status tabular-nums">{qNum}</p>
+      <p className="bk-ticket-plate">{plate}</p>
+      <p className="bk-ticket-car">{car}</p>
+      <p className="bk-ticket-service">{service}</p>
+      {linked ? (
+        <p className="bk-ticket-status">{ticket.linked_booking_ids.length} services</p>
+      ) : null}
+      {warn ? (
+        <p className="bk-ticket-status flex items-center gap-1 text-amber-700 dark:text-amber-200">
+          <ShieldAlert size={12} aria-hidden />
+          Fast in-progress
+        </p>
+      ) : null}
     </>
   )
   if (onOpen) {
@@ -252,14 +232,19 @@ function TicketCard({ ticket, timingWarnings, onOpen, compact = false }) {
       <button
         type="button"
         onClick={() => onOpen(ticket.booking_id)}
-        className={`floor-ticket queue-ticket-card w-full text-left ${compact ? 'queue-ticket-compact' : ''}`}
+        className={`floor-ticket queue-ticket-card bk-ticket-compact bk-ticket-openable w-full text-left ${compact ? 'queue-ticket-compact' : ''}`}
+        aria-label={`Open ticket · ${label}`}
       >
         {body}
       </button>
     )
   }
   return (
-    <Link to={`/operations/queue/${ticket.booking_id}`} className={`floor-ticket queue-ticket-card ${compact ? 'queue-ticket-compact' : ''}`}>
+    <Link
+      to={`/operations/queue/${ticket.booking_id}`}
+      className={`floor-ticket queue-ticket-card bk-ticket-compact bk-ticket-openable ${compact ? 'queue-ticket-compact' : ''}`}
+      aria-label={`Open ticket · ${label}`}
+    >
       {body}
     </Link>
   )
@@ -782,37 +767,34 @@ function OperationsQueueBoardPage() {
   const setLaneFilter = useCallback((lane) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
+      next.delete('family')
       if (!lane) next.delete('lane')
       else next.set('lane', lane)
-      if (queueFamily === QUEUE_FAMILY_DETAILING) next.set('family', 'detailing')
-      else next.delete('family')
       if (branchFilter && branchFilter !== 'all') next.set('branch', branchFilter)
       else next.delete('branch')
       return next
     }, { replace: true })
-  }, [branchFilter, queueFamily, setSearchParams])
+  }, [branchFilter, setSearchParams])
 
   const onBranchChange = useCallback((slug) => {
     setBranchFilter(slug)
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
-      if (queueFamily === QUEUE_FAMILY_DETAILING) next.set('family', 'detailing')
-      else next.delete('family')
+      next.delete('family')
       if (slug && slug !== 'all') next.set('branch', slug)
       else next.delete('branch')
       return next
     }, { replace: true })
-  }, [queueFamily, setSearchParams])
+  }, [setSearchParams])
 
-  const setQueueFamily = useCallback((nextFamily) => {
+  useEffect(() => {
+    if (!searchParams.get('family')) return
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
-      if (parseQueueFamilyParam(nextFamily) === QUEUE_FAMILY_DETAILING) next.set('family', 'detailing')
-      else next.delete('family')
-      next.delete('lane')
+      next.delete('family')
       return next
     }, { replace: true })
-  }, [setSearchParams])
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     if (!seeAll && !(Array.isArray(scopeList) && scopeList.length > 1)) return
@@ -843,13 +825,9 @@ function OperationsQueueBoardPage() {
         eyebrow="Floor"
         title="Queue"
         description={
-          queueFamily === QUEUE_FAMILY_DETAILING
-            ? canSwitchQueueFamily(profile)
-              ? 'Multi-day detailing from Assigned to Branch through release. Switch to Wash for same-day jobs.'
-              : 'Multi-day detailing from Assigned to Branch through release.'
-            : seeRedo
-              ? 'Same-day wash and package tickets until payment. Redo is the owner QC lane.'
-              : 'Same-day wash and package tickets — waiting, on the bay, and final check.'
+          seeRedo
+            ? 'Same-day services and packages until payment. Redo is the owner QC lane. Detailing lives on Bookings.'
+            : 'Same-day services and packages — waiting, on the bay, and final check. Detailing lives on Bookings.'
         }
         live={live}
         action={
@@ -864,20 +842,6 @@ function OperationsQueueBoardPage() {
 
       <div className="queue-board-toolbar mt-3 flex flex-col gap-3">
         <div className="queue-board-controls">
-          {canSwitchQueueFamily(profile) ? (
-          <div className="queue-seg" role="group" aria-label="Service family">
-            {QUEUE_FAMILIES.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                aria-pressed={queueFamily === f.id}
-                onClick={() => setQueueFamily(f.id)}
-              >
-                {f.shortLabel}
-              </button>
-            ))}
-          </div>
-          ) : null}
           <div className="queue-seg" role="group" aria-label="Queue layout">
             {['board', 'table'].map((mode) => (
               <button
@@ -1405,7 +1369,7 @@ export function NewQueueTicketPage() {
       if (phoneDigits.length < 10) throw new Error('Phone number is required (at least 10 digits).')
       const plateError = plateValidationError(form.vehicle_plate)
       if (plateError) throw new Error(plateError)
-      if (!form.service_ids?.length) throw new Error('Select at least one service, package, or detailing service.')
+      if (!form.service_ids?.length) throw new Error('Select at least one service or package.')
       if (showFormLowPriceWarning && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) {
         setSubmitting(false)
         return
@@ -1434,7 +1398,7 @@ export function NewQueueTicketPage() {
 
   return (
     <section>
-      <PageHeader eyebrow="Create Queue Ticket" title="Add vehicle to queue" description="Required: LTO plate, conduction sticker, or temporary / TOP; phone; and at least one Service / Package / Detailing. Name is optional for fast walk-ins." />
+      <PageHeader eyebrow="Create Queue Ticket" title="Add vehicle to queue" description="Required: LTO plate, conduction sticker, or temporary / TOP; phone; and at least one Service or Package. Detailing jobs belong on Bookings. Name is optional for fast walk-ins." />
       {error && <p className="floor-alert floor-alert-error mt-5">{error}</p>}
       <div className="mt-8">
         <Panel title="Ticket Form" icon={Plus}>
@@ -1517,6 +1481,7 @@ export function NewQueueTicketPage() {
               vehicleType={form.vehicle_type}
               onChange={updateServiceIds}
               disabled={submitting}
+              kinds={['service', 'package']}
             />
             {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="floor-control">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
             <FormField label="Final Price in Pesos" value={form.final_price} onChange={update('final_price')} type="number" min="0" step="0.01" required />

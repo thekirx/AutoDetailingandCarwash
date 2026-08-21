@@ -1,6 +1,7 @@
 /**
- * Client command categories: Car Wash Queue vs Detailing Queue.
- * Wash = same-day service/package kinds. Detailing = multi-day detailing pay_category.
+ * Floor Queue UI is same-day Services & Packages only.
+ * Multi-day detailing lives on Bookings (`/operations/bookings`).
+ * Floor Board may still split wash vs detailing for network overview.
  */
 
 import { serviceKindFromPayCategory } from './serviceKinds.js'
@@ -8,6 +9,7 @@ import { serviceKindFromPayCategory } from './serviceKinds.js'
 export const QUEUE_FAMILY_WASH = 'wash'
 export const QUEUE_FAMILY_DETAILING = 'detailing'
 
+/** Queue UI exposes a single family — no Wash/Detail toggle. */
 export const QUEUE_FAMILIES = [
   {
     id: QUEUE_FAMILY_WASH,
@@ -16,15 +18,9 @@ export const QUEUE_FAMILIES = [
     path: '/operations/queue',
     kinds: ['service', 'package'],
   },
-  {
-    id: QUEUE_FAMILY_DETAILING,
-    label: 'Detailing Queue',
-    shortLabel: 'Detail',
-    path: '/operations/queue?family=detailing',
-    kinds: ['detailing'],
-  },
 ]
 
+/** Parse family for classifiers / Floor Board. Queue UI ignores this via queueFamilyForProfile. */
 export function parseQueueFamilyParam(raw) {
   const key = String(raw || '').trim().toLowerCase()
   if (key === QUEUE_FAMILY_DETAILING || key === 'detail' || key === 'detailing') {
@@ -33,13 +29,14 @@ export function parseQueueFamilyParam(raw) {
   return QUEUE_FAMILY_WASH
 }
 
-export function canSwitchQueueFamily(profile) {
-  return profile?.role !== 'detailer'
+/** Always false — Queue has no family switcher. */
+export function canSwitchQueueFamily() {
+  return false
 }
 
-export function queueFamilyForProfile(raw, profile) {
-  if (!canSwitchQueueFamily(profile)) return QUEUE_FAMILY_DETAILING
-  return parseQueueFamilyParam(raw)
+/** Queue page always washes; Bookings owns detailing. */
+export function queueFamilyForProfile() {
+  return QUEUE_FAMILY_WASH
 }
 
 export function ticketQueueFamily(ticket) {
@@ -52,19 +49,18 @@ export function filterTicketsByFamily(tickets = [], family = QUEUE_FAMILY_WASH) 
   return (tickets || []).filter((t) => ticketQueueFamily(t) === want)
 }
 
-/** Detailing queue also shows "Assigned to Branch" (confirmed) from Bookings. */
+/** Detailing split (Floor Board) includes Assigned to Branch. Queue wash strips confirmed. */
 export function boardStatusesForFamily(baseStatuses = [], family = QUEUE_FAMILY_WASH) {
   const want = parseQueueFamilyParam(family)
   if (want === QUEUE_FAMILY_DETAILING) {
-    const out = ['confirmed', ...baseStatuses]
-    return [...new Set(out)]
+    return [...new Set(['confirmed', ...(baseStatuses || [])])]
   }
-  return baseStatuses.filter((s) => s !== 'confirmed')
+  return (baseStatuses || []).filter((s) => s !== 'confirmed')
 }
 
-export function queueFamilyHref(family, { lane, branch } = {}) {
+/** Queue href never carries family=detailing. */
+export function queueFamilyHref(_family, { lane, branch } = {}) {
   const params = new URLSearchParams()
-  if (parseQueueFamilyParam(family) === QUEUE_FAMILY_DETAILING) params.set('family', 'detailing')
   if (lane) params.set('lane', lane)
   if (branch && branch !== 'all') params.set('branch', branch)
   const q = params.toString()

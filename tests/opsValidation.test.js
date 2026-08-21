@@ -60,6 +60,7 @@ describe('ops CRUD validation', () => {
     const v = validateServiceInput({ name: 'Exterior Wash', price: '199.5', duration_minutes: '45' })
     assert.equal(v.price_minor, 19950)
     assert.equal(v.slug, 'exterior-wash')
+    assert.deepEqual(v.size_price_minor, {})
   })
 
   it('rejects staff updates without name/branch and protects BossMich', () => {

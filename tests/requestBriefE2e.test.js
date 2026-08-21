@@ -69,10 +69,10 @@ describe('request.md floor + people', () => {
 
 describe('request.md roles + planner', () => {
   it('detailer, video editor, investor homes and docks', () => {
-    assert.equal(redirectForRole(ROLES.DETAILER), '/operations/queue?family=detailing')
+    assert.equal(redirectForRole(ROLES.DETAILER), '/operations/bookings')
     assert.equal(redirectForRole(ROLES.VIDEO_EDITOR), '/operations/planning?tab=calendar')
     assert.equal(redirectForRole(ROLES.INVESTOR), '/operations/finance')
-    assert.ok(getDetailerDock({ role: ROLES.DETAILER }).some((i) => i.to.includes('family=detailing')))
+    assert.ok(getDetailerDock({ role: ROLES.DETAILER }).some((i) => i.to === '/operations/bookings'))
     assert.deepEqual(
       getVideoEditorDock({ role: ROLES.VIDEO_EDITOR }).map((i) => i.label),
       ['Calendar', 'Tasks'],
@@ -155,10 +155,12 @@ describe('request.md money + POS + Bacoor', () => {
     assert.ok(MERCH_FAMILIES.some((f) => f.id === 'accessories'))
     assert.ok(MERCH_FAMILIES.some((f) => f.id === 'clothing'))
     const pos = read('src/pages/PosPage.jsx')
-    assert.match(pos, /cash-advance/)
+    assert.match(pos, /Cash advances · Payroll/)
     assert.match(pos, /salary_carwash/)
     assert.match(pos, /salary_detailer/)
     assert.match(pos, /pending/)
+    const payroll = read('src/pages/PayrollPage.jsx')
+    assert.match(payroll, /cash-advance/)
   })
 
   it('finance hover percent is a real share, not a hardcoded 50', () => {

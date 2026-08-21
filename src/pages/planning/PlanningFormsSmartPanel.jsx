@@ -519,7 +519,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
             <p className="text-xs text-muted-foreground">
               Access: Complaint + Events RSVP are shareable when published.
               Equipment repairs are crew-only.
-              Cash advance is for employees except Super Admin (who still edits everything).
+              Cash advance is for employees except Super Admin. Approvals happen on Payroll.
             </p>
           </div>
           {qrUrl ? (

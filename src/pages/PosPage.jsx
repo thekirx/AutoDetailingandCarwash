@@ -1,26 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
-import { Cake, Check, Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X, XCircle } from 'lucide-react'
+import { Cake, Gift, Link2, LogOut, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { allowRoute, canAccessPos, canEditPlanning, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
+import { allowRoute, canAccessPos, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { buildPosSalePayload, buildVisitHandoffCartLines, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership } from '@/lib/posSale'
-import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange } from '@/lib/servicePricing'
+import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
+import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
 import { approvedCaForCloseDay, buildBacoorDailyReport, formatBacoorReportText } from '@/lib/bacoorDailyReport'
 import {
   canSubmitShiftClose,
+  datetimeLocalToIso,
   moneySnapshotFromReport,
-  minorToPesosInput,
   parsePesosToMinor,
+  toDatetimeLocalValue,
   validateShiftCloseSubmit,
   SHIFT_CLOSE_MONEY_KEYS,
 } from '@/lib/shiftClose'
+import ShiftCloseWizard from '@/components/ShiftCloseWizard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -54,7 +57,7 @@ const EXPENSE_KINDS = [
   { value: 'other', label: 'Other' },
 ]
 
-const SHELL_TABS = ['checkout', 'pending', 'expenses', 'cash-advance', 'dashboard']
+const SHELL_TABS = ['checkout', 'pending', 'expenses', 'dashboard']
 
 export default function PosPage() {
   const { profile } = useAuth()
@@ -77,7 +80,7 @@ export default function PosPage() {
   const [query, setQuery] = useState('')
   const [merchFamilyFilter, setMerchFamilyFilter] = useState('all')
   // Branch Admin sells merch + pays queue tickets only — not freeform service catalog.
-  const [tab, setTab] = useState(() => (isBranchAdmin(profile) ? 'merch' : 'services'))
+  const [tab, setTab] = useState(() => (isBranchAdmin(profile) ? 'merch' : 'bay'))
 
   useEffect(() => {
     if (branchAdmin && tab !== 'merch') setTab('merch')
@@ -85,7 +88,7 @@ export default function PosPage() {
   const [cart, setCart] = useState([])
   const [branch, setBranch] = useState(assignedBranch)
   const [branches, setBranches] = useState([])
-  const [carSize, setCarSize] = useState('medium')
+  const [handoffVehicleSize, setHandoffVehicleSize] = useState('medium')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [customerId, setCustomerId] = useState('')
   const [linkedCustomer, setLinkedCustomer] = useState(null)
@@ -104,10 +107,13 @@ export default function PosPage() {
   const [dailyReportOpen, setDailyReportOpen] = useState(false)
   const [shiftCloseMode, setShiftCloseMode] = useState(false)
   const [shiftOverrides, setShiftOverrides] = useState({})
+  const [shiftEndedAtLocal, setShiftEndedAtLocal] = useState(() => toDatetimeLocalValue())
+  const [shiftEndedError, setShiftEndedError] = useState('')
   const [shiftReasons, setShiftReasons] = useState({})
   const [shiftFieldErrors, setShiftFieldErrors] = useState({})
   const [shiftSubmitting, setShiftSubmitting] = useState(false)
   const [shiftFieldConfig, setShiftFieldConfig] = useState([])
+  const [shiftWizardStep, setShiftWizardStep] = useState(0)
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
   const [activeMembership, setActiveMembership] = useState(null)
@@ -119,12 +125,8 @@ export default function PosPage() {
   const [savingExpense, setSavingExpense] = useState(false)
   const [todayExpenses, setTodayExpenses] = useState([])
 
-  // Cash-advance tab
-  const [caSubmissions, setCaSubmissions] = useState([])
+  // Approved cash advances for daily / shift-close report (approve on Payroll)
   const [approvedCas, setApprovedCas] = useState([])
-  const [caLoading, setCaLoading] = useState(false)
-
-  const canApproveCa = canEditPlanning(profile)
 
   const membershipContext = useMemo(
     () => ({
@@ -163,7 +165,7 @@ export default function PosPage() {
     const [svc, prod, stats, handoffRes, compRes] = await Promise.all([
       supabase
         .from('services')
-        .select('id, name, slug, pay_category, price_minor, service_size_prices(size_slug, price_minor)')
+        .select('id, name, slug, description, pay_category, price_minor, included_service_ids, service_size_prices(size_slug, price_minor)')
         .eq('is_active', true)
         .eq('is_archived', false),
       supabase
@@ -214,6 +216,7 @@ export default function PosPage() {
     setServices(
       (svc.data || []).map((row) => ({
         ...row,
+        included_service_ids: Array.isArray(row.included_service_ids) ? row.included_service_ids : [],
         size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
       })),
     )
@@ -280,35 +283,24 @@ export default function PosPage() {
     setTodayExpenses(data || [])
   }, [branch])
 
-  const loadCashAdvances = useCallback(async () => {
+  const loadApprovedCashAdvances = useCallback(async () => {
     if (!branch) return
-    setCaLoading(true)
     const today = getLocalCalendarDate()
-    const select = 'id, form_id, payload, status, respondent_label, created_at, resolved_at, ops_forms!inner ( name, kind, slug )'
-    const [pendingRes, resolvedRes] = await Promise.all([
-      supabase
-        .from('ops_form_submissions')
-        .select(select)
-        .eq('status', 'new')
-        .eq('ops_forms.kind', 'cash_advance')
-        .order('created_at', { ascending: false })
-        .limit(100),
-      supabase
-        .from('ops_form_submissions')
-        .select(select)
-        .eq('status', 'resolved')
-        .eq('ops_forms.kind', 'cash_advance')
-        .gte('resolved_at', `${today}T00:00:00+08:00`)
-        .order('resolved_at', { ascending: false })
-        .limit(100),
-    ])
-    setCaLoading(false)
-    if (pendingRes.error) { toast.error(pendingRes.error.message); return }
-    if (resolvedRes.error) toast.error(resolvedRes.error.message)
+    const { data, error } = await supabase
+      .from('ops_form_submissions')
+      .select('id, form_id, payload, status, respondent_label, created_at, resolved_at, ops_forms!inner ( name, kind, slug )')
+      .eq('status', 'resolved')
+      .eq('ops_forms.kind', 'cash_advance')
+      .gte('resolved_at', `${today}T00:00:00+08:00`)
+      .order('resolved_at', { ascending: false })
+      .limit(100)
+    if (error) {
+      toast.error(error.message)
+      return
+    }
     const scope = getBranchScopeList(profile)
     const inScope = (row) => cashAdvanceVisibleOnPos(row, { posBranch: branch, branchScopeList: scope })
-    setCaSubmissions((pendingRes.data || []).filter(inScope))
-    setApprovedCas((resolvedRes.data || []).filter(inScope).filter((row) => approvedCaForCloseDay(row, today)))
+    setApprovedCas((data || []).filter(inScope).filter((row) => approvedCaForCloseDay(row, today)))
   }, [branch, profile])
 
   const loadRef = useRef(load)
@@ -322,7 +314,7 @@ export default function PosPage() {
     if (!branch) return
     load()
     loadExpenses()
-    loadCashAdvances()
+    loadApprovedCashAdvances()
     const channel = supabase
       .channel(`pos-${branch}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales', filter: `branch=eq.${branch}` }, scheduleReload)
@@ -334,25 +326,66 @@ export default function PosPage() {
       scheduleExpenses.cancel()
       supabase.removeChannel(channel)
     }
-  }, [load, loadExpenses, loadCashAdvances, branch, scheduleReload, scheduleExpenses])
+  }, [load, loadExpenses, loadApprovedCashAdvances, branch, scheduleReload, scheduleExpenses])
 
-  const serviceItems = useMemo(() => {
+  const bayItems = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return (services || [])
+    const nameById = Object.fromEntries((services || []).map((s) => [s.id, s.name]))
+    return filterPosBayCatalog(services)
       .map((s) => {
-        const price_minor = resolveServicePriceMinor(s, carSize)
+        const kind = serviceKindFromPayCategory(s.pay_category)
+        const sized = serviceHasSizePricing(s)
+        const includes = (s.included_service_ids || [])
+          .map((id) => nameById[id])
+          .filter(Boolean)
+        const price_minor = resolveServicePriceMinor(s, 'medium')
         return {
-          key: `service-${s.id}-${carSize}`,
-          item_type: 'service',
+          key: `service-${s.id}`,
+          item_type: kind === 'package' ? 'package' : 'service',
           id: s.id,
           name: s.name,
           pay_category: s.pay_category,
           price_minor,
-          meta: `Size: ${PRICING_SIZES.find((x) => x.slug === carSize)?.label || carSize} · range ${formatSizePriceRange(s, formatMoney)}`,
+          size_options: sized ? availablePricingSizes(s) : [],
+          size_prices: s.size_prices || {},
+          meta: [
+            kind === 'package' ? 'Package' : 'Service',
+            sized ? `from ${formatSizePriceRange(s, formatMoney)}` : null,
+            includes.length ? `Includes ${includes.join(' · ')}` : s.description || null,
+          ]
+            .filter(Boolean)
+            .join(' · '),
         }
       })
-      .filter((item) => !q || item.name.toLowerCase().includes(q))
-  }, [services, query, carSize])
+      .filter((item) => !q || item.name.toLowerCase().includes(q) || (item.meta || '').toLowerCase().includes(q))
+  }, [services, query])
+
+  const detailingItems = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return filterPosDetailingCatalog(services)
+      .map((s) => {
+        const sized = serviceHasSizePricing(s)
+        const price_minor = resolveServicePriceMinor(s, 'medium')
+        return {
+          key: `service-${s.id}`,
+          item_type: 'detailing',
+          id: s.id,
+          name: s.name,
+          pay_category: s.pay_category,
+          price_minor,
+          size_options: sized ? availablePricingSizes(s) : [],
+          size_prices: s.size_prices || {},
+          meta: [
+            'Detailing',
+            sized ? formatSizePriceRange(s, formatMoney) : null,
+            s.description || null,
+          ]
+            .filter(Boolean)
+            .join(' · '),
+        }
+      })
+      .filter((item) => !q || item.name.toLowerCase().includes(q) || (item.meta || '').toLowerCase().includes(q))
+  }, [services, query])
 
   const merchItems = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -518,11 +551,11 @@ export default function PosPage() {
     const booking = row.bookings || {}
     const serviceId = booking.service_id
     const svc = serviceId ? services.find((s) => s.id === serviceId) : null
-    if (booking.vehicle_type) setCarSize(booking.vehicle_type)
+    if (booking.vehicle_type) setHandoffVehicleSize(booking.vehicle_type)
     const amount =
       row.amount_minor ??
       booking.final_price_minor ??
-      resolveServicePriceMinor(svc, booking.vehicle_type || carSize) ??
+      resolveServicePriceMinor(svc, booking.vehicle_type || handoffVehicleSize) ??
       0
     setActiveHandoff(row)
     if (!branchLocked) setBranch(row.branch || branch)
@@ -746,7 +779,6 @@ export default function PosPage() {
 
   if (!canAccessPos(profile)) return <Navigate to="/operations/access-denied" replace />
 
-  const catalog = tab === 'services' ? serviceItems : merchItems
   const catalogTab = branchAdmin ? 'merch' : tab
 
   function setShellTab(next) {
@@ -794,28 +826,85 @@ export default function PosPage() {
     loadExpenses()
   }
 
-  async function updateCaStatus(row, status) {
-    const { error } = await supabase.from('ops_form_submissions').update({ status }).eq('id', row.id)
+  function openEndOfShift() {
+    setShiftCloseMode(true)
+    setShiftOverrides({})
+    setShiftReasons({})
+    setShiftFieldErrors({})
+    setShiftEndedError('')
+    setShiftWizardStep(0)
+    setShiftEndedAtLocal(toDatetimeLocalValue())
+    setDailyReportOpen(true)
+    supabase
+      .from('shift_close_field_config')
+      .select('field_key, label, allow_override, is_active, sort_order')
+      .eq('is_active', true)
+      .order('sort_order')
+      .then(({ data }) => {
+        const rows = (data || []).map((row) =>
+          row.field_key === 'square_sales_minor' && /square/i.test(row.label || '')
+            ? { ...row, label: 'Total sales' }
+            : row,
+        )
+        setShiftFieldConfig(rows)
+      })
+  }
+
+  async function submitEndOfShift() {
+    const endedIso = datetimeLocalToIso(shiftEndedAtLocal)
+    if (!endedIso) {
+      setShiftEndedError('Pick when this shift ended.')
+      setShiftWizardStep(0)
+      toast.error('Set shift end time')
+      return
+    }
+    const baseline = moneySnapshotFromReport(dailyReportData)
+    const submitted = { ...baseline }
+    for (const key of SHIFT_CLOSE_MONEY_KEYS) {
+      if (shiftOverrides[key] != null) {
+        const parsed = parsePesosToMinor(shiftOverrides[key])
+        if (parsed == null) {
+          setShiftFieldErrors({ [key]: 'Enter a valid amount (0 or more).' })
+          toast.error('Fix invalid amounts before submit')
+          return
+        }
+        submitted[key] = parsed
+      }
+    }
+    const check = validateShiftCloseSubmit({
+      baseline,
+      submitted,
+      reasons: shiftReasons,
+      fieldConfig: shiftFieldConfig,
+    })
+    if (!check.ok) {
+      setShiftFieldErrors(check.errors)
+      const errKey = Object.keys(check.errors)[0]
+      if (['square_sales_minor', 'total_gcash_minor', 'credit_card_minor', 'total_cash_left_minor', 'downpayments_minor', 'ca_collected_minor'].includes(errKey)) {
+        setShiftWizardStep(1)
+      } else if (errKey) {
+        setShiftWizardStep(2)
+      }
+      toast.error('Fix override reasons or amounts')
+      return
+    }
+    setShiftSubmitting(true)
+    const { error } = await supabase.rpc('submit_shift_close', {
+      payload: {
+        branch,
+        business_date: getLocalCalendarDate(),
+        shift_ended_at: endedIso,
+        pos_baseline: baseline,
+        submitted,
+        override_reasons: check.overrideReasons,
+      },
+    })
+    setShiftSubmitting(false)
     if (error) toast.error(error.message)
     else {
-      toast.success(`Cash advance ${status === 'resolved' ? 'approved' : 'declined'}`)
-      const p = row.payload || {}
-      writeAudit({
-        action: 'pos.cash_advance',
-        entityType: 'ops_form_submission',
-        entityId: row.id,
-        summary: `Cash advance ${status === 'resolved' ? 'approved' : 'declined'} · ${branch}`,
-        meta: { branch, amount_minor: Math.round(Number(p.amount || 0) * 100), status },
-      })
-      notifyPosStaff({
-        event: 'cash_advance',
-        branch,
-        amount_minor: Math.round(Number(p.amount || 0) * 100),
-        title: p.employee_name || row.respondent_label || 'Employee',
-        status,
-        entity_id: row.id,
-      })
-      loadCashAdvances()
+      toast.success('End of shift submitted for review')
+      setDailyReportOpen(false)
+      setShiftCloseMode(false)
     }
   }
 
@@ -832,28 +921,6 @@ export default function PosPage() {
         <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
           Daily sales report
         </Button>
-        {canSubmitShiftClose(profile) ? (
-          <Button
-            type="button"
-            variant="secondary"
-            className="min-h-11"
-            onClick={() => {
-              setShiftCloseMode(true)
-              setShiftOverrides({})
-              setShiftReasons({})
-              setShiftFieldErrors({})
-              setDailyReportOpen(true)
-              supabase
-                .from('shift_close_field_config')
-                .select('field_key, label, allow_override, is_active, sort_order')
-                .eq('is_active', true)
-                .order('sort_order')
-                .then(({ data }) => setShiftFieldConfig(data || []))
-            }}
-          >
-            End of shift
-          </Button>
-        ) : null}
         {canManageCatalog ? (
           <Button type="button" variant="secondary" className="min-h-11" asChild>
             <Link to="/operations/inventory">Inventory Management</Link>
@@ -901,25 +968,17 @@ export default function PosPage() {
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="min-h-11 pl-9"
-            placeholder={branchAdmin || catalogTab === 'merch' ? 'Search merch / items' : 'Search services'}
+            placeholder={
+              branchAdmin || catalogTab === 'merch'
+                ? 'Search merch / items'
+                : catalogTab === 'detailing'
+                  ? 'Search detailing'
+                  : 'Search services & packages'
+            }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        {!branchAdmin && catalogTab === 'services' && (
-          <Select value={carSize} onValueChange={setCarSize}>
-            <SelectTrigger className="min-h-11 w-full sm:w-48">
-              <SelectValue placeholder="Car size" />
-            </SelectTrigger>
-            <SelectContent>
-              {PRICING_SIZES.map((sz) => (
-                <SelectItem key={sz.slug} value={sz.slug}>
-                  {sz.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
         {branchLocked ? (
           <div className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 text-sm">
             <MapPin className="size-4 text-primary" aria-hidden />
@@ -968,16 +1027,32 @@ export default function PosPage() {
         </div>
       ) : (
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="services" className="min-h-11">
-              Services ({serviceItems.length})
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+            <TabsTrigger value="bay" className="min-h-11">
+              Services & packages ({bayItems.length})
+            </TabsTrigger>
+            <TabsTrigger value="detailing" className="min-h-11">
+              Detailing ({detailingItems.length})
             </TabsTrigger>
             <TabsTrigger value="merch" className="min-h-11">
               Merch / items ({merchItems.length})
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="services" className="mt-4">
-            <CatalogGrid items={catalog} onAdd={addToCart} birthdayPerk={birthdayPerk} empty="No services match." />
+          <TabsContent value="bay" className="mt-4">
+            <CatalogGrid
+              items={bayItems}
+              onAdd={addToCart}
+              birthdayPerk={birthdayPerk}
+              empty="No services or packages match."
+            />
+          </TabsContent>
+          <TabsContent value="detailing" className="mt-4">
+            <CatalogGrid
+              items={detailingItems}
+              onAdd={addToCart}
+              birthdayPerk={birthdayPerk}
+              empty="No detailing services match."
+            />
           </TabsContent>
           <TabsContent value="merch" className="mt-4">
             <div className="planner-v2-tabs mb-3" role="toolbar" aria-label="Merch family">
@@ -993,7 +1068,12 @@ export default function PosPage() {
                 </button>
               ))}
             </div>
-            <CatalogGrid items={catalog} onAdd={addToCart} birthdayPerk={birthdayPerk} empty="No merch items. Add stock under Manage merch." />
+            <CatalogGrid
+              items={merchItems}
+              onAdd={addToCart}
+              birthdayPerk={birthdayPerk}
+              empty="No merch items. Add stock under Manage merch."
+            />
           </TabsContent>
         </Tabs>
       )}
@@ -1145,54 +1225,6 @@ export default function PosPage() {
     </div>
   )
 
-  const cashAdvanceBody = (
-    <div className="mt-4 flex flex-col gap-4">
-      {caLoading ? (
-        <p className="text-sm text-muted-foreground">Loading cash advances…</p>
-      ) : caSubmissions.length === 0 ? (
-        <div className="planner-empty">
-          <strong>No cash advance requests</strong>
-          <p>Staff submissions show here for approve or decline.</p>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {caSubmissions.map((row) => {
-            const p = row.payload || {}
-            return (
-              <Card key={row.id} className="planner-ticket">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base">{p.employee_name || row.respondent_label || 'Employee'}</CardTitle>
-                    <Badge variant="outline">{row.status}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-2xl font-semibold tabular-nums">{formatMoney(Number(p.amount || 0) * 100)}</p>
-                  {p.branch && <p className="text-xs text-muted-foreground">Branch: {p.branch}</p>}
-                  {p.needed_by && <p className="text-xs text-muted-foreground">Needed by: {p.needed_by}</p>}
-                  {p.reason && <p className="text-sm">{p.reason}</p>}
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(row.created_at).toLocaleString()}
-                  </p>
-                  {canApproveCa && (
-                    <div className="flex gap-2 pt-1">
-                      <Button size="sm" className="gap-1.5" onClick={() => updateCaStatus(row, 'resolved')}>
-                        <Check className="size-3.5" /> Approve
-                      </Button>
-                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => updateCaStatus(row, 'archived')}>
-                        <XCircle className="size-3.5" /> Decline
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-
   const dashboardBody = (
     <div className="mt-4 flex flex-col gap-6">
       <PosDayHero
@@ -1209,28 +1241,6 @@ export default function PosPage() {
         <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
           Daily sales report
         </Button>
-        {canSubmitShiftClose(profile) ? (
-          <Button
-            type="button"
-            variant="secondary"
-            className="min-h-11"
-            onClick={() => {
-              setShiftCloseMode(true)
-              setShiftOverrides({})
-              setShiftReasons({})
-              setShiftFieldErrors({})
-              setDailyReportOpen(true)
-              supabase
-                .from('shift_close_field_config')
-                .select('field_key, label, allow_override, is_active, sort_order')
-                .eq('is_active', true)
-                .order('sort_order')
-                .then(({ data }) => setShiftFieldConfig(data || []))
-            }}
-          >
-            End of shift
-          </Button>
-        ) : null}
         {canManageCatalog && (
           <Button type="button" variant="secondary" className="min-h-11" asChild>
             <Link to="/operations/inventory">Inventory Management</Link>
@@ -1241,47 +1251,62 @@ export default function PosPage() {
           <Link to="/operations/finance?tab=purchases">Open Finance · expenses</Link>
         </Button>
         ) : null}
+        {allowRoute(profile, 'payroll') ? (
+          <Button type="button" variant="outline" className="min-h-11" asChild>
+            <Link to="/operations/payroll?tab=cash-advance">Cash advances · Payroll</Link>
+          </Button>
+        ) : null}
       </div>
     </div>
   )
 
   return (
     <section className={`hakum-pos planner-v2 flex flex-col ${branchAdmin ? 'gap-4' : 'gap-6'}`}>
-      <header className="planner-v2-head">
+      <header className="planner-v2-head hakum-pos-head">
         <div>
           <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">
             {branchAdmin ? 'Counter' : 'Point of sale'}
           </p>
-          <h1>{branchAdmin ? 'POS' : 'POS hub'}</h1>
+          <h1>{branchAdmin ? 'POS' : 'POS'}</h1>
           <p className="mt-2 flex flex-wrap items-center gap-2">
             <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
             <span>
               {branchAdmin
-                ? `Queue payment + merch · ${branchLocked ? 'your branch' : 'all branches'}`
-                : `Checkout, queue pay, and merch · ${branchLocked ? 'your assigned branch' : 'all branches'}`}
+                ? `Sell merch, take queue payment, close the day · ${branchLabel}`
+                : `Sell, pay queue tickets, expenses, end of shift · ${branchLabel}`}
             </span>
           </p>
         </div>
-        {shellTab === 'checkout' && (
-          <Button onClick={() => setCartOpen(true)} className="min-h-11 gap-2">
-            <ShoppingCart data-icon="inline-start" />
-            Cart · {cart.length} · {formatMoney(cartTotal)}
-          </Button>
-        )}
+        <div className="hakum-pos-head-actions">
+          {canSubmitShiftClose(profile) ? (
+            <Button
+              type="button"
+              className="hakum-pos-end-shift min-h-11 gap-2"
+              onClick={openEndOfShift}
+            >
+              <LogOut data-icon="inline-start" aria-hidden />
+              End of shift
+            </Button>
+          ) : null}
+          {shellTab === 'checkout' ? (
+            <Button onClick={() => setCartOpen(true)} className="min-h-11 gap-2">
+              <ShoppingCart data-icon="inline-start" />
+              Cart · {cart.length} · {formatMoney(cartTotal)}
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       <Tabs value={shellTab} onValueChange={setShellTab} className="w-full">
         <TabsList variant="line" className="hakum-pos-tabs planner-v2-tabs">
-          <TabsTrigger value="checkout" className="min-h-11">Checkout</TabsTrigger>
-          <TabsTrigger value="pending" className="min-h-11">Pending{handoffs.length ? ` (${handoffs.length})` : ''}</TabsTrigger>
+          <TabsTrigger value="checkout" className="min-h-11">Sell</TabsTrigger>
+          <TabsTrigger value="pending" className="min-h-11">Pay queue{handoffs.length ? ` (${handoffs.length})` : ''}</TabsTrigger>
           <TabsTrigger value="expenses" className="min-h-11">Expenses</TabsTrigger>
-          <TabsTrigger value="cash-advance" className="min-h-11">Cash Advance{caSubmissions.length ? ` (${caSubmissions.length})` : ''}</TabsTrigger>
-          <TabsTrigger value="dashboard" className="min-h-11">Dashboard</TabsTrigger>
+          <TabsTrigger value="dashboard" className="min-h-11">Today</TabsTrigger>
         </TabsList>
         <TabsContent value="checkout">{checkoutBody}</TabsContent>
         <TabsContent value="pending">{pendingBody}</TabsContent>
         <TabsContent value="expenses">{expensesBody}</TabsContent>
-        <TabsContent value="cash-advance">{cashAdvanceBody}</TabsContent>
         <TabsContent value="dashboard">{dashboardBody}</TabsContent>
       </Tabs>
 
@@ -1289,10 +1314,13 @@ export default function PosPage() {
         open={dailyReportOpen}
         onOpenChange={(open) => {
           setDailyReportOpen(open)
-          if (!open) setShiftCloseMode(false)
+          if (!open) {
+            setShiftCloseMode(false)
+            setShiftWizardStep(0)
+          }
         }}
       >
-        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>
               {shiftCloseMode ? 'End of shift' : 'Daily sales report'} · {branchLabel}
@@ -1300,110 +1328,27 @@ export default function PosPage() {
           </SheetHeader>
           <div className="mt-4 space-y-3 text-sm">
             {shiftCloseMode ? (
-              <>
-                <p className="text-muted-foreground">
-                  POS baseline is filled from today’s paid sales. Override a field only when needed — each change needs a reason.
-                </p>
-                <div className="space-y-3">
-                  {(shiftFieldConfig.length
-                    ? shiftFieldConfig.map((f) => f.field_key)
-                    : SHIFT_CLOSE_MONEY_KEYS
-                  ).map((key) => {
-                    const cfg = shiftFieldConfig.find((f) => f.field_key === key)
-                    const label = cfg?.label || key.replace(/_minor$/, '').replaceAll('_', ' ')
-                    const baseline = moneySnapshotFromReport(dailyReportData)[key] || 0
-                    const inputVal =
-                      shiftOverrides[key] != null ? shiftOverrides[key] : minorToPesosInput(baseline)
-                    const changed =
-                      parsePesosToMinor(inputVal) != null && parsePesosToMinor(inputVal) !== baseline
-                    return (
-                      <div key={key} className="rounded-xl border border-border p-3">
-                        <Label htmlFor={`shift-${key}`}>{label}</Label>
-                        <p className="mb-1 text-xs text-muted-foreground">
-                          POS baseline · {formatMoney(baseline)}
-                        </p>
-                        <Input
-                          id={`shift-${key}`}
-                          inputMode="decimal"
-                          disabled={cfg?.allow_override === false}
-                          value={inputVal}
-                          onChange={(e) => {
-                            setShiftOverrides((prev) => ({ ...prev, [key]: e.target.value }))
-                            setShiftFieldErrors((prev) => {
-                              const next = { ...prev }
-                              delete next[key]
-                              return next
-                            })
-                          }}
-                        />
-                        {changed ? (
-                          <Input
-                            className="mt-2"
-                            placeholder="Override reason (required)"
-                            value={shiftReasons[key] || ''}
-                            onChange={(e) =>
-                              setShiftReasons((prev) => ({ ...prev, [key]: e.target.value }))
-                            }
-                          />
-                        ) : null}
-                        {shiftFieldErrors[key] ? (
-                          <p className="mt-1 text-xs text-destructive">{shiftFieldErrors[key]}</p>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                </div>
-                <Button
-                  type="button"
-                  className="min-h-11 w-full"
-                  disabled={shiftSubmitting || !branch}
-                  onClick={async () => {
-                    const baseline = moneySnapshotFromReport(dailyReportData)
-                    const submitted = { ...baseline }
-                    for (const key of SHIFT_CLOSE_MONEY_KEYS) {
-                      if (shiftOverrides[key] != null) {
-                        const parsed = parsePesosToMinor(shiftOverrides[key])
-                        if (parsed == null) {
-                          setShiftFieldErrors({ [key]: 'Enter a valid amount (0 or more).' })
-                          toast.error('Fix invalid amounts before submit')
-                          return
-                        }
-                        submitted[key] = parsed
-                      }
-                    }
-                    const check = validateShiftCloseSubmit({
-                      baseline,
-                      submitted,
-                      reasons: shiftReasons,
-                      fieldConfig: shiftFieldConfig,
-                    })
-                    if (!check.ok) {
-                      setShiftFieldErrors(check.errors)
-                      toast.error('Fix override reasons or amounts')
-                      return
-                    }
-                    setShiftSubmitting(true)
-                    const { error } = await supabase.rpc('submit_shift_close', {
-                      payload: {
-                        branch,
-                        business_date: getLocalCalendarDate(),
-                        pos_baseline: baseline,
-                        submitted,
-                        override_reasons: check.overrideReasons,
-                      },
-                    })
-                    setShiftSubmitting(false)
-                    if (error) toast.error(error.message)
-                    else {
-                      toast.success('End of shift submitted for review')
-                      setDailyReportOpen(false)
-                      setShiftCloseMode(false)
-                    }
-                  }}
-                >
-                  {shiftSubmitting ? 'Submitting…' : 'Submit end of shift'}
-                </Button>
-              </>
+              <ShiftCloseWizard
+                step={shiftWizardStep}
+                onStep={setShiftWizardStep}
+                branchLabel={branchLabel}
+                shiftEndedAtLocal={shiftEndedAtLocal}
+                onShiftEndedAt={(v) => {
+                  setShiftEndedAtLocal(v)
+                  setShiftEndedError('')
+                }}
+                shiftEndedError={shiftEndedError}
+                dailyReportData={dailyReportData}
+                shiftFieldConfig={shiftFieldConfig}
+                shiftOverrides={shiftOverrides}
+                setShiftOverrides={setShiftOverrides}
+                shiftReasons={shiftReasons}
+                setShiftReasons={setShiftReasons}
+                shiftFieldErrors={shiftFieldErrors}
+                setShiftFieldErrors={setShiftFieldErrors}
+                onSubmit={submitEndOfShift}
+                shiftSubmitting={shiftSubmitting || !branch}
+              />
             ) : (
               <>
             <p className="text-muted-foreground">
@@ -1685,51 +1630,99 @@ export default function PosPage() {
 }
 
 function CatalogGrid({ items, onAdd, empty, birthdayPerk }) {
+  const [sizeByKey, setSizeByKey] = useState({})
   if (!items.length) return <p className="text-sm text-muted-foreground">{empty}</p>
+
+  function pricedItem(item) {
+    const options = item.size_options || []
+    if (!options.length) return item
+    const slug = sizeByKey[item.key] || options.find((o) => o.slug === 'medium')?.slug || options[0].slug
+    const price_minor =
+      item.size_prices?.[slug] != null ? Number(item.size_prices[slug]) : item.price_minor
+    const label = PRICING_SIZES.find((x) => x.slug === slug)?.label || slug
+    return {
+      ...item,
+      key: `${item.key}-${slug}`,
+      price_minor,
+      meta: [item.meta, `Size ${label}`].filter(Boolean).join(' · '),
+      vehicle_size: slug,
+    }
+  }
+
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {items.map((item) => (
-        <div key={item.key} className="min-h-[100px]">
-          <Card className="planner-ticket h-full transition hover:border-primary/50 hover:bg-accent/30">
-            <button type="button" onClick={() => onAdd(item)} className="w-full text-left">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-lg">{item.name}</CardTitle>
-                  <Badge variant="secondary">{item.item_type}</Badge>
+      {items.map((item) => {
+        const options = item.size_options || []
+        const selected =
+          sizeByKey[item.key] || options.find((o) => o.slug === 'medium')?.slug || options[0]?.slug || ''
+        return (
+          <div key={item.key} className="min-h-[100px]">
+            <Card className="planner-ticket h-full transition hover:border-primary/50 hover:bg-accent/30">
+              <button type="button" onClick={() => onAdd(pricedItem(item))} className="w-full text-left">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-lg">{item.name}</CardTitle>
+                    <Badge variant="secondary">{item.item_type}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold tabular-nums">
+                    {formatMoney(
+                      options.length && selected && item.size_prices?.[selected] != null
+                        ? item.size_prices[selected]
+                        : item.price_minor,
+                    )}
+                  </p>
+                  {item.meta && <p className="mt-2 text-xs text-muted-foreground">{item.meta}</p>}
+                </CardContent>
+              </button>
+              {options.length > 0 ? (
+                <div className="border-t border-border px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    value={selected}
+                    onValueChange={(slug) => setSizeByKey((cur) => ({ ...cur, [item.key]: slug }))}
+                  >
+                    <SelectTrigger className="min-h-10">
+                      <SelectValue placeholder="Pick size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {options.map((sz) => (
+                        <SelectItem key={sz.slug} value={sz.slug}>
+                          {sz.label} · {formatMoney(item.size_prices?.[sz.slug] ?? item.price_minor)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold tabular-nums">{formatMoney(item.price_minor)}</p>
-                {item.meta && <p className="mt-2 text-xs text-muted-foreground">{item.meta}</p>}
-              </CardContent>
-            </button>
-            <div className="flex flex-wrap gap-1 border-t border-border px-4 py-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="min-h-11 gap-1.5 px-2 text-xs text-muted-foreground"
-                onClick={() => onAdd(item, { loyaltyAward: true })}
-              >
-                <Gift className="size-3.5" aria-hidden />
-                Loyalty / free
-              </Button>
-              {birthdayPerk ? (
+              ) : null}
+              <div className="flex flex-wrap gap-1 border-t border-border px-4 py-2">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="min-h-11 gap-1.5 px-2 text-xs text-primary"
-                  onClick={() => onAdd(item, { birthdayAward: true })}
+                  className="min-h-11 gap-1.5 px-2 text-xs text-muted-foreground"
+                  onClick={() => onAdd(pricedItem(item), { loyaltyAward: true })}
                 >
-                  <Cake className="size-3.5" aria-hidden />
-                  Birthday
+                  <Gift className="size-3.5" aria-hidden />
+                  Loyalty / free
                 </Button>
-              ) : null}
-            </div>
-          </Card>
-        </div>
-      ))}
+                {birthdayPerk ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-11 gap-1.5 px-2 text-xs text-primary"
+                    onClick={() => onAdd(pricedItem(item), { birthdayAward: true })}
+                  >
+                    <Cake className="size-3.5" aria-hidden />
+                    Birthday
+                  </Button>
+                ) : null}
+              </div>
+            </Card>
+          </div>
+        )
+      })}
     </div>
   )
 }

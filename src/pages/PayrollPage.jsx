@@ -1,10 +1,11 @@
 /** Payroll register: SA/ASA wizard from POS proof → payout lines → confirm. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { Banknote, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessPayroll,
+  canApproveCashAdvance,
   canRunPayroll,
   getBranchScopeList,
 } from '@/auth/permissions'
@@ -18,15 +19,23 @@ import {
 import { collectPaged } from '@/lib/crmInsights'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import {
-  PAYROLL_WIZARD_STEPS,
+  PAYROLL_RUN_KINDS,
+  FIXED_SALARY_BOOKS_BRANCH,
   addPayrollAdjustment,
+  addPayrollCommission,
   adjustPayrollLine,
   buildPayrollPreview,
   buildRunPayrollPayload,
+  groupPayrollLinesByStaff,
   netPayrollLinesMinor,
   payrollBlocksConfirm,
   payrollPeriodRange,
+  payrollWizardSteps,
+  prorateMonthlyPackageMinor,
   rebuildWashPoolLines,
+  removeStaffFromPayrollPreview,
+  resolveFixedSalaryBranch,
+  buildPendingFloorPayrollQueue,
   validatePayrollAdjustment,
   validatePayrollCustomRange,
 } from '@/lib/payroll'
@@ -39,13 +48,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { NamedSelect } from '@/components/ui/named-select'
 import { toast } from 'sonner'
+import PayrollCashAdvancesPanel from '@/components/PayrollCashAdvancesPanel'
 
 const FREQ_LABELS = {
   daily: 'Daily',
   weekly: 'Weekly',
   biweekly: 'Every 2 weeks',
+  semimonthly: '15th & month-end',
   monthly: 'Monthly',
-  custom: 'Custom range',
+  custom: 'Custom range (override anytime)',
 }
 
 const SETTINGS_FREQUENCIES = PAYOUT_FREQUENCIES.filter((f) => f !== 'custom')
@@ -67,10 +78,18 @@ function periodIso(start, end) {
 export default function PayrollPage() {
   const { profile } = useAuth()
   const canRun = canRunPayroll(profile)
+  const canApproveCa = canApproveCashAdvance(profile)
   const scope = getBranchScopeList(profile)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const initialTab = ['home', 'run', 'cash-advance', 'packages', 'history', 'rules'].includes(tabParam)
+    ? tabParam
+    : 'home'
 
-  const [tab, setTab] = useState('run')
+  const [tab, setTab] = useState(initialTab)
   const [step, setStep] = useState(0)
+  const [runKind, setRunKind] = useState('floor')
+  const [pendingCloses, setPendingCloses] = useState([])
   const [branches, setBranches] = useState([])
   const [rules, setRules] = useState({ ...DEFAULT_COMPENSATION_RULES })
   const [branch, setBranch] = useState('')
@@ -85,12 +104,28 @@ export default function PayrollPage() {
   const [packages, setPackages] = useState([])
   const [staffRoster, setStaffRoster] = useState([])
   const [adjForm, setAdjForm] = useState({ staffId: '', direction: 'add', label: '', amountPesos: '' })
+  const [commissionForm, setCommissionForm] = useState({ staffId: '', label: 'Commission', amountPesos: '' })
   const [pkgForm, setPkgForm] = useState({ staff_id: '', package_kind: 'fixed', amountPesos: '', notes: '', branch: '' })
+
+  const wizardSteps = useMemo(() => payrollWizardSteps(runKind), [runKind])
+  const stepId = wizardSteps[step]?.id
+  const staffGroups = useMemo(
+    () => (preview?.lines ? groupPayrollLinesByStaff(preview.lines) : []),
+    [preview?.lines],
+  )
 
   const branchOptions = useMemo(() => {
     const rows = scope === null ? branches : branches.filter((b) => scope.includes(b.slug))
     return rows.map((b) => ({ value: b.slug, label: b.name || b.slug }))
   }, [branches, scope])
+
+  const packageBranchOptions = useMemo(
+    () => [
+      { value: '', label: 'Company / HQ (no bay)' },
+      ...branchOptions.filter((b) => b.value !== FIXED_SALARY_BOOKS_BRANCH),
+    ],
+    [branchOptions],
+  )
 
   const applyPeriod = useCallback((freq, anchor, custom = null) => {
     if (freq === 'custom') {
@@ -126,20 +161,72 @@ export default function PayrollPage() {
   }, [applyPeriod, scope])
 
   const loadRuns = useCallback(async () => {
-    let q = supabase
+    // Unscoped recent runs — needed so multi-day pending coverage is accurate across bays.
+    const selectWithKind =
+      'id, branch, frequency, period_start, period_end, status, wash_pool_pct, pos_sales_minor, total_payout_minor, confirmed_at, notes, run_kind, payroll_run_lines(id, staff_id, amount_minor, kind, branch, source_key, source_sale_id)'
+    const selectPlain =
+      'id, branch, frequency, period_start, period_end, status, wash_pool_pct, pos_sales_minor, total_payout_minor, confirmed_at, notes, payroll_run_lines(id, staff_id, amount_minor, kind, branch, source_key, source_sale_id)'
+    const { data, error } = await supabase
       .from('payroll_runs')
-      .select('id, branch, frequency, period_start, period_end, status, wash_pool_pct, pos_sales_minor, total_payout_minor, confirmed_at, payroll_run_lines(id, staff_id, amount_minor, kind, branch, source_key, source_sale_id)')
+      .select(selectWithKind)
       .order('period_start', { ascending: false })
-      .limit(40)
-    if (branch) q = q.eq('branch', branch)
+      .limit(80)
+    if (error) {
+      const retry = await supabase
+        .from('payroll_runs')
+        .select(selectPlain)
+        .order('period_start', { ascending: false })
+        .limit(80)
+      if (retry.error) toast.error(retry.error.message)
+      else setRuns(retry.data || [])
+    } else setRuns(data || [])
+  }, [])
+
+  const loadPendingCloses = useCallback(async () => {
+    let q = supabase
+      .from('shift_close_reports')
+      .select('id, branch, business_date, status, shift_ended_at, submitted')
+      .in('status', ['submitted', 'accepted', 'locked'])
+      .order('business_date', { ascending: false })
+      .limit(90)
+    if (Array.isArray(scope) && scope.length) q = q.in('branch', scope)
     const { data, error } = await q
-    if (error) toast.error(error.message)
-    else setRuns(data || [])
-  }, [branch])
+    if (!error) setPendingCloses(data || [])
+  }, [scope])
+
+  const pendingFloorQueue = useMemo(
+    () => buildPendingFloorPayrollQueue({ closes: pendingCloses, runs }),
+    [pendingCloses, runs],
+  )
+
+  function startAccumulatedFloorPay(group) {
+    const readyDays = (group?.days || []).filter((d) => d.ready)
+    if (!readyDays.length) {
+      toast.message('Accept closes in Finance before running floor pay')
+      return
+    }
+    const period_start = readyDays[0].business_date
+    const period_end = readyDays[readyDays.length - 1].business_date
+    setRunKind('floor')
+    setBranch(group.branch)
+    setFrequency('custom')
+    setPeriodStart(period_start)
+    setPeriodEnd(period_end)
+    setPreview(null)
+    setStep(0)
+    setTab('run')
+    setSearchParams({ tab: 'run' }, { replace: true })
+    toast.message(
+      readyDays.length > 1
+        ? `Floor window ${period_start} → ${period_end} · ${readyDays.length} ready days`
+        : `Floor day ${period_start}`,
+    )
+  }
 
   useEffect(() => {
     loadSettings().catch((err) => toast.error(err.message))
     loadRuns().catch((err) => toast.error(err.message))
+    loadPendingCloses().catch(() => {})
     Promise.all([
       supabase
         .from('staff_pay_packages')
@@ -151,14 +238,14 @@ export default function PayrollPage() {
       if (!pkg.error) setPackages(pkg.data || [])
       if (!staff.error) setStaffRoster(staff.data || [])
     })
-  }, [loadSettings, loadRuns])
-
-  useEffect(() => {
-    setPkgForm((f) => ({ ...f, branch: f.branch || branch || '' }))
-  }, [branch])
+  }, [loadSettings, loadRuns, loadPendingCloses])
 
   async function loadProof() {
     if (!periodStart || !periodEnd) return
+    if (runKind === 'floor' && !branch) {
+      toast.error('Pick a branch for floor pay')
+      return
+    }
     if (frequency === 'custom') {
       const check = validatePayrollCustomRange(periodStart, periodEnd)
       if (!check.ok) {
@@ -169,54 +256,71 @@ export default function PayrollPage() {
     setLoading(true)
     try {
       const { startIso, endIso } = periodIso(periodStart, periodEnd)
+      const isFixed = runKind === 'fixed'
+
+      const emptyList = Promise.resolve([])
       const [salesRows, attRows, expRows, claimedRows, pkgRows, staffRows] = await Promise.all([
-        collectPaged(async (from, to) => {
+        isFixed
+          ? emptyList
+          : collectPaged(async (from, to) => {
+              let q = supabase
+                .from('sales')
+                .select('id, branch, status, total_minor, occurred_at, sale_line_items(line_total_minor, services(pay_category))')
+                .eq('status', 'paid')
+                .gte('occurred_at', startIso)
+                .lte('occurred_at', endIso)
+                .order('occurred_at', { ascending: false })
+              if (branch) q = q.eq('branch', branch)
+              const { data, error } = await q.range(from, to)
+              if (error) throw error
+              return data || []
+            }, 1000),
+        isFixed
+          ? emptyList
+          : collectPaged(async (from, to) => {
+              let q = supabase
+                .from('staff_attendance')
+                .select('staff_id, branch_slug, attendance_date, status, staff_profiles(id, full_name, role)')
+                .gte('attendance_date', periodStart)
+                .lte('attendance_date', periodEnd)
+              if (branch) q = q.eq('branch_slug', branch)
+              const { data, error } = await q.range(from, to)
+              if (error) throw error
+              return data || []
+            }, 1000),
+        isFixed
+          ? emptyList
+          : collectPaged(async (from, to) => {
+              let q = supabase
+                .from('expenses')
+                .select('description, total_minor, branch, expense_kind')
+                .like('description', 'ceramic:%')
+                .gte('created_at', startIso)
+                .lte('created_at', endIso)
+              if (branch) q = q.eq('branch', branch)
+              const { data, error } = await q.range(from, to)
+              if (error) throw error
+              return data || []
+            }, 1000),
+        isFixed
+          ? emptyList
+          : collectPaged(async (from, to) => {
+              const { data, error } = await supabase.from('payroll_run_sales').select('sale_id').range(from, to)
+              if (error) throw error
+              return data || []
+            }, 1000),
+        (() => {
           let q = supabase
-            .from('sales')
-            .select('id, branch, status, total_minor, occurred_at, sale_line_items(line_total_minor, services(pay_category))')
-            .eq('status', 'paid')
-            .gte('occurred_at', startIso)
-            .lte('occurred_at', endIso)
-            .order('occurred_at', { ascending: false })
-          if (branch) q = q.eq('branch', branch)
-          const { data, error } = await q.range(from, to)
-          if (error) throw error
-          return data || []
-        }, 1000),
-        collectPaged(async (from, to) => {
-          let q = supabase
-            .from('staff_attendance')
-            .select('staff_id, branch_slug, attendance_date, status, staff_profiles(id, full_name, role)')
-            .gte('attendance_date', periodStart)
-            .lte('attendance_date', periodEnd)
-          if (branch) q = q.eq('branch_slug', branch)
-          const { data, error } = await q.range(from, to)
-          if (error) throw error
-          return data || []
-        }, 1000),
-        collectPaged(async (from, to) => {
-          let q = supabase
-            .from('expenses')
-            .select('description, total_minor, branch, expense_kind')
-            .like('description', 'ceramic:%')
-            .gte('created_at', startIso)
-            .lte('created_at', endIso)
-          if (branch) q = q.eq('branch', branch)
-          const { data, error } = await q.range(from, to)
-          if (error) throw error
-          return data || []
-        }, 1000),
-        collectPaged(async (from, to) => {
-          const { data, error } = await supabase.from('payroll_run_sales').select('sale_id').range(from, to)
-          if (error) throw error
-          return data || []
-        }, 1000),
-        supabase
-          .from('staff_pay_packages')
-          .select('id, staff_id, package_kind, amount_minor, effective_from, notes, is_active, branch, staff_profiles(id, full_name, branch_slug, role)')
-          .eq('is_active', true)
-          .eq('branch', branch)
-          .lte('effective_from', periodEnd),
+            .from('staff_pay_packages')
+            .select(
+              'id, staff_id, package_kind, amount_minor, effective_from, notes, is_active, branch, staff_profiles(id, full_name, branch_slug, role)',
+            )
+            .eq('is_active', true)
+            .lte('effective_from', periodEnd)
+          // Fixed salary: company-wide packages (any / null branch). Floor: bay packages only.
+          if (!isFixed && branch) q = q.eq('branch', branch)
+          return q
+        })(),
         supabase
           .from('staff_profiles')
           .select('id, full_name, role, branch_slug')
@@ -251,9 +355,16 @@ export default function PayrollPage() {
         ceramicExpenses: expRows,
         claimedSaleIds: (claimedRows || []).map((r) => r.sale_id),
         packages: packageInput,
+        runKind,
+        frequency,
       })
       setPreview(next)
       setStep(1)
+      toast.success(
+        isFixed
+          ? `${next.lines.length} salary line(s) loaded`
+          : `${next.proof.length} POS ticket(s) · ${next.lines.length} payout line(s)`,
+      )
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -282,9 +393,10 @@ export default function PayrollPage() {
     setSaving(true)
     const payload = buildRunPayrollPayload({
       preview,
-      branch,
+      branch: runKind === 'fixed' ? null : branch,
       frequency,
-      notes,
+      runKind,
+      notes: [runKind === 'fixed' ? 'Fixed salary' : 'Floor pay', notes].filter(Boolean).join(' · '),
     })
     const { data, error } = await supabase.rpc('run_payroll', { payload })
     setSaving(false)
@@ -305,7 +417,6 @@ export default function PayrollPage() {
   }
 
   const gate = payrollBlocksConfirm(preview)
-  const stepId = PAYROLL_WIZARD_STEPS[step]?.id
 
   return (
     <section className="hakum-payroll flex flex-col gap-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
@@ -316,14 +427,17 @@ export default function PayrollPage() {
           Payroll
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Pay crew from paid POS sales. Each run keeps the ticket ids as proof, then posts salary lines to Finance.
+          Floor pay for crew who worked the bay. Fixed salary for office roles (monthly package, auto-split by
+          payout frequency). Cash advances approve here — not on POS.
         </p>
       </header>
 
       <div role="tablist" aria-label="Payroll sections" className="planner-v2-tabs">
         {[
+          { id: 'home', label: 'Dashboard' },
           { id: 'run', label: 'Run payroll' },
-          { id: 'packages', label: 'Packages' },
+          { id: 'cash-advance', label: 'Cash advances' },
+          { id: 'packages', label: 'Salaries' },
           { id: 'history', label: 'Payouts' },
           { id: 'rules', label: 'Rules' },
         ].map((item) => (
@@ -332,17 +446,149 @@ export default function PayrollPage() {
             type="button"
             className={tab === item.id ? 'is-on' : ''}
             aria-pressed={tab === item.id}
-            onClick={() => setTab(item.id)}
+            onClick={() => {
+              setTab(item.id)
+              setSearchParams(item.id === 'home' ? {} : { tab: item.id }, { replace: true })
+            }}
           >
             {item.label}
           </button>
         ))}
       </div>
 
+      {tab === 'home' && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Pending floor pay</CardTitle>
+              <CardDescription>
+                Accepted end-of-shift days without a floor payroll run stack here. Optional — run one day or the
+                whole accumulated window when ready.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!pendingFloorQueue.groups.length ? (
+                <p className="text-sm text-muted-foreground">
+                  No uncovered closes. After Finance accepts an end of shift, it shows here until floor pay posts.
+                </p>
+              ) : (
+                pendingFloorQueue.groups.map((group) => (
+                  <div
+                    key={group.branch}
+                    className="rounded-xl border border-border p-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">
+                          {group.branch} · {group.period_start}
+                          {group.period_end !== group.period_start ? ` → ${group.period_end}` : ''}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {group.ready_count} ready
+                          {group.review_count ? ` · ${group.review_count} awaiting close review` : ''}
+                          {' · '}
+                          {group.days.length} day{group.days.length === 1 ? '' : 's'} · sales{' '}
+                          {formatMoney(group.total_sales_minor)}
+                        </p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {group.days.map((d) => d.business_date).join(' · ')}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {group.ready_count > 0 ? (
+                          <Button
+                            type="button"
+                            className="min-h-11"
+                            onClick={() => startAccumulatedFloorPay(group)}
+                          >
+                            Run floor pay
+                            {group.days.length > 1 ? ` (${group.days.length} days)` : ''}
+                          </Button>
+                        ) : (
+                          <Button type="button" variant="outline" className="min-h-11" asChild>
+                            <Link to="/operations/finance?tab=shift-close">Accept closes in Finance</Link>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              <p className="text-xs text-muted-foreground">
+                Ready days: {pendingFloorQueue.ready_day_count}
+                {pendingFloorQueue.review_day_count
+                  ? ` · still in review: ${pendingFloorQueue.review_day_count}`
+                  : ''}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Next scheduled window</CardTitle>
+              <CardDescription>
+                {FREQ_LABELS[frequency] || frequency} · {periodStart || '—'} to {periodEnd || '—'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                className="min-h-11"
+                onClick={() => {
+                  setRunKind('floor')
+                  setTab('run')
+                  setSearchParams({ tab: 'run' }, { replace: true })
+                  setStep(0)
+                }}
+              >
+                Run floor pay
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                onClick={() => {
+                  setRunKind('fixed')
+                  setTab('run')
+                  setSearchParams({ tab: 'run' }, { replace: true })
+                  setStep(0)
+                }}
+              >
+                Run fixed salary
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent payouts</CardTitle>
+            </CardHeader>
+            <CardContent className="hakum-payroll-table">
+              {(runs || []).slice(0, 5).map((run) => (
+                <article key={run.id} className="hakum-payroll-row">
+                  <p className="font-medium">
+                    {run.period_start} → {run.period_end}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {run.run_kind === 'fixed' || /fixed salary/i.test(run.notes || '')
+                      ? 'Fixed'
+                      : 'Floor'}{' '}
+                    · {run.branch || 'company'} · {FREQ_LABELS[run.frequency] || run.frequency}
+                  </p>
+                  <Badge variant="secondary">{run.status}</Badge>
+                  <p className="tabular-nums font-medium">{formatMoney(run.total_payout_minor)}</p>
+                </article>
+              ))}
+              {!runs.length ? (
+                <p className="text-sm text-muted-foreground">No payroll runs yet.</p>
+              ) : null}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {tab === 'run' && (
         <div className="flex flex-col gap-4">
           <ol className="hakum-payroll-steps">
-            {PAYROLL_WIZARD_STEPS.map((item, idx) => (
+            {wizardSteps.map((item, idx) => (
               <li key={item.id}>
                 <button
                   type="button"
@@ -359,21 +605,50 @@ export default function PayrollPage() {
           {stepId === 'period' && (
             <Card>
               <CardHeader>
-                <CardTitle>Choose the pay period</CardTitle>
+                <CardTitle>Choose who you are paying</CardTitle>
                 <CardDescription>
-                  Frequency follows company rules. Dates can be overridden for a one-off run.
+                  {runKind === 'fixed'
+                    ? 'Office / BA / marketing salaries — no bay required. Amounts are monthly, prorated for this frequency.'
+                    : 'Floor pay uses attendance + paid POS at one bay.'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="payroll-branch">Branch</Label>
-                  <NamedSelect
-                    id="payroll-branch"
-                    value={branch}
-                    onChange={setBranch}
-                    options={branchOptions}
-                  />
+                <div className="hakum-payroll-kind sm:col-span-2" role="group" aria-label="Payroll type">
+                  {PAYROLL_RUN_KINDS.map((kind) => (
+                    <button
+                      key={kind.id}
+                      type="button"
+                      className={runKind === kind.id ? 'is-on' : ''}
+                      aria-pressed={runKind === kind.id}
+                      onClick={() => {
+                        setRunKind(kind.id)
+                        setPreview(null)
+                        setStep(0)
+                      }}
+                    >
+                      <strong>{kind.label}</strong>
+                      <span>{kind.hint}</span>
+                    </button>
+                  ))}
                 </div>
+                {runKind === 'floor' ? (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="payroll-branch">Branch</Label>
+                    <NamedSelect
+                      id="payroll-branch"
+                      value={branch}
+                      onChange={setBranch}
+                      options={branchOptions}
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border bg-muted/20 p-3 sm:col-span-2">
+                    <p className="text-sm font-medium">Company-wide salaries</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      No bay to pick. Books post under HQ / Office when an employee has no home branch.
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="payroll-freq">Payout frequency</Label>
                   <NamedSelect
@@ -394,24 +669,40 @@ export default function PayrollPage() {
                   <Label htmlFor="payroll-end">End</Label>
                   <Input id="payroll-end" type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
                 </div>
-                <p className="sm:col-span-2 text-xs text-muted-foreground">
-                  POS proof → packages → labeled add/deduct → Finance post on confirm.
-                </p>
+                {runKind === 'fixed' && periodStart && frequency ? (
+                  <p className="sm:col-span-2 text-xs text-muted-foreground">
+                    Example: ₱30,000 / month → this run pays{' '}
+                    {formatMoney(prorateMonthlyPackageMinor(3_000_000, frequency, { start: periodStart, end: periodEnd }))}{' '}
+                    at {FREQ_LABELS[frequency]}.
+                  </p>
+                ) : (
+                  <p className="sm:col-span-2 text-xs text-muted-foreground">
+                    Loads wash pool + ceramic from days with attendance and unpaid POS tickets.
+                  </p>
+                )}
                 <div className="sm:col-span-2">
-                  <Button className="min-h-11 w-full sm:w-auto" disabled={loading || !branch} onClick={loadProof}>
-                    {loading ? 'Loading POS…' : 'Load POS proof'}
+                  <Button
+                    className="min-h-11 w-full sm:w-auto"
+                    disabled={loading || (runKind === 'floor' && !branch)}
+                    onClick={loadProof}
+                  >
+                    {loading
+                      ? 'Loading…'
+                      : runKind === 'fixed'
+                        ? 'Load salaried employees'
+                        : 'Load POS proof'}
                   </Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {stepId === 'proof' && (
+          {stepId === 'proof' && runKind !== 'fixed' && (
             <Card>
               <CardHeader>
                 <CardTitle>POS proof</CardTitle>
                 <CardDescription>
-                  Paid sales in this window, minus tickets already on another payroll run. Detailing jobs fund ceramic shares, not the wash pool.
+                  Paid wash sales in this window, minus tickets already on another payroll run. Detailing funds ceramic shares, not the wash pool.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -440,7 +731,180 @@ export default function PayrollPage() {
             </Card>
           )}
 
-          {stepId === 'lines' && (
+          {stepId === 'people' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Salaried employees</CardTitle>
+                <CardDescription>
+                  Override a prorated amount, or remove someone from this run. Next step adds commissions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!preview ? (
+                  <p className="text-sm text-muted-foreground">Load salaried employees first.</p>
+                ) : (
+                  <div className="hakum-payroll-table">
+                    {staffGroups.map((g) => {
+                      const salaryLine = g.lines.find((l) => String(l.kind || '').startsWith('package'))
+                      if (!salaryLine) return null
+                      return (
+                        <article key={g.staff_id || g.staff_name} className="hakum-payroll-row hakum-payroll-row--salary">
+                          <div>
+                            <p className="font-medium">{g.staff_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {g.role || 'Staff'}
+                              {salaryLine.monthly_amount_minor
+                                ? ` · monthly ${formatMoney(salaryLine.monthly_amount_minor)}`
+                                : ''}
+                            </p>
+                          </div>
+                          <Label className="sr-only" htmlFor={`sal-${salaryLine.key}`}>
+                            This run amount for {g.staff_name}
+                          </Label>
+                          <Input
+                            id={`sal-${salaryLine.key}`}
+                            type="number"
+                            min="0"
+                            step="100"
+                            className="min-h-11"
+                            disabled={!canRun}
+                            value={salaryLine.pay_minor}
+                            onChange={(e) =>
+                              setPreview((prev) => {
+                                const lines = adjustPayrollLine(prev.lines, salaryLine.key, e.target.value)
+                                return { ...prev, lines, total_payout_minor: netPayrollLinesMinor(lines) }
+                              })
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="min-h-11"
+                            disabled={!canRun || !g.staff_id}
+                            onClick={() =>
+                              setPreview((prev) => {
+                                const lines = removeStaffFromPayrollPreview(prev.lines, g.staff_id)
+                                return { ...prev, lines, total_payout_minor: netPayrollLinesMinor(lines) }
+                              })
+                            }
+                          >
+                            Skip
+                          </Button>
+                        </article>
+                      )
+                    })}
+                    {!staffGroups.some((g) => g.lines.some((l) => String(l.kind || '').startsWith('package'))) ? (
+                      <p className="text-sm text-muted-foreground">
+                        No active monthly salaries. Add people under Salaries first.
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+                <p className="text-sm font-medium">
+                  Salary subtotal {formatMoney(preview?.lines?.filter((l) => String(l.kind || '').startsWith('package')).reduce((s, l) => s + (l.pay_minor || 0), 0) || 0)}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {stepId === 'extras' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Commissions &amp; bonuses</CardTitle>
+                <CardDescription>
+                  Add commission or bonus on top of salary for this payout. Deductions also work here.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!preview ? (
+                  <p className="text-sm text-muted-foreground">Load employees first.</p>
+                ) : (
+                  <>
+                    <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
+                      <NamedSelect
+                        value={commissionForm.staffId}
+                        onChange={(staffId) => setCommissionForm((f) => ({ ...f, staffId }))}
+                        options={staffGroups
+                          .filter((g) => g.staff_id)
+                          .map((g) => ({ value: g.staff_id, label: g.staff_name }))}
+                        placeholder="Employee"
+                      />
+                      <Input
+                        placeholder="Label (e.g. Sales commission)"
+                        value={commissionForm.label}
+                        onChange={(e) => setCommissionForm((f) => ({ ...f, label: e.target.value }))}
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Amount (pesos)"
+                        value={commissionForm.amountPesos}
+                        onChange={(e) => setCommissionForm((f) => ({ ...f, amountPesos: e.target.value }))}
+                      />
+                      <Button
+                        type="button"
+                        className="min-h-11"
+                        disabled={!canRun}
+                        onClick={() => {
+                          const staff = staffRoster.find((s) => s.id === commissionForm.staffId)
+                          const amountMinor = Math.round(Number(commissionForm.amountPesos) * 100)
+                          if (!staff || !(amountMinor > 0)) {
+                            toast.error('Pick an employee and enter a commission amount')
+                            return
+                          }
+                          setPreview((prev) => {
+                            const lines = addPayrollCommission(prev.lines, {
+                              staff,
+                              branch: resolveFixedSalaryBranch({}, staff),
+                              label: commissionForm.label || 'Commission',
+                              amountMinor,
+                            })
+                            return { ...prev, lines, total_payout_minor: netPayrollLinesMinor(lines) }
+                          })
+                          setCommissionForm({ staffId: '', label: 'Commission', amountPesos: '' })
+                          toast.success('Commission added')
+                        }}
+                      >
+                        Add commission
+                      </Button>
+                    </div>
+                    <div className="hakum-payroll-table">
+                      {(preview.lines || [])
+                        .filter((l) => !String(l.kind || '').startsWith('package'))
+                        .map((row) => (
+                          <article key={row.key} className="hakum-payroll-row">
+                            <p className="font-medium">{row.staff_name}</p>
+                            <p className="text-muted-foreground">
+                              {row.direction === 'deduct' ? 'Deduct' : 'Add'} · {row.label || row.kind}
+                            </p>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="100"
+                              className="min-h-11"
+                              disabled={!canRun}
+                              value={row.pay_minor}
+                              onChange={(e) =>
+                                setPreview((prev) => {
+                                  const lines = adjustPayrollLine(prev.lines, row.key, e.target.value)
+                                  return { ...prev, lines, total_payout_minor: netPayrollLinesMinor(lines) }
+                                })
+                              }
+                            />
+                          </article>
+                        ))}
+                      {!(preview.lines || []).some((l) => !String(l.kind || '').startsWith('package')) ? (
+                        <p className="text-sm text-muted-foreground">No commissions yet — optional.</p>
+                      ) : null}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {stepId === 'lines' && runKind !== 'fixed' && (
             <Card>
               <CardHeader>
                 <CardTitle>Payout lines</CardTitle>
@@ -548,7 +1012,7 @@ export default function PayrollPage() {
                         setPreview((prev) => {
                           const lines = addPayrollAdjustment(prev.lines, {
                             staff,
-                            branch: branch || staff.branch_slug,
+                            branch: branch || staff.branch_slug || FIXED_SALARY_BOOKS_BRANCH,
                             direction: adjForm.direction,
                             label: adjForm.label,
                             amountMinor,
@@ -569,18 +1033,70 @@ export default function PayrollPage() {
             </Card>
           )}
 
-          {stepId === 'confirm' && (
+          {(stepId === 'review' || (stepId === 'confirm' && runKind !== 'fixed')) && (
             <Card>
               <CardHeader>
-                <CardTitle>Confirm payout</CardTitle>
+                <CardTitle>{runKind === 'fixed' ? 'Full payroll review' : 'Confirm payout'}</CardTitle>
                 <CardDescription>
-                  Posts this run, locks the POS tickets, and writes salary expenses. This cannot be quietly undone.
+                  {runKind === 'fixed'
+                    ? 'Every employee on this run — salary, commissions, and net. Adjust anything, then post.'
+                    : 'Posts this run, locks the POS tickets, and writes salary expenses. This cannot be quietly undone.'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm">
-                  {periodStart} to {periodEnd} · {FREQ_LABELS[frequency]} · total {formatMoney(preview?.total_payout_minor || 0)}
+                  {periodStart} to {periodEnd} · {FREQ_LABELS[frequency]}
+                  {runKind === 'fixed' ? ' · company-wide' : ` · ${branch}`} · total{' '}
+                  {formatMoney(preview?.total_payout_minor || 0)}
                 </p>
+                {runKind === 'fixed' ? (
+                  <div className="hakum-payroll-table">
+                    {staffGroups.map((g) => (
+                      <article key={g.staff_id || g.staff_name} className="hakum-payroll-review">
+                        <header>
+                          <p className="font-medium">{g.staff_name}</p>
+                          <p className="tabular-nums text-lg font-semibold">{formatMoney(g.total_minor)}</p>
+                        </header>
+                        <ul>
+                          {g.lines.map((row) => (
+                            <li key={row.key}>
+                              <span>
+                                {String(row.kind || '').startsWith('package')
+                                  ? 'Salary'
+                                  : row.label || row.kind.replaceAll('_', ' ')}
+                                {row.direction === 'deduct' ? ' (deduct)' : ''}
+                              </span>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="100"
+                                className="min-h-11 max-w-[9rem]"
+                                disabled={!canRun}
+                                value={row.pay_minor}
+                                onChange={(e) =>
+                                  setPreview((prev) => {
+                                    const lines = adjustPayrollLine(prev.lines, row.key, e.target.value)
+                                    return { ...prev, lines, total_payout_minor: netPayrollLinesMinor(lines) }
+                                  })
+                                }
+                                aria-label={`${row.label || row.kind} for ${g.staff_name}`}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-muted-foreground">
+                          Salary {formatMoney(g.salary_minor)}
+                          {g.commission_minor
+                            ? ` · extras ${formatMoney(g.commission_minor)}`
+                            : ''}
+                        </p>
+                      </article>
+                    ))}
+                    {!staffGroups.length ? (
+                      <p className="text-sm text-muted-foreground">Nothing to pay — go back and load employees.</p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {gate.blocked ? <p className="text-sm text-destructive">{gate.reason}</p> : null}
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="payroll-notes">Notes</Label>
@@ -614,8 +1130,8 @@ export default function PayrollPage() {
             <Button
               type="button"
               className="min-h-11"
-              disabled={step >= PAYROLL_WIZARD_STEPS.length - 1 || (step === 0 && !preview)}
-              onClick={() => setStep((s) => Math.min(PAYROLL_WIZARD_STEPS.length - 1, s + 1))}
+              disabled={step >= wizardSteps.length - 1 || (step === 0 && !preview)}
+              onClick={() => setStep((s) => Math.min(wizardSteps.length - 1, s + 1))}
             >
               Next
               <ChevronRight data-icon="inline-end" />
@@ -624,12 +1140,23 @@ export default function PayrollPage() {
         </div>
       )}
 
+      {tab === 'cash-advance' && (
+        <PayrollCashAdvancesPanel
+          profile={profile}
+          branch={branch}
+          branchOptions={branchOptions}
+          onBranchChange={setBranch}
+          canApprove={canApproveCa}
+        />
+      )}
+
       {tab === 'packages' && (
         <Card>
           <CardHeader>
-            <CardTitle>Staff pay packages</CardTitle>
+            <CardTitle>Monthly salaries</CardTitle>
             <CardDescription>
-              Fixed / custom / hybrid packages for non-pool roles. Included when you load POS proof for a period.
+              Enter the full monthly amount. Branch is optional — leave as Company / HQ for office roles with no bay.
+              Fixed salary runs prorate by payout frequency.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -639,9 +1166,9 @@ export default function PayrollPage() {
                 onSubmit={async (e) => {
                   e.preventDefault()
                   const amount_minor = Math.round(Number(pkgForm.amountPesos) * 100)
-                  const pkgBranch = pkgForm.branch || branch
-                  if (!pkgForm.staff_id || !(amount_minor > 0) || !pkgBranch) {
-                    toast.error('Employee, branch, and amount required')
+                  const pkgBranch = pkgForm.branch || null
+                  if (!pkgForm.staff_id || !(amount_minor > 0)) {
+                    toast.error('Employee and monthly amount required')
                     return
                   }
                   const { error } = await supabase.from('staff_pay_packages').insert({
@@ -653,7 +1180,7 @@ export default function PayrollPage() {
                   })
                   if (error) toast.error(error.message)
                   else {
-                    toast.success('Package saved')
+                    toast.success('Monthly salary saved')
                     setPkgForm({ staff_id: '', package_kind: 'fixed', amountPesos: '', notes: '', branch: branch || '' })
                     const { data } = await supabase
                       .from('staff_pay_packages')
@@ -671,35 +1198,40 @@ export default function PayrollPage() {
                   placeholder="Employee"
                 />
                 <NamedSelect
-                  value={pkgForm.branch || branch}
+                  value={pkgForm.branch || ''}
                   onChange={(next) => setPkgForm((f) => ({ ...f, branch: next }))}
-                  options={branchOptions}
-                  placeholder="Branch"
+                  options={packageBranchOptions}
+                  placeholder="Branch (optional)"
                 />
                 <NamedSelect
                   value={pkgForm.package_kind}
                   onChange={(package_kind) => setPkgForm((f) => ({ ...f, package_kind }))}
                   options={[
-                    { value: 'fixed', label: 'Fixed' },
+                    { value: 'fixed', label: 'Fixed salary' },
+                    { value: 'hybrid', label: 'Hybrid (salary + extras)' },
                     { value: 'custom', label: 'Custom' },
-                    { value: 'hybrid', label: 'Hybrid' },
                   ]}
                 />
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="pkg-amount">Monthly amount (₱)</Label>
+                  <Input
+                    id="pkg-amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="e.g. 30000"
+                    value={pkgForm.amountPesos}
+                    onChange={(e) => setPkgForm((f) => ({ ...f, amountPesos: e.target.value }))}
+                  />
+                </div>
                 <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Amount (pesos)"
-                  value={pkgForm.amountPesos}
-                  onChange={(e) => setPkgForm((f) => ({ ...f, amountPesos: e.target.value }))}
-                />
-                <Input
-                  placeholder="Notes"
+                  className="sm:col-span-2"
+                  placeholder="Notes (optional)"
                   value={pkgForm.notes}
                   onChange={(e) => setPkgForm((f) => ({ ...f, notes: e.target.value }))}
                 />
-                <Button type="submit" className="min-h-11 sm:col-span-2">
-                  Save package
+                <Button type="submit" className="min-h-11 sm:col-span-2 sm:w-auto">
+                  Save monthly salary
                 </Button>
               </form>
             ) : null}
@@ -708,13 +1240,13 @@ export default function PayrollPage() {
                 <article key={p.id} className="hakum-payroll-row">
                   <p className="font-medium">{p.staff_profiles?.full_name || p.staff_id}</p>
                   <p className="text-muted-foreground">
-                    {p.package_kind} · {p.branch} · from {p.effective_from}
+                    {p.package_kind} · {p.branch || 'HQ / company'} · from {p.effective_from}
                   </p>
-                  <p>{formatMoney(p.amount_minor)}</p>
+                  <p className="tabular-nums font-medium">{formatMoney(p.amount_minor)} / mo</p>
                 </article>
               ))}
               {!packages.length ? (
-                <p className="text-sm text-muted-foreground">No active packages yet.</p>
+                <p className="text-sm text-muted-foreground">No active monthly salaries yet.</p>
               ) : null}
             </div>
           </CardContent>

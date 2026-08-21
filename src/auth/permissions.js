@@ -245,6 +245,11 @@ export function canRunPayroll(profile) {
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'finance_write')
 }
 
+/** Approve / decline cash advances on Payroll (not POS). Same gate as run payroll. */
+export function canApproveCashAdvance(profile) {
+  return canRunPayroll(profile)
+}
+
 /** Employees see their own payouts. Super Admin uses Payroll instead. */
 export function canViewOwnPay(profile) {
   if (!profile?.role) return false
@@ -421,9 +426,10 @@ export function canAccessMarketing(profile) {
   return canAccessCrm(profile)
 }
 
-/** Bookings view: Sales, Super Admin/ASA, Marketing (readonly). TL/Admin use Queue status board. */
+/** Bookings view: Sales, Super Admin/ASA, Marketing (readonly), Detailer (pipeline). TL/Admin use Queue for wash. */
 export function canAccessBookingBoard(profile) {
   if (profile?.role === ROLES.MARKETING) return true
+  if (profile?.role === ROLES.DETAILER) return true
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'bookings')
   return profile?.role === ROLES.SALES
@@ -652,7 +658,7 @@ export function getOperationsNav(profile) {
 
   if (profile?.role === ROLES.DETAILER) {
     return [
-      nav('Queue', '/operations/queue?family=detailing', 'ClipboardList', 'floor'),
+      nav('Bookings', '/operations/bookings', 'Kanban', 'floor'),
       nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
       nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
@@ -906,11 +912,11 @@ export function getVideoEditorMore(profile) {
   return [{ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' }]
 }
 
-/** Detailer — assigned detailing + attendance. */
+/** Detailer — detailing pipeline on Bookings + attendance. */
 export function getDetailerDock(profile) {
   if (profile?.role !== ROLES.DETAILER) return []
   return [
-    { label: 'Queue', to: '/operations/queue?family=detailing', icon: 'ClipboardList', primary: true },
+    { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban', primary: true },
     { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
     { label: 'Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
   ]
@@ -932,7 +938,7 @@ export function redirectForRole(role) {
   if (role === ROLES.SALES) return '/operations/bookings'
   if (role === ROLES.MARKETING) return '/operations/crm'
   if (role === ROLES.VIDEO_EDITOR) return '/operations/planning?tab=calendar'
-  if (role === ROLES.DETAILER) return '/operations/queue?family=detailing'
+  if (role === ROLES.DETAILER) return '/operations/bookings'
   if (role === ROLES.INVESTOR) return '/operations/finance'
   // legacy cashier still lands on POS
   if (role === DEPRECATED_ROLES.CASHIER) return '/operations/pos'

@@ -64,11 +64,13 @@ describe('C5 POS / C6 finance contracts', () => {
     assert.match(String(text), /Cash Advance Payment/)
   })
 
-  it('PosPage exposes expense + cash advance + pending tabs', async () => {
+  it('PosPage expenses + pending; cash advance approve is on Payroll', async () => {
     const src = await read('src/pages/PosPage.jsx')
     assert.match(src, /expense/i)
-    assert.match(src, /cash.?advance|Cash Advance/i)
+    assert.match(src, /Cash advances · Payroll/)
     assert.match(src, /pending/i)
+    const payroll = await read('src/pages/PayrollPage.jsx')
+    assert.match(payroll, /PayrollCashAdvancesPanel/)
   })
 })
 

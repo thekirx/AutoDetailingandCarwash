@@ -31,7 +31,7 @@ describe('requireBranchSlug fail-closed', () => {
 })
 
 describe('packages are branch-keyed', () => {
-  it('skips packages without branch; includes matching branch only', () => {
+  it('company packages use HQ books branch; bay packages keep their branch', () => {
     const preview = buildPayrollPreview({
       period: { start: '2026-08-21', end: '2026-08-21' },
       rules: { wash_pool_pct: 35 },
@@ -41,12 +41,15 @@ describe('packages are branch-keyed', () => {
         { id: 'p1', staff_id: 's1', amount_minor: 50000, package_kind: 'fixed', branch: 'batangas', staff_name: 'A' },
         { id: 'p2', staff_id: 's2', amount_minor: 40000, package_kind: 'fixed', staff_name: 'B' },
       ],
+      runKind: 'fixed',
+      frequency: 'monthly',
     })
-    assert.equal(preview.lines.length, 1)
-    assert.equal(preview.lines[0].branch, 'batangas')
+    assert.equal(preview.lines.length, 2)
+    assert.equal(preview.lines.find((l) => l.staff_id === 's1')?.branch, 'batangas')
+    assert.equal(preview.lines.find((l) => l.staff_id === 's2')?.branch, 'hq')
   })
 
-  it('addPayrollAdjustment skips when branch missing', () => {
+  it('addPayrollAdjustment falls back to HQ when branch missing', () => {
     const next = addPayrollAdjustment([], {
       staff: { id: 's1', full_name: 'Ty' },
       branch: '',
@@ -54,7 +57,8 @@ describe('packages are branch-keyed', () => {
       label: 'Bonus',
       amountMinor: 100,
     })
-    assert.equal(next.length, 0)
+    assert.equal(next.length, 1)
+    assert.equal(next[0].branch, 'hq')
   })
 })
 
@@ -92,5 +96,22 @@ describe('finance integrity wiring', () => {
     const myPay = readFileSync(join(root, 'src/pages/MyPayPage.jsx'), 'utf8')
     assert.doesNotMatch(myPay, /\|\| 'bacoor'/)
     assert.match(myPay, /branchSlugsForOwnPay/)
+  })
+
+  it('SA expense report approve lands on pending_payment; mark_paid later', () => {
+    const mig = readFileSync(
+      join(root, 'supabase/migrations/20260821140000_expense_approve_pending_payment.sql'),
+      'utf8',
+    )
+    assert.match(mig, /pending_payment/)
+    assert.match(mig, /approve_paid/)
+    assert.match(mig, /mark_paid/)
+    assert.match(mig, /expenses_pending_payment_idx/)
+    const ui = readFileSync(join(root, 'src/pages/finance/FinanceExpenseReportsTab.jsx'), 'utf8')
+    assert.match(ui, /Approve · pending payment/)
+    assert.match(ui, /approve_paid/)
+    assert.match(ui, /mark_paid/)
+    const purchases = readFileSync(join(root, 'src/pages/finance/FinancePurchasesTab.jsx'), 'utf8')
+    assert.match(purchases, /pending_payment/)
   })
 })

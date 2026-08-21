@@ -1,5 +1,6 @@
 /** SA / ASA finance_view: review BA end-of-shift closes vs POS baseline. */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -12,6 +13,7 @@ import {
   canReviewShiftClose,
   shiftCloseDiffRows,
 } from '@/lib/shiftClose'
+import { shiftClosePayrollCoverage } from '@/lib/payroll'
 import { toast } from 'sonner'
 
 function statusVariant(status) {
@@ -24,6 +26,7 @@ function statusVariant(status) {
 export default function FinanceShiftCloseTab({ profile, range, branchFilter, canWrite }) {
   const canReview = canReviewShiftClose(profile)
   const [rows, setRows] = useState([])
+  const [payrollRuns, setPayrollRuns] = useState([])
   const [fieldConfig, setFieldConfig] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState(null)
@@ -35,19 +38,41 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
     try {
       let q = supabase
         .from('shift_close_reports')
-        .select('id, branch, business_date, status, pos_baseline, submitted, override_reasons, review_note, submitted_at, reviewed_at')
+        .select('id, branch, business_date, status, shift_ended_at, pos_baseline, submitted, override_reasons, review_note, submitted_at, reviewed_at')
         .gte('business_date', range.start)
         .lte('business_date', range.end)
         .order('business_date', { ascending: false })
       if (branchFilter && branchFilter !== 'all') q = q.eq('branch', branchFilter)
-      const [reports, fields] = await Promise.all([
+      let runsQ = supabase
+        .from('payroll_runs')
+        .select('id, branch, period_start, period_end, status, notes, run_kind, pos_sales_minor')
+        .in('status', ['confirmed', 'paid'])
+        .lte('period_start', range.end)
+        .gte('period_end', range.start)
+        .limit(120)
+      const [reports, fields, runs] = await Promise.all([
         q,
         supabase.from('shift_close_field_config').select('*').order('sort_order'),
+        runsQ,
       ])
       if (reports.error) throw reports.error
       if (fields.error) throw fields.error
       setRows(reports.data || [])
       setFieldConfig(fields.data || [])
+      if (runs.error && /run_kind/i.test(runs.error.message || '')) {
+        const retry = await supabase
+          .from('payroll_runs')
+          .select('id, branch, period_start, period_end, status, notes, pos_sales_minor')
+          .in('status', ['confirmed', 'paid'])
+          .lte('period_start', range.end)
+          .gte('period_end', range.start)
+          .limit(120)
+        setPayrollRuns(retry.data || [])
+      } else if (!runs.error) {
+        setPayrollRuns(runs.data || [])
+      } else {
+        setPayrollRuns([])
+      }
     } catch (err) {
       toast.error(err.message || 'Unable to load shift closes')
     } finally {
@@ -60,6 +85,10 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
   }, [load])
 
   const selected = rows.find((r) => r.id === selectedId) || null
+  const selectedCoverage = useMemo(
+    () => (selected ? shiftClosePayrollCoverage(selected, payrollRuns) : null),
+    [selected, payrollRuns],
+  )
   const diffs = selected
     ? shiftCloseDiffRows(selected.pos_baseline, selected.submitted, fieldConfig)
     : []
@@ -107,6 +136,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
           <CardTitle>Shift reviews</CardTitle>
           <CardDescription>
             POS baseline vs Branch Admin submission. Accept, reject, or lock — does not change POS sales.
+            Floor pay coverage is for reporting only; run optional payroll from Payroll → Dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -114,7 +144,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No shift closes in this range. Branch Admins submit from POS → End of shift.
+              No shift closes in this range. Branch Admin, Super Admin, or ASA submit from POS → End of shift (with editable close time).
             </p>
           ) : (
             <Table>
@@ -122,25 +152,43 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Branch</TableHead>
+                  <TableHead>Shift ended</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Floor pay</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.id} data-state={selectedId === row.id ? 'selected' : undefined}>
-                    <TableCell>{row.business_date}</TableCell>
-                    <TableCell>{row.branch}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>
-                        Review
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {rows.map((row) => {
+                  const coverage = shiftClosePayrollCoverage(row, payrollRuns)
+                  return (
+                    <TableRow key={row.id} data-state={selectedId === row.id ? 'selected' : undefined}>
+                      <TableCell>{row.business_date}</TableCell>
+                      <TableCell>{row.branch}</TableCell>
+                      <TableCell className="text-xs tabular-nums text-muted-foreground">
+                        {row.shift_ended_at
+                          ? new Date(row.shift_ended_at).toLocaleString([], {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={coverage.covered ? 'default' : 'outline'}>{coverage.label}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>
+                          Review
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           )}
@@ -154,8 +202,20 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
               {selected.branch} · {selected.business_date}
             </CardTitle>
             <CardDescription>
+              {selectedCoverage ? `${selectedCoverage.label} · ` : ''}
               Status {selected.status}
+              {selected.shift_ended_at
+                ? ` · Shift ended ${new Date(selected.shift_ended_at).toLocaleString()}`
+                : ''}
               {selected.review_note ? ` · Note: ${selected.review_note}` : ''}
+              {!selectedCoverage?.covered && selected.status === 'accepted' ? (
+                <>
+                  {' · '}
+                  <Link className="underline" to="/operations/payroll">
+                    Open Payroll dashboard
+                  </Link>
+                </>
+              ) : null}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">

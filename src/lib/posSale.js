@@ -38,13 +38,22 @@ export function posCartBlocksCheckout(cart = []) {
   )
 }
 
-/** POS CA inbox: cash_advance + this register's branch. Empty payload.branch is out. */
-export function cashAdvanceVisibleOnPos(row, { posBranch, branchScopeList } = {}) {
+/**
+ * Cash advance branch filter for Payroll inbox + POS daily-close load.
+ * Empty payload.branch is out (fail-closed).
+ */
+export function cashAdvanceInBranchScope(row, { branch, posBranch, branchScopeList } = {}) {
   if ((row?.ops_forms?.kind || row?.kind) !== 'cash_advance') return false
+  const target = String(branch || posBranch || '').trim()
   const subBranch = String(row?.payload?.branch || '').trim()
-  if (!subBranch || !posBranch || subBranch !== posBranch) return false
+  if (!subBranch || !target || subBranch !== target) return false
   if (branchScopeList === null) return true
   return Array.isArray(branchScopeList) && branchScopeList.includes(subBranch)
+}
+
+/** @deprecated use cashAdvanceInBranchScope — kept for older call sites / tests */
+export function cashAdvanceVisibleOnPos(row, opts = {}) {
+  return cashAdvanceInBranchScope(row, opts)
 }
 
 function normalizeName(value) {
@@ -177,12 +186,15 @@ export function buildPosSalePayload({ branch, customerId, paymentMethod, cart, a
   }
 }
 
-/** Ceramic/payroll drafts are proof rows — they must not inflate Bacoor close until paid. */
+/** Ceramic/payroll/report drafts — do not inflate Bacoor close until paid. */
 export function expenseCountsOnDailyClose(row = {}) {
   const status = String(row?.status || 'draft').toLowerCase()
   if (status === 'void' || status === 'rejected' || status === 'cancelled') return false
+  if (status === 'pending_payment' || status === 'pending_approval') return false
   const desc = String(row?.description || '')
-  if (/^(ceramic|compensation|payroll):/i.test(desc)) return status === 'paid' || status === 'approved'
+  if (/^(ceramic|compensation|payroll|expense_report):/i.test(desc)) {
+    return status === 'paid' || status === 'posted'
+  }
   return true
 }
 

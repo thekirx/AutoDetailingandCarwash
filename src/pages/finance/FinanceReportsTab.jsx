@@ -155,13 +155,29 @@ export default function FinanceReportsTab({
       { key: 'status', label: 'Status' },
       {
         key: 'square_sales_minor',
-        label: 'Square sales (submitted)',
-        value: (r) => formatMoney(r.submitted?.square_sales_minor ?? 0),
+        label: 'Total sales (submitted)',
+        value: (r) =>
+          formatMoney(r.submitted?.total_sales_minor ?? r.submitted?.square_sales_minor ?? 0),
       },
       {
         key: 'total_gcash_minor',
         label: 'GCash (submitted)',
         value: (r) => formatMoney(r.submitted?.total_gcash_minor ?? 0),
+      },
+      {
+        key: 'credit_card_minor',
+        label: 'Credit card (submitted)',
+        value: (r) => formatMoney(r.submitted?.credit_card_minor ?? 0),
+      },
+      {
+        key: 'total_expenses_minor',
+        label: 'Expenses (submitted)',
+        value: (r) => formatMoney(r.submitted?.total_expenses_minor ?? 0),
+      },
+      {
+        key: 'ca_collected_minor',
+        label: 'CA collected (submitted)',
+        value: (r) => formatMoney(r.submitted?.ca_collected_minor ?? 0),
       },
       {
         key: 'total_cash_left_minor',
@@ -193,8 +209,11 @@ export default function FinanceReportsTab({
                 <TableHead>Date</TableHead>
                 <TableHead>Branch</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Square sales</TableHead>
+                <TableHead className="text-right">Total sales</TableHead>
                 <TableHead className="text-right">GCash</TableHead>
+                <TableHead className="text-right">Card</TableHead>
+                <TableHead className="text-right">Expenses</TableHead>
+                <TableHead className="text-right">CA collected</TableHead>
                 <TableHead className="text-right">Cash left</TableHead>
               </TableRow>
             </TableHeader>
@@ -204,14 +223,19 @@ export default function FinanceReportsTab({
                   <TableCell className="font-medium">{r.business_date}</TableCell>
                   <TableCell>{r.branch}</TableCell>
                   <TableCell><Badge variant="secondary">{r.status}</Badge></TableCell>
-                  <TableCell className="text-right tabular-nums">{formatMoney(r.submitted?.square_sales_minor ?? 0)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatMoney(r.submitted?.total_sales_minor ?? r.submitted?.square_sales_minor ?? 0)}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{formatMoney(r.submitted?.total_gcash_minor ?? 0)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatMoney(r.submitted?.credit_card_minor ?? 0)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatMoney(r.submitted?.total_expenses_minor ?? 0)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatMoney(r.submitted?.ca_collected_minor ?? 0)}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatMoney(r.submitted?.total_cash_left_minor ?? 0)}</TableCell>
                 </TableRow>
               ))}
               {!shiftCloses.length && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-muted-foreground">
+                  <TableCell colSpan={9} className="text-muted-foreground">
                     No accepted or locked shift closes in this window.
                   </TableCell>
                 </TableRow>

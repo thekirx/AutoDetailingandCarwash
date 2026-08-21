@@ -6086,7 +6086,33 @@ a.planner-ticket:active {
   box-shadow: inset 0 2px 0 var(--planner-stub);
 }
 .hakum-pos {
+  --pos-end-shift: #b42318;
+  --pos-end-shift-ink: #fffaf8;
+  --pos-end-shift-edge: #7f1d1d;
   min-width: 0;
+}
+.hakum-pos-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.hakum-pos-end-shift {
+  border-color: var(--pos-end-shift-edge) !important;
+  background: var(--pos-end-shift) !important;
+  color: var(--pos-end-shift-ink) !important;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 0 color-mix(in oklab, #000 18%, transparent), 0 8px 18px color-mix(in oklab, var(--pos-end-shift) 28%, transparent);
+}
+.hakum-pos-end-shift:hover {
+  background: color-mix(in oklab, var(--pos-end-shift) 88%, #000) !important;
+  color: var(--pos-end-shift-ink) !important;
+}
+.hakum-pos-end-shift:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--pos-end-shift) 55%, #fff);
+  outline-offset: 2px;
 }
 .hakum-pos-hero {
   display: grid;
@@ -7356,19 +7382,114 @@ html:not(.dark) .floor-shell .floor-alert-error {
   white-space: nowrap;
 }
 .booking-lane-board .floor-lane-body {
-  gap: 0.55rem;
+  gap: 0.45rem;
 }
 .booking-lane-board .floor-ticket {
-  padding: 0.75rem 0.8rem;
+  padding: 0.65rem 0.75rem;
   min-height: 0;
-  border-radius: 0.85rem;
+  border-radius: 0.75rem;
+}
+.booking-lane-board .floor-ticket.bk-ticket-compact {
+  min-height: 0;
 }
 .booking-lane-board .floor-ticket p {
-  font-size: 0.84rem;
-  line-height: 1.35;
+  margin: 0;
 }
 .booking-lane-board .floor-ticket .bk-meta {
   font-size: 0.72rem;
+}
+
+/* Compact booking tickets: detailing type · car - plate */
+.bk-ticket-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.12rem;
+  width: 100%;
+  text-align: left;
+  overflow: hidden;
+  min-height: 0;
+  box-sizing: border-box;
+}
+button.bk-ticket-compact {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+}
+.bk-ticket-openable {
+  cursor: pointer;
+}
+.bk-ticket-openable:hover,
+.bk-ticket-openable:focus-visible {
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+  box-shadow: 0 4px 14px rgba(5, 38, 153, 0.1);
+  outline: none;
+}
+.bk-ticket-service {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bk-ticket-car-plate {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bk-ticket-plate {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--card-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bk-ticket-car {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bk-ticket-status {
+  margin: 0.2rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bk-card.bk-ticket-compact {
+  padding: 0.85rem 1rem;
+}
+.bk-edit-stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
 }
 @media (prefers-reduced-motion: reduce) {
   .booking-lane-board {
@@ -11013,7 +11134,33 @@ a.planner-ticket:active {
   box-shadow: inset 0 2px 0 var(--planner-stub);
 }
 .hakum-pos {
+  --pos-end-shift: #b42318;
+  --pos-end-shift-ink: #fffaf8;
+  --pos-end-shift-edge: #7f1d1d;
   min-width: 0;
+}
+.hakum-pos-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.hakum-pos-end-shift {
+  border-color: var(--pos-end-shift-edge) !important;
+  background: var(--pos-end-shift) !important;
+  color: var(--pos-end-shift-ink) !important;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 0 color-mix(in oklab, #000 18%, transparent), 0 8px 18px color-mix(in oklab, var(--pos-end-shift) 28%, transparent);
+}
+.hakum-pos-end-shift:hover {
+  background: color-mix(in oklab, var(--pos-end-shift) 88%, #000) !important;
+  color: var(--pos-end-shift-ink) !important;
+}
+.hakum-pos-end-shift:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--pos-end-shift) 55%, #fff);
+  outline-offset: 2px;
 }
 .hakum-pos-hero {
   display: grid;
@@ -11496,4 +11643,117 @@ a.planner-ticket:active {
   .hakum-payroll-steps {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* End-of-shift wizard step rail */
+.hakum-shift-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hakum-shift-steps button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+.hakum-shift-steps button > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 0.65rem;
+}
+.hakum-shift-steps button.is-on {
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+  background: color-mix(in oklab, var(--primary) 8%, var(--card));
+  color: var(--foreground);
+}
+@media (max-width: 420px) {
+  .hakum-shift-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.hakum-payroll-kind {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.hakum-payroll-kind button {
+  min-height: 3.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--card);
+  text-align: left;
+  cursor: pointer;
+}
+.hakum-payroll-kind button.is-on {
+  border-color: color-mix(in oklab, #052699 50%, var(--border));
+  background: color-mix(in oklab, #052699 8%, var(--card));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, #052699 25%, transparent);
+}
+.hakum-payroll-kind strong {
+  display: block;
+  font-size: 0.95rem;
+}
+.hakum-payroll-kind span {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.hakum-payroll-row--salary {
+  grid-template-columns: minmax(0, 1.4fr) minmax(7rem, 9rem) auto;
+  align-items: center;
+}
+.hakum-payroll-review {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--card);
+  padding: 0.9rem 1rem;
+}
+.hakum-payroll-review > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.hakum-payroll-review ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+.hakum-payroll-review li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.75rem;
 }

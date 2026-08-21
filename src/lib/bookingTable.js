@@ -1,4 +1,5 @@
 import { DETAILING_BOARD_STATUSES } from './detailingBoardStatuses.js'
+import { isBookingBoardRow } from './serviceKinds.js'
 
 export const BOOKING_TABLE_PAGE_SIZES = Object.freeze([10, 25, 50])
 export const BOOKING_TABLE_DEFAULT_PAGE_SIZE = 10
@@ -25,17 +26,43 @@ export function paginateRows(rows, { page = 1, pageSize = 10 } = {}) {
 
 const STATUS_ORDER = Object.freeze([...DETAILING_BOARD_STATUSES.map((s) => s.id), 'cancelled'])
 
+export function bookingPlateText(booking) {
+  const plate = String(booking?.vehicle_plate || '').trim()
+  return plate ? plate.toUpperCase() : ''
+}
+
+export function bookingCarText(booking) {
+  return [booking?.vehicle_make, booking?.vehicle_model].filter(Boolean).join(' ').trim()
+}
+
 export function bookingVehicleText(booking) {
-  const car = [booking?.vehicle_make, booking?.vehicle_model].filter(Boolean).join(' ')
-  if (booking?.vehicle_plate && car) return `${booking.vehicle_plate} · ${car}`
-  return booking?.vehicle_plate || car || 'No vehicle details'
+  const plate = bookingPlateText(booking)
+  const car = bookingCarText(booking)
+  if (plate && car) return `${plate} · ${car}`
+  return plate || car || 'No vehicle details'
+}
+
+/** Compact board line: "Toyota Vios - GN1L5I" */
+export function bookingCarPlateLine(booking) {
+  const plate = bookingPlateText(booking)
+  const car = bookingCarText(booking)
+  if (car && plate) return `${car} - ${plate}`
+  return car || plate || 'Vehicle TBD'
+}
+
+/** Service name only — card headline for detailing type. */
+export function bookingDetailingTypeText(booking) {
+  const name = String(booking?.services?.name || booking?.service_name || '').trim()
+  return name || 'Detailing TBD'
 }
 
 export function bookingServiceText(booking) {
   const name = booking?.services?.name || booking?.service_name
   const kind = booking?.services?.pay_category || booking?.service_pay_category
   if (!name && !kind) return null
-  if (kind === 'detailing') return name ? `${name} · Detailing` : 'Detailing'
+  if (kind === 'detailing' || kind === 'ppf' || isBookingBoardRow(booking)) {
+    return name ? `${name} · Detailing` : 'Detailing'
+  }
   return name || null
 }
 
@@ -80,10 +107,11 @@ export function paginateBookingTableRows(rows, { page = 1, pageSize = BOOKING_TA
   return paginateRows(rows, { page, pageSize: size })
 }
 
-/** Wash/packages vs multi-day detailing. Anything not detailing is same-day floor work. */
+/** Wash/packages vs multi-day detailing. Bookings board SKUs (incl. PPF) count as detailing. */
 export function bookingPayKind(booking) {
+  if (isBookingBoardRow(booking)) return 'detailing'
   const kind = String(booking?.services?.pay_category || booking?.service_pay_category || '').toLowerCase()
-  return kind === 'detailing' ? 'detailing' : 'wash'
+  return kind === 'detailing' || kind === 'ppf' ? 'detailing' : 'wash'
 }
 
 export function filterBookingList(rows, { status = 'all', kind = 'all' } = {}) {

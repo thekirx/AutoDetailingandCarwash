@@ -3,7 +3,14 @@
  * Amounts in minor units (centavos). Percentages are whole numbers (35 = 35%).
  */
 
-export const PAYOUT_FREQUENCIES = Object.freeze(['daily', 'weekly', 'biweekly', 'monthly', 'custom'])
+export const PAYOUT_FREQUENCIES = Object.freeze([
+  'daily',
+  'weekly',
+  'biweekly',
+  'semimonthly',
+  'monthly',
+  'custom',
+])
 
 export const DEFAULT_COMPENSATION_RULES = Object.freeze({
   wash_pool_pct: 35,
@@ -12,7 +19,8 @@ export const DEFAULT_COMPENSATION_RULES = Object.freeze({
   ceramic_crew_solo_pct: 20,
   ceramic_crew_split_pct: 10,
   ceramic_detailer_split_pct: 10,
-  payout_frequency: 'weekly',
+  /** Hakum default: commission windows around the 15th and month-end. */
+  payout_frequency: 'semimonthly',
   payout_weekday: 5,
 })
 
@@ -34,7 +42,7 @@ export function normalizeCompensationSettings(row) {
     if (Number.isFinite(n)) out[key] = n
   }
   const freq = String(src.payout_frequency || out.payout_frequency).toLowerCase()
-  out.payout_frequency = PAYOUT_FREQUENCIES.includes(freq) ? freq : 'weekly'
+  out.payout_frequency = PAYOUT_FREQUENCIES.includes(freq) ? freq : DEFAULT_COMPENSATION_RULES.payout_frequency
   const weekday = Number(src.payout_weekday)
   out.payout_weekday = Number.isInteger(weekday) && weekday >= 0 && weekday <= 6 ? weekday : 5
   return out

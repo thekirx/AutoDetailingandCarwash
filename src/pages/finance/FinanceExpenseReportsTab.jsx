@@ -129,7 +129,15 @@ export default function FinanceExpenseReportsTab({
     setBusy(false)
     if (error) toast.error(error.message)
     else {
-      toast.success(`Report ${action}d`)
+      toast.success(
+        action === 'approve'
+          ? 'Approved — expenses pending payment'
+          : action === 'approve_paid'
+            ? 'Approved and marked paid'
+            : action === 'mark_paid'
+              ? 'Expenses marked paid'
+              : `Report ${action}d`,
+      )
       setReviewNote('')
       load()
       onReload?.()
@@ -143,7 +151,8 @@ export default function FinanceExpenseReportsTab({
           <CardHeader>
             <CardTitle>Compose expense report</CardTitle>
             <CardDescription>
-              ASA monthly/custom category lines. Submit posts pending expenses into Purchases / P&amp;L.
+              ASA monthly/custom category lines. Submit creates pending_approval expenses. Super Admin
+              approves to pending payment (or pay now); mark paid when cash actually leaves.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -195,7 +204,9 @@ export default function FinanceExpenseReportsTab({
       <Card>
         <CardHeader>
           <CardTitle>Reports</CardTitle>
-          <CardDescription>Submit posts to expenses; Super Admin approves to paid.</CardDescription>
+          <CardDescription>
+            Submit → pending approval. Approve → pending payment (not on P&amp;L until paid). Mark paid when settled.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {isSuperAdmin(profile) ? (
@@ -214,6 +225,9 @@ export default function FinanceExpenseReportsTab({
                     <p className="text-sm text-muted-foreground">
                       {r.branch} · {r.period_start} to {r.period_end} · {formatMoney(total)}
                     </p>
+                    {r.review_note ? (
+                      <p className="mt-1 text-xs text-muted-foreground">Note: {r.review_note}</p>
+                    ) : null}
                   </div>
                   <Badge>{r.status}</Badge>
                 </div>
@@ -226,12 +240,26 @@ export default function FinanceExpenseReportsTab({
                   {isSuperAdmin(profile) && r.status === 'submitted' ? (
                     <>
                       <Button type="button" size="sm" disabled={busy} onClick={() => review(r.id, 'approve')}>
-                        Approve
+                        Approve · pending payment
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => review(r.id, 'approve_paid')}
+                      >
+                        Approve &amp; pay now
                       </Button>
                       <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => review(r.id, 'reject')}>
                         Reject
                       </Button>
                     </>
+                  ) : null}
+                  {isSuperAdmin(profile) && r.status === 'approved' ? (
+                    <Button type="button" size="sm" disabled={busy} onClick={() => review(r.id, 'mark_paid')}>
+                      Mark paid
+                    </Button>
                   ) : null}
                 </div>
               </article>

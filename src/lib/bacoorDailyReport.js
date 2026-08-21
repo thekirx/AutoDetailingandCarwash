@@ -25,7 +25,9 @@ export function emptyBacoorDailyReport(meta = {}) {
   return {
     branch: meta.branch || '',
     date: meta.date || null,
+    /** @deprecated storage key — UI label is Total sales (paid POS) */
     square_sales_minor: 0,
+    total_sales_minor: 0,
     downpayments_minor: 0,
     ca_collected_minor: 0,
     total_gcash_minor: 0,
@@ -85,6 +87,7 @@ export function buildBacoorDailyReport({
     const amount = Number(row.total_minor || 0)
     if (!Number.isFinite(amount)) continue
     report.square_sales_minor += amount
+    report.total_sales_minor += amount
     const method = String(row.payment_method || '').toLowerCase()
     if (method === 'gcash') report.total_gcash_minor += amount
     if (method === 'card' || method === 'credit') report.credit_card_minor += amount
@@ -144,7 +147,7 @@ export function formatBacoorReportText(report, formatMoney) {
     '━━━━━━━━━━━',
     'Sales Report Summary',
     '━━━━━━━━━━━',
-    `Square Sales: ${m(report.square_sales_minor)}`,
+    `Total Sales: ${m(report.total_sales_minor || report.square_sales_minor)}`,
     `Downpayments: ${m(report.downpayments_minor)}`,
     `CA Collected: ${m(report.ca_collected_minor)}`,
     `Total Gcash: ${m(report.total_gcash_minor)}`,

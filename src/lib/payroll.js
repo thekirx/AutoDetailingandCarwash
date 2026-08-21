@@ -15,6 +15,74 @@ export const PAYROLL_WIZARD_STEPS = Object.freeze([
   { id: 'confirm', label: 'Confirm', hint: 'Post to Finance' },
 ])
 
+/** Fixed salary wizard — no bay; salary list → commissions → full review. */
+export const PAYROLL_FIXED_WIZARD_STEPS = Object.freeze([
+  { id: 'period', label: 'Period', hint: 'Frequency and dates only' },
+  { id: 'people', label: 'Employees', hint: 'Monthly salaries — override or skip' },
+  { id: 'extras', label: 'Commissions', hint: 'Add commission or bonus per person' },
+  { id: 'review', label: 'Review', hint: 'Full payout list — adjust then post' },
+])
+
+/** Books bucket for company-wide / office salaries (not a wash bay). */
+export const FIXED_SALARY_BOOKS_BRANCH = 'hq'
+
+export function resolveFixedSalaryBranch(pkg = {}, staff = null) {
+  return (
+    String(pkg.branch || '').trim() ||
+    String(staff?.branch_slug || pkg.staff?.branch_slug || '').trim() ||
+    FIXED_SALARY_BOOKS_BRANCH
+  )
+}
+
+export function payrollWizardSteps(runKind) {
+  return String(runKind || '') === 'fixed' ? PAYROLL_FIXED_WIZARD_STEPS : PAYROLL_WIZARD_STEPS
+}
+
+/** Group lines by employee for salary review UI. */
+export function groupPayrollLinesByStaff(lines = []) {
+  const map = new Map()
+  for (const row of lines || []) {
+    const id = row.staff_id || 'unassigned'
+    if (!map.has(id)) {
+      map.set(id, {
+        staff_id: id === 'unassigned' ? null : id,
+        staff_name: row.staff_name || 'Unassigned',
+        role: row.role || null,
+        branch: row.branch || FIXED_SALARY_BOOKS_BRANCH,
+        lines: [],
+        salary_minor: 0,
+        commission_minor: 0,
+        total_minor: 0,
+      })
+    }
+    const g = map.get(id)
+    g.lines.push(row)
+    const amt = Math.round(Number(row.pay_minor) || Number(row.amount_minor) || 0)
+    const signed =
+      row.direction === 'deduct' || row.kind === 'adjustment_deduct' ? -amt : amt
+    if (String(row.kind || '').startsWith('package')) g.salary_minor += amt
+    else if (
+      row.kind === 'adjustment_add' ||
+      row.kind === 'adjustment_deduct' ||
+      /commission|bonus/i.test(String(row.label || ''))
+    ) {
+      g.commission_minor += signed
+    }
+    g.total_minor = netPayrollLinesMinor(g.lines)
+  }
+  return [...map.values()].sort((a, b) =>
+    String(a.staff_name || '').localeCompare(String(b.staff_name || ''), undefined, {
+      sensitivity: 'base',
+    }),
+  )
+}
+
+/** Remove every line for a staff member from this run. */
+export function removeStaffFromPayrollPreview(lines = [], staffId) {
+  if (!staffId) return lines || []
+  return (lines || []).filter((row) => row.staff_id !== staffId)
+}
+
 function manilaNoon(ymd) {
   return new Date(`${ymd}T12:00:00+08:00`)
 }
@@ -51,6 +119,14 @@ export function payrollPeriodRange(frequency, anchorYmd, customRange = null) {
     return { start, end }
   }
   if (freq === 'daily') return { start: ymd, end: ymd }
+  if (freq === 'semimonthly') {
+    const [y, m, day] = ymd.split('-').map(Number)
+    if (day <= 15) {
+      return { start: `${y}-${String(m).padStart(2, '0')}-01`, end: `${y}-${String(m).padStart(2, '0')}-15` }
+    }
+    const last = new Date(Date.UTC(y, m, 0, 4, 0, 0))
+    return { start: `${y}-${String(m).padStart(2, '0')}-16`, end: formatYmd(last) }
+  }
   if (freq === 'monthly') {
     const [y, m] = ymd.split('-').map(Number)
     const start = `${y}-${String(m).padStart(2, '0')}-01`
@@ -169,6 +245,8 @@ function splitAmount(roster, amountMinor, kind, { branch, sourceKey, sourceSaleI
 /**
  * Build a confirmable payroll preview from paid POS sales + daily attendance.
  * Ceramic Finance drafts (ceramic:{saleId}:crew|detailer) split onto that day's roster.
+ * Package amount_minor = monthly salary; prorated by frequency for this run.
+ * @param {'floor'|'fixed'|'all'} [opts.runKind]
  */
 export function buildPayrollPreview({
   period,
@@ -178,119 +256,167 @@ export function buildPayrollPreview({
   ceramicExpenses = [],
   claimedSaleIds = [],
   packages = [],
+  runKind = 'all',
+  frequency = 'weekly',
 } = {}) {
   const claimed = new Set((claimedSaleIds || []).map(String))
   const poolPct = Number(rules.wash_pool_pct)
   const washByBranchDay = new Map()
   const proof = []
   let posSalesMinor = 0
-
-  for (const sale of sales || []) {
-    if (String(sale?.status || 'paid') !== 'paid') continue
-    const id = String(sale.id || '')
-    if (!id || claimed.has(id)) continue
-    const branch = sale.branch
-    const day = saleDay(sale)
-    if (!branch || !inPeriod(day, period)) continue
-    const wash = washPoolAmountMinor(sale)
-    if (wash <= 0) continue
-    posSalesMinor += wash
-    proof.push({
-      sale_id: id,
-      branch,
-      day,
-      total_minor: Number(sale.total_minor) || wash,
-      wash_pool_minor: wash,
-      occurred_at: sale.occurred_at || null,
-    })
-    const key = `${branch}|${day}`
-    washByBranchDay.set(key, (washByBranchDay.get(key) || 0) + wash)
-  }
-
+  const kind = String(runKind || 'all').toLowerCase()
+  const includeFloor = kind === 'all' || kind === 'floor'
+  const includeFixed = kind === 'all' || kind === 'fixed'
   const lines = []
-  for (const [key, totalSalesMinor] of washByBranchDay) {
-    const [branch, day] = key.split('|')
-    const sourceKey = `compensation:${branch}:${day}`
-    const split = splitWashPool({
-      totalSalesMinor,
-      poolPct,
-      roster: rosterFor(attendance, branch, day),
-    })
-    for (const row of split.rows) {
-      if (!row.pay_minor) continue
+
+  if (includeFloor) {
+    for (const sale of sales || []) {
+      if (String(sale?.status || 'paid') !== 'paid') continue
+      const id = String(sale.id || '')
+      if (!id || claimed.has(id)) continue
+      const branch = sale.branch
+      const day = saleDay(sale)
+      if (!branch || !inPeriod(day, period)) continue
+      const wash = washPoolAmountMinor(sale)
+      if (wash <= 0) continue
+      posSalesMinor += wash
+      proof.push({
+        sale_id: id,
+        branch,
+        day,
+        total_minor: Number(sale.total_minor) || wash,
+        wash_pool_minor: wash,
+        occurred_at: sale.occurred_at || null,
+      })
+      const key = `${branch}|${day}`
+      washByBranchDay.set(key, (washByBranchDay.get(key) || 0) + wash)
+    }
+
+    for (const [key, totalSalesMinor] of washByBranchDay) {
+      const [branch, day] = key.split('|')
+      const sourceKey = `compensation:${branch}:${day}`
+      const split = splitWashPool({
+        totalSalesMinor,
+        poolPct,
+        roster: rosterFor(attendance, branch, day),
+      })
+      for (const row of split.rows) {
+        if (!row.pay_minor) continue
+        lines.push(
+          toLine({
+            kind: 'wash_pool',
+            staff: row,
+            branch,
+            sourceKey,
+            payMinor: row.pay_minor,
+            date: day,
+          }),
+        )
+      }
+    }
+
+    for (const exp of ceramicExpenses || []) {
+      const parsed = parseCeramicKey(exp.description)
+      if (!parsed) continue
+      if (claimed.has(String(parsed.saleId))) continue
+      const sale = (sales || []).find((s) => String(s.id) === String(parsed.saleId))
+      const branch = exp.branch || sale?.branch
+      const day = saleDay(sale) || period?.start
+      if (!branch || !inPeriod(day, period)) continue
+      const lineKind = parsed.side === 'detailer' ? 'ceramic_detailer' : 'ceramic_crew'
+      let roster = rosterFor(attendance, branch, day)
+      if (lineKind === 'ceramic_detailer') {
+        const detailers = roster.filter((r) => String(r.role || '').toLowerCase() === 'detailer')
+        roster = detailers.length ? detailers : []
+      }
       lines.push(
-        toLine({
-          kind: 'wash_pool',
-          staff: row,
+        ...splitAmount(roster, exp.total_minor, lineKind, {
           branch,
-          sourceKey,
-          payMinor: row.pay_minor,
+          sourceKey: exp.description,
+          sourceSaleId: parsed.saleId,
           date: day,
         }),
       )
     }
   }
 
-  for (const exp of ceramicExpenses || []) {
-    const parsed = parseCeramicKey(exp.description)
-    if (!parsed) continue
-    if (claimed.has(String(parsed.saleId))) continue
-    const sale = (sales || []).find((s) => String(s.id) === String(parsed.saleId))
-    const branch = exp.branch || sale?.branch
-    const day = saleDay(sale) || period?.start
-    if (!branch || !inPeriod(day, period)) continue
-    const kind = parsed.side === 'detailer' ? 'ceramic_detailer' : 'ceramic_crew'
-    let roster = rosterFor(attendance, branch, day)
-    if (kind === 'ceramic_detailer') {
-      const detailers = roster.filter((r) => String(r.role || '').toLowerCase() === 'detailer')
-      roster = detailers.length ? detailers : []
+  if (includeFixed) {
+    for (const pkg of packages || []) {
+      const staffId = pkg.staff_id || pkg.staff?.id
+      if (!staffId) continue
+      const effectiveFrom = String(pkg.effective_from || '1970-01-01').slice(0, 10)
+      if (period?.end && effectiveFrom > period.end) continue
+      const monthly = Math.round(Number(pkg.amount_minor) || 0)
+      if (monthly <= 0) continue
+      const staff = pkg.staff || { id: staffId, staff_id: staffId, full_name: pkg.staff_name }
+      const branch = resolveFixedSalaryBranch(pkg, staff)
+      const payMinor = prorateMonthlyPackageMinor(monthly, frequency, period)
+      if (payMinor <= 0) continue
+      const pkgKind = pkg.package_kind === 'hybrid' ? 'package_hybrid' : 'package_fixed'
+      lines.push({
+        ...toLine({
+          kind: pkgKind,
+          staff,
+          branch,
+          sourceKey: `package:${pkg.id || staffId}`,
+          payMinor,
+          date: period?.start,
+        }),
+        direction: 'add',
+        label: pkg.notes || 'Monthly salary (prorated)',
+        monthly_amount_minor: monthly,
+      })
     }
-    lines.push(
-      ...splitAmount(roster, exp.total_minor, kind, {
-        branch,
-        sourceKey: exp.description,
-        sourceSaleId: parsed.saleId,
-        date: day,
-      }),
-    )
-  }
-
-  for (const pkg of packages || []) {
-    const staffId = pkg.staff_id || pkg.staff?.id
-    if (!staffId) continue
-    const effectiveFrom = String(pkg.effective_from || '1970-01-01').slice(0, 10)
-    if (period?.end && effectiveFrom > period.end) continue
-    const amount = Math.round(Number(pkg.amount_minor) || 0)
-    if (amount <= 0) continue
-    const branch = pkg.branch
-    if (!branch) continue
-    const kind = pkg.package_kind === 'hybrid' ? 'package_hybrid' : 'package_fixed'
-    lines.push({
-      ...toLine({
-        kind,
-        staff: pkg.staff || { id: staffId, staff_id: staffId, full_name: pkg.staff_name },
-        branch,
-        sourceKey: `package:${pkg.id || staffId}`,
-        payMinor: amount,
-        date: period?.start,
-      }),
-      direction: 'add',
-      label: pkg.notes || pkg.package_kind || 'Pay package',
-    })
   }
 
   const totalPayoutMinor = netPayrollLinesMinor(lines)
   return {
     period,
+    run_kind: kind,
+    frequency,
     rules: { wash_pool_pct: poolPct },
     pos_sales_minor: posSalesMinor,
     pool_minor: lines.filter((l) => l.kind === 'wash_pool').reduce((s, l) => s + l.pay_minor, 0),
     total_payout_minor: totalPayoutMinor,
     proof,
     lines,
-    input: { period, rules, sales, attendance, ceramicExpenses, claimedSaleIds, packages },
+    input: {
+      period,
+      rules,
+      sales,
+      attendance,
+      ceramicExpenses,
+      claimedSaleIds,
+      packages,
+      runKind: kind,
+      frequency,
+    },
   }
 }
+
+/** Monthly package → this run's share by payout frequency. */
+export function prorateMonthlyPackageMinor(monthlyMinor, frequency, period = null) {
+  const monthly = Math.round(Number(monthlyMinor) || 0)
+  if (monthly <= 0) return 0
+  const freq = String(frequency || 'weekly').toLowerCase()
+  if (freq === 'monthly') return monthly
+  if (freq === 'semimonthly') return Math.round(monthly / 2)
+  if (freq === 'biweekly') return Math.round((monthly * 12) / 26)
+  if (freq === 'weekly') return Math.round((monthly * 12) / 52)
+  if (freq === 'daily') return Math.round(monthly / 30)
+  if (freq === 'custom' && period?.start && period?.end) {
+    const days = Math.round((manilaNoon(period.end) - manilaNoon(period.start)) / 86400000) + 1
+    const [y, m] = String(period.start).split('-').map(Number)
+    const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate()
+    return Math.round((monthly * Math.max(1, days)) / Math.max(28, daysInMonth))
+  }
+  return Math.round((monthly * 12) / 52)
+}
+
+export const PAYROLL_RUN_KINDS = Object.freeze([
+  { id: 'floor', label: 'Floor pay', hint: 'Crew, TL, detailer — wash pool + ceramic from days worked' },
+  { id: 'fixed', label: 'Fixed salary', hint: 'Office / BA / marketing — monthly package prorated' },
+])
 
 export function netPayrollLinesMinor(lines = []) {
   return (lines || []).reduce((sum, row) => {
@@ -308,9 +434,8 @@ export function addPayrollAdjustment(lines = [], { staff, branch, direction, lab
   const amount = Math.round(Number(amountMinor) || 0)
   const trimmed = String(label || '').trim()
   if (amount <= 0 || !trimmed || !staff) return lines
-  const lineBranch = String(branch || staff.branch_slug || '').trim()
+  const lineBranch = String(branch || staff.branch_slug || FIXED_SALARY_BOOKS_BRANCH).trim()
   if (!lineBranch) return lines
-  const staffId = staff.staff_id || staff.id
   const kind = dir === 'deduct' ? 'adjustment_deduct' : 'adjustment_add'
   const sourceKey = `${dir}:${trimmed}`
   const row = {
@@ -326,6 +451,18 @@ export function addPayrollAdjustment(lines = [], { staff, branch, direction, lab
     label: trimmed,
   }
   return [...(lines || []), row]
+}
+
+/** Commission / bonus convenience — always an add labeled for the review UI. */
+export function addPayrollCommission(lines = [], { staff, branch, label, amountMinor }) {
+  const trimmed = String(label || 'Commission').trim() || 'Commission'
+  return addPayrollAdjustment(lines, {
+    staff,
+    branch: branch || resolveFixedSalaryBranch({}, staff),
+    direction: 'add',
+    label: /commission|bonus/i.test(trimmed) ? trimmed : `Commission · ${trimmed}`,
+    amountMinor,
+  })
 }
 
 export function validatePayrollAdjustment({ direction, label, amountMinor }) {
@@ -441,8 +578,9 @@ export function assignPayrollLineStaff(lines = [], key, staff) {
   })
 }
 
-export function buildRunPayrollPayload({ preview, branch, frequency, notes = '' }) {
+export function buildRunPayrollPayload({ preview, branch, frequency, notes = '', runKind = 'floor' }) {
   const period = preview?.period || {}
+  const kind = String(runKind || preview?.run_kind || 'floor').toLowerCase() === 'fixed' ? 'fixed' : 'floor'
   return {
     branch: branch && branch !== 'all' ? branch : null,
     frequency,
@@ -450,6 +588,7 @@ export function buildRunPayrollPayload({ preview, branch, frequency, notes = '' 
     period_end: period.end,
     wash_pool_pct: Number(preview?.rules?.wash_pool_pct) || 0,
     notes,
+    run_kind: kind,
     sales: (preview?.proof || []).map((row) => ({
       sale_id: row.sale_id,
       branch: row.branch,
@@ -471,4 +610,114 @@ export function buildRunPayrollPayload({ preview, branch, frequency, notes = '' 
         amount_minor: row.pay_minor,
       })),
   }
+}
+
+/** True when a payroll run is floor/bay pay (not fixed salary). */
+export function isFloorPayrollRun(run) {
+  const kind = String(run?.run_kind || '').toLowerCase()
+  if (kind === 'floor') return true
+  if (kind === 'fixed') return false
+  const notes = String(run?.notes || '')
+  if (/fixed\s*salary/i.test(notes)) return false
+  if (/floor\s*pay/i.test(notes)) return true
+  if (Number(run?.pos_sales_minor) > 0) return true
+  const sales = run?.payroll_run_sales
+  return Array.isArray(sales) && sales.length > 0
+}
+
+/** Confirmed/paid floor run covers this branch business day. */
+export function floorPayrollCoversDay(run, ymd, branch) {
+  if (!isFloorPayrollRun(run)) return false
+  if (!['confirmed', 'paid'].includes(String(run?.status || ''))) return false
+  const day = String(ymd || '').slice(0, 10)
+  const br = String(branch || '').trim()
+  if (!day || !br) return false
+  const start = String(run.period_start || '').slice(0, 10)
+  const end = String(run.period_end || '').slice(0, 10)
+  if (!start || !end || start > day || end < day) return false
+  if (run.branch && String(run.branch) !== br) return false
+  return true
+}
+
+/**
+ * Accepted (and submitted) end-of-shift days not yet covered by a floor payroll run.
+ * Missed days accumulate per branch so SA can optionally run one window covering them all.
+ */
+export function buildPendingFloorPayrollQueue({ closes = [], runs = [] } = {}) {
+  const readyStatuses = new Set(['accepted', 'locked'])
+  const reviewStatuses = new Set(['submitted'])
+  const days = []
+
+  for (const close of closes || []) {
+    const business_date = String(close.business_date || '').slice(0, 10)
+    const branch = String(close.branch || '').trim()
+    const status = String(close.status || '')
+    if (!business_date || !branch) continue
+    if (!readyStatuses.has(status) && !reviewStatuses.has(status)) continue
+    if ((runs || []).some((r) => floorPayrollCoversDay(r, business_date, branch))) continue
+
+    const total_sales_minor = Math.round(
+      Number(close.submitted?.total_sales_minor ?? close.submitted?.square_sales_minor ?? 0) || 0,
+    )
+    days.push({
+      close_id: close.id,
+      branch,
+      business_date,
+      status,
+      ready: readyStatuses.has(status),
+      total_sales_minor,
+      shift_ended_at: close.shift_ended_at || null,
+    })
+  }
+
+  days.sort(
+    (a, b) =>
+      a.business_date.localeCompare(b.business_date) || a.branch.localeCompare(b.branch),
+  )
+
+  const byBranch = new Map()
+  for (const row of days) {
+    if (!byBranch.has(row.branch)) {
+      byBranch.set(row.branch, {
+        branch: row.branch,
+        days: [],
+        ready_count: 0,
+        review_count: 0,
+        total_sales_minor: 0,
+        period_start: row.business_date,
+        period_end: row.business_date,
+      })
+    }
+    const g = byBranch.get(row.branch)
+    g.days.push(row)
+    g.total_sales_minor += row.total_sales_minor
+    if (row.ready) g.ready_count += 1
+    else g.review_count += 1
+    if (row.business_date < g.period_start) g.period_start = row.business_date
+    if (row.business_date > g.period_end) g.period_end = row.business_date
+  }
+
+  const groups = [...byBranch.values()].sort((a, b) => a.branch.localeCompare(b.branch))
+  return {
+    days,
+    groups,
+    ready_day_count: days.filter((d) => d.ready).length,
+    review_day_count: days.filter((d) => !d.ready).length,
+  }
+}
+
+/** Finance / reporting label for whether floor pay has posted for a close day. */
+export function shiftClosePayrollCoverage(close, runs = []) {
+  const status = String(close?.status || '')
+  const day = String(close?.business_date || '').slice(0, 10)
+  const branch = String(close?.branch || '').trim()
+  if (!day || !branch) return { covered: false, label: '—' }
+  if ((runs || []).some((r) => floorPayrollCoversDay(r, day, branch))) {
+    return { covered: true, label: 'Floor pay posted' }
+  }
+  if (status === 'accepted' || status === 'locked') {
+    return { covered: false, label: 'Pending floor pay' }
+  }
+  if (status === 'submitted') return { covered: false, label: 'Awaiting close review' }
+  return { covered: false, label: status || '—' }
 }

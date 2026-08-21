@@ -69,7 +69,7 @@ export const OPS_DEMO_ACCOUNTS = [
     label: 'Detailer',
     email: 'detailer@hakumautocare.com',
     password: 'HakumDetail2026!',
-    hint: 'Detailing queue · FloorApp',
+    hint: 'Detailing on Bookings · FloorApp',
   },
   {
     id: 'video',

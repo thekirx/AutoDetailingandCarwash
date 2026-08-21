@@ -381,7 +381,7 @@ function DetailerFloorShell({ profile, signOut }) {
       brand={{ title: 'Hakum Detailing', fallbackName: 'Detailer', icon: <BrandMark /> }}
       dock={dock}
       more={more}
-      homeUrl="/operations/queue?family=detailing"
+      homeUrl="/operations/bookings"
       homeLabel="Open detailing"
     />
   )

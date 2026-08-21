@@ -5,12 +5,23 @@ import {
   parseQueueFamilyParam,
   boardStatusesForFamily,
   ticketQueueFamily,
+  canSwitchQueueFamily,
+  queueFamilyForProfile,
+  QUEUE_FAMILIES,
   QUEUE_FAMILY_DETAILING,
   QUEUE_FAMILY_WASH,
 } from '../src/lib/queueFamilies.js'
 import { filterCustomersBySmartGroup, CRM_SMART_GROUP_PRESETS } from '../src/lib/crmSmartGroups.js'
 import { getOpsBoardStatuses } from '../src/queue/queueLogic.js'
-import { canAccessSettings, getOperationsNav, groupOperationsNav, getTeamLeadDock } from '../src/auth/permissions.js'
+import {
+  canAccessSettings,
+  getOperationsNav,
+  groupOperationsNav,
+  getTeamLeadDock,
+  redirectForRole,
+  getDetailerDock,
+  ROLES,
+} from '../src/auth/permissions.js'
 import { FORM_KINDS, templateFields } from '../src/lib/opsForms.js'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -19,9 +30,13 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('command category IA', () => {
-  it('splits wash vs detailing queue families', () => {
+  it('queue is wash-only; detailing tickets are filtered out', () => {
+    assert.equal(QUEUE_FAMILIES.length, 1)
+    assert.equal(QUEUE_FAMILIES[0].id, QUEUE_FAMILY_WASH)
+    assert.equal(canSwitchQueueFamily({ role: 'BossMich' }), false)
     assert.equal(parseQueueFamilyParam('detailing'), QUEUE_FAMILY_DETAILING)
     assert.equal(parseQueueFamilyParam(''), QUEUE_FAMILY_WASH)
+    assert.equal(queueFamilyForProfile('detailing', { role: 'detailer' }), QUEUE_FAMILY_WASH)
     assert.equal(ticketQueueFamily({ service_pay_category: 'wash' }), QUEUE_FAMILY_WASH)
     assert.equal(ticketQueueFamily({ service_pay_category: 'detailing' }), QUEUE_FAMILY_DETAILING)
     const rows = [
@@ -38,15 +53,22 @@ describe('command category IA', () => {
       [2],
     )
     assert.ok(boardStatusesForFamily(['waiting'], 'detailing').includes('confirmed'))
+    assert.ok(!boardStatusesForFamily(['waiting', 'confirmed'], 'wash').includes('confirmed'))
   })
 
-  it('detailing board statuses include Assigned to Branch', () => {
+  it('ops queue board statuses stay wash lanes (no Assigned-to-Branch)', () => {
+    const lanes = getOpsBoardStatuses({ role: 'team_lead', branch_slug: 'bacoor' }, { family: 'wash' })
+    assert.ok(lanes.includes('waiting'))
+    assert.ok(!lanes.includes('confirmed'))
+  })
+
+  it('Floor Board API can still request detailing lanes for network overview', () => {
     const lanes = getOpsBoardStatuses({ role: 'team_lead', branch_slug: 'bacoor' }, { family: 'detailing' })
     assert.ok(lanes.includes('confirmed'))
     assert.ok(lanes.includes('waiting'))
   })
 
-  it('nav exposes one Queue command, not separate wash and detailing links', () => {
+  it('nav exposes one Queue command without detailing family link', () => {
     const sa = getOperationsNav({ role: 'BossMich' })
     const labels = sa.map((i) => i.label)
     const queueLinks = sa.filter((i) => String(i.to).startsWith('/operations/queue') && !String(i.to).includes('/new'))
@@ -54,16 +76,29 @@ describe('command category IA', () => {
     assert.equal(queueLinks.length, 1)
     assert.equal(queueLinks[0].label, 'Queue')
     assert.equal(queueLinks[0].to, '/operations/queue')
+    assert.ok(!String(queueLinks[0].to).includes('family=detailing'))
     assert.equal(labels.includes('Car Wash Queue'), false)
     assert.equal(labels.includes('Detailing Queue'), false)
     assert.ok(labels.includes('Planner'))
-    assert.equal(labels.includes('Hakum Planner'), false)
     assert.ok(labels.includes('Settings'))
     assert.equal(canAccessSettings({ role: 'BossMich' }), true)
     const dock = getTeamLeadDock({ role: 'team_lead', branch_slug: 'bacoor' })
     assert.ok(dock.some((i) => i.label === 'Queue' && i.to === '/operations/queue'))
     assert.equal(dock.some((i) => i.label === 'Wash'), false)
     assert.equal(dock.some((i) => i.label === 'Detail'), false)
+  })
+
+  it('detailer lands on Bookings for detailing work', () => {
+    assert.equal(redirectForRole(ROLES.DETAILER), '/operations/bookings')
+    assert.ok(getDetailerDock({ role: ROLES.DETAILER }).some((i) => i.to === '/operations/bookings'))
+    assert.ok(!getDetailerDock({ role: ROLES.DETAILER }).some((i) => String(i.to).includes('queue')))
+  })
+
+  it('queue page has no Wash/Detail family switcher', () => {
+    const page = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
+    assert.doesNotMatch(page, /aria-label="Service family"/)
+    assert.match(page, /Detailing lives on Bookings/)
+    assert.match(page, /kinds=\{\['service', 'package'\]\}/)
   })
 
   it('Command sidebar groups SA nav by shop day, not one dump', () => {

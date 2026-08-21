@@ -198,7 +198,7 @@ export default function App() {
             <Route path="payroll" element={gate('payroll', <PayrollPage />)} />
             <Route path="my-pay" element={gate('my-pay', <MyPayPage />)} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
-            <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory?tab=services" replace />)} />
+            <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory" replace />)} />
             <Route path="products" element={gate('inventory', <Navigate to="/operations/inventory?tab=merch" replace />)} />
             <Route path="sms" element={gate('crm', <Navigate to="/operations/crm?tab=sms" replace />)} />
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />

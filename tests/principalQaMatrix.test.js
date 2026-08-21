@@ -56,14 +56,14 @@ function allowedKeys(p) {
 }
 
 describe('P0 access gates', () => {
-  it('P0-1 detailer may open detailing queue home', () => {
+  it('P0-1 detailer may open bookings for detailing work', () => {
     const p = profile(ROLES.DETAILER)
-    assert.equal(redirectForRole(ROLES.DETAILER), '/operations/queue?family=detailing')
-    assert.equal(allowRoute(p, 'queue'), true)
+    assert.equal(redirectForRole(ROLES.DETAILER), '/operations/bookings')
+    assert.equal(allowRoute(p, 'bookings'), true)
     assert.equal(allowRoute(p, 'attendance'), true)
     assert.equal(allowRoute(p, 'finance'), false)
     assert.equal(allowRoute(p, 'pos'), false)
-    assert.ok(getDetailerDock(p).some((i) => i.to.includes('family=detailing')))
+    assert.ok(getDetailerDock(p).some((i) => i.to === '/operations/bookings'))
   })
 
   it('P0-2 video_editor may open my-tasks + planning calendar', () => {
@@ -88,7 +88,7 @@ describe('Landing + shell matrix', () => {
     [ROLES.SALES, '/operations/bookings', 'floor'],
     [ROLES.MARKETING, '/operations/crm', 'floor'],
     [ROLES.VIDEO_EDITOR, '/operations/planning?tab=calendar', 'floor'],
-    [ROLES.DETAILER, '/operations/queue?family=detailing', 'floor'],
+    [ROLES.DETAILER, '/operations/bookings', 'floor'],
   ]
 
   for (const [role, home, shell] of cases) {

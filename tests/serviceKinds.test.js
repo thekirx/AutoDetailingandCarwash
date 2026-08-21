@@ -4,11 +4,15 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  filterPosBayCatalog,
+  filterPosDetailingCatalog,
   filterServicesByKind,
   formatQueueNumberForKind,
   isDetailingPayCategory,
   isSameDayQueueKind,
   isTicketOnTodayFloor,
+  payCategoryOptionsForCatalogScope,
+  defaultPayCategoryForCatalogScope,
   searchServices,
   serviceKindFromPayCategory,
 } from '../src/lib/serviceKinds.js'
@@ -41,6 +45,11 @@ describe('serviceKinds', () => {
     assert.equal(filterServicesByKind(rows, 'service').length, 1)
     assert.equal(filterServicesByKind(rows, 'package')[0].id, '2')
     assert.equal(searchServices(rows, 'interior')[0].id, '3')
+    assert.equal(filterPosBayCatalog(rows).length, 2)
+    assert.equal(filterPosDetailingCatalog(rows)[0].id, '3')
+    assert.equal(defaultPayCategoryForCatalogScope('detailing'), 'detailing')
+    assert.ok(payCategoryOptionsForCatalogScope('bay').every((r) => r.kind !== 'detailing'))
+    assert.ok(payCategoryOptionsForCatalogScope('detailing').every((r) => r.kind === 'detailing'))
   })
 
   it('keeps detailing on the floor across days; drops stale same-day waiting', () => {

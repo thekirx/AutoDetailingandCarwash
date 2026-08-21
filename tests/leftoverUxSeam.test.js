@@ -27,7 +27,7 @@ import {
 import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
 import { resolveFinanceTab } from '../src/lib/financeData.js'
 import { currentPostedPayoutMinor } from '../src/lib/payroll.js'
-import { canSwitchQueueFamily, queueFamilyForProfile, QUEUE_FAMILY_DETAILING, QUEUE_FAMILY_WASH } from '../src/lib/queueFamilies.js'
+import { canSwitchQueueFamily, queueFamilyForProfile, QUEUE_FAMILY_WASH } from '../src/lib/queueFamilies.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(root, p), 'utf8')
@@ -129,16 +129,17 @@ describe('Homepage coming-soon is branch rows, not a hardcoded city', () => {
   })
 })
 
-describe('Detailer stays on the detailing family', () => {
-  it('ignores a wash URL and hides the family switcher', () => {
+describe('Queue is wash-only; detailing is Bookings', () => {
+  it('collapses family params to wash and hides the family switcher', () => {
     const p = { role: 'detailer' }
-    assert.equal(queueFamilyForProfile('', p), QUEUE_FAMILY_DETAILING)
-    assert.equal(queueFamilyForProfile('wash', p), QUEUE_FAMILY_DETAILING)
+    assert.equal(queueFamilyForProfile('', p), QUEUE_FAMILY_WASH)
+    assert.equal(queueFamilyForProfile('detailing', p), QUEUE_FAMILY_WASH)
     assert.equal(canSwitchQueueFamily(p), false)
     assert.equal(queueFamilyForProfile('', { role: 'team_lead' }), QUEUE_FAMILY_WASH)
     const src = read('src/pages/OperationsPages.jsx')
     assert.match(src, /queueFamilyForProfile/)
-    assert.match(src, /canSwitchQueueFamily/)
+    assert.doesNotMatch(src, /aria-label="Service family"/)
+    assert.match(src, /Detailing lives on Bookings/)
   })
 })
 

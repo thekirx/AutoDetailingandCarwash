@@ -129,7 +129,8 @@ export default function MyPayPage() {
           My pay
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Confirmed pay is money already posted from Payroll. Estimates are unpaid wash-pool shares until a run confirms.
+          Confirmed pay is money already posted from Payroll — floor (wash/ceramic) and fixed salary both show here.
+          Estimates are unpaid wash-pool shares until a run confirms.
         </p>
       </header>
 
@@ -193,7 +194,12 @@ export default function MyPayPage() {
             <p className="font-medium">{formatMoney(row.amount_minor)}</p>
             <p className="text-muted-foreground">
               {String(row.source_key || '').startsWith('deduct:') ? 'Deduct · ' : ''}
-              {row.kind.replaceAll('_', ' ')} · {row.branch}
+              {String(row.kind || '').startsWith('package')
+                ? 'Fixed salary'
+                : row.kind === 'wash_pool'
+                  ? 'Floor · wash pool'
+                  : String(row.kind || '').replaceAll('_', ' ')}{' '}
+              · {row.branch}
             </p>
             <p className="text-xs text-muted-foreground">
               {row.payroll_runs?.period_start} to {row.payroll_runs?.period_end}

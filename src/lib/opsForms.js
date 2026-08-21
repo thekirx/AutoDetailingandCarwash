@@ -37,7 +37,7 @@ export const FIXED_FORM_TEMPLATES = [
     kind: 'cash_advance',
     slug: 'cash-advance',
     name: 'Employee Cash Advance',
-    description: 'Request a cash advance. Managers review submissions in Planner.',
+    description: 'Request a cash advance. Super Admin / ASA review on Payroll.',
     public_enabled: false,
     status: 'published',
   },

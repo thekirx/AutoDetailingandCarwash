@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check, ChevronsUpDown, Search, X } from 'lucide-react'
 import { formatMoney } from '@/queue/queueApi'
 import { resolveServicePriceMinor } from '@/lib/servicePricing'
@@ -19,10 +19,21 @@ export default function ServiceKindPicker({
   vehicleType = 'medium',
   onChange,
   disabled = false,
+  kinds = null,
 }) {
-  const [kind, setKind] = useState('service')
+  const kindTabs = useMemo(() => {
+    if (!Array.isArray(kinds) || !kinds.length) return SERVICE_KINDS
+    const allow = new Set(kinds)
+    return SERVICE_KINDS.filter((k) => allow.has(k.id))
+  }, [kinds])
+
+  const [kind, setKind] = useState(() => kindTabs[0]?.id || 'service')
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!kindTabs.some((k) => k.id === kind)) setKind(kindTabs[0]?.id || 'service')
+  }, [kindTabs, kind])
 
   const selectedSet = useMemo(() => new Set(selectedIds || []), [selectedIds])
 
@@ -34,7 +45,7 @@ export default function ServiceKindPicker({
     [services, selectedSet],
   )
 
-  const kindMeta = SERVICE_KINDS.find((k) => k.id === kind) || SERVICE_KINDS[0]
+  const kindMeta = kindTabs.find((k) => k.id === kind) || kindTabs[0] || SERVICE_KINDS[0]
 
   const toggle = (serviceId) => {
     if (disabled) return
@@ -56,7 +67,7 @@ export default function ServiceKindPicker({
       </legend>
 
       <div className="floor-kind-tabs" role="tablist" aria-label="Service kind">
-        {SERVICE_KINDS.map((row) => {
+        {kindTabs.map((row) => {
           const active = kind === row.id
           const count = filterServicesByKind(services, row.id).length
           return (

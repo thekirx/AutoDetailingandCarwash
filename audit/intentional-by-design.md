@@ -14,7 +14,8 @@ Documented so future audits do not re-file these as bugs.
 | Ceramic tier names (PREMIUM/PLATINUM) | Marketing packages; not separate Inventory SKUs |
 | Crew **My pay** vs Payroll confirm | Wash-pool salary posts only from Payroll confirm; Crew tab / My pay **Estimate — unpaid** is not posted pay |
 | Custom roles Option A | `role_definitions` + `custom_role_key`; `profile_role` enum unchanged |
-| Shift close does not mutate `sales` | Accepted/locked reports are attestation only |
+| Shift end time is BA-editable | Closing is not fixed to branch hours; BA/ASA/SA set `shift_ended_at` on End of shift |
+| Commission default 15th & month-end | `payout_frequency = semimonthly`; Payroll custom range still overrides anytime |
 | Customer notes have no branch column | Guest notes are customer/plate global for CRM hospitality |
 | Shift close in Finance Reports | Read-only attestation filter; P&L still POS sales + paid/posted expenses |
 | Investor / SA null branch scope | All-site readers by role |
@@ -23,4 +24,4 @@ Documented so future audits do not re-file these as bugs.
 | Branch Admin cannot write Inventory catalog | RLS matches `canManageServices` (SA / ASA services_merch\|pos) |
 | Marketing always has CRM + bookings | Role contract; not ASA grant-scoped |
 | Marketing cannot write `events` via RLS | No Content / Planning-edit UI; published events remain public-readable |
-| Detailers cannot switch queue family | Locked to detailing family URL |
+| Detailers use Bookings for detailing | Queue is services/packages only; detailing pipeline is `/operations/bookings` |
