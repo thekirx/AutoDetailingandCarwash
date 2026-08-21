@@ -1,0 +1,364 @@
+/* PPF packages — media accordion.
+   Scoped under .ppf-packages-section so the existing intro styles (eyebrow,
+   ppf-package-stakes, ppf-film-brand, ppf-install-proof, ppf-ladder-footnote)
+   keep applying unchanged. Typography inherits the site's font stack on
+   purpose — only size, weight and letter-spacing are set here. */
+
+.ppf-packages-section {
+  --ppfa-brand: #1b3fc4;
+  --ppfa-brand-lo: #122e96;
+  --ppfa-panel: #0a1838;
+  --ppfa-ice: #9fb6ee;
+  --ppfa-ice-dim: #54689c;
+  --ppfa-platinum: #d7e1f7;
+  --ppfa-line: rgba(159, 182, 238, 0.16);
+  --ppfa-ease: cubic-bezier(0.24, 0.86, 0.22, 1);
+}
+
+/* ---------- lane ---------- */
+.ppf-packages-section .ppfa-lane {
+  display: flex;
+  gap: 6px;
+  height: 620px;
+}
+
+.ppf-packages-section .ppfa-panelcard {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--ppfa-line);
+  background: var(--ppfa-panel);
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: flex 780ms var(--ppfa-ease), border-color 0.5s;
+}
+.ppf-packages-section .ppfa-panelcard.is-open {
+  flex: 4.4 1 0;
+  border-color: rgba(159, 182, 238, 0.34);
+}
+.ppf-packages-section .ppfa-panelcard.is-platinum.is-open {
+  border-color: rgba(215, 225, 247, 0.42);
+}
+.ppf-packages-section .ppfa-panelcard:focus-visible {
+  outline: 2px solid var(--ppfa-platinum);
+  outline-offset: 4px;
+}
+
+.ppf-packages-section .ppfa-media {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(118deg, transparent 34%, rgba(159, 182, 238, 0.1) 47%, transparent 58%),
+    radial-gradient(120% 80% at 28% 0%, rgba(27, 63, 196, 0.44), transparent 62%),
+    linear-gradient(180deg, #0d1d44, #060f2a);
+  transition: transform 900ms var(--ppfa-ease);
+}
+.ppf-packages-section .ppfa-panelcard.is-open .ppfa-media { transform: scale(1.06); }
+
+.ppf-packages-section .ppfa-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(3, 9, 24, 0.18) 0%,
+    rgba(3, 9, 24, 0.58) 55%,
+    rgba(3, 9, 24, 0.95) 100%
+  );
+}
+
+/* ---------- collapsed spine ---------- */
+.ppf-packages-section .ppfa-spine {
+  position: absolute;
+  inset: 0 0 1.6rem;
+  display: grid;
+  place-items: center;
+  align-content: end;
+  transition: opacity 0.35s;
+}
+.ppf-packages-section .ppfa-spine b,
+.ppf-packages-section .ppfa-spine s {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ppf-packages-section .ppfa-spine b {
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+.ppf-packages-section .ppfa-spine s {
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ppfa-ice-dim);
+  margin-top: 0.875rem;
+}
+.ppf-packages-section .ppfa-panelcard.is-open .ppfa-spine {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- coverage diagram ---------- */
+.ppf-packages-section .ppfa-cover {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 44%;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.6s var(--ppfa-ease) 0.2s;
+}
+.ppf-packages-section .ppfa-panelcard.is-open .ppfa-cover { opacity: 1; }
+.ppf-packages-section .ppfa-car { height: 66%; width: auto; max-width: 84%; }
+.ppf-packages-section .ppfa-panel {
+  fill: #0e1d3e;
+  stroke: rgba(159, 182, 238, 0.16);
+  stroke-width: 1;
+  transition: fill 0.5s var(--ppfa-ease);
+}
+.ppf-packages-section .ppfa-panel.is-on { fill: var(--ppfa-brand); }
+.ppf-packages-section .is-platinum .ppfa-panel.is-on { fill: #3e63e8; }
+.ppf-packages-section .ppfa-glass {
+  fill: #08122a;
+  stroke: rgba(159, 182, 238, 0.12);
+  stroke-width: 1;
+}
+.ppf-packages-section .ppfa-tyre { fill: #04091c; }
+.ppf-packages-section .ppfa-cover-cap {
+  position: absolute;
+  bottom: 2rem;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.625rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ppfa-ice-dim);
+}
+.ppf-packages-section .ppfa-cover-cap b {
+  font-size: 0.95rem;
+  color: #fff;
+  letter-spacing: 0;
+}
+
+/* ---------- open content ---------- */
+.ppf-packages-section .ppfa-body {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 60%;
+  padding: 2rem 2.25rem;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s var(--ppfa-ease) 0.18s, transform 0.6s var(--ppfa-ease) 0.18s;
+}
+.ppf-packages-section .ppfa-panelcard.is-open .ppfa-body {
+  opacity: 1;
+  transform: none;
+}
+
+.ppf-packages-section .ppfa-labels {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ppfa-ice);
+}
+.ppf-packages-section .ppfa-labels strong {
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  padding: 4px 9px;
+  background: rgba(159, 182, 238, 0.14);
+  color: #dce6fb;
+}
+.ppf-packages-section .ppfa-labels strong.is-featured {
+  background: var(--ppfa-brand);
+  color: #fff;
+}
+.ppf-packages-section .is-platinum .ppfa-labels strong {
+  background: var(--ppfa-platinum);
+  color: #05102a;
+}
+
+.ppf-packages-section .ppfa-body h3 {
+  font-size: clamp(1.75rem, 3vw, 2.75rem);
+  line-height: 0.92;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  margin: 0.75rem 0 0.5rem;
+}
+.ppf-packages-section .ppfa-headline {
+  margin: 0 0 1.125rem;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: #cbd8f4;
+  max-width: 34ch;
+}
+
+.ppf-packages-section .ppfa-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+.ppf-packages-section .ppfa-chips i {
+  font-style: normal;
+  font-size: 0.59rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #d6e1f8;
+  border: 1px solid rgba(159, 182, 238, 0.28);
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+.ppf-packages-section .ppfa-chips i.is-new {
+  border-color: var(--ppfa-platinum);
+  color: #fff;
+}
+
+.ppf-packages-section .ppfa-included {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--ppfa-ice-dim);
+  margin-bottom: 1.25rem;
+  max-width: 40ch;
+}
+
+.ppf-packages-section .ppfa-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid var(--ppfa-brand);
+  background: var(--ppfa-brand);
+  color: #fff;
+  transition: background 0.25s, gap 0.25s;
+}
+.ppf-packages-section .ppfa-go:hover {
+  background: var(--ppfa-brand-lo);
+  gap: 0.8rem;
+}
+
+/* ---------- comparison strip ---------- */
+.ppf-packages-section .ppfa-compare {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: 170px repeat(3, 1fr);
+  border: 1px solid var(--ppfa-line);
+}
+.ppf-packages-section .ppfa-compare-row { display: contents; }
+.ppf-packages-section .ppfa-compare > *,
+.ppf-packages-section .ppfa-compare-row > * {
+  padding: 0.85rem 1.125rem;
+  border-left: 1px solid var(--ppfa-line);
+  font-size: 0.85rem;
+}
+.ppf-packages-section .ppfa-rowlabel {
+  border-left: 0;
+  font-size: 0.59rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ppfa-ice-dim);
+}
+.ppf-packages-section .ppfa-cell {
+  color: #dce6fb;
+  transition: background 0.4s, color 0.4s;
+}
+.ppf-packages-section .ppfa-cell em {
+  font-style: normal;
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--ppfa-ice-dim);
+  margin-top: 2px;
+}
+.ppf-packages-section .ppfa-cell.is-hot {
+  background: rgba(27, 63, 196, 0.16);
+  color: #fff;
+}
+.ppf-packages-section .ppfa-headcell {
+  font-weight: 800;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 1000px) {
+  .ppf-packages-section .ppfa-lane {
+    flex-direction: column;
+    height: auto;
+    gap: 8px;
+  }
+  .ppf-packages-section .ppfa-panelcard {
+    flex: none;
+    height: 104px;
+    transition: height 700ms var(--ppfa-ease);
+  }
+  .ppf-packages-section .ppfa-panelcard.is-open {
+    flex: none;
+    height: auto;
+    min-height: 560px;
+  }
+  .ppf-packages-section .ppfa-spine {
+    inset: 0;
+    place-items: center start;
+    align-content: center;
+    grid-auto-flow: column;
+    justify-content: start;
+    gap: 0.875rem;
+    padding-left: 1.5rem;
+  }
+  .ppf-packages-section .ppfa-spine b,
+  .ppf-packages-section .ppfa-spine s {
+    writing-mode: horizontal-tb;
+    transform: none;
+    margin: 0;
+  }
+  .ppf-packages-section .ppfa-spine b { font-size: 1.25rem; }
+  .ppf-packages-section .ppfa-cover {
+    position: relative;
+    width: 100%;
+    height: 240px;
+    padding-top: 1.75rem;
+  }
+  .ppf-packages-section .ppfa-cover-cap { bottom: 0; }
+  .ppf-packages-section .ppfa-body {
+    position: relative;
+    width: 100%;
+    padding: 0.5rem 1.5rem 1.75rem;
+  }
+  .ppf-packages-section .ppfa-headline,
+  .ppf-packages-section .ppfa-included { max-width: none; }
+  .ppf-packages-section .ppfa-compare {
+    grid-template-columns: 1fr;
+    margin-top: 1.25rem;
+  }
+  .ppf-packages-section .ppfa-compare > *,
+  .ppf-packages-section .ppfa-compare-row > * {
+    border-left: 0;
+    border-top: 1px solid var(--ppfa-line);
+  }
+  .ppf-packages-section .ppfa-rowlabel { background: rgba(159, 182, 238, 0.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ppf-packages-section .ppfa-lane *,
+  .ppf-packages-section .ppfa-compare * { transition: none !important; }
+}
