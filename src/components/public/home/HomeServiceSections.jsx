@@ -1,12 +1,21 @@
 import { useCallback, useState } from 'react'
-import { Check } from 'lucide-react'
+import { ArrowRight, Check, Plus, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
+
 import { ceramicPackages, ceramicSection, mediaGallery, nanoCeramicTint, ppfInformation } from '../../../data/publicHomeContent'
 import PpfInstallSequence from './PpfInstallSequence'
+import { buildCeramicPackageCards } from '../../../lib/homepageContent'
 import { getPpfCaptionKey } from '../../../lib/ppfScrollStory'
+
+const ceramicCards = buildCeramicPackageCards(ceramicPackages)
 
 const cinematicLines = (text) => text.split('\n').map((line) => <span key={line}>{line}</span>)
 
 export function CeramicSection() {
+  /* One panel open at a time: the detail sheet covers its own photo, so two open
+     at once would just be two walls of text competing on the same row. */
+  const [openPackage, setOpenPackage] = useState(null)
+
   return (
     <section id="ceramic" className="coating-section" data-motion-section="ceramic">
       <div className="public-shell ceramic-layout">
@@ -16,26 +25,73 @@ export function CeramicSection() {
           <div>{ceramicSection.copy}</div>
         </div>
         <div className="ceramic-package-grid" data-motion="cards">
-          {ceramicPackages.map((item) => (
-            <article className="ceramic-package-panel" key={item.title} data-motion-item>
-              <img src={item.bgImage} alt={`${item.title} ceramic coating package`} loading="lazy" decoding="async" />
-              <div className="ceramic-package-overlay" aria-hidden="true" />
-              <div className="ceramic-package-body">
-                <h3 className="ceramic-package-name">{item.title}</h3>
-                <div className="ceramic-package-content">
-                  <div className="ceramic-package-warranty">
-                    <Check size={14} strokeWidth={3} aria-hidden="true" />
-                    <span>{item.warrantyYears}-year warranty</span>
-                  </div>
-                  <p>{item.copy}</p>
-                  <div className="ceramic-package-inclusions">
-                    <strong>Inclusions:</strong>
-                    <ul>{item.includes.map((feature) => <li key={feature}>{feature}</li>)}</ul>
+          {ceramicCards.map((item) => {
+            const open = openPackage === item.id
+            return (
+              <article
+                className="ceramic-package-panel"
+                key={item.id}
+                data-motion-item
+                data-open={open ? 'true' : 'false'}
+              >
+                <img src={item.image} alt={item.imageAlt} loading="lazy" decoding="async" />
+                <div className="ceramic-package-overlay" aria-hidden="true" />
+                <div className="ceramic-package-body">
+                  <h3 className="ceramic-package-name">{item.title}</h3>
+                  <div className="ceramic-package-content">
+                    <div className="ceramic-package-warranty">
+                      <Check size={16} strokeWidth={3} aria-hidden="true" />
+                      <strong>{item.warrantyYears}</strong>
+                      <span>Year<br />warranty</span>
+                    </div>
+                    <p className="ceramic-package-pitch">{item.pitch}</p>
+                    <div className="ceramic-package-actions">
+                      <button
+                        type="button"
+                        className="ceramic-package-more"
+                        aria-expanded={open}
+                        aria-controls={item.detailsId}
+                        onClick={() => setOpenPackage(open ? null : item.id)}
+                      >
+                        <Plus size={15} aria-hidden="true" />
+                        Know more
+                      </button>
+                      <Link
+                        className="ceramic-package-book"
+                        to="/book"
+                        state={item.bookingState}
+                        aria-label={item.ctaLabel}
+                      >
+                        Book now <ArrowRight size={16} aria-hidden="true" />
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
+
+                <div className="ceramic-package-details" id={item.detailsId} hidden={!open}>
+                  <div className="ceramic-package-details-inner">
+                    <p className="ceramic-package-details-title">{item.title} ceramic coating</p>
+                    <p>{item.copy}</p>
+                    <div className="ceramic-package-inclusions">
+                      <strong>Inclusions:</strong>
+                      <ul>{item.includes.map((feature) => <li key={feature}>{feature}</li>)}</ul>
+                    </div>
+                    <Link className="ceramic-package-book" to="/book" state={item.bookingState}>
+                      Book now <ArrowRight size={16} aria-hidden="true" />
+                    </Link>
+                  </div>
+                  <button
+                    type="button"
+                    className="ceramic-package-close"
+                    onClick={() => setOpenPackage(null)}
+                    aria-label={`Close ${item.title} details`}
+                  >
+                    <X size={18} aria-hidden="true" />
+                  </button>
+                </div>
+              </article>
+            )
+          })}
         </div>
       </div>
     </section>

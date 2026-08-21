@@ -85,7 +85,6 @@ describe('Public homepage content assets', () => {
       'media-gallery',
       'latest-post',
       'events',
-      'queue',
       'branches',
     ])
     /* Partnership moved to its own page at /partnerships — a B2B ask with its

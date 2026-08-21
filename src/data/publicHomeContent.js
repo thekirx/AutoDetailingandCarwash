@@ -10,7 +10,6 @@ export const HOME_SECTION_IDS = [
   'media-gallery',
   'latest-post',
   'events',
-  'queue',
   'branches',
 ]
 
@@ -104,8 +103,10 @@ export const ceramicSection = {
 
 export const ceramicPackages = [
   {
+    id: 'premium',
     title: 'PREMIUM',
     warrantyYears: 5,
+    pitch: 'Deeper gloss and stronger water repellency, covered for five years.',
     bgImage: new URL('../assets/services/ceramic-premium.webp', import.meta.url).href,
     copy: 'Enhanced protection with deeper gloss and stronger hydrophobic performance for drivers who want more lasting results.',
     includes: [
@@ -116,8 +117,10 @@ export const ceramicPackages = [
     ],
   },
   {
+    id: 'platinum',
     title: 'PLATINUM',
     warrantyYears: 8,
+    pitch: 'Our highest gloss and longest paint preservation, covered for eight years.',
     bgImage: new URL('../assets/services/ceramic-platinum.webp', import.meta.url).href,
     copy: 'Our highest level of ceramic protection, created for maximum gloss, durability, and long-term paint preservation.',
     includes: [
@@ -164,6 +167,23 @@ export const mediaGallery = [
     image: new URL('../assets/services/ceramic-coating-gallery.webp', import.meta.url).href,
   },
 ]
+
+/**
+ * Close-ups of Hakum's own PPF installs, shown beside the packages.
+ *
+ * Deliberately empty. The section renders no proof strip until real Hakum work
+ * is added here — a rendered product frame or a stock install shot would be
+ * exactly the generic evidence a six-figure buyer discounts on sight.
+ *
+ * What earns a slot: tight shots that show the work, not the car — a wrapped
+ * edge at a panel gap, film following a bumper curve, a door handle recess, a
+ * finished seam. Shoot them under shop lighting on cars you actually did.
+ *
+ *   { image: new URL('../assets/ppf-install/raptor-fender-edge.webp', import.meta.url).href,
+ *     alt: 'Film wrapped into the fender edge on a Ranger Raptor',
+ *     caption: 'Fender edge, wrapped' }
+ */
+export const ppfInstallProof = []
 
 /**
  * Draggable before/after pairs.
