@@ -17,6 +17,7 @@ import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, s
 import { PRICING_SIZES } from '../lib/servicePricing'
 import { serviceKindFromPayCategory } from '../lib/serviceKinds'
 import CancellationReasonDialog from './CancellationReasonDialog'
+import CustomerNotesPanel from './CustomerNotesPanel'
 import { supabase } from '../lib/supabase'
 import {
   formatQueueNumber,
@@ -600,6 +601,13 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
               {ticket.redo_reason && <Info label="Redo reason" value={ticket.redo_reason} />}
             </div>
           )}
+          <div className="mt-4 border-t border-border pt-4">
+            <CustomerNotesPanel
+              customerId={ticket.customer_id || null}
+              plate={ticket.vehicle_plate || ''}
+              vehicleId={ticket.vehicle_id || null}
+            />
+          </div>
           {showEditActions && canEditServicePrice ? (
             <div className="mt-4 grid gap-3 rounded-2xl border border-border bg-muted/20 p-3 sm:grid-cols-[1fr_auto] sm:items-end">
               <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">

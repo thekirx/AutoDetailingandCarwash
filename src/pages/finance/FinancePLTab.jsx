@@ -1,5 +1,4 @@
-/** Finance Profit & Loss tab: income vs expenses by category, with period comparison.
- * Xero-like layout: left sidebar of common formats, top control bar, main statement. */
+/** Finance Profit & Loss: one statement, branch/period filters on the toolbar. */
 import { useMemo } from 'react'
 import { Download, FileSpreadsheet, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,12 +14,6 @@ import {
   downloadExcel,
   printAsPdf,
 } from '@/lib/financeData'
-
-const COMMON_FORMATS = [
-  { id: 'pl', label: 'Profit and Loss' },
-  { id: 'pl-by-kind', label: 'By kind (income/expense)' },
-  { id: 'pl-by-category', label: 'By category' },
-]
 
 export default function FinancePLTab({
   plRows,
@@ -111,12 +104,7 @@ export default function FinancePLTab({
   return (
     <div className="finance-pl-layout">
       <aside className="finance-pl-aside">
-        <p className="finance-pl-aside-title">Common formats</p>
-        <ul>
-          {COMMON_FORMATS.map((f) => (
-            <li key={f.id} className="finance-pl-aside-item is-active">{f.label}</li>
-          ))}
-        </ul>
+        <p className="finance-pl-aside-title">How to read this</p>
         <p className="finance-pl-aside-hint">
           Filter by branch and period at the top. Income comes from POS paid sales; expenses from paid or posted bills.
         </p>

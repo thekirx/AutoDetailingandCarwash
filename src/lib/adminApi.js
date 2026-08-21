@@ -166,6 +166,44 @@ export async function archiveBranch(slug) {
   return data
 }
 
+export async function listBranchOperatingHours(branchSlug) {
+  const slug = String(branchSlug || '').trim()
+  if (!slug) return []
+  const { data, error } = await supabase
+    .from('branch_operating_hours')
+    .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+    .eq('branch_slug', slug)
+    .order('day_of_week')
+  if (error) throw mapDbError(error)
+  return data || []
+}
+
+/** Upsert a full Sun–Sat week for one branch. */
+export async function saveBranchOperatingHours(branchSlug, week) {
+  const slug = String(branchSlug || '').trim()
+  if (!slug) throw new Error('Branch slug is required.')
+  const { normalizeWeekHours, validateWeekHours, normalizeTimeInput } = await import('./branchOperatingHours.js')
+  const normalized = normalizeWeekHours(week, slug)
+  const invalid = validateWeekHours(normalized)
+  if (invalid) throw new Error(invalid)
+
+  const rows = normalized.map((row) => ({
+    branch_slug: slug,
+    day_of_week: row.day_of_week,
+    is_closed: Boolean(row.is_closed),
+    opens_at: row.is_closed ? null : normalizeTimeInput(row.opens_at),
+    closes_at: row.is_closed ? null : normalizeTimeInput(row.closes_at),
+    updated_at: new Date().toISOString(),
+  }))
+
+  const { data, error } = await supabase
+    .from('branch_operating_hours')
+    .upsert(rows, { onConflict: 'branch_slug,day_of_week' })
+    .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+  if (error) throw mapDbError(error)
+  return data || []
+}
+
 export async function listStaffPeople({ includeInactive = false } = {}) {
   let q = supabase
     .from('staff_profiles')

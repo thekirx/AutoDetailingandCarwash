@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { ceramicPackages, ceramicSection, mediaGallery, nanoCeramicTint, ppfInformation } from '../../../data/publicHomeContent'
 import PpfInstallSequence from './PpfInstallSequence'
@@ -32,6 +33,13 @@ export function CeramicSection() {
                     <strong>Inclusions:</strong>
                     <ul>{item.includes.map((feature) => <li key={feature}>{feature}</li>)}</ul>
                   </div>
+                  <Link
+                    className="ceramic-package-book"
+                    to="/book"
+                    state={{ service: 'Ceramic Coating', package: item.title }}
+                  >
+                    Book {item.title}
+                  </Link>
                 </div>
               </div>
             </article>

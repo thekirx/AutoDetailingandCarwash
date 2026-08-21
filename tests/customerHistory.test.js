@@ -84,7 +84,8 @@ describe('customer history search helpers', () => {
 describe('history RBAC + nav', () => {
   it('allows SA ASA Sales TL Marketing Branch Admin', () => {
     assert.equal(canAccessHistory({ role: 'BossMich' }), true)
-    assert.equal(canAccessHistory({ role: 'assistant_super_admin' }), true)
+    assert.equal(canAccessHistory({ role: 'assistant_super_admin', permission_grants: {} }), true)
+    assert.equal(canAccessHistory({ role: 'assistant_super_admin', permission_grants: { history: false } }), false)
     assert.equal(canAccessHistory({ role: ROLES.SALES }), true)
     assert.equal(canAccessHistory({ role: ROLES.TEAM_LEAD }), true)
     assert.equal(canAccessHistory({ role: ROLES.MARKETING }), true)

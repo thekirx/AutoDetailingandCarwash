@@ -1,12 +1,16 @@
 import { ArrowRight, MapPin, Radio } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { buildHomeBranchCards, countActiveHomeBranches } from '../../../lib/homeBranches'
+import { buildHomeBranchCards, comingSoonHomeCopy, countActiveHomeBranches } from '../../../lib/homeBranches'
 import LiveQueueBoard from './LiveQueueBoard'
 
 export default function HomeEndingSections({ branches }) {
   const branchCards = buildHomeBranchCards(branches)
   const activeBranchCount = countActiveHomeBranches(branchCards)
+  const soonCopy = comingSoonHomeCopy(branchCards)
+  const branchLead = soonCopy
+    ? `Premium car care across ${activeBranchCount} active branches, ${soonCopy}. Choose your nearest open branch and let us take it from here.`
+    : `Premium car care across ${activeBranchCount} active branches. Choose your nearest open branch and let us take it from here.`
 
   return (
     <>
@@ -23,7 +27,7 @@ export default function HomeEndingSections({ branches }) {
         <div className="public-shell">
           <div className="section-heading-row" data-motion="heading">
             <div><p className="eyebrow eyebrow-light">Branches / Contact</p><h2 className="section-title light">Closer than<br />you think.</h2></div>
-            <p>Premium car care across {activeBranchCount} active branches, with Dasmariñas coming soon. Choose your nearest open branch and let us take it from here.</p>
+            <p>{branchLead}</p>
           </div>
           <div className="home-branch-grid" data-motion="cards">
             {branchCards.map((branch, index) => branch.isComingSoon ? (

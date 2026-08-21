@@ -173,10 +173,10 @@ describe('C1 provision roles + C10 compensation', () => {
 })
 
 describe('C11 ASA/BA scope gates', () => {
-  it('BA reviews/audit/people yes; data-center SA-only; investor people denied', () => {
+  it('BA reviews/audit yes, people no; data-center SA-only; investor people denied', () => {
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'reviews'), true)
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'audit'), true)
-    assert.equal(allowRoute({ role: ROLES.ADMIN }, 'people'), true)
+    assert.equal(allowRoute({ role: ROLES.ADMIN }, 'people'), false)
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'data-center'), false)
     assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'data-center'), true)
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'people'), false)

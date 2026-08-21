@@ -72,6 +72,10 @@ export function classifySaleBucket({
       name: productName || serviceName,
     })
   }
+  // Daily-close rows sometimes omit item_type but still name the sellable.
+  if (name.includes('coffee') || name.includes('refresh')) return 'coffee'
+  if (name.includes('cloth') || name.includes('apparel')) return 'clothing'
+  if (name.includes('accessor') || name.includes('merch')) return 'accessories'
   return 'car_wash'
 }
 

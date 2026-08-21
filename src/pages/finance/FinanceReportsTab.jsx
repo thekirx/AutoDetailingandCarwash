@@ -1,7 +1,7 @@
 /** Finance Reports tab: three sections — Sales, Operations, Customer Retention.
  * Each section pulls real data and exports to CSV/Excel/PDF. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Download, FileSpreadsheet, FileText, Users, Wrench, ShoppingCart } from 'lucide-react'
+import { Download, FileSpreadsheet, FileText, Users, Wrench, ShoppingCart, ClipboardCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -26,12 +26,23 @@ export default function FinanceReportsTab({
   const [operations, setOperations] = useState({ bookings: 0, complaints: 0, crew: 0 })
   const [retention, setRetention] = useState([])
   const [retentionSummary, setRetentionSummary] = useState({ fresh: 0, returning: 0, loyal: 0, total: 0 })
+  const [shiftCloses, setShiftCloses] = useState([])
 
   const load = useCallback(async () => {
     const startIso = `${range.start}T00:00:00+08:00`
     const endIso = `${range.end}T23:59:59.999+08:00`
     const allSites = branchScopeList(profile) === null && (!branchFilter || branchFilter === 'all')
-    const [books, comps, crew, retentionRes] = await Promise.all([
+    let shiftQ = supabase
+      .from('shift_close_reports')
+      .select('id, branch, business_date, status, submitted, pos_baseline')
+      .in('status', ['accepted', 'locked'])
+      .gte('business_date', range.start)
+      .lte('business_date', range.end)
+      .order('business_date', { ascending: false })
+      .limit(60)
+    if (branchFilter && branchFilter !== 'all') shiftQ = shiftQ.eq('branch', branchFilter)
+
+    const [books, comps, crew, retentionRes, shiftRes] = await Promise.all([
       scopeBranch(
         supabase
           .from('bookings')
@@ -68,11 +79,13 @@ export default function FinanceReportsTab({
         profile,
         branchFilter,
       ),
+      shiftQ,
     ])
     if (books.error) toast.error(books.error.message)
     if (comps.error) toast.error(comps.error.message)
     if (crew.error) toast.error(crew.error.message)
     if (retentionRes.error) toast.error(retentionRes.error.message)
+    if (shiftRes.error) toast.error(shiftRes.error.message)
     setOperations({
       bookings: books.count || 0,
       complaints: comps.count || 0,
@@ -82,6 +95,7 @@ export default function FinanceReportsTab({
     if (allSites) retentionRows = rollupRetentionByCustomer(retentionRows).slice(0, 50)
     setRetention(retentionRows)
     setRetentionSummary(retentionBuckets(retentionRows))
+    setShiftCloses(shiftRes.data || [])
   }, [range.start, range.end, profile, branchFilter, showComplaints])
 
   useEffect(() => {
@@ -134,12 +148,79 @@ export default function FinanceReportsTab({
     [],
   )
 
+  const shiftCloseColumns = useMemo(
+    () => [
+      { key: 'business_date', label: 'Date' },
+      { key: 'branch', label: 'Branch' },
+      { key: 'status', label: 'Status' },
+      {
+        key: 'square_sales_minor',
+        label: 'Square sales (submitted)',
+        value: (r) => formatMoney(r.submitted?.square_sales_minor ?? 0),
+      },
+      {
+        key: 'total_gcash_minor',
+        label: 'GCash (submitted)',
+        value: (r) => formatMoney(r.submitted?.total_gcash_minor ?? 0),
+      },
+      {
+        key: 'total_cash_left_minor',
+        label: 'Cash left (submitted)',
+        value: (r) => formatMoney(r.submitted?.total_cash_left_minor ?? 0),
+      },
+    ],
+    [],
+  )
+
   const subtitle = `${range.start} to ${range.end}`
 
   if (loading) return <ReportsSkeleton />
 
   return (
     <div className="flex flex-col gap-6">
+      <ReportSection
+        icon={<ClipboardCheck className="size-4" aria-hidden />}
+        title="Shift close attestation"
+        description={`${shiftCloses.length} accepted/locked closes · read-only · does not rewrite POS sales`}
+        onCsv={() => downloadCsv(shiftCloses, shiftCloseColumns, `hakum-shift-close-${range.start}-to-${range.end}.csv`)}
+        onExcel={() => downloadExcel(shiftCloses, shiftCloseColumns, `hakum-shift-close-${range.start}-to-${range.end}.xls`, 'Hakum Shift Close')}
+        onPdf={() => printAsPdf(shiftCloses, shiftCloseColumns, 'Hakum Shift Close Attestation', subtitle)}
+      >
+        <div className="finance-table-wrap">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Branch</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Square sales</TableHead>
+                <TableHead className="text-right">GCash</TableHead>
+                <TableHead className="text-right">Cash left</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shiftCloses.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.business_date}</TableCell>
+                  <TableCell>{r.branch}</TableCell>
+                  <TableCell><Badge variant="secondary">{r.status}</Badge></TableCell>
+                  <TableCell className="text-right tabular-nums">{formatMoney(r.submitted?.square_sales_minor ?? 0)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatMoney(r.submitted?.total_gcash_minor ?? 0)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatMoney(r.submitted?.total_cash_left_minor ?? 0)}</TableCell>
+                </TableRow>
+              ))}
+              {!shiftCloses.length && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-muted-foreground">
+                    No accepted or locked shift closes in this window.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </ReportSection>
+
       <ReportSection
         icon={<ShoppingCart className="size-4" aria-hidden />}
         title="Sales report"

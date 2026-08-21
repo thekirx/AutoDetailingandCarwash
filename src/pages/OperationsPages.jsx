@@ -25,8 +25,10 @@ import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import ServiceKindPicker from '../components/ServiceKindPicker'
 import { serviceKindFromPayCategory } from '../lib/serviceKinds'
 import {
+  canSwitchQueueFamily,
   filterTicketsByFamily,
   parseQueueFamilyParam,
+  queueFamilyForProfile,
   QUEUE_FAMILIES,
   QUEUE_FAMILY_DETAILING,
 } from '../lib/queueFamilies'
@@ -703,7 +705,7 @@ function OperationsQueueBoardPage() {
   const seeRedo = canViewRedoLane(profile)
   const scopeList = getBranchScopeList(profile)
   const [searchParams, setSearchParams] = useSearchParams()
-  const queueFamily = parseQueueFamilyParam(searchParams.get('family'))
+  const queueFamily = queueFamilyForProfile(searchParams.get('family'), profile)
   const familyMeta = QUEUE_FAMILIES.find((f) => f.id === queueFamily) || QUEUE_FAMILIES[0]
   const requestedLane = parseQueueLaneParam(searchParams.get('lane'))
   const view = searchParams.get('view') === 'table' ? 'table' : 'board'
@@ -842,7 +844,9 @@ function OperationsQueueBoardPage() {
         title="Queue"
         description={
           queueFamily === QUEUE_FAMILY_DETAILING
-            ? 'Multi-day detailing from Assigned to Branch through release. Switch to Wash for same-day jobs.'
+            ? canSwitchQueueFamily(profile)
+              ? 'Multi-day detailing from Assigned to Branch through release. Switch to Wash for same-day jobs.'
+              : 'Multi-day detailing from Assigned to Branch through release.'
             : seeRedo
               ? 'Same-day wash and package tickets until payment. Redo is the owner QC lane.'
               : 'Same-day wash and package tickets — waiting, on the bay, and final check.'
@@ -860,6 +864,7 @@ function OperationsQueueBoardPage() {
 
       <div className="queue-board-toolbar mt-3 flex flex-col gap-3">
         <div className="queue-board-controls">
+          {canSwitchQueueFamily(profile) ? (
           <div className="queue-seg" role="group" aria-label="Service family">
             {QUEUE_FAMILIES.map((f) => (
               <button
@@ -872,6 +877,7 @@ function OperationsQueueBoardPage() {
               </button>
             ))}
           </div>
+          ) : null}
           <div className="queue-seg" role="group" aria-label="Queue layout">
             {['board', 'table'].map((mode) => (
               <button

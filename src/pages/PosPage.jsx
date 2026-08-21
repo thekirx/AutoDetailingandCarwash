@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
 import { Cake, Check, Gift, Link2, MapPin, Search, ShoppingCart, Trash2, UserRound, X, XCircle } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, canEditPlanning, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
+import { allowRoute, canAccessPos, canEditPlanning, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
@@ -13,6 +13,14 @@ import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
 import { approvedCaForCloseDay, buildBacoorDailyReport, formatBacoorReportText } from '@/lib/bacoorDailyReport'
+import {
+  canSubmitShiftClose,
+  moneySnapshotFromReport,
+  minorToPesosInput,
+  parsePesosToMinor,
+  validateShiftCloseSubmit,
+  SHIFT_CLOSE_MONEY_KEYS,
+} from '@/lib/shiftClose'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -53,6 +61,7 @@ export default function PosPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const branchAdmin = isBranchAdmin(profile)
   const canManageCatalog = canManageServices(profile)
+  const canOpenFinance = allowRoute(profile, 'finance')
   const requestedShellTab = SHELL_TABS.includes(searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'checkout'
@@ -93,6 +102,12 @@ export default function PosPage() {
   const [todaySales, setTodaySales] = useState([])
   const [categoryTotals, setCategoryTotals] = useState(emptyPosCategoryTotals())
   const [dailyReportOpen, setDailyReportOpen] = useState(false)
+  const [shiftCloseMode, setShiftCloseMode] = useState(false)
+  const [shiftOverrides, setShiftOverrides] = useState({})
+  const [shiftReasons, setShiftReasons] = useState({})
+  const [shiftFieldErrors, setShiftFieldErrors] = useState({})
+  const [shiftSubmitting, setShiftSubmitting] = useState(false)
+  const [shiftFieldConfig, setShiftFieldConfig] = useState([])
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
   const [activeMembership, setActiveMembership] = useState(null)
@@ -817,6 +832,28 @@ export default function PosPage() {
         <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
           Daily sales report
         </Button>
+        {canSubmitShiftClose(profile) ? (
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-11"
+            onClick={() => {
+              setShiftCloseMode(true)
+              setShiftOverrides({})
+              setShiftReasons({})
+              setShiftFieldErrors({})
+              setDailyReportOpen(true)
+              supabase
+                .from('shift_close_field_config')
+                .select('field_key, label, allow_override, is_active, sort_order')
+                .eq('is_active', true)
+                .order('sort_order')
+                .then(({ data }) => setShiftFieldConfig(data || []))
+            }}
+          >
+            End of shift
+          </Button>
+        ) : null}
         {canManageCatalog ? (
           <Button type="button" variant="secondary" className="min-h-11" asChild>
             <Link to="/operations/inventory">Inventory Management</Link>
@@ -965,7 +1002,7 @@ export default function PosPage() {
 
   const dailyReportData = useMemo(() => {
     return buildBacoorDailyReport({
-      branch: branch || 'bacoor',
+      branch: branch || '',
       date: getLocalCalendarDate(),
       sales: paidSalesToBacoorRows(todaySales),
       classifyBucket: (row) => row.bucket,
@@ -1172,14 +1209,38 @@ export default function PosPage() {
         <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
           Daily sales report
         </Button>
+        {canSubmitShiftClose(profile) ? (
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-11"
+            onClick={() => {
+              setShiftCloseMode(true)
+              setShiftOverrides({})
+              setShiftReasons({})
+              setShiftFieldErrors({})
+              setDailyReportOpen(true)
+              supabase
+                .from('shift_close_field_config')
+                .select('field_key, label, allow_override, is_active, sort_order')
+                .eq('is_active', true)
+                .order('sort_order')
+                .then(({ data }) => setShiftFieldConfig(data || []))
+            }}
+          >
+            End of shift
+          </Button>
+        ) : null}
         {canManageCatalog && (
           <Button type="button" variant="secondary" className="min-h-11" asChild>
             <Link to="/operations/inventory">Inventory Management</Link>
           </Button>
         )}
+        {canOpenFinance ? (
         <Button type="button" variant="secondary" className="min-h-11" asChild>
-          <Link to="/operations/finance?tab=expenses">Open Finance · expenses</Link>
+          <Link to="/operations/finance?tab=purchases">Open Finance · expenses</Link>
         </Button>
+        ) : null}
       </div>
     </div>
   )
@@ -1224,12 +1285,127 @@ export default function PosPage() {
         <TabsContent value="dashboard">{dashboardBody}</TabsContent>
       </Tabs>
 
-      <Sheet open={dailyReportOpen} onOpenChange={setDailyReportOpen}>
+      <Sheet
+        open={dailyReportOpen}
+        onOpenChange={(open) => {
+          setDailyReportOpen(open)
+          if (!open) setShiftCloseMode(false)
+        }}
+      >
         <SheetContent className="w-full overflow-y-auto sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Daily sales report · {branchLabel}</SheetTitle>
+            <SheetTitle>
+              {shiftCloseMode ? 'End of shift' : 'Daily sales report'} · {branchLabel}
+            </SheetTitle>
           </SheetHeader>
           <div className="mt-4 space-y-3 text-sm">
+            {shiftCloseMode ? (
+              <>
+                <p className="text-muted-foreground">
+                  POS baseline is filled from today’s paid sales. Override a field only when needed — each change needs a reason.
+                </p>
+                <div className="space-y-3">
+                  {(shiftFieldConfig.length
+                    ? shiftFieldConfig.map((f) => f.field_key)
+                    : SHIFT_CLOSE_MONEY_KEYS
+                  ).map((key) => {
+                    const cfg = shiftFieldConfig.find((f) => f.field_key === key)
+                    const label = cfg?.label || key.replace(/_minor$/, '').replaceAll('_', ' ')
+                    const baseline = moneySnapshotFromReport(dailyReportData)[key] || 0
+                    const inputVal =
+                      shiftOverrides[key] != null ? shiftOverrides[key] : minorToPesosInput(baseline)
+                    const changed =
+                      parsePesosToMinor(inputVal) != null && parsePesosToMinor(inputVal) !== baseline
+                    return (
+                      <div key={key} className="rounded-xl border border-border p-3">
+                        <Label htmlFor={`shift-${key}`}>{label}</Label>
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          POS baseline · {formatMoney(baseline)}
+                        </p>
+                        <Input
+                          id={`shift-${key}`}
+                          inputMode="decimal"
+                          disabled={cfg?.allow_override === false}
+                          value={inputVal}
+                          onChange={(e) => {
+                            setShiftOverrides((prev) => ({ ...prev, [key]: e.target.value }))
+                            setShiftFieldErrors((prev) => {
+                              const next = { ...prev }
+                              delete next[key]
+                              return next
+                            })
+                          }}
+                        />
+                        {changed ? (
+                          <Input
+                            className="mt-2"
+                            placeholder="Override reason (required)"
+                            value={shiftReasons[key] || ''}
+                            onChange={(e) =>
+                              setShiftReasons((prev) => ({ ...prev, [key]: e.target.value }))
+                            }
+                          />
+                        ) : null}
+                        {shiftFieldErrors[key] ? (
+                          <p className="mt-1 text-xs text-destructive">{shiftFieldErrors[key]}</p>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+                <Button
+                  type="button"
+                  className="min-h-11 w-full"
+                  disabled={shiftSubmitting || !branch}
+                  onClick={async () => {
+                    const baseline = moneySnapshotFromReport(dailyReportData)
+                    const submitted = { ...baseline }
+                    for (const key of SHIFT_CLOSE_MONEY_KEYS) {
+                      if (shiftOverrides[key] != null) {
+                        const parsed = parsePesosToMinor(shiftOverrides[key])
+                        if (parsed == null) {
+                          setShiftFieldErrors({ [key]: 'Enter a valid amount (0 or more).' })
+                          toast.error('Fix invalid amounts before submit')
+                          return
+                        }
+                        submitted[key] = parsed
+                      }
+                    }
+                    const check = validateShiftCloseSubmit({
+                      baseline,
+                      submitted,
+                      reasons: shiftReasons,
+                      fieldConfig: shiftFieldConfig,
+                    })
+                    if (!check.ok) {
+                      setShiftFieldErrors(check.errors)
+                      toast.error('Fix override reasons or amounts')
+                      return
+                    }
+                    setShiftSubmitting(true)
+                    const { error } = await supabase.rpc('submit_shift_close', {
+                      payload: {
+                        branch,
+                        business_date: getLocalCalendarDate(),
+                        pos_baseline: baseline,
+                        submitted,
+                        override_reasons: check.overrideReasons,
+                      },
+                    })
+                    setShiftSubmitting(false)
+                    if (error) toast.error(error.message)
+                    else {
+                      toast.success('End of shift submitted for review')
+                      setDailyReportOpen(false)
+                      setShiftCloseMode(false)
+                    }
+                  }}
+                >
+                  {shiftSubmitting ? 'Submitting…' : 'Submit end of shift'}
+                </Button>
+              </>
+            ) : (
+              <>
             <p className="text-muted-foreground">
               Auto-filled from today’s paid sales. Payment modes: Cash, GCash, Credit Cards.
             </p>
@@ -1262,11 +1438,15 @@ export default function PosPage() {
             >
               Copy report text
             </Button>
+            {canOpenFinance ? (
             <Button type="button" className="min-h-11 w-full" asChild>
-              <Link to="/operations/finance?tab=expenses" onClick={() => setDailyReportOpen(false)}>
+              <Link to="/operations/finance?tab=purchases" onClick={() => setDailyReportOpen(false)}>
                 Open Finance · expenses
               </Link>
             </Button>
+            ) : null}
+              </>
+            )}
           </div>
         </SheetContent>
       </Sheet>

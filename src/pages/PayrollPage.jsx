@@ -19,12 +19,16 @@ import { collectPaged } from '@/lib/crmInsights'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import {
   PAYROLL_WIZARD_STEPS,
+  addPayrollAdjustment,
   adjustPayrollLine,
   buildPayrollPreview,
   buildRunPayrollPayload,
+  netPayrollLinesMinor,
   payrollBlocksConfirm,
   payrollPeriodRange,
   rebuildWashPoolLines,
+  validatePayrollAdjustment,
+  validatePayrollCustomRange,
 } from '@/lib/payroll'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
@@ -41,7 +45,10 @@ const FREQ_LABELS = {
   weekly: 'Weekly',
   biweekly: 'Every 2 weeks',
   monthly: 'Monthly',
+  custom: 'Custom range',
 }
+
+const SETTINGS_FREQUENCIES = PAYOUT_FREQUENCIES.filter((f) => f !== 'custom')
 
 const WEEKDAYS = [
   { value: '0', label: 'Sunday' },
@@ -75,17 +82,27 @@ export default function PayrollPage() {
   const [saving, setSaving] = useState(false)
   const [runs, setRuns] = useState([])
   const [notes, setNotes] = useState('')
+  const [packages, setPackages] = useState([])
+  const [staffRoster, setStaffRoster] = useState([])
+  const [adjForm, setAdjForm] = useState({ staffId: '', direction: 'add', label: '', amountPesos: '' })
+  const [pkgForm, setPkgForm] = useState({ staff_id: '', package_kind: 'fixed', amountPesos: '', notes: '', branch: '' })
 
   const branchOptions = useMemo(() => {
     const rows = scope === null ? branches : branches.filter((b) => scope.includes(b.slug))
     return rows.map((b) => ({ value: b.slug, label: b.name || b.slug }))
   }, [branches, scope])
 
-  const applyPeriod = useCallback((freq, anchor) => {
+  const applyPeriod = useCallback((freq, anchor, custom = null) => {
+    if (freq === 'custom') {
+      const range = payrollPeriodRange('custom', anchor, custom || { start: periodStart, end: periodEnd })
+      setPeriodStart(range.start)
+      setPeriodEnd(range.end)
+      return
+    }
     const range = payrollPeriodRange(freq, anchor)
     setPeriodStart(range.start)
     setPeriodEnd(range.end)
-  }, [])
+  }, [periodStart, periodEnd])
 
   const loadSettings = useCallback(async () => {
     const [branchRows, settingsRes] = await Promise.all([
@@ -109,26 +126,50 @@ export default function PayrollPage() {
   }, [applyPeriod, scope])
 
   const loadRuns = useCallback(async () => {
-    const { data, error } = await supabase
+    let q = supabase
       .from('payroll_runs')
       .select('id, branch, frequency, period_start, period_end, status, wash_pool_pct, pos_sales_minor, total_payout_minor, confirmed_at, payroll_run_lines(id, staff_id, amount_minor, kind, branch, source_key, source_sale_id)')
       .order('period_start', { ascending: false })
       .limit(40)
+    if (branch) q = q.eq('branch', branch)
+    const { data, error } = await q
     if (error) toast.error(error.message)
     else setRuns(data || [])
-  }, [])
+  }, [branch])
 
   useEffect(() => {
     loadSettings().catch((err) => toast.error(err.message))
     loadRuns().catch((err) => toast.error(err.message))
+    Promise.all([
+      supabase
+        .from('staff_pay_packages')
+        .select('id, staff_id, package_kind, amount_minor, effective_from, notes, is_active, branch, staff_profiles(full_name)')
+        .eq('is_active', true)
+        .order('effective_from', { ascending: false }),
+      supabase.from('staff_profiles').select('id, full_name, role, branch_slug').eq('is_active', true).order('full_name'),
+    ]).then(([pkg, staff]) => {
+      if (!pkg.error) setPackages(pkg.data || [])
+      if (!staff.error) setStaffRoster(staff.data || [])
+    })
   }, [loadSettings, loadRuns])
+
+  useEffect(() => {
+    setPkgForm((f) => ({ ...f, branch: f.branch || branch || '' }))
+  }, [branch])
 
   async function loadProof() {
     if (!periodStart || !periodEnd) return
+    if (frequency === 'custom') {
+      const check = validatePayrollCustomRange(periodStart, periodEnd)
+      if (!check.ok) {
+        toast.error(check.reason)
+        return
+      }
+    }
     setLoading(true)
     try {
       const { startIso, endIso } = periodIso(periodStart, periodEnd)
-      const [salesRows, attRows, expRows, claimedRows] = await Promise.all([
+      const [salesRows, attRows, expRows, claimedRows, pkgRows, staffRows] = await Promise.all([
         collectPaged(async (from, to) => {
           let q = supabase
             .from('sales')
@@ -170,7 +211,22 @@ export default function PayrollPage() {
           if (error) throw error
           return data || []
         }, 1000),
+        supabase
+          .from('staff_pay_packages')
+          .select('id, staff_id, package_kind, amount_minor, effective_from, notes, is_active, branch, staff_profiles(id, full_name, branch_slug, role)')
+          .eq('is_active', true)
+          .eq('branch', branch)
+          .lte('effective_from', periodEnd),
+        supabase
+          .from('staff_profiles')
+          .select('id, full_name, role, branch_slug')
+          .eq('is_active', true)
+          .order('full_name'),
       ])
+      if (pkgRows.error) throw pkgRows.error
+      if (staffRows.error) throw staffRows.error
+      setPackages(pkgRows.data || [])
+      setStaffRoster(staffRows.data || [])
 
       const attendance = (attRows || []).map((row) => ({
         id: row.staff_id,
@@ -181,6 +237,12 @@ export default function PayrollPage() {
         attendance_date: row.attendance_date,
         status: row.status,
       }))
+      const packageInput = (pkgRows.data || []).map((p) => ({
+        ...p,
+        staff: p.staff_profiles,
+        staff_name: p.staff_profiles?.full_name,
+        branch: p.branch,
+      }))
       const next = buildPayrollPreview({
         period: { start: periodStart, end: periodEnd },
         rules,
@@ -188,6 +250,7 @@ export default function PayrollPage() {
         attendance,
         ceramicExpenses: expRows,
         claimedSaleIds: (claimedRows || []).map((r) => r.sale_id),
+        packages: packageInput,
       })
       setPreview(next)
       setStep(1)
@@ -260,6 +323,7 @@ export default function PayrollPage() {
       <div role="tablist" aria-label="Payroll sections" className="planner-v2-tabs">
         {[
           { id: 'run', label: 'Run payroll' },
+          { id: 'packages', label: 'Packages' },
           { id: 'history', label: 'Payouts' },
           { id: 'rules', label: 'Rules' },
         ].map((item) => (
@@ -317,7 +381,7 @@ export default function PayrollPage() {
                     value={frequency}
                     onChange={(value) => {
                       setFrequency(value)
-                      applyPeriod(value, periodStart || getLocalCalendarDate())
+                      if (value !== 'custom') applyPeriod(value, periodStart || getLocalCalendarDate())
                     }}
                     options={PAYOUT_FREQUENCIES.map((f) => ({ value: f, label: FREQ_LABELS[f] }))}
                   />
@@ -330,6 +394,9 @@ export default function PayrollPage() {
                   <Label htmlFor="payroll-end">End</Label>
                   <Input id="payroll-end" type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
                 </div>
+                <p className="sm:col-span-2 text-xs text-muted-foreground">
+                  POS proof → packages → labeled add/deduct → Finance post on confirm.
+                </p>
                 <div className="sm:col-span-2">
                   <Button className="min-h-11 w-full sm:w-auto" disabled={loading || !branch} onClick={loadProof}>
                     {loading ? 'Loading POS…' : 'Load POS proof'}
@@ -400,33 +467,104 @@ export default function PayrollPage() {
                   {(preview?.lines || []).map((row) => (
                     <article key={row.key} className="hakum-payroll-row">
                       <p className="font-medium">{row.staff_name || 'Unassigned'}</p>
-                      <p className="text-muted-foreground">{row.kind.replace('_', ' ')} · {row.branch}</p>
+                      <p className="text-muted-foreground">
+                        {row.direction === 'deduct' ? 'Deduct' : row.kind.replaceAll('_', ' ')}
+                        {row.label ? ` · ${row.label}` : ''} · {row.branch}
+                      </p>
                       {row.missing_assignee ? <Badge variant="outline">Needs assignee</Badge> : null}
                       <Input
                         type="number"
                         min="0"
                         step="100"
                         className="min-h-11"
-                        disabled={!canRun}
+                        disabled={!canRun || row.kind?.startsWith('adjustment')}
                         value={row.pay_minor}
                         onChange={(e) =>
-                          setPreview((prev) => ({
-                            ...prev,
-                            lines: adjustPayrollLine(prev.lines, row.key, e.target.value),
-                            total_payout_minor: adjustPayrollLine(prev.lines, row.key, e.target.value).reduce(
-                              (s, l) => s + l.pay_minor,
-                              0,
-                            ),
-                          }))
+                          setPreview((prev) => {
+                            const lines = adjustPayrollLine(prev.lines, row.key, e.target.value)
+                            return {
+                              ...prev,
+                              lines,
+                              total_payout_minor: netPayrollLinesMinor(lines),
+                            }
+                          })
                         }
                         aria-label={`Amount for ${row.staff_name || 'unassigned'}`}
                       />
                     </article>
                   ))}
                   {!preview?.lines?.length ? (
-                    <p className="text-sm text-muted-foreground">No payout lines. Check attendance and POS proof.</p>
+                    <p className="text-sm text-muted-foreground">No payout lines. Check attendance, packages, and POS proof.</p>
                   ) : null}
                 </div>
+                {canRun && preview ? (
+                  <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
+                    <p className="sm:col-span-2 text-sm font-medium">Add / deduct</p>
+                    <NamedSelect
+                      value={adjForm.staffId}
+                      onChange={(staffId) => setAdjForm((f) => ({ ...f, staffId }))}
+                      options={(staffRoster.length ? staffRoster : []).map((s) => ({
+                        value: s.id,
+                        label: s.full_name || s.id,
+                      }))}
+                      placeholder="Employee"
+                    />
+                    <NamedSelect
+                      value={adjForm.direction}
+                      onChange={(direction) => setAdjForm((f) => ({ ...f, direction }))}
+                      options={[
+                        { value: 'add', label: 'Add' },
+                        { value: 'deduct', label: 'Deduct' },
+                      ]}
+                    />
+                    <Input
+                      placeholder="Label (required)"
+                      value={adjForm.label}
+                      onChange={(e) => setAdjForm((f) => ({ ...f, label: e.target.value }))}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Amount (pesos)"
+                      value={adjForm.amountPesos}
+                      onChange={(e) => setAdjForm((f) => ({ ...f, amountPesos: e.target.value }))}
+                    />
+                    <Button
+                      type="button"
+                      className="sm:col-span-2 min-h-11"
+                      onClick={() => {
+                        const staff = staffRoster.find((s) => s.id === adjForm.staffId)
+                        const amountMinor = Math.round(Number(adjForm.amountPesos) * 100)
+                        const check = validatePayrollAdjustment({
+                          direction: adjForm.direction,
+                          label: adjForm.label,
+                          amountMinor,
+                        })
+                        if (!check.ok || !staff) {
+                          toast.error(check.errors?.label || check.errors?.amount || 'Pick an employee and fill add/deduct')
+                          return
+                        }
+                        setPreview((prev) => {
+                          const lines = addPayrollAdjustment(prev.lines, {
+                            staff,
+                            branch: branch || staff.branch_slug,
+                            direction: adjForm.direction,
+                            label: adjForm.label,
+                            amountMinor,
+                          })
+                          return { ...prev, lines, total_payout_minor: netPayrollLinesMinor(lines) }
+                        })
+                        setAdjForm({ staffId: '', direction: 'add', label: '', amountPesos: '' })
+                      }}
+                    >
+                      Add line
+                    </Button>
+                    <p className="sm:col-span-2 text-sm">
+                      Net payout {formatMoney(preview?.total_payout_minor || 0)}
+                    </p>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           )}
@@ -486,6 +624,103 @@ export default function PayrollPage() {
         </div>
       )}
 
+      {tab === 'packages' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Staff pay packages</CardTitle>
+            <CardDescription>
+              Fixed / custom / hybrid packages for non-pool roles. Included when you load POS proof for a period.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {canRun ? (
+              <form
+                className="grid gap-3 sm:grid-cols-2"
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  const amount_minor = Math.round(Number(pkgForm.amountPesos) * 100)
+                  const pkgBranch = pkgForm.branch || branch
+                  if (!pkgForm.staff_id || !(amount_minor > 0) || !pkgBranch) {
+                    toast.error('Employee, branch, and amount required')
+                    return
+                  }
+                  const { error } = await supabase.from('staff_pay_packages').insert({
+                    staff_id: pkgForm.staff_id,
+                    package_kind: pkgForm.package_kind,
+                    amount_minor,
+                    branch: pkgBranch,
+                    notes: pkgForm.notes.trim() || null,
+                  })
+                  if (error) toast.error(error.message)
+                  else {
+                    toast.success('Package saved')
+                    setPkgForm({ staff_id: '', package_kind: 'fixed', amountPesos: '', notes: '', branch: branch || '' })
+                    const { data } = await supabase
+                      .from('staff_pay_packages')
+                      .select('id, staff_id, package_kind, amount_minor, effective_from, notes, is_active, branch, staff_profiles(full_name)')
+                      .eq('is_active', true)
+                      .order('effective_from', { ascending: false })
+                    setPackages(data || [])
+                  }
+                }}
+              >
+                <NamedSelect
+                  value={pkgForm.staff_id}
+                  onChange={(staff_id) => setPkgForm((f) => ({ ...f, staff_id }))}
+                  options={staffRoster.map((s) => ({ value: s.id, label: s.full_name }))}
+                  placeholder="Employee"
+                />
+                <NamedSelect
+                  value={pkgForm.branch || branch}
+                  onChange={(next) => setPkgForm((f) => ({ ...f, branch: next }))}
+                  options={branchOptions}
+                  placeholder="Branch"
+                />
+                <NamedSelect
+                  value={pkgForm.package_kind}
+                  onChange={(package_kind) => setPkgForm((f) => ({ ...f, package_kind }))}
+                  options={[
+                    { value: 'fixed', label: 'Fixed' },
+                    { value: 'custom', label: 'Custom' },
+                    { value: 'hybrid', label: 'Hybrid' },
+                  ]}
+                />
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Amount (pesos)"
+                  value={pkgForm.amountPesos}
+                  onChange={(e) => setPkgForm((f) => ({ ...f, amountPesos: e.target.value }))}
+                />
+                <Input
+                  placeholder="Notes"
+                  value={pkgForm.notes}
+                  onChange={(e) => setPkgForm((f) => ({ ...f, notes: e.target.value }))}
+                />
+                <Button type="submit" className="min-h-11 sm:col-span-2">
+                  Save package
+                </Button>
+              </form>
+            ) : null}
+            <div className="hakum-payroll-table">
+              {packages.map((p) => (
+                <article key={p.id} className="hakum-payroll-row">
+                  <p className="font-medium">{p.staff_profiles?.full_name || p.staff_id}</p>
+                  <p className="text-muted-foreground">
+                    {p.package_kind} · {p.branch} · from {p.effective_from}
+                  </p>
+                  <p>{formatMoney(p.amount_minor)}</p>
+                </article>
+              ))}
+              {!packages.length ? (
+                <p className="text-sm text-muted-foreground">No active packages yet.</p>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {tab === 'history' && (
         <div className="hakum-payroll-table">
           {runs.map((run) => (
@@ -521,7 +756,7 @@ export default function PayrollPage() {
                   value={rules.payout_frequency}
                   disabled={!canRun}
                   onChange={(value) => setRules((prev) => ({ ...prev, payout_frequency: value }))}
-                  options={PAYOUT_FREQUENCIES.map((f) => ({ value: f, label: FREQ_LABELS[f] }))}
+                  options={SETTINGS_FREQUENCIES.map((f) => ({ value: f, label: FREQ_LABELS[f] }))}
                 />
               </div>
               <div className="flex flex-col gap-1.5">

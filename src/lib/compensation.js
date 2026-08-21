@@ -3,7 +3,7 @@
  * Amounts in minor units (centavos). Percentages are whole numbers (35 = 35%).
  */
 
-export const PAYOUT_FREQUENCIES = Object.freeze(['daily', 'weekly', 'biweekly', 'monthly'])
+export const PAYOUT_FREQUENCIES = Object.freeze(['daily', 'weekly', 'biweekly', 'monthly', 'custom'])
 
 export const DEFAULT_COMPENSATION_RULES = Object.freeze({
   wash_pool_pct: 35,

@@ -3,7 +3,7 @@
  * Real POS income + real expenses, scoped per branch or all branches. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { LayoutDashboard, ShoppingCart, Receipt, FileBarChart, Tags, BookOpen } from 'lucide-react'
+import { LayoutDashboard, ShoppingCart, Receipt, FileBarChart, Tags, BookOpen, ClipboardCheck, FileSpreadsheet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessFinance, canSeeAllBranches, canWriteFinance } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
   FINANCE_TABS,
-  FINANCE_TAB_IDS,
+  resolveFinanceTab,
   financeRangeIso,
   financeCompareRange,
   scopeBranch,
@@ -27,12 +27,16 @@ import FinancePurchasesTab from './finance/FinancePurchasesTab'
 import FinancePLTab from './finance/FinancePLTab'
 import FinanceCategoriesTab from './finance/FinanceCategoriesTab'
 import FinanceReportsTab from './finance/FinanceReportsTab'
+import FinanceShiftCloseTab from './finance/FinanceShiftCloseTab'
+import FinanceExpenseReportsTab from './finance/FinanceExpenseReportsTab'
 
 const TAB_ICONS = {
   overview: LayoutDashboard,
   sales: ShoppingCart,
   purchases: Receipt,
   pl: FileBarChart,
+  'shift-close': ClipboardCheck,
+  'expense-reports': FileSpreadsheet,
   categories: Tags,
   reports: BookOpen,
 }
@@ -41,7 +45,7 @@ export default function FinancePage() {
   const { profile } = useAuth()
   const canWrite = canWriteFinance(profile)
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = FINANCE_TAB_IDS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'overview'
+  const tab = resolveFinanceTab(searchParams.get('tab'))
 
   const [branches, setBranches] = useState([])
   const [categories, setCategories] = useState([])
@@ -251,6 +255,27 @@ export default function FinancePage() {
             comparePreset={comparePreset}
             onCompareChange={setComparePreset}
             loading={loading}
+          />
+        </TabsContent>
+
+        <TabsContent value="shift-close" className="mt-6">
+          <FinanceShiftCloseTab
+            profile={profile}
+            range={range}
+            branchFilter={branchFilter}
+            canWrite={canWrite}
+          />
+        </TabsContent>
+
+        <TabsContent value="expense-reports" className="mt-6">
+          <FinanceExpenseReportsTab
+            profile={profile}
+            categories={categories}
+            writableBranches={writableBranches}
+            canWrite={canWrite}
+            onReload={load}
+            branchFilter={branchFilter}
+            range={range}
           />
         </TabsContent>
 

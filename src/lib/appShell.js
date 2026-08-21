@@ -1,5 +1,6 @@
 import { isStandaloneDisplay, isIosDevice, isAndroidDevice } from './installApp.js'
-import { OPS_LOGIN_ROLES, redirectForRole } from '../auth/permissions.js'
+import { OPS_LOGIN_ROLES } from '../auth/permissions.js'
+import { resolvePostLoginPath } from '../auth/authRedirect.js'
 
 /**
  * Prefer native-app shell (sign-in / account) over marketing landing.
@@ -26,7 +27,7 @@ export function prefersAppShell({
 export function resolveAppHome(profile) {
   if (!profile?.role) return null
   if (profile.role === 'customer') return '/account'
-  if (OPS_LOGIN_ROLES.includes(profile.role)) return redirectForRole(profile.role)
+  if (OPS_LOGIN_ROLES.includes(profile.role)) return resolvePostLoginPath(profile, null)
   return null
 }
 

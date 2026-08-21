@@ -38,8 +38,8 @@ import {
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('payroll period range', () => {
-  it('daily / weekly / biweekly / monthly use Manila calendar literals', () => {
-    assert.deepEqual(PAYOUT_FREQUENCIES, ['daily', 'weekly', 'biweekly', 'monthly'])
+  it('daily / weekly / biweekly / monthly / custom use Manila calendar literals', () => {
+    assert.deepEqual(PAYOUT_FREQUENCIES, ['daily', 'weekly', 'biweekly', 'monthly', 'custom'])
     assert.deepEqual(payrollPeriodRange('daily', '2026-08-19'), {
       start: '2026-08-19',
       end: '2026-08-19',
@@ -55,6 +55,10 @@ describe('payroll period range', () => {
     assert.deepEqual(payrollPeriodRange('monthly', '2026-08-19'), {
       start: '2026-08-01',
       end: '2026-08-31',
+    })
+    assert.deepEqual(payrollPeriodRange('custom', '2026-08-19', { start: '2026-08-01', end: '2026-08-15' }), {
+      start: '2026-08-01',
+      end: '2026-08-15',
     })
   })
 })

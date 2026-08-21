@@ -1,25 +1,47 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CeramicSection } from '../components/public/home/HomeServiceSections'
 
 const PPFVisualizer = lazy(() => import('../components/PPFVisualizer'))
-import { usePublicBranches, branchLabel } from '../lib/branches'
+import { usePublicBranches, branchLabel, fetchPublicBranchHours } from '../lib/branches'
+import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
+import {
+  buildPublicServiceOverview,
+  fetchPublicCatalogServices,
+} from '../lib/publicCatalog'
 import { usePageMeta } from '../lib/pageMeta'
 
-const serviceItems = [
-  ['Premium car wash','A careful exterior clean, wheel treatment, and hand finish for a crisp everyday reset.'],
-  ['Interior deep clean','Extraction, steam, detail brushing, and conditioning for a cabin that feels renewed.'],
-  ['Paint correction','Multi-stage refinement to reduce swirls, haze, and defects while restoring deep gloss.'],
-  ['Ceramic coating','Durable hydrophobic protection with richer color, easier upkeep, and serious shine.'],
-  ['Paint protection film','Virtually invisible impact protection, precisely installed around every edge and contour.'],
-  ['Maintenance detailing','A tailored care plan that preserves your finish between major detailing sessions.'],
-]
-
 export function ServicesPage() {
+  const [serviceItems, setServiceItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setLoadError('')
+    fetchPublicCatalogServices()
+      .then((rows) => {
+        if (cancelled) return
+        setServiceItems(buildPublicServiceOverview(rows))
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setLoadError(err?.message || 'Could not load services.')
+        setServiceItems([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   return (
     <PageHero
-      eyebrow="Our services · Marketing overview"
+      eyebrow="Our services · Live catalog"
       title={
         <>
           Precision in
@@ -27,25 +49,35 @@ export function ServicesPage() {
           <i>every pass.</i>
         </>
       }
-      copy="Every vehicle receives a considered process, premium workmanship, and the same care we give our own. Live menu and pricing appear when you book."
+      copy="Service names match Hakum Inventory — the same menu you see when you book or check out at the bay."
     >
       <section className="content-section">
         <p className="public-shell mb-6 text-sm text-slate-500">
-          This page is a marketing overview — not the live catalog. Book to see current services from Hakum.
+          Names and order come from the live catalog. Marketing descriptions appear when a homepage match exists; otherwise the inventory description is shown.
         </p>
-        <div className="public-shell numbered-grid">
-          {serviceItems.map(([name, copy], i) => (
-            <article key={name}>
-              <span>0{i + 1}</span>
-              <Sparkles />
-              <h2>{name}</h2>
-              <p>{copy}</p>
-              <Link to="/book">
-                Book this service <ArrowRight />
-              </Link>
-            </article>
-          ))}
-        </div>
+        {loadError ? (
+          <p className="public-shell mb-6 text-sm text-destructive">{loadError}</p>
+        ) : null}
+        {loading ? (
+          <p className="public-shell text-sm text-slate-500">Loading services…</p>
+        ) : (
+          <div className="public-shell numbered-grid">
+            {serviceItems.map((item, i) => (
+              <article key={item.id || item.slug}>
+                <span>0{i + 1}</span>
+                <Sparkles />
+                <h2>{item.title}</h2>
+                <p>{item.copy}</p>
+                <Link to="/book" state={{ service: item.title, service_id: item.id }}>
+                  Book this service <ArrowRight />
+                </Link>
+              </article>
+            ))}
+            {!serviceItems.length && !loadError ? (
+              <p className="text-sm text-slate-500">No active services are listed yet.</p>
+            ) : null}
+          </div>
+        )}
       </section>
     </PageHero>
   )
@@ -63,7 +95,7 @@ export function PackagesPage() {
             <i>compare.</i>
           </>
         }
-        copy="Long-term ceramic gloss and precision-fit PPF, built around how much protection your vehicle needs. Confirm availability and pricing when you book."
+        copy="Long-term ceramic gloss and precision-fit PPF, built around how much protection your vehicle needs. Package titles match booking prefill."
       />
       <CeramicSection />
       <Suspense fallback={null}>
@@ -75,11 +107,32 @@ export function PackagesPage() {
 
 export function BranchesPage() {
   const { branches, loading, error } = usePublicBranches({ mode: 'visible' })
+  const [hoursBySlug, setHoursBySlug] = useState({})
+
   usePageMeta({
     title: 'Branches',
     description: 'Find Hakum Auto Care branches across Cavite and Batangas. Book a visit or open the live queue.',
     path: '/branches',
   })
+
+  useEffect(() => {
+    let active = true
+    const slugs = branches.map((b) => b.slug)
+    if (!slugs.length) {
+      setHoursBySlug({})
+      return undefined
+    }
+    fetchPublicBranchHours(slugs)
+      .then((map) => {
+        if (active) setHoursBySlug(map)
+      })
+      .catch(() => {
+        if (active) setHoursBySlug({})
+      })
+    return () => {
+      active = false
+    }
+  }, [branches])
 
   return (
     <section className="hb-sites">
@@ -124,7 +177,7 @@ export function BranchesPage() {
             </>
           ) : null}
           {branches.map((b, index) => (
-            <BranchSiteCard key={b.slug} branch={b} index={index} />
+            <BranchSiteCard key={b.slug} branch={b} index={index} hours={hoursBySlug[b.slug] || []} />
           ))}
           {!loading && !branches.length ? (
             <p className="lq-picker-empty">No branches listed yet.</p>
@@ -135,12 +188,14 @@ export function BranchesPage() {
   )
 }
 
-function BranchSiteCard({ branch, index }) {
+function BranchSiteCard({ branch, index, hours = [] }) {
   const comingSoon = Boolean(branch.coming_soon)
   const mapsUrl =
     branch.latitude != null && branch.longitude != null
       ? `https://www.openstreetmap.org/?mlat=${branch.latitude}&mlon=${branch.longitude}#map=16/${branch.latitude}/${branch.longitude}`
       : null
+  const summary = hours.length ? formatHoursSummary(hours) : null
+  const badge = comingSoon ? 'Coming soon' : hours.length ? openNowLabel(hours) : 'Hours TBD'
 
   return (
     <article className={`hb-site${comingSoon ? ' is-soon' : ''}`} style={{ '--i': index }}>
@@ -148,14 +203,16 @@ function BranchSiteCard({ branch, index }) {
         <div className="hb-site-core">
           <div className="hb-site-visual">
             <img src="/branding/hakum-mark-ow.png" alt="" className="hb-site-mark" width={44} height={44} />
-            <span className="hb-site-badge">{comingSoon ? 'Coming soon' : 'Open daily'}</span>
+            <span className="hb-site-badge">{badge}</span>
           </div>
           <div className="hb-site-body">
             <p className="hb-site-kicker">Hakum Auto Care</p>
             <h2 className="hb-site-title">{branch.name}</h2>
             <p className="hb-site-address">{branch.address || 'Address coming soon'}</p>
             <p className="hb-site-hours">
-              {comingSoon ? 'Opening soon - ask us for updates' : 'Queue times vary by branch load'}
+              {comingSoon
+                ? 'Opening soon — ask us for updates'
+                : summary || 'Queue times vary by branch load'}
             </p>
             <div className="hb-site-actions">
               {comingSoon ? (

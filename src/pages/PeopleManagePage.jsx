@@ -3,21 +3,23 @@ import { Navigate } from 'react-router-dom'
 import { Pencil, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
-  ASSISTANT_GRANT_KEYS,
-  ASSISTANT_GRANT_LABELS,
-  DEFAULT_ASSISTANT_GRANTS,
   ROLES,
+  ASSISTANT_GRANT_KEYS,
+  DEFAULT_ASSISTANT_GRANTS,
   canCreateAdminAccounts,
   canEditAssistantGrants,
   canManagePeople,
   isSuperAdmin,
+  normalizeAssistantGrants,
 } from '@/auth/permissions'
+import AssistantGrantsEditor from '@/components/AssistantGrantsEditor'
 import {
   deactivateStaffPerson,
   listBranches,
   listStaffPeople,
   provisionStaff,
   updateStaffPerson,
+  updateStaffAccountFields,
 } from '@/lib/adminApi'
 import { filterBranchesForProfile, filterPeopleForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +31,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
+import { validateRoleDefinition, BASELINE_TEMPLATES } from '@/lib/roleDefinitions'
 
 const ROLE_LABELS = {
   admin: 'Admin',
@@ -62,6 +66,31 @@ function showBranchPicker(role, grants) {
   return false
 }
 
+function DirectoryPersonActions({ profile, row, onEdit, onDeactivate }) {
+  if (!canMutateDirectoryPerson(profile, row)) return null
+  return (
+    <div className="people-directory-actions">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() =>
+          onEdit({
+            ...row,
+            branch_slugs: row.branch_slugs || (row.branch_slug ? [row.branch_slug] : []),
+            permission_grants: normalizeAssistantGrants(row.permission_grants),
+          })
+        }
+      >
+        <Pencil size={14} className="mr-1" /> Edit
+      </Button>
+      {row.is_active && (
+        <Button size="sm" variant="ghost" onClick={() => onDeactivate(row, false)}>Deactivate</Button>
+      )}
+      <Button size="sm" variant="ghost" onClick={() => onDeactivate(row, true)}>Archive</Button>
+    </div>
+  )
+}
+
 function canMutateDirectoryPerson(actor, target) {
   if (!target || target.role === 'BossMich') return false
   if (isSuperAdmin(actor)) return true
@@ -84,10 +113,17 @@ export default function PeopleManagePage() {
     branch_slug: '',
     branch_slugs: [],
     temporary_password: '',
-    permission_grants: { ...DEFAULT_ASSISTANT_GRANTS },
+    permission_grants: normalizeAssistantGrants({}),
     attendance_enabled: true,
     geofence_enabled: true,
     employment_type: 'permanent',
+  })
+  const [roleDefs, setRoleDefs] = useState([])
+  const [roleDefForm, setRoleDefForm] = useState({
+    role_key: '',
+    label: '',
+    baseline_template: 'staff',
+    grants: { ...DEFAULT_ASSISTANT_GRANTS },
   })
 
   const roleOptions = useMemo(() => {
@@ -111,11 +147,16 @@ export default function PeopleManagePage() {
   }, [profile])
 
   const load = useCallback(async () => {
-    const [p, b] = await Promise.all([listStaffPeople({ includeInactive: true }), listBranches()])
+    const [p, b, defs] = await Promise.all([
+      listStaffPeople({ includeInactive: true }),
+      listBranches(),
+      supabase.from('role_definitions').select('*').eq('is_active', true).order('label'),
+    ])
     const scopedBranches = filterBranchesForProfile(b, profile)
     const scopedPeople = filterPeopleForProfile(p, profile)
     setPeople(scopedPeople)
     setBranches(scopedBranches)
+    if (!defs.error) setRoleDefs(defs.data || [])
     const defaultBranch = pickDefaultBranchSlug(profile, scopedBranches)
     setForm((f) => ({
       ...f,
@@ -187,6 +228,12 @@ export default function PeopleManagePage() {
         payload.branch_slugs = editing.branch_slugs || []
       }
       await updateStaffPerson(payload)
+      if (String(editing.temporary_password || '').trim()) {
+        await updateStaffAccountFields({
+          id: editing.id,
+          temporary_password: editing.temporary_password.trim(),
+        })
+      }
       toast.success('Staff updated')
       setEditing(null)
       await load()
@@ -222,6 +269,80 @@ export default function PeopleManagePage() {
               : 'Create Team Leads and staff for your assigned branch.'}
         </p>
       </div>
+
+      {isSuperAdmin(profile) ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Custom roles</CardTitle>
+            <CardDescription>
+              Option A: baseline system template + grants overlay. Assign via custom_role_key on a person (keeps profile_role enum).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form
+              className="grid gap-3 sm:grid-cols-2"
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const check = validateRoleDefinition(roleDefForm)
+                if (!check.ok) {
+                  toast.error(Object.values(check.errors)[0])
+                  return
+                }
+                const { error } = await supabase.from('role_definitions').upsert({
+                  role_key: check.role_key,
+                  label: check.label,
+                  baseline_template: check.baseline_template,
+                  grants: check.grants,
+                  is_active: true,
+                  updated_at: new Date().toISOString(),
+                })
+                if (error) toast.error(error.message)
+                else {
+                  toast.success('Role definition saved')
+                  setRoleDefForm({ role_key: '', label: '', baseline_template: 'staff', grants: { ...DEFAULT_ASSISTANT_GRANTS } })
+                  load()
+                }
+              }}
+            >
+              <Input
+                placeholder="role_key (snake_case)"
+                value={roleDefForm.role_key}
+                onChange={(e) => setRoleDefForm((f) => ({ ...f, role_key: e.target.value }))}
+              />
+              <Input
+                placeholder="Label"
+                value={roleDefForm.label}
+                onChange={(e) => setRoleDefForm((f) => ({ ...f, label: e.target.value }))}
+              />
+              <Select
+                value={roleDefForm.baseline_template}
+                onValueChange={(baseline_template) => setRoleDefForm((f) => ({ ...f, baseline_template }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Baseline template" /></SelectTrigger>
+                <SelectContent>
+                  {BASELINE_TEMPLATES.map((t) => (
+                    <SelectItem key={t} value={t}>{ROLE_LABELS[t] || t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="submit" className="min-h-11">Save definition</Button>
+              <p className="sm:col-span-2 text-xs text-muted-foreground">
+                Grant keys whitelist: {ASSISTANT_GRANT_KEYS.slice(0, 6).join(', ')}…
+              </p>
+            </form>
+            <ul className="space-y-2 text-sm">
+              {roleDefs.map((d) => (
+                <li key={d.role_key} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
+                  <span>
+                    <strong>{d.label}</strong> · {d.role_key} → {d.baseline_template}
+                  </span>
+                </li>
+              ))}
+              {!roleDefs.length ? <li className="text-muted-foreground">No custom roles yet.</li> : null}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
         <Card>
@@ -289,29 +410,10 @@ export default function PeopleManagePage() {
                 </div>
               )}
               {form.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile) && (
-                <div className="flex flex-col gap-2">
-                  <Label>Permission grants</Label>
-                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
-                    {ASSISTANT_GRANT_KEYS.map((key) => (
-                      <label key={key} className="flex cursor-pointer items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(form.permission_grants[key])}
-                          onChange={() =>
-                            setForm((f) => ({
-                              ...f,
-                              permission_grants: { ...f.permission_grants, [key]: !f.permission_grants[key] },
-                            }))
-                          }
-                        />
-                        <span>
-                          <span className="font-medium">{ASSISTANT_GRANT_LABELS[key] || key}</span>
-                          <span className="ml-1 text-xs text-muted-foreground">({key})</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <AssistantGrantsEditor
+                  grants={form.permission_grants}
+                  onChange={(permission_grants) => setForm((f) => ({ ...f, permission_grants }))}
+                />
               )}
               <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
                 <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff toggles</Label>
@@ -349,6 +451,28 @@ export default function PeopleManagePage() {
             <CardDescription>{people.length} profiles</CardDescription>
           </CardHeader>
           <CardContent>
+            <ul className="people-directory-cards">
+              {people.map((row) => (
+                <li key={row.id} className="people-directory-card">
+                  <div>
+                    <strong>{row.full_name}</strong>
+                    <p>{row.phone || 'No phone'}</p>
+                    <p>{(row.branch_slugs || []).join(', ') || row.branch_slug || 'All / HQ'}</p>
+                  </div>
+                  <div className="people-directory-card-meta">
+                    <Badge variant="secondary">{ROLE_LABELS[row.role] || row.role}</Badge>
+                    {row.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
+                  </div>
+                  <DirectoryPersonActions
+                    profile={profile}
+                    row={row}
+                    onEdit={setEditing}
+                    onDeactivate={onDeactivate}
+                  />
+                </li>
+              ))}
+            </ul>
+            <div className="people-directory-table overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -374,32 +498,18 @@ export default function PeopleManagePage() {
                       {row.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
-                      {canMutateDirectoryPerson(profile, row) && (
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setEditing({
-                                ...row,
-                                branch_slugs: row.branch_slugs || (row.branch_slug ? [row.branch_slug] : []),
-                                permission_grants: { ...DEFAULT_ASSISTANT_GRANTS, ...(row.permission_grants || {}) },
-                              })
-                            }
-                          >
-                            <Pencil size={14} className="mr-1" /> Edit
-                          </Button>
-                          {row.is_active && (
-                            <Button size="sm" variant="ghost" onClick={() => onDeactivate(row, false)}>Deactivate</Button>
-                          )}
-                          <Button size="sm" variant="ghost" onClick={() => onDeactivate(row, true)}>Archive</Button>
-                        </div>
-                      )}
+                      <DirectoryPersonActions
+                        profile={profile}
+                        row={row}
+                        onEdit={setEditing}
+                        onDeactivate={onDeactivate}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -464,32 +574,10 @@ export default function PeopleManagePage() {
                 </div>
               )}
               {editing.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile) && (
-                <div className="flex flex-col gap-2">
-                  <Label>Permission grants</Label>
-                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
-                    {ASSISTANT_GRANT_KEYS.map((key) => (
-                      <label key={key} className="flex cursor-pointer items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(editing.permission_grants?.[key])}
-                          onChange={() =>
-                            setEditing((r) => ({
-                              ...r,
-                              permission_grants: {
-                                ...r.permission_grants,
-                                [key]: !r.permission_grants?.[key],
-                              },
-                            }))
-                          }
-                        />
-                        <span>
-                          <span className="font-medium">{ASSISTANT_GRANT_LABELS[key] || key}</span>
-                          <span className="ml-1 text-xs text-muted-foreground">({key})</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <AssistantGrantsEditor
+                  grants={editing.permission_grants}
+                  onChange={(permission_grants) => setEditing((r) => ({ ...r, permission_grants }))}
+                />
               )}
               <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
                 <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff toggles</Label>
@@ -511,6 +599,16 @@ export default function PeopleManagePage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Temporary password</Label>
+                <Input
+                  type="text"
+                  autoComplete="new-password"
+                  value={editing.temporary_password || ''}
+                  onChange={(e) => setEditing((r) => ({ ...r, temporary_password: e.target.value }))}
+                  placeholder="Leave blank to keep the current password"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>

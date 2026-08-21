@@ -50,6 +50,25 @@ export async function fetchPublicBranches({ mode = 'bookable' } = {}) {
   return attachHours(data || [])
 }
 
+/** Map branch_slug → week rows for public /branches cards. */
+export async function fetchPublicBranchHours(slugs = []) {
+  const list = [...new Set((slugs || []).map((s) => String(s || '').trim()).filter(Boolean))]
+  if (!list.length) return {}
+  const { data, error } = await supabase
+    .from('branch_operating_hours')
+    .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+    .in('branch_slug', list)
+    .order('day_of_week')
+  if (error) throw new Error(error.message)
+  const hoursBySlug = Object.create(null)
+  for (const row of data || []) {
+    const key = row.branch_slug
+    if (!hoursBySlug[key]) hoursBySlug[key] = []
+    hoursBySlug[key].push(row)
+  }
+  return hoursBySlug
+}
+
 export function usePublicBranches({ mode = 'bookable' } = {}) {
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -105,3 +124,6 @@ export function branchNameMap(rows = []) {
   for (const row of rows) map[row.slug] = row.name
   return map
 }
+
+export { requireBranchSlug, branchSlugsForOwnPay } from './branchScope.js'
+

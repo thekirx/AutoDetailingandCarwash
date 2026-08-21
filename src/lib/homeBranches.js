@@ -12,10 +12,18 @@ const COMING_SOON_BRANCH = {
   status: 'Coming Soon',
 }
 
+function displayName(branch) {
+  return String(branch.name || branch.slug || '').replace('Hakum Auto Care ', '')
+}
+
+function isComingSoonRow(row) {
+  return Boolean(row?.coming_soon || row?.isComingSoon)
+}
+
 function activeCard(branch) {
   return {
     slug: branch.slug,
-    name: branch.name.replace('Hakum Auto Care ', ''),
+    name: displayName(branch),
     address: branch.address || branch.slug,
     href: branch.href || `/queue/${branch.slug}`,
     isComingSoon: false,
@@ -23,11 +31,34 @@ function activeCard(branch) {
   }
 }
 
+function comingSoonCard(branch) {
+  return {
+    slug: branch.slug,
+    name: displayName(branch),
+    address: branch.address || branch.slug,
+    href: null,
+    isComingSoon: true,
+    status: 'Coming Soon',
+  }
+}
+
 export function buildHomeBranchCards(branches = []) {
-  const activeBranches = branches.length ? branches : FALLBACK_BRANCHES
-  return [...activeBranches.map(activeCard), COMING_SOON_BRANCH]
+  if (!branches.length) {
+    return [...FALLBACK_BRANCHES.map(activeCard), COMING_SOON_BRANCH]
+  }
+  const coming = branches.filter(isComingSoonRow).map(comingSoonCard)
+  const active = branches.filter((row) => !isComingSoonRow(row)).map(activeCard)
+  return [...active, ...coming]
 }
 
 export function countActiveHomeBranches(cards = []) {
   return cards.filter((card) => !card.isComingSoon).length
+}
+
+export function comingSoonHomeCopy(cards = []) {
+  const names = cards.filter((card) => card.isComingSoon).map((card) => card.name).filter(Boolean)
+  if (!names.length) return ''
+  if (names.length === 1) return `with ${names[0]} coming soon`
+  const last = names[names.length - 1]
+  return `with ${names.slice(0, -1).join(', ')} and ${last} coming soon`
 }

@@ -1,4 +1,4 @@
-import { allowRoute, redirectForRole } from './permissions.js'
+import { allowRoute, getOperationsNav, redirectForRole } from './permissions.js'
 
 /** Safe post-login redirect — never bounce back to access-denied / login loops. */
 export function safeAuthReturnPath(pathname, { fallback = null } = {}) {
@@ -41,6 +41,12 @@ export function opsRouteKeyFromPath(pathname) {
   if (path.startsWith('/operations/settings')) return 'settings'
   if (path.startsWith('/operations/reports')) return 'reports'
   if (path.startsWith('/operations/memberships')) return 'memberships'
+  if (path.startsWith('/operations/reviews')) return 'reviews'
+  if (path.startsWith('/operations/content')) return 'content'
+  if (path.startsWith('/operations/notifications')) return 'notifications'
+  if (path.startsWith('/operations/broadcast')) return 'notifications'
+  if (path.startsWith('/operations/history')) return 'history'
+  if (path.startsWith('/operations/attendance')) return 'attendance'
   if (path.startsWith('/operations/services')) return 'inventory'
   if (path.startsWith('/operations/products')) return 'inventory'
   return null
@@ -50,8 +56,15 @@ export function opsRouteKeyFromPath(pathname) {
  * Post-login destination: prefer deep-link only when this role can open it.
  * Prevents login → forbidden page → access-denied flicker.
  */
-export function resolvePostLoginPath(profile, fromPath) {
+function allowedRoleHome(profile) {
   const home = redirectForRole(profile?.role)
+  const key = opsRouteKeyFromPath(home)
+  if (!key || allowRoute(profile, key)) return home
+  return getOperationsNav(profile)[0]?.to || home
+}
+
+export function resolvePostLoginPath(profile, fromPath) {
+  const home = allowedRoleHome(profile)
   const safe = safeAuthReturnPath(fromPath)
   if (!safe) return home
   const key = opsRouteKeyFromPath(safe)

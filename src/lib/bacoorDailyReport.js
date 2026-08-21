@@ -1,6 +1,7 @@
 /** Bacoor-style daily close report fields (minor units). */
 
 import { expenseCountsOnDailyClose } from './posSale.js'
+import { classifySaleBucket as classifyPosSaleBucket, posBucketToBacoor } from './posSellables.js'
 
 export function manilaDayStamp(iso) {
   if (!iso) return ''
@@ -22,7 +23,7 @@ export function approvedCaForCloseDay(row, dayIso) {
 
 export function emptyBacoorDailyReport(meta = {}) {
   return {
-    branch: meta.branch || 'bacoor',
+    branch: meta.branch || '',
     date: meta.date || null,
     square_sales_minor: 0,
     downpayments_minor: 0,
@@ -54,26 +55,22 @@ export function emptyBacoorDailyReport(meta = {}) {
  * cashAdvances: { status, amount_minor, employee_name, notes }
  */
 export function classifySaleBucket(row) {
-  const cat = String(
-    row?.pay_category || row?.services?.pay_category || row?.bookings?.services?.pay_category || '',
-  ).toLowerCase()
-  const name = String(row?.service_name || row?.bucket || row?.name || '').toLowerCase()
-  const type = String(row?.item_type || '').toLowerCase()
-  if (cat === 'ppf' || name.includes('ppf')) return 'ppf'
-  if (name.includes('tint') || name.includes('nano ceramic')) return 'tint'
-  if (cat === 'detailing' || name.includes('ceramic')) return 'coating'
-  if (name.includes('coffee') || name.includes('refresh') || (type === 'product' && name.includes('drink'))) {
-    return 'refreshment'
-  }
-  if (name.includes('cloth')) return 'clothing'
-  if (name.includes('accessor') || name.includes('merch')) return 'accessories'
-  if (cat === 'wash' || cat === 'package' || cat === 'addon' || row?.pos_handoff_id) return 'carwash'
-  if (row?.booking_id && cat !== 'detailing') return 'carwash'
-  return 'accessories'
+  return posBucketToBacoor(
+    classifyPosSaleBucket({
+      serviceSlug: row?.service_slug || row?.services?.slug,
+      payCategory:
+        row?.pay_category || row?.services?.pay_category || row?.bookings?.services?.pay_category,
+      itemType: row?.item_type,
+      serviceName: row?.service_name || row?.bucket || row?.name,
+      productTags: row?.product_tags || row?.products?.tags,
+      productCategory: row?.product_category || row?.category,
+      productName: row?.product_name,
+    }),
+  )
 }
 
 export function buildBacoorDailyReport({
-  branch = 'bacoor',
+  branch = '',
   date,
   sales = [],
   expenses = [],

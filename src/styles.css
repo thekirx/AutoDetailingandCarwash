@@ -248,6 +248,7 @@ button { cursor: pointer; }
 .ceramic-package-inclusions strong { display:block; margin-bottom:8px; color:#5a9bff; font-size:clamp(13px,.92vw,15px); }
 .ceramic-package-inclusions ul { margin:0; padding-left:14px; }
 .ceramic-package-inclusions li { color:#fff; font-size:clamp(12px,.92vw,15px); line-height:1.48; }
+.ceramic-package-book { display:inline-flex; margin-top:22px; color:#fff; font-size:11px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.55); padding-bottom:4px; }
 .visualizer-section { padding:var(--section-space-lg) 0; overflow:hidden; color:#f1f1f1; background:radial-gradient(circle at 18% 30%,#1239a7 0,transparent 36%),#020a31; }
 .ppf-heading { display:grid; grid-template-columns:1.25fr .75fr; gap:70px; align-items:end; margin-bottom:54px; }
 .ppf-heading>div { min-width:0; }
@@ -6388,25 +6389,41 @@ a.planner-ticket:active {
 .inquiries-page { display:grid; gap:18px; }
 .inquiries-head { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
 .inquiries-head h1 { margin:0; font-family:var(--font-public-display); font-weight:var(--font-weight-public-display); font-size:26px; letter-spacing:var(--tracking-public-display); text-transform:uppercase; }
-.inquiries-head p { margin:6px 0 0; max-width:560px; color:#718096; font-size:12.5px; line-height:1.6; }
-.inquiries-refresh { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:0 16px; border:1px solid rgba(255,255,255,.14); border-radius:var(--radius-md); background:transparent; color:inherit; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.inquiries-head p { margin:6px 0 0; max-width:560px; color:var(--muted-foreground); font-size:12.5px; line-height:1.6; }
+.inquiries-refresh { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:0 16px; border:1px solid var(--border); border-radius:var(--radius-md); background:transparent; color:inherit; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
 .inquiries-refresh:disabled { opacity:.55; cursor:wait; }
 .inquiries-tabs { display:flex; gap:6px; flex-wrap:wrap; }
-.inquiries-tabs button { min-height:36px; padding:0 16px; border:1px solid rgba(255,255,255,.12); border-radius:var(--radius-pill); background:transparent; color:#8b95a6; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+.inquiries-tabs button { min-height:36px; padding:0 16px; border:1px solid var(--border); border-radius:var(--radius-md); background:transparent; color:var(--muted-foreground); font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
 .inquiries-tabs button.is-active { border-color:transparent; background:var(--color-brand-primary); color:#fff; }
+.inquiries-status-filters { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+.inquiries-status-filters button { min-height:32px; padding:0 12px; border:1px solid var(--border); border-radius:999px; background:transparent; color:var(--muted-foreground); font-size:11px; font-weight:600; text-transform:capitalize; }
+.inquiries-status-filters button.is-active { border-color:var(--color-brand-primary); background:color-mix(in oklab, var(--color-brand-primary) 12%, transparent); color:var(--foreground); }
 .inquiry-list { display:grid; gap:12px; margin:0; padding:0; list-style:none; }
-.inquiry-row { padding:16px 18px; border:1px solid rgba(255,255,255,.08); border-radius:var(--radius-lg); background:rgba(255,255,255,.02); }
+.inquiry-row { padding:16px 18px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--card); }
 .inquiry-row-head { display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap; }
 .inquiry-row-head>div { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .inquiry-row-head strong { font-size:14px; }
-.inquiry-row-head>span { color:#718096; font-size:11px; white-space:nowrap; }
-.inquiry-meta { display:flex; align-items:center; gap:16px; margin:10px 0 0; flex-wrap:wrap; color:#8b95a6; font-size:12px; }
-.inquiry-meta a { display:inline-flex; align-items:center; gap:6px; color:#8fabff; text-decoration:none; }
+.inquiry-row-head>span { color:var(--muted-foreground); font-size:11px; white-space:nowrap; }
+.inquiry-meta { display:flex; align-items:center; gap:16px; margin:10px 0 0; flex-wrap:wrap; color:var(--muted-foreground); font-size:12px; }
+.inquiry-meta a { display:inline-flex; align-items:center; gap:6px; color:var(--primary); text-decoration:none; }
 .inquiry-meta a:hover { text-decoration:underline; }
-.inquiry-body { margin:12px 0 0; color:#c7ced9; font-size:13px; line-height:1.65; white-space:pre-wrap; }
-.inquiries-empty,.inquiries-error { margin:0; color:#8b95a6; font-size:13px; }
-.inquiries-error { color:#f19a9a; }
-.inquiries-empty-state { display:grid; place-items:center; gap:10px; padding:44px 20px; color:#718096; text-align:center; }
+.inquiry-body { margin:12px 0 0; color:var(--foreground); font-size:13px; line-height:1.65; white-space:pre-wrap; }
+.inquiry-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 0; }
+.inquiry-actions button { min-height:32px; padding:0 12px; border:1px solid var(--border); border-radius:var(--radius-md); background:transparent; color:var(--foreground); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.inquiries-empty,.inquiries-error { margin:0; color:var(--muted-foreground); font-size:13px; }
+.people-directory-cards { display:grid; gap:12px; margin:0; padding:0; list-style:none; }
+.people-directory-card { display:grid; gap:10px; padding:16px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--card); }
+.people-directory-card strong { font-size:15px; }
+.people-directory-card p { margin:4px 0 0; color:var(--muted-foreground); font-size:12px; }
+.people-directory-card-meta { display:flex; flex-wrap:wrap; gap:8px; }
+.people-directory-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.people-directory-table { display:none; }
+@media (min-width: 768px) {
+  .people-directory-cards { display:none; }
+  .people-directory-table { display:block; }
+}
+.inquiries-error { color:#b91c1c; }
+.inquiries-empty-state { display:grid; place-items:center; gap:10px; padding:44px 20px; color:var(--muted-foreground); text-align:center; }
 .inquiries-empty-state svg { color:var(--color-brand-primary); }
 .inquiries-empty-state p { margin:0; font-size:13px; }
 .partnership-honeypot { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }

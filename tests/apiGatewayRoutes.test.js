@@ -6,6 +6,7 @@ import bookingsGateway, { operations as bookings } from '../api/bookings.js'
 import notificationsGateway, { operations as notifications } from '../api/notifications.js'
 import financeGateway, { operations as finance } from '../api/finance.js'
 import dataCenterGateway, { operations as dataCenter } from '../api/data-center.js'
+import publicInquiryGateway, { operations as publicInquiry } from '../api/public-inquiry.js'
 
 function response() {
   const out = { statusCode: 200, headers: {}, body: '' }
@@ -43,6 +44,7 @@ const domains = [
   ],
   ['finance', financeGateway, finance, ['send-finance-quote']],
   ['data-center', dataCenterGateway, dataCenter, ['data-center']],
+  ['public-inquiry', publicInquiryGateway, publicInquiry, ['complaints', 'contact', 'partnership']],
 ]
 
 describe('domain gateway allowlists', () => {

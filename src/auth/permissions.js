@@ -35,6 +35,13 @@ export const DEFAULT_ASSISTANT_GRANTS = {
   memberships: true,
   inquiries: true,
   rbac_edit: false,
+  crm: true,
+  content: true,
+  console: true,
+  reviews: true,
+  notifications: true,
+  history: true,
+  bookings: true,
 }
 
 export const ASSISTANT_GRANT_KEYS = Object.keys(DEFAULT_ASSISTANT_GRANTS)
@@ -56,6 +63,73 @@ export const ASSISTANT_GRANT_LABELS = {
   memberships: 'Memberships',
   inquiries: 'Inquiries inbox',
   rbac_edit: 'Edit other ASA grants',
+  crm: 'CRM',
+  content: 'Site content',
+  console: 'Console',
+  reviews: 'Reviews inbox',
+  notifications: 'Notifications',
+  history: 'Customer history',
+  bookings: 'Bookings board',
+}
+
+/** People editor groups — keeps long grant lists scannable. */
+export const ASSISTANT_GRANT_GROUPS = [
+  {
+    id: 'floor',
+    label: 'Floor & checkout',
+    keys: ['pos', 'queue_all', 'bookings', 'history', 'reviews'],
+  },
+  {
+    id: 'money',
+    label: 'Money & reports',
+    keys: ['finance_view', 'finance_write', 'reports', 'kpi_all', 'memberships'],
+  },
+  {
+    id: 'ops',
+    label: 'Ops setup',
+    keys: ['people', 'branches', 'branches_all', 'services_merch', 'planning_edit'],
+  },
+  {
+    id: 'comms',
+    label: 'CRM & content',
+    keys: ['crm', 'content', 'inquiries', 'notifications', 'console'],
+  },
+  {
+    id: 'admin',
+    label: 'Admin',
+    keys: ['audit', 'rbac_edit'],
+  },
+]
+
+/** Merge defaults + patch; unknown keys dropped. */
+export function normalizeAssistantGrants(input = {}) {
+  const out = { ...DEFAULT_ASSISTANT_GRANTS }
+  for (const key of ASSISTANT_GRANT_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(input, key)) {
+      out[key] = Boolean(input[key])
+    }
+  }
+  return out
+}
+
+export function countEnabledAssistantGrants(grants = {}) {
+  return ASSISTANT_GRANT_KEYS.filter((key) => Boolean(grants[key])).length
+}
+
+/** Toggle every grant on, or restore product defaults. */
+export function setAssistantGrantsPreset(mode) {
+  if (mode === 'all') {
+    return Object.fromEntries(ASSISTANT_GRANT_KEYS.map((key) => [key, true]))
+  }
+  if (mode === 'safe') {
+    return normalizeAssistantGrants({
+      ...DEFAULT_ASSISTANT_GRANTS,
+      finance_write: false,
+      planning_edit: false,
+      rbac_edit: false,
+    })
+  }
+  return { ...DEFAULT_ASSISTANT_GRANTS }
 }
 
 export const SUPER_ADMIN_ROLES = [ROLES.SUPER_ADMIN]
@@ -98,7 +172,7 @@ export function isAdmin(profile) {
 
 export function resolveAssistantGrants(profile) {
   if (!isAssistantSuperAdmin(profile)) return null
-  return { ...DEFAULT_ASSISTANT_GRANTS, ...(profile?.permission_grants || {}) }
+  return normalizeAssistantGrants(profile?.permission_grants)
 }
 
 export function hasGrant(profile, key) {
@@ -237,7 +311,8 @@ export function canAccessAudit(profile) {
 
 /** SA / ASA: blogs + event rich content on landing and customer app. */
 export function canManageSiteContent(profile) {
-  return isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
+  if (isSuperAdmin(profile)) return true
+  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'content')
 }
 
 /** Settings hub (branches / people / audit / permissions). Notifications live on their own nav item. */
@@ -254,13 +329,13 @@ export function canAccessSettings(profile) {
 /** Super Admin / ASA — configure automated reminders and broadcast pushes. */
 export function canManageNotifications(profile) {
   if (isSuperAdmin(profile)) return true
-  return isAssistantSuperAdmin(profile)
+  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'notifications')
 }
 
 /** Super Admin / ASA / Marketing — send broadcast marketing pushes. */
 export function canSendBroadcast(profile) {
   if (isSuperAdmin(profile)) return true
-  if (isAssistantSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'notifications')
   return profile?.role === ROLES.MARKETING
 }
 
@@ -272,7 +347,8 @@ export function canAccessNotifications(profile) {
 /** Customer visit History — plate / phone ledger for ops roles. */
 export function canAccessHistory(profile) {
   if (!profile) return false
-  if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile)) return true
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'history')
   return [ROLES.SALES, ROLES.TEAM_LEAD, ROLES.MARKETING, ROLES.ADMIN].includes(profile.role)
 }
 
@@ -320,7 +396,9 @@ export function canUseAttendanceClock(profile) {
 }
 
 export function canAccessConsole(profile) {
-  return isAdmin(profile)
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'console')
+  return profile?.role === ROLES.ADMIN
 }
 
 export function canEditBookings(profile) {
@@ -333,7 +411,9 @@ export function canCreateBookings(profile) {
 }
 
 export function canAccessCrm(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.MARKETING])
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'crm')
+  return profile?.role === ROLES.MARKETING
 }
 
 /** @deprecated SMS lives under CRM; kept for redirects */
@@ -344,7 +424,8 @@ export function canAccessMarketing(profile) {
 /** Bookings view: Sales, Super Admin/ASA, Marketing (readonly). TL/Admin use Queue status board. */
 export function canAccessBookingBoard(profile) {
   if (profile?.role === ROLES.MARKETING) return true
-  if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile)) return true
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'bookings')
   return profile?.role === ROLES.SALES
 }
 
@@ -426,18 +507,20 @@ export function canEditQueueOperations(profile) {
 }
 
 export function canViewQueueOperations(profile) {
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
   return has(profile, QUEUE_VIEWER_ROLES)
 }
 
 /** Redo QC lane — Super Admin + Assistant Super Admin only (not customers, TL, or branch admin). */
 export function canViewRedoLane(profile) {
-  return isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
+  if (isSuperAdmin(profile)) return true
+  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'queue_all')
 }
 
 /** Failed QA: TL + SA + ASA may send wash/package tickets back from final_checking. */
 export function canMarkFailedQa(profile) {
   if (isSuperAdmin(profile)) return true
-  if (isAssistantSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
   return profile?.role === ROLES.TEAM_LEAD
 }
 
@@ -467,14 +550,14 @@ export function canViewAssignedTasks(profile) {
 
 export function canAccessReviews(profile) {
   if (isSuperAdmin(profile)) return true
-  if (isAssistantSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'reviews')
   return profile?.role === ROLES.ADMIN
 }
 
 export function canAccessMemberships(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'memberships')
-  return profile?.role === ROLES.ADMIN
+  return false
 }
 
 export function canAccessDataCenter(profile) {
@@ -739,21 +822,10 @@ export function getTeamLeadMore(profile) {
   const more = []
   if (canAccessHistory(profile)) more.push({ label: 'History', to: '/operations/history', icon: 'History' })
   if (canViewQueueOperations(profile)) more.push({ label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' })
-  if (canViewQueueOperations(profile)) more.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
   if (canViewAssignedTasks(profile)) more.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
   if (canViewPlanning(profile)) more.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
+  if (canViewOwnPay(profile)) more.push({ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' })
   return more
-}
-
-/** Branch Admin thumb dock — POS primary (checkout), Floor + Queue + Attendance. */
-export function getBranchAdminDock(profile) {
-  if (!isBranchAdmin(profile)) return []
-  const dock = []
-  if (canViewQueueOperations(profile)) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
-  if (canViewQueueOperations(profile)) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
-  if (canAccessAttendance(profile)) dock.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
-  if (canAccessPos(profile)) dock.push({ label: 'POS', to: '/operations/pos', icon: 'ShoppingCart', primary: true })
-  return dock
 }
 
 /** Optional overflow for Branch Admin (public kiosk links live on the queue page). */
@@ -780,7 +852,8 @@ export function getSalesDock(profile) {
 
 export function getSalesMore(profile) {
   if (!isSalesRole(profile)) return []
-  return []
+  if (!canViewOwnPay(profile)) return []
+  return [{ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' }]
 }
 
 /** Crew thumb dock — attendance primary. */
@@ -812,7 +885,10 @@ export function getMarketingDock(profile) {
 
 export function getMarketingMore(profile) {
   if (profile?.role !== ROLES.MARKETING) return []
-  return [{ label: 'History', to: '/operations/history', icon: 'History' }]
+  const more = []
+  if (canAccessHistory(profile)) more.push({ label: 'History', to: '/operations/history', icon: 'History' })
+  if (canViewOwnPay(profile)) more.push({ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' })
+  return more
 }
 
 /** Video editor — calendar + tasks only. */
@@ -824,8 +900,10 @@ export function getVideoEditorDock(profile) {
   ]
 }
 
-export function getVideoEditorMore() {
-  return []
+export function getVideoEditorMore(profile) {
+  if (profile?.role !== ROLES.VIDEO_EDITOR) return []
+  if (!canViewOwnPay(profile)) return []
+  return [{ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' }]
 }
 
 /** Detailer — assigned detailing + attendance. */
@@ -838,8 +916,10 @@ export function getDetailerDock(profile) {
   ]
 }
 
-export function getDetailerMore() {
-  return []
+export function getDetailerMore(profile) {
+  if (profile?.role !== ROLES.DETAILER) return []
+  if (!canViewOwnPay(profile)) return []
+  return [{ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' }]
 }
 
 export function redirectForRole(role) {
@@ -859,8 +939,22 @@ export function redirectForRole(role) {
   return '/operations/dashboard'
 }
 
+/** Branch Admin Command chrome — gate URLs to the same list. */
+export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
+  'dashboard',
+  'queue',
+  'attendance',
+  'pos',
+  'reviews',
+  'planning',
+  'history',
+  'my-pay',
+  'audit',
+])
+
 /** Route allow helpers for App.jsx */
 export function allowRoute(profile, key) {
+  if (isBranchAdmin(profile)) return BRANCH_ADMIN_ROUTE_KEYS.includes(key)
   const map = {
     console: canAccessConsole,
     planning: canViewPlanning,

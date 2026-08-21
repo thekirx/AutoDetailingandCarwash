@@ -42,6 +42,19 @@ describe('floor board roster + financials', () => {
     assert.equal(fin.coffee_sales_minor, 200)
     assert.equal(fin.pos_sales_minor, 700)
   })
+
+  it('delegates floor buckets to posSellables classifier', async () => {
+    const { classifySaleBucket, posBucketToBacoor } = await import('../src/lib/posSellables.js')
+    const row = { booking_id: 'b1', pay_category: 'wash', service_name: 'Carwash' }
+    const posBucket = classifySaleBucket({
+      itemType: 'service',
+      payCategory: row.pay_category,
+      serviceName: row.service_name,
+    })
+    assert.equal(posBucket, 'car_wash')
+    assert.equal(classifyFloorSaleBucket(row), 'carwash')
+    assert.equal(posBucketToBacoor(posBucket), 'carwash')
+  })
 })
 
 describe('compensation engine', () => {

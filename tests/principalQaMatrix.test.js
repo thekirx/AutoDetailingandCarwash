@@ -22,6 +22,7 @@ const OPS_KEYS = [
   'cars',
   'audit',
   'data-center',
+  'inquiries',
   'dashboard',
   'queue',
   'queue-new',
@@ -32,6 +33,8 @@ const OPS_KEYS = [
   'pos',
   'inventory',
   'finance',
+  'payroll',
+  'my-pay',
   'crm',
   'bookings',
   'planning',
@@ -131,6 +134,18 @@ describe('Negative allowRoute denials', () => {
     )
   })
 
+  it('every ROLES value has home, nav, and home route allowed', () => {
+    for (const role of Object.values(ROLES)) {
+      const p = profile(role)
+      const home = redirectForRole(role)
+      assert.ok(home.startsWith('/operations'), `${role} home`)
+      const nav = getOperationsNav(p)
+      assert.ok(nav.length > 0, `${role} nav empty`)
+      const routeKey = home.split('?')[0].replace('/operations/', '').split('/')[0]
+      assert.equal(allowRoute(p, routeKey), true, `${role} denied home ${routeKey}`)
+    }
+  })
+
   it('team_lead queue ok, pos denied by default', () => {
     const p = profile(ROLES.TEAM_LEAD)
     assert.equal(allowRoute(p, 'queue'), true)
@@ -140,10 +155,14 @@ describe('Negative allowRoute denials', () => {
     assert.equal(allowRoute(p, 'finance'), false)
   })
 
-  it('ASA without grants denied queue_all surfaces when gated', () => {
+  it('ASA empty grants keep console and queue; explicit false denies both', () => {
     const bare = profile(ROLES.ASSISTANT_SUPER_ADMIN, { permission_grants: {} })
     assert.equal(allowRoute(bare, 'console'), true)
-    // queue view still via ASA console tier in QUEUE_VIEWER
     assert.equal(allowRoute(bare, 'queue'), true)
+    const denied = profile(ROLES.ASSISTANT_SUPER_ADMIN, {
+      permission_grants: { console: false, queue_all: false },
+    })
+    assert.equal(allowRoute(denied, 'console'), false)
+    assert.equal(allowRoute(denied, 'queue'), false)
   })
 })

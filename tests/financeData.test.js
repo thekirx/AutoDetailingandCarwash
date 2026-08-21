@@ -25,7 +25,7 @@ describe('financeData tabs + presets', () => {
   it('exposes six tabs with stable ids', () => {
     assert.deepEqual(
       FINANCE_TABS.map((t) => t.id),
-      ['overview', 'sales', 'purchases', 'pl', 'categories', 'reports'],
+      ['overview', 'sales', 'purchases', 'pl', 'shift-close', 'expense-reports', 'categories', 'reports'],
     )
     assert.ok(FINANCE_TABS.every((t) => t.label && t.hint))
   })

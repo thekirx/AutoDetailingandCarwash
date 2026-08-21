@@ -42,9 +42,14 @@ function isoWeekNumber(ymd) {
   return Math.floor(diffDays / 7) + 1
 }
 
-export function payrollPeriodRange(frequency, anchorYmd) {
+export function payrollPeriodRange(frequency, anchorYmd, customRange = null) {
   const ymd = String(anchorYmd || '').slice(0, 10)
   const freq = String(frequency || 'weekly').toLowerCase()
+  if (freq === 'custom') {
+    const start = String(customRange?.start || ymd).slice(0, 10)
+    const end = String(customRange?.end || start).slice(0, 10)
+    return { start, end }
+  }
   if (freq === 'daily') return { start: ymd, end: ymd }
   if (freq === 'monthly') {
     const [y, m] = ymd.split('-').map(Number)
@@ -59,6 +64,19 @@ export function payrollPeriodRange(frequency, anchorYmd) {
     return { start, end: addDaysYmd(start, 13) }
   }
   return { start: monday, end: addDaysYmd(monday, 6) }
+}
+
+/** Validate custom range: end ≥ start, span ≤ 366 days. */
+export function validatePayrollCustomRange(start, end) {
+  const s = String(start || '').slice(0, 10)
+  const e = String(end || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || !/^\d{4}-\d{2}-\d{2}$/.test(e)) {
+    return { ok: false, reason: 'Start and end dates are required' }
+  }
+  if (e < s) return { ok: false, reason: 'End date must be on or after start' }
+  const days = Math.round((manilaNoon(e) - manilaNoon(s)) / 86400000) + 1
+  if (days > 366) return { ok: false, reason: 'Custom range cannot exceed 366 days' }
+  return { ok: true, reason: null, days }
 }
 
 function saleDay(sale) {
@@ -159,6 +177,7 @@ export function buildPayrollPreview({
   attendance = [],
   ceramicExpenses = [],
   claimedSaleIds = [],
+  packages = [],
 } = {}) {
   const claimed = new Set((claimedSaleIds || []).map(String))
   const poolPct = Number(rules.wash_pool_pct)
@@ -236,7 +255,31 @@ export function buildPayrollPreview({
     )
   }
 
-  const totalPayoutMinor = lines.reduce((sum, row) => sum + (Number(row.pay_minor) || 0), 0)
+  for (const pkg of packages || []) {
+    const staffId = pkg.staff_id || pkg.staff?.id
+    if (!staffId) continue
+    const effectiveFrom = String(pkg.effective_from || '1970-01-01').slice(0, 10)
+    if (period?.end && effectiveFrom > period.end) continue
+    const amount = Math.round(Number(pkg.amount_minor) || 0)
+    if (amount <= 0) continue
+    const branch = pkg.branch
+    if (!branch) continue
+    const kind = pkg.package_kind === 'hybrid' ? 'package_hybrid' : 'package_fixed'
+    lines.push({
+      ...toLine({
+        kind,
+        staff: pkg.staff || { id: staffId, staff_id: staffId, full_name: pkg.staff_name },
+        branch,
+        sourceKey: `package:${pkg.id || staffId}`,
+        payMinor: amount,
+        date: period?.start,
+      }),
+      direction: 'add',
+      label: pkg.notes || pkg.package_kind || 'Pay package',
+    })
+  }
+
+  const totalPayoutMinor = netPayrollLinesMinor(lines)
   return {
     period,
     rules: { wash_pool_pct: poolPct },
@@ -245,8 +288,53 @@ export function buildPayrollPreview({
     total_payout_minor: totalPayoutMinor,
     proof,
     lines,
-    input: { period, rules, sales, attendance, ceramicExpenses, claimedSaleIds },
+    input: { period, rules, sales, attendance, ceramicExpenses, claimedSaleIds, packages },
   }
+}
+
+export function netPayrollLinesMinor(lines = []) {
+  return (lines || []).reduce((sum, row) => {
+    const amt = Math.round(Number(row.pay_minor) || Number(row.amount_minor) || 0)
+    if (row.direction === 'deduct' || row.kind === 'adjustment_deduct') return sum - amt
+    return sum + amt
+  }, 0)
+}
+
+/**
+ * Add labeled adjustment (add or deduct). Amount always stored positive.
+ */
+export function addPayrollAdjustment(lines = [], { staff, branch, direction, label, amountMinor }) {
+  const dir = direction === 'deduct' ? 'deduct' : 'add'
+  const amount = Math.round(Number(amountMinor) || 0)
+  const trimmed = String(label || '').trim()
+  if (amount <= 0 || !trimmed || !staff) return lines
+  const lineBranch = String(branch || staff.branch_slug || '').trim()
+  if (!lineBranch) return lines
+  const staffId = staff.staff_id || staff.id
+  const kind = dir === 'deduct' ? 'adjustment_deduct' : 'adjustment_add'
+  const sourceKey = `${dir}:${trimmed}`
+  const row = {
+    ...toLine({
+      kind,
+      staff,
+      branch: lineBranch,
+      sourceKey,
+      payMinor: amount,
+      date: null,
+    }),
+    direction: dir,
+    label: trimmed,
+  }
+  return [...(lines || []), row]
+}
+
+export function validatePayrollAdjustment({ direction, label, amountMinor }) {
+  const errors = {}
+  if (!['add', 'deduct'].includes(direction)) errors.direction = 'Choose add or deduct'
+  if (!String(label || '').trim()) errors.label = 'Label is required'
+  const amt = Math.round(Number(amountMinor) || 0)
+  if (!(amt > 0)) errors.amount = 'Amount must be greater than 0'
+  return { ok: Object.keys(errors).length === 0, errors }
 }
 
 export function adjustPayrollLine(lines = [], key, amountMinor) {
@@ -270,10 +358,16 @@ export function payrollBlocksConfirm(preview) {
   if (list.some((row) => row.missing_assignee || (row.pay_minor > 0 && !row.staff_id))) {
     return { blocked: true, reason: 'Assign every payout line to an employee' }
   }
-  if (list.some((row) => row.pay_minor < 0)) {
+  if (list.some((row) => {
+    const amt = Number(row.pay_minor)
+    return !Number.isFinite(amt) || amt < 0
+  })) {
     return { blocked: true, reason: 'Payout lines cannot be negative' }
   }
-  if (!list.some((row) => row.pay_minor > 0)) {
+  if (list.some((row) => (row.kind === 'adjustment_add' || row.kind === 'adjustment_deduct') && !String(row.label || '').trim())) {
+    return { blocked: true, reason: 'Each add/deduct needs a label' }
+  }
+  if (netPayrollLinesMinor(list) <= 0) {
     return { blocked: true, reason: 'Nothing to pay for this period' }
   }
   return { blocked: false, reason: null }
@@ -284,6 +378,53 @@ export function ownPayTotalMinor(lines = [], staffId) {
   return (lines || [])
     .filter((row) => row.staff_id === staffId || row.id === staffId)
     .reduce((sum, row) => sum + (Number(row.pay_minor) || Number(row.amount_minor) || 0), 0)
+}
+
+/** Latest confirmed/paid run total. Lines are newest-first. */
+export function currentPostedPayoutMinor(lines = []) {
+  const open = (lines || []).filter((row) => ['confirmed', 'paid'].includes(row.payroll_runs?.status))
+  const latest = open[0]
+  if (!latest?.payroll_runs) return { amountMinor: 0, periodStart: null, periodEnd: null }
+  const periodStart = latest.payroll_runs.period_start
+  const periodEnd = latest.payroll_runs.period_end
+  const confirmedAt = latest.payroll_runs.confirmed_at || ''
+  const amountMinor = open
+    .filter((row) =>
+      row.payroll_runs?.period_start === periodStart
+      && row.payroll_runs?.period_end === periodEnd
+      && (row.payroll_runs?.confirmed_at || '') === confirmedAt)
+    .reduce((sum, row) => sum + signedLineMinor(row), 0)
+  return { amountMinor, periodStart, periodEnd }
+}
+
+function signedLineMinor(row) {
+  const amt = Math.round(Number(row.amount_minor) || Number(row.pay_minor) || 0)
+  const key = String(row.source_key || '')
+  if (key.startsWith('deduct:') || row.direction === 'deduct' || row.kind === 'adjustment_deduct') {
+    return -amt
+  }
+  return amt
+}
+
+/** Confirmed lines whose run overlaps [start,end] (inclusive YMD). */
+export function confirmedPayInCalendarWindow(lines = [], { start, end } = {}) {
+  const s = String(start || '').slice(0, 10)
+  const e = String(end || '').slice(0, 10)
+  return (lines || [])
+    .filter((row) => ['confirmed', 'paid'].includes(row.payroll_runs?.status))
+    .filter((row) => {
+      const ps = row.payroll_runs?.period_start
+      const pe = row.payroll_runs?.period_end
+      if (!ps || !pe || !s || !e) return false
+      return ps <= e && pe >= s
+    })
+    .reduce((sum, row) => sum + signedLineMinor(row), 0)
+}
+
+/** Manila calendar month bounds for a YMD. */
+export function manilaMonthBounds(ymd) {
+  const day = String(ymd || getLocalCalendarDate()).slice(0, 10)
+  return payrollPeriodRange('monthly', day)
 }
 
 export function assignPayrollLineStaff(lines = [], key, staff) {
@@ -321,7 +462,9 @@ export function buildRunPayrollPayload({ preview, branch, frequency, notes = '' 
         staff_id: row.staff_id,
         staff_name: row.staff_name,
         branch: row.branch,
-        kind: row.kind,
+        kind: row.kind === 'adjustment_deduct' || row.kind === 'adjustment_add' ? 'adjustment' : row.kind,
+        direction: row.direction || (row.kind === 'adjustment_deduct' ? 'deduct' : 'add'),
+        label: row.label || null,
         source_key: row.source_key,
         source_sale_id: row.source_sale_id,
         attendance_weight: row.attendance_weight,

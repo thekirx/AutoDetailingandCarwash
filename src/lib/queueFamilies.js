@@ -33,6 +33,15 @@ export function parseQueueFamilyParam(raw) {
   return QUEUE_FAMILY_WASH
 }
 
+export function canSwitchQueueFamily(profile) {
+  return profile?.role !== 'detailer'
+}
+
+export function queueFamilyForProfile(raw, profile) {
+  if (!canSwitchQueueFamily(profile)) return QUEUE_FAMILY_DETAILING
+  return parseQueueFamilyParam(raw)
+}
+
 export function ticketQueueFamily(ticket) {
   const kind = serviceKindFromPayCategory(ticket?.service_pay_category || ticket?.pay_category)
   return kind === 'detailing' ? QUEUE_FAMILY_DETAILING : QUEUE_FAMILY_WASH

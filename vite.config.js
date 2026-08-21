@@ -8,6 +8,7 @@ import { handleProvisionRequest } from './server/provisionCustomer.mjs'
 import { handleProvisionStaffRequest, handleUpdateStaffRequest } from './server/provisionStaff.mjs'
 import { handleCustomerPortalRequest } from './server/customerPortal.mjs'
 import { handlePublicBookRequest } from './server/publicBook.mjs'
+import { handlePublicInquiryRequest } from './server/publicInquiry.mjs'
 import { handleBookingStatusRequest } from './server/bookingStatus.mjs'
 import { handlePushSubscribeRequest, handleSendPushRequest } from './server/pushApi.mjs'
 import { handleBusybeeRequest } from './server/busybeeApi.mjs'
@@ -78,6 +79,7 @@ function provisionApiPlugin() {
         return handleCustomerHistoryRequest(req, res)
       })
       mount('/api/public-book', (req, res) => handlePublicBookRequest(req, res))
+      mount('/api/public-inquiry', (req, res) => handlePublicInquiryRequest(req, res))
       mount('/api/plate-lookup', async (req, res) => {
         const { handlePublicPlateLookup } = await import('./server/publicPlateLookup.mjs')
         return handlePublicPlateLookup(req, res)

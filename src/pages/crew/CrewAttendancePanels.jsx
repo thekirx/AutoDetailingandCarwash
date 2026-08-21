@@ -311,7 +311,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
               <p className="mt-2 text-sm text-foreground">
                 <span className="font-semibold">Your pay</span>
                 {' · '}
-                wash pool estimate {formatMoney(myPayMinor)}
+                wash pool estimate — unpaid {formatMoney(myPayMinor)}
                 {' · '}
                 <Link className="text-primary underline-offset-4 hover:underline" to="/operations/my-pay">
                   Posted payouts

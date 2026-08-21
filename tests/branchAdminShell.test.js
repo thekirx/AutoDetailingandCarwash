@@ -5,7 +5,6 @@ import {
   allowRoute,
   canManageServices,
   canAccessPos,
-  getBranchAdminDock,
   getOperationsNav,
   redirectForRole,
   isBranchAdmin,
@@ -47,16 +46,13 @@ describe('Branch Admin simplified shell', () => {
     assert.equal(getOperationsNav(p).some((i) => i.label === 'Car Wash Queue'), false)
   })
 
-  it('dock is Floor, Queue, Attendance, POS (POS primary)', () => {
-    const dock = getBranchAdminDock(p)
-    assert.deepEqual(
-      dock.map((i) => i.to),
-      ['/operations/dashboard', '/operations/queue', '/operations/attendance', '/operations/pos'],
-    )
-    assert.equal(dock[0].label, 'Floor')
-    assert.equal(dock.find((i) => i.to === '/operations/queue')?.label, 'Queue')
-    assert.equal(dock.find((i) => i.to === '/operations/pos')?.primary, true)
-    assert.equal(getBranchAdminDock({ role: ROLES.TEAM_LEAD }).length, 0)
+  it('dock contract matches Command nav (BA uses Command shell, not thumb dock)', () => {
+    const nav = getOperationsNav(p)
+    const navPaths = nav.map((i) => i.to)
+    assert.ok(navPaths.includes('/operations/dashboard'))
+    assert.ok(navPaths.includes('/operations/queue'))
+    assert.ok(navPaths.includes('/operations/attendance'))
+    assert.ok(navPaths.includes('/operations/pos'))
   })
 
   it('POS checkout allowed but cannot manage services/merch catalog', () => {

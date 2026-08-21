@@ -12,6 +12,7 @@ import {
   isAdmin,
   isSuperAdmin,
 } from './permissions'
+import { resolveProfileWithCustomRole } from '../lib/roleDefinitions'
 
 const AuthContext = createContext(null)
 
@@ -28,7 +29,7 @@ export function AuthProvider({ children }) {
 
     const { data: staffProfile, error: staffError } = await supabase
       .from('staff_profiles')
-      .select('id, full_name, role, branch_slug, phone, is_active, permission_grants, attendance_enabled, geofence_enabled, employment_type')
+      .select('id, full_name, role, branch_slug, phone, is_active, permission_grants, attendance_enabled, geofence_enabled, employment_type, custom_role_key, role_definitions(role_key, label, baseline_template, grants, is_active)')
       .eq('id', user.id)
       .eq('is_active', true)
       .maybeSingle()
@@ -43,12 +44,16 @@ export function AuthProvider({ children }) {
         console.warn('[auth] branch assignments unavailable', assignErr.message || assignErr)
       }
       const branch_slugs = (assigns || []).map((a) => a.branch_slug).filter(Boolean)
-      const next = {
+      let next = {
         ...staffProfile,
         permission_grants: staffProfile.permission_grants || {},
         branch_slugs: branch_slugs.length ? branch_slugs : staffProfile.branch_slug ? [staffProfile.branch_slug] : [],
         email: user.email,
         source: 'staff_profiles',
+      }
+      const def = staffProfile.role_definitions
+      if (def?.is_active !== false && def?.role_key) {
+        next = resolveProfileWithCustomRole(next, def)
       }
       setProfile(next)
       return next

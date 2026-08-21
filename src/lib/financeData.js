@@ -9,11 +9,20 @@ export const FINANCE_TABS = [
   { id: 'sales', label: 'Sales', hint: 'POS sales by day, branch, and payment method' },
   { id: 'purchases', label: 'Purchases', hint: 'Expenses and bills to pay' },
   { id: 'pl', label: 'Profit & Loss', hint: 'Income vs expenses by category' },
+  { id: 'shift-close', label: 'Shift reviews', hint: 'End-of-shift closes vs POS baseline' },
+  { id: 'expense-reports', label: 'Expense reports', hint: 'ASA category reports posted to expenses' },
   { id: 'categories', label: 'Categories', hint: 'Expense categories and kinds' },
   { id: 'reports', label: 'Reports', hint: 'Sales, operations, and retention exports' },
 ]
 
 export const FINANCE_TAB_IDS = FINANCE_TABS.map((t) => t.id)
+
+const FINANCE_TAB_ALIASES = { expenses: 'purchases' }
+
+export function resolveFinanceTab(raw) {
+  const key = FINANCE_TAB_ALIASES[raw] || raw
+  return FINANCE_TAB_IDS.includes(key) ? key : 'overview'
+}
 
 export const DATE_PRESETS = [
   { value: 'today', label: 'Today' },
