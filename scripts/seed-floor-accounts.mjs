@@ -10,6 +10,7 @@
  *   staff1@hakumautocare.com       → HakumStaff2026!
  *   marketing@hakumautocare.com    → HakumMkt2026!
  *   assistant@hakumautocare.com    → HakumAsa2026!
+ *   opslead@hakumautocare.com      → HakumOpsLead2026!
  *   detailer@hakumautocare.com     → HakumDetail2026!
  *   video@hakumautocare.com        → HakumVideo2026!
  *   investor@hakumautocare.com     → HakumInvest2026!
@@ -293,6 +294,20 @@ async function main() {
   })
   console.log('Assistant Super Admin', asa.id)
 
+  const opsLead = await ensureAuthUser({
+    email: 'opslead@hakumautocare.com',
+    password: 'HakumOpsLead2026!',
+    full_name: 'Operations Lead',
+  })
+  await upsertStaffProfile(opsLead, {
+    full_name: 'Operations Lead',
+    role: 'operations_lead',
+    branch_slug: null,
+    phone: '09170000031',
+  })
+  await admin.from('staff_profiles').update({ attendance_enabled: false }).eq('id', opsLead.id)
+  console.log('Operations Lead', opsLead.id)
+
   const detailer = await ensureAuthUser({
     email: 'detailer@hakumautocare.com',
     password: 'HakumDetail2026!',
@@ -372,6 +387,7 @@ async function main() {
         staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026! (Crew 1–3 · present on Bacoor)',
         marketing: 'marketing@hakumautocare.com / HakumMkt2026!',
         assistant: 'assistant@hakumautocare.com / HakumAsa2026!',
+        opslead: 'opslead@hakumautocare.com / HakumOpsLead2026!',
         detailer: 'detailer@hakumautocare.com / HakumDetail2026!',
         video: 'video@hakumautocare.com / HakumVideo2026!',
         investor: 'investor@hakumautocare.com / HakumInvest2026!',

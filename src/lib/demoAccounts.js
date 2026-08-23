@@ -23,6 +23,13 @@ export const OPS_DEMO_ACCOUNTS = [
     hint: 'Bacoor scoped',
   },
   {
+    id: 'opslead',
+    label: 'Operations Lead',
+    email: 'opslead@hakumautocare.com',
+    password: 'HakumOpsLead2026!',
+    hint: 'All branches · Ops Lab · no clock',
+  },
+  {
     id: 'tl',
     label: 'Team Lead',
     email: 'teamlead@hakumautocare.com',
