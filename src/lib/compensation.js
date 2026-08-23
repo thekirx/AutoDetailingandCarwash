@@ -22,6 +22,10 @@ export const DEFAULT_COMPENSATION_RULES = Object.freeze({
   /** Hakum default: commission windows around the 15th and month-end. */
   payout_frequency: 'semimonthly',
   payout_weekday: 5,
+  attendance_present_weight: 1,
+  attendance_late_weight: 0.7,
+  pending_floor_optional: false,
+  cash_advance_auto_deduct: false,
 })
 
 const COMP_KEYS = [
@@ -45,6 +49,13 @@ export function normalizeCompensationSettings(row) {
   out.payout_frequency = PAYOUT_FREQUENCIES.includes(freq) ? freq : DEFAULT_COMPENSATION_RULES.payout_frequency
   const weekday = Number(src.payout_weekday)
   out.payout_weekday = Number.isInteger(weekday) && weekday >= 0 && weekday <= 6 ? weekday : 5
+  const presentW = Number(src.attendance_present_weight)
+  if (Number.isFinite(presentW) && presentW >= 0) out.attendance_present_weight = presentW
+  const lateW = Number(src.attendance_late_weight)
+  if (Number.isFinite(lateW) && lateW >= 0) out.attendance_late_weight = lateW
+  if (typeof src.pending_floor_optional === 'boolean') out.pending_floor_optional = src.pending_floor_optional
+  // Contract: CA deduct is manual in payroll wizard only — never honor auto-deduct.
+  out.cash_advance_auto_deduct = false
   return out
 }
 
@@ -61,27 +72,33 @@ export function toCompensationSettingsRow(rules, { id = 1 } = {}) {
     ceramic_detailer_split_pct: n.ceramic_detailer_split_pct,
     payout_frequency: n.payout_frequency,
     payout_weekday: n.payout_weekday,
+    attendance_present_weight: n.attendance_present_weight,
+    attendance_late_weight: n.attendance_late_weight,
+    pending_floor_optional: n.pending_floor_optional,
+    cash_advance_auto_deduct: false,
   }
 }
 
 /**
- * Lateness weight: present = 1, late = 0.7, else 0.
+ * Lateness weight: present / late from rules (defaults 1 / 0.7), else 0.
  * ponytail: linear weights; upgrade to minute-based if SA asks.
  */
-export function attendanceWeight(status) {
+export function attendanceWeight(status, rules = {}) {
   const s = String(status || '').toLowerCase()
-  if (s === 'present') return 1
-  if (s === 'late') return 0.7
+  const present = Number(rules.attendance_present_weight)
+  const late = Number(rules.attendance_late_weight)
+  if (s === 'present') return Number.isFinite(present) && present >= 0 ? present : 1
+  if (s === 'late') return Number.isFinite(late) && late >= 0 ? late : 0.7
   return 0
 }
 
 /** Split wash/package sales pool across on-shift crew + TL by attendance weight. */
-export function splitWashPool({ totalSalesMinor = 0, poolPct = 35, roster = [] } = {}) {
+export function splitWashPool({ totalSalesMinor = 0, poolPct = 35, roster = [], rules = {} } = {}) {
   const pool = Math.round((Number(totalSalesMinor) || 0) * (Number(poolPct) || 0) / 100)
   const weighted = (roster || [])
     .map((row) => ({
       ...row,
-      weight: attendanceWeight(row.attendance_status || row.status),
+      weight: attendanceWeight(row.attendance_status || row.status, rules),
     }))
     .filter((row) => row.weight > 0)
   const weightSum = weighted.reduce((sum, row) => sum + row.weight, 0)
@@ -131,12 +148,40 @@ export function computeCeramicPay({
 
 export function detailingAmountMinor(lines = []) {
   return (lines || []).reduce((sum, line) => {
-    const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
-    if (cat !== 'detailing') return sum
+    if (!isCeramicCompensationLine(line)) return sum
     const qty = Number(line.quantity) || 1
-    const unit = Number(line.line_total_minor) || Number(line.unit_price_minor) * qty || Number(line.price_minor) * qty || 0
+    const unit =
+      Number(line.line_total_minor) ||
+      Number(line.unit_price_minor) * qty ||
+      Number(line.price_minor) * qty ||
+      0
     return sum + unit
   }, 0)
+}
+
+/**
+ * Lines that feed ceramic crew/detailer drafts (coating / paint maint / detailing tab).
+ * Excludes PPF film packages — those are not ceramic split jobs.
+ */
+export function isCeramicCompensationLine(line = {}) {
+  const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
+  if (cat === 'detailing') return true
+  if (String(line?.catalog_kind || '').toLowerCase() === 'detailing') {
+    // Detailing tab may include ppf slug cards — only ceramic-ish names/slugs
+    const slug = String(line?.slug || line?.services?.slug || '').toLowerCase()
+    const name = String(line?.name || '').toLowerCase()
+    if (slug.includes('ppf') || name.includes('ppf') || cat === 'ppf') return false
+    return true
+  }
+  const slug = String(line?.slug || line?.services?.slug || '').toLowerCase()
+  if (slug.includes('ceramic-coating') || slug.includes('paint-maintenance') || slug.includes('nano-ceramic')) {
+    return true
+  }
+  const name = String(line?.name || '').toLowerCase()
+  if (name.includes('ceramic coating') || name.includes('nano ceramic') || name.includes('paint maintenance')) {
+    return true
+  }
+  return false
 }
 
 export function effectiveCeramicToggles(toggles = {}, paymentMethod) {
@@ -234,7 +279,9 @@ export function washPoolAmountMinor(sale) {
   if (lines.length) {
     return lines.reduce((sum, line) => {
       const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
-      if (cat === 'detailing') return sum
+      const kind = String(line?.catalog_kind || '').toLowerCase()
+      if (cat === 'detailing' || kind === 'detailing') return sum
+      if (isCeramicCompensationLine(line)) return sum
       return sum + (Number(line.line_total_minor) || 0)
     }, 0)
   }

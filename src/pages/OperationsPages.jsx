@@ -228,7 +228,7 @@ function TicketCard({ ticket, timingWarnings, onOpen, compact = false }) {
     </>
   )
   if (onOpen) {
-    return (
+  return (
       <button
         type="button"
         onClick={() => onOpen(ticket.booking_id)}
@@ -659,7 +659,7 @@ function ScopedFloorDashboard() {
           ) : (
             <EmptyLine text="No paid sales in this range for your branch." />
           )}
-            </div>
+        </div>
       </Panel>
       {!isTeamLeadFloor ? (
         <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
@@ -853,9 +853,9 @@ function OperationsQueueBoardPage() {
                 {mode === 'board' ? 'Board' : 'Table'}
               </button>
             ))}
-          </div>
+            </div>
           <RefreshButton loading={loading} onClick={reload} />
-        </div>
+            </div>
         <div className="flex flex-wrap items-end gap-3">
           {(seeAll || branchOptions.length > 1) ? (
             <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
@@ -891,9 +891,9 @@ function OperationsQueueBoardPage() {
               >
                 Shop TV
               </Link>
-            </div>
-          ) : null}
         </div>
+          ) : null}
+      </div>
         <div
           className="floor-status-chips flex w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
           role="toolbar"
@@ -915,7 +915,7 @@ function OperationsQueueBoardPage() {
           {boardStatuses.map((status) => {
             const active = focusLane === status
             const n = (grouped[status] || []).length
-            return (
+              return (
               <button
                 key={status}
                 type="button"
@@ -932,16 +932,16 @@ function OperationsQueueBoardPage() {
                 </span>
                 <span className="tabular-nums text-primary">{n}</span>
               </button>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
       </div>
 
       {view === 'table' ? (
         <div className="mt-3">
         <div className="bk-table">
           <div className="bk-table-toolbar">
-            <div>
+          <div>
               <p className="bk-table-count">{familyMeta.shortLabel} ledger</p>
               <p className="bk-table-range">
                 {tableSlice.total
@@ -1069,7 +1069,7 @@ function OperationsQueueBoardPage() {
               >
                 <ChevronRight size={16} strokeWidth={2} />
               </Button>
-            </div>
+        </div>
           </div>
         </div>
         </div>

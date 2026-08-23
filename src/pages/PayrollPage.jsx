@@ -36,6 +36,8 @@ import {
   removeStaffFromPayrollPreview,
   resolveFixedSalaryBranch,
   buildPendingFloorPayrollQueue,
+  floorConfirmBlockedByPendingCloses,
+  posProofTotalsByBranchDay,
   validatePayrollAdjustment,
   validatePayrollCustomRange,
 } from '@/lib/payroll'
@@ -90,6 +92,7 @@ export default function PayrollPage() {
   const [step, setStep] = useState(0)
   const [runKind, setRunKind] = useState('floor')
   const [pendingCloses, setPendingCloses] = useState([])
+  const [posProofByKey, setPosProofByKey] = useState(null)
   const [branches, setBranches] = useState([])
   const [rules, setRules] = useState({ ...DEFAULT_COMPENSATION_RULES })
   const [branch, setBranch] = useState('')
@@ -145,7 +148,7 @@ export default function PayrollPage() {
       supabase
         .from('compensation_settings')
         .select(
-          'wash_pool_pct, ceramic_shirt_deduction_minor, ceramic_card_fee_pct, ceramic_crew_solo_pct, ceramic_crew_split_pct, ceramic_detailer_split_pct, payout_frequency, payout_weekday',
+          'wash_pool_pct, ceramic_shirt_deduction_minor, ceramic_card_fee_pct, ceramic_crew_solo_pct, ceramic_crew_split_pct, ceramic_detailer_split_pct, payout_frequency, payout_weekday, attendance_present_weight, attendance_late_weight, pending_floor_optional, cash_advance_auto_deduct',
         )
         .eq('id', 1)
         .maybeSingle(),
@@ -161,26 +164,46 @@ export default function PayrollPage() {
   }, [applyPeriod, scope])
 
   const loadRuns = useCallback(async () => {
-    // Unscoped recent runs — needed so multi-day pending coverage is accurate across bays.
+    // Include claimed sales + occurred_at so pending coverage keys off proof days.
     const selectWithKind =
-      'id, branch, frequency, period_start, period_end, status, wash_pool_pct, pos_sales_minor, total_payout_minor, confirmed_at, notes, run_kind, payroll_run_lines(id, staff_id, amount_minor, kind, branch, source_key, source_sale_id)'
+      'id, branch, frequency, period_start, period_end, status, wash_pool_pct, pos_sales_minor, total_payout_minor, confirmed_at, notes, run_kind, payroll_run_lines(id, staff_id, amount_minor, kind, branch, source_key, source_sale_id), payroll_run_sales(sale_id, branch, total_minor, sales(occurred_at))'
     const selectPlain =
-      'id, branch, frequency, period_start, period_end, status, wash_pool_pct, pos_sales_minor, total_payout_minor, confirmed_at, notes, payroll_run_lines(id, staff_id, amount_minor, kind, branch, source_key, source_sale_id)'
-    const { data, error } = await supabase
+      'id, branch, frequency, period_start, period_end, status, wash_pool_pct, pos_sales_minor, total_payout_minor, confirmed_at, notes, payroll_run_lines(id, staff_id, amount_minor, kind, branch, source_key, source_sale_id), payroll_run_sales(sale_id, branch, total_minor, sales(occurred_at))'
+    const mapRuns = (rows) =>
+      (rows || []).map((run) => ({
+        ...run,
+        payroll_run_sales: (run.payroll_run_sales || []).map((s) => ({
+          sale_id: s.sale_id,
+          branch: s.branch,
+          total_minor: s.total_minor,
+          business_date: String(s.sales?.occurred_at || '').slice(0, 10),
+        })),
+      }))
+    let q = supabase
       .from('payroll_runs')
       .select(selectWithKind)
       .order('period_start', { ascending: false })
       .limit(80)
+    if (Array.isArray(scope) && scope.length) {
+      const branchList = scope.map((s) => `"${s}"`).join(',')
+      q = q.or(`branch.in.(${branchList}),branch.is.null`)
+    }
+    const { data, error } = await q
     if (error) {
-      const retry = await supabase
+      let retryQ = supabase
         .from('payroll_runs')
         .select(selectPlain)
         .order('period_start', { ascending: false })
         .limit(80)
+      if (Array.isArray(scope) && scope.length) {
+        const branchList = scope.map((s) => `"${s}"`).join(',')
+        retryQ = retryQ.or(`branch.in.(${branchList}),branch.is.null`)
+      }
+      const retry = await retryQ
       if (retry.error) toast.error(retry.error.message)
-      else setRuns(retry.data || [])
-    } else setRuns(data || [])
-  }, [])
+      else setRuns(mapRuns(retry.data))
+    } else setRuns(mapRuns(data))
+  }, [scope])
 
   const loadPendingCloses = useCallback(async () => {
     let q = supabase
@@ -192,11 +215,33 @@ export default function PayrollPage() {
     if (Array.isArray(scope) && scope.length) q = q.in('branch', scope)
     const { data, error } = await q
     if (!error) setPendingCloses(data || [])
+
+    const days = (data || []).map((c) => String(c.business_date || '').slice(0, 10)).filter(Boolean)
+    const branchesIn = [...new Set((data || []).map((c) => c.branch).filter(Boolean))]
+    if (!days.length || !branchesIn.length) {
+      setPosProofByKey(null)
+      return
+    }
+    const minDay = days.reduce((a, b) => (a < b ? a : b))
+    const maxDay = days.reduce((a, b) => (a > b ? a : b))
+    let salesQ = supabase
+      .from('sales')
+      .select('id, branch, status, total_minor, occurred_at')
+      .eq('status', 'paid')
+      .gte('occurred_at', `${minDay}T00:00:00+08:00`)
+      .lte('occurred_at', `${maxDay}T23:59:59.999+08:00`)
+      .limit(2000)
+    if (branchesIn.length === 1) salesQ = salesQ.eq('branch', branchesIn[0])
+    else salesQ = salesQ.in('branch', branchesIn)
+    const salesRes = await salesQ
+    if (!salesRes.error) {
+      setPosProofByKey(posProofTotalsByBranchDay(salesRes.data || []))
+    }
   }, [scope])
 
   const pendingFloorQueue = useMemo(
-    () => buildPendingFloorPayrollQueue({ closes: pendingCloses, runs }),
-    [pendingCloses, runs],
+    () => buildPendingFloorPayrollQueue({ closes: pendingCloses, runs, posProofByKey }),
+    [pendingCloses, runs, posProofByKey],
   )
 
   function startAccumulatedFloorPay(group) {
@@ -235,12 +280,28 @@ export default function PayrollPage() {
         .order('effective_from', { ascending: false }),
       supabase.from('staff_profiles').select('id, full_name, role, branch_slug').eq('is_active', true).order('full_name'),
     ]).then(([pkg, staff]) => {
-      if (!pkg.error) setPackages(pkg.data || [])
-      if (!staff.error) setStaffRoster(staff.data || [])
+      if (!pkg.error) {
+        const rows = pkg.data || []
+        const scoped =
+          Array.isArray(scope) && scope.length
+            ? rows.filter((row) => !row.branch || scope.includes(row.branch))
+            : rows
+        setPackages(scoped)
+      }
+      if (!staff.error) {
+        const rows = staff.data || []
+        const scoped =
+          Array.isArray(scope) && scope.length
+            ? rows.filter((row) => !row.branch_slug || scope.includes(row.branch_slug))
+            : rows
+        setStaffRoster(scoped)
+      }
     })
-  }, [loadSettings, loadRuns, loadPendingCloses])
+  }, [loadSettings, loadRuns, loadPendingCloses, scope])
 
-  async function loadProof() {
+  useEffect(() => {
+    setPreview(null)
+  }, [branch, runKind])
     if (!periodStart || !periodEnd) return
     if (runKind === 'floor' && !branch) {
       toast.error('Pick a branch for floor pay')
@@ -385,6 +446,18 @@ export default function PayrollPage() {
   }
 
   async function confirmRun() {
+    const closeGate = floorConfirmBlockedByPendingCloses({
+      pendingFloorOptional: rules.pending_floor_optional,
+      runKind,
+      branch,
+      periodStart,
+      periodEnd,
+      closes: pendingCloses,
+    })
+    if (closeGate.blocked) {
+      toast.error(closeGate.reason)
+      return
+    }
     const gate = payrollBlocksConfirm(preview)
     if (gate.blocked) {
       toast.error(gate.reason)
@@ -462,14 +535,21 @@ export default function PayrollPage() {
             <CardHeader>
               <CardTitle>Pending floor pay</CardTitle>
               <CardDescription>
-                Accepted end-of-shift days without a floor payroll run stack here. Optional — run one day or the
-                whole accumulated window when ready.
+                {rules.pending_floor_optional === false
+                  ? 'Hard gate: accept end-of-shift in Finance, then confirm floor pay here. Close ₱ is attestation; POS proof ₱ is what pay uses.'
+                  : 'Close days waiting for a floor run. Close ₱ is attestation; POS proof ₱ is paid sales for the same days.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {rules.pending_floor_optional === false && pendingFloorQueue.ready_day_count > 0 ? (
+                <p className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">
+                  Floor confirm is blocked until these closes are handled · {pendingFloorQueue.ready_day_count} ready day
+                  {pendingFloorQueue.ready_day_count === 1 ? '' : 's'}. Confirm from Run payroll after loading proof.
+                </p>
+              ) : null}
               {!pendingFloorQueue.groups.length ? (
                 <p className="text-sm text-muted-foreground">
-                  No uncovered closes. After Finance accepts an end of shift, it shows here until floor pay posts.
+                  No uncovered closes. After Finance accepts an end of shift, SA/ASA get a notification — then confirm floor pay here.
                 </p>
               ) : (
                 pendingFloorQueue.groups.map((group) => (
@@ -487,8 +567,13 @@ export default function PayrollPage() {
                           {group.ready_count} ready
                           {group.review_count ? ` · ${group.review_count} awaiting close review` : ''}
                           {' · '}
-                          {group.days.length} day{group.days.length === 1 ? '' : 's'} · sales{' '}
-                          {formatMoney(group.total_sales_minor)}
+                          {group.days.length} day{group.days.length === 1 ? '' : 's'}
+                        </p>
+                        <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+                          Close attested · {formatMoney(group.close_sales_minor)}
+                          {group.pos_proof_known
+                            ? ` · POS proof · ${formatMoney(group.pos_proof_minor)}`
+                            : ' · POS proof · loading…'}
                         </p>
                         <p className="mt-2 text-xs text-muted-foreground">
                           {group.days.map((d) => d.business_date).join(' · ')}
@@ -1255,18 +1340,22 @@ export default function PayrollPage() {
 
       {tab === 'history' && (
         <div className="hakum-payroll-table">
-          {runs.map((run) => (
-            <article key={run.id} className="hakum-payroll-row">
-              <p className="font-medium">
-                {run.period_start} to {run.period_end}
-              </p>
-              <p className="text-muted-foreground">
-                {FREQ_LABELS[run.frequency] || run.frequency} · {run.branch || 'multi'} · {run.status}
-              </p>
-              <p>{formatMoney(run.total_payout_minor)} from {formatMoney(run.pos_sales_minor)} POS</p>
-              <p className="text-xs text-muted-foreground">{(run.payroll_run_lines || []).length} employee lines</p>
-            </article>
-          ))}
+          {runs.map((run) => {
+            const kind =
+              run.run_kind === 'fixed' || /fixed salary/i.test(run.notes || '') ? 'Fixed' : 'Floor'
+            return (
+              <article key={run.id} className="hakum-payroll-row">
+                <p className="font-medium">
+                  {kind} · {run.period_start} to {run.period_end}
+                </p>
+                <p className="text-muted-foreground">
+                  {FREQ_LABELS[run.frequency] || run.frequency} · {run.branch || 'multi'} · {run.status}
+                </p>
+                <p>{formatMoney(run.total_payout_minor)} from {formatMoney(run.pos_sales_minor)} POS</p>
+                <p className="text-xs text-muted-foreground">{(run.payroll_run_lines || []).length} employee lines</p>
+              </article>
+            )
+          })}
           {!runs.length ? <p className="text-sm text-muted-foreground">No payroll runs yet.</p> : null}
         </div>
       )}

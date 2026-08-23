@@ -112,6 +112,28 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
     else {
       toast.success(`Shift close ${data?.status || action}`)
       setReviewNote('')
+      if (action === 'accept' && selected) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession()
+          const token = sessionData?.session?.access_token
+          if (token) {
+            await fetch('/api/notify-shift-close', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                branch: selected.branch,
+                business_date: selected.business_date,
+                close_id: selected.id,
+              }),
+            })
+          }
+        } catch {
+          /* inbox already written by RPC; push is best-effort */
+        }
+      }
       load()
     }
   }
@@ -135,8 +157,9 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
         <CardHeader>
           <CardTitle>Shift reviews</CardTitle>
           <CardDescription>
-            POS baseline vs Branch Admin submission. Accept, reject, or lock — does not change POS sales.
-            Floor pay coverage is for reporting only; run optional payroll from Payroll → Dashboard.
+            POS baseline vs Branch Admin submission. Accept unlocks Pending floor pay and notifies SA/ASA —
+            it does not change POS sales or pay crew. P&L income stays on paid POS tickets.
+            Floor coverage = whether a floor run already claimed that day.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -154,7 +177,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                   <TableHead>Branch</TableHead>
                   <TableHead>Shift ended</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Floor pay</TableHead>
+                  <TableHead>Floor coverage</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>

@@ -4,6 +4,8 @@ export const ROLES = {
   SUPER_ADMIN: 'BossMich',
   ASSISTANT_SUPER_ADMIN: 'assistant_super_admin',
   ADMIN: 'admin',
+  /** Network-wide ops: TL∪BA surface, all branches, planner, roadmap; no attendance clock. */
+  OPERATIONS_LEAD: 'operations_lead',
   TEAM_LEAD: 'team_lead',
   SALES: 'sales',
   STAFF: 'staff',
@@ -134,9 +136,15 @@ export function setAssistantGrantsPreset(mode) {
 
 export const SUPER_ADMIN_ROLES = [ROLES.SUPER_ADMIN]
 export const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN, ROLES.ADMIN]
-export const QUEUE_EDITOR_ROLES = [ROLES.TEAM_LEAD, ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN]
+export const QUEUE_EDITOR_ROLES = [
+  ROLES.TEAM_LEAD,
+  ROLES.OPERATIONS_LEAD,
+  ROLES.SUPER_ADMIN,
+  ROLES.ASSISTANT_SUPER_ADMIN,
+]
 export const QUEUE_VIEWER_ROLES = [
   ROLES.ADMIN,
+  ROLES.OPERATIONS_LEAD,
   ROLES.TEAM_LEAD,
   ROLES.SUPER_ADMIN,
   ROLES.ASSISTANT_SUPER_ADMIN,
@@ -145,6 +153,7 @@ export const QUEUE_VIEWER_ROLES = [
 export const OPS_LOGIN_ROLES = [
   ROLES.STAFF,
   ROLES.TEAM_LEAD,
+  ROLES.OPERATIONS_LEAD,
   ROLES.SALES,
   ROLES.ADMIN,
   ROLES.SUPER_ADMIN,
@@ -163,6 +172,10 @@ export function isSuperAdmin(profile) {
 
 export function isAssistantSuperAdmin(profile) {
   return profile?.role === ROLES.ASSISTANT_SUPER_ADMIN
+}
+
+export function isOperationsLead(profile) {
+  return profile?.role === ROLES.OPERATIONS_LEAD
 }
 
 /** Console-tier: owner, assistant, or branch admin */
@@ -187,8 +200,8 @@ export function getBranchScopeList(profile) {
   if (!profile) return []
   if (isSuperAdmin(profile)) return null
   if (isAssistantSuperAdmin(profile) && hasGrant(profile, 'branches_all')) return null
-  // Sales is assigned to all branches — sees every booking, can assign to any branch.
-  if (profile?.role === ROLES.SALES) return null
+  // Sales + Operations Lead — network-wide scope.
+  if (profile?.role === ROLES.SALES || isOperationsLead(profile)) return null
   const multi = Array.isArray(profile.branch_slugs) ? profile.branch_slugs.filter(Boolean) : []
   if (multi.length) return multi
   if (profile.branch_slug) return [profile.branch_slug]
@@ -216,6 +229,7 @@ export function canAccessInquiries(profile) {
 export function canAccessPos(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'pos')
+  if (isOperationsLead(profile)) return true
   return profile?.role === ROLES.ADMIN
 }
 
@@ -223,6 +237,7 @@ export function canAccessFinance(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'finance_view')
   if (profile?.role === ROLES.INVESTOR) return true
+  if (isOperationsLead(profile)) return true
   return profile?.role === ROLES.ADMIN
 }
 
@@ -277,7 +292,7 @@ export function canAccessInventory(profile) {
 }
 
 export function canManageCrew(profile) {
-  return isAdmin(profile) || has(profile, [ROLES.TEAM_LEAD])
+  return isAdmin(profile) || has(profile, [ROLES.TEAM_LEAD, ROLES.OPERATIONS_LEAD])
 }
 
 export function canManageBranches(profile) {
@@ -311,6 +326,7 @@ export function canEditAssistantGrants(profile) {
 export function canAccessAudit(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'audit')
+  if (isOperationsLead(profile)) return true
   return profile?.role === ROLES.ADMIN
 }
 
@@ -354,7 +370,9 @@ export function canAccessHistory(profile) {
   if (!profile) return false
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'history')
-  return [ROLES.SALES, ROLES.TEAM_LEAD, ROLES.MARKETING, ROLES.ADMIN].includes(profile.role)
+  return [ROLES.SALES, ROLES.TEAM_LEAD, ROLES.OPERATIONS_LEAD, ROLES.MARKETING, ROLES.ADMIN].includes(
+    profile.role,
+  )
 }
 
 /** Super Admin only — master make/model catalog for TL picker */
@@ -363,8 +381,13 @@ export function canManageVehicleCatalog(profile) {
 }
 
 export function canOverrideAttendance(profile) {
-  // SA / ASA / Branch Admin may correct register rows. TL clocks in but does not override.
-  return isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || profile?.role === ROLES.ADMIN
+  // SA / ASA / Branch Admin / Operations Lead may correct register rows. TL clocks in but does not override.
+  return (
+    isSuperAdmin(profile) ||
+    isAssistantSuperAdmin(profile) ||
+    isOperationsLead(profile) ||
+    profile?.role === ROLES.ADMIN
+  )
 }
 
 /**
@@ -382,18 +405,19 @@ export function canEditAttendanceRoles(profile) {
   return isSuperAdmin(profile)
 }
 
-/** Dedicated Attendance page: clock (BA/Crew/TL) and/or register/settings (SA/BA). */
+/** Dedicated Attendance page: clock (BA/Crew/TL) and/or register/settings (SA/BA/OL). OL has no personal clock. */
 export function canAccessAttendance(profile) {
   if (!profile) return false
-  if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile)) return true
+  if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || isOperationsLead(profile)) return true
   return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF, ROLES.DETAILER, ROLES.MARKETING, ROLES.VIDEO_EDITOR].includes(
     profile.role,
   )
 }
 
-/** Personal geofenced time in / time out — Branch Admin, Crew, Team Lead, Detailer. */
+/** Personal geofenced time in / time out — not Operations Lead (salary without attendance). */
 export function canUseAttendanceClock(profile) {
   if (!profile) return false
+  if (isOperationsLead(profile)) return false
   if (profile.attendance_enabled === false) return false
   return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF, ROLES.DETAILER, ROLES.MARKETING, ROLES.VIDEO_EDITOR].includes(
     profile.role,
@@ -437,7 +461,13 @@ export function canAccessBookingBoard(profile) {
 
 /** Advance detailing board status without editing services (TL / Branch Admin / SA). */
 export function canAdvanceBookingStatus(profile) {
-  return has(profile, [...ADMIN_ROLES, ROLES.TEAM_LEAD, ROLES.SALES, ROLES.DETAILER])
+  return has(profile, [
+    ...ADMIN_ROLES,
+    ROLES.TEAM_LEAD,
+    ROLES.OPERATIONS_LEAD,
+    ROLES.SALES,
+    ROLES.DETAILER,
+  ])
 }
 
 /** Form-appointments editors: Sales (details only) and TL (can check-in to waiting). */
@@ -463,17 +493,29 @@ export function canModifyBookingServicePrice(profile) {
 }
 
 export function canViewPlanning(profile) {
-  // SA / ASA / Branch Admin manage boards; crew + TL + marketing + video open planner.
+  // SA / ASA / Branch Admin / Operations Lead manage boards; crew + TL + marketing + video open planner.
   return (
     isAdmin(profile) ||
+    isOperationsLead(profile) ||
     has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD, ROLES.MARKETING, ROLES.VIDEO_EDITOR])
   )
 }
 
 export function canEditPlanning(profile) {
   if (isSuperAdmin(profile)) return true
-  if (isBranchAdmin(profile)) return true
+  if (isBranchAdmin(profile) || isOperationsLead(profile)) return true
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'planning_edit')
+}
+
+/** Shared Miro-style roadmap / suggestions board. */
+export function canAccessOpsRoadmap(profile) {
+  if (!profile?.role) return false
+  return (
+    isSuperAdmin(profile) ||
+    isAssistantSuperAdmin(profile) ||
+    isBranchAdmin(profile) ||
+    isOperationsLead(profile)
+  )
 }
 
 /**
@@ -489,6 +531,7 @@ export function canSubmitOpsFormKind(profile, kind) {
     return has(profile, [
       ROLES.STAFF,
       ROLES.TEAM_LEAD,
+      ROLES.OPERATIONS_LEAD,
       ROLES.ADMIN,
       ROLES.ASSISTANT_SUPER_ADMIN,
     ])
@@ -509,6 +552,7 @@ export function canUseOperations(profile) {
 export function canEditQueueOperations(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
+  if (isOperationsLead(profile)) return true
   return profile?.role === ROLES.TEAM_LEAD
 }
 
@@ -527,18 +571,20 @@ export function canViewRedoLane(profile) {
 export function canMarkFailedQa(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
+  if (isOperationsLead(profile)) return true
   return profile?.role === ROLES.TEAM_LEAD
 }
 
 /** Legacy TL port: Team Lead never sees the For Payment lane; console tier does. */
 export function canSeeForPaymentLane(profile) {
-  return isAdmin(profile)
+  return isAdmin(profile) || isOperationsLead(profile)
 }
 
 /** Branch Admin / Super Admin / ASA(queue_all) may pull tickets back to earlier lanes. */
 export function canOverrideQueueStatus(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
+  if (isOperationsLead(profile)) return true
   return profile?.role === ROLES.ADMIN
 }
 
@@ -547,6 +593,7 @@ export function canViewAssignedTasks(profile) {
     ROLES.STAFF,
     ROLES.DETAILER,
     ROLES.TEAM_LEAD,
+    ROLES.OPERATIONS_LEAD,
     ROLES.ADMIN,
     ROLES.SUPER_ADMIN,
     ROLES.ASSISTANT_SUPER_ADMIN,
@@ -557,6 +604,7 @@ export function canViewAssignedTasks(profile) {
 export function canAccessReviews(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'reviews')
+  if (isOperationsLead(profile)) return true
   return profile?.role === ROLES.ADMIN
 }
 
@@ -575,12 +623,13 @@ export function isBranchAdmin(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
-/** Web-first Command shell: SA, ASA, Branch Admin, Investor. */
+/** Web-first Command shell: SA, ASA, Branch Admin, Operations Lead, Investor. */
 export function usesCommandShell(profile) {
   return (
     isSuperAdmin(profile) ||
     isAssistantSuperAdmin(profile) ||
     isBranchAdmin(profile) ||
+    isOperationsLead(profile) ||
     profile?.role === ROLES.INVESTOR
   )
 }
@@ -693,8 +742,27 @@ export function getOperationsNav(profile) {
       nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
       nav('Reviews', '/operations/reviews', 'Star', 'customers'),
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
+      nav('Roadmap', '/operations/roadmap', 'Map', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
       nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
+      nav('Audit', '/operations/audit', 'ScrollText', 'company'),
+    ]
+  }
+
+  // Operations Lead: network-wide BA∪TL ops, no personal clock; roadmap owner.
+  if (isOperationsLead(profile)) {
+    return [
+      nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
+      nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
+      nav('Crew', '/operations/crew', 'Users', 'floor'),
+      nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
+      nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
+      nav('Reviews', '/operations/reviews', 'Star', 'customers'),
+      nav('Planner', '/operations/planning', 'Columns3', 'work'),
+      nav('Roadmap', '/operations/roadmap', 'Map', 'work'),
+      nav('History', '/operations/history', 'History', 'work'),
+      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
+      nav('Finance', '/operations/finance', 'Wallet', 'books'),
       nav('Audit', '/operations/audit', 'ScrollText', 'company'),
     ]
   }
@@ -774,6 +842,9 @@ export function getOperationsNav(profile) {
   if (canViewPlanning(profile)) {
     items.push(nav('Planner', '/operations/planning', 'Columns3', 'work'))
   }
+  if (canAccessOpsRoadmap(profile)) {
+    items.push(nav('Roadmap', '/operations/roadmap', 'Map', 'work'))
+  }
   if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF) {
     items.push(nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'))
   }
@@ -843,6 +914,9 @@ export function getBranchAdminMore(profile) {
   }
   if (canViewPlanning(profile)) {
     more.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
+  }
+  if (canAccessOpsRoadmap(profile)) {
+    more.push({ label: 'Roadmap', to: '/operations/roadmap', icon: 'Map' })
   }
   return more
 }
@@ -933,6 +1007,7 @@ export function redirectForRole(role) {
     return '/operations/console'
   }
   if (role === ROLES.ADMIN) return '/operations/pos'
+  if (role === ROLES.OPERATIONS_LEAD) return '/operations/roadmap'
   if (role === ROLES.STAFF) return '/operations/attendance'
   if (role === ROLES.TEAM_LEAD) return '/operations/queue'
   if (role === ROLES.SALES) return '/operations/bookings'
@@ -953,6 +1028,7 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'pos',
   'reviews',
   'planning',
+  'roadmap',
   'history',
   'my-pay',
   'audit',
@@ -964,6 +1040,7 @@ export function allowRoute(profile, key) {
   const map = {
     console: canAccessConsole,
     planning: canViewPlanning,
+    roadmap: canAccessOpsRoadmap,
     people: canManagePeople,
     branches: canManageBranches,
     cars: canManageVehicleCatalog,

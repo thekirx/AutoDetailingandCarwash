@@ -5,6 +5,7 @@ import { handleNotifyBookingRequest } from '../server/notifyBookingApi.mjs'
 import { handleNotifyOpsFormRequest } from '../server/notifyOpsFormApi.mjs'
 import { handleNotifyPlannerRequest } from '../server/notifyPlannerApi.mjs'
 import { handleNotifyPosRequest } from '../server/notifyPosApi.mjs'
+import { handleNotifyShiftCloseRequest } from '../server/notifyShiftCloseApi.mjs'
 import { handlePushSubscribeRequest, handleSendPushRequest } from '../server/pushApi.mjs'
 import { handleNotificationSettingsRequest } from '../server/notificationSettingsApi.mjs'
 import { handleNotificationBroadcastRequest } from '../server/notificationBroadcastApi.mjs'
@@ -19,6 +20,7 @@ export const operations = Object.freeze({
   'notify-ops-form': handleNotifyOpsFormRequest,
   'notify-planner': handleNotifyPlannerRequest,
   'notify-pos': handleNotifyPosRequest,
+  'notify-shift-close': handleNotifyShiftCloseRequest,
   'push-subscribe': handlePushSubscribeRequest,
   'send-push': handleSendPushRequest,
   'notification-settings': handleNotificationSettingsRequest,

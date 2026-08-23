@@ -194,11 +194,15 @@ export default function MyPayPage() {
             <p className="font-medium">{formatMoney(row.amount_minor)}</p>
             <p className="text-muted-foreground">
               {String(row.source_key || '').startsWith('deduct:') ? 'Deduct · ' : ''}
-              {String(row.kind || '').startsWith('package')
+              {String(row.kind || '').startsWith('package') || String(row.source_key || '').startsWith('package:')
                 ? 'Fixed salary'
                 : row.kind === 'wash_pool'
                   ? 'Floor · wash pool'
-                  : String(row.kind || '').replaceAll('_', ' ')}{' '}
+                  : row.kind === 'ceramic_detailer'
+                    ? 'Detailing · detailer'
+                    : row.kind === 'ceramic_crew'
+                      ? 'Detailing · crew'
+                      : String(row.kind || '').replaceAll('_', ' ')}{' '}
               · {row.branch}
             </p>
             <p className="text-xs text-muted-foreground">

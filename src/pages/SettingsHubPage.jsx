@@ -1,5 +1,5 @@
 import { Link, Navigate } from 'react-router-dom'
-import { Building2, DollarSign, Newspaper, ScrollText, Shield, UserPlus } from 'lucide-react'
+import { Building2, DollarSign, Newspaper, ScrollText, Shield, ShoppingCart, UserPlus, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessAudit,
@@ -12,6 +12,22 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const TILES = [
+  {
+    key: 'pos',
+    title: 'POS settings',
+    description: 'Payment methods, expense kinds, and end-of-shift field labels.',
+    to: '/operations/settings/pos',
+    icon: ShoppingCart,
+    allow: canAccessConsole,
+  },
+  {
+    key: 'payroll-settings',
+    title: 'Payroll settings',
+    description: 'Attendance weights, pending-floor policy, and cash-advance netting.',
+    to: '/operations/settings/payroll',
+    icon: Wallet,
+    allow: canAccessPayroll,
+  },
   {
     key: 'content',
     title: 'Blogs & Events',
@@ -62,7 +78,7 @@ const TILES = [
   },
 ]
 
-/** Settings hub — branches / people / audit / permissions. Payroll rules live on Payroll. */
+/** Settings hub — POS / Payroll policy tiles plus company admin. */
 export default function SettingsHubPage() {
   const { profile } = useAuth()
   const tiles = TILES.filter((t) => t.allow(profile))
@@ -77,7 +93,7 @@ export default function SettingsHubPage() {
         <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Settings</p>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Company settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Branches, employees, audit logs, and permission assignment. Payout rules are on Payroll.
+          Branches, employees, POS/Payroll policy, audit logs, and permission assignment.
         </p>
       </header>
       <div className="grid gap-4 sm:grid-cols-2">

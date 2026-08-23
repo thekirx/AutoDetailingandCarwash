@@ -31,7 +31,7 @@ export const SHIFT_CLOSE_MONEY_KEYS = Object.freeze([
 export const SHIFT_CLOSE_FIELD_LABELS = Object.freeze({
   square_sales_minor: 'Total sales',
   downpayments_minor: 'Downpayments',
-  ca_collected_minor: 'CA collected',
+  ca_collected_minor: 'CA repaid to drawer',
   total_gcash_minor: 'GCash',
   credit_card_minor: 'Credit card',
   total_expenses_minor: 'Total expenses',
@@ -118,6 +118,26 @@ export function shiftCloseFieldLabel(key, fieldConfig = []) {
   return SHIFT_CLOSE_FIELD_LABELS[key] || key.replace(/_minor$/, '').replaceAll('_', ' ')
 }
 
+/** Short helper under each EoS field — keep BA from double-counting CAs. */
+export function shiftCloseFieldHint(key) {
+  if (key === 'ca_collected_minor') {
+    return 'Only type money staff repaid into the drawer. Approved advances already appear in the expense list — do not re-enter them here.'
+  }
+  if (key === 'downpayments_minor') {
+    return 'Deposits taken today that are not already in Total sales.'
+  }
+  if (key === 'total_expenses_minor') {
+    return 'Includes POS expense drafts for today. Ceramic/payroll drafts stay out until paid.'
+  }
+  if (key === 'total_cash_left_minor') {
+    return 'Formula from cash sales − expenses + CA repaid. Match the physical drawer; override with a reason if different.'
+  }
+  if (key === 'square_sales_minor') {
+    return 'Sum of paid POS tickets today (not an estimate).'
+  }
+  return ''
+}
+
 export function isShiftCloseComputedKey(key) {
   return SHIFT_CLOSE_COMPUTED_KEYS.includes(key)
 }
@@ -134,6 +154,47 @@ export function moneySnapshotFromReport(report) {
     out[key] = Number.isFinite(n) ? Math.round(n) : 0
   }
   return out
+}
+
+/**
+ * When BA types CA repaid, bump cash-left baseline unless they already changed cash left.
+ * ponytail: keeps Bacoor drawer math in sync (cash sales − expenses + CA repaid).
+ */
+export function applyCaCollectedToCashLeft(baseline, submitted) {
+  const base = moneySnapshotFromReport(baseline)
+  const sub = moneySnapshotFromReport(submitted)
+  const caDelta = sub.ca_collected_minor - base.ca_collected_minor
+  if (caDelta !== 0 && sub.total_cash_left_minor === base.total_cash_left_minor) {
+    const cashSales = Number(baseline?.cash_sales_minor)
+    if (Number.isFinite(cashSales)) {
+      sub.total_cash_left_minor = cashSales - sub.total_expenses_minor + sub.ca_collected_minor
+    } else {
+      sub.total_cash_left_minor = base.total_cash_left_minor + caDelta
+    }
+  }
+  return sub
+}
+
+/** Merge wizard overrides for display + validation (CA repaid bumps cash left). */
+export function projectShiftCloseMoney(dailyReportData, overrides = {}) {
+  const baseline = moneySnapshotFromReport(dailyReportData)
+  const submitted = { ...baseline }
+  for (const key of SHIFT_CLOSE_MONEY_KEYS) {
+    if (overrides[key] != null) {
+      const parsed = parsePesosToMinor(overrides[key])
+      if (parsed != null) submitted[key] = parsed
+    }
+  }
+  return applyCaCollectedToCashLeft(baseline, submitted)
+}
+
+/** Baseline for validate after CA repaid is applied — avoids false override on cash left. */
+export function shiftCloseValidationBaseline(dailyReportData, submitted) {
+  const baseline = moneySnapshotFromReport(dailyReportData)
+  return applyCaCollectedToCashLeft(baseline, {
+    ...baseline,
+    ca_collected_minor: submitted.ca_collected_minor,
+  })
 }
 
 /** Parse pesos string/number → minor units; null if invalid. */

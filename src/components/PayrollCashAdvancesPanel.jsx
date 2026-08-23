@@ -1,5 +1,5 @@
 /** Payroll inbox: approve / decline cash advances (not POS). */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, XCircle } from 'lucide-react'
 import { getBranchScopeList } from '@/auth/permissions'
 import { writeAudit } from '@/lib/audit'
@@ -26,13 +26,24 @@ export default function PayrollCashAdvancesPanel({
 }) {
   const [pending, setPending] = useState([])
   const [approvedToday, setApprovedToday] = useState([])
+  const [staffRoster, setStaffRoster] = useState([])
+  const [staffBySubmission, setStaffBySubmission] = useState({})
   const [loading, setLoading] = useState(false)
+
+  const staffOptions = useMemo(
+    () =>
+      staffRoster.map((s) => ({
+        value: s.id,
+        label: `${s.full_name}${s.role ? ` · ${s.role}` : ''}`,
+      })),
+    [staffRoster],
+  )
 
   const load = useCallback(async () => {
     if (!branch) return
     setLoading(true)
     const today = getLocalCalendarDate()
-    const [pendingRes, resolvedRes] = await Promise.all([
+    const [pendingRes, resolvedRes, staffRes] = await Promise.all([
       supabase
         .from('ops_form_submissions')
         .select(SELECT)
@@ -48,6 +59,13 @@ export default function PayrollCashAdvancesPanel({
         .gte('resolved_at', `${today}T00:00:00+08:00`)
         .order('resolved_at', { ascending: false })
         .limit(100),
+      supabase
+        .from('staff_profiles')
+        .select('id, full_name, role, branch_slug')
+        .eq('is_active', true)
+        .eq('branch_slug', branch)
+        .order('full_name')
+        .limit(200),
     ])
     setLoading(false)
     if (pendingRes.error) {
@@ -55,12 +73,22 @@ export default function PayrollCashAdvancesPanel({
       return
     }
     if (resolvedRes.error) toast.error(resolvedRes.error.message)
+    if (!staffRes.error) setStaffRoster(staffRes.data || [])
     const scope = getBranchScopeList(profile)
     const inScope = (row) => cashAdvanceInBranchScope(row, { branch, branchScopeList: scope })
-    setPending((pendingRes.data || []).filter(inScope))
+    const pendingRows = (pendingRes.data || []).filter(inScope)
+    setPending(pendingRows)
     setApprovedToday(
       (resolvedRes.data || []).filter(inScope).filter((row) => approvedCaForCloseDay(row, today)),
     )
+    setStaffBySubmission((prev) => {
+      const next = { ...prev }
+      for (const row of pendingRows) {
+        const existing = row.payload?.staff_id
+        if (existing && !next[row.id]) next[row.id] = existing
+      }
+      return next
+    })
   }, [branch, profile])
 
   useEffect(() => {
@@ -69,19 +97,42 @@ export default function PayrollCashAdvancesPanel({
 
   async function updateStatus(row, status) {
     if (!canApprove) return
-    const { error } = await supabase.from('ops_form_submissions').update({ status }).eq('id', row.id)
+    const p = row.payload || {}
+    let payload = { ...p }
+    if (status === 'resolved') {
+      const staffId = String(staffBySubmission[row.id] || p.staff_id || '').trim()
+      if (!staffId) {
+        toast.error('Link a staff profile before approving — needed for payroll deducts')
+        return
+      }
+      const staff = staffRoster.find((s) => s.id === staffId)
+      payload = {
+        ...p,
+        staff_id: staffId,
+        employee_name: staff?.full_name || p.employee_name || row.respondent_label || 'Employee',
+        branch: p.branch || branch,
+      }
+    }
+    const { error } = await supabase
+      .from('ops_form_submissions')
+      .update({ status, payload })
+      .eq('id', row.id)
     if (error) {
       toast.error(error.message)
       return
     }
-    const p = row.payload || {}
     toast.success(`Cash advance ${status === 'resolved' ? 'approved' : 'declined'}`)
     writeAudit({
       action: 'payroll.cash_advance',
       entityType: 'ops_form_submission',
       entityId: row.id,
       summary: `Cash advance ${status === 'resolved' ? 'approved' : 'declined'} · ${branch}`,
-      meta: { branch, amount_minor: Math.round(Number(p.amount || 0) * 100), status },
+      meta: {
+        branch,
+        amount_minor: Math.round(Number(payload.amount || 0) * 100),
+        status,
+        staff_id: payload.staff_id || null,
+      },
     })
     load()
   }
@@ -92,8 +143,8 @@ export default function PayrollCashAdvancesPanel({
         <CardHeader>
           <CardTitle>Cash advances</CardTitle>
           <CardDescription>
-            Approve or decline employee requests here. Approved amounts roll into today’s POS daily
-            close (expenses + cash left) and can be overridden on End of shift.
+            Approve or decline employee requests here. Link staff on approve so Payroll can deduct
+            manually later. Approved amounts roll into today’s POS daily close (expenses + cash left).
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -150,22 +201,33 @@ export default function PayrollCashAdvancesPanel({
                           {new Date(row.created_at).toLocaleString()}
                         </p>
                         {canApprove ? (
-                          <div className="flex gap-2 pt-1">
-                            <Button
-                              size="sm"
-                              className="gap-1.5"
-                              onClick={() => updateStatus(row, 'resolved')}
-                            >
-                              <Check className="size-3.5" /> Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1.5"
-                              onClick={() => updateStatus(row, 'archived')}
-                            >
-                              <XCircle className="size-3.5" /> Decline
-                            </Button>
+                          <div className="space-y-2 pt-1">
+                            <NamedSelect
+                              id={`ca-staff-${row.id}`}
+                              value={staffBySubmission[row.id] || p.staff_id || ''}
+                              onChange={(next) =>
+                                setStaffBySubmission((prev) => ({ ...prev, [row.id]: next }))
+                              }
+                              emptyLabel="Link staff (required)"
+                              options={staffOptions.filter((o) => o.value)}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="gap-1.5"
+                                onClick={() => updateStatus(row, 'resolved')}
+                              >
+                                <Check className="size-3.5" /> Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5"
+                                onClick={() => updateStatus(row, 'archived')}
+                              >
+                                <XCircle className="size-3.5" /> Decline
+                              </Button>
+                            </div>
                           </div>
                         ) : null}
                       </CardContent>
@@ -189,7 +251,14 @@ export default function PayrollCashAdvancesPanel({
                       key={row.id}
                       className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
                     >
-                      <span>{p.employee_name || row.respondent_label || 'Employee'}</span>
+                      <span>
+                        {p.employee_name || row.respondent_label || 'Employee'}
+                        {p.staff_id ? (
+                          <span className="ml-2 text-xs text-muted-foreground">linked</span>
+                        ) : (
+                          <span className="ml-2 text-xs text-destructive">no staff link</span>
+                        )}
+                      </span>
                       <span className="tabular-nums font-medium">
                         {formatMoney(Number(p.amount || 0) * 100)}
                       </span>

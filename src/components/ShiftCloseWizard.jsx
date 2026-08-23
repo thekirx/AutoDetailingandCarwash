@@ -10,6 +10,8 @@ import {
   minorToPesosInput,
   moneySnapshotFromReport,
   parsePesosToMinor,
+  projectShiftCloseMoney,
+  shiftCloseFieldHint,
   shiftCloseFieldLabel,
 } from '@/lib/shiftClose'
 
@@ -32,7 +34,11 @@ export default function ShiftCloseWizard({
   shiftSubmitting,
 }) {
   const baselineSnap = moneySnapshotFromReport(dailyReportData)
+  const projectedSnap = projectShiftCloseMoney(dailyReportData, shiftOverrides)
   const stepMeta = SHIFT_CLOSE_WIZARD_STEPS[step] || SHIFT_CLOSE_WIZARD_STEPS[0]
+  const approvedCa = dailyReportData?.approved_ca || []
+  const caRepayments = dailyReportData?.ca_repayments || []
+  const draftExpenseCount = Number(dailyReportData?.expense_draft_count || 0)
 
   function keysForStep() {
     if (stepMeta.id === 'money') return SHIFT_CLOSE_STEP_KEYS.money
@@ -40,16 +46,30 @@ export default function ShiftCloseWizard({
     return []
   }
 
+  function fieldBaseline(key) {
+    if (key === 'total_cash_left_minor' || key === 'ca_collected_minor') {
+      return projectedSnap[key] ?? baselineSnap[key] ?? 0
+    }
+    return baselineSnap[key] || 0
+  }
+
   function renderField(key) {
     const cfg = shiftFieldConfig.find((f) => f.field_key === key)
     if (cfg?.is_active === false) return null
     const label = shiftCloseFieldLabel(key, shiftFieldConfig)
-    const baseline = baselineSnap[key] || 0
+    const hint = shiftCloseFieldHint(key)
+    const baseline = fieldBaseline(key)
     const inputVal = shiftOverrides[key] != null ? shiftOverrides[key] : minorToPesosInput(baseline)
     const changed = parsePesosToMinor(inputVal) != null && parsePesosToMinor(inputVal) !== baseline
     const computed = isShiftCloseComputedKey(key)
+    const liveHint =
+      key === 'total_cash_left_minor' &&
+      projectedSnap.total_cash_left_minor !== baselineSnap.total_cash_left_minor &&
+      shiftOverrides.total_cash_left_minor == null
+        ? `Includes CA repaid · ${formatMoney(projectedSnap.total_cash_left_minor)}`
+        : null
     return (
-      <div key={key} className="rounded-xl border border-border p-3">
+      <div key={key} className="rounded-xl border border-border bg-card/40 p-3">
         <div className="flex items-start justify-between gap-2">
           <Label htmlFor={`shift-${key}`}>{label}</Label>
           <span className="shrink-0 text-[10px] font-bold tracking-wide uppercase text-muted-foreground">
@@ -60,6 +80,8 @@ export default function ShiftCloseWizard({
           Baseline · {formatMoney(baseline)}
           {computed ? ' · change only if the drawer count differs' : ' · enter if you collected any'}
         </p>
+        {hint ? <p className="mb-2 text-xs leading-snug text-muted-foreground">{hint}</p> : null}
+        {liveHint ? <p className="mb-2 text-xs font-medium text-primary">{liveHint}</p> : null}
         <Input
           id={`shift-${key}`}
           inputMode="decimal"
@@ -94,7 +116,7 @@ export default function ShiftCloseWizard({
     <div className="space-y-4 text-sm">
       <p className="text-muted-foreground">
         {branchLabel} · walk through each step. Numbers fill from today&apos;s paid sales — edit only when
-        the count is different.
+        the count is different. This close is an attestation for Finance — it does not run payroll.
       </p>
 
       <ol className="hakum-shift-steps" aria-label="End of shift steps">
@@ -129,16 +151,16 @@ export default function ShiftCloseWizard({
               <p className="mt-1 text-xs text-destructive">{shiftEndedError}</p>
             ) : (
               <p className="mt-1 text-xs text-muted-foreground">
-                Close early or late — this time anchors the day for payroll windows.
+                Close early or late — this time anchors the day for Finance review.
               </p>
             )}
           </div>
-          <div className="rounded-xl border border-dashed border-border bg-muted/30 p-3">
-            <p className="text-[10px] font-bold tracking-wide text-muted-foreground uppercase">Today so far</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">
+          <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-3">
+            <p className="text-[10px] font-bold tracking-wide text-primary uppercase">Today so far</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
               {formatMoney(baselineSnap.square_sales_minor)}
             </p>
-            <p className="text-xs text-muted-foreground">Total sales (paid)</p>
+            <p className="text-xs text-muted-foreground">Total sales (paid POS) · {branchLabel}</p>
           </div>
         </div>
       ) : null}
@@ -146,6 +168,48 @@ export default function ShiftCloseWizard({
       {stepMeta.id === 'money' || stepMeta.id === 'detail' ? (
         <div className="space-y-3">
           <p className="text-muted-foreground">{stepMeta.hint}</p>
+          {stepMeta.id === 'money' && approvedCa.length > 0 ? (
+            <div className="rounded-xl border border-border bg-muted/40 p-3">
+              <p className="text-[10px] font-bold tracking-wide text-muted-foreground uppercase">
+                Approved cash advances (already in expenses)
+              </p>
+              <ul className="mt-2 space-y-1 text-xs">
+                {approvedCa.map((row, i) => (
+                  <li key={`${row.label}-${i}`} className="flex justify-between gap-2 tabular-nums">
+                    <span>{row.label}</span>
+                    <span>{formatMoney(row.amount_minor)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Do not type these again under CA repaid to drawer unless staff paid cash back into the till.
+              </p>
+            </div>
+          ) : null}
+          {stepMeta.id === 'money' && caRepayments.length > 0 ? (
+            <div className="rounded-xl border border-primary/25 bg-primary/5 p-3">
+              <p className="text-[10px] font-bold tracking-wide text-primary uppercase">
+                CA repayments logged today
+              </p>
+              <ul className="mt-2 space-y-1 text-xs">
+                {caRepayments.map((row, i) => (
+                  <li key={`${row.label}-${i}`} className="flex justify-between gap-2 tabular-nums">
+                    <span>{row.label}</span>
+                    <span>{formatMoney(row.amount_minor)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Total CA repaid · {formatMoney(projectedSnap.ca_collected_minor)} · cash left updates automatically.
+              </p>
+            </div>
+          ) : null}
+          {stepMeta.id === 'detail' && draftExpenseCount > 0 ? (
+            <p className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              {draftExpenseCount} expense draft{draftExpenseCount === 1 ? '' : 's'} count toward Total expenses /
+              cash left. Confirm they match cash that actually left the drawer.
+            </p>
+          ) : null}
           {keysForStep().map(renderField)}
         </div>
       ) : null}
@@ -155,7 +219,7 @@ export default function ShiftCloseWizard({
           <p className="text-muted-foreground">Double-check totals, then submit for Super Admin review.</p>
           <ul className="divide-y divide-border rounded-xl border border-border">
             {[...SHIFT_CLOSE_STEP_KEYS.money, 'total_expenses_minor'].map((key) => {
-              const baseline = baselineSnap[key] || 0
+              const baseline = fieldBaseline(key)
               const inputVal =
                 shiftOverrides[key] != null ? shiftOverrides[key] : minorToPesosInput(baseline)
               const minor = parsePesosToMinor(inputVal) ?? baseline

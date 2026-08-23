@@ -211,10 +211,10 @@ function toLine({ kind, staff, branch, sourceKey, sourceSaleId, payMinor, date, 
   }
 }
 
-function splitAmount(roster, amountMinor, kind, { branch, sourceKey, sourceSaleId, date }) {
+function splitAmount(roster, amountMinor, kind, { branch, sourceKey, sourceSaleId, date, rules }) {
   const pool = Math.round(Number(amountMinor) || 0)
   if (pool <= 0) return []
-  const split = splitWashPool({ totalSalesMinor: pool, poolPct: 100, roster })
+  const split = splitWashPool({ totalSalesMinor: pool, poolPct: 100, roster, rules })
   if (!split.rows.length) {
     return [
       toLine({
@@ -267,7 +267,7 @@ export function buildPayrollPreview({
   const kind = String(runKind || 'all').toLowerCase()
   const includeFloor = kind === 'all' || kind === 'floor'
   const includeFixed = kind === 'all' || kind === 'fixed'
-  const lines = []
+  let lines = []
 
   if (includeFloor) {
     for (const sale of sales || []) {
@@ -299,6 +299,7 @@ export function buildPayrollPreview({
         totalSalesMinor,
         poolPct,
         roster: rosterFor(attendance, branch, day),
+        rules,
       })
       for (const row of split.rows) {
         if (!row.pay_minor) continue
@@ -335,6 +336,7 @@ export function buildPayrollPreview({
           sourceKey: exp.description,
           sourceSaleId: parsed.saleId,
           date: day,
+          rules,
         }),
       )
     }
@@ -368,6 +370,8 @@ export function buildPayrollPreview({
       })
     }
   }
+
+  // Contract: cash advances deduct only via manual payroll wizard adjustments.
 
   const totalPayoutMinor = netPayrollLinesMinor(lines)
   return {
@@ -625,27 +629,49 @@ export function isFloorPayrollRun(run) {
   return Array.isArray(sales) && sales.length > 0
 }
 
-/** Confirmed/paid floor run covers this branch business day. */
+/** Confirmed/paid floor run covers this branch business day via claimed sales, else period. */
 export function floorPayrollCoversDay(run, ymd, branch) {
   if (!isFloorPayrollRun(run)) return false
   if (!['confirmed', 'paid'].includes(String(run?.status || ''))) return false
   const day = String(ymd || '').slice(0, 10)
   const br = String(branch || '').trim()
   if (!day || !br) return false
+  if (run.branch && String(run.branch) !== br) return false
+
+  const claimed = run.payroll_run_sales || run.claimed_sales || []
+  if (Array.isArray(claimed) && claimed.length > 0) {
+    return claimed.some((sale) => {
+      const saleBranch = String(sale.branch || run.branch || '').trim()
+      if (saleBranch && saleBranch !== br) return false
+      const saleDay = String(
+        sale.business_date || sale.sale_date || sale.occurred_on || '',
+      ).slice(0, 10)
+      if (saleDay) return saleDay === day
+      // Sale row without a day — fall through to period only for that sale's absence
+      return false
+    })
+  }
+
   const start = String(run.period_start || '').slice(0, 10)
   const end = String(run.period_end || '').slice(0, 10)
   if (!start || !end || start > day || end < day) return false
-  if (run.branch && String(run.branch) !== br) return false
   return true
 }
 
 /**
  * Accepted (and submitted) end-of-shift days not yet covered by a floor payroll run.
- * Missed days accumulate per branch so SA can optionally run one window covering them all.
+ * Coverage prefers claimed POS sale business dates when payroll_run_sales are present.
+ * Optional posProofByKey: Map or object of `${branch}|${business_date}` → wash-eligible / total paid minor.
  */
-export function buildPendingFloorPayrollQueue({ closes = [], runs = [] } = {}) {
+export function buildPendingFloorPayrollQueue({ closes = [], runs = [], posProofByKey = null } = {}) {
   const readyStatuses = new Set(['accepted', 'locked'])
   const reviewStatuses = new Set(['submitted'])
+  const proofMap =
+    posProofByKey instanceof Map
+      ? posProofByKey
+      : posProofByKey && typeof posProofByKey === 'object'
+        ? new Map(Object.entries(posProofByKey))
+        : null
   const days = []
 
   for (const close of closes || []) {
@@ -656,16 +682,22 @@ export function buildPendingFloorPayrollQueue({ closes = [], runs = [] } = {}) {
     if (!readyStatuses.has(status) && !reviewStatuses.has(status)) continue
     if ((runs || []).some((r) => floorPayrollCoversDay(r, business_date, branch))) continue
 
-    const total_sales_minor = Math.round(
+    const close_sales_minor = Math.round(
       Number(close.submitted?.total_sales_minor ?? close.submitted?.square_sales_minor ?? 0) || 0,
     )
+    const proofKey = `${branch}|${business_date}`
+    const pos_proof_minor = proofMap?.has(proofKey)
+      ? Math.round(Number(proofMap.get(proofKey)) || 0)
+      : null
     days.push({
       close_id: close.id,
       branch,
       business_date,
       status,
       ready: readyStatuses.has(status),
-      total_sales_minor,
+      total_sales_minor: close_sales_minor,
+      close_sales_minor,
+      pos_proof_minor,
       shift_ended_at: close.shift_ended_at || null,
     })
   }
@@ -684,13 +716,21 @@ export function buildPendingFloorPayrollQueue({ closes = [], runs = [] } = {}) {
         ready_count: 0,
         review_count: 0,
         total_sales_minor: 0,
+        close_sales_minor: 0,
+        pos_proof_minor: 0,
+        pos_proof_known: false,
         period_start: row.business_date,
         period_end: row.business_date,
       })
     }
     const g = byBranch.get(row.branch)
     g.days.push(row)
-    g.total_sales_minor += row.total_sales_minor
+    g.total_sales_minor += row.close_sales_minor
+    g.close_sales_minor += row.close_sales_minor
+    if (row.pos_proof_minor != null) {
+      g.pos_proof_minor += row.pos_proof_minor
+      g.pos_proof_known = true
+    }
     if (row.ready) g.ready_count += 1
     else g.review_count += 1
     if (row.business_date < g.period_start) g.period_start = row.business_date
@@ -706,6 +746,88 @@ export function buildPendingFloorPayrollQueue({ closes = [], runs = [] } = {}) {
   }
 }
 
+/**
+ * Hard gate when pending_floor_optional === false:
+ * every day in the floor period for this branch must have an accepted/locked close
+ * (or no close at all only if allowMissingClose — default false requires accepted when sales expected).
+ */
+export function floorConfirmBlockedByPendingCloses({
+  pendingFloorOptional = true,
+  runKind = 'floor',
+  branch,
+  periodStart,
+  periodEnd,
+  closes = [],
+} = {}) {
+  if (String(runKind || '') !== 'floor') return { blocked: false, reason: null }
+  if (pendingFloorOptional !== false) return { blocked: false, reason: null }
+  const start = String(periodStart || '').slice(0, 10)
+  const end = String(periodEnd || '').slice(0, 10)
+  const bay = String(branch || '').trim()
+  if (!start || !end || !bay) {
+    return { blocked: true, reason: 'Pick a branch and period for floor pay' }
+  }
+
+  const inWindow = (closes || []).filter((c) => {
+    const d = String(c.business_date || '').slice(0, 10)
+    return String(c.branch || '') === bay && d >= start && d <= end
+  })
+
+  const waiting = inWindow.filter((c) => String(c.status || '') === 'submitted')
+  if (waiting.length) {
+    return {
+      blocked: true,
+      reason: `Accept ${waiting.length} end-of-shift close(s) in Finance before confirming floor pay`,
+    }
+  }
+
+  const ready = inWindow.filter((c) => ['accepted', 'locked'].includes(String(c.status || '')))
+  if (!ready.length) {
+    return {
+      blocked: true,
+      reason: 'No accepted end-of-shift close for this branch and period — submit and accept close first',
+    }
+  }
+  return { blocked: false, reason: null }
+}
+
+/** Roll wash-pool + ceramic preview lines onto Bacoor salary fields (display / EoS baseline). */
+export function applyFloorPreviewToBacoorReport(report, preview, rules = {}) {
+  const out = report && typeof report === 'object' ? { ...report } : {}
+  const lines = preview?.lines || []
+  let wash = 0
+  let detailer = 0
+  let tinter = 0
+  for (const row of lines) {
+    const kind = String(row.kind || '')
+    const amt = Math.round(Number(row.pay_minor) || 0)
+    if (!amt) continue
+    if (kind === 'wash_pool' || kind === 'ceramic_crew') wash += amt
+    else if (kind === 'ceramic_detailer') detailer += amt
+  }
+  const poolFallback = Math.round(Number(preview?.pool_minor) || 0)
+  out.carwash_salary_minor = wash || poolFallback
+  out.detailer_salary_minor = detailer
+  out.tinter_salary_minor = tinter
+  out.wash_pool_pct = Number(rules.wash_pool_pct ?? preview?.rules?.wash_pool_pct) || 0
+  out.salary_from_preview = true
+  return out
+}
+
+/** Build `${branch}|${day}` → paid total minor from sales rows (for pending dual ₱). */
+export function posProofTotalsByBranchDay(sales = []) {
+  const map = new Map()
+  for (const sale of sales || []) {
+    if (String(sale?.status || 'paid') !== 'paid') continue
+    const branch = String(sale.branch || '').trim()
+    const day = String(sale.business_date || saleDay(sale) || '').slice(0, 10)
+    if (!branch || !day) continue
+    const key = `${branch}|${day}`
+    map.set(key, (map.get(key) || 0) + (Number(sale.total_minor) || 0))
+  }
+  return map
+}
+
 /** Finance / reporting label for whether floor pay has posted for a close day. */
 export function shiftClosePayrollCoverage(close, runs = []) {
   const status = String(close?.status || '')
@@ -713,11 +835,11 @@ export function shiftClosePayrollCoverage(close, runs = []) {
   const branch = String(close?.branch || '').trim()
   if (!day || !branch) return { covered: false, label: '—' }
   if ((runs || []).some((r) => floorPayrollCoversDay(r, day, branch))) {
-    return { covered: true, label: 'Floor pay posted' }
+    return { covered: true, label: 'Floor coverage · posted' }
   }
   if (status === 'accepted' || status === 'locked') {
-    return { covered: false, label: 'Pending floor pay' }
+    return { covered: false, label: 'Floor coverage · pending confirm' }
   }
-  if (status === 'submitted') return { covered: false, label: 'Awaiting close review' }
+  if (status === 'submitted') return { covered: false, label: 'Floor coverage · awaiting close review' }
   return { covered: false, label: status || '—' }
 }

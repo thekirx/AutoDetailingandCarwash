@@ -2,6 +2,32 @@
  * Cart line for a queue→POS handoff.
  * Never use the handoff row id as service_id (complete_pos_sale would FK-fail or stamp wrong loyalty).
  */
+
+/** RPC complete_pos_sale only accepts product | service. */
+export function normalizePosLineItemType(itemType) {
+  const t = String(itemType || '').toLowerCase()
+  if (t === 'product') return 'product'
+  // package / detailing / service / unknown catalog kinds → service row with service_id
+  return 'service'
+}
+
+export function isPosServiceLine(line) {
+  return normalizePosLineItemType(line?.item_type) === 'service'
+}
+
+/** Catalog card → cart line: RPC-safe item_type + display kind. */
+export function buildCatalogCartLine(item = {}) {
+  const catalogKind = String(item.catalog_kind || item.item_type || 'service').toLowerCase()
+  const item_type = normalizePosLineItemType(
+    catalogKind === 'product' ? 'product' : 'service',
+  )
+  return {
+    ...item,
+    item_type,
+    catalog_kind: catalogKind === 'product' ? 'product' : catalogKind,
+  }
+}
+
 export function buildHandoffCartLine({ handoff, services = [], amountMinor }) {
   const booking = handoff?.bookings || {}
   const bookingId = booking.id || null
@@ -13,6 +39,7 @@ export function buildHandoffCartLine({ handoff, services = [], amountMinor }) {
   return {
     key: `handoff-${handoff.id}-${bookingId || 'solo'}`,
     item_type: 'service',
+    catalog_kind: 'service',
     id: serviceId,
     name: svc?.name || `Queue · ${booking.vehicle_plate || 'ticket'}`,
     quantity: 1,
@@ -27,14 +54,14 @@ export function buildHandoffCartLine({ handoff, services = [], amountMinor }) {
 
 /** Merch/addons stay on the open queue ticket. A walk-in service starts a new sale. */
 export function keepQueueHandoffWhenAdding(item) {
-  return String(item?.item_type || '') === 'product'
+  return normalizePosLineItemType(item?.item_type) === 'product'
 }
 
 /** complete_pos_sale CHECKs service lines must have service_id. */
 export function posCartBlocksCheckout(cart = []) {
   return (cart || []).some(
     (line) =>
-      String(line?.item_type || '') === 'service' && (Boolean(line.missing_service) || !line.id),
+      isPosServiceLine(line) && (Boolean(line.missing_service) || !line.id),
   )
 }
 
@@ -85,7 +112,7 @@ export function resolveMembershipUnitPrice({
   includedServices = [],
 } = {}) {
   const list = Math.max(Math.floor(Number(listPriceMinor) || 0), 0)
-  if (itemType !== 'service' || isLoyaltyAward) {
+  if (normalizePosLineItemType(itemType) !== 'service' || isLoyaltyAward) {
     return {
       unit_price_minor: isLoyaltyAward ? 0 : list,
       is_membership_included: false,
@@ -133,7 +160,8 @@ export function priceCartForMembership(cart = [], membershipContext = {}) {
     includedServices = [],
   } = membershipContext
 
-  return (cart || []).map((line) => {
+  return (cart || []).map((raw) => {
+    const line = buildCatalogCartLine(raw)
     const list = Math.max(
       Math.floor(Number(line.list_price_minor ?? line.price_minor ?? line.unit_price_minor) || 0),
       0,
@@ -159,6 +187,15 @@ export function priceCartForMembership(cart = [], membershipContext = {}) {
   })
 }
 
+/** True when payment_method is in the configured POS list (fallback: any non-empty). */
+export function isAllowedPosPaymentMethod(method, paymentMethods = []) {
+  const key = String(method || '').trim().toLowerCase()
+  if (!key) return false
+  const list = Array.isArray(paymentMethods) ? paymentMethods : []
+  if (!list.length) return true
+  return list.some((m) => String(m?.value || m || '').trim().toLowerCase() === key)
+}
+
 /** Build complete_pos_sale payload — keep queue handoffs linked to booking completion. */
 export function buildPosSalePayload({ branch, customerId, paymentMethod, cart, activeHandoff, notes }) {
   const note = typeof notes === 'string' ? notes.trim() : ''
@@ -170,19 +207,22 @@ export function buildPosSalePayload({ branch, customerId, paymentMethod, cart, a
     payment_method: paymentMethod,
     status: 'paid',
     notes: note || null,
-    lines: (cart || []).map((line) => ({
-      item_type: line.item_type,
-      // null when handoff has no booking.service_id — never pass a non-service uuid
-      service_id: line.item_type === 'service' && line.id ? line.id : null,
-      product_id: line.item_type === 'product' && line.id ? line.id : null,
-      name: line.name,
-      quantity: line.quantity,
-      unit_price_minor:
-        line.is_loyalty_award || line.is_birthday_award || line.is_membership_included ? 0 : line.unit_price_minor,
-      is_loyalty_award: Boolean(line.is_loyalty_award || line.is_birthday_award),
-      is_birthday_award: Boolean(line.is_birthday_award),
-      is_membership_included: Boolean(line.is_membership_included),
-    })),
+    lines: (cart || []).map((line) => {
+      const item_type = normalizePosLineItemType(line.item_type)
+      return {
+        item_type,
+        // null when handoff has no booking.service_id — never pass a non-service uuid
+        service_id: item_type === 'service' && line.id ? line.id : null,
+        product_id: item_type === 'product' && line.id ? line.id : null,
+        name: line.name,
+        quantity: line.quantity,
+        unit_price_minor:
+          line.is_loyalty_award || line.is_birthday_award || line.is_membership_included ? 0 : line.unit_price_minor,
+        is_loyalty_award: Boolean(line.is_loyalty_award || line.is_birthday_award),
+        is_birthday_award: Boolean(line.is_birthday_award),
+        is_membership_included: Boolean(line.is_membership_included),
+      }
+    }),
   }
 }
 

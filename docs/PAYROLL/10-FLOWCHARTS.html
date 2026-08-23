@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hakum Payroll — Flowcharts</title>
+  <link rel="stylesheet" href="../_assets/flowcharts.css" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script defer src="../_assets/flowcharts.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">Hakum Ops</div>
+      <h1 class="title">Payroll Flowcharts</h1>
+      <p class="subtitle">Interactions, functions, and dataflow — visual reference</p>
+      <div class="nav-label">Diagrams</div>
+      <nav class="nav">
+        <a href="#f1" data-target="f1" class="active">F1 — System context</a>
+        <a href="#f2" data-target="f2">F2 — Floor confirm</a>
+        <a href="#f3" data-target="f3">F3 — Fixed confirm</a>
+        <a href="#f4" data-target="f4">F4 — Wash pool day</a>
+        <a href="#f5" data-target="f5">F5 — Pending vs pay truth</a>
+        <a href="#f6" data-target="f6">F6 — Cash advance paths</a>
+        <a href="#f7" data-target="f7">F7 — Coverage claimed sales</a>
+        <a href="#f8" data-target="f8">F8 — Role access</a>
+        <a href="#f9" data-target="f9">F9 — Preview function map</a>
+      </nav>
+      <div class="meta-links">
+        <a href="./10-FLOWCHARTS.pdf">Download PDF</a><br />
+        <a href="./10-FLOWCHARTS.md">Markdown source</a><br />
+        <a href="./README.md">Payroll docs index</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="intro">
+        <h1>Payroll flowcharts (visual)</h1>
+        <p>
+          Open this file in any browser. Diagrams are rendered live from Mermaid.
+          Source of truth for edits: <code>10-FLOWCHARTS.md</code>.
+        </p>
+      </header>
+
+      <section class="chart-card" id="f1">
+        <div class="chart-header">
+          <h2>F1 — System context</h2>
+          <p>POS, Finance, and Payroll boundaries.</p>
+        </div>
+        <div class="chart-body">
+          <pre class="mermaid">
+flowchart TB
+  subgraph POS
+    Sale[Paid sales]
+    Cer[Ceramic expense drafts]
+    EoS[End of shift]
+  end
+  subgraph Finance
+    Rev[Accept reject lock]
+  end
+  subgraph Payroll
+    Pend[Pending floor reminder]
+    Floor[Floor preview]
+    Fixed[Fixed preview]
+    CA[CA approve]
+    RPC[run_payroll]
+  end
+  Sale --> Floor
+  Cer --> Floor
+  EoS --> Rev
+  Rev --> Pend
+  Pend -.-> Floor
+  Floor --> RPC
+  Fixed --> RPC
+  CA --> EoS
+  CA -.->|broken auto deduct| Floor
+  RPC --> Posted[(payroll_runs confirmed)]
+          </pre>
+        </div>
+      </section>
+
+      <section class="chart-card" id="f2">
+        <div class="chart-header">
+          <h2>F2 — Floor confirm sequence</h2>
+          <p>Preview, confirm, and Postgres writes.</p>
+        </div>
+        <div class="chart-body">
+          <pre class="mermaid">
+sequenceDiagram
+  participant SA as SA or ASA
+  participant UI as PayrollPage
+  participant Eng as buildPayrollPreview
+  participant RPC as run_payroll
+  participant DB as Postgres
+
+  SA->>UI: Period + Run floor
+  UI->>UI: loadProof sales attendance ceramic
+  UI->>Eng: buildPayrollPreview floor
+  Eng-->>UI: proof + lines
+  SA->>UI: Confirm
+  UI->>RPC: buildRunPayrollPayload
+  RPC->>DB: payroll_runs + lines + sales claims
+  RPC->>DB: expenses paid or insert
+  RPC->>DB: audit_logs
+          </pre>
+        </div>
+      </section>
+
+      <section class="chart-card" id="f3">
+        <div class="chart-header">
+          <h2>F3 — Fixed confirm</h2>
+          <p>Package proration through run_payroll.</p>
+        </div>
+        <div class="chart-body">
+          <pre class="mermaid">
+flowchart TD
+  Pkg[(staff_pay_packages)] --> Prorate[prorateMonthlyPackageMinor]
+  Prorate --> Lines[package lines]
+  Adj[Manual commission deduct] --> Lines
+  Lines --> Payload[buildRunPayrollPayload run_kind fixed]
+  Payload --> RPC[run_payroll]
+  RPC --> Runs[(payroll_runs fixed)]
+          </pre>
+        </div>
+      </section>
+
+      <section class="chart-card" id="f4">
+        <div class="chart-header">
+          <h2>F4 — Wash pool day</h2>
+          <p>Sales, attendance weights, and split.</p>
+        </div>
+        <div class="chart-body">
+          <pre class="mermaid">
+flowchart LR
+  Sales[Paid sales that day] --> Wash[washPoolAmountMinor]
+  Wash --> Pool[times wash_pool_pct]
+  Att[Attendance present late] --> W[attendanceWeight]
+  Pool --> Split[splitWashPool]
+  W --> Split
+  Split --> Lines[wash_pool lines]
+          </pre>
+        </div>
+      </section>
+
+      <section class="chart-card" id="f5">
+        <div class="chart-header">
+          <h2>F5 — Pending vs pay truth</h2>
+          <p>Close attestation vs paid POS proof.</p>
+        </div>
+        <div class="chart-body">
+          <pre class="mermaid">
+flowchart TB
+  subgraph Attestation[Does NOT pay]
+    Close[shift_close submitted PHP]
+    Close --> Pend[Pending queue display]
+  end
+  subgraph Proof[Pays people]
+    PS[Paid POS wash lines]
+    ATT[Attendance]
+    CER[Ceramic keys]
+    PS --> Prev[buildPayrollPreview]
+    ATT --> Prev
+    CER --> Prev
+    Prev --> Run[run_payroll]
+  end
+  Pend -.->|nudge only| Prev
+          </pre>
+        </div>
+      </section>
+
+      <section class="chart-card" id="f6">
+        <div class="chart-header">
+          <h2>F6 — Cash advance paths</h2>
+          <p>Approve, close, and broken auto-deduct.</p>
+        </div>
+        <div class="chart-body">
+          <pre class="mermaid">
+flowchart TD
+  Form[ops form cash_advance] --> Sub[ops_form_submissions]
+  Sub --> Panel[Payroll CA panel]
+  Panel -->|resolved| Close[POS End of shift expenses]
+  Panel -->|auto deduct setting| Broken[Broken load approved + no staff_id]
+  Broken -.->|should| Deduct[adjustment_deduct on preview]
+  Manual[Manual wizard deduct] --> Preview[Floor or fixed lines]
+          </pre>
+        </div>
+      </section>
+
+      <section class="chart-card" id="f7">
+        <div class="chart-header">
+          <h2>F7 — Coverage claimed sales</h2>
+          <p>How confirmed runs clear pending days.</p>
+        </div>
+        <div class="chart-body">
+          <pre class="mermaid">
+flowchart TD
+  Run[Confirmed floor run] --> Sales{payroll_run_sales length?}
+  Sales -->|yes| Days[Cover only sale business_dates]
+  Sales -->|no| Period[Cover full period_start to end]
+  Days --> Pend[Pending drops matching close days]
+  Period --> Pend
+          </pre>
+        </div>
+      </section>
+
+      <section class="chart-card" id="f8">
+        <div class="chart-header">
+          <h2>F8 — Role access</h2>
+          <p>Who can see register vs My Pay.</p>
+        </div>
+        <div class="chart-body">
+          <pre class="mermaid">
+flowchart LR
+  SA[Super Admin] --> Reg[Payroll register]
+  ASA[ASA finance_view] --> Reg
+  ASAW[ASA finance_write] --> Confirm[Confirm and CA]
+  BA[Branch Admin] --> MyPay[My Pay only]
+  TL[Team Lead] --> MyPay
+  Crew[Crew] --> MyPay
+          </pre>
+        </div>
+      </section>
+
+      <section class="chart-card" id="f9">
+        <div class="chart-header">
+          <h2>F9 — Function map (preview)</h2>
+          <p>loadProof through run_payroll.</p>
+        </div>
+        <div class="chart-body">
+          <pre class="mermaid">
+flowchart TD
+  load[loadProof] --> prev[buildPayrollPreview]
+  prev --> wash[washPoolAmountMinor + splitWashPool]
+  prev --> cer[parseCeramicKey + splitAmount]
+  prev --> pkg[prorateMonthlyPackageMinor]
+  prev --> ca[CA deduct if flag]
+  prev --> block[payrollBlocksConfirm]
+  block --> payload[buildRunPayrollPayload]
+  payload --> rpc[run_payroll]
+          </pre>
+        </div>
+      </section>
+
+      <p class="footer-note">
+        Last synced with <code>10-FLOWCHARTS.md</code> — 2026-08-22. Re-audit steps are in the markdown file.
+      </p>
+    </main>
+  </div>
+</body>
+</html>

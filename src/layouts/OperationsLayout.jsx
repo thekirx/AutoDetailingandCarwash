@@ -17,6 +17,7 @@ import {
   LineChart,
   ListChecks,
   LogOut,
+  Map,
   Menu,
   MessageSquare,
   Package,
@@ -114,6 +115,7 @@ const iconMap = {
   Newspaper,
   Star,
   Banknote,
+  Map,
 }
 
 function formatRole(role) {
@@ -121,6 +123,7 @@ function formatRole(role) {
   if (role === 'BossMich') return 'Super Admin'
   if (role === 'assistant_super_admin') return 'Assistant Super Admin'
   if (role === 'admin') return 'Branch Admin'
+  if (role === 'operations_lead') return 'Operations Lead'
   if (role === 'staff') return 'Crew'
   if (role === 'marketing') return 'Marketing'
   if (role === 'detailer') return 'Detailer'

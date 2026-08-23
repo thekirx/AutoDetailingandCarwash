@@ -104,6 +104,10 @@ describe('compensation engine', () => {
       ceramic_detailer_split_pct: 12,
       payout_frequency: 'semimonthly',
       payout_weekday: 5,
+      attendance_present_weight: 1,
+      attendance_late_weight: 0.7,
+      pending_floor_optional: false,
+      cash_advance_auto_deduct: false,
     })
     assert.equal(normalizeCompensationSettings(null).wash_pool_pct, 35)
   })

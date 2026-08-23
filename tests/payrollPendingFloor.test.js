@@ -56,6 +56,28 @@ describe('pending floor payroll from shift closes', () => {
     assert.equal(queue.groups[0].period_end, '2026-08-20')
   })
 
+  it('covers a day only when claimed sales hit that business date', () => {
+    const run = {
+      branch: 'bacoor',
+      period_start: '2026-08-18',
+      period_end: '2026-08-20',
+      status: 'confirmed',
+      run_kind: 'floor',
+      payroll_run_sales: [{ branch: 'bacoor', business_date: '2026-08-18', sale_id: 's1' }],
+    }
+    assert.equal(floorPayrollCoversDay(run, '2026-08-18', 'bacoor'), true)
+    assert.equal(floorPayrollCoversDay(run, '2026-08-19', 'bacoor'), false)
+    const queue = buildPendingFloorPayrollQueue({
+      closes: [
+        { id: '1', branch: 'bacoor', business_date: '2026-08-18', status: 'accepted', submitted: { total_sales_minor: 1 } },
+        { id: '2', branch: 'bacoor', business_date: '2026-08-19', status: 'accepted', submitted: { total_sales_minor: 1 } },
+      ],
+      runs: [run],
+    })
+    assert.equal(queue.ready_day_count, 1)
+    assert.equal(queue.days[0].business_date, '2026-08-19')
+  })
+
   it('does not treat fixed salary as covering floor days', () => {
     assert.equal(
       floorPayrollCoversDay(
@@ -77,7 +99,7 @@ describe('pending floor payroll from shift closes', () => {
 
   it('labels finance coverage for reporting', () => {
     const close = { branch: 'bacoor', business_date: '2026-08-19', status: 'accepted' }
-    assert.equal(shiftClosePayrollCoverage(close, []).label, 'Pending floor pay')
+    assert.equal(shiftClosePayrollCoverage(close, []).label, 'Floor coverage · pending confirm')
     assert.equal(
       shiftClosePayrollCoverage(close, [
         {
@@ -113,6 +135,7 @@ describe('pending floor payroll from shift closes', () => {
     assert.match(page, /buildPendingFloorPayrollQueue/)
     assert.match(page, /Pending floor pay/)
     assert.match(page, /startAccumulatedFloorPay/)
+    assert.match(page, /floorConfirmBlockedByPendingCloses/)
     const mig = readFileSync(
       join(root, 'supabase/migrations/20260821170000_payroll_run_kind_pending_floor.sql'),
       'utf8',
@@ -122,6 +145,6 @@ describe('pending floor payroll from shift closes', () => {
     assert.match(mig, /shift_close_reports_pending_payroll_idx/)
     const finance = readFileSync(join(root, 'src/pages/finance/FinanceShiftCloseTab.jsx'), 'utf8')
     assert.match(finance, /shiftClosePayrollCoverage/)
-    assert.match(finance, /Floor pay/)
+    assert.match(finance, /Floor coverage/)
   })
 })

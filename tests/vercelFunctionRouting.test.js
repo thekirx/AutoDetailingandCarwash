@@ -18,6 +18,7 @@ const expected = {
   '/api/notify-ops-form': '/api/notifications?operation=notify-ops-form',
   '/api/notify-planner': '/api/notifications?operation=notify-planner',
   '/api/notify-pos': '/api/notifications?operation=notify-pos',
+  '/api/notify-shift-close': '/api/notifications?operation=notify-shift-close',
   '/api/notification-broadcast': '/api/notifications?operation=notification-broadcast',
   '/api/notification-broadcast-kinds': '/api/notifications?operation=notification-broadcast-kinds',
   '/api/notification-templates': '/api/notifications?operation=notification-templates',

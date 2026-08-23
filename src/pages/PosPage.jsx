@@ -2,23 +2,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
 import { Cake, Gift, Link2, LogOut, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { allowRoute, canAccessPos, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
+import { allowRoute, canAccessPos, canAccessSettings, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { buildPosSalePayload, buildVisitHandoffCartLines, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership } from '@/lib/posSale'
+import { buildPosSalePayload, buildVisitHandoffCartLines, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
-import { approvedCaForCloseDay, buildBacoorDailyReport, formatBacoorReportText } from '@/lib/bacoorDailyReport'
+import { approvedCaForCloseDay, formatBacoorReportText } from '@/lib/bacoorDailyReport'
+import { buildShopDaySettlementReport, shopDayShouldClose } from '@/lib/shopDaySettlement'
 import {
+  applyCaCollectedToCashLeft,
   canSubmitShiftClose,
   datetimeLocalToIso,
   moneySnapshotFromReport,
   parsePesosToMinor,
+  shiftCloseValidationBaseline,
   toDatetimeLocalValue,
   validateShiftCloseSubmit,
   SHIFT_CLOSE_MONEY_KEYS,
@@ -34,6 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { PAYMENT_METHODS } from '@/lib/paymentMethods'
+import { normalizePosSettings, DEFAULT_POS_EXPENSE_KINDS } from '@/lib/posSettings'
 import { accumulatePosCategoryTotals, emptyPosCategoryTotals, MERCH_FAMILIES, paidSalesToBacoorRows, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
 import { collectPaged } from '@/lib/crmInsights'
 import {
@@ -44,18 +48,6 @@ import {
   computeCeramicPay,
   effectiveCeramicToggles,
 } from '@/lib/compensation'
-
-const PAYMENT_OPTIONS = PAYMENT_METHODS
-
-const EXPENSE_KINDS = [
-  { value: 'daily', label: 'Daily expense' },
-  { value: 'salary_carwash', label: 'Carwash salary' },
-  { value: 'salary_detailer', label: 'Detailer salary' },
-  { value: 'salary_tinter', label: 'Tinter salary' },
-  { value: 'monthly', label: 'Monthly expense' },
-  { value: 'other_branch', label: 'Other branch expense' },
-  { value: 'other', label: 'Other' },
-]
 
 const SHELL_TABS = ['checkout', 'pending', 'expenses', 'dashboard']
 
@@ -85,6 +77,13 @@ export default function PosPage() {
   useEffect(() => {
     if (branchAdmin && tab !== 'merch') setTab('merch')
   }, [branchAdmin, tab])
+
+  useEffect(() => {
+    if (!paymentOptions.length) return
+    if (!isAllowedPosPaymentMethod(paymentMethod, paymentOptions)) {
+      setPaymentMethod(paymentOptions[0].value)
+    }
+  }, [paymentOptions, paymentMethod])
   const [cart, setCart] = useState([])
   const [branch, setBranch] = useState(assignedBranch)
   const [branches, setBranches] = useState([])
@@ -101,6 +100,8 @@ export default function PosPage() {
   const [saving, setSaving] = useState(false)
   const [compToggles, setCompToggles] = useState({ freeShirt: false, cardPayment: false, crewAssisted: true, detailerAssigned: false })
   const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
+  const [paymentOptions, setPaymentOptions] = useState(() => PAYMENT_METHODS.map((m) => ({ ...m })))
+  const [expenseKinds, setExpenseKinds] = useState(() => DEFAULT_POS_EXPENSE_KINDS.map((k) => ({ ...k })))
   const [todayStats, setTodayStats] = useState(null)
   const [todaySales, setTodaySales] = useState([])
   const [categoryTotals, setCategoryTotals] = useState(emptyPosCategoryTotals())
@@ -127,6 +128,7 @@ export default function PosPage() {
 
   // Approved cash advances for daily / shift-close report (approve on Payroll)
   const [approvedCas, setApprovedCas] = useState([])
+  const [todayAttendance, setTodayAttendance] = useState([])
 
   const membershipContext = useMemo(
     () => ({
@@ -162,7 +164,7 @@ export default function PosPage() {
     const startIso = `${today}T00:00:00+08:00`
     const endIso = `${today}T23:59:59.999+08:00`
     let saleRows = []
-    const [svc, prod, stats, handoffRes, compRes] = await Promise.all([
+    const [svc, prod, stats, handoffRes, compRes, posSettingsRes] = await Promise.all([
       supabase
         .from('services')
         .select('id, name, slug, description, pay_category, price_minor, included_service_ids, service_size_prices(size_slug, price_minor)')
@@ -187,6 +189,7 @@ export default function PosPage() {
         )
         .eq('id', 1)
         .maybeSingle(),
+      supabase.from('ops_pos_settings').select('payment_methods, expense_kinds').eq('id', 1).maybeSingle(),
     ])
     try {
       saleRows = await collectPaged(async (from, to) => {
@@ -213,6 +216,11 @@ export default function PosPage() {
     if (handoffRes.error) toast.error(handoffRes.error.message)
     if (compRes.error) toast.error(compRes.error.message)
     else setCompRules(normalizeCompensationSettings(compRes.data))
+    if (!posSettingsRes.error && posSettingsRes.data) {
+      const normalized = normalizePosSettings(posSettingsRes.data)
+      setPaymentOptions(normalized.payment_methods)
+      setExpenseKinds(normalized.expense_kinds)
+    }
     setServices(
       (svc.data || []).map((row) => ({
         ...row,
@@ -269,6 +277,14 @@ export default function PosPage() {
     if (assignedBranch && branch !== assignedBranch) setBranch(assignedBranch)
   }, [assignedBranch, branchLocked, branch])
 
+  useEffect(() => {
+    setCart([])
+    setActiveHandoff(null)
+    setShiftOverrides({})
+    setShiftReasons({})
+    setShiftFieldErrors({})
+  }, [branch])
+
   const loadExpenses = useCallback(async () => {
     if (!branch) return
     const today = getLocalCalendarDate()
@@ -303,6 +319,22 @@ export default function PosPage() {
     setApprovedCas((data || []).filter(inScope).filter((row) => approvedCaForCloseDay(row, today)))
   }, [branch, profile])
 
+  const loadTodayAttendance = useCallback(async () => {
+    if (!branch) return
+    const today = getLocalCalendarDate()
+    const { data, error } = await supabase
+      .from('staff_attendance')
+      .select('staff_id, branch_slug, attendance_date, status, staff_profiles(id, full_name, role)')
+      .eq('branch_slug', branch)
+      .eq('attendance_date', today)
+      .limit(200)
+    if (error) {
+      setTodayAttendance([])
+      return
+    }
+    setTodayAttendance(data || [])
+  }, [branch])
+
   const loadRef = useRef(load)
   loadRef.current = load
   const expensesRef = useRef(loadExpenses)
@@ -315,6 +347,7 @@ export default function PosPage() {
     load()
     loadExpenses()
     loadApprovedCashAdvances()
+    loadTodayAttendance()
     const channel = supabase
       .channel(`pos-${branch}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales', filter: `branch=eq.${branch}` }, scheduleReload)
@@ -326,7 +359,7 @@ export default function PosPage() {
       scheduleExpenses.cancel()
       supabase.removeChannel(channel)
     }
-  }, [load, loadExpenses, loadApprovedCashAdvances, branch, scheduleReload, scheduleExpenses])
+  }, [load, loadExpenses, loadApprovedCashAdvances, loadTodayAttendance, branch, scheduleReload, scheduleExpenses])
 
   const bayItems = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -341,7 +374,8 @@ export default function PosPage() {
         const price_minor = resolveServicePriceMinor(s, 'medium')
         return {
           key: `service-${s.id}`,
-          item_type: kind === 'package' ? 'package' : 'service',
+          item_type: 'service',
+          catalog_kind: kind === 'package' ? 'package' : 'service',
           id: s.id,
           name: s.name,
           pay_category: s.pay_category,
@@ -368,7 +402,8 @@ export default function PosPage() {
         const price_minor = resolveServicePriceMinor(s, 'medium')
         return {
           key: `service-${s.id}`,
-          item_type: 'detailing',
+          item_type: 'service',
+          catalog_kind: 'detailing',
           id: s.id,
           name: s.name,
           pay_category: s.pay_category,
@@ -576,7 +611,7 @@ export default function PosPage() {
     setGuestPhone('')
     setCustomerSearch('')
     setCustomerHits([])
-    setTab(branchAdmin ? 'merch' : 'services')
+    setTab(branchAdmin ? 'merch' : 'bay')
     let siblings = []
     if (booking.visit_group_id) {
       const { data } = await supabase
@@ -638,6 +673,10 @@ export default function PosPage() {
     if (!cart.length || !branch) return
     if (posCartBlocksCheckout(cart)) {
       toast.error('This queue ticket has no linked service. Ask a Team Lead to set the service on the booking, then send it to payment again.')
+      return
+    }
+    if (!isAllowedPosPaymentMethod(paymentMethod, paymentOptions)) {
+      toast.error('Choose a payment method from the list.')
       return
     }
     setSaving(true)
@@ -827,6 +866,19 @@ export default function PosPage() {
   }
 
   function openEndOfShift() {
+    if (
+      !shopDayShouldClose({
+        sales: todaySales,
+        expenses: todayExpenses,
+        cashAdvances: approvedCas.map((r) => ({
+          amount_minor: Number(r.payload?.amount || 0) * 100,
+        })),
+        caRepayments: dailyReportData?.ca_repayments,
+      })
+    ) {
+      toast.message('Nothing to close today — no paid sales, expenses, or cash advances')
+      return
+    }
     setShiftCloseMode(true)
     setShiftOverrides({})
     setShiftReasons({})
@@ -871,8 +923,10 @@ export default function PosPage() {
         submitted[key] = parsed
       }
     }
+    Object.assign(submitted, applyCaCollectedToCashLeft(baseline, submitted))
+    const validationBaseline = shiftCloseValidationBaseline(dailyReportData, submitted)
     const check = validateShiftCloseSubmit({
-      baseline,
+      baseline: validationBaseline,
       submitted,
       reasons: shiftReasons,
       fieldConfig: shiftFieldConfig,
@@ -929,38 +983,24 @@ export default function PosPage() {
       </div>
 
       {handoffs.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Waiting for payment</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {branchAdmin
-                ? 'Cars from the queue — open one to take payment.'
-                : 'Tickets from the floor — open one to close the visit.'}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+          <div>
+            <p className="font-medium">
+              {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} waiting for payment
             </p>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            {handoffs.map((row) => {
-              const booking = row.bookings || {}
-              return (
-                <button
-                  key={row.id}
-                  type="button"
-                  onClick={() => loadHandoff(row)}
-                  className="planner-ticket min-h-[88px] rounded-xl border border-border bg-background p-4 text-left transition hover:border-primary/50 hover:bg-accent/30"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium">{booking.customer_name || 'Customer'}</p>
-                    <Badge variant="secondary">
-                      {booking.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{booking.vehicle_plate || '—'}</p>
-                  <p className="mt-3 text-xl font-semibold tabular-nums">{formatMoney(row.amount_minor || booking.final_price_minor || 0)}</p>
-                </button>
-              )
-            })}
-          </CardContent>
-        </Card>
+            <p className="text-sm text-muted-foreground">Open Pay queue to settle floor handoffs.</p>
+          </div>
+          <Button
+            type="button"
+            className="min-h-11"
+            onClick={() => {
+              setShellTab('pending')
+              setSearchParams({ tab: 'pending' }, { replace: true })
+            }}
+          >
+            Open Pay queue
+          </Button>
+        </div>
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -1081,25 +1121,21 @@ export default function PosPage() {
   )
 
   const dailyReportData = useMemo(() => {
-    return buildBacoorDailyReport({
-      branch: branch || '',
+    return buildShopDaySettlementReport({
+      branchSlug: branch || '',
+      branchDisplay: branchLabel || branch || '',
       date: getLocalCalendarDate(),
-      sales: paidSalesToBacoorRows(todaySales),
-      classifyBucket: (row) => row.bucket,
-      expenses: todayExpenses.filter(expenseCountsOnDailyClose).map((e) => ({
-        expense_kind: e.expense_kind,
-        amount_minor: e.total_minor,
-        label: e.title,
-        status: e.status,
-        description: e.description,
-      })),
+      sales: todaySales,
+      expenses: todayExpenses,
       cashAdvances: approvedCas.map((r) => ({
         status: 'approved',
         amount_minor: Number(r.payload?.amount || 0) * 100,
         employee_name: r.payload?.employee_name || r.respondent_label || 'Employee',
       })),
+      attendance: todayAttendance,
+      rules: compRules,
     })
-  }, [branch, todaySales, todayExpenses, approvedCas])
+  }, [branch, branchLabel, todaySales, todayExpenses, approvedCas, todayAttendance, compRules])
 
   const pendingBody = (
     <div className="mt-4 flex flex-col gap-4">
@@ -1174,7 +1210,7 @@ export default function PosPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {EXPENSE_KINDS.map((k) => (
+                  {expenseKinds.map((k) => (
                     <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1204,7 +1240,7 @@ export default function PosPage() {
                   <div>
                     <p className="font-medium">{row.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {EXPENSE_KINDS.find((k) => k.value === row.expense_kind)?.label || row.expense_kind}
+                      {expenseKinds.find((k) => k.value === row.expense_kind)?.label || row.expense_kind}
                       {' · '}
                       {new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
@@ -1278,6 +1314,11 @@ export default function PosPage() {
           </p>
         </div>
         <div className="hakum-pos-head-actions">
+          {canAccessSettings(profile) ? (
+            <Button type="button" variant="outline" className="min-h-11" asChild>
+              <Link to="/operations/settings/pos">POS settings</Link>
+            </Button>
+          ) : null}
           {canSubmitShiftClose(profile) ? (
             <Button
               type="button"
@@ -1424,7 +1465,7 @@ export default function PosPage() {
                       ) : (
                         formatMoney(line.unit_price_minor)
                       )}{' '}
-                      · {line.item_type}
+                      · {line.catalog_kind || line.item_type}
                       {line.is_loyalty_award ? ' · loyalty' : ''}
                       {line.is_membership_included ? ' · member include' : ''}
                       {line.membership_discount_applied ? ' · member discount' : ''}
@@ -1565,7 +1606,7 @@ export default function PosPage() {
                   <SelectValue placeholder="Payment" />
                 </SelectTrigger>
                 <SelectContent>
-                  {PAYMENT_OPTIONS.map((opt) => (
+                  {paymentOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </SelectItem>
@@ -1574,6 +1615,7 @@ export default function PosPage() {
               </Select>
             </div>
 
+            {ceramicPreview ? (
             <div className="space-y-2 rounded-xl border border-border bg-muted/25 p-3">
               <p className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Compensation toggles</p>
               {[
@@ -1596,16 +1638,13 @@ export default function PosPage() {
                   {t.label}
                 </label>
               ))}
-              {ceramicPreview ? (
-                <p className="text-xs tabular-nums text-muted-foreground">
-                  Crew {formatMoney(ceramicPreview.crew_minor)}
-                  {' · '}
-                  Detailer {formatMoney(ceramicPreview.detailer_minor)} posts as Finance drafts on pay
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">Applies when the cart has detailing / coating lines.</p>
-              )}
+              <p className="text-xs tabular-nums text-muted-foreground">
+                Crew {formatMoney(ceramicPreview.crew_minor)}
+                {' · '}
+                Detailer {formatMoney(ceramicPreview.detailer_minor)} posts as Finance drafts on pay
+              </p>
             </div>
+            ) : null}
           </div>
 
           <div className="pos-checkout-footer mt-auto space-y-3 border-t border-border px-5 py-4">
@@ -1662,7 +1701,7 @@ function CatalogGrid({ items, onAdd, empty, birthdayPerk }) {
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-lg">{item.name}</CardTitle>
-                    <Badge variant="secondary">{item.item_type}</Badge>
+                    <Badge variant="secondary">{item.catalog_kind || item.item_type}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>

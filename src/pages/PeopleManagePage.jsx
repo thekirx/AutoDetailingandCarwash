@@ -37,6 +37,7 @@ import { validateRoleDefinition, BASELINE_TEMPLATES } from '@/lib/roleDefinition
 const ROLE_LABELS = {
   admin: 'Admin',
   assistant_super_admin: 'Assistant Super Admin',
+  operations_lead: 'Operations Lead',
   team_lead: 'Team Lead',
   staff: 'Staff',
   sales: 'Sales',
@@ -135,6 +136,7 @@ export default function PeopleManagePage() {
       return [
         { value: 'admin', label: 'Admin (multi-branch)' },
         { value: 'assistant_super_admin', label: 'Assistant Super Admin' },
+        { value: 'operations_lead', label: 'Operations Lead (all branches)' },
         ...base,
         { value: 'detailer', label: 'Detailer' },
         { value: 'sales', label: 'Sales (form bookings)' },
@@ -184,7 +186,7 @@ export default function PeopleManagePage() {
         branch_slug: needsBranch ? slugs[0] || form.branch_slug || null : null,
         branch_slugs: needsBranch ? slugs : [],
         permission_grants: form.role === ROLES.ASSISTANT_SUPER_ADMIN ? form.permission_grants : {},
-        attendance_enabled: form.attendance_enabled,
+        attendance_enabled: form.role === 'operations_lead' ? false : form.attendance_enabled,
         geofence_enabled: form.geofence_enabled,
         employment_type: form.employment_type,
       })
@@ -366,7 +368,16 @@ export default function PeopleManagePage() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Role</Label>
-                <Select value={form.role} onValueChange={(role) => setForm((f) => ({ ...f, role }))}>
+                <Select
+                  value={form.role}
+                  onValueChange={(role) =>
+                    setForm((f) => ({
+                      ...f,
+                      role,
+                      attendance_enabled: role === 'operations_lead' ? false : f.attendance_enabled,
+                    }))
+                  }
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {roleOptions.map((opt) => (

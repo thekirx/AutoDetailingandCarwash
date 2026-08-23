@@ -103,6 +103,10 @@ function provisionApiPlugin() {
         const { handleNotifyPosRequest } = await import('./server/notifyPosApi.mjs')
         return handleNotifyPosRequest(req, res)
       })
+      mount('/api/notify-shift-close', async (req, res) => {
+        const { handleNotifyShiftCloseRequest } = await import('./server/notifyShiftCloseApi.mjs')
+        return handleNotifyShiftCloseRequest(req, res)
+      })
       mount('/api/lifecycle-sms', async (req, res) => {
         const { handleLifecycleSmsRequest } = await import('./server/lifecycleSmsApi.mjs')
         return handleLifecycleSmsRequest(req, res)

@@ -32,6 +32,48 @@ describe('POS checkout workflow seam', () => {
     )
   })
 
+  it('blocks pay when a package/detailing line has no service_id (normalized as service)', () => {
+    assert.equal(
+      posCartBlocksCheckout([{ item_type: 'package', id: null, missing_service: true }]),
+      true,
+    )
+    assert.equal(posCartBlocksCheckout([{ item_type: 'detailing', id: 'svc-d1' }]), false)
+  })
+
+  it('normalizes package and detailing cart lines to service for complete_pos_sale', async () => {
+    const { buildPosSalePayload, normalizePosLineItemType } = await import('../src/lib/posSale.js')
+    assert.equal(normalizePosLineItemType('package'), 'service')
+    assert.equal(normalizePosLineItemType('detailing'), 'service')
+    assert.equal(normalizePosLineItemType('product'), 'product')
+    const payload = buildPosSalePayload({
+      branch: 'bacoor',
+      paymentMethod: 'cash',
+      cart: [
+        { item_type: 'package', id: 'pkg-1', name: 'Express', quantity: 1, unit_price_minor: 50000 },
+        { item_type: 'detailing', id: 'det-1', name: 'Ceramic', quantity: 1, unit_price_minor: 900000 },
+      ],
+    })
+    assert.deepEqual(
+      payload.lines.map((l) => ({ item_type: l.item_type, service_id: l.service_id, product_id: l.product_id })),
+      [
+        { item_type: 'service', service_id: 'pkg-1', product_id: null },
+        { item_type: 'service', service_id: 'det-1', product_id: null },
+      ],
+    )
+  })
+
+  it('handoff after pay uses bay catalog tab not legacy services', () => {
+    const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
+    assert.match(pos, /setTab\(branchAdmin \? 'merch' : 'bay'\)/)
+    assert.doesNotMatch(pos, /setTab\(branchAdmin \? 'merch' : 'services'\)/)
+  })
+
+  it('Sell tab links to Pay queue instead of duplicating handoff cards', () => {
+    const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
+    assert.match(pos, /Open Pay queue/)
+    assert.doesNotMatch(pos, /Waiting for payment/)
+  })
+
   it('cash advance inbox is fail-closed: kind + branch, never empty-branch leak', () => {
     const ca = (branch) => ({
       ops_forms: { kind: 'cash_advance' },
