@@ -19,6 +19,7 @@ const expected = {
   '/api/notify-planner': '/api/notifications?operation=notify-planner',
   '/api/notify-pos': '/api/notifications?operation=notify-pos',
   '/api/notify-shift-close': '/api/notifications?operation=notify-shift-close',
+  '/api/notify-ops-lab': '/api/notifications?operation=notify-ops-lab',
   '/api/notification-broadcast': '/api/notifications?operation=notification-broadcast',
   '/api/notification-broadcast-kinds': '/api/notifications?operation=notification-broadcast-kinds',
   '/api/notification-templates': '/api/notifications?operation=notification-templates',

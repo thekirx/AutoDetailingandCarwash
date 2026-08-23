@@ -507,7 +507,7 @@ export function canEditPlanning(profile) {
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'planning_edit')
 }
 
-/** Shared Miro-style roadmap / suggestions board. */
+/** Ops Lab — plans / roadmaps / solutions board (SA · ASA · BA · Operations Lead). */
 export function canAccessOpsRoadmap(profile) {
   if (!profile?.role) return false
   return (
@@ -742,7 +742,7 @@ export function getOperationsNav(profile) {
       nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
       nav('Reviews', '/operations/reviews', 'Star', 'customers'),
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
-      nav('Roadmap', '/operations/roadmap', 'Map', 'work'),
+      nav('Ops Lab', '/operations/roadmap', 'Map', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
       nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
       nav('Audit', '/operations/audit', 'ScrollText', 'company'),
@@ -759,7 +759,7 @@ export function getOperationsNav(profile) {
       nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
       nav('Reviews', '/operations/reviews', 'Star', 'customers'),
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
-      nav('Roadmap', '/operations/roadmap', 'Map', 'work'),
+      nav('Ops Lab', '/operations/roadmap', 'Map', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
       nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
       nav('Finance', '/operations/finance', 'Wallet', 'books'),
@@ -843,7 +843,7 @@ export function getOperationsNav(profile) {
     items.push(nav('Planner', '/operations/planning', 'Columns3', 'work'))
   }
   if (canAccessOpsRoadmap(profile)) {
-    items.push(nav('Roadmap', '/operations/roadmap', 'Map', 'work'))
+    items.push(nav('Ops Lab', '/operations/roadmap', 'Map', 'work'))
   }
   if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF) {
     items.push(nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'))
@@ -916,7 +916,7 @@ export function getBranchAdminMore(profile) {
     more.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
   }
   if (canAccessOpsRoadmap(profile)) {
-    more.push({ label: 'Roadmap', to: '/operations/roadmap', icon: 'Map' })
+    more.push({ label: 'Ops Lab', to: '/operations/roadmap', icon: 'Map' })
   }
   return more
 }

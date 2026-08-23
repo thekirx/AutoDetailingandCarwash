@@ -38,6 +38,7 @@ export function opsRouteKeyFromPath(pathname) {
   if (path.startsWith('/operations/crm')) return 'crm'
   if (path.startsWith('/operations/bookings')) return 'bookings'
   if (path.startsWith('/operations/planning')) return 'planning'
+  if (path.startsWith('/operations/roadmap')) return 'roadmap'
   if (path.startsWith('/operations/settings')) return 'settings'
   if (path.startsWith('/operations/reports')) return 'reports'
   if (path.startsWith('/operations/memberships')) return 'memberships'
