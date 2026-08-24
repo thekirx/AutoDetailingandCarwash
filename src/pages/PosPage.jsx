@@ -38,7 +38,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { PAYMENT_METHODS } from '@/lib/paymentMethods'
 import { normalizePosSettings, DEFAULT_POS_EXPENSE_KINDS } from '@/lib/posSettings'
-import { accumulatePosCategoryTotals, emptyPosCategoryTotals, MERCH_FAMILIES, paidSalesToBacoorRows, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
+import { accumulatePosCategoryTotals, emptyPosCategoryTotals, MERCH_FAMILIES, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
+import { getAccessTokenFresh } from '@/lib/authToken'
 import { collectPaged } from '@/lib/crmInsights'
 import {
   DEFAULT_COMPENSATION_RULES,
@@ -818,6 +819,23 @@ export default function PosPage() {
     load()
   }
 
+  const dailyReportData = useMemo(() => {
+    return buildShopDaySettlementReport({
+      branchSlug: branch || '',
+      branchDisplay: branchLabel || branch || '',
+      date: getLocalCalendarDate(),
+      sales: todaySales,
+      expenses: todayExpenses,
+      cashAdvances: approvedCas.map((r) => ({
+        status: 'approved',
+        amount_minor: Number(r.payload?.amount || 0) * 100,
+        employee_name: r.payload?.employee_name || r.respondent_label || 'Employee',
+      })),
+      attendance: todayAttendance,
+      rules: compRules,
+    })
+  }, [branch, branchLabel, todaySales, todayExpenses, approvedCas, todayAttendance, compRules])
+
   if (!canAccessPos(profile)) return <Navigate to="/operations/access-denied" replace />
 
   const catalogTab = branchAdmin ? 'merch' : tab
@@ -1122,23 +1140,6 @@ export default function PosPage() {
     </div>
   )
 
-  const dailyReportData = useMemo(() => {
-    return buildShopDaySettlementReport({
-      branchSlug: branch || '',
-      branchDisplay: branchLabel || branch || '',
-      date: getLocalCalendarDate(),
-      sales: todaySales,
-      expenses: todayExpenses,
-      cashAdvances: approvedCas.map((r) => ({
-        status: 'approved',
-        amount_minor: Number(r.payload?.amount || 0) * 100,
-        employee_name: r.payload?.employee_name || r.respondent_label || 'Employee',
-      })),
-      attendance: todayAttendance,
-      rules: compRules,
-    })
-  }, [branch, branchLabel, todaySales, todayExpenses, approvedCas, todayAttendance, compRules])
-
   const pendingBody = (
     <div className="mt-4 flex flex-col gap-4">
       {handoffs.length === 0 ? (
@@ -1230,7 +1231,7 @@ export default function PosPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Today's expenses · {branchLabel}</CardTitle>
+          <CardTitle className="text-lg">Today&apos;s expenses · {branchLabel}</CardTitle>
         </CardHeader>
         <CardContent>
           {todayExpenses.length === 0 ? (
