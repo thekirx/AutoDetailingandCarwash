@@ -3,18 +3,33 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Download, FileSpreadsheet, FileText, Users, Wrench, ShoppingCart, ClipboardCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
 import { canAccessInquiries } from '@/auth/permissions'
 import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
-import { downloadCsv, downloadExcel, printAsPdf, retentionBuckets, rollupRetentionByCustomer, salesByBranch, salesByDay, scopeBranch, branchScopeList } from '@/lib/financeData'
+import {
+  downloadCsv,
+  downloadExcel,
+  formatFinanceWindow,
+  printAsPdf,
+  retentionBuckets,
+  rollupRetentionByCustomer,
+  salesByBranch,
+  salesByDay,
+  scopeBranch,
+  branchScopeList,
+} from '@/lib/financeData'
+import {
+  FinanceMetricCell,
+  FinanceMetricStrip,
+  FinancePanel,
+  FinanceTabSkeleton,
+} from './FinanceChrome'
 
 export default function FinanceReportsTab({
   salesRows,
-  branchOptions,
   range,
   loading,
   profile,
@@ -188,14 +203,25 @@ export default function FinanceReportsTab({
     [],
   )
 
-  const subtitle = `${range.start} to ${range.end}`
+  const subtitle = formatFinanceWindow(range.start, range.end)
+  const salesTotal = useMemo(
+    () => salesByDayRows.reduce((s, r) => s + r.total_sales_minor, 0),
+    [salesByDayRows],
+  )
 
-  if (loading) return <ReportsSkeleton />
+  if (loading) return <FinanceTabSkeleton metrics={4} lines={4} />
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="finance-dash flex flex-col gap-5">
+      <FinanceMetricStrip label="Report snapshot">
+        <FinanceMetricCell label="POS sales" value={formatMoney(salesTotal)} hint={subtitle} tone="ink" />
+        <FinanceMetricCell label="Bookings done" value={String(operations.bookings)} tone="ink" />
+        <FinanceMetricCell label="Shift closes" value={String(shiftCloses.length)} hint="Accepted / locked" tone="muted" />
+        <FinanceMetricCell label="Customers" value={String(retentionSummary.total)} hint={`${retentionSummary.loyal} loyal`} tone="up" />
+      </FinanceMetricStrip>
+
       <ReportSection
-        icon={<ClipboardCheck className="size-4" aria-hidden />}
+        icon={<ClipboardCheck aria-hidden />}
         title="Shift close attestation"
         description={`${shiftCloses.length} accepted/locked closes · read-only · does not rewrite POS sales`}
         onCsv={() => downloadCsv(shiftCloses, shiftCloseColumns, `hakum-shift-close-${range.start}-to-${range.end}.csv`)}
@@ -246,9 +272,9 @@ export default function FinanceReportsTab({
       </ReportSection>
 
       <ReportSection
-        icon={<ShoppingCart className="size-4" aria-hidden />}
+        icon={<ShoppingCart aria-hidden />}
         title="Sales report"
-        description={`${salesByDayRows.length} days · ${formatMoney(salesByDayRows.reduce((s, r) => s + r.total_sales_minor, 0))} in paid sales`}
+        description={`${salesByDayRows.length} days · ${formatMoney(salesTotal)} in paid sales`}
         onCsv={() => downloadCsv(salesByDayRows, salesColumns, `hakum-sales-report-${range.start}-to-${range.end}.csv`)}
         onExcel={() => downloadExcel(salesByDayRows, salesColumns, `hakum-sales-report-${range.start}-to-${range.end}.xls`, 'Hakum Sales Report')}
         onPdf={() => printAsPdf(salesByDayRows, salesColumns, 'Hakum Sales Report', subtitle)}
@@ -285,7 +311,7 @@ export default function FinanceReportsTab({
       </ReportSection>
 
       <ReportSection
-        icon={<Wrench className="size-4" aria-hidden />}
+        icon={<Wrench aria-hidden />}
         title="Operations report"
         description={showComplaints
           ? `${operations.bookings} completed bookings · ${operations.complaints} complaints`
@@ -294,28 +320,30 @@ export default function FinanceReportsTab({
         onExcel={() => downloadExcel(operationsRows, operationsColumns, `hakum-operations-report-${range.start}-to-${range.end}.xls`, 'Hakum Operations Report')}
         onPdf={() => printAsPdf(operationsRows, operationsColumns, 'Hakum Operations Report', subtitle)}
       >
-        <div className="finance-kpi-row">
-          <Kpi label="Completed bookings" value={operations.bookings} />
-          {showComplaints && <Kpi label="Complaints" value={operations.complaints} />}
-          <Kpi label="Crew in KPI" value={operations.crew} />
-          <Kpi label="Branches with sales" value={salesByBranchRows.length} />
-        </div>
+        <FinanceMetricStrip label="Operations">
+          <FinanceMetricCell label="Completed bookings" value={String(operations.bookings)} tone="ink" />
+          {showComplaints ? (
+            <FinanceMetricCell label="Complaints" value={String(operations.complaints)} tone="muted" />
+          ) : null}
+          <FinanceMetricCell label="Crew in KPI" value={String(operations.crew)} tone="ink" />
+          <FinanceMetricCell label="Branches with sales" value={String(salesByBranchRows.length)} tone="muted" />
+        </FinanceMetricStrip>
       </ReportSection>
 
       <ReportSection
-        icon={<Users className="size-4" aria-hidden />}
+        icon={<Users aria-hidden />}
         title="Customer retention"
         description={`${retentionSummary.total} customers · ${retentionSummary.fresh} new · ${retentionSummary.loyal} loyal`}
         onCsv={() => downloadCsv(retention, retentionColumns, `hakum-retention-report-${range.start}-to-${range.end}.csv`)}
         onExcel={() => downloadExcel(retention, retentionColumns, `hakum-retention-report-${range.start}-to-${range.end}.xls`, 'Hakum Customer Retention')}
         onPdf={() => printAsPdf(retention, retentionColumns, 'Hakum Customer Retention', subtitle)}
       >
-        <div className="finance-kpi-row">
-          <Kpi label="New (1 visit)" value={retentionSummary.fresh} />
-          <Kpi label="Returning (2-4)" value={retentionSummary.returning} />
-          <Kpi label="Loyal (5+)" value={retentionSummary.loyal} />
-          <Kpi label="Total customers" value={retentionSummary.total} />
-        </div>
+        <FinanceMetricStrip label="Retention">
+          <FinanceMetricCell label="New (1 visit)" value={String(retentionSummary.fresh)} tone="ink" />
+          <FinanceMetricCell label="Returning (2-4)" value={String(retentionSummary.returning)} tone="muted" />
+          <FinanceMetricCell label="Loyal (5+)" value={String(retentionSummary.loyal)} tone="up" />
+          <FinanceMetricCell label="Total customers" value={String(retentionSummary.total)} tone="ink" />
+        </FinanceMetricStrip>
         <div className="finance-table-wrap">
           <Table>
             <TableHeader>
@@ -348,56 +376,34 @@ export default function FinanceReportsTab({
 
 function ReportSection({ icon, title, description, onCsv, onExcel, onPdf, children }) {
   return (
-    <Card>
-      <CardHeader>
-        <div className="finance-report-header">
-          <div className="finance-report-title">
-            <span className="finance-report-icon" aria-hidden>{icon}</span>
-            <div>
-              <CardTitle>{title}</CardTitle>
-              <CardDescription>{description}</CardDescription>
-            </div>
-          </div>
-          <div className="finance-report-actions">
-            <Button variant="outline" onClick={onCsv}>
-              <Download className="size-3.5" /> CSV
-            </Button>
-            <Button variant="outline" onClick={onExcel}>
-              <FileSpreadsheet className="size-3.5" /> Excel
-            </Button>
-            <Button variant="outline" onClick={onPdf}>
-              <FileText className="size-3.5" /> PDF
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
-  )
-}
-
-function Kpi({ label, value }) {
-  return (
-    <Card>
-      <CardContent className="pt-5">
-        <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">{label}</p>
-        <p className="mt-3 text-2xl font-semibold tabular-nums">{value}</p>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ReportsSkeleton() {
-  return (
-    <div className="flex flex-col gap-6">
-      {[0, 1, 2].map((i) => (
-        <Card key={i}>
-          <CardContent className="space-y-2">
-            <div className="finance-skeleton-line h-8 w-48" />
-            <div className="finance-skeleton-line h-40" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <FinancePanel
+      title={
+        <span className="inline-flex items-center gap-2">
+          <span className="finance-kpi-icon" aria-hidden>
+            {icon}
+          </span>
+          {title}
+        </span>
+      }
+      description={description}
+      actions={
+        <>
+          <Button type="button" variant="outline" className="min-h-10 cursor-pointer" onClick={onCsv}>
+            <Download data-icon="inline-start" />
+            CSV
+          </Button>
+          <Button type="button" variant="outline" className="min-h-10 cursor-pointer" onClick={onExcel}>
+            <FileSpreadsheet data-icon="inline-start" />
+            Excel
+          </Button>
+          <Button type="button" variant="outline" className="min-h-10 cursor-pointer" onClick={onPdf}>
+            <FileText data-icon="inline-start" />
+            PDF
+          </Button>
+        </>
+      }
+    >
+      {children}
+    </FinancePanel>
   )
 }

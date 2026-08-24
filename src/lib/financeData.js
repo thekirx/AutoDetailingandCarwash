@@ -5,14 +5,14 @@
 import { getBranchScopeList } from '../auth/permissions.js'
 
 export const FINANCE_TABS = [
-  { id: 'overview', label: 'Overview', hint: 'Income, expenses, and net for the window' },
-  { id: 'sales', label: 'Sales', hint: 'POS sales by day, branch, and payment method' },
-  { id: 'purchases', label: 'Purchases', hint: 'Expenses and bills to pay' },
-  { id: 'pl', label: 'Profit & Loss', hint: 'Income vs expenses by category' },
-  { id: 'shift-close', label: 'Shift reviews', hint: 'End-of-shift closes vs POS baseline' },
-  { id: 'expense-reports', label: 'Expense reports', hint: 'ASA category reports posted to expenses' },
-  { id: 'categories', label: 'Categories', hint: 'Expense categories and kinds' },
-  { id: 'reports', label: 'Reports', hint: 'Sales, operations, and retention exports' },
+  { id: 'overview', label: 'Dashboard', hint: 'Business overview for the selected window', group: 'Books' },
+  { id: 'sales', label: 'Sales', hint: 'POS sales by day, branch, and payment method', group: 'Business' },
+  { id: 'purchases', label: 'Bills & expenses', hint: 'Expenses and bills to pay', group: 'Business' },
+  { id: 'pl', label: 'Profit and loss', hint: 'Income vs expenses by category', group: 'Accounting' },
+  { id: 'shift-close', label: 'Shift reviews', hint: 'End-of-shift closes vs POS baseline', group: 'Accounting' },
+  { id: 'expense-reports', label: 'Expense reports', hint: 'ASA category reports posted to expenses', group: 'Accounting' },
+  { id: 'categories', label: 'Categories', hint: 'Expense categories and kinds', group: 'Settings' },
+  { id: 'reports', label: 'Reports', hint: 'Sales, operations, and retention exports', group: 'Reports' },
 ]
 
 export const FINANCE_TAB_IDS = FINANCE_TABS.map((t) => t.id)
@@ -26,12 +26,16 @@ export function resolveFinanceTab(raw) {
 
 export const DATE_PRESETS = [
   { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
   { value: 'week', label: 'This week' },
+  { value: 'last_7', label: 'Last 7 days' },
+  { value: 'last_30', label: 'Last 30 days' },
   { value: 'month', label: 'This month' },
+  { value: 'last_month', label: 'Last month' },
   { value: '3mo', label: 'Last 3 months' },
   { value: '6mo', label: 'Last 6 months' },
   { value: 'year', label: 'This year' },
-  { value: 'custom', label: 'Custom range' },
+  { value: 'custom', label: 'Custom' },
 ]
 
 export const COMPARE_PRESETS = [
@@ -112,6 +116,12 @@ export function financeRange(preset, customStart, customEnd, now = new Date()) {
     const d = toManilaDay(now)
     return { start: d, end: d }
   }
+  if (preset === 'yesterday') {
+    const d = new Date(now)
+    d.setDate(d.getDate() - 1)
+    const day = toManilaDay(d)
+    return { start: day, end: day }
+  }
   if (preset === 'week') {
     const start = new Date(now)
     const day = start.getDay()
@@ -121,9 +131,26 @@ export function financeRange(preset, customStart, customEnd, now = new Date()) {
     end.setDate(start.getDate() + 6)
     return { start: toManilaDay(start), end: toManilaDay(end) }
   }
+  if (preset === 'last_7') {
+    const end = new Date(now)
+    const start = new Date(now)
+    start.setDate(start.getDate() - 6)
+    return { start: toManilaDay(start), end: toManilaDay(end) }
+  }
+  if (preset === 'last_30') {
+    const end = new Date(now)
+    const start = new Date(now)
+    start.setDate(start.getDate() - 29)
+    return { start: toManilaDay(start), end: toManilaDay(end) }
+  }
   if (preset === 'month') {
     const start = new Date(now.getFullYear(), now.getMonth(), 1)
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    return { start: toManilaDay(start), end: toManilaDay(end) }
+  }
+  if (preset === 'last_month') {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const end = new Date(now.getFullYear(), now.getMonth(), 0)
     return { start: toManilaDay(start), end: toManilaDay(end) }
   }
   if (preset === 'year') {
@@ -136,6 +163,30 @@ export function financeRange(preset, customStart, customEnd, now = new Date()) {
   const start = new Date(now)
   start.setMonth(start.getMonth() - months)
   return { start: toManilaDay(start), end: toManilaDay(end) }
+}
+
+/** Compact human window for headers: "1–31 Aug 2026" or "11 Aug 2026". */
+export function formatFinanceWindow(startStr, endStr) {
+  const start = parseYmd(startStr)
+  const end = parseYmd(endStr)
+  if (!start || !end) return `${startStr || '—'} to ${endStr || '—'}`
+  const sameDay = startStr === endStr
+  const dayMonthYear = { day: 'numeric', month: 'short', year: 'numeric' }
+  if (sameDay) return start.toLocaleDateString('en-PH', dayMonthYear)
+  const sameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()
+  if (sameMonth) {
+    const monthYear = end.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
+    return `${start.getDate()}–${end.getDate()} ${monthYear}`
+  }
+  return `${start.toLocaleDateString('en-PH', dayMonthYear)} – ${end.toLocaleDateString('en-PH', dayMonthYear)}`
+}
+
+/** Percent change vs prior; null when prior is zero and current is zero. */
+export function pctChange(current, prior) {
+  const c = Number(current) || 0
+  const p = Number(prior) || 0
+  if (p === 0) return c === 0 ? null : 100
+  return Math.round(((c - p) / Math.abs(p)) * 1000) / 10
 }
 
 /** Manila-calendar ISO timestamps for Supabase range queries. */
@@ -233,6 +284,27 @@ export function salesByDay(salesRows) {
   return [...map.values()].sort((a, b) => (a.sale_date < b.sale_date ? 1 : -1))
 }
 
+/** Branch × day ledger rows for Sales tab (preserves multi-branch accuracy). */
+export function salesLedgerRows(salesRows) {
+  return [...(salesRows || [])]
+    .map((r) => ({
+      branch: r.branch,
+      sale_date: r.sale_date,
+      total_sales_minor: Number(r.total_sales_minor || 0),
+      cash_minor: Number(r.cash_sales_minor || 0),
+      gcash_minor: Number(r.gcash_sales_minor || 0),
+      card_minor: Number(r.card_sales_minor || 0),
+      online_minor: Number(r.online_sales_minor || 0),
+      paid_count: Number(r.paid_count || 0),
+      transaction_count: Number(r.transaction_count || 0),
+      average_ticket_minor: Number(r.average_ticket_minor || 0),
+    }))
+    .sort((a, b) => {
+      if (a.sale_date !== b.sale_date) return a.sale_date < b.sale_date ? 1 : -1
+      return String(a.branch || '').localeCompare(String(b.branch || ''))
+    })
+}
+
 /** Group sales by branch → [{branch, total_sales_minor, paid_count, transaction_count}]. */
 export function salesByBranch(salesRows) {
   const map = new Map()
@@ -247,6 +319,110 @@ export function salesByBranch(salesRows) {
     row.transaction_count += Number(r.transaction_count || 0)
   }
   return [...map.values()].sort((a, b) => b.total_sales_minor - a.total_sales_minor)
+}
+
+/** Daily cash-flow series from finance_daily_pl (oldest → newest). Chart values in pesos. */
+export function plTrendByDay(plRows) {
+  const map = new Map()
+  for (const r of plRows || []) {
+    const key = r.period_date
+    if (!key) continue
+    if (!map.has(key)) map.set(key, { date: key, income_minor: 0, expenses_minor: 0 })
+    const row = map.get(key)
+    const amt = Number(r.amount_minor || 0)
+    if (r.kind === 'income') row.income_minor += amt
+    else if (r.kind === 'expense') row.expenses_minor += amt
+  }
+  return [...map.values()]
+    .map((r) => ({
+      date: r.date,
+      income: r.income_minor / 100,
+      expenses: r.expenses_minor / 100,
+      net: (r.income_minor - r.expenses_minor) / 100,
+      income_minor: r.income_minor,
+      expenses_minor: r.expenses_minor,
+      net_minor: r.income_minor - r.expenses_minor,
+    }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+}
+
+/** Top expense categories for horizontal bars (pesos + minor). */
+export function topExpenseCategories(plRows, limit = 6) {
+  return plByCategory(plRows)
+    .filter((r) => r.kind === 'expense' && r.amount_minor > 0)
+    .slice(0, limit)
+    .map((r) => ({
+      category: r.category,
+      amount: r.amount_minor / 100,
+      amount_minor: r.amount_minor,
+    }))
+}
+
+/**
+ * Principal-owner readouts from POS + P&L in the window.
+ * Pure helpers — no fake fill when books are empty.
+ */
+export function financeOwnerInsights(salesRows, plRows) {
+  const pl = rollupPl(plRows)
+  const paidCount = (salesRows || []).reduce((acc, r) => acc + Number(r.paid_count || 0), 0)
+  const salesTotal = sumMinor(salesRows, 'total_sales_minor')
+  const cash = sumMinor(salesRows, 'cash_sales_minor')
+  const avgTicketMinor = paidCount > 0 ? Math.round(salesTotal / paidCount) : 0
+  const cashShare = salesTotal > 0 ? Math.round((cash / salesTotal) * 1000) / 10 : 0
+  const expenseRatio = pl.income > 0 ? Math.round((pl.expenses / pl.income) * 1000) / 10 : null
+  const byDay = salesByDay(salesRows)
+  const busiest = byDay.length
+    ? [...byDay].sort((a, b) => b.total_sales_minor - a.total_sales_minor)[0]
+    : null
+
+  const cues = []
+  if (pl.income === 0 && pl.expenses === 0) {
+    cues.push({
+      tone: 'neutral',
+      text: 'No paid sales or posted expenses in this window. Close POS days or post bills to populate books.',
+    })
+  } else {
+    if (expenseRatio != null && expenseRatio >= 80) {
+      cues.push({
+        tone: 'warn',
+        text: `Expenses are ${expenseRatio}% of income — open Profit and loss and cut the top categories.`,
+      })
+    }
+    if (pl.margin < 15 && pl.income > 0) {
+      cues.push({
+        tone: 'warn',
+        text: `Net margin is ${pl.margin}% — raise average ticket or trim operating spend.`,
+      })
+    }
+    if (cashShare >= 65 && salesTotal > 0) {
+      cues.push({
+        tone: 'info',
+        text: `Cash is ${cashShare}% of sales — reconcile till vs GCash/card before shift close.`,
+      })
+    }
+    if (busiest) {
+      cues.push({
+        tone: 'info',
+        text: `Strongest POS day in window: ${busiest.sale_date}. Staff that day pattern on busy weeks.`,
+      })
+    }
+    if (paidCount > 0 && avgTicketMinor > 0) {
+      cues.push({
+        tone: 'info',
+        text: `${paidCount} paid tickets · watch average ticket in Sales when running promos.`,
+      })
+    }
+  }
+
+  return {
+    paidCount,
+    avgTicketMinor,
+    cashShare,
+    expenseRatio,
+    busiestDay: busiest?.sale_date || null,
+    busiestSalesMinor: busiest?.total_sales_minor || 0,
+    cues,
+  }
 }
 
 /** CSV via papaparse (already installed). Returns a string. */

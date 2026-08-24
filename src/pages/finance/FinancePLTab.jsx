@@ -1,19 +1,37 @@
-/** Finance Profit & Loss: one statement, branch/period filters on the toolbar. */
+/** Finance Profit and Loss — statement + metrics, shared chrome. */
 import { useMemo } from 'react'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { Download, FileSpreadsheet, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
 import { formatMoney } from '@/queue/queueApi'
 import {
   COMPARE_PRESETS,
-  rollupPl,
-  mergePlByCategory,
   downloadCsv,
   downloadExcel,
+  formatFinanceWindow,
+  mergePlByCategory,
   printAsPdf,
+  rollupPl,
+  topExpenseCategories,
 } from '@/lib/financeData'
+import {
+  FinanceEmpty,
+  FinanceMetricCell,
+  FinanceMetricStrip,
+  FinancePanel,
+  FinanceTabSkeleton,
+} from './FinanceChrome'
+
+const expenseConfig = {
+  amount: { label: 'Spend', color: '#b91c1c' },
+}
 
 export default function FinancePLTab({
   plRows,
@@ -27,12 +45,16 @@ export default function FinancePLTab({
   const pl = useMemo(() => rollupPl(plRows), [plRows])
   const prior = useMemo(() => rollupPl(priorPlRows), [priorPlRows])
   const comparing = Boolean(compareRange)
-  const merged = useMemo(() => mergePlByCategory(plRows, comparing ? priorPlRows : []), [plRows, priorPlRows, comparing])
+  const merged = useMemo(
+    () => mergePlByCategory(plRows, comparing ? priorPlRows : []),
+    [plRows, priorPlRows, comparing],
+  )
   const incomeRows = merged.filter((r) => r.kind === 'income')
   const expenseRows = merged.filter((r) => r.kind === 'expense')
+  const expenseBars = useMemo(() => topExpenseCategories(plRows, 6), [plRows])
 
   const exportRows = useMemo(() => {
-    const rows = [
+    return [
       ...incomeRows.map((r) => ({
         section: 'Trading income',
         kind: 'income',
@@ -74,7 +96,6 @@ export default function FinancePLTab({
         change: '',
       },
     ]
-    return rows
   }, [incomeRows, expenseRows, pl, prior, comparing])
 
   const exportColumns = comparing
@@ -93,61 +114,93 @@ export default function FinancePLTab({
         { key: 'amount', label: 'Amount' },
       ]
 
+  const windowLabel = formatFinanceWindow(range.start, range.end)
   const subtitle = comparing
-    ? `${range.start} to ${range.end} vs ${compareRange.start} to ${compareRange.end}`
-    : `${range.start} to ${range.end}`
+    ? `${windowLabel} vs ${formatFinanceWindow(compareRange.start, compareRange.end)}`
+    : windowLabel
   const fileBase = `hakum-profit-and-loss-${range.start}-to-${range.end}`
   const colSpan = comparing ? 4 : 2
+  const emptyBooks = pl.income === 0 && pl.expenses === 0
 
-  if (loading) return <PLSkeleton />
+  if (loading) return <FinanceTabSkeleton metrics={4} />
 
   return (
-    <div className="finance-pl-layout">
-      <aside className="finance-pl-aside">
-        <p className="finance-pl-aside-title">How to read this</p>
-        <p className="finance-pl-aside-hint">
-          Filter by branch and period at the top. Income comes from POS paid sales; expenses from paid or posted bills.
+    <div className="finance-dash flex flex-col gap-5">
+      <FinanceMetricStrip label="P&L totals">
+        <FinanceMetricCell label="Income" value={formatMoney(pl.income)} hint="POS paid" tone="ink" />
+        <FinanceMetricCell label="Expenses" value={formatMoney(pl.expenses)} hint="Paid + posted" tone="muted" />
+        <FinanceMetricCell
+          label={pl.net >= 0 ? 'Net profit' : 'Net loss'}
+          value={formatMoney(pl.net)}
+          hint={comparing ? `Prior ${formatMoney(prior.net)}` : 'Income − expenses'}
+          tone={pl.net >= 0 ? 'up' : 'down'}
+        />
+        <FinanceMetricCell
+          label="Margin"
+          value={`${pl.margin}%`}
+          hint={comparing ? `Prior ${prior.margin}%` : 'Net ÷ income'}
+          tone="ink"
+        />
+      </FinanceMetricStrip>
+
+      <div className="finance-toolbar">
+        <p className="text-sm text-muted-foreground max-w-xl">
+          Income is paid POS sales. Expenses are paid or posted bills. Use Compare in the filter bar or here.
         </p>
-      </aside>
-
-      <div className="finance-pl-main">
-        <div className="finance-pl-toolbar">
-          <div>
-            <p className="finance-pl-period">{subtitle}</p>
-            <p className="finance-pl-org">Hakum Auto Care</p>
+        <div className="finance-toolbar-actions">
+          <div className="finance-filter-group">
+            <Label htmlFor="pl-compare">Compare with</Label>
+            <select
+              id="pl-compare"
+              className="finance-toolbar-select min-h-10"
+              value={comparePreset}
+              onChange={(e) => onCompareChange?.(e.target.value)}
+            >
+              {COMPARE_PRESETS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="finance-pl-toolbar-actions">
-            <div className="finance-filter-group">
-              <Label htmlFor="pl-compare">Compare with</Label>
-              <select
-                id="pl-compare"
-                className="finance-toolbar-select"
-                value={comparePreset}
-                onChange={(e) => onCompareChange?.(e.target.value)}
-              >
-                {COMPARE_PRESETS.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
-            </div>
-            <Button variant="outline" onClick={() => downloadCsv(exportRows, exportColumns, `${fileBase}.csv`)}>
-              <Download className="size-3.5" /> CSV
-            </Button>
-            <Button variant="outline" onClick={() => downloadExcel(exportRows, exportColumns, `${fileBase}.xls`, 'Hakum Profit and Loss')}>
-              <FileSpreadsheet className="size-3.5" /> Excel
-            </Button>
-            <Button variant="outline" onClick={() => printAsPdf(exportRows, exportColumns, 'Hakum Profit and Loss', subtitle)}>
-              <FileText className="size-3.5" /> PDF
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-10 cursor-pointer"
+            onClick={() => downloadCsv(exportRows, exportColumns, `${fileBase}.csv`)}
+          >
+            <Download data-icon="inline-start" />
+            CSV
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-10 cursor-pointer"
+            onClick={() => downloadExcel(exportRows, exportColumns, `${fileBase}.xls`, 'Hakum Profit and Loss')}
+          >
+            <FileSpreadsheet data-icon="inline-start" />
+            Excel
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-10 cursor-pointer"
+            onClick={() => printAsPdf(exportRows, exportColumns, 'Hakum Profit and Loss', subtitle)}
+          >
+            <FileText data-icon="inline-start" />
+            PDF
+          </Button>
         </div>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Profit and Loss</CardTitle>
-            <CardDescription>{subtitle}</CardDescription>
-          </CardHeader>
-          <CardContent>
+      <div className="finance-dash-split">
+        <FinancePanel title="Profit and loss" description={subtitle}>
+          {emptyBooks ? (
+            <FinanceEmpty
+              title="No income or expenses in this window"
+              body="Paid POS sales and paid/posted bills build this statement."
+            />
+          ) : (
             <table className="finance-pl-table">
               <thead>
                 <tr>
@@ -174,7 +227,9 @@ export default function FinancePLTab({
                       <td>{r.category}</td>
                       <td className="text-right tabular-nums">{formatMoney(r.current)}</td>
                       {comparing ? <td className="text-right tabular-nums">{formatMoney(r.prior)}</td> : null}
-                      {comparing ? <td className="text-right tabular-nums">{formatDelta(r.delta, r.deltaPct)}</td> : null}
+                      {comparing ? (
+                        <td className="text-right tabular-nums">{formatDelta(r.delta, r.deltaPct)}</td>
+                      ) : null}
                     </tr>
                   ))
                 )}
@@ -182,7 +237,9 @@ export default function FinancePLTab({
                   <td>Total trading income</td>
                   <td className="text-right tabular-nums">{formatMoney(pl.income)}</td>
                   {comparing ? <td className="text-right tabular-nums">{formatMoney(prior.income)}</td> : null}
-                  {comparing ? <td className="text-right tabular-nums">{formatDelta(pl.income - prior.income)}</td> : null}
+                  {comparing ? (
+                    <td className="text-right tabular-nums">{formatDelta(pl.income - prior.income)}</td>
+                  ) : null}
                 </tr>
                 <tr className="finance-pl-section">
                   <th colSpan={colSpan}>Operating expenses</th>
@@ -200,7 +257,9 @@ export default function FinancePLTab({
                       <td>{r.category}</td>
                       <td className="text-right tabular-nums">{formatMoney(r.current)}</td>
                       {comparing ? <td className="text-right tabular-nums">{formatMoney(r.prior)}</td> : null}
-                      {comparing ? <td className="text-right tabular-nums">{formatDelta(r.delta, r.deltaPct)}</td> : null}
+                      {comparing ? (
+                        <td className="text-right tabular-nums">{formatDelta(r.delta, r.deltaPct)}</td>
+                      ) : null}
                     </tr>
                   ))
                 )}
@@ -208,13 +267,17 @@ export default function FinancePLTab({
                   <td>Total operating expenses</td>
                   <td className="text-right tabular-nums">{formatMoney(pl.expenses)}</td>
                   {comparing ? <td className="text-right tabular-nums">{formatMoney(prior.expenses)}</td> : null}
-                  {comparing ? <td className="text-right tabular-nums">{formatDelta(pl.expenses - prior.expenses)}</td> : null}
+                  {comparing ? (
+                    <td className="text-right tabular-nums">{formatDelta(pl.expenses - prior.expenses)}</td>
+                  ) : null}
                 </tr>
                 <tr className={`finance-pl-net ${pl.net >= 0 ? 'is-positive' : 'is-negative'}`}>
                   <td>{pl.net >= 0 ? 'Net profit' : 'Net loss'}</td>
                   <td className="text-right tabular-nums">{formatMoney(pl.net)}</td>
                   {comparing ? <td className="text-right tabular-nums">{formatMoney(prior.net)}</td> : null}
-                  {comparing ? <td className="text-right tabular-nums">{formatDelta(pl.net - prior.net)}</td> : null}
+                  {comparing ? (
+                    <td className="text-right tabular-nums">{formatDelta(pl.net - prior.net)}</td>
+                  ) : null}
                 </tr>
                 <tr className="finance-pl-margin">
                   <td>Net margin</td>
@@ -230,8 +293,53 @@ export default function FinancePLTab({
                 </tr>
               </tbody>
             </table>
-          </CardContent>
-        </Card>
+          )}
+        </FinancePanel>
+
+        <FinancePanel title="Top expenses" description="Categories in this window">
+          {expenseBars.length > 0 ? (
+            <div className="finance-chart-mid">
+              <ChartContainer config={expenseConfig} className="h-full w-full aspect-auto">
+                <BarChart
+                  accessibilityLayer
+                  data={expenseBars}
+                  layout="vertical"
+                  margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
+                >
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                  <XAxis
+                    type="number"
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `₱${Number(v) >= 1000 ? `${Math.round(v / 1000)}k` : v}`}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="category"
+                    width={96}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) => (
+                          <span className="tabular-nums font-medium">
+                            {formatMoney(Math.round(Number(value) * 100))}
+                          </span>
+                        )}
+                      />
+                    }
+                  />
+                  <Bar dataKey="amount" fill="var(--color-amount)" radius={[0, 2, 2, 0]} maxBarSize={22} />
+                </BarChart>
+              </ChartContainer>
+            </div>
+          ) : (
+            <FinanceEmpty title="No posted expenses" body="Paid and posted bills appear here by category." />
+          )}
+        </FinancePanel>
       </div>
     </div>
   )
@@ -241,16 +349,4 @@ function formatDelta(deltaMinor, pct) {
   const sign = deltaMinor > 0 ? '+' : ''
   const money = `${sign}${formatMoney(deltaMinor)}`
   return pct == null ? money : `${money} (${sign}${pct}%)`
-}
-
-function PLSkeleton() {
-  return (
-    <Card>
-      <CardContent className="space-y-2">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="finance-skeleton-line h-10" />
-        ))}
-      </CardContent>
-    </Card>
-  )
 }

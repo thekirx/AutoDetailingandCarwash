@@ -1,7 +1,6 @@
-/** ASA expense report composer + SA approve. */
-import { useCallback, useEffect, useState } from 'react'
+/** ASA expense report composer + SA approve — dashboard chrome. */
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +9,12 @@ import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { isSuperAdmin } from '@/auth/permissions'
 import { toast } from 'sonner'
+import {
+  FinanceEmpty,
+  FinanceMetricCell,
+  FinanceMetricStrip,
+  FinancePanel,
+} from './FinanceChrome'
 
 export default function FinanceExpenseReportsTab({
   profile,
@@ -60,6 +65,17 @@ export default function FinanceExpenseReportsTab({
       setForm((f) => ({ ...f, branch: writableBranches[0].slug }))
     }
   }, [writableBranches, branchFilter, form.branch])
+
+  const metrics = useMemo(() => {
+    const draft = reports.filter((r) => r.status === 'draft' || r.status === 'rejected').length
+    const submitted = reports.filter((r) => r.status === 'submitted').length
+    const approved = reports.filter((r) => r.status === 'approved').length
+    const totalMinor = reports.reduce(
+      (s, r) => s + (r.expense_report_lines || []).reduce((a, l) => a + (Number(l.amount_minor) || 0), 0),
+      0,
+    )
+    return { draft, submitted, approved, totalMinor, count: reports.length }
+  }, [reports])
 
   async function createAndAddLine(e) {
     e.preventDefault()
@@ -145,129 +161,171 @@ export default function FinanceExpenseReportsTab({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="finance-dash flex flex-col gap-5">
+      <FinanceMetricStrip label="Expense report totals">
+        <FinanceMetricCell label="Reports" value={String(metrics.count)} hint="In filter scope" tone="ink" />
+        <FinanceMetricCell label="Draft / rejected" value={String(metrics.draft)} tone="muted" />
+        <FinanceMetricCell label="Submitted" value={String(metrics.submitted)} hint="Awaiting SA" tone="muted" />
+        <FinanceMetricCell label="Approved" value={String(metrics.approved)} hint="Pending payment" tone="up" />
+        <FinanceMetricCell label="Line total" value={formatMoney(metrics.totalMinor)} hint="All open reports" tone="ink" />
+      </FinanceMetricStrip>
+
       {canWrite ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Compose expense report</CardTitle>
-            <CardDescription>
-              ASA monthly/custom category lines. Submit creates pending_approval expenses. Super Admin
-              approves to pending payment (or pay now); mark paid when cash actually leaves.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={createAndAddLine} className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label>Branch</Label>
-                <NamedSelect
-                  value={form.branch}
-                  onChange={(branch) => setForm((f) => ({ ...f, branch }))}
-                  options={writableBranches.map((b) => ({ value: b.slug, label: b.name || b.slug }))}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Title</Label>
-                <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="August utilities" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Period start</Label>
-                <Input type="date" required value={form.period_start} onChange={(e) => setForm((f) => ({ ...f, period_start: e.target.value }))} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Period end</Label>
-                <Input type="date" required value={form.period_end} onChange={(e) => setForm((f) => ({ ...f, period_end: e.target.value }))} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Category</Label>
-                <NamedSelect
-                  value={form.category_id}
-                  onChange={(category_id) => setForm((f) => ({ ...f, category_id }))}
-                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Amount (pesos)</Label>
-                <Input type="number" min="0" step="0.01" required value={form.amountPesos} onChange={(e) => setForm((f) => ({ ...f, amountPesos: e.target.value }))} />
-              </div>
-              <div className="sm:col-span-2 flex flex-col gap-1.5">
-                <Label>Line notes</Label>
-                <Input value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
-              </div>
-              <Button type="submit" className="min-h-11 sm:col-span-2" disabled={busy}>
-                Save draft + line
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <FinancePanel
+          title="Compose expense report"
+          description="ASA category lines. Submit creates pending_approval expenses. SA approves to pending payment; mark paid when cash leaves."
+        >
+          <form onSubmit={createAndAddLine} className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label>Branch</Label>
+              <NamedSelect
+                value={form.branch}
+                onChange={(branch) => setForm((f) => ({ ...f, branch }))}
+                options={writableBranches.map((b) => ({ value: b.slug, label: b.name || b.slug }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Title</Label>
+              <Input
+                className="min-h-10"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="August utilities"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Period start</Label>
+              <Input
+                type="date"
+                required
+                className="min-h-10"
+                value={form.period_start}
+                onChange={(e) => setForm((f) => ({ ...f, period_start: e.target.value }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Period end</Label>
+              <Input
+                type="date"
+                required
+                className="min-h-10"
+                value={form.period_end}
+                onChange={(e) => setForm((f) => ({ ...f, period_end: e.target.value }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Category</Label>
+              <NamedSelect
+                value={form.category_id}
+                onChange={(category_id) => setForm((f) => ({ ...f, category_id }))}
+                options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Amount (pesos)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                className="min-h-10"
+                value={form.amountPesos}
+                onChange={(e) => setForm((f) => ({ ...f, amountPesos: e.target.value }))}
+              />
+            </div>
+            <div className="sm:col-span-2 flex flex-col gap-1.5">
+              <Label>Line notes</Label>
+              <Input
+                className="min-h-10"
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </div>
+            <Button type="submit" className="min-h-11 cursor-pointer sm:col-span-2" disabled={busy}>
+              Save draft + line
+            </Button>
+          </form>
+        </FinancePanel>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Reports</CardTitle>
-          <CardDescription>
-            Submit → pending approval. Approve → pending payment (not on P&amp;L until paid). Mark paid when settled.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isSuperAdmin(profile) ? (
-            <div className="flex flex-col gap-1.5">
-              <Label>Review note (required to reject)</Label>
-              <Input value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} />
-            </div>
-          ) : null}
-          {reports.map((r) => {
-            const total = (r.expense_report_lines || []).reduce((s, l) => s + (Number(l.amount_minor) || 0), 0)
-            return (
-              <article key={r.id} className="rounded-xl border border-border p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{r.title || `${r.branch} · ${r.period_start}`}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {r.branch} · {r.period_start} to {r.period_end} · {formatMoney(total)}
-                    </p>
-                    {r.review_note ? (
-                      <p className="mt-1 text-xs text-muted-foreground">Note: {r.review_note}</p>
+      <FinancePanel
+        title="Reports"
+        description="Submit → pending approval. Approve → pending payment (not on P&L until paid). Mark paid when settled."
+      >
+        {isSuperAdmin(profile) ? (
+          <div className="mb-4 flex flex-col gap-1.5">
+            <Label>Review note (required to reject)</Label>
+            <Input className="min-h-10" value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} />
+          </div>
+        ) : null}
+        {!reports.length ? (
+          <FinanceEmpty
+            title="No expense reports yet"
+            body={canWrite ? 'Compose a draft above for the selected branch and period.' : 'No reports in this filter scope.'}
+          />
+        ) : (
+          <ul className="finance-cue-list">
+            {reports.map((r) => {
+              const total = (r.expense_report_lines || []).reduce((s, l) => s + (Number(l.amount_minor) || 0), 0)
+              return (
+                <li key={r.id} className="!border-b border-border !py-4" data-tone="info">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{r.title || `${r.branch} · ${r.period_start}`}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {r.branch} · {r.period_start} to {r.period_end} · {formatMoney(total)}
+                      </p>
+                      {r.review_note ? (
+                        <p className="mt-1 text-xs text-muted-foreground">Note: {r.review_note}</p>
+                      ) : null}
+                    </div>
+                    <Badge>{r.status}</Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {canWrite && (r.status === 'draft' || r.status === 'rejected') ? (
+                      <Button type="button" size="sm" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => submit(r.id)}>
+                        Submit
+                      </Button>
+                    ) : null}
+                    {isSuperAdmin(profile) && r.status === 'submitted' ? (
+                      <>
+                        <Button type="button" size="sm" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review(r.id, 'approve')}>
+                          Approve · pending payment
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="min-h-10 cursor-pointer"
+                          disabled={busy}
+                          onClick={() => review(r.id, 'approve_paid')}
+                        >
+                          Approve &amp; pay now
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="min-h-10 cursor-pointer"
+                          disabled={busy}
+                          onClick={() => review(r.id, 'reject')}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    ) : null}
+                    {isSuperAdmin(profile) && r.status === 'approved' ? (
+                      <Button type="button" size="sm" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review(r.id, 'mark_paid')}>
+                        Mark paid
+                      </Button>
                     ) : null}
                   </div>
-                  <Badge>{r.status}</Badge>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {canWrite && (r.status === 'draft' || r.status === 'rejected') ? (
-                    <Button type="button" size="sm" disabled={busy} onClick={() => submit(r.id)}>
-                      Submit
-                    </Button>
-                  ) : null}
-                  {isSuperAdmin(profile) && r.status === 'submitted' ? (
-                    <>
-                      <Button type="button" size="sm" disabled={busy} onClick={() => review(r.id, 'approve')}>
-                        Approve · pending payment
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        disabled={busy}
-                        onClick={() => review(r.id, 'approve_paid')}
-                      >
-                        Approve &amp; pay now
-                      </Button>
-                      <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => review(r.id, 'reject')}>
-                        Reject
-                      </Button>
-                    </>
-                  ) : null}
-                  {isSuperAdmin(profile) && r.status === 'approved' ? (
-                    <Button type="button" size="sm" disabled={busy} onClick={() => review(r.id, 'mark_paid')}>
-                      Mark paid
-                    </Button>
-                  ) : null}
-                </div>
-              </article>
-            )
-          })}
-          {!reports.length ? <p className="text-sm text-muted-foreground">No expense reports yet.</p> : null}
-        </CardContent>
-      </Card>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </FinancePanel>
     </div>
   )
 }

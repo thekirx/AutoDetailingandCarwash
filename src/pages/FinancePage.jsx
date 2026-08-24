@@ -1,14 +1,24 @@
-/** Finance module shell — Xero-like IA, tailored for Hakum.
- * Tabs: Overview · Sales · Purchases · Profit & Loss · Categories · Reports.
+/** Finance module shell — Xero-like books hub for Hakum Auto Care.
+ * Tabs: Dashboard · Sales · Bills · P&L · Shift · Expense reports · Categories · Reports.
  * Real POS income + real expenses, scoped per branch or all branches. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { LayoutDashboard, ShoppingCart, Receipt, FileBarChart, Tags, BookOpen, ClipboardCheck, FileSpreadsheet } from 'lucide-react'
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Receipt,
+  FileBarChart,
+  Tags,
+  BookOpen,
+  ClipboardCheck,
+  FileSpreadsheet,
+} from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessFinance, canSeeAllBranches, canWriteFinance } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
@@ -16,10 +26,13 @@ import {
   resolveFinanceTab,
   financeRangeIso,
   financeCompareRange,
+  formatFinanceWindow,
   scopeBranch,
   branchScopeList,
+  rollupPl,
 } from '@/lib/financeData'
 import { collectPaged } from '@/lib/crmInsights'
+import { formatMoney } from '@/queue/queueApi'
 import FinanceFilters from './finance/FinanceFilters'
 import FinanceOverviewTab from './finance/FinanceOverviewTab'
 import FinanceSalesTab from './finance/FinanceSalesTab'
@@ -157,6 +170,18 @@ export default function FinancePage() {
     return branches.filter((b) => scope.includes(b.slug))
   }, [branches, scope])
 
+  const windowLabel = useMemo(
+    () => formatFinanceWindow(range.start, range.end),
+    [range.start, range.end],
+  )
+
+  const headlinePl = useMemo(() => rollupPl(plRows), [plRows])
+
+  const branchName = useMemo(() => {
+    if (branchFilter === 'all') return 'All branches'
+    return branchOptions.find((b) => b.slug === branchFilter)?.name || branchFilter
+  }, [branchFilter, branchOptions])
+
   if (!canAccessFinance(profile)) return <Navigate to="/operations/access-denied" replace />
 
   function setTab(next) {
@@ -169,21 +194,38 @@ export default function FinancePage() {
     <section className="finance-shell">
       <header className="finance-hero">
         <div className="finance-hero-copy">
-          <p className="finance-eyebrow">Finance</p>
+          <p className="finance-eyebrow">Books · Hakum Auto Care</p>
           <h1 className="finance-title">
             {(() => {
               const Icon = TAB_ICONS[tab] || LayoutDashboard
-              return <Icon className="size-6" aria-hidden />
+              return <Icon aria-hidden />
             })()}
-            Hakum Auto Care
+            {activeTab?.label || 'Dashboard'}
           </h1>
           <p className="finance-lead">
-            {activeTab?.hint || 'Finance overview'} · {range.start} to {range.end}
+            {activeTab?.hint || 'Finance overview'}
+            <span className="finance-lead-sep" aria-hidden>
+              ·
+            </span>
+            <span className="tabular-nums">{windowLabel}</span>
+            <span className="finance-lead-sep" aria-hidden>
+              ·
+            </span>
+            {branchName}
           </p>
         </div>
-        <Badge variant={canWrite ? 'default' : 'secondary'} className="finance-role-badge">
-          {canWrite ? 'Can edit' : 'View only'}
-        </Badge>
+
+        <div className="finance-hero-aside">
+          <div className="finance-net-chip" data-tone={headlinePl.net >= 0 ? 'up' : 'down'}>
+            <p className="finance-net-label">{headlinePl.net >= 0 ? 'Net profit' : 'Net loss'}</p>
+            <p className="finance-net-value tabular-nums">
+              {loading ? '—' : formatMoney(headlinePl.net)}
+            </p>
+          </div>
+          <Badge variant={canWrite ? 'default' : 'secondary'} className="finance-role-badge">
+            {canWrite ? 'Can edit' : 'View only'}
+          </Badge>
+        </div>
       </header>
 
       <FinanceFilters
@@ -191,40 +233,58 @@ export default function FinancePage() {
         branchFilter={branchFilter}
         onBranchChange={setBranchFilter}
         datePreset={datePreset}
-        onDatePresetChange={setDatePreset}
+        onDatePresetChange={(next) => {
+          setDatePreset(next)
+          if (next === 'custom' && !customStart && !customEnd) {
+            setCustomStart(range.start)
+            setCustomEnd(range.end)
+          }
+        }}
         customStart={customStart}
         customEnd={customEnd}
         onCustomRangeChange={(s, e) => {
           setCustomStart(s)
           setCustomEnd(e)
         }}
+        comparePreset={comparePreset}
+        onCompareChange={setComparePreset}
         showBranch={canSeeAllBranches(profile) || branchOptions.length > 1}
+        onRefresh={load}
+        refreshing={loading}
+        windowLabel={windowLabel}
       />
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="finance-tabs-list">
-          {FINANCE_TABS.map((item) => {
-            const Icon = TAB_ICONS[item.id]
-            return (
-              <TabsTrigger key={item.id} value={item.id} title={item.hint}>
-                {Icon ? <Icon className="size-4" aria-hidden /> : null}
-                {item.label}
-              </TabsTrigger>
-            )
-          })}
-        </TabsList>
+      <Tabs value={tab} onValueChange={setTab} className="finance-tabs">
+        <div className="finance-tabs-rail">
+          <TabsList className="finance-tabs-list">
+            {FINANCE_TABS.map((item) => {
+              const Icon = TAB_ICONS[item.id]
+              return (
+                <TabsTrigger key={item.id} value={item.id} title={item.hint} className="cursor-pointer">
+                  {Icon ? <Icon aria-hidden /> : null}
+                  <span>{item.label}</span>
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
+        </div>
 
-        <TabsContent value="overview" className="mt-6">
+        <Separator className="finance-tabs-sep" />
+
+        <TabsContent value="overview" className="finance-tab-panel">
           <FinanceOverviewTab
             plRows={plRows}
+            priorPlRows={priorPlRows}
             salesRows={salesRows}
             branchOptions={branchOptions.filter((b) => b.slug !== 'all')}
             range={range}
+            compareRange={compareRange}
             loading={loading}
+            onNavigate={setTab}
           />
         </TabsContent>
 
-        <TabsContent value="sales" className="mt-6">
+        <TabsContent value="sales" className="finance-tab-panel">
           <FinanceSalesTab
             salesRows={salesRows}
             branchOptions={branchOptions.filter((b) => b.slug !== 'all')}
@@ -233,7 +293,7 @@ export default function FinancePage() {
           />
         </TabsContent>
 
-        <TabsContent value="purchases" className="mt-6">
+        <TabsContent value="purchases" className="finance-tab-panel">
           <FinancePurchasesTab
             expenses={expenses}
             categories={categories}
@@ -246,7 +306,7 @@ export default function FinancePage() {
           />
         </TabsContent>
 
-        <TabsContent value="pl" className="mt-6">
+        <TabsContent value="pl" className="finance-tab-panel">
           <FinancePLTab
             plRows={plRows}
             priorPlRows={priorPlRows}
@@ -258,7 +318,7 @@ export default function FinancePage() {
           />
         </TabsContent>
 
-        <TabsContent value="shift-close" className="mt-6">
+        <TabsContent value="shift-close" className="finance-tab-panel">
           <FinanceShiftCloseTab
             profile={profile}
             range={range}
@@ -267,7 +327,7 @@ export default function FinancePage() {
           />
         </TabsContent>
 
-        <TabsContent value="expense-reports" className="mt-6">
+        <TabsContent value="expense-reports" className="finance-tab-panel">
           <FinanceExpenseReportsTab
             profile={profile}
             categories={categories}
@@ -279,11 +339,11 @@ export default function FinancePage() {
           />
         </TabsContent>
 
-        <TabsContent value="categories" className="mt-6">
+        <TabsContent value="categories" className="finance-tab-panel">
           <FinanceCategoriesTab categories={categories} canWrite={canWrite} onReload={load} />
         </TabsContent>
 
-        <TabsContent value="reports" className="mt-6">
+        <TabsContent value="reports" className="finance-tab-panel">
           <FinanceReportsTab
             salesRows={salesRows}
             branchOptions={branchOptions.filter((b) => b.slug !== 'all')}

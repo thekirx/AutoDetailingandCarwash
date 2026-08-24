@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +14,12 @@ import {
 } from '@/lib/shiftClose'
 import { shiftClosePayrollCoverage } from '@/lib/payroll'
 import { toast } from 'sonner'
+import {
+  FinanceEmpty,
+  FinanceMetricCell,
+  FinanceMetricStrip,
+  FinancePanel,
+} from './FinanceChrome'
 
 function statusVariant(status) {
   if (status === 'accepted' || status === 'locked') return 'default'
@@ -93,6 +98,17 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
     ? shiftCloseDiffRows(selected.pos_baseline, selected.submitted, fieldConfig)
     : []
 
+  const statusCounts = useMemo(() => {
+    const counts = { total: rows.length, submitted: 0, accepted: 0, rejected: 0, locked: 0 }
+    for (const r of rows) {
+      if (r.status === 'submitted') counts.submitted += 1
+      else if (r.status === 'accepted') counts.accepted += 1
+      else if (r.status === 'rejected') counts.rejected += 1
+      else if (r.status === 'locked') counts.locked += 1
+    }
+    return counts
+  }, [rows])
+
   async function review(action) {
     if (!canReview || !selected) return
     if (action === 'reject' && String(reviewNote).trim().length < 3) {
@@ -152,23 +168,26 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Shift reviews</CardTitle>
-          <CardDescription>
-            POS baseline vs Branch Admin submission. Accept unlocks Pending floor pay and notifies SA/ASA —
-            it does not change POS sales or pay crew. P&L income stays on paid POS tickets.
-            Floor coverage = whether a floor run already claimed that day.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="finance-dash flex flex-col gap-5">
+      <FinanceMetricStrip label="Shift close totals">
+        <FinanceMetricCell label="In window" value={String(statusCounts.total)} hint={`${range.start} → ${range.end}`} tone="ink" />
+        <FinanceMetricCell label="Submitted" value={String(statusCounts.submitted)} hint="Needs review" tone="muted" />
+        <FinanceMetricCell label="Accepted" value={String(statusCounts.accepted)} tone="up" />
+        <FinanceMetricCell label="Rejected" value={String(statusCounts.rejected)} tone="down" />
+        <FinanceMetricCell label="Locked" value={String(statusCounts.locked)} hint="Day sealed" tone="ink" />
+      </FinanceMetricStrip>
+
+      <FinancePanel
+        title="Shift reviews"
+        description="POS baseline vs Branch Admin submission. Accept unlocks Pending floor pay — it does not rewrite POS sales. P&L income stays on paid tickets."
+      >
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No shift closes in this range. Branch Admin, Super Admin, or ASA submit from POS → End of shift (with editable close time).
-            </p>
+            <FinanceEmpty
+              title="No shift closes in this range"
+              body="Branch Admin, Super Admin, or ASA submit from POS → End of shift (with editable close time)."
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -186,7 +205,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                   const coverage = shiftClosePayrollCoverage(row, payrollRuns)
                   return (
                     <TableRow key={row.id} data-state={selectedId === row.id ? 'selected' : undefined}>
-                      <TableCell>{row.business_date}</TableCell>
+                      <TableCell className="tabular-nums">{row.business_date}</TableCell>
                       <TableCell>{row.branch}</TableCell>
                       <TableCell className="text-xs tabular-nums text-muted-foreground">
                         {row.shift_ended_at
@@ -205,7 +224,13 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                         <Badge variant={coverage.covered ? 'default' : 'outline'}>{coverage.label}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="min-h-10 cursor-pointer"
+                          onClick={() => setSelectedId(row.id)}
+                        >
                           Review
                         </Button>
                       </TableCell>
@@ -215,33 +240,16 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+      </FinancePanel>
 
       {selected ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {selected.branch} · {selected.business_date}
-            </CardTitle>
-            <CardDescription>
-              {selectedCoverage ? `${selectedCoverage.label} · ` : ''}
-              Status {selected.status}
-              {selected.shift_ended_at
-                ? ` · Shift ended ${new Date(selected.shift_ended_at).toLocaleString()}`
-                : ''}
-              {selected.review_note ? ` · Note: ${selected.review_note}` : ''}
-              {!selectedCoverage?.covered && selected.status === 'accepted' ? (
-                <>
-                  {' · '}
-                  <Link className="underline" to="/operations/payroll">
-                    Open Payroll dashboard
-                  </Link>
-                </>
-              ) : null}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+        <FinancePanel
+          title={`${selected.branch} · ${selected.business_date}`}
+          description={`${selectedCoverage ? `${selectedCoverage.label} · ` : ''}Status ${selected.status}${
+            selected.shift_ended_at ? ` · Shift ended ${new Date(selected.shift_ended_at).toLocaleString()}` : ''
+          }${selected.review_note ? ` · Note: ${selected.review_note}` : ''}`}
+        >
+            <div className="flex flex-col gap-4">
             {diffs.length === 0 ? (
               <p className="text-sm text-muted-foreground">Submitted matches POS baseline — no overrides.</p>
             ) : (
@@ -263,14 +271,23 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                           <p className="text-xs text-muted-foreground">{selected.override_reasons[d.key]}</p>
                         ) : null}
                       </TableCell>
-                      <TableCell>{formatMoney(d.baseline_minor)}</TableCell>
-                      <TableCell>{formatMoney(d.submitted_minor)}</TableCell>
-                      <TableCell>{formatMoney(d.delta_minor)}</TableCell>
+                      <TableCell className="tabular-nums">{formatMoney(d.baseline_minor)}</TableCell>
+                      <TableCell className="tabular-nums">{formatMoney(d.submitted_minor)}</TableCell>
+                      <TableCell className="tabular-nums">{formatMoney(d.delta_minor)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             )}
+
+            {!selectedCoverage?.covered && selected.status === 'accepted' ? (
+              <p className="text-sm text-muted-foreground">
+                No floor payroll run claimed this day yet.{' '}
+                <Link className="underline" to="/operations/payroll">
+                  Open Payroll dashboard
+                </Link>
+              </p>
+            ) : null}
 
             {canReview && selected.status === 'submitted' ? (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
@@ -278,16 +295,23 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                   <Label htmlFor="shift-review-note">Review note (required to reject)</Label>
                   <Input
                     id="shift-review-note"
+                    className="min-h-10"
                     value={reviewNote}
                     onChange={(e) => setReviewNote(e.target.value)}
                     placeholder="Reason for reject, or optional accept note"
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" disabled={busy} onClick={() => review('accept')}>
+                  <Button type="button" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review('accept')}>
                     Accept
                   </Button>
-                  <Button type="button" variant="destructive" disabled={busy} onClick={() => review('reject')}>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="min-h-10 cursor-pointer"
+                    disabled={busy}
+                    onClick={() => review('reject')}
+                  >
                     Reject
                   </Button>
                 </div>
@@ -295,7 +319,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
             ) : null}
 
             {canReview && selected.status === 'accepted' ? (
-              <Button type="button" variant="secondary" disabled={busy} onClick={() => review('lock')}>
+              <Button type="button" variant="secondary" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review('lock')}>
                 Lock day
               </Button>
             ) : null}
@@ -303,17 +327,12 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
             {selected.status === 'locked' ? (
               <p className="text-sm text-muted-foreground">This day is locked. Resubmit is blocked until unlocked by policy.</p>
             ) : null}
-          </CardContent>
-        </Card>
+            </div>
+        </FinancePanel>
       ) : null}
 
       {profile?.role === 'BossMich' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Field customization</CardTitle>
-            <CardDescription>Which money fields Branch Admins may override on End of shift.</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <FinancePanel title="Field customization" description="Which money fields Branch Admins may override on End of shift.">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -326,7 +345,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                   <TableRow key={f.field_key}>
                     <TableCell>{f.label}</TableCell>
                     <TableCell>
-                      <label className="inline-flex items-center gap-2 text-sm">
+                      <label className="inline-flex min-h-10 items-center gap-2 text-sm">
                         <input
                           type="checkbox"
                           checked={f.allow_override !== false}
@@ -340,8 +359,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
+        </FinancePanel>
       ) : null}
     </div>
   )
