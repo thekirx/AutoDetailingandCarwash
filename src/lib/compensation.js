@@ -160,25 +160,35 @@ export function detailingAmountMinor(lines = []) {
 }
 
 /**
- * Lines that feed ceramic crew/detailer drafts (coating / paint maint / detailing tab).
- * Excludes PPF film packages — those are not ceramic split jobs.
+ * Lines that feed detailing crew/detailer drafts (coating / paint maint / tint / detailing).
+ * Excludes PPF film packages — those are not detailing split jobs.
  */
 export function isCeramicCompensationLine(line = {}) {
   const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
+  if (cat === 'ppf') return false
   if (cat === 'detailing') return true
   if (String(line?.catalog_kind || '').toLowerCase() === 'detailing') {
-    // Detailing tab may include ppf slug cards — only ceramic-ish names/slugs
     const slug = String(line?.slug || line?.services?.slug || '').toLowerCase()
     const name = String(line?.name || '').toLowerCase()
-    if (slug.includes('ppf') || name.includes('ppf') || cat === 'ppf') return false
+    if (slug.includes('ppf') || name.includes('ppf')) return false
     return true
   }
   const slug = String(line?.slug || line?.services?.slug || '').toLowerCase()
-  if (slug.includes('ceramic-coating') || slug.includes('paint-maintenance') || slug.includes('nano-ceramic')) {
+  if (
+    slug.includes('ceramic-coating') ||
+    slug.includes('paint-maintenance') ||
+    slug.includes('nano-ceramic') ||
+    slug.includes('detailing')
+  ) {
     return true
   }
   const name = String(line?.name || '').toLowerCase()
-  if (name.includes('ceramic coating') || name.includes('nano ceramic') || name.includes('paint maintenance')) {
+  if (
+    name.includes('ceramic coating') ||
+    name.includes('nano ceramic') ||
+    name.includes('paint maintenance') ||
+    name.includes('detailing')
+  ) {
     return true
   }
   return false
@@ -195,8 +205,24 @@ export function effectiveCeramicToggles(toggles = {}, paymentMethod) {
   }
 }
 
+/** Canonical expense key for detailing compensation drafts (legacy ceramic: still accepted). */
+export function detailingExpenseKey(saleId, kind) {
+  return `detailing:${saleId}:${kind}`
+}
+
+/** @deprecated use detailingExpenseKey — kept for callers; writes detailing: prefix */
 export function ceramicExpenseKey(saleId, kind) {
-  return `ceramic:${saleId}:${kind}`
+  return detailingExpenseKey(saleId, kind)
+}
+
+export function parseDetailingCompKey(description) {
+  const m = /^(?:ceramic|detailing):([^:]+):(crew|detailer)$/i.exec(String(description || '').trim())
+  if (!m) return null
+  return { saleId: m[1], side: m[2].toLowerCase() }
+}
+
+export function isDetailingCompExpenseDescription(description) {
+  return /^(?:ceramic|detailing):/i.test(String(description || '').trim())
 }
 
 export function buildCeramicCompensationExpenses({
@@ -219,8 +245,8 @@ export function buildCeramicCompensationExpenses({
   const rows = []
   if (pay.crew_minor > 0) {
     rows.push({
-      title: `Ceramic crew share · ${branch}${date ? ` · ${date}` : ''}`,
-      description: ceramicExpenseKey(saleId, 'crew'),
+      title: `Detailing crew share · ${branch}${date ? ` · ${date}` : ''}`,
+      description: detailingExpenseKey(saleId, 'crew'),
       total_minor: pay.crew_minor,
       unit_cost_minor: pay.crew_minor,
       quantity: 1,
@@ -231,8 +257,8 @@ export function buildCeramicCompensationExpenses({
   }
   if (pay.detailer_minor > 0) {
     rows.push({
-      title: `Ceramic detailer share · ${branch}${date ? ` · ${date}` : ''}`,
-      description: ceramicExpenseKey(saleId, 'detailer'),
+      title: `Detailing detailer share · ${branch}${date ? ` · ${date}` : ''}`,
+      description: detailingExpenseKey(saleId, 'detailer'),
       total_minor: pay.detailer_minor,
       unit_cost_minor: pay.detailer_minor,
       quantity: 1,

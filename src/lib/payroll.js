@@ -171,7 +171,8 @@ function inPeriod(day, period) {
 }
 
 function parseCeramicKey(description) {
-  const m = /^ceramic:([^:]+):(crew|detailer)$/i.exec(String(description || '').trim())
+  // Legacy ceramic: + canonical detailing: keys
+  const m = /^(?:ceramic|detailing):([^:]+):(crew|detailer)$/i.exec(String(description || '').trim())
   if (!m) return null
   return { saleId: m[1], side: m[2].toLowerCase() }
 }

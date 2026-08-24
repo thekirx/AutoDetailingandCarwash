@@ -126,12 +126,13 @@ export function normalizeFields(fields) {
   })
 }
 
-export function templateFields(kind) {
+export function templateFields(kind, { branchSlugs } = {}) {
+  const branches = Array.isArray(branchSlugs) && branchSlugs.length ? branchSlugs : []
   if (kind === 'complaint') {
     return normalizeFields([
       { key: 'customer_name', label: 'Customer name', type: 'text', required: true },
       { key: 'phone', label: 'Phone', type: 'phone', required: false },
-      { key: 'branch', label: 'Branch', type: 'select', required: true, options: ['bacoor', 'batangas'] },
+      { key: 'branch', label: 'Branch', type: 'select', required: true, options: branches },
       { key: 'category', label: 'Category', type: 'select', required: true, options: ['Service quality', 'Wait time', 'Damage', 'Staff', 'Other'] },
       { key: 'description', label: 'Description', type: 'textarea', required: true },
     ])
@@ -139,7 +140,7 @@ export function templateFields(kind) {
   if (kind === 'equipment_repair') {
     return normalizeFields([
       { key: 'reporter', label: 'Reported by', type: 'text', required: true },
-      { key: 'branch', label: 'Branch', type: 'select', required: true, options: ['bacoor', 'batangas'] },
+      { key: 'branch', label: 'Branch', type: 'select', required: true, options: branches },
       { key: 'equipment', label: 'Equipment', type: 'text', required: true },
       { key: 'urgency', label: 'Urgency', type: 'select', required: true, options: ['Low', 'Medium', 'High', 'Critical'] },
       { key: 'description', label: 'Issue description', type: 'textarea', required: true },
@@ -148,7 +149,7 @@ export function templateFields(kind) {
   if (kind === 'cash_advance') {
     return normalizeFields([
       { key: 'employee_name', label: 'Employee name', type: 'text', required: true },
-      { key: 'branch', label: 'Branch', type: 'select', required: true, options: ['bacoor', 'batangas'] },
+      { key: 'branch', label: 'Branch', type: 'select', required: true, options: branches },
       { key: 'amount', label: 'Amount (₱)', type: 'number', required: true },
       { key: 'needed_by', label: 'Needed by', type: 'date', required: true },
       { key: 'reason', label: 'Reason', type: 'textarea', required: true },
@@ -164,7 +165,16 @@ export function templateFields(kind) {
     ])
   }
   // Fixed kinds only — unknown kind falls back to complaint shape
-  return templateFields('complaint')
+  return templateFields('complaint', { branchSlugs: branches })
+}
+
+/** Overlay live branch slugs onto any form's branch select (DB templates + defaults). */
+export function withLiveBranchOptions(fields = [], branchSlugs = []) {
+  const options = (branchSlugs || []).map((s) => String(s || '').trim()).filter(Boolean)
+  if (!options.length) return normalizeFields(fields)
+  return normalizeFields(fields).map((f) =>
+    f.key === 'branch' && f.type === 'select' ? { ...f, options } : f,
+  )
 }
 
 export function defaultFormSettings(kind = 'complaint') {

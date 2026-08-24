@@ -66,7 +66,7 @@ export function buildShopDaySettlementReport({
     status: s.status || 'paid',
   }))
   const ceramicExpenses = (expenses || []).filter((e) =>
-    /^ceramic:/i.test(String(e.description || '')),
+    /^(?:ceramic|detailing):/i.test(String(e.description || '')),
   )
   const roster = (attendance || []).map((row) => ({
     id: row.staff_id || row.id,

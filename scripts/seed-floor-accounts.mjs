@@ -45,8 +45,31 @@ if (!url || !key) {
 
 const admin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 
-const BRANCH = 'bacoor'
 const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+
+/** Active floor branches for demo seeds — prefers real shops, never HQ-only. */
+async function resolveSeedBranches() {
+  const envList = String(process.env.SEED_BRANCHES || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const { data, error } = await admin
+    .from('branches')
+    .select('slug, name, is_active, coming_soon, is_archived')
+    .eq('is_archived', false)
+    .order('name')
+  if (error) throw error
+  const live = (data || []).filter((b) => b.is_active !== false && !b.coming_soon)
+  if (envList.length) {
+    const set = new Set(envList)
+    const picked = live.filter((b) => set.has(b.slug))
+    if (picked.length) return picked.map((b) => b.slug)
+  }
+  const preferred = live.filter((b) => !String(b.slug).startsWith('aud-') && b.slug !== 'hq')
+  const slugs = (preferred.length ? preferred : live).map((b) => b.slug)
+  if (!slugs.length) throw new Error('No active branches found to seed')
+  return slugs
+}
 
 const DETAILING_SERVICES = [
   {
@@ -157,11 +180,11 @@ async function upsertStaffProfile(user, { full_name, role, branch_slug, phone = 
   return user.id
 }
 
-async function markPresent(staffId, markedBy) {
+async function markPresent(staffId, markedBy, branchSlug) {
   const { error } = await admin.from('staff_attendance').upsert(
     {
       staff_id: staffId,
-      branch_slug: BRANCH,
+      branch_slug: branchSlug,
       attendance_date: TODAY,
       status: 'present',
       checked_in_at: new Date().toISOString(),
@@ -173,11 +196,11 @@ async function markPresent(staffId, markedBy) {
   if (error) throw error
 }
 
-async function archiveOrphanStaff(keepIds) {
+async function archiveOrphanStaff(keepIds, branchSlug) {
   const { data: rows } = await admin
     .from('staff_profiles')
     .select('id, full_name, role')
-    .eq('branch_slug', BRANCH)
+    .eq('branch_slug', branchSlug)
     .eq('role', 'staff')
     .eq('is_active', true)
 
@@ -194,7 +217,10 @@ async function archiveOrphanStaff(keepIds) {
 }
 
 async function main() {
-  console.log('Seeding floor accounts for', TODAY, BRANCH)
+  const branches = await resolveSeedBranches()
+  const primary = branches.includes('bacoor') ? 'bacoor' : branches[0]
+  const secondary = branches.find((s) => s !== primary) || null
+  console.log('Seeding floor accounts for', TODAY, 'branches=', branches.join(','), 'primary=', primary)
 
   await seedFloorDetailingServices()
 
@@ -214,18 +240,33 @@ async function main() {
   await upsertStaffProfile(branchAdmin, {
     full_name: 'Branch Admin',
     role: 'admin',
-    branch_slug: BRANCH,
+    branch_slug: primary,
     phone: '09170000001',
   })
-  console.log('Admin', branchAdmin.id)
+  // Multi-branch: BA can also see secondary shop when present
+  await admin.from('staff_branch_assignments').delete().eq('staff_id', branchAdmin.id)
+  await admin
+    .from('staff_branch_assignments')
+    .insert(branches.map((slug) => ({ staff_id: branchAdmin.id, branch_slug: slug })))
+  console.log('Admin', branchAdmin.id, 'branches', branches.join(','))
 
   const tlUser = await ensureAuthUser({
     email: 'teamlead@hakumautocare.com',
     password: 'HakumTL2026!',
     full_name: 'TL Test Account',
   })
-  await upsertStaffProfile(tlUser, { full_name: 'TL Test Account', role: 'team_lead', branch_slug: BRANCH })
-  console.log('Team Lead', tlUser.id)
+  await upsertStaffProfile(tlUser, { full_name: 'TL Test Account', role: 'team_lead', branch_slug: primary })
+  console.log('Team Lead', tlUser.id, primary)
+
+  if (secondary) {
+    const tl2 = await ensureAuthUser({
+      email: 'teamlead2@hakumautocare.com',
+      password: 'HakumTL2026!',
+      full_name: 'TL Second Branch',
+    })
+    await upsertStaffProfile(tl2, { full_name: 'TL Second Branch', role: 'team_lead', branch_slug: secondary })
+    console.log('Team Lead 2', tl2.id, secondary)
+  }
 
   const salesUser = await ensureAuthUser({
     email: 'sales@hakumautocare.com',
@@ -235,17 +276,19 @@ async function main() {
   await upsertStaffProfile(salesUser, {
     full_name: 'Sales Desk',
     role: 'sales',
-    branch_slug: BRANCH,
+    branch_slug: primary,
     phone: '09170000015',
   })
   await admin.from('staff_branch_assignments').delete().eq('staff_id', salesUser.id)
-  await admin.from('staff_branch_assignments').insert({ staff_id: salesUser.id, branch_slug: BRANCH })
-  console.log('Sales', salesUser.id)
+  await admin
+    .from('staff_branch_assignments')
+    .insert(branches.map((slug) => ({ staff_id: salesUser.id, branch_slug: slug })))
+  console.log('Sales', salesUser.id, 'branches', branches.join(','))
 
   const staffDefs = [
-    { email: 'staff1@hakumautocare.com', full_name: 'Crew One', phone: '09170001111' },
-    { email: 'staff2@hakumautocare.com', full_name: 'Crew Two', phone: '09170002222' },
-    { email: 'staff3@hakumautocare.com', full_name: 'Crew Three', phone: '09170003333' },
+    { email: 'staff1@hakumautocare.com', full_name: 'Crew One', phone: '09170001111', branch: primary },
+    { email: 'staff2@hakumautocare.com', full_name: 'Crew Two', phone: '09170002222', branch: primary },
+    { email: 'staff3@hakumautocare.com', full_name: 'Crew Three', phone: '09170003333', branch: secondary || primary },
   ]
   const staffIds = new Set()
   for (const def of staffDefs) {
@@ -257,15 +300,17 @@ async function main() {
     await upsertStaffProfile(user, {
       full_name: def.full_name,
       role: 'staff',
-      branch_slug: BRANCH,
+      branch_slug: def.branch,
       phone: def.phone,
     })
-    await markPresent(user.id, tlUser.id)
+    await markPresent(user.id, tlUser.id, def.branch)
     staffIds.add(user.id)
-    console.log('Staff', def.email, user.id, 'present', TODAY)
+    console.log('Staff', def.email, user.id, def.branch, 'present', TODAY)
   }
 
-  await archiveOrphanStaff(staffIds)
+  for (const slug of branches) {
+    await archiveOrphanStaff(staffIds, slug)
+  }
 
   const marketing = await ensureAuthUser({
     email: 'marketing@hakumautocare.com',
@@ -275,7 +320,7 @@ async function main() {
   await upsertStaffProfile(marketing, {
     full_name: 'Marketing Lead',
     role: 'marketing',
-    branch_slug: BRANCH,
+    branch_slug: primary,
     phone: '09170000021',
   })
   console.log('Marketing', marketing.id)
@@ -316,7 +361,7 @@ async function main() {
   await upsertStaffProfile(detailer, {
     full_name: 'Demo Detailer',
     role: 'detailer',
-    branch_slug: BRANCH,
+    branch_slug: primary,
     phone: '09170000040',
   })
   await admin
@@ -333,7 +378,7 @@ async function main() {
   await upsertStaffProfile(video, {
     full_name: 'Demo Video Editor',
     role: 'video_editor',
-    branch_slug: BRANCH,
+    branch_slug: primary,
     phone: '09170000041',
   })
   console.log('Video Editor', video.id)

@@ -251,13 +251,10 @@ function BookingStageTicket({
   )
 }
 
-/** Prefer live ops shops (Bacoor / Batangas) over test / Dasmarinas audit slugs. */
+/** Prefer first active bookable shop — never invent a slug. */
 function preferredBranchSlug(branches = []) {
-  const preferred = ['bacoor', 'batangas']
-  for (const slug of preferred) {
-    if (branches.some((b) => b.slug === slug)) return slug
-  }
-  return branches[0]?.slug || ''
+  const active = (branches || []).filter((b) => b?.slug && !b.is_archived && b.is_active !== false && !b.coming_soon)
+  return active[0]?.slug || branches[0]?.slug || ''
 }
 
 function bookableBranches(branches = [], profile) {

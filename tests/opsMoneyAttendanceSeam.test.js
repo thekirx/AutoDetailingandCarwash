@@ -79,8 +79,10 @@ describe('ops money + attendance seam (live role strings)', () => {
     assert.equal(plan.pool_minor, 35000)
   })
 
-  it('daily close buckets detailing bookings as coating, not queue wash', () => {
-    assert.equal(classifySaleBucket({ booking_id: 'b1', pay_category: 'detailing', total_minor: 1 }), 'coating')
+  it('daily close buckets detailing vs coating vs wash separately', () => {
+    assert.equal(classifySaleBucket({ booking_id: 'b1', pay_category: 'detailing', total_minor: 1 }), 'detailing')
+    assert.equal(classifySaleBucket({ booking_id: 'b2', service_slug: 'ceramic-coating', total_minor: 1 }), 'coating')
+    assert.equal(classifySaleBucket({ booking_id: 'b3', service_slug: 'paint-maintenance', total_minor: 1 }), 'paint_maint')
     assert.equal(classifySaleBucket({ pos_handoff_id: 'h1', pay_category: 'wash', total_minor: 1 }), 'carwash')
     assert.equal(classifySaleBucket({ name: 'Iced coffee', item_type: 'product', total_minor: 1 }), 'refreshment')
     const closeRows = paidSalesToBacoorRows([
@@ -92,7 +94,7 @@ describe('ops money + attendance seam (live role strings)', () => {
         pay_category: 'detailing',
       },
     ])
-    assert.equal(closeRows[0].bucket, 'coating')
+    assert.equal(closeRows[0].bucket, 'detailing')
   })
 
   it('geofence helper always returns ok/distance; People toggles reach the clock', () => {
@@ -139,8 +141,9 @@ describe('ops money + attendance seam (live role strings)', () => {
     // 20_000 pesos − 500 shirt = 19_500; 10% crew + 10% detailer
     assert.equal(drafts.find((r) => r.expense_kind === 'salary_carwash')?.total_minor, 195000)
     assert.equal(drafts.find((r) => r.expense_kind === 'salary_detailer')?.total_minor, 195000)
-    assert.equal(drafts.find((r) => r.expense_kind === 'salary_carwash')?.description, 'ceramic:sale-1:crew')
-    assert.equal(drafts.find((r) => r.expense_kind === 'salary_detailer')?.description, 'ceramic:sale-1:detailer')
+    assert.equal(drafts.find((r) => r.expense_kind === 'salary_carwash')?.description, 'detailing:sale-1:crew')
+    assert.equal(drafts.find((r) => r.expense_kind === 'salary_detailer')?.description, 'detailing:sale-1:detailer')
+    assert.match(drafts.find((r) => r.expense_kind === 'salary_carwash')?.title || '', /Detailing crew/)
     assert.equal(buildCeramicCompensationExpenses({ saleId: 'x', branch: 'bacoor', salesMinor: 0 }).length, 0)
   })
 

@@ -355,7 +355,7 @@ export default function PayrollPage() {
               let q = supabase
                 .from('expenses')
                 .select('description, total_minor, branch, expense_kind')
-                .like('description', 'ceramic:%')
+                .or('description.like.ceramic:%,description.like.detailing:%')
                 .gte('created_at', startIso)
                 .lte('created_at', endIso)
               if (branch) q = q.eq('branch', branch)

@@ -147,8 +147,10 @@ export default function PosPage() {
   const familyTiles = useMemo(
     () => [
       { label: 'Car wash', value: formatMoney(categoryTotals.car_wash) },
-      { label: 'Ceramic coating', value: formatMoney(categoryTotals.ceramic_coating) },
-      { label: 'Nano ceramic tint', value: formatMoney(categoryTotals.nano_tint) },
+      { label: 'Coating', value: formatMoney(categoryTotals.ceramic_coating) },
+      { label: 'Paint maintenance', value: formatMoney(categoryTotals.paint_maintenance) },
+      { label: 'Other detailing', value: formatMoney(categoryTotals.detailing) },
+      { label: 'Tint', value: formatMoney(categoryTotals.nano_tint) },
       { label: 'PPF', value: formatMoney(categoryTotals.ppf) },
       { label: 'Coffee / refreshments', value: formatMoney(categoryTotals.coffee) },
       { label: 'Accessories', value: formatMoney(categoryTotals.accessories) },
@@ -1410,7 +1412,7 @@ export default function PosPage() {
               ))}
             </div>
             <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <p className="mb-2 font-semibold">Bacoor-style report</p>
+              <p className="mb-2 font-semibold">Daily close report</p>
               <pre className="whitespace-pre-wrap text-xs leading-relaxed">{formatBacoorReportText(dailyReportData, formatMoney)}</pre>
             </div>
             <Button

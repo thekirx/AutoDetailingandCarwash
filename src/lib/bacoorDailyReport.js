@@ -38,6 +38,8 @@ export function emptyBacoorDailyReport(meta = {}) {
     queue_app_sales_minor: 0,
     car_wash_sales_minor: 0,
     ceramic_coating_sales_minor: 0,
+    paint_maintenance_sales_minor: 0,
+    detailing_sales_minor: 0,
     ppf_sales_minor: 0,
     ceramic_tint_sales_minor: 0,
     refreshment_sales_minor: 0,
@@ -112,6 +114,8 @@ export function buildBacoorDailyReport({
       report.queue_app_sales_minor += amount
       report.car_wash_sales_minor += amount
     } else if (bucket === 'coating') report.ceramic_coating_sales_minor += amount
+    else if (bucket === 'paint_maint') report.paint_maintenance_sales_minor += amount
+    else if (bucket === 'detailing') report.detailing_sales_minor += amount
     else if (bucket === 'ppf') report.ppf_sales_minor += amount
     else if (bucket === 'tint') report.ceramic_tint_sales_minor += amount
     else if (bucket === 'refreshment') report.refreshment_sales_minor += amount
@@ -191,9 +195,11 @@ export function formatBacoorReportText(report, formatMoney) {
     '━━━━━━━━━━━',
     `Queue App Sales: ${m(report.queue_app_sales_minor)}`,
     `Car Wash Sales: ${m(report.car_wash_sales_minor)}`,
-    `Ceramic Coating Sales: ${m(report.ceramic_coating_sales_minor)}`,
+    `Coating Sales: ${m(report.ceramic_coating_sales_minor)}`,
+    `Paint Maintenance Sales: ${m(report.paint_maintenance_sales_minor)}`,
+    `Other Detailing Sales: ${m(report.detailing_sales_minor)}`,
     `PPF Sales: ${m(report.ppf_sales_minor)}`,
-    `Ceramic Tint Sales: ${m(report.ceramic_tint_sales_minor)}`,
+    `Tint Sales: ${m(report.ceramic_tint_sales_minor)}`,
     `Refreshment Sales: ${m(report.refreshment_sales_minor)}`,
     `Car Accessories: ${m(report.car_accessories_minor)}`,
     `Hakum Clothing: ${m(report.hakum_clothing_minor)}`,
@@ -207,7 +213,7 @@ export function formatBacoorReportText(report, formatMoney) {
         : ''
     }`,
     `Detailer Salary: ${m(report.detailer_salary_minor)}${
-      report.salary_from_preview ? ' (from detailing / ceramic preview)' : ''
+      report.salary_from_preview ? ' (from detailing compensation preview)' : ''
     }`,
     `Tinter Salary: ${m(report.tinter_salary_minor)}`,
     '',

@@ -62,9 +62,18 @@ export function classifySaleBucket({
   const name = String(serviceName || '').toLowerCase()
   const cat = String(payCategory || '').toLowerCase()
   if (slug.includes('ceramic-coating') || name.includes('ceramic coating')) return 'ceramic_coating'
-  if (slug.includes('nano-ceramic') || name.includes('nano ceramic') || name.includes('tint')) return 'nano_tint'
+  if (slug.includes('nano-ceramic') || name.includes('nano ceramic') || (name.includes('tint') && !name.includes('paint')))
+    return 'nano_tint'
   if (slug.includes('paint-protection') || slug.includes('ppf') || name.includes('ppf') || cat === 'ppf') return 'ppf'
-  if (cat === 'detailing') return 'ceramic_coating'
+  if (slug.includes('paint-maintenance') || name.includes('paint maintenance')) return 'paint_maintenance'
+  // Generic detailing (interior/exterior/etc.) — not ceramic coating
+  if (
+    cat === 'detailing' ||
+    slug.includes('detailing') ||
+    name.includes('detailing')
+  ) {
+    return 'detailing'
+  }
   if (itemType === 'product') {
     return merchFamily({
       tags: productTags,
@@ -83,6 +92,8 @@ export function emptyPosCategoryTotals() {
   return {
     car_wash: 0,
     ceramic_coating: 0,
+    paint_maintenance: 0,
+    detailing: 0,
     nano_tint: 0,
     ppf: 0,
     coffee: 0,
@@ -109,6 +120,8 @@ export function accumulatePosCategoryTotals(rows = []) {
 export function posBucketToBacoor(bucket) {
   if (bucket === 'car_wash') return 'carwash'
   if (bucket === 'ceramic_coating') return 'coating'
+  if (bucket === 'paint_maintenance') return 'paint_maint'
+  if (bucket === 'detailing') return 'detailing'
   if (bucket === 'nano_tint') return 'tint'
   if (bucket === 'ppf') return 'ppf'
   if (bucket === 'coffee') return 'refreshment'

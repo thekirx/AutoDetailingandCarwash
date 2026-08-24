@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { NamedSelect } from '@/components/ui/named-select'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
+import { listBranches } from '@/lib/adminApi'
 import { slugifyEventTitle } from '@/lib/planningPart6'
 import { toast } from 'sonner'
 
@@ -17,10 +18,11 @@ export { default as PlanningFormsPanel } from './PlanningFormsSmartPanel'
 export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
   const [events, setEvents] = useState([])
   const [opsForms, setOpsForms] = useState([])
+  const [branchOptions, setBranchOptions] = useState([])
   const [form, setForm] = useState({
     title: '',
     description: '',
-    branch: 'bacoor',
+    branch: '',
     starts_at: '',
     ends_at: '',
     is_published: true,
@@ -34,7 +36,7 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
       .order('starts_at', { ascending: false })
       .limit(50)
     if (!canEdit) eventsQ = eventsQ.eq('is_published', true)
-    const [ev, forms] = await Promise.all([
+    const [ev, forms, branches] = await Promise.all([
       eventsQ,
       supabase
         .from('ops_forms')
@@ -42,10 +44,16 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
         .eq('is_active', true)
         .neq('status', 'archived')
         .order('name'),
+      listBranches().catch(() => []),
     ])
     if (ev.error) toast.error(ev.error.message)
     else setEvents(ev.data || [])
     if (!forms.error) setOpsForms(forms.data || [])
+    const opts = (branches || [])
+      .filter((b) => b && !b.is_archived && b.is_active !== false)
+      .map((b) => ({ value: b.slug, label: b.name || b.slug }))
+    setBranchOptions(opts)
+    setForm((prev) => (prev.branch ? prev : { ...prev, branch: opts[0]?.value || '' }))
   }, [canEdit])
 
   useEffect(() => {
@@ -73,7 +81,15 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
     if (error) toast.error(error.message)
     else {
       toast.success('Event created')
-      setForm({ title: '', description: '', branch: 'bacoor', starts_at: '', ends_at: '', is_published: true, form_id: '' })
+      setForm({
+        title: '',
+        description: '',
+        branch: branchOptions[0]?.value || '',
+        starts_at: '',
+        ends_at: '',
+        is_published: true,
+        form_id: '',
+      })
       load()
     }
   }
@@ -135,7 +151,11 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Branch</Label>
-                <Input value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} />
+                <NamedSelect
+                  value={form.branch || ''}
+                  onChange={(branch) => setForm({ ...form, branch })}
+                  options={[{ value: '', label: 'All / none' }, ...branchOptions]}
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Published</Label>

@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
+import { listBranches } from '@/lib/adminApi'
 import {
   DEFAULT_FORM_LOGO,
   FIELD_TYPES,
@@ -45,6 +46,7 @@ import {
   submissionTitle,
   templateFields,
   validatePayload,
+  withLiveBranchOptions,
 } from '@/lib/opsForms'
 import { toast } from 'sonner'
 
@@ -208,8 +210,9 @@ async function notifyComplaintIfNeeded(form, payload, submissionId) {
   }
 }
 
-function emptyEditorFromForm(form) {
+function emptyEditorFromForm(form, branchSlugs = []) {
   const kind = form?.kind || 'complaint'
+  const base = form?.fields?.length ? form.fields : templateFields(kind, { branchSlugs })
   return {
     id: form?.id || null,
     name: form?.name || '',
@@ -218,7 +221,7 @@ function emptyEditorFromForm(form) {
     status: form?.status || 'published',
     public_enabled: Boolean(form?.public_enabled),
     event_id: form?.event_id || '',
-    fields: normalizeFields(form?.fields?.length ? form.fields : templateFields(kind)),
+    fields: withLiveBranchOptions(base, branchSlugs),
     settings: normalizeFormSettings(form?.settings, kind),
     slug: form?.slug || '',
   }
@@ -229,6 +232,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
   const manageTemplates = canEdit && canManageOpsFormTemplates(profile)
   const [forms, setForms] = useState([])
   const [events, setEvents] = useState([])
+  const [branchSlugs, setBranchSlugs] = useState([])
   const [submissions, setSubmissions] = useState([])
   const [kindFilter, setKindFilter] = useState('equipment_repair')
   const [editorOpen, setEditorOpen] = useState(false)
@@ -244,7 +248,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
   const [statusFilter, setStatusFilter] = useState('all')
 
   const load = useCallback(async () => {
-    const [f, s, e] = await Promise.all([
+    const [f, s, e, branches] = await Promise.all([
       supabase
         .from('ops_forms')
         .select('id, name, kind, fields, is_active, slug, description, status, public_enabled, event_id, settings, created_at')
@@ -257,7 +261,13 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
         .order('created_at', { ascending: false })
         .limit(200),
       supabase.from('events').select('id, title, slug, starts_at').order('starts_at', { ascending: false }).limit(80),
+      listBranches().catch(() => []),
     ])
+    const slugs = (branches || [])
+      .filter((b) => b && !b.is_archived && b.is_active !== false)
+      .map((b) => b.slug)
+      .filter(Boolean)
+    setBranchSlugs(slugs)
     if (f.error) toast.error(f.error.message)
     else {
       const rows = f.data || []
@@ -298,6 +308,10 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     [forms, profile],
   )
   const activeForm = fillableForms.find((f) => f.id === fillFormId) || fillableForms[0]
+  const activeFormFields = useMemo(
+    () => withLiveBranchOptions(activeForm?.fields || [], branchSlugs),
+    [activeForm, branchSlugs],
+  )
   const resultsForm = forms.find((f) => f.id === resultsFormId)
   const resultsRows = useMemo(() => {
     let rows = submissions.filter((s) => s.form_id === resultsFormId)
@@ -317,7 +331,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
 
   function openEdit(form) {
     if (!form) return toast.error('Template not seeded yet - run the latest migration')
-    setEditor(emptyEditorFromForm(form))
+    setEditor(emptyEditorFromForm(form, branchSlugs))
     setEditorOpen(true)
   }
 
@@ -372,9 +386,9 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     if (!activeForm || !canSubmitOpsFormKind(profile, activeForm.kind)) {
       return toast.error('You cannot submit this form kind')
     }
-    const errors = validatePayload(activeForm.fields, payload)
+    const errors = validatePayload(activeFormFields, payload)
     if (errors[0]) return toast.error(errors[0])
-    const calendarAt = extractCalendarAt(activeForm.fields, payload)
+    const calendarAt = extractCalendarAt(activeFormFields, payload)
     let planCardId = null
     if (pushPlanning && listId && manageTemplates) {
       const title = submissionTitle(activeForm, payload)
@@ -573,7 +587,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                   )}
                 </>
               )}
-              <DynamicFields fields={activeForm?.fields || []} values={payload} onChange={setPayload} />
+              <DynamicFields fields={activeFormFields} values={payload} onChange={setPayload} />
               <Button type="submit" className="w-fit cursor-pointer" disabled={!activeForm}>Submit</Button>
             </form>
           </CardContent>
@@ -744,7 +758,15 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                   </Button>
                 </div>
               </div>
-              <BrandedOpsForm form={previewForm} preview values={{}} />
+              <BrandedOpsForm
+                form={
+                  previewForm
+                    ? { ...previewForm, fields: withLiveBranchOptions(previewForm.fields, branchSlugs) }
+                    : null
+                }
+                preview
+                values={{}}
+              />
             </div>
           ) : null}
         </DialogContent>
