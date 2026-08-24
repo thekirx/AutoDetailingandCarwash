@@ -17,12 +17,20 @@ import {
 import { opsRouteKeyFromPath, resolvePostLoginPath } from '../src/auth/authRedirect.js'
 import {
   buildOpsLabNotifyCopy,
+  catalogStatusesToOptions,
+  catalogTypesToOptions,
   clampItemSize,
   filterBoards,
+  filterSuggestions,
+  flattenLabRows,
+  itemDocumentHref,
   newBoardDraft,
   newRoadmapItemDraft,
+  newSuggestionDraft,
+  normalizeOpsLabSlug,
   normalizeViewport,
   screenToBoardDelta,
+  suggestionKindLabel,
 } from '../src/lib/opsRoadmap.js'
 
 describe('Operations Lead + Ops Lab', () => {
@@ -87,5 +95,54 @@ describe('Operations Lead + Ops Lab', () => {
       { kind: 'plan', status: 'all', q: 'wash' },
     )
     assert.equal(filtered.length, 1)
+    const flat = flattenLabRows(
+      [
+        { id: 'i1', board_id: 'b1', kind: 'action', title: 'Fix queue', item_status: 'open', updated_at: '2026-01-02' },
+        { id: 'i2', board_id: 'b1', kind: 'frame', title: 'Skip me', item_status: 'open' },
+      ],
+      [{ id: 'b1', board_kind: 'plan', title: 'Q3' }],
+    )
+    assert.equal(flat.length, 1)
+    assert.equal(flat[0].board_kind, 'plan')
+    assert.equal(filterSuggestions(flat, { kind: 'plan', status: 'open', q: 'queue' }).length, 1)
+    assert.equal(suggestionKindLabel({ kind: 'form_link' }), 'Document')
+    assert.equal(itemDocumentHref({ kind: 'form_link', meta: { url: '/operations/inquiries' } }), '/operations/inquiries')
+    const sug = newSuggestionDraft({ boardId: 'b1', title: 'New idea', linkUrl: 'https://docs.example.com', createdBy: 'u1' })
+    assert.equal(sug.kind, 'form_link')
+    assert.equal(sug.meta.url, 'https://docs.example.com')
+  })
+
+  it('custom catalog + status notify + slug', () => {
+    assert.equal(normalizeOpsLabSlug('In Review'), 'in_review')
+    assert.equal(normalizeOpsLabSlug('  Blocked!! '), 'blocked')
+    const types = catalogTypesToOptions([
+      { id: '1', slug: 'pilot', label: 'Pilot', hint: 'Trial', sort_order: 5, is_archived: false },
+      { id: '2', slug: 'old', label: 'Old', sort_order: 1, is_archived: true },
+    ])
+    assert.equal(types.length, 1)
+    assert.equal(types[0].value, 'pilot')
+    const statuses = catalogStatusesToOptions([
+      { id: 's1', slug: 'blocked', label: 'Blocked', badge: 'destructive', sort_order: 15, is_archived: false },
+    ])
+    assert.equal(statuses[0].badge, 'destructive')
+    assert.equal(catalogTypesToOptions([]).length, 4)
+    const statusCopy = buildOpsLabNotifyCopy({
+      event: 'status_changed',
+      boardId: 'b1',
+      actorName: 'Mal',
+      itemTitle: 'Fix queue',
+      fromStatus: 'Open',
+      toStatus: 'Doing',
+    })
+    assert.equal(statusCopy.kind, 'ops_lab.status_changed')
+    assert.match(statusCopy.body, /Open → Doing/)
+    const delCopy = buildOpsLabNotifyCopy({
+      event: 'item_deleted',
+      boardId: 'b1',
+      boardKind: 'plan',
+      actorName: 'Mal',
+      itemTitle: 'Gone',
+    })
+    assert.equal(delCopy.kind, 'ops_lab.item_deleted')
   })
 })

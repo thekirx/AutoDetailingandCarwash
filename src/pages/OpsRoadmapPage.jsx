@@ -1,52 +1,53 @@
 /**
- * Ops Lab — plans, roadmaps, solutions, brainstorms for SA / ASA / BA / Operations Lead.
- * Canvas + library list; brand-aligned Hakum ops chrome; complaint/form links; notify on create.
+ * Ops Lab — leadership suggestions table (plans, roadmaps, solutions, links).
+ * Custom types/statuses via Settings; status changes notify all Ops Lab peers; DB audits every action.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
-import {
-  LayoutGrid,
-  List,
-  Minus,
-  Plus,
-  Trash2,
-  Type,
-  StickyNote,
-  Square,
-  Maximize2,
-  Link2,
-  CheckSquare,
-  MessageSquareWarning,
-  Archive,
-} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, Navigate } from 'react-router-dom'
+import { ExternalLink, Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessOpsRoadmap } from '@/auth/permissions'
-import { createCoalescedReload } from '@/lib/coalesceReload'
 import {
-  BOARD_KINDS,
-  BOARD_PRIORITIES,
-  BOARD_STATUSES,
-  ITEM_STATUSES,
-  ROADMAP_COLORS,
-  ROADMAP_KINDS,
   boardKindMeta,
-  boardPointFromClient,
-  filterBoards,
+  catalogStatusesToOptions,
+  catalogTypesToOptions,
+  filterSuggestions,
+  flattenLabRows,
+  itemDocumentHref,
   itemLinkLabel,
+  itemStatusMeta,
   newBoardDraft,
-  newRoadmapItemDraft,
-  normalizeViewport,
-  roadmapColor,
-  screenToBoardDelta,
+  newSuggestionDraft,
+  normalizeOpsLabSlug,
+  suggestionKindLabel,
 } from '@/lib/opsRoadmap'
 import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { NamedSelect } from '@/components/ui/named-select'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 
-async function notifyOpsLab({ event, board, profile }) {
+async function notifyOpsLab({ event, board, profile, itemTitle, fromStatus, toStatus }) {
   try {
     const { data: sessionData } = await supabase.auth.getSession()
     const token = sessionData?.session?.access_token
@@ -62,6 +63,9 @@ async function notifyOpsLab({ event, board, profile }) {
         board_id: board.id,
         board_title: board.title,
         board_kind: board.board_kind || 'brainstorm',
+        item_title: itemTitle || undefined,
+        from_status: fromStatus || undefined,
+        to_status: toStatus || undefined,
         actor_name: profile?.full_name || 'Teammate',
       }),
     })
@@ -70,826 +74,794 @@ async function notifyOpsLab({ event, board, profile }) {
   }
 }
 
-function StickyCard({ item, selected, onSelect, onChange, onDelete, onDragStart, complaints }) {
-  const palette = roadmapColor(item.color)
-  const isHeading = item.kind === 'heading'
-  const isFrame = item.kind === 'frame'
-  const isComplaint = item.kind === 'complaint_link'
-  const isForm = item.kind === 'form_link'
-  const isAction = item.kind === 'action'
-  const linkLabel = itemLinkLabel(item)
+function formatWhen(iso) {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })
+  } catch {
+    return iso
+  }
+}
+
+function CatalogEditor({
+  kind,
+  rows,
+  onSaved,
+  profileId,
+}) {
+  const [label, setLabel] = useState('')
+  const [hint, setHint] = useState('')
+  const [badge, setBadge] = useState('outline')
+  const [editing, setEditing] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const table = kind === 'type' ? 'ops_lab_types' : 'ops_lab_statuses'
+  const title = kind === 'type' ? 'Types' : 'Statuses'
+
+  function resetForm() {
+    setLabel('')
+    setHint('')
+    setBadge('outline')
+    setEditing(null)
+  }
+
+  function startEdit(row) {
+    setEditing(row)
+    setLabel(row.label || '')
+    setHint(row.hint || '')
+    setBadge(row.badge || 'outline')
+  }
+
+  async function save(e) {
+    e.preventDefault()
+    const trimmed = label.trim()
+    if (!trimmed) {
+      toast.error(`${kind === 'type' ? 'Type' : 'Status'} name is required`)
+      return
+    }
+    setBusy(true)
+    try {
+      if (editing) {
+        const patch = {
+          label: trimmed,
+          updated_by: profileId,
+          updated_at: new Date().toISOString(),
+        }
+        if (kind === 'type') patch.hint = hint.trim()
+        if (kind === 'status') patch.badge = badge
+        const { error } = await supabase.from(table).update(patch).eq('id', editing.id)
+        if (error) throw error
+        toast.success(`${title.slice(0, -1)} updated`)
+      } else {
+        const slug = normalizeOpsLabSlug(trimmed)
+        if (!slug) {
+          toast.error('Could not build a slug from that name')
+          return
+        }
+        const insert = {
+          slug,
+          label: trimmed,
+          sort_order: 100 + (rows?.length || 0) * 10,
+          is_system: false,
+          created_by: profileId,
+          updated_by: profileId,
+        }
+        if (kind === 'type') insert.hint = hint.trim()
+        if (kind === 'status') insert.badge = badge
+        const { error } = await supabase.from(table).insert(insert)
+        if (error) throw error
+        toast.success(`${title.slice(0, -1)} added`)
+      }
+      resetForm()
+      await onSaved()
+    } catch (err) {
+      toast.error(err.message || 'Save failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function archiveOrDelete(row) {
+    setBusy(true)
+    try {
+      if (row.is_system) {
+        const { error } = await supabase
+          .from(table)
+          .update({
+            is_archived: !row.is_archived,
+            updated_by: profileId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', row.id)
+        if (error) throw error
+        toast.success(row.is_archived ? 'Restored' : 'Hidden from menus')
+      } else {
+        const { error } = await supabase.from(table).delete().eq('id', row.id)
+        if (error) {
+          // Fallback: archive if delete blocked / in use
+          const { error: archErr } = await supabase
+            .from(table)
+            .update({ is_archived: true, updated_by: profileId, updated_at: new Date().toISOString() })
+            .eq('id', row.id)
+          if (archErr) throw error
+          toast.success('Hidden from menus')
+        } else {
+          toast.success('Deleted')
+        }
+      }
+      if (editing?.id === row.id) resetForm()
+      await onSaved()
+    } catch (err) {
+      toast.error(err.message || 'Could not remove')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onPointerDown={(e) => onDragStart(e, item)}
-      onClick={(e) => {
-        e.stopPropagation()
-        onSelect(item.id)
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect(item.id)
-        }
-      }}
-      className={`absolute touch-none select-none rounded-[0.85rem] border shadow-[0_8px_24px_rgba(5,38,153,0.08)] transition-[box-shadow,transform] ${
-        selected ? 'ring-2 ring-[var(--ops-primary)] ring-offset-2' : ''
-      }`}
-      style={{
-        left: item.x,
-        top: item.y,
-        width: item.w,
-        height: item.h,
-        zIndex: item.z_index || 1,
-        background: isFrame ? `${palette.bg}66` : palette.bg,
-        borderColor: palette.border,
-        color: palette.ink,
-        borderStyle: isFrame ? 'dashed' : 'solid',
-        borderWidth: isFrame ? 2 : 1,
-      }}
-    >
-      <div className="flex h-full flex-col gap-1 p-2.5 sm:p-3">
-        {(isComplaint || isForm || isAction) && (
-          <p className="text-[0.6rem] font-semibold uppercase tracking-[0.14em] opacity-70">
-            {ROADMAP_KINDS.find((k) => k.value === item.kind)?.label}
-          </p>
-        )}
-        {isHeading ? (
-          <input
-            className="w-full bg-transparent font-[family-name:var(--font-ops)] text-lg font-semibold outline-none placeholder:opacity-50 sm:text-xl"
-            value={item.title || ''}
-            placeholder="Heading"
-            onChange={(e) => onChange(item.id, { title: e.target.value })}
-            onPointerDown={(e) => e.stopPropagation()}
+    <div className="space-y-4">
+      <form onSubmit={save} className="grid gap-3 rounded-lg border border-border/70 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">{editing ? `Edit ${kind}` : `Add ${kind}`}</p>
+          {editing ? (
+            <Button type="button" variant="ghost" size="sm" onClick={resetForm}>
+              Cancel edit
+            </Button>
+          ) : null}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`cat-${kind}-label`}>Name</Label>
+          <Input
+            id={`cat-${kind}-label`}
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder={kind === 'type' ? 'e.g. Pilot' : 'e.g. Blocked'}
           />
-        ) : (
-          <>
-            <input
-              className="w-full bg-transparent text-sm font-semibold outline-none placeholder:opacity-50"
-              value={item.title || ''}
-              placeholder={isFrame ? 'Frame label' : 'Title'}
-              onChange={(e) => onChange(item.id, { title: e.target.value })}
-              onPointerDown={(e) => e.stopPropagation()}
+        </div>
+        {kind === 'type' ? (
+          <div className="space-y-1.5">
+            <Label htmlFor={`cat-${kind}-hint`}>Hint</Label>
+            <Input
+              id={`cat-${kind}-hint`}
+              value={hint}
+              onChange={(e) => setHint(e.target.value)}
+              placeholder="Short description"
             />
-            {!isFrame ? (
-              <textarea
-                className="min-h-0 flex-1 resize-none bg-transparent text-sm leading-snug outline-none placeholder:opacity-50"
-                value={item.body || ''}
-                placeholder="Write the idea…"
-                onChange={(e) => onChange(item.id, { body: e.target.value })}
-                onPointerDown={(e) => e.stopPropagation()}
-              />
-            ) : null}
-          </>
-        )}
-
-        {isComplaint && selected ? (
-          <select
-            className="mt-1 w-full rounded-md border border-black/10 bg-white/70 px-2 py-1 text-xs"
-            value={item.meta?.submission_id || ''}
-            onPointerDown={(e) => e.stopPropagation()}
-            onChange={(e) => {
-              const row = complaints.find((c) => c.id === e.target.value)
-              onChange(item.id, {
-                meta: {
-                  ...(item.meta || {}),
-                  submission_id: e.target.value || null,
-                  complaint_label: row
-                    ? `${row.respondent_label || 'Guest'} · ${String(row.payload?.subject || row.payload?.message || '').slice(0, 48)}`
-                    : null,
-                  respondent_label: row?.respondent_label || null,
-                },
-                title: row
-                  ? `Complaint · ${row.respondent_label || 'Guest'}`
-                  : item.title,
-              })
-            }}
-          >
-            <option value="">Pick a complaint…</option>
-            {complaints.map((c) => (
-              <option key={c.id} value={c.id}>
-                {(c.respondent_label || 'Guest').slice(0, 24)} ·{' '}
-                {String(c.payload?.subject || c.payload?.message || c.id).slice(0, 36)}
-              </option>
-            ))}
-          </select>
-        ) : null}
-
-        {isForm && selected ? (
-          <input
-            className="mt-1 w-full rounded-md border border-black/10 bg-white/70 px-2 py-1 text-xs"
-            placeholder="https://… or /operations/…"
-            value={item.meta?.url || ''}
-            onPointerDown={(e) => e.stopPropagation()}
-            onChange={(e) =>
-              onChange(item.id, {
-                meta: { ...(item.meta || {}), url: e.target.value, form_label: e.target.value },
-              })
-            }
-          />
-        ) : null}
-
-        {linkLabel && !selected ? (
-          <p className="truncate text-[0.7rem] font-medium opacity-80">{linkLabel}</p>
-        ) : null}
-
-        {selected ? (
-          <div className="mt-auto flex flex-col gap-1.5 pt-1">
-            <div className="flex items-center gap-1">
-              <select
-                className="h-7 flex-1 rounded-md border border-black/10 bg-white/70 px-1 text-[0.65rem]"
-                value={item.item_status || 'open'}
-                onPointerDown={(e) => e.stopPropagation()}
-                onChange={(e) => onChange(item.id, { item_status: e.target.value })}
-              >
-                {ITEM_STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="rounded p-1 text-destructive hover:bg-black/5"
-                title="Delete"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete(item.id)
-                }}
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {ROADMAP_COLORS.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  title={c.label}
-                  className="size-4 rounded-full border border-black/10"
-                  style={{
-                    background: c.bg,
-                    outline: item.color === c.value ? `2px solid ${c.border}` : undefined,
-                  }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onChange(item.id, { color: c.value })
-                  }}
-                />
-              ))}
-            </div>
           </div>
         ) : (
-          <p className="mt-auto text-[0.6rem] uppercase tracking-wide opacity-60">
-            {item.item_status || 'open'}
-          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor={`cat-${kind}-badge`}>Badge style</Label>
+            <Select value={badge} onValueChange={setBadge}>
+              <SelectTrigger id={`cat-${kind}-badge`} className="w-full cursor-pointer">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="outline">Outline</SelectItem>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="secondary">Secondary</SelectItem>
+                <SelectItem value="destructive">Destructive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         )}
-      </div>
+        <Button type="submit" disabled={busy} className="w-full sm:w-auto">
+          {busy ? 'Saving…' : editing ? 'Save changes' : `Add ${kind}`}
+        </Button>
+      </form>
+
+      <ul className="divide-y divide-border/60 rounded-lg border border-border/70">
+        {(rows || []).map((row) => (
+          <li key={row.id} className="flex items-center gap-2 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">
+                {row.label}
+                {row.is_archived ? (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">(hidden)</span>
+                ) : null}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {row.slug}
+                {row.is_system ? ' · system' : ''}
+                {kind === 'type' && row.hint ? ` · ${row.hint}` : ''}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              onClick={() => startEdit(row)}
+              aria-label={`Edit ${row.label}`}
+              disabled={busy}
+            >
+              <Pencil className="size-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 text-destructive hover:text-destructive"
+              onClick={() => archiveOrDelete(row)}
+              aria-label={row.is_system ? `Hide ${row.label}` : `Delete ${row.label}`}
+              disabled={busy}
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          </li>
+        ))}
+        {!rows?.length ? (
+          <li className="px-3 py-6 text-center text-sm text-muted-foreground">No rows yet.</li>
+        ) : null}
+      </ul>
     </div>
   )
 }
 
 export default function OpsRoadmapPage() {
   const { profile } = useAuth()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const allowed = canAccessOpsRoadmap(profile)
   const [boards, setBoards] = useState([])
-  const [boardId, setBoardId] = useState('')
   const [items, setItems] = useState([])
   const [complaints, setComplaints] = useState([])
+  const [typeRows, setTypeRows] = useState([])
+  const [statusRows, setStatusRows] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedId, setSelectedId] = useState(null)
-  const [viewport, setViewport] = useState(() => normalizeViewport())
-  const [viewMode, setViewMode] = useState('canvas')
+  const [saving, setSaving] = useState(false)
   const [kindFilter, setKindFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [query, setQuery] = useState('')
-  const [draftKind, setDraftKind] = useState('brainstorm')
-  const [newTitle, setNewTitle] = useState('')
-  const surfaceRef = useRef(null)
-  const dragRef = useRef(null)
-  const panRef = useRef(null)
-  const saveTimers = useRef(new Map())
-  const viewportTimer = useRef(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [draft, setDraft] = useState({
+    title: '',
+    notes: '',
+    link: '',
+    boardKind: 'plan',
+    complaintId: '',
+  })
 
-  const allowed = canAccessOpsRoadmap(profile)
-  const board = useMemo(() => boards.find((b) => b.id === boardId) || null, [boards, boardId])
-  const visibleBoards = useMemo(
-    () => filterBoards(boards, { kind: kindFilter, status: statusFilter, q: query }),
-    [boards, kindFilter, statusFilter, query],
-  )
+  const typeOptions = useMemo(() => catalogTypesToOptions(typeRows), [typeRows])
+  const statusOptions = useMemo(() => catalogStatusesToOptions(statusRows), [statusRows])
+
+  const loadCatalog = useCallback(async () => {
+    const [typesRes, statusRes] = await Promise.all([
+      supabase.from('ops_lab_types').select('*').order('sort_order', { ascending: true }),
+      supabase.from('ops_lab_statuses').select('*').order('sort_order', { ascending: true }),
+    ])
+    if (!typesRes.error) setTypeRows(typesRes.data || [])
+    else setTypeRows([])
+    if (!statusRes.error) setStatusRows(statusRes.data || [])
+    else setStatusRows([])
+  }, [])
 
   const loadBoards = useCallback(async () => {
     const { data, error } = await supabase
       .from('ops_roadmap_boards')
-      .select(
-        'id, title, description, board_kind, status, priority, branch_slug, viewport, updated_at, created_by, linked_form_submission_id',
-      )
+      .select('id, title, board_kind, status, updated_at')
       .eq('is_archived', false)
       .order('updated_at', { ascending: false })
-      .limit(80)
-    if (error) {
-      toast.error(error.message)
-      return
-    }
+    if (error) throw error
     setBoards(data || [])
-    const fromUrl = searchParams.get('board')
-    setBoardId((prev) => prev || fromUrl || data?.[0]?.id || '')
-  }, [searchParams])
+    return data || []
+  }, [])
 
-  const loadItems = useCallback(async (id) => {
-    if (!id) {
+  const loadItems = useCallback(async (boardRows) => {
+    const ids = (boardRows || []).map((b) => b.id)
+    if (!ids.length) {
       setItems([])
       return
     }
     const { data, error } = await supabase
       .from('ops_roadmap_items')
       .select('*')
-      .eq('board_id', id)
-      .order('z_index', { ascending: true })
-    if (error) {
-      toast.error(error.message)
-      return
-    }
+      .in('board_id', ids)
+      .order('updated_at', { ascending: false })
+    if (error) throw error
     setItems(data || [])
   }, [])
 
   const loadComplaints = useCallback(async () => {
     const { data, error } = await supabase
       .from('ops_form_submissions')
-      .select('id, payload, status, respondent_label, created_at, ops_forms!inner ( kind, name )')
+      .select('id, payload, respondent_label, created_at, ops_forms!inner ( kind, name )')
       .eq('ops_forms.kind', 'complaint')
       .order('created_at', { ascending: false })
-      .limit(40)
+      .limit(50)
     if (!error) setComplaints(data || [])
   }, [])
 
+  const reload = useCallback(async () => {
+    setLoading(true)
+    try {
+      await loadCatalog()
+      const boardRows = await loadBoards()
+      await Promise.all([loadItems(boardRows), loadComplaints()])
+    } catch (err) {
+      toast.error(err.message || 'Could not load Ops Lab')
+    } finally {
+      setLoading(false)
+    }
+  }, [loadCatalog, loadBoards, loadItems, loadComplaints])
+
   useEffect(() => {
     if (!allowed) return
-    setLoading(true)
-    Promise.all([loadBoards(), loadComplaints()]).finally(() => setLoading(false))
-  }, [allowed, loadBoards, loadComplaints])
+    reload()
+  }, [allowed, reload])
 
-  useEffect(() => {
-    if (!boardId) {
-      setItems([])
-      return
-    }
-    const b = boards.find((row) => row.id === boardId)
-    if (b?.viewport) setViewport(normalizeViewport(b.viewport))
-    loadItems(boardId)
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev)
-      next.set('board', boardId)
-      return next
-    }, { replace: true })
-  }, [boardId, boards, loadItems, setSearchParams])
+  const rows = useMemo(() => flattenLabRows(items, boards), [items, boards])
+  const visibleRows = useMemo(
+    () => filterSuggestions(rows, { kind: kindFilter, status: statusFilter, q: query }),
+    [rows, kindFilter, statusFilter, query],
+  )
 
-  useEffect(() => {
-    if (!allowed || !boardId) return
-    const reload = createCoalescedReload(() => loadItems(boardId), 350)
-    const channel = supabase
-      .channel(`ops-lab-${boardId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'ops_roadmap_items', filter: `board_id=eq.${boardId}` },
-        reload,
-      )
-      .subscribe()
-    return () => {
-      reload.cancel()
-      supabase.removeChannel(channel)
-    }
-  }, [allowed, boardId, loadItems])
-
-  function scheduleItemSave(id, patch) {
-    const prev = saveTimers.current.get(id)
-    if (prev) clearTimeout(prev)
-    saveTimers.current.set(
-      id,
-      setTimeout(async () => {
-        saveTimers.current.delete(id)
-        const { error } = await supabase
-          .from('ops_roadmap_items')
-          .update({ ...patch, updated_by: profile.id, updated_at: new Date().toISOString() })
-          .eq('id', id)
-        if (error) toast.error(error.message)
-        if (patch.meta?.submission_id && board) {
-          notifyOpsLab({ event: 'complaint_linked', board, profile })
-        }
-      }, 400),
-    )
-  }
-
-  function patchItemLocal(id, patch) {
-    setItems((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)))
-    scheduleItemSave(id, patch)
-  }
-
-  function scheduleViewportSave(next) {
-    if (!boardId) return
-    if (viewportTimer.current) clearTimeout(viewportTimer.current)
-    viewportTimer.current = setTimeout(async () => {
-      await supabase
-        .from('ops_roadmap_boards')
-        .update({
-          viewport: next,
-          updated_by: profile.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', boardId)
-    }, 600)
-  }
-
-  async function createBoard() {
-    const draft = newBoardDraft({
-      title: newTitle,
-      boardKind: draftKind,
+  async function ensureBoard(boardKind) {
+    const hit = boards.find((b) => b.board_kind === boardKind)
+    if (hit) return hit
+    const insert = newBoardDraft({
+      title: `${boardKindMeta(boardKind, typeOptions).label} list`,
+      boardKind,
       createdBy: profile.id,
+      allowedKinds: typeOptions,
     })
     const { data, error } = await supabase
       .from('ops_roadmap_boards')
-      .insert(draft)
-      .select(
-        'id, title, description, board_kind, status, priority, branch_slug, viewport, updated_at, created_by, linked_form_submission_id',
-      )
+      .insert(insert)
+      .select('id, title, board_kind, status, updated_at')
       .maybeSingle()
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    setNewTitle('')
-    setBoards((rows) => [data, ...rows])
-    setBoardId(data.id)
-    toast.success(`${boardKindMeta(data.board_kind).label} created`)
+    if (error) throw error
+    setBoards((prev) => [data, ...prev])
     notifyOpsLab({ event: 'board_created', board: data, profile })
+    return data
   }
 
-  async function patchBoard(patch) {
-    if (!boardId) return
-    const prev = board
-    setBoards((rows) => rows.map((b) => (b.id === boardId ? { ...b, ...patch } : b)))
-    const { error } = await supabase
-      .from('ops_roadmap_boards')
-      .update({ ...patch, updated_by: profile.id, updated_at: new Date().toISOString() })
-      .eq('id', boardId)
-    if (error) {
-      toast.error(error.message)
+  async function addSuggestion(e) {
+    e.preventDefault()
+    const title = draft.title.trim()
+    if (!title) {
+      toast.error('Enter a suggestion title')
       return
     }
-    // Notify peers when status or kind changes (not every keystroke on title)
-    if (prev && (patch.status || patch.board_kind || patch.priority === 'high')) {
+    setSaving(true)
+    try {
+      const board = await ensureBoard(draft.boardKind)
+      const complaint = complaints.find((c) => c.id === draft.complaintId)
+      const itemDraft = newSuggestionDraft({
+        boardId: board.id,
+        title,
+        body: draft.notes.trim(),
+        linkUrl: draft.link.trim(),
+        complaintSubmissionId: draft.complaintId || null,
+        createdBy: profile.id,
+      })
+      if (complaint) {
+        itemDraft.meta = {
+          submission_id: complaint.id,
+          complaint_label: `${complaint.respondent_label || 'Guest'} · ${String(complaint.payload?.subject || complaint.payload?.message || '').slice(0, 48)}`,
+          respondent_label: complaint.respondent_label || null,
+        }
+        itemDraft.title = title || `Complaint · ${complaint.respondent_label || 'Guest'}`
+      }
+      const { data, error } = await supabase.from('ops_roadmap_items').insert(itemDraft).select('*').maybeSingle()
+      if (error) throw error
+      setItems((prev) => [data, ...prev])
+      setDraft({ title: '', notes: '', link: '', boardKind: draft.boardKind, complaintId: '' })
+      setAddOpen(false)
+      toast.success('Suggestion added')
       notifyOpsLab({
-        event: 'board_updated',
-        board: { ...prev, ...patch },
+        event: draft.complaintId ? 'complaint_linked' : 'item_created',
+        board,
         profile,
+        itemTitle: data.title,
+      })
+    } catch (err) {
+      toast.error(err.message || 'Could not add suggestion')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function onAddOpenChange(open) {
+    setAddOpen(open)
+    if (open) {
+      const defaultKind = typeOptions.some((k) => k.value === 'plan')
+        ? 'plan'
+        : typeOptions[0]?.value || 'plan'
+      setDraft({ title: '', notes: '', link: '', boardKind: defaultKind, complaintId: '' })
+    }
+  }
+
+  async function patchItem(id, patch, { notifyStatus } = {}) {
+    const prev = items.find((r) => r.id === id)
+    setItems((list) => list.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+    const { error } = await supabase
+      .from('ops_roadmap_items')
+      .update({ ...patch, updated_by: profile.id, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) {
+      toast.error(error.message)
+      if (prev) setItems((list) => list.map((row) => (row.id === id ? prev : row)))
+      return
+    }
+    if (notifyStatus && prev && patch.item_status && patch.item_status !== prev.item_status) {
+      const board = boards.find((b) => b.id === prev.board_id) || { id: prev.board_id, title: 'Ops Lab', board_kind: prev.board_kind }
+      const fromLabel = itemStatusMeta(prev.item_status, statusOptions).label
+      const toLabel = itemStatusMeta(patch.item_status, statusOptions).label
+      notifyOpsLab({
+        event: 'status_changed',
+        board,
+        profile,
+        itemTitle: patch.title || prev.title,
+        fromStatus: fromLabel,
+        toStatus: toLabel,
       })
     }
   }
 
-  async function archiveBoard() {
-    if (!boardId) return
-    const { error } = await supabase
-      .from('ops_roadmap_boards')
-      .update({ is_archived: true, updated_by: profile.id })
-      .eq('id', boardId)
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    setBoards((rows) => rows.filter((b) => b.id !== boardId))
-    setBoardId('')
-    toast.success('Board archived')
+  function saveItemField(id, patch) {
+    setItems((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
   }
 
-  async function addItem(kind) {
-    if (!boardId) {
-      toast.error('Create or select a board first')
-      return
-    }
-    const rect = surfaceRef.current?.getBoundingClientRect()
-    const center = rect
-      ? boardPointFromClient({
-          clientX: rect.left + rect.width / 2,
-          clientY: rect.top + rect.height / 2,
-          rect,
-          viewport,
-        })
-      : { x: 140, y: 120 }
-    const draft = newRoadmapItemDraft({
-      boardId,
-      kind,
-      x: center.x - 110,
-      y: center.y - 80,
-      createdBy: profile.id,
-    })
-    const { data, error } = await supabase.from('ops_roadmap_items').insert(draft).select('*').maybeSingle()
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    setItems((rows) => [...rows, data])
-    setSelectedId(data.id)
-    setViewMode('canvas')
+  async function commitItemField(id, patch) {
+    await patchItem(id, patch)
   }
 
   async function deleteItem(id) {
-    setItems((rows) => rows.filter((r) => r.id !== id))
-    if (selectedId === id) setSelectedId(null)
+    const prev = items.find((r) => r.id === id)
+    setItems((list) => list.filter((row) => row.id !== id))
     const { error } = await supabase.from('ops_roadmap_items').delete().eq('id', id)
-    if (error) toast.error(error.message)
-  }
-
-  function onSurfacePointerDown(e) {
-    if (e.button === 1 || e.button === 2 || e.altKey || e.buttons === 4) {
-      e.preventDefault()
-      panRef.current = { x: e.clientX, y: e.clientY, vx: viewport.x, vy: viewport.y }
+    if (error) {
+      toast.error(error.message)
+      if (prev) setItems((list) => [prev, ...list])
       return
     }
-    if (e.target === e.currentTarget) setSelectedId(null)
-  }
-
-  function onItemDragStart(e, item) {
-    if (e.button !== 0) return
-    e.stopPropagation()
-    setSelectedId(item.id)
-    dragRef.current = {
-      id: item.id,
-      startX: e.clientX,
-      startY: e.clientY,
-      origX: Number(item.x) || 0,
-      origY: Number(item.y) || 0,
+    if (prev) {
+      const board = boards.find((b) => b.id === prev.board_id) || {
+        id: prev.board_id,
+        title: 'Ops Lab',
+        board_kind: 'brainstorm',
+      }
+      notifyOpsLab({ event: 'item_deleted', board, profile, itemTitle: prev.title })
     }
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-  }
-
-  function onSurfacePointerMove(e) {
-    if (panRef.current) {
-      const dx = e.clientX - panRef.current.x
-      const dy = e.clientY - panRef.current.y
-      setViewport(
-        normalizeViewport({
-          x: panRef.current.vx + dx,
-          y: panRef.current.vy + dy,
-          zoom: viewport.zoom,
-        }),
-      )
-      return
-    }
-    if (!dragRef.current) return
-    const { dx, dy } = screenToBoardDelta(
-      e.clientX - dragRef.current.startX,
-      e.clientY - dragRef.current.startY,
-      viewport.zoom,
-    )
-    patchItemLocal(dragRef.current.id, {
-      x: Math.round(dragRef.current.origX + dx),
-      y: Math.round(dragRef.current.origY + dy),
-    })
-  }
-
-  function onSurfacePointerUp() {
-    if (panRef.current) {
-      scheduleViewportSave(viewport)
-      panRef.current = null
-    }
-    dragRef.current = null
-  }
-
-  function onWheel(e) {
-    if (!e.ctrlKey && !e.metaKey) return
-    e.preventDefault()
-    const next = normalizeViewport({
-      ...viewport,
-      zoom: viewport.zoom + (e.deltaY > 0 ? -0.08 : 0.08),
-    })
-    setViewport(next)
-    scheduleViewportSave(next)
-  }
-
-  function zoomBy(step) {
-    const next = normalizeViewport({ ...viewport, zoom: viewport.zoom + step })
-    setViewport(next)
-    scheduleViewportSave(next)
   }
 
   if (!allowed) return <Navigate to="/operations/access-denied" replace />
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-3 px-3 pb-6 pt-2 sm:px-5 sm:pb-8">
-      <header className="mb-1 space-y-1">
-        <p className="text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-[var(--ops-primary)]">
-          Leadership
-        </p>
-        <h1 className="font-[family-name:var(--font-ops)] text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-          Ops Lab
-        </h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Plans, roadmaps, and solutions shared with Super Admin, ASA, and Branch Admins. Link
-          complaints, assign actions, brainstorm improvements.
-        </p>
-      </header>
+    <section className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-[family-name:var(--font-ops)] text-2xl font-semibold tracking-tight sm:text-3xl">
+            Ops Lab
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Shared suggestions for leadership. Status changes notify everyone with access; every action is audited.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" className="gap-1.5" onClick={() => setSettingsOpen(true)}>
+            <Settings2 className="size-4" />
+            Settings
+          </Button>
+          <Button type="button" className="gap-1.5" onClick={() => onAddOpenChange(true)}>
+            <Plus className="size-4" />
+            Add suggestion
+          </Button>
+        </div>
+      </div>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
-        {/* Library rail */}
-        <aside className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:p-4">
-          <div className="space-y-2">
+      <Dialog open={addOpen} onOpenChange={onAddOpenChange}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add suggestion</DialogTitle>
+            <DialogDescription>
+              Title, type, optional notes, and a link to a document or complaint.
+            </DialogDescription>
+          </DialogHeader>
+          <form id="ops-lab-add-form" onSubmit={addSuggestion} className="grid gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="lab-title">Suggestion</Label>
+              <Input
+                id="lab-title"
+                value={draft.title}
+                onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+                placeholder="e.g. Standardize tint intake checklist"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="lab-type">Type</Label>
+              <Select value={draft.boardKind} onValueChange={(v) => setDraft((d) => ({ ...d, boardKind: v }))}>
+                <SelectTrigger id="lab-type" className="w-full cursor-pointer">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {typeOptions.map((k) => (
+                    <SelectItem key={k.value} value={k.value}>
+                      {k.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="lab-notes">Notes</Label>
+              <Textarea
+                id="lab-notes"
+                value={draft.notes}
+                onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+                placeholder="Context, owner, or next step"
+                rows={3}
+                className="min-h-0 resize-y"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="lab-link">Document link</Label>
+              <Input
+                id="lab-link"
+                value={draft.link}
+                onChange={(e) => setDraft((d) => ({ ...d, link: e.target.value, complaintId: '' }))}
+                placeholder="https://… or /operations/…"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="lab-complaint">Or link complaint</Label>
+              <Select
+                value={draft.complaintId || 'none'}
+                onValueChange={(v) =>
+                  setDraft((d) => ({
+                    ...d,
+                    complaintId: v === 'none' ? '' : v,
+                    link: v === 'none' ? d.link : '',
+                  }))
+                }
+              >
+                <SelectTrigger id="lab-complaint" className="w-full cursor-pointer">
+                  <SelectValue placeholder="Pick a complaint (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No complaint</SelectItem>
+                  {complaints.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {(c.respondent_label || 'Guest').slice(0, 28)} ·{' '}
+                      {String(c.payload?.subject || c.payload?.message || c.id).slice(0, 40)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </form>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setAddOpen(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="submit" form="ops-lab-add-form" className="gap-1.5" disabled={saving}>
+              <Plus className="size-4" />
+              {saving ? 'Saving…' : 'Add suggestion'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Ops Lab settings</DialogTitle>
+            <DialogDescription>
+              Customize types and statuses. Changes apply to filters and the add form. Actions are audited for Super Admin.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs defaultValue="types" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="types" className="flex-1">
+                Types
+              </TabsTrigger>
+              <TabsTrigger value="statuses" className="flex-1">
+                Statuses
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="types" className="mt-4">
+              <CatalogEditor kind="type" rows={typeRows} onSaved={loadCatalog} profileId={profile.id} />
+            </TabsContent>
+            <TabsContent value="statuses" className="mt-4">
+              <CatalogEditor kind="status" rows={statusRows} onSaved={loadCatalog} profileId={profile.id} />
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      <Card className="border-border/80 shadow-sm">
+        <CardHeader className="border-b border-border/60 pb-4">
+          <CardTitle>Suggestions</CardTitle>
+          <CardDescription>
+            {loading ? 'Loading…' : `${visibleRows.length} shown${rows.length !== visibleRows.length ? ` of ${rows.length}` : ''}`}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-4 pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search boards…"
-              aria-label="Search boards"
+              placeholder="Search suggestions…"
+              className="sm:max-w-xs"
+              aria-label="Search suggestions"
             />
-            <div className="grid grid-cols-2 gap-2">
-              <NamedSelect
-                id="lab-kind-filter"
-                value={kindFilter}
-                onChange={setKindFilter}
-                options={[
-                  { value: 'all', label: 'All types' },
-                  ...BOARD_KINDS.map((k) => ({ value: k.value, label: k.label })),
-                ]}
-              />
-              <NamedSelect
-                id="lab-status-filter"
-                value={statusFilter}
-                onChange={setStatusFilter}
-                options={[
-                  { value: 'all', label: 'All status' },
-                  ...BOARD_STATUSES.map((s) => ({ value: s.value, label: s.label })),
-                ]}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2 rounded-lg border border-dashed border-[var(--ops-primary)]/30 bg-[var(--color-brand-primary-soft)]/40 p-2.5">
-            <NamedSelect
-              id="lab-new-kind"
-              value={draftKind}
-              onChange={setDraftKind}
-              options={BOARD_KINDS.map((k) => ({ value: k.value, label: k.label }))}
-            />
-            <Input
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Board title"
-            />
-            <Button type="button" className="w-full gap-1.5" onClick={createBoard}>
-              <Plus className="size-4" /> New board
+            <Select value={kindFilter} onValueChange={setKindFilter}>
+              <SelectTrigger className="w-full cursor-pointer sm:w-40" aria-label="Filter by type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {typeOptions.map((k) => (
+                  <SelectItem key={k.value} value={k.value}>
+                    {k.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full cursor-pointer sm:w-36" aria-label="Filter by status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                {statusOptions.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="button" variant="outline" className="sm:ml-auto" onClick={reload} disabled={loading}>
+              {loading ? 'Loading…' : 'Refresh'}
             </Button>
           </div>
 
-          <ul className="max-h-[42vh] space-y-1.5 overflow-y-auto lg:max-h-[min(58vh,560px)]">
-            {loading ? (
-              <li className="px-1 py-6 text-center text-sm text-muted-foreground">Loading…</li>
-            ) : visibleBoards.length === 0 ? (
-              <li className="px-1 py-6 text-center text-sm text-muted-foreground">
-                No boards yet. Create a plan or solution.
-              </li>
-            ) : (
-              visibleBoards.map((b) => {
-                const active = b.id === boardId
-                const meta = boardKindMeta(b.board_kind)
-                return (
-                  <li key={b.id}>
-                    <button
-                      type="button"
-                      onClick={() => setBoardId(b.id)}
-                      className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
-                        active
-                          ? 'border-[var(--ops-primary)] bg-[var(--color-brand-primary-soft)]'
-                          : 'border-transparent hover:bg-muted/60'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-semibold">{b.title}</span>
-                        {b.priority === 'high' ? (
-                          <Badge variant="destructive" className="shrink-0 text-[0.6rem]">
-                            High
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <p className="mt-0.5 text-[0.65rem] text-muted-foreground">
-                        {meta.label} · {b.status?.replace('_', ' ')}
-                      </p>
-                    </button>
-                  </li>
-                )
-              })
-            )}
-          </ul>
-        </aside>
-
-        {/* Workspace */}
-        <section className="flex min-w-0 flex-col gap-3">
-          {board ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:p-4">
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <Input
-                  value={board.title || ''}
-                  onChange={(e) => patchBoard({ title: e.target.value })}
-                  className="font-semibold sm:col-span-2"
-                  aria-label="Board title"
-                />
-                <NamedSelect
-                  id="board-kind"
-                  value={board.board_kind || 'brainstorm'}
-                  onChange={(v) => patchBoard({ board_kind: v })}
-                  options={BOARD_KINDS.map((k) => ({ value: k.value, label: k.label }))}
-                />
-                <NamedSelect
-                  id="board-status"
-                  value={board.status || 'open'}
-                  onChange={(v) => patchBoard({ status: v })}
-                  options={BOARD_STATUSES.map((s) => ({ value: s.value, label: s.label }))}
-                />
-                <NamedSelect
-                  id="board-priority"
-                  value={board.priority || 'normal'}
-                  onChange={(v) => patchBoard({ priority: v })}
-                  options={BOARD_PRIORITIES.map((p) => ({ value: p.value, label: p.label }))}
-                />
-                <Input
-                  className="sm:col-span-2 lg:col-span-3"
-                  value={board.description || ''}
-                  onChange={(e) => patchBoard({ description: e.target.value })}
-                  placeholder="What problem does this board solve?"
-                />
-                <Button type="button" variant="outline" className="gap-1.5" onClick={archiveBoard}>
-                  <Archive className="size-3.5" /> Archive
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => addItem('note')}>
-                  <StickyNote className="size-3.5" /> Sticky
-                </Button>
-                <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => addItem('heading')}>
-                  <Type className="size-3.5" /> Heading
-                </Button>
-                <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => addItem('frame')}>
-                  <Square className="size-3.5" /> Frame
-                </Button>
-                <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => addItem('action')}>
-                  <CheckSquare className="size-3.5" /> Action
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5"
-                  onClick={() => addItem('complaint_link')}
-                >
-                  <MessageSquareWarning className="size-3.5" /> Complaint
-                </Button>
-                <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => addItem('form_link')}>
-                  <Link2 className="size-3.5" /> Link
-                </Button>
-                <Link
-                  to="/operations/inquiries"
-                  className="text-xs text-[var(--ops-primary)] underline-offset-2 hover:underline"
-                >
-                  Open inquiries
-                </Link>
-                <div className="ml-auto flex items-center gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={viewMode === 'canvas' ? 'default' : 'outline'}
-                    onClick={() => setViewMode('canvas')}
-                    aria-label="Canvas view"
-                  >
-                    <LayoutGrid className="size-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={viewMode === 'stack' ? 'default' : 'outline'}
-                    onClick={() => setViewMode('stack')}
-                    aria-label="List view"
-                  >
-                    <List className="size-3.5" />
-                  </Button>
-                  <Button type="button" size="sm" variant="outline" onClick={() => zoomBy(-0.1)} aria-label="Zoom out">
-                    <Minus className="size-3.5" />
-                  </Button>
-                  <Button type="button" size="sm" variant="outline" onClick={() => zoomBy(0.1)} aria-label="Zoom in">
-                    <Plus className="size-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const next = normalizeViewport({ x: 0, y: 0, zoom: 1 })
-                      setViewport(next)
-                      scheduleViewportSave(next)
-                    }}
-                    aria-label="Reset view"
-                  >
-                    <Maximize2 className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {!boardId ? (
-            <div className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-14 text-center">
-              <p className="text-sm text-muted-foreground">
-                Create a plan, roadmap, or solution board to start.
-              </p>
-            </div>
-          ) : viewMode === 'stack' ? (
-            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {items.length === 0 ? (
-                <li className="col-span-full rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-                  Empty board — add stickies, actions, or a complaint link.
-                </li>
-              ) : (
-                items.map((item) => {
-                  const palette = roadmapColor(item.color)
+          <div className="overflow-x-auto rounded-lg border border-border/70">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[12rem]">Suggestion</TableHead>
+                  <TableHead className="w-[7rem]">Type</TableHead>
+                  <TableHead className="w-[8rem]">Status</TableHead>
+                  <TableHead className="min-w-[10rem]">Link</TableHead>
+                  <TableHead className="w-[9rem]">Updated</TableHead>
+                  <TableHead className="w-[3rem]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleRows.map((row) => {
+                  const href = itemDocumentHref(row)
+                  const linkLabel = itemLinkLabel(row)
+                  const statusValue = statusOptions.some((s) => s.value === row.item_status)
+                    ? row.item_status
+                    : statusOptions[0]?.value || row.item_status || 'open'
                   return (
-                    <li
-                      key={item.id}
-                      className="rounded-xl border p-3 shadow-sm"
-                      style={{
-                        background: palette.bg,
-                        borderColor: palette.border,
-                        color: palette.ink,
-                      }}
-                    >
-                      <p className="text-[0.65rem] font-semibold uppercase tracking-wider opacity-70">
-                        {ROADMAP_KINDS.find((k) => k.value === item.kind)?.label || item.kind}
-                      </p>
-                      <input
-                        className="mt-1 w-full bg-transparent text-base font-semibold outline-none"
-                        value={item.title || ''}
-                        onChange={(e) => patchItemLocal(item.id, { title: e.target.value })}
-                      />
-                      {item.kind !== 'heading' && item.kind !== 'frame' ? (
-                        <textarea
-                          className="mt-2 min-h-24 w-full resize-y bg-transparent text-sm outline-none"
-                          value={item.body || ''}
-                          onChange={(e) => patchItemLocal(item.id, { body: e.target.value })}
+                    <TableRow key={row.id}>
+                      <TableCell className="align-top">
+                        <Input
+                          value={row.title || ''}
+                          onChange={(e) => saveItemField(row.id, { title: e.target.value })}
+                          onBlur={(e) => commitItemField(row.id, { title: e.target.value })}
+                          className="h-8 border-transparent bg-transparent px-1 font-medium shadow-none focus-visible:border-input focus-visible:bg-background"
+                          aria-label="Suggestion title"
                         />
-                      ) : null}
-                      <div className="mt-2 flex justify-end">
-                        <Button type="button" size="sm" variant="ghost" onClick={() => deleteItem(item.id)}>
-                          <Trash2 className="size-3.5" />
+                        <Textarea
+                          value={row.body || ''}
+                          onChange={(e) => saveItemField(row.id, { body: e.target.value })}
+                          onBlur={(e) => commitItemField(row.id, { body: e.target.value })}
+                          rows={2}
+                          className="mt-1 min-h-0 resize-none border-transparent bg-transparent px-1 text-xs text-muted-foreground shadow-none focus-visible:border-input focus-visible:bg-background"
+                          aria-label="Notes"
+                        />
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <Badge variant="outline" className="font-normal">
+                          {boardKindMeta(row.board_kind, typeOptions).label}
+                        </Badge>
+                        <p className="mt-1 text-[0.65rem] text-muted-foreground">{suggestionKindLabel(row)}</p>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <Select
+                          value={statusValue}
+                          onValueChange={(v) => patchItem(row.id, { item_status: v }, { notifyStatus: true })}
+                        >
+                          <SelectTrigger className="h-8 w-[7.5rem] cursor-pointer">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {statusOptions.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>
+                                {s.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        {href ? (
+                          href.startsWith('http') ? (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-sm text-[var(--ops-primary)] underline-offset-2 hover:underline"
+                            >
+                              {linkLabel || 'Open link'}
+                              <ExternalLink className="size-3.5 shrink-0 opacity-70" />
+                            </a>
+                          ) : (
+                            <Link
+                              to={href}
+                              className="inline-flex items-center gap-1 text-sm text-[var(--ops-primary)] underline-offset-2 hover:underline"
+                            >
+                              {linkLabel || 'Open link'}
+                              <ExternalLink className="size-3.5 shrink-0 opacity-70" />
+                            </Link>
+                          )
+                        ) : (
+                          <Input
+                            value={row.meta?.url || ''}
+                            onChange={(e) =>
+                              saveItemField(row.id, {
+                                kind: e.target.value ? 'form_link' : row.kind,
+                                meta: { ...(row.meta || {}), url: e.target.value, form_label: e.target.value },
+                              })
+                            }
+                            onBlur={(e) =>
+                              commitItemField(row.id, {
+                                kind: e.target.value ? 'form_link' : row.kind,
+                                meta: { ...(row.meta || {}), url: e.target.value, form_label: e.target.value },
+                              })
+                            }
+                            placeholder="Paste link"
+                            className="h-8 text-xs"
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell className="align-top text-xs whitespace-nowrap text-muted-foreground">
+                        {formatWhen(row.updated_at)}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          onClick={() => deleteItem(row.id)}
+                          aria-label="Delete suggestion"
+                        >
+                          <Trash2 className="size-4" />
                         </Button>
-                      </div>
-                    </li>
+                      </TableCell>
+                    </TableRow>
                   )
-                })
-              )}
-            </ul>
-          ) : (
-            <div
-              ref={surfaceRef}
-              className="relative h-[min(70vh,740px)] overflow-hidden rounded-xl border border-border touch-none"
-              style={{
-                backgroundColor: 'var(--ops-page)',
-                backgroundImage:
-                  'radial-gradient(circle at 1px 1px, rgba(5,38,153,0.12) 1px, transparent 0)',
-                backgroundSize: '22px 22px',
-              }}
-              onPointerDown={onSurfacePointerDown}
-              onPointerMove={onSurfacePointerMove}
-              onPointerUp={onSurfacePointerUp}
-              onPointerLeave={onSurfacePointerUp}
-              onWheel={onWheel}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <div
-                className="absolute left-0 top-0 origin-top-left will-change-transform"
-                style={{
-                  transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
-                }}
-              >
-                {items.map((item) => (
-                  <StickyCard
-                    key={item.id}
-                    item={item}
-                    selected={selectedId === item.id}
-                    onSelect={setSelectedId}
-                    onChange={patchItemLocal}
-                    onDelete={deleteItem}
-                    onDragStart={onItemDragStart}
-                    complaints={complaints}
-                  />
-                ))}
-              </div>
-              <p className="pointer-events-none absolute bottom-2 left-2 rounded-md bg-background/85 px-2 py-1 text-[0.65rem] text-muted-foreground backdrop-blur sm:text-xs">
-                Drag cards · Alt-drag to pan · Ctrl/⌘+scroll zoom · {Math.round(viewport.zoom * 100)}%
-              </p>
-            </div>
-          )}
-        </section>
-      </div>
-    </div>
+                })}
+                {!loading && !visibleRows.length && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                      No suggestions yet. Click Add suggestion or loosen your filters.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                      Loading suggestions…
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Need customer complaints outside this list?{' '}
+            <Link to="/operations/inquiries" className="text-[var(--ops-primary)] underline-offset-2 hover:underline">
+              Open inquiries
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
+    </section>
   )
 }

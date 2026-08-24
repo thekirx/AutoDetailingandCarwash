@@ -53,6 +53,9 @@ export async function handleNotifyOpsLabRequest(req, res) {
         boardId,
         boardTitle,
         boardKind,
+        itemTitle: String(body.item_title || '').trim(),
+        fromStatus: String(body.from_status || '').trim(),
+        toStatus: String(body.to_status || '').trim(),
         actorId: userData.user.id,
         actorName: staff.full_name || 'Teammate',
       })

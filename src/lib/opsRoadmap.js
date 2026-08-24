@@ -3,6 +3,7 @@
  * Deep seam: board kinds, item kinds, viewport math, notify copy.
  */
 
+/** Built-in fallbacks when catalog tables are empty / migration pending. */
 export const BOARD_KINDS = Object.freeze([
   { value: 'brainstorm', label: 'Brainstorm', hint: 'Open ideas' },
   { value: 'plan', label: 'Plan', hint: 'Dated execution plan' },
@@ -42,13 +43,64 @@ export const ROADMAP_KINDS = Object.freeze([
 ])
 
 export const ITEM_STATUSES = Object.freeze([
-  { value: 'open', label: 'Open' },
-  { value: 'doing', label: 'Doing' },
-  { value: 'done', label: 'Done' },
+  { value: 'open', label: 'Open', badge: 'outline' },
+  { value: 'doing', label: 'Doing', badge: 'default' },
+  { value: 'done', label: 'Done', badge: 'secondary' },
 ])
 
-export function boardKindMeta(value) {
-  return BOARD_KINDS.find((k) => k.value === value) || BOARD_KINDS[0]
+/** slug from label: "In Review" → in_review */
+export function normalizeOpsLabSlug(raw) {
+  const s = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 48)
+  if (!s) return ''
+  return /^[a-z]/.test(s) ? s : `x_${s}`.slice(0, 48)
+}
+
+/** Map DB catalog rows → { value, label, hint?, badge? } for selects. */
+export function catalogTypesToOptions(rows = []) {
+  const active = (rows || []).filter((r) => !r.is_archived)
+  if (!active.length) return [...BOARD_KINDS]
+  return active
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 100) - (b.sort_order ?? 100) || String(a.label).localeCompare(String(b.label)))
+    .map((r) => ({
+      value: r.slug,
+      label: r.label,
+      hint: r.hint || '',
+      id: r.id,
+      is_system: !!r.is_system,
+      sort_order: r.sort_order ?? 100,
+    }))
+}
+
+export function catalogStatusesToOptions(rows = []) {
+  const active = (rows || []).filter((r) => !r.is_archived)
+  if (!active.length) return [...ITEM_STATUSES]
+  return active
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 100) - (b.sort_order ?? 100) || String(a.label).localeCompare(String(b.label)))
+    .map((r) => ({
+      value: r.slug,
+      label: r.label,
+      badge: r.badge || 'outline',
+      id: r.id,
+      is_system: !!r.is_system,
+      sort_order: r.sort_order ?? 100,
+    }))
+}
+
+export function boardKindMeta(value, kinds = BOARD_KINDS) {
+  const list = kinds?.length ? kinds : BOARD_KINDS
+  return list.find((k) => k.value === value) || list[0] || BOARD_KINDS[0]
+}
+
+export function itemStatusMeta(value, statuses = ITEM_STATUSES) {
+  const list = statuses?.length ? statuses : ITEM_STATUSES
+  return list.find((s) => s.value === value) || list[0] || ITEM_STATUSES[0]
 }
 
 export function roadmapColor(value) {
@@ -114,7 +166,7 @@ export function newRoadmapItemDraft({
     h: kindMeta.defaultH,
     z_index: Date.now() % 1_000_000,
     meta: meta && typeof meta === 'object' ? meta : {},
-    item_status: ITEM_STATUSES.some((s) => s.value === itemStatus) ? itemStatus : 'open',
+    item_status: String(itemStatus || 'open').trim() || 'open',
     created_by: createdBy,
     updated_by: createdBy,
   }
@@ -128,10 +180,12 @@ export function newBoardDraft({
   branchSlug = null,
   createdBy = null,
   description = '',
+  allowedKinds = BOARD_KINDS,
 } = {}) {
-  const kind = BOARD_KINDS.some((k) => k.value === boardKind) ? boardKind : 'brainstorm'
+  const kinds = allowedKinds?.length ? allowedKinds : BOARD_KINDS
+  const kind = kinds.some((k) => k.value === boardKind) ? boardKind : kinds[0]?.value || 'brainstorm'
   return {
-    title: String(title || '').trim() || `${boardKindMeta(kind).label} · untitled`,
+    title: String(title || '').trim() || `${boardKindMeta(kind, kinds).label} · untitled`,
     description: String(description || '').trim() || null,
     board_kind: kind,
     status: BOARD_STATUSES.some((s) => s.value === status) ? status : 'open',
@@ -162,9 +216,14 @@ export function buildOpsLabNotifyCopy({
   boardKind = 'brainstorm',
   boardId = '',
   actorName = 'Someone',
+  itemTitle = '',
+  fromStatus = '',
+  toStatus = '',
+  kindLabel: kindLabelOverride = '',
 } = {}) {
-  const kindLabel = boardKindMeta(boardKind).label
+  const kindLabel = kindLabelOverride || boardKindMeta(boardKind).label
   const id = String(boardId || Date.now())
+  const label = String(itemTitle || 'Suggestion').trim() || 'Suggestion'
   if (event === 'complaint_linked') {
     return {
       kind: 'ops_lab.complaint_linked',
@@ -172,6 +231,35 @@ export function buildOpsLabNotifyCopy({
       body: `${actorName} linked a complaint on “${boardTitle}”. Review the solution board.`,
       url: `/operations/roadmap?board=${encodeURIComponent(id)}`,
       tag: `ops_lab:complaint:${id}`,
+    }
+  }
+  if (event === 'item_created') {
+    return {
+      kind: 'ops_lab.item_created',
+      title: 'New Ops Lab suggestion',
+      body: `${actorName} added “${label}” (${kindLabel}).`,
+      url: `/operations/roadmap`,
+      tag: `ops_lab:item:${id}:${Date.now()}`,
+    }
+  }
+  if (event === 'status_changed') {
+    const from = String(fromStatus || '?').trim() || '?'
+    const to = String(toStatus || '?').trim() || '?'
+    return {
+      kind: 'ops_lab.status_changed',
+      title: 'Ops Lab status changed',
+      body: `${actorName} moved “${label}” from ${from} → ${to}.`,
+      url: `/operations/roadmap`,
+      tag: `ops_lab:status:${id}:${Date.now()}`,
+    }
+  }
+  if (event === 'item_deleted') {
+    return {
+      kind: 'ops_lab.item_deleted',
+      title: 'Ops Lab suggestion removed',
+      body: `${actorName} deleted “${label}” (${kindLabel}).`,
+      url: `/operations/roadmap`,
+      tag: `ops_lab:delete:${id}:${Date.now()}`,
     }
   }
   if (event === 'board_updated') {
@@ -211,7 +299,104 @@ export function itemLinkLabel(item) {
     return meta.complaint_label || meta.respondent_label || 'Open complaint'
   }
   if (item?.kind === 'form_link') {
-    return meta.form_label || meta.url || 'Open form'
+    return meta.form_label || meta.url || 'Open document'
   }
   return null
+}
+
+/** Table row kinds only (no canvas frames/headings). */
+export const TABLE_ITEM_KINDS = Object.freeze(['note', 'action', 'complaint_link', 'form_link'])
+
+export function suggestionKindLabel(item) {
+  if (item?.kind === 'complaint_link') return 'Complaint'
+  if (item?.kind === 'form_link') return 'Document'
+  if (item?.kind === 'action') return 'Action'
+  return 'Suggestion'
+}
+
+export function itemDocumentHref(item) {
+  const meta = item?.meta || {}
+  if (item?.kind === 'complaint_link' && meta.submission_id) {
+    return `/operations/planning?submission=${encodeURIComponent(meta.submission_id)}`
+  }
+  const raw = String(meta.url || '').trim()
+  if (!raw) return null
+  if (/^https?:\/\//i.test(raw) || raw.startsWith('/')) return raw
+  return `/${raw.replace(/^\//, '')}`
+}
+
+/** Join items with board metadata for the Ops Lab table. */
+export function flattenLabRows(items = [], boards = []) {
+  const boardById = new Map((boards || []).map((b) => [b.id, b]))
+  return (items || [])
+    .filter((item) => TABLE_ITEM_KINDS.includes(item.kind))
+    .map((item) => {
+      const board = boardById.get(item.board_id)
+      return {
+        ...item,
+        board_kind: board?.board_kind || 'brainstorm',
+        board_title: board?.title || 'Untitled',
+      }
+    })
+    .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))
+}
+
+/** Filter suggestion rows for the table toolbar. */
+export function filterSuggestions(rows = [], { kind = 'all', status = 'all', q = '' } = {}) {
+  const needle = String(q || '').trim().toLowerCase()
+  return (rows || [])
+    .filter((r) => (kind === 'all' ? true : r.board_kind === kind))
+    .filter((r) => (status === 'all' ? true : r.item_status === status))
+    .filter((r) => {
+      if (!needle) return true
+      const hay = `${r.title || ''} ${r.body || ''} ${r.board_title || ''} ${itemLinkLabel(r) || ''}`.toLowerCase()
+      return hay.includes(needle)
+    })
+}
+
+export function itemStatusBadgeVariant(status, statuses = ITEM_STATUSES) {
+  const meta = itemStatusMeta(status, statuses)
+  if (meta?.badge) return meta.badge
+  if (status === 'done') return 'secondary'
+  if (status === 'doing') return 'default'
+  return 'outline'
+}
+
+export function newSuggestionDraft({
+  boardId,
+  title = '',
+  body = '',
+  linkUrl = '',
+  complaintSubmissionId = null,
+  createdBy = null,
+} = {}) {
+  const trimmedTitle = String(title || '').trim()
+  const trimmedLink = String(linkUrl || '').trim()
+  if (complaintSubmissionId) {
+    return newRoadmapItemDraft({
+      boardId,
+      kind: 'complaint_link',
+      title: trimmedTitle || 'Complaint link',
+      body: String(body || '').trim(),
+      createdBy,
+      meta: { submission_id: complaintSubmissionId },
+    })
+  }
+  if (trimmedLink) {
+    return newRoadmapItemDraft({
+      boardId,
+      kind: 'form_link',
+      title: trimmedTitle || 'Linked document',
+      body: String(body || '').trim(),
+      createdBy,
+      meta: { url: trimmedLink, form_label: trimmedLink },
+    })
+  }
+  return newRoadmapItemDraft({
+    boardId,
+    kind: 'action',
+    title: trimmedTitle || 'New suggestion',
+    body: String(body || '').trim() || 'Describe the change or fix.',
+    createdBy,
+  })
 }
