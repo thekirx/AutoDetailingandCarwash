@@ -377,6 +377,8 @@ describe('payroll wizard + RPC wiring', () => {
       ['period', 'proof', 'lines', 'confirm'],
     )
     const page = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
+    assert.match(page, /async function loadProof/)
+    assert.match(page, /onClick=\{loadProof\}/)
     assert.match(page, /payrollWizardSteps/)
     assert.match(page, /PAYROLL_RUN_KINDS/)
     assert.match(page, /groupPayrollLinesByStaff/)

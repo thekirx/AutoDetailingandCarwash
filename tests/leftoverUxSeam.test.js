@@ -285,3 +285,19 @@ describe('People edit can set a temporary password', () => {
     assert.match(css, /people-directory-cards/)
   })
 })
+
+describe('Finance Reports is the books reports surface', () => {
+  it('legacy /operations/reports redirects; Finance Reports loads best sellers in the filter window', () => {
+    const redirect = read('src/pages/ReportsPage.jsx')
+    assert.match(redirect, /finance\?tab=reports/)
+    assert.match(redirect, /canAccessReports|canAccessFinance/)
+    const tab = read('src/pages/finance/FinanceReportsTab.jsx')
+    assert.match(tab, /aggregateBestSellers/)
+    assert.match(tab, /rollupPl/)
+    assert.match(tab, /scopeBranch/)
+    assert.match(tab, /occurred_at/)
+    const nav = getOperationsNav({ role: ROLES.SUPER_ADMIN })
+    assert.ok(nav.some((i) => i.to === '/operations/finance'))
+    assert.ok(!nav.some((i) => i.to === '/operations/reports'))
+  })
+})

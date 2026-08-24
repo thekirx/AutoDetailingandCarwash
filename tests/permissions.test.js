@@ -11,6 +11,7 @@ import {
   canEditPlanning,
   canEditQueueOperations,
   canManageServices,
+  canViewOwnPay,
   canViewPlanning,
   getBranchScopeList,
   getOperationsNav,
@@ -29,7 +30,42 @@ describe('RBAC Part 1 matrix', () => {
     assert.equal(canEditQueueOperations(p), true)
     assert.equal(canManageServices(p), true)
     assert.equal(getBranchScopeList(p), null)
-    assert.ok(getOperationsNav(p).some((i) => i.to === '/operations/reports'))
+    assert.equal(canViewOwnPay(p), false)
+    assert.equal(allowRoute(p, 'my-pay'), false)
+    assert.deepEqual(
+      getOperationsNav(p).map((i) => i.to),
+      [
+        '/operations/console',
+        '/operations/dashboard',
+        '/operations/queue',
+        '/operations/bookings',
+        '/operations/attendance',
+        '/operations/crew',
+        '/operations/kpi',
+        '/operations/pos',
+        '/operations/inventory',
+        '/operations/crm',
+        '/operations/reviews',
+        '/operations/memberships',
+        '/operations/finance',
+        '/operations/payroll',
+        '/operations/planning',
+        '/operations/roadmap',
+        '/operations/my-tasks',
+        '/operations/history',
+        '/operations/notifications',
+        '/operations/people',
+        '/operations/branches',
+        '/operations/cars',
+        '/operations/content',
+        '/operations/audit',
+        '/operations/data-center',
+        '/operations/inquiries',
+        '/operations/settings',
+      ],
+    )
+    assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-pay'))
+    assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/services'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/sms'))
   })

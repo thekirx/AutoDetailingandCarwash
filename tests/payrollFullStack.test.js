@@ -116,7 +116,8 @@ describe('one salary path — payroll, not duplicate posters', () => {
     assert.match(payroll, /toCompensationSettingsRow/)
     const settings = read('src/pages/SettingsHubPage.jsx')
     assert.doesNotMatch(settings, /toCompensationSettingsRow/)
-    assert.match(settings, /to: '\/operations\/payroll'/)
+    assert.match(settings, /settings\/payroll/)
+    assert.doesNotMatch(settings, /to: '\/operations\/payroll'/)
   })
 
   it('POS keeps ceramic drafts as proof and does not clone Inventory as POS tabs', () => {

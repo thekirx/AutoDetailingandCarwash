@@ -125,13 +125,14 @@ describe('Negative allowRoute denials', () => {
     assert.equal(allowRoute(p, 'queue'), false)
   })
 
-  it('investor finance+reports only', () => {
+  it('investor finance hub only (reports live under Finance tab)', () => {
     const p = profile(ROLES.INVESTOR)
     assert.deepEqual(allowedKeys(p).sort(), ['finance', 'reports'].sort())
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/finance', '/operations/reports'],
+      ['/operations/finance'],
     )
+    assert.equal(allowRoute(p, 'reports'), true)
   })
 
   it('every ROLES value has home, nav, and home route allowed', () => {

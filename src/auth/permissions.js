@@ -241,6 +241,11 @@ export function canAccessFinance(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+/** Books hub entry: finance_view or the legacy reports grant (Finance → Reports tab). */
+export function canOpenFinanceHub(profile) {
+  return canAccessFinance(profile) || canAccessReports(profile)
+}
+
 export function canWriteFinance(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'finance_write')
@@ -693,7 +698,6 @@ export function getOperationsNav(profile) {
   if (profile?.role === ROLES.INVESTOR) {
     return [
       nav('Finance', '/operations/finance', 'Wallet', 'books'),
-      nav('Reports', '/operations/reports', 'LineChart', 'books'),
     ]
   }
 
@@ -828,15 +832,14 @@ export function getOperationsNav(profile) {
 
   if (canAccessFinance(profile)) {
     items.push(nav('Finance', '/operations/finance', 'Wallet', 'books'))
+  } else if (canAccessReports(profile)) {
+    items.push(nav('Finance', '/operations/finance?tab=reports', 'Wallet', 'books'))
   }
   if (canAccessPayroll(profile)) {
     items.push(nav('Payroll', '/operations/payroll', 'Banknote', 'books'))
   }
   if (canViewOwnPay(profile)) {
     items.push(nav('My pay', '/operations/my-pay', 'Banknote', 'books'))
-  }
-  if (canAccessReports(profile)) {
-    items.push(nav('Reports', '/operations/reports', 'LineChart', 'books'))
   }
 
   if (canViewPlanning(profile)) {
@@ -1056,7 +1059,7 @@ export function allowRoute(profile, key) {
     'my-tasks': canViewAssignedTasks,
     pos: canAccessPos,
     inventory: canAccessInventory,
-    finance: canAccessFinance,
+    finance: canOpenFinanceHub,
     payroll: canAccessPayroll,
     'my-pay': canViewOwnPay,
     crm: canAccessCrm,

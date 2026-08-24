@@ -97,7 +97,13 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   const scope = getBranchScopeList(profile)
 
   const load = useCallback(async () => {
-    if (!branchSlug) return
+    if (!branchSlug) {
+      setStaff([])
+      setAttendance([])
+      setDates([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
       const { staff: staffRows, attendance: attRows, range } = await fetchAttendanceMatrix({ branchSlug, period })
@@ -603,7 +609,6 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
 export function CrewSettingsPanel({ profile }) {
   const canEdit = canEditAttendanceSettings(profile)
   const canRoles = canEditAttendanceRoles(profile)
-  const [branches, setBranches] = useState([])
   const [slug, setSlug] = useState(profile?.branch_slug || '')
   const [form, setForm] = useState({ geofence_radius_m: 20, shift_start: '08:00', shift_end: '18:00' })
   const [meta, setMeta] = useState(null)
@@ -640,7 +645,6 @@ export function CrewSettingsPanel({ profile }) {
     fetchBranches()
       .then((rows) => {
         const scoped = filterBranchesForProfile(rows || [], profile)
-        setBranches(scoped)
         const first = pickDefaultBranchSlug(profile, scoped)
         setSlug((s) => s || first)
       })

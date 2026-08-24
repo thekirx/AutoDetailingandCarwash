@@ -14,7 +14,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessFinance, canSeeAllBranches, canWriteFinance } from '@/auth/permissions'
+import { canAccessFinance, canOpenFinanceHub, canSeeAllBranches, canWriteFinance } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
@@ -56,9 +56,12 @@ const TAB_ICONS = {
 
 export default function FinancePage() {
   const { profile } = useAuth()
-  const canWrite = canWriteFinance(profile)
+  const booksAccess = canAccessFinance(profile)
+  const canWrite = booksAccess && canWriteFinance(profile)
+  const reportsOnly = !booksAccess && canOpenFinanceHub(profile)
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = resolveFinanceTab(searchParams.get('tab'))
+  const tab = reportsOnly ? 'reports' : resolveFinanceTab(searchParams.get('tab'))
+  const visibleTabs = reportsOnly ? FINANCE_TABS.filter((t) => t.id === 'reports') : FINANCE_TABS
 
   const [branches, setBranches] = useState([])
   const [categories, setCategories] = useState([])
@@ -165,6 +168,12 @@ export default function FinancePage() {
     load()
   }, [load])
 
+  useEffect(() => {
+    if (reportsOnly && searchParams.get('tab') !== 'reports') {
+      setSearchParams({ tab: 'reports' }, { replace: true })
+    }
+  }, [reportsOnly, searchParams, setSearchParams])
+
   const writableBranches = useMemo(() => {
     if (scope === null) return branches
     return branches.filter((b) => scope.includes(b.slug))
@@ -182,13 +191,17 @@ export default function FinancePage() {
     return branchOptions.find((b) => b.slug === branchFilter)?.name || branchFilter
   }, [branchFilter, branchOptions])
 
-  if (!canAccessFinance(profile)) return <Navigate to="/operations/access-denied" replace />
+  if (!canOpenFinanceHub(profile)) return <Navigate to="/operations/access-denied" replace />
 
   function setTab(next) {
+    if (reportsOnly) {
+      setSearchParams({ tab: 'reports' }, { replace: true })
+      return
+    }
     setSearchParams(next === 'overview' ? {} : { tab: next }, { replace: true })
   }
 
-  const activeTab = FINANCE_TABS.find((t) => t.id === tab)
+  const activeTab = visibleTabs.find((t) => t.id === tab) || FINANCE_TABS.find((t) => t.id === 'reports')
 
   return (
     <section className="finance-shell">
@@ -257,7 +270,7 @@ export default function FinancePage() {
       <Tabs value={tab} onValueChange={setTab} className="finance-tabs">
         <div className="finance-tabs-rail">
           <TabsList className="finance-tabs-list">
-            {FINANCE_TABS.map((item) => {
+            {visibleTabs.map((item) => {
               const Icon = TAB_ICONS[item.id]
               return (
                 <TabsTrigger key={item.id} value={item.id} title={item.hint} className="cursor-pointer">
@@ -346,7 +359,8 @@ export default function FinancePage() {
         <TabsContent value="reports" className="finance-tab-panel">
           <FinanceReportsTab
             salesRows={salesRows}
-            branchOptions={branchOptions.filter((b) => b.slug !== 'all')}
+            plRows={plRows}
+            expenses={expenses}
             range={range}
             loading={loading}
             profile={profile}

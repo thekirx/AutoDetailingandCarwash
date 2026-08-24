@@ -1,12 +1,18 @@
-/** Finance Reports tab: three sections — Sales, Operations, Customer Retention.
- * Each section pulls real data and exports to CSV/Excel/PDF. */
+/** Finance Reports tab: sales, ops, retention, shift closes, best sellers — same filter window as Finance. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Download, FileSpreadsheet, FileText, Users, Wrench, ShoppingCart, ClipboardCheck } from 'lucide-react'
+import { Download, FileSpreadsheet, FileText, Users, Wrench, ShoppingCart, ClipboardCheck, Trophy } from 'lucide-react'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
 import { supabase } from '@/lib/supabase'
 import { canAccessInquiries } from '@/auth/permissions'
+import { aggregateBestSellers, collectInChunks, collectPaged } from '@/lib/crmInsights'
 import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
 import {
@@ -15,6 +21,7 @@ import {
   formatFinanceWindow,
   printAsPdf,
   retentionBuckets,
+  rollupPl,
   rollupRetentionByCustomer,
   salesByBranch,
   salesByDay,
@@ -22,14 +29,21 @@ import {
   branchScopeList,
 } from '@/lib/financeData'
 import {
+  FinanceEmpty,
   FinanceMetricCell,
   FinanceMetricStrip,
   FinancePanel,
   FinanceTabSkeleton,
 } from './FinanceChrome'
 
+const bestSellerConfig = {
+  total: { label: 'Sales (₱)', color: 'hsl(var(--primary))' },
+}
+
 export default function FinanceReportsTab({
   salesRows,
+  plRows = [],
+  expenses = [],
   range,
   loading,
   profile,
@@ -42,6 +56,8 @@ export default function FinanceReportsTab({
   const [retention, setRetention] = useState([])
   const [retentionSummary, setRetentionSummary] = useState({ fresh: 0, returning: 0, loyal: 0, total: 0 })
   const [shiftCloses, setShiftCloses] = useState([])
+  const [bestSellers, setBestSellers] = useState([])
+  const [sellersLoading, setSellersLoading] = useState(true)
 
   const load = useCallback(async () => {
     const startIso = `${range.start}T00:00:00+08:00`
@@ -57,7 +73,8 @@ export default function FinanceReportsTab({
       .limit(60)
     if (branchFilter && branchFilter !== 'all') shiftQ = shiftQ.eq('branch', branchFilter)
 
-    const [books, comps, crew, retentionRes, shiftRes] = await Promise.all([
+    setSellersLoading(true)
+    const [books, comps, crew, retentionRes, shiftRes, saleIdRows] = await Promise.all([
       scopeBranch(
         supabase
           .from('bookings')
@@ -95,6 +112,23 @@ export default function FinanceReportsTab({
         branchFilter,
       ),
       shiftQ,
+      collectPaged(async (from, to) => {
+        let q = supabase
+          .from('sales')
+          .select('id')
+          .eq('status', 'paid')
+          .gte('occurred_at', startIso)
+          .lte('occurred_at', endIso)
+          .order('occurred_at', { ascending: false })
+          .range(from, to)
+        q = scopeBranch(q, profile, branchFilter)
+        const { data, error } = await q
+        if (error) throw error
+        return data || []
+      }, 1000).catch((err) => {
+        toast.error(err.message)
+        return []
+      }),
     ])
     if (books.error) toast.error(books.error.message)
     if (comps.error) toast.error(comps.error.message)
@@ -111,6 +145,28 @@ export default function FinanceReportsTab({
     setRetention(retentionRows)
     setRetentionSummary(retentionBuckets(retentionRows))
     setShiftCloses(shiftRes.data || [])
+
+    try {
+      const saleIds = (saleIdRows || []).map((r) => r.id).filter(Boolean)
+      const lineRows = saleIds.length
+        ? await collectInChunks(saleIds, async (chunk, from, to) => {
+            const { data, error } = await supabase
+              .from('sale_line_items')
+              .select('name, item_type, line_total_minor, quantity, sale_id')
+              .in('sale_id', chunk)
+              .order('id', { ascending: true })
+              .range(from, to)
+            if (error) throw error
+            return data || []
+          })
+        : []
+      setBestSellers(aggregateBestSellers(lineRows, 8))
+    } catch (err) {
+      toast.error(err.message)
+      setBestSellers([])
+    } finally {
+      setSellersLoading(false)
+    }
   }, [range.start, range.end, profile, branchFilter, showComplaints])
 
   useEffect(() => {
@@ -119,6 +175,22 @@ export default function FinanceReportsTab({
 
   const salesByDayRows = useMemo(() => salesByDay(salesRows), [salesRows])
   const salesByBranchRows = useMemo(() => salesByBranch(salesRows), [salesRows])
+  const pl = useMemo(() => rollupPl(plRows), [plRows])
+  const expenseRowTotal = useMemo(
+    () =>
+      (expenses || [])
+        .filter((r) => ['paid', 'approved', 'posted'].includes(String(r.status || '')))
+        .reduce((s, r) => s + Number(r.total_minor || 0), 0),
+    [expenses],
+  )
+  // Prefer P&L view (books truth); fall back to expense rows in the same window.
+  const expenseTotal = pl.expenses > 0 ? pl.expenses : expenseRowTotal
+  const salesTotal = useMemo(
+    () => salesByDayRows.reduce((s, r) => s + r.total_sales_minor, 0),
+    [salesByDayRows],
+  )
+  const incomeTotal = pl.income > 0 ? pl.income : salesTotal
+  const netTotal = incomeTotal - expenseTotal
 
   const salesColumns = useMemo(
     () => [
@@ -147,8 +219,11 @@ export default function FinanceReportsTab({
       ...(showComplaints ? [{ metric: 'Complaints', value: operations.complaints }] : []),
       { metric: 'Crew in KPI view', value: operations.crew },
       { metric: 'Branches with sales', value: salesByBranchRows.length },
+      { metric: 'Income (P&L)', value: formatMoney(incomeTotal) },
+      { metric: 'Expenses (P&L)', value: formatMoney(expenseTotal) },
+      { metric: 'Net', value: formatMoney(netTotal) },
     ],
-    [operations, salesByBranchRows.length, showComplaints],
+    [operations, salesByBranchRows.length, showComplaints, incomeTotal, expenseTotal, netTotal],
   )
 
   const retentionColumns = useMemo(
@@ -157,8 +232,8 @@ export default function FinanceReportsTab({
       { key: 'phone', label: 'Phone' },
       { key: 'paid_sales', label: 'Paid sales' },
       { key: 'total_spent_minor', label: 'Total spent', value: (r) => formatMoney(r.total_spent_minor) },
-      { key: 'first_paid_at', label: 'First paid', value: (r) => r.first_paid_at ? new Date(r.first_paid_at).toLocaleDateString() : '—' },
-      { key: 'last_paid_at', label: 'Last paid', value: (r) => r.last_paid_at ? new Date(r.last_paid_at).toLocaleDateString() : '—' },
+      { key: 'first_paid_at', label: 'First paid', value: (r) => (r.first_paid_at ? new Date(r.first_paid_at).toLocaleDateString() : '—') },
+      { key: 'last_paid_at', label: 'Last paid', value: (r) => (r.last_paid_at ? new Date(r.last_paid_at).toLocaleDateString() : '—') },
     ],
     [],
   )
@@ -171,8 +246,7 @@ export default function FinanceReportsTab({
       {
         key: 'square_sales_minor',
         label: 'Total sales (submitted)',
-        value: (r) =>
-          formatMoney(r.submitted?.total_sales_minor ?? r.submitted?.square_sales_minor ?? 0),
+        value: (r) => formatMoney(r.submitted?.total_sales_minor ?? r.submitted?.square_sales_minor ?? 0),
       },
       {
         key: 'total_gcash_minor',
@@ -203,22 +277,70 @@ export default function FinanceReportsTab({
     [],
   )
 
-  const subtitle = formatFinanceWindow(range.start, range.end)
-  const salesTotal = useMemo(
-    () => salesByDayRows.reduce((s, r) => s + r.total_sales_minor, 0),
-    [salesByDayRows],
+  const bestSellerColumns = useMemo(
+    () => [
+      { key: 'name', label: 'SKU / service' },
+      { key: 'total', label: 'Sales (₱)', value: (r) => formatMoney(Math.round(Number(r.total || 0) * 100)) },
+    ],
+    [],
   )
 
-  if (loading) return <FinanceTabSkeleton metrics={4} lines={4} />
+  const subtitle = formatFinanceWindow(range.start, range.end)
+
+  if (loading) return <FinanceTabSkeleton metrics={6} lines={4} />
 
   return (
     <div className="finance-dash flex flex-col gap-5">
       <FinanceMetricStrip label="Report snapshot">
-        <FinanceMetricCell label="POS sales" value={formatMoney(salesTotal)} hint={subtitle} tone="ink" />
+        <FinanceMetricCell label="Income" value={formatMoney(incomeTotal)} hint={subtitle} tone="ink" />
+        <FinanceMetricCell label="Expenses" value={formatMoney(expenseTotal)} hint="P&L / paid bills" tone="muted" />
+        <FinanceMetricCell
+          label={netTotal >= 0 ? 'Net profit' : 'Net loss'}
+          value={formatMoney(netTotal)}
+          tone={netTotal >= 0 ? 'up' : 'down'}
+        />
         <FinanceMetricCell label="Bookings done" value={String(operations.bookings)} tone="ink" />
         <FinanceMetricCell label="Shift closes" value={String(shiftCloses.length)} hint="Accepted / locked" tone="muted" />
         <FinanceMetricCell label="Customers" value={String(retentionSummary.total)} hint={`${retentionSummary.loyal} loyal`} tone="up" />
       </FinanceMetricStrip>
+
+      <ReportSection
+        icon={<Trophy aria-hidden />}
+        title="Best sellers"
+        description={
+          sellersLoading
+            ? 'Loading paid line items…'
+            : `${bestSellers.length} top SKUs from paid sales · ${subtitle}`
+        }
+        onCsv={() => downloadCsv(bestSellers, bestSellerColumns, `hakum-best-sellers-${range.start}-to-${range.end}.csv`)}
+        onExcel={() => downloadExcel(bestSellers, bestSellerColumns, `hakum-best-sellers-${range.start}-to-${range.end}.xls`, 'Hakum Best Sellers')}
+        onPdf={() => printAsPdf(bestSellers, bestSellerColumns, 'Hakum Best Sellers', subtitle)}
+      >
+        {bestSellers.length ? (
+          <ChartContainer config={bestSellerConfig} className="finance-chart-mid aspect-auto h-[280px] w-full">
+            <BarChart accessibilityLayer data={bestSellers} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-18} textAnchor="end" height={64} interval={0} tick={{ fontSize: 10 }} />
+              <YAxis tickLine={false} axisLine={false} width={48} tickFormatter={(v) => `₱${Number(v).toLocaleString('en-PH')}`} />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={(value) => (
+                      <span className="tabular-nums font-medium">{formatMoney(Math.round(Number(value) * 100))}</span>
+                    )}
+                  />
+                }
+              />
+              <Bar dataKey="total" fill="var(--color-total)" radius={[2, 2, 0, 0]} maxBarSize={36} />
+            </BarChart>
+          </ChartContainer>
+        ) : (
+          <FinanceEmpty
+            title={sellersLoading ? 'Loading best sellers' : 'No paid line items'}
+            body="Paid POS lines in this window rank here by peso total."
+          />
+        )}
+      </ReportSection>
 
       <ReportSection
         icon={<ClipboardCheck aria-hidden />}

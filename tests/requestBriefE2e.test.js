@@ -80,10 +80,11 @@ describe('request.md roles + planner', () => {
     const investorNav = getOperationsNav({ role: ROLES.INVESTOR })
     assert.deepEqual(
       investorNav.map((i) => i.to),
-      ['/operations/finance', '/operations/reports'],
+      ['/operations/finance'],
     )
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'people'), false)
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'pos'), false)
+    assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'reports'), true)
   })
 
   it('video editor planner tabs are Tasks + Calendar only', () => {

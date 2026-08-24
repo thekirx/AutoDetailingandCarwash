@@ -302,6 +302,8 @@ export default function PayrollPage() {
   useEffect(() => {
     setPreview(null)
   }, [branch, runKind])
+
+  async function loadProof() {
     if (!periodStart || !periodEnd) return
     if (runKind === 'floor' && !branch) {
       toast.error('Pick a branch for floor pay')
