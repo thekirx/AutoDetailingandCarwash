@@ -79,12 +79,6 @@ export default function PosPage() {
     if (branchAdmin && tab !== 'merch') setTab('merch')
   }, [branchAdmin, tab])
 
-  useEffect(() => {
-    if (!paymentOptions.length) return
-    if (!isAllowedPosPaymentMethod(paymentMethod, paymentOptions)) {
-      setPaymentMethod(paymentOptions[0].value)
-    }
-  }, [paymentOptions, paymentMethod])
   const [cart, setCart] = useState([])
   const [branch, setBranch] = useState(assignedBranch)
   const [branches, setBranches] = useState([])
@@ -103,6 +97,13 @@ export default function PosPage() {
   const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
   const [paymentOptions, setPaymentOptions] = useState(() => PAYMENT_METHODS.map((m) => ({ ...m })))
   const [expenseKinds, setExpenseKinds] = useState(() => DEFAULT_POS_EXPENSE_KINDS.map((k) => ({ ...k })))
+
+  useEffect(() => {
+    if (!paymentOptions.length) return
+    if (!isAllowedPosPaymentMethod(paymentMethod, paymentOptions)) {
+      setPaymentMethod(paymentOptions[0].value)
+    }
+  }, [paymentOptions, paymentMethod])
   const [todayStats, setTodayStats] = useState(null)
   const [todaySales, setTodaySales] = useState([])
   const [categoryTotals, setCategoryTotals] = useState(emptyPosCategoryTotals())
