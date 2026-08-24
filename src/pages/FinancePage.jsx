@@ -70,6 +70,7 @@ export default function FinancePage() {
   const [priorPlRows, setPriorPlRows] = useState([])
   const [expenses, setExpenses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   const scope = branchScopeList(profile)
   const [branchFilter, setBranchFilter] = useState(scope === null ? 'all' : (scope[0] || 'all'))
@@ -98,6 +99,7 @@ export default function FinancePage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError('')
     try {
       const startIso = `${range.start}T00:00:00+08:00`
       const endIso = `${range.end}T23:59:59.999+08:00`
@@ -158,7 +160,9 @@ export default function FinancePage() {
       setPriorPlRows(prior.data || [])
       setExpenses(expRows)
     } catch (err) {
-      toast.error(err.message || 'Unable to load finance data')
+      const message = err.message || 'Unable to load finance data'
+      setLoadError(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -266,6 +270,24 @@ export default function FinancePage() {
         refreshing={loading}
         windowLabel={windowLabel}
       />
+
+      {loadError ? (
+        <div
+          role="alert"
+          className="finance-load-error mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <p className="font-semibold">Finance data failed to load</p>
+          <p className="mt-1 text-destructive/90">{loadError}</p>
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-destructive/30 bg-background px-4 py-2 text-sm font-semibold text-destructive transition hover:bg-destructive/5 disabled:cursor-wait disabled:opacity-60"
+          >
+            {loading ? 'Retrying…' : 'Retry'}
+          </button>
+        </div>
+      ) : null}
 
       <Tabs value={tab} onValueChange={setTab} className="finance-tabs">
         <div className="finance-tabs-rail">

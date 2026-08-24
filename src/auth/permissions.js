@@ -848,7 +848,7 @@ export function getOperationsNav(profile) {
   if (canAccessOpsRoadmap(profile)) {
     items.push(nav('Ops Lab', '/operations/roadmap', 'Map', 'work'))
   }
-  if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF) {
+  if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF && !isSuperAdmin(profile)) {
     items.push(nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'))
   }
   if (canAccessHistory(profile)) {

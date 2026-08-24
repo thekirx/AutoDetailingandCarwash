@@ -299,5 +299,32 @@ describe('Finance Reports is the books reports surface', () => {
     const nav = getOperationsNav({ role: ROLES.SUPER_ADMIN })
     assert.ok(nav.some((i) => i.to === '/operations/finance'))
     assert.ok(!nav.some((i) => i.to === '/operations/reports'))
+    assert.ok(!nav.some((i) => i.to === '/operations/my-tasks'))
+  })
+
+  it('Finance load failure shows inline retry banner', () => {
+    const page = read('src/pages/FinancePage.jsx')
+    assert.match(page, /loadError/)
+    assert.match(page, /Finance data failed to load/)
+    assert.match(page, /setLoadError/)
+  })
+
+  it('Crew pool defers hire to People when canManagePeople', () => {
+    const page = read('src/pages/OperationsPages.jsx')
+    assert.match(page, /canManageCrew && canManagePeople\(profile\)/)
+    assert.match(page, /canManageCrew && !canManagePeople\(profile\)/)
+    assert.match(page, /\/operations\/people/)
+  })
+
+  it('Payroll pending closes surfaces load errors', () => {
+    const page = read('src/pages/PayrollPage.jsx')
+    assert.match(page, /loadPendingCloses\(\)\.catch\(\(err\) => toast\.error/)
+  })
+
+  it('My Tasks empty state links planners to Planner', () => {
+    const page = read('src/pages/OperationsPages.jsx')
+    assert.match(page, /showPlannerCue/)
+    assert.match(page, /canViewPlanning\(profile\)/)
+    assert.match(page, /Open Planner/)
   })
 })

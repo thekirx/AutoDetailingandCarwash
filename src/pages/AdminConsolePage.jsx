@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import {
   Boxes,
   CircleDollarSign,
@@ -129,7 +129,7 @@ export default function AdminConsolePage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <MetricCard
               label="Today revenue"
               value={formatPeso(snap?.todayRevenueMinor)}
@@ -140,18 +140,15 @@ export default function AdminConsolePage() {
             <MetricCard label="Active queue" value={String(snap?.queueRows?.length || 0)} detail="Waiting → payment" icon={ClipboardList} />
             <MetricCard label="Low stock SKUs" value={String(snap?.lowStock?.length || 0)} detail="≤ 10 units" icon={Boxes} tone={snap?.lowStock?.length ? 'warn' : 'good'} />
             <MetricCard label="Active staff" value={String(staffCounts.total)} detail={`${staffCounts.leads} TL · ${staffCounts.crew} crew`} icon={Users} />
+            <MetricCard label="Branches" value={String(snap?.branches?.length || 0)} detail="Active sites" icon={ClipboardList} />
           </div>
           <p className="text-sm text-muted-foreground">
             Period books (income, expenses, net) live on{' '}
-            <a className="font-medium text-primary underline-offset-4 hover:underline" href="/operations/finance">
+            <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/operations/finance">
               Finance
-            </a>
+            </Link>
             . Console is today&apos;s ops pulse only.
           </p>
-
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="Branches" value={String(snap?.branches?.length || 0)} detail="Active sites" icon={ClipboardList} />
-          </div>
 
           <Tabs defaultValue="queue">
             <TabsList>

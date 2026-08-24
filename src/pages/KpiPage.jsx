@@ -149,7 +149,8 @@ export default function KpiPage() {
           .order('created_at', { ascending: false })
           .limit(100)
         cq = applyBranchScope(cq, branchScope)
-        const { data: complaintRows } = await cq
+        const { data: complaintRows, error: complaintError } = await cq
+        if (complaintError) throw complaintError
         setComplaints(complaintRows || [])
       } else {
         setComplaints([])

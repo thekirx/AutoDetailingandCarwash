@@ -28,7 +28,7 @@ import {
   queueFamilyForProfile,
   QUEUE_FAMILIES,
 } from '../lib/queueFamilies'
-import { canAccessPayroll, canAccessPos, canSeeAllBranches, canViewRedoLane, canWriteFinance, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
+import { canAccessPayroll, canAccessPos, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, canWriteFinance, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
 import {
   DEFAULT_COMPENSATION_RULES,
   normalizeCompensationSettings,
@@ -1595,7 +1595,16 @@ export function CrewPage() {
 
       {crewTab === 'pool' && (
             <Panel title="Staff Pool" icon={UserPlus} className="mt-5">
-              {canManageCrew && (
+              {canManageCrew && canManagePeople(profile) ? (
+                <p className="mb-5 rounded-2xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                  New accounts are created in{' '}
+                  <Link to="/operations/people" className="font-semibold text-primary underline-offset-4 hover:underline">
+                    People
+                  </Link>
+                  . Use this tab to mark present and deploy crew on the floor.
+                </p>
+              ) : null}
+              {canManageCrew && !canManagePeople(profile) ? (
                 <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-2">
                   <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Staff name
@@ -1631,7 +1640,7 @@ export function CrewPage() {
               </label>
                   <button disabled={saving === 'add-staff'} className="md:col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60">{saving === 'add-staff' ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}Add crew member</button>
             </form>
-          )}
+              ) : null}
               <StaffPoolList
                 rows={staffPool}
                 canManage={canManageCrew}
@@ -1750,6 +1759,13 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
 
   return (
     <Panel title="Compensation estimate · today" icon={Wallet} className="mt-5">
+      <p className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
+        Estimate only — not posted pay. Confirm payouts on{' '}
+        <Link to="/operations/payroll" className="font-semibold underline underline-offset-2">
+          Payroll
+        </Link>
+        .
+      </p>
       <div className="grid gap-3 sm:grid-cols-3 mb-4">
         <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
           <p className="text-[11px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Total sales</p>
@@ -1906,6 +1922,7 @@ export function MyTasksPage() {
   if (error) return <ErrorState error={error} onRetry={load} />
   const empty = !loading && !queueRows.length && !planRows.length
   const isStaff = profile?.role === ROLES.STAFF
+  const showPlannerCue = empty && canViewPlanning(profile)
   return (
     <section className="planner-v2 px-1 sm:px-0">
       <PageHeader
@@ -1922,10 +1939,28 @@ export function MyTasksPage() {
                 Attendance
               </Link>
             ) : null}
+            {showPlannerCue ? (
+              <Link
+                to="/operations/planning"
+                className="floor-touch-btn inline-flex items-center rounded-2xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground no-underline"
+              >
+                Open Planner
+              </Link>
+            ) : null}
             <RefreshButton loading={loading} onClick={load} />
           </div>
         )}
       />
+
+      {showPlannerCue ? (
+        <p className="mt-4 rounded-2xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+          Nothing assigned to you yet. Assign cards from{' '}
+          <Link to="/operations/planning" className="font-semibold text-primary underline-offset-4 hover:underline">
+            Planner
+          </Link>
+          .
+        </p>
+      ) : null}
 
       <Panel title="Planning assignments" icon={ClipboardList} className="mt-6">
         <div className="grid gap-4">

@@ -51,7 +51,6 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/payroll',
         '/operations/planning',
         '/operations/roadmap',
-        '/operations/my-tasks',
         '/operations/history',
         '/operations/notifications',
         '/operations/people',
@@ -65,6 +64,7 @@ describe('RBAC Part 1 matrix', () => {
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-pay'))
+    assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-tasks'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/services'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/sms'))

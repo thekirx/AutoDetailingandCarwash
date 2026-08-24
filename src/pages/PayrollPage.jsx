@@ -271,7 +271,7 @@ export default function PayrollPage() {
   useEffect(() => {
     loadSettings().catch((err) => toast.error(err.message))
     loadRuns().catch((err) => toast.error(err.message))
-    loadPendingCloses().catch(() => {})
+    loadPendingCloses().catch((err) => toast.error(err.message))
     Promise.all([
       supabase
         .from('staff_pay_packages')
