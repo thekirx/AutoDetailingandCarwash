@@ -88,11 +88,14 @@ async function main() {
   else pass('C10-comp', 'ok')
 
   for (const [id, email, password, expectRole] of [
+    ['login-asa', 'assistant@hakumautocare.com', 'HakumAsa2026!', 'assistant_super_admin'],
     ['login-tl', 'teamlead@hakumautocare.com', 'HakumTL2026!', 'team_lead'],
     ['login-sales', 'sales@hakumautocare.com', 'HakumSales2026!', 'sales'],
     ['login-admin', 'admin@hakumautocare.com', 'HakumAdmin2026!', 'admin'],
     ['login-marketing', 'marketing@hakumautocare.com', 'HakumMkt2026!', 'marketing'],
     ['login-staff', 'staff1@hakumautocare.com', 'HakumStaff2026!', 'staff'],
+    ['login-staff2', 'staff2@hakumautocare.com', 'HakumStaff2026!', 'staff'],
+    ['login-staff3', 'staff3@hakumautocare.com', 'HakumStaff2026!', 'staff'],
     ['login-detailer', 'detailer@hakumautocare.com', 'HakumDetail2026!', 'detailer'],
     ['login-video', 'video@hakumautocare.com', 'HakumVideo2026!', 'video_editor'],
     ['login-investor', 'investor@hakumautocare.com', 'HakumInvest2026!', 'investor'],

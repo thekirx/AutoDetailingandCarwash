@@ -71,14 +71,16 @@ export default function LoginPage() {
     return <Navigate to={resolvePostLoginPath(profile, returnPath)} replace />
   }
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
+  const signInWithCredentials = async (nextEmail, nextPassword) => {
     setError('')
     setInfo('')
     setSubmitting(true)
     missingProfileTries.current = 0
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: nextEmail.trim(),
+      password: nextPassword,
+    })
     if (authError) {
       setError('Invalid email or password.')
       setSubmitting(false)
@@ -150,6 +152,11 @@ export default function LoginPage() {
     const dest = resolvePostLoginPath(hydrated || { role }, returnPath)
     navigate(dest, { replace: true })
     setSubmitting(false)
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    await signInWithCredentials(email, password)
   }
 
   const handleForgot = async () => {
@@ -254,11 +261,13 @@ export default function LoginPage() {
       <DemoAccountChips
         title="Demo team accounts"
         accounts={demoAccounts}
-        onPick={(a) => {
+        disabled={submitting}
+        onPick={async (a) => {
           setEmail(a.email)
           setPassword(a.password)
           setError('')
           setInfo('')
+          await signInWithCredentials(a.email, a.password)
         }}
       />
     </HakumAuthShell>

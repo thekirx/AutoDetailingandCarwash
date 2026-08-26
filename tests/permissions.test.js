@@ -11,6 +11,7 @@ import {
   canEditPlanning,
   canEditQueueOperations,
   canManageServices,
+  canViewOwnPay,
   canViewPlanning,
   getBranchScopeList,
   getOperationsNav,
@@ -29,7 +30,42 @@ describe('RBAC Part 1 matrix', () => {
     assert.equal(canEditQueueOperations(p), true)
     assert.equal(canManageServices(p), true)
     assert.equal(getBranchScopeList(p), null)
-    assert.ok(getOperationsNav(p).some((i) => i.to === '/operations/reports'))
+    assert.equal(canViewOwnPay(p), false)
+    assert.equal(allowRoute(p, 'my-pay'), false)
+    assert.deepEqual(
+      getOperationsNav(p).map((i) => i.to),
+      [
+        '/operations/console',
+        '/operations/dashboard',
+        '/operations/queue',
+        '/operations/bookings',
+        '/operations/attendance',
+        '/operations/crew',
+        '/operations/kpi',
+        '/operations/pos',
+        '/operations/inventory',
+        '/operations/crm',
+        '/operations/reviews',
+        '/operations/memberships',
+        '/operations/finance',
+        '/operations/payroll',
+        '/operations/planning',
+        '/operations/roadmap',
+        '/operations/history',
+        '/operations/notifications',
+        '/operations/people',
+        '/operations/branches',
+        '/operations/cars',
+        '/operations/content',
+        '/operations/audit',
+        '/operations/data-center',
+        '/operations/inquiries',
+        '/operations/settings',
+      ],
+    )
+    assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-pay'))
+    assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-tasks'))
+    assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/services'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/sms'))
   })
@@ -99,6 +135,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/pos',
         '/operations/reviews',
         '/operations/planning',
+        '/operations/roadmap',
         '/operations/history',
         '/operations/my-pay',
         '/operations/audit',
@@ -164,6 +201,7 @@ describe('RBAC Part 1 matrix', () => {
       { role: ROLES.SUPER_ADMIN },
       { role: ROLES.ASSISTANT_SUPER_ADMIN, permission_grants: {} },
       { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor'] },
+      { role: ROLES.OPERATIONS_LEAD },
       { role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' },
       { role: ROLES.STAFF, branch_slug: 'bacoor' },
       { role: ROLES.SALES, branch_slug: 'bacoor' },

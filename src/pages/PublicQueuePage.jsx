@@ -140,8 +140,11 @@ export default function PublicQueuePage({ mode = 'customer' }) {
   useEffect(() => {
     if (!branch) return
     fetchPublicBranches()
-      .then((rows) => setFallbackSlug(rows[0]?.slug || 'bacoor'))
-      .catch(() => setFallbackSlug('bacoor'))
+      .then((rows) => {
+        const first = (rows || []).find((b) => b?.slug)?.slug || ''
+        setFallbackSlug(first)
+      })
+      .catch(() => setFallbackSlug(''))
   }, [branch])
 
   const floorModel = useMemo(() => buildPublicFloorModel(floorRows, branch), [floorRows, branch])

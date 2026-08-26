@@ -46,11 +46,28 @@ export function sizePricesMap(service) {
 }
 
 export function resolveServicePriceMinor(service, sizeSlug) {
-  const slug = normalizePricingSize(sizeSlug)
   const map = sizePricesMap(service)
+  const hasSized = Object.keys(map).length > 0
+  if (!hasSized) return Number(service?.price_minor) || 0
+  const slug = normalizePricingSize(sizeSlug)
   if (map[slug] != null && Number.isFinite(Number(map[slug]))) return Number(map[slug])
   if (map.medium != null && Number.isFinite(Number(map.medium))) return Number(map.medium)
+  const first = PRICING_SIZE_SLUGS.map((s) => map[s]).find((n) => n != null && Number.isFinite(Number(n)))
+  if (first != null) return Number(first)
   return Number(service?.price_minor) || 0
+}
+
+/** True when catalog row has optional per-size prices (not flat-only). */
+export function serviceHasSizePricing(service) {
+  const map = sizePricesMap(service)
+  const vals = Object.values(map).map(Number).filter((n) => Number.isFinite(n))
+  return vals.length > 0
+}
+
+/** Sizes that have an explicit price for this service (for multi-select / POS pickers). */
+export function availablePricingSizes(service) {
+  const map = sizePricesMap(service)
+  return PRICING_SIZES.filter((sz) => map[sz.slug] != null && Number.isFinite(Number(map[sz.slug])))
 }
 
 /** Compact display e.g. "₱500–₱900" or single price if flat. */
@@ -70,10 +87,10 @@ export function emptySizePriceForm(pesos = '') {
 
 export function sizePricesFromService(service) {
   const map = sizePricesMap(service)
-  const base = service?.price_minor != null ? String(Number(service.price_minor) / 100) : ''
-  const out = {}
+  const out = emptySizePriceForm('')
+  if (!Object.keys(map).length) return out
   for (const slug of PRICING_SIZE_SLUGS) {
-    out[slug] = map[slug] != null ? String(Number(map[slug]) / 100) : base
+    out[slug] = map[slug] != null ? String(Number(map[slug]) / 100) : ''
   }
   return out
 }

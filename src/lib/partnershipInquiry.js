@@ -13,6 +13,9 @@ const SITE_TYPE_VALUES = SITE_TYPES.map((type) => type.value)
 
 export const SITE_TYPE_LABELS = Object.fromEntries(SITE_TYPES.map((type) => [type.value, type.label]))
 
+export const PARTNERSHIP_STATUSES = ['new', 'reviewing', 'contacted', 'archived']
+export const CONTACT_STATUSES = ['new', 'reviewing', 'contacted', 'archived']
+
 export function normalizePartnershipInquiry(input = {}) {
   const siteType = String(input.siteType || '').trim()
   return {

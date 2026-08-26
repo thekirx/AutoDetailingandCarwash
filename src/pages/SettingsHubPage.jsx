@@ -1,68 +1,33 @@
 import { Link, Navigate } from 'react-router-dom'
-import { Building2, DollarSign, Newspaper, ScrollText, Shield, UserPlus } from 'lucide-react'
+import { ShoppingCart, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
-  canAccessAudit,
   canAccessConsole,
   canAccessPayroll,
-  canManageBranches,
-  canManagePeople,
-  canManageSiteContent,
 } from '@/auth/permissions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+/** Policy destinations only — People / Branches / Audit / Content stay in Command nav. */
 const TILES = [
   {
-    key: 'content',
-    title: 'Blogs & Events',
-    description: 'Publish blog posts and event pages with images, video, and form buttons.',
-    to: '/operations/content',
-    icon: Newspaper,
-    allow: canManageSiteContent,
+    key: 'pos',
+    title: 'POS settings',
+    description: 'Payment methods, expense kinds, and end-of-shift field labels.',
+    to: '/operations/settings/pos',
+    icon: ShoppingCart,
+    allow: canAccessConsole,
   },
   {
-    key: 'branches',
-    title: 'Branches',
-    description: 'Create and edit company sites.',
-    to: '/operations/branches',
-    icon: Building2,
-    allow: canManageBranches,
-  },
-  {
-    key: 'people',
-    title: 'Employees',
-    description: 'Create accounts per branch, deactivate access, assign ASA grants.',
-    to: '/operations/people',
-    icon: UserPlus,
-    allow: canManagePeople,
-  },
-  {
-    key: 'audit',
-    title: 'Audit / Logs',
-    description: 'Review operational and admin activity.',
-    to: '/operations/audit',
-    icon: ScrollText,
-    allow: canAccessAudit,
-  },
-  {
-    key: 'payroll',
-    title: 'Payroll',
-    description: 'Run payouts from POS sales, edit commission, and confirm employee lines.',
-    to: '/operations/payroll',
-    icon: DollarSign,
+    key: 'payroll-settings',
+    title: 'Payroll settings',
+    description: 'Attendance weights, pending-floor policy, and cash-advance netting.',
+    to: '/operations/settings/payroll',
+    icon: Wallet,
     allow: canAccessPayroll,
-  },
-  {
-    key: 'permissions',
-    title: 'Permission assignment',
-    description: 'ASA grants live on People. Console for Super Admin pulse.',
-    to: '/operations/people',
-    icon: Shield,
-    allow: (p) => canManagePeople(p) || canAccessConsole(p),
   },
 ]
 
-/** Settings hub — branches / people / audit / permissions. Payroll rules live on Payroll. */
+/** Settings hub — POS / Payroll policy tiles (not a second nav). */
 export default function SettingsHubPage() {
   const { profile } = useAuth()
   const tiles = TILES.filter((t) => t.allow(profile))
@@ -77,7 +42,7 @@ export default function SettingsHubPage() {
         <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Settings</p>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Company settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Branches, employees, audit logs, and permission assignment. Payout rules are on Payroll.
+          POS and payroll policy. People, branches, content, and audit stay in the main Command menu.
         </p>
       </header>
       <div className="grid gap-4 sm:grid-cols-2">

@@ -26,6 +26,8 @@ import {
 import {
   BOOKING_TABLE_DEFAULT_PAGE_SIZE,
   BOOKING_TABLE_PAGE_SIZES,
+  bookingCarPlateLine,
+  bookingDetailingTypeText,
   bookingServiceText,
   bookingVehicleText,
   filterBookingList,
@@ -50,7 +52,7 @@ import {
   STATUS_LABELS,
 } from '@/queue/queueLogic'
 import { assignStaff, fetchPresentAssignableStaff, fetchServices } from '@/queue/queueApi'
-import { filterFloorDetailingServices } from '@/lib/serviceKinds'
+import { filterFloorDetailingServices, isBookingBoardRow } from '@/lib/serviceKinds'
 import CancellationReasonDialog from '@/components/CancellationReasonDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -104,20 +106,6 @@ const emptyBooking = {
 
 function todayISO() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
-}
-
-function formatBookingStamp(iso) {
-  if (!iso) return null
-  try {
-    return new Date(iso).toLocaleString([], {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return null
-  }
 }
 
 function bookingTableWhen(iso) {
@@ -218,85 +206,55 @@ function BookingStageTicket({
   booking,
   tone,
   variant,
-  branchLabel,
-  canEditServicePrice,
-  canAdvanceStatus,
-  canCancelForm,
-  canSeePayment,
-  canCheckIn,
-  onEdit,
-  onMove,
-  onCancel,
+  canOpen,
+  onOpen,
 }) {
-  const next = getBookingPrimaryNextStatus(booking.status, {
-    canSeePayment,
-    canCheckIn,
-    detailingPipeline: true,
-  })
-  const statusAt = formatBookingStamp(booking.updated_at || booking.scheduled_start)
-  const startAt = formatBookingStamp(booking.scheduled_start)
-  const endAt = booking.status === 'completed' ? formatBookingStamp(booking.completed_at || booking.scheduled_end) : null
-  const showCancel = canCancelForm && booking.status !== 'cancelled' && booking.status !== 'completed'
   const isList = variant === 'list'
-  return (
-    <article className={cn(isList ? 'bk-card planner-ticket' : 'floor-ticket planner-ticket !cursor-default', tone)}>
-      <div className="flex items-start justify-between gap-2">
-        <p className={isList ? 'bk-card-plate' : 'font-semibold leading-snug text-foreground'}>
-          {bookingVehicleText(booking)}
+  const service = bookingDetailingTypeText(booking)
+  const carPlate = bookingCarPlateLine(booking)
+  const label = `${service}, ${carPlate}`
+  const className = cn(
+    isList ? 'bk-card bk-ticket-compact planner-ticket' : 'floor-ticket bk-ticket-compact planner-ticket',
+    tone,
+    canOpen && 'bk-ticket-openable',
+  )
+
+  const body = (
+    <>
+      <p className="bk-ticket-service">{service}</p>
+      <p className="bk-ticket-car-plate">{carPlate}</p>
+      {isList ? (
+        <p className="bk-ticket-status">
+          {detailingBoardStatusLabel(booking.status) || STATUS_LABELS[booking.status] || booking.status}
         </p>
-        {canEditServicePrice ? (
-          <Button size="sm" variant="ghost" className="h-11 shrink-0 cursor-pointer px-2" onClick={() => onEdit(booking)}>
-            Edit
-          </Button>
-        ) : null}
-      </div>
-      <p className="mt-1 leading-snug text-foreground">{booking.customer_name}</p>
-      {bookingServiceText(booking) ? (
-        <p className="mt-1 text-xs font-semibold leading-snug text-primary">{bookingServiceText(booking)}</p>
       ) : null}
-      <p className="bk-meta mt-1 text-xs font-medium capitalize text-muted-foreground">
-        {branchLabel || booking.branch}
-        {isList ? ` · ${detailingBoardStatusLabel(booking.status) || STATUS_LABELS[booking.status] || booking.status}` : ''}
-      </p>
-      <div className="bk-meta mt-2 space-y-0.5 text-xs text-muted-foreground tabular-nums">
-        {statusAt ? <p>Status · {statusAt}</p> : null}
-        {startAt ? <p>Start · {startAt}</p> : null}
-        {endAt ? <p className="font-medium text-foreground">End · {endAt}</p> : null}
-      </div>
-      {(canAdvanceStatus && next) || showCancel ? (
-        <div className={isList ? 'bk-card-actions' : undefined}>
-          {canAdvanceStatus && next ? (
-            <Button
-              type="button"
-              className={cn('min-h-11 cursor-pointer', isList ? 'bk-card-primary' : 'mt-3 w-full')}
-              onClick={() => onMove(booking, next)}
-            >
-              {BOOKING_PRIMARY_ACTION_LABELS[next] || next}
-            </Button>
-          ) : null}
-          {showCancel ? (
-            <Button
-              type="button"
-              variant="ghost"
-              className={cn('min-h-11 cursor-pointer text-destructive', isList ? 'bk-card-cancel' : 'mt-2 w-full')}
-              onClick={() => onCancel(booking)}
-            >
-              Cancel booking
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-    </article>
+    </>
+  )
+
+  if (!canOpen) {
+    return (
+      <article className={className} aria-label={label}>
+        {body}
+      </article>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      aria-label={`Open booking · ${label}`}
+      onClick={() => onOpen(booking)}
+    >
+      {body}
+    </button>
   )
 }
 
-/** Prefer live ops shops (Bacoor / Batangas) over test / Dasmarinas audit slugs. */
+/** Prefer first active bookable shop — never invent a slug. */
 function preferredBranchSlug(branches = []) {
-  const preferred = ['bacoor', 'batangas']
-  for (const slug of preferred) {
-    if (branches.some((b) => b.slug === slug)) return slug
-  }
-  return branches[0]?.slug || ''
+  const active = (branches || []).filter((b) => b?.slug && !b.is_archived && b.is_active !== false && !b.coming_soon)
+  return active[0]?.slug || branches[0]?.slug || ''
 }
 
 function bookableBranches(branches = [], profile) {
@@ -331,7 +289,7 @@ export default function BookingBoardPage() {
   const [customEnd, setCustomEnd] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [kindFilter, setKindFilter] = useState('all')
+  const [kindFilter, setKindFilter] = useState('detailing')
   const [tableSort, setTableSort] = useState({ key: 'start', dir: 'asc' })
   const [tablePage, setTablePage] = useState(1)
   const [tablePageSize, setTablePageSize] = useState(BOOKING_TABLE_DEFAULT_PAGE_SIZE)
@@ -350,10 +308,7 @@ export default function BookingBoardPage() {
   const [assignBranchDialog, setAssignBranchDialog] = useState(null)
   const [assignBranchSlug, setAssignBranchSlug] = useState('')
   const [assignBranchSaving, setAssignBranchSaving] = useState(false)
-  const formServices = useMemo(
-    () => (formBookingsOnly ? filterFloorDetailingServices(services) : services),
-    [services, formBookingsOnly],
-  )
+  const formServices = useMemo(() => filterFloorDetailingServices(services), [services])
   const boardStatuses = useMemo(() => getBookingBoardStatuses(profile), [profile])
   const visibleColumns = useMemo(
     () => COLUMNS.filter((c) => boardStatuses.includes(c.id)),
@@ -383,7 +338,7 @@ export default function BookingBoardPage() {
 
   const load = useCallback(async () => {
     const select =
-      'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id, final_price_minor, price_minor, services(name, pay_category)'
+      'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id, final_price_minor, price_minor, services(name, slug, pay_category)'
     // Open pipeline stays on board/calendar until released/cancelled — date filter only gates terminal rows.
     const openStatuses = boardStatuses.filter((s) => isOpenBookingStatus(s))
     const closedStatuses = boardStatuses.filter((s) => !isOpenBookingStatus(s))
@@ -423,6 +378,7 @@ export default function BookingBoardPage() {
 
     const byId = new Map()
     for (const row of [...(openRes.data || []), ...(closedRes.data || [])]) {
+      if (!isBookingBoardRow(row)) continue
       byId.set(row.id, row)
     }
     setBookings(
@@ -692,7 +648,7 @@ export default function BookingBoardPage() {
           formBranches[0]?.slug ||
           ''
     const defaultService =
-      (formBookingsOnly ? filterFloorDetailingServices(services) : services)[0]?.id || ''
+      formServices[0]?.id || ''
     setForm({
       ...emptyBooking,
       branch: defaultBranch,
@@ -775,10 +731,10 @@ export default function BookingBoardPage() {
     const model = form.vehicle_model.trim()
     const serviceId = form.service_id
     if (!serviceId) {
-      toast.error('Pick a service.')
+      toast.error('Pick a detailing service.')
       return
     }
-    if (formBookingsOnly && !formServices.some((s) => s.id === serviceId)) {
+    if (!formServices.some((s) => s.id === serviceId)) {
       toast.error('Pick a detailing service: Ceramic, Paint Maintenance, Tint, or PPF.')
       return
     }
@@ -878,10 +834,15 @@ export default function BookingBoardPage() {
     ...visibleColumns.map((c) => ({ value: c.id, label: c.label })),
   ])
   const kindFilterItems = selectItems([
-    { value: 'all', label: 'All services' },
-    { value: 'wash', label: 'Wash & packages' },
-    { value: 'detailing', label: 'Detailing' },
+    { value: 'detailing', label: 'Detailing (ceramic · tint · PPF)' },
   ])
+  const editingNext = editing
+    ? getBookingPrimaryNextStatus(editing.status, {
+        canSeePayment,
+        canCheckIn,
+        detailingPipeline: true,
+      })
+    : null
   const rangeLabel =
     datePreset === 'all'
       ? 'All dates'
@@ -910,10 +871,10 @@ export default function BookingBoardPage() {
             <h1 className="bk-hero-title">Bookings</h1>
             <p className="bk-hero-sub">
               {isMarketing
-                ? 'Read-only detailing pipeline · Sales owns service and price changes'
+                ? 'Read-only detailing pipeline · ceramic · tint · PPF'
                 : formBookingsOnly
-                  ? 'Full detailing pipeline · service and price edits stay with Sales'
-                  : rangeLabel}
+                  ? 'Detailing pipeline · ceramic · tint · PPF · wash stays on Queue'
+                  : `${rangeLabel} · detailing only`}
             </p>
           </div>
         </div>
@@ -980,7 +941,7 @@ export default function BookingBoardPage() {
 
         <TabsContent value="board" className="mt-4 min-w-0">
           <div className="bk-board">
-            <p className="bk-board-hint">Tap a stage to open its bay. On a wide desk, scroll the columns.</p>
+            <p className="bk-board-hint">Tap a card to open it. Tap a stage chip to jump columns.</p>
             <div className="bk-status-strip" role="toolbar" aria-label="Filter bookings by status">
               {visibleColumns.map((col) => {
                 const active = focusedBoardStatus === col.id
@@ -1028,15 +989,8 @@ export default function BookingBoardPage() {
                         booking={booking}
                         variant="lane"
                         tone={col.tone}
-                        branchLabel={branchNameBySlug[booking.branch] || booking.branch}
-                        canEditServicePrice={canEditServicePrice}
-                        canAdvanceStatus={canAdvanceStatus}
-                        canCancelForm={canCancelForm}
-                        canSeePayment={canSeePayment}
-                        canCheckIn={canCheckIn}
-                        onEdit={openEdit}
-                        onMove={move}
-                        onCancel={setCancelTarget}
+                        canOpen={canEdit || canEditServicePrice}
+                        onOpen={openEdit}
                       />
                     ))}
                     {!grouped[col.id].length && (
@@ -1089,13 +1043,11 @@ export default function BookingBoardPage() {
                   </SelectContent>
                 </Select>
                 <Select value={kindFilter} onValueChange={setKindFilter} items={kindFilterItems}>
-                  <SelectTrigger id="bk-list-kind" className="min-h-11 w-full cursor-pointer" aria-label="Filter by service">
-                    <SelectValue placeholder="All services" />
+                  <SelectTrigger id="bk-list-kind" className="min-h-11 w-full cursor-pointer" aria-label="Service family">
+                    <SelectValue placeholder="Detailing" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All services</SelectItem>
-                    <SelectItem value="wash">Wash & packages</SelectItem>
-                    <SelectItem value="detailing">Detailing</SelectItem>
+                    <SelectItem value="detailing">Detailing (ceramic · tint · PPF)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1108,15 +1060,8 @@ export default function BookingBoardPage() {
                   booking={booking}
                   variant="list"
                   tone={visibleColumns.find((c) => c.id === booking.status)?.tone}
-                  branchLabel={branchNameBySlug[booking.branch] || booking.branch}
-                  canEditServicePrice={canEditServicePrice}
-                  canAdvanceStatus={canAdvanceStatus}
-                  canCancelForm={canCancelForm}
-                  canSeePayment={canSeePayment}
-                  canCheckIn={canCheckIn}
-                  onEdit={openEdit}
-                  onMove={move}
-                  onCancel={setCancelTarget}
+                  canOpen={canEdit || canEditServicePrice}
+                  onOpen={openEdit}
                 />
               ))}
               {!tableSlice.total ? (
@@ -1161,13 +1106,11 @@ export default function BookingBoardPage() {
                   </SelectContent>
                 </Select>
                 <Select value={kindFilter} onValueChange={setKindFilter} items={kindFilterItems}>
-                  <SelectTrigger id="bk-table-kind" className="min-h-11 w-full cursor-pointer sm:w-44" aria-label="Filter by service">
-                    <SelectValue placeholder="All services" />
+                  <SelectTrigger id="bk-table-kind" className="min-h-11 w-full cursor-pointer sm:w-44" aria-label="Service family">
+                    <SelectValue placeholder="Detailing" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All services</SelectItem>
-                    <SelectItem value="wash">Wash & packages</SelectItem>
-                    <SelectItem value="detailing">Detailing</SelectItem>
+                    <SelectItem value="detailing">Detailing (ceramic · tint · PPF)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1399,7 +1342,7 @@ export default function BookingBoardPage() {
                 <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
                   {detailingBoardStatusLabel(form.status) || form.status}
                   <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Advance status from the board cards. Additional services stay with Sales.
+                    Use Advance below to move this booking. Additional services stay with Sales.
                   </span>
                 </p>
               ) : (
@@ -1415,6 +1358,35 @@ export default function BookingBoardPage() {
               <Label htmlFor="bk-notes">Notes</Label>
               <Textarea id="bk-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
+            {editing ? (
+              <div className="bk-edit-stage-actions">
+                {canAdvanceStatus && editingNext ? (
+                  <Button
+                    type="button"
+                    className="min-h-11 w-full cursor-pointer sm:w-auto"
+                    onClick={() => {
+                      setFormOpen(false)
+                      move(editing, editingNext)
+                    }}
+                  >
+                    {BOOKING_PRIMARY_ACTION_LABELS[editingNext] || 'Advance'}
+                  </Button>
+                ) : null}
+                {canCancelForm && editing.status !== 'cancelled' && editing.status !== 'completed' ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="min-h-11 w-full cursor-pointer text-destructive sm:w-auto"
+                    onClick={() => {
+                      setFormOpen(false)
+                      setCancelTarget(editing)
+                    }}
+                  >
+                    Cancel booking
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
             <DialogFooter>
               <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setFormOpen(false)}>Cancel</Button>
               <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>

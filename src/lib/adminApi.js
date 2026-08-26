@@ -166,6 +166,44 @@ export async function archiveBranch(slug) {
   return data
 }
 
+export async function listBranchOperatingHours(branchSlug) {
+  const slug = String(branchSlug || '').trim()
+  if (!slug) return []
+  const { data, error } = await supabase
+    .from('branch_operating_hours')
+    .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+    .eq('branch_slug', slug)
+    .order('day_of_week')
+  if (error) throw mapDbError(error)
+  return data || []
+}
+
+/** Upsert a full Sun–Sat week for one branch. */
+export async function saveBranchOperatingHours(branchSlug, week) {
+  const slug = String(branchSlug || '').trim()
+  if (!slug) throw new Error('Branch slug is required.')
+  const { normalizeWeekHours, validateWeekHours, normalizeTimeInput } = await import('./branchOperatingHours.js')
+  const normalized = normalizeWeekHours(week, slug)
+  const invalid = validateWeekHours(normalized)
+  if (invalid) throw new Error(invalid)
+
+  const rows = normalized.map((row) => ({
+    branch_slug: slug,
+    day_of_week: row.day_of_week,
+    is_closed: Boolean(row.is_closed),
+    opens_at: row.is_closed ? null : normalizeTimeInput(row.opens_at),
+    closes_at: row.is_closed ? null : normalizeTimeInput(row.closes_at),
+    updated_at: new Date().toISOString(),
+  }))
+
+  const { data, error } = await supabase
+    .from('branch_operating_hours')
+    .upsert(rows, { onConflict: 'branch_slug,day_of_week' })
+    .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+  if (error) throw mapDbError(error)
+  return data || []
+}
+
 export async function listStaffPeople({ includeInactive = false } = {}) {
   let q = supabase
     .from('staff_profiles')
@@ -379,29 +417,54 @@ export async function listServices({ includeArchived = false } = {}) {
   let q = supabase
     .from('services')
     .select(
-      'id, name, slug, description, price_minor, duration_minutes, pay_category, is_active, is_archived, display_order, loyalty_weight, service_size_prices(size_slug, price_minor)',
+      'id, name, slug, description, price_minor, duration_minutes, pay_category, is_active, is_archived, display_order, loyalty_weight, included_service_ids, service_size_prices(size_slug, price_minor)',
     )
     .order('display_order')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
-  if (error) throw mapDbError(error)
+  if (error) {
+    // Older DBs without included_service_ids
+    if (/included_service_ids/i.test(error.message || '')) {
+      let q2 = supabase
+        .from('services')
+        .select(
+          'id, name, slug, description, price_minor, duration_minutes, pay_category, is_active, is_archived, display_order, loyalty_weight, service_size_prices(size_slug, price_minor)',
+        )
+        .order('display_order')
+      if (!includeArchived) q2 = q2.eq('is_archived', false)
+      const retry = await q2
+      if (retry.error) throw mapDbError(retry.error)
+      const rows = (retry.data || []).map((row) => ({
+        ...row,
+        included_service_ids: [],
+        size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+      }))
+      servicesCache.set({ key, rows })
+      return rows
+    }
+    throw mapDbError(error)
+  }
   const rows = (data || []).map((row) => ({
     ...row,
+    included_service_ids: Array.isArray(row.included_service_ids) ? row.included_service_ids : [],
     size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
   }))
   servicesCache.set({ key, rows })
   return rows
 }
 
-async function upsertServiceSizePrices(serviceId, sizePriceMinor) {
-  if (!serviceId || !sizePriceMinor) return
+async function replaceServiceSizePrices(serviceId, sizePriceMinor) {
+  if (!serviceId) return
+  const { error: delErr } = await supabase.from('service_size_prices').delete().eq('service_id', serviceId)
+  if (delErr) throw mapDbError(delErr)
+  if (!sizePriceMinor || !Object.keys(sizePriceMinor).length) return
   const rows = Object.entries(sizePriceMinor).map(([size_slug, price_minor]) => ({
     service_id: serviceId,
     size_slug,
     price_minor,
     updated_at: new Date().toISOString(),
   }))
-  const { error } = await supabase.from('service_size_prices').upsert(rows, { onConflict: 'service_id,size_slug' })
+  const { error } = await supabase.from('service_size_prices').insert(rows)
   if (error) throw mapDbError(error)
 }
 
@@ -418,9 +481,12 @@ export async function createService(payload) {
     is_active: true,
     is_archived: false,
   }
+  if (Array.isArray(payload.included_service_ids)) {
+    row.included_service_ids = payload.included_service_ids.filter(Boolean)
+  }
   const { data, error } = await supabase.from('services').insert(row).select().maybeSingle()
   if (error) throw mapDbError(error)
-  await upsertServiceSizePrices(data?.id, v.size_price_minor)
+  await replaceServiceSizePrices(data?.id, v.size_price_minor)
   servicesCache.clear()
   await writeAudit({
     action: 'create',
@@ -455,11 +521,14 @@ export async function updateService(id, payload) {
     updated_at: new Date().toISOString(),
   }
   if (payload.is_active === undefined) delete patch.is_active
+  if (Array.isArray(payload.included_service_ids)) {
+    patch.included_service_ids = payload.included_service_ids.filter(Boolean)
+  }
 
   const { data, error } = await supabase.from('services').update(patch).eq('id', id).select().maybeSingle()
   if (error) throw mapDbError(error)
   if (!data) throw new Error('Service not found.')
-  await upsertServiceSizePrices(id, v.size_price_minor)
+  await replaceServiceSizePrices(id, v.size_price_minor)
   servicesCache.clear()
   await writeAudit({
     action: 'update',

@@ -69,10 +69,10 @@ describe('request.md floor + people', () => {
 
 describe('request.md roles + planner', () => {
   it('detailer, video editor, investor homes and docks', () => {
-    assert.equal(redirectForRole(ROLES.DETAILER), '/operations/queue?family=detailing')
+    assert.equal(redirectForRole(ROLES.DETAILER), '/operations/bookings')
     assert.equal(redirectForRole(ROLES.VIDEO_EDITOR), '/operations/planning?tab=calendar')
     assert.equal(redirectForRole(ROLES.INVESTOR), '/operations/finance')
-    assert.ok(getDetailerDock({ role: ROLES.DETAILER }).some((i) => i.to.includes('family=detailing')))
+    assert.ok(getDetailerDock({ role: ROLES.DETAILER }).some((i) => i.to === '/operations/bookings'))
     assert.deepEqual(
       getVideoEditorDock({ role: ROLES.VIDEO_EDITOR }).map((i) => i.label),
       ['Calendar', 'Tasks'],
@@ -80,10 +80,11 @@ describe('request.md roles + planner', () => {
     const investorNav = getOperationsNav({ role: ROLES.INVESTOR })
     assert.deepEqual(
       investorNav.map((i) => i.to),
-      ['/operations/finance', '/operations/reports'],
+      ['/operations/finance'],
     )
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'people'), false)
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'pos'), false)
+    assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'reports'), true)
   })
 
   it('video editor planner tabs are Tasks + Calendar only', () => {
@@ -155,10 +156,14 @@ describe('request.md money + POS + Bacoor', () => {
     assert.ok(MERCH_FAMILIES.some((f) => f.id === 'accessories'))
     assert.ok(MERCH_FAMILIES.some((f) => f.id === 'clothing'))
     const pos = read('src/pages/PosPage.jsx')
-    assert.match(pos, /cash-advance/)
-    assert.match(pos, /salary_carwash/)
-    assert.match(pos, /salary_detailer/)
+    assert.match(pos, /Cash advances · Payroll/)
+    assert.match(pos, /DEFAULT_POS_EXPENSE_KINDS|ops_pos_settings/)
     assert.match(pos, /pending/)
+    const posSettings = read('src/lib/posSettings.js')
+    assert.match(posSettings, /salary_carwash/)
+    assert.match(posSettings, /salary_detailer/)
+    const payroll = read('src/pages/PayrollPage.jsx')
+    assert.match(payroll, /cash-advance/)
   })
 
   it('finance hover percent is a real share, not a hardcoded 50', () => {

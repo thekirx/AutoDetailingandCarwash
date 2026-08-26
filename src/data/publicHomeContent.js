@@ -211,3 +211,18 @@ export const beforeAfterShowcase = {
   copy: 'Same car, same light, same angle. The only thing that changed is the work.',
   items: [],
 }
+
+export function publicServiceOverview() {
+  return services.filter((item) => item.available !== false).map((item) => ({
+    title: item.title,
+    copy: item.copy,
+  }))
+}
+
+/** @deprecated use publicPackageOverview from ../lib/publicCatalog.js */
+export function publicPackageOverviewLegacy() {
+  return {
+    ceramic: ceramicPackages.map((item) => item.title),
+    ppf: ['Basic Protection', 'Premium Protection', 'Platinum Protection'],
+  }
+}

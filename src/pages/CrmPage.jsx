@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { plateValidationError, PLATE_FIELD_HINT, normalizePlate } from '@/lib/customerAuth'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
+import CustomerNotesPanel from '@/components/CustomerNotesPanel'
 import CrmInsightsPanel from '@/pages/CrmInsightsPanel'
 import SmsPage from '@/pages/SmsPage'
 import { Badge } from '@/components/ui/badge'
@@ -680,6 +681,7 @@ export default function CrmPage() {
                 <TabsTrigger value="visits">Visits</TabsTrigger>
                 <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
                 <TabsTrigger value="loyalty">Loyalty</TabsTrigger>
+                <TabsTrigger value="notes">Notes</TabsTrigger>
               </TabsList>
               <TabsContent value="visits" className="space-y-3">
                 {membership && (
@@ -744,6 +746,9 @@ export default function CrmPage() {
                   </div>
                 ))}
                 {!loyalty.length && <p className="text-sm text-muted-foreground">No loyalty ledger entries.</p>}
+              </TabsContent>
+              <TabsContent value="notes" className="space-y-3">
+                <CustomerNotesPanel customerId={selected.id} plate={selected.primary_plate || ''} />
               </TabsContent>
             </Tabs>
           )}

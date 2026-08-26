@@ -2,11 +2,15 @@ import { useState } from 'react'
 import { ArrowRight, ChevronDown, MapPin, Radio } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { buildHomeBranchCards, countActiveHomeBranches } from '../../../lib/homeBranches'
+import { buildHomeBranchCards, comingSoonHomeCopy, countActiveHomeBranches } from '../../../lib/homeBranches'
 
 export default function HomeEndingSections({ branches }) {
   const branchCards = buildHomeBranchCards(branches)
   const activeBranchCount = countActiveHomeBranches(branchCards)
+  const soonCopy = comingSoonHomeCopy(branchCards)
+  const branchLead = soonCopy
+    ? `Premium car care across ${activeBranchCount} active branches, ${soonCopy}. Choose your nearest open branch and let us take it from here.`
+    : `Premium car care across ${activeBranchCount} active branches. Choose your nearest open branch and let us take it from here.`
   /* Collapsed by default: the closing section asks one question — how do I get
      to you — and a full grid of every branch answers it before it is asked. */
   const [showBranches, setShowBranches] = useState(false)
@@ -16,7 +20,7 @@ export default function HomeEndingSections({ branches }) {
       <div className="public-shell">
         <div className="section-heading-row" data-motion="heading">
           <div><p className="eyebrow eyebrow-light">Branches / Contact</p><h2 className="section-title light">Closer than<br />you think.</h2></div>
-          <p>Premium car care across {activeBranchCount} active branches, with Dasmariñas coming soon. Choose your nearest open branch and let us take it from here.</p>
+          <p>{branchLead}</p>
         </div>
 
         <div className="home-branch-actions" data-motion="copy">

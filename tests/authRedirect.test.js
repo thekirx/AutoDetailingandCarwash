@@ -26,6 +26,12 @@ describe('resolvePostLoginPath', () => {
     assert.equal(opsRouteKeyFromPath('/operations/settings'), 'settings')
     assert.equal(opsRouteKeyFromPath('/operations/payroll'), 'payroll')
     assert.equal(opsRouteKeyFromPath('/operations/my-pay'), 'my-pay')
+    assert.equal(opsRouteKeyFromPath('/operations/attendance'), 'attendance')
+    assert.equal(opsRouteKeyFromPath('/operations/history'), 'history')
+    assert.equal(opsRouteKeyFromPath('/operations/reviews'), 'reviews')
+    assert.equal(opsRouteKeyFromPath('/operations/content'), 'content')
+    assert.equal(opsRouteKeyFromPath('/operations/notifications'), 'notifications')
+    assert.equal(opsRouteKeyFromPath('/operations/broadcast'), 'notifications')
     assert.equal(opsRouteKeyFromPath('/operations/access-denied'), null)
   })
 
@@ -38,5 +44,15 @@ describe('resolvePostLoginPath', () => {
 
   it('sends Super Admin to console home when no return path', () => {
     assert.equal(resolvePostLoginPath({ role: ROLES.SUPER_ADMIN }, null), '/operations/console')
+  })
+
+  it('skips a denied role home so ASA without console does not loop', () => {
+    const asa = {
+      role: ROLES.ASSISTANT_SUPER_ADMIN,
+      permission_grants: { console: false },
+    }
+    const home = resolvePostLoginPath(asa, null)
+    assert.notEqual(home, '/operations/console')
+    assert.match(home, /^\/operations\//)
   })
 })

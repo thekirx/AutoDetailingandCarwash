@@ -6,7 +6,11 @@ import { fileURLToPath } from 'node:url'
 import {
   BOOKING_TABLE_DEFAULT_PAGE_SIZE,
   QUEUE_LANE_PAGE_SIZE,
+  bookingCarPlateLine,
+  bookingCarText,
+  bookingDetailingTypeText,
   bookingPayKind,
+  bookingPlateText,
   bookingServiceText,
   bookingVehicleText,
   compareBookingTableRows,
@@ -15,6 +19,7 @@ import {
   paginateRows,
   sortBookingTableRows,
 } from '../src/lib/bookingTable.js'
+import { isBookingBoardRow } from '../src/lib/serviceKinds.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -47,8 +52,14 @@ describe('booking table ledger', () => {
     assert.equal(sortBookingTableRows([zed, ana], { key: 'customer', dir: 'asc' })[0].id, '1')
     assert.equal(sortBookingTableRows([zed, ana], { key: 'start', dir: 'asc' })[0].id, '1')
     assert.equal(sortBookingTableRows([zed, ana], { key: 'status', dir: 'asc' })[0].status, 'pending')
+    assert.equal(bookingPlateText(zed), 'GN446J')
+    assert.equal(bookingCarText(zed), 'Toyota Vios')
     assert.equal(bookingVehicleText(zed), 'GN446J · Toyota Vios')
+    assert.equal(bookingCarPlateLine(zed), 'Toyota Vios - GN446J')
+    assert.equal(bookingDetailingTypeText(ana), 'Ceramic Coating')
     assert.equal(bookingServiceText(ana), 'Ceramic Coating · Detailing')
+    assert.equal(isBookingBoardRow(ana), true)
+    assert.equal(isBookingBoardRow(zed), false)
   })
 
   it('pages 13 rows at 10 per page as 1-10 of 13', () => {
@@ -89,6 +100,14 @@ describe('booking table ledger', () => {
     assert.equal(filterBookingList([ana, zed], { kind: 'detailing' }).map((r) => r.id).join(','), '1')
     assert.equal(filterBookingList([ana, zed], { kind: 'wash', status: 'waiting' }).length, 0)
     assert.equal(filterBookingList([ana, zed], { status: 'all', kind: 'all' }).length, 2)
+  })
+
+  it('list/table kind filter is detailing-only on Bookings', () => {
+    const page = readFileSync(join(root, 'src/pages/BookingBoardPage.jsx'), 'utf8')
+    assert.match(page, /isBookingBoardRow/)
+    assert.match(page, /filterFloorDetailingServices/)
+    assert.doesNotMatch(page, /SelectItem value="wash"/)
+    assert.match(page, /useState\('detailing'\)/)
   })
 
   it('list tab is a searchable roster, separate from the board kanban', () => {

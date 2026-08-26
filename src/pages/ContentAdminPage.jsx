@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { NamedSelect } from '@/components/ui/named-select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { listBranches } from '@/lib/adminApi'
 import { normalizeBlocks, slugifyContentTitle } from '@/lib/contentBlocks'
 import { slugifyEventTitle } from '@/lib/planningPart6'
 import { supabase } from '@/lib/supabase'
@@ -34,13 +35,13 @@ function emptyBlog() {
   }
 }
 
-function emptyEvent() {
+function emptyEvent(defaultBranch = '') {
   return {
     id: null,
     title: '',
     slug: '',
     description: '',
-    branch: 'bacoor',
+    branch: defaultBranch,
     starts_at: '',
     ends_at: '',
     banner_url: '/branding/hakum-lw-ow.png',
@@ -61,9 +62,10 @@ export default function ContentAdminPage() {
   const [eventEditor, setEventEditor] = useState(null)
   const [preview, setPreview] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [branchOptions, setBranchOptions] = useState([])
 
   const load = useCallback(async () => {
-    const [b, e, f] = await Promise.all([
+    const [b, e, f, branches] = await Promise.all([
       supabase.from('blogs').select('*').order('updated_at', { ascending: false }).limit(100),
       supabase
         .from('events')
@@ -76,13 +78,21 @@ export default function ContentAdminPage() {
         .eq('is_active', true)
         .neq('status', 'archived')
         .order('name'),
+      listBranches().catch(() => []),
     ])
     if (b.error) toast.error(b.error.message)
     else setBlogs(b.data || [])
     if (e.error) toast.error(e.error.message)
     else setEvents(e.data || [])
     if (!f.error) setForms(f.data || [])
+    setBranchOptions(
+      (branches || [])
+        .filter((row) => row && !row.is_archived && row.is_active !== false)
+        .map((row) => ({ value: row.slug, label: row.name || row.slug })),
+    )
   }, [])
+
+  const defaultBranchSlug = branchOptions[0]?.value || ''
 
   useEffect(() => {
     if (canEdit) load()
@@ -281,7 +291,7 @@ export default function ContentAdminPage() {
 
         <TabsContent value="events" className="mt-4 space-y-4">
           <div className="flex justify-end">
-            <Button type="button" className="cursor-pointer" onClick={() => setEventEditor(emptyEvent())}>
+            <Button type="button" className="cursor-pointer" onClick={() => setEventEditor(emptyEvent(defaultBranchSlug))}>
               <Plus className="size-4" /> New event
             </Button>
           </div>
@@ -428,7 +438,11 @@ export default function ContentAdminPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label>Branch</Label>
-                  <Input value={eventEditor.branch} onChange={(e) => setEventEditor({ ...eventEditor, branch: e.target.value })} />
+                  <NamedSelect
+                    value={eventEditor.branch || ''}
+                    onChange={(branch) => setEventEditor({ ...eventEditor, branch })}
+                    options={[{ value: '', label: 'All / none' }, ...branchOptions]}
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label>Published</Label>

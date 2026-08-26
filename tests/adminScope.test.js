@@ -27,12 +27,11 @@ import {
 describe('Admin capability matrix', () => {
   const p = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor', 'imus'] }
 
-  it('allows console floor POS finance CRM memberships and planning edit; denies cars reports edit-queue redo roles', () => {
-    assert.equal(allowRoute(p, 'console'), true)
+  it('allows floor POS reviews planning audit; denies console finance CRM cars reports edit-queue redo roles', () => {
     assert.equal(allowRoute(p, 'pos'), true)
-    assert.equal(allowRoute(p, 'finance'), true)
-    assert.equal(allowRoute(p, 'crm'), true)
-    assert.equal(allowRoute(p, 'memberships'), true)
+    assert.equal(allowRoute(p, 'finance'), false)
+    assert.equal(allowRoute(p, 'crm'), false)
+    assert.equal(allowRoute(p, 'memberships'), false)
     assert.equal(allowRoute(p, 'queue'), true)
     assert.equal(allowRoute(p, 'cars'), false)
     assert.equal(allowRoute(p, 'reports'), false)
@@ -53,6 +52,7 @@ describe('Admin capability matrix', () => {
         '/operations/pos',
         '/operations/reviews',
         '/operations/planning',
+        '/operations/roadmap',
         '/operations/history',
         '/operations/my-pay',
         '/operations/audit',

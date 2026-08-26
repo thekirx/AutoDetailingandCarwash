@@ -4,7 +4,10 @@ Short vocabulary for audits and architecture reviews. Expand as seams deepen.
 
 | Term | Meaning |
 |------|---------|
-| Floor | Live queue board + ticket lifecycle (waiting → … → payment) |
+| Floor | Live queue board + ticket lifecycle (waiting → … → payment). Queue = same-day services & packages only |
+| Bookings | Detailing multi-day pipeline (Assigned → intake → … → release). Ceramic / tint / PPF / paint maint only — not wash Queue. Cards: detailing type over `car - plate` |
+| POS catalog | Sell tabs: **Services & packages** (same-day) · **Detailing** · Merch. No global size filter — size pricing is optional per catalog item (multi-select). Packages = mixed `included_service_ids` or custom price |
+| Inventory | `/operations/inventory` mirrors POS: **Services & packages** · **Detailing** · Merch — separate create/list so bay and multi-day data stay distributed |
 | Visit group | Multi-service tickets sharing one `queue_number` / `visit_group_id` |
 | Queue allocator | `queue_number_counters` + `assign_daily_queue_number` (atomic per branch/day) |
 | Handoff | Queue → POS payment transfer (`pos_handoffs` / sale) |
@@ -27,8 +30,12 @@ Short vocabulary for audits and architecture reviews. Expand as seams deepen.
 | Planner proof | Optional unless `plan_cards.proof_required`. Photo lives in private `plan-proofs` (`{uid}/{cardId}/file`). Assign notifies inbox + web push |
 | Review inbox | Planner Review tab: assignees in `for_review`. Accept → `done`, send back → `in_progress` |
 | Planner configure | Editors only. CRUD lists on the current board, shop-wide categories/templates, and boards. Assignee progress statuses stay fixed |
-| Shop-day settlement | Wash pool (`washPoolAmountMinor`) + ceramic job drafts (`buildCeramicCompensationExpenses`) + daily close buckets. Branch scope is `getBranchScopeList`. Close skips ceramic/payroll drafts until paid |
-| Payroll run | SA/ASA wizard: POS paid sales + attendance → `payroll_runs` / `payroll_run_lines` / `payroll_run_sales`. Interface: `src/lib/payroll.js`. Employees (not Super Admin) read own lines on My pay. Wash-pool salary posts only from Payroll confirm; Crew tab is estimate-only |
+| Shop-day settlement | Wash pool (`washPoolAmountMinor`) + ceramic job drafts (`buildCeramicCompensationExpenses`) + daily close buckets. Branch scope is `getBranchScopeList`. Close skips ceramic/payroll drafts until paid. **Docs:** `docs/POS/` |
+| POS counter | `/operations/pos` — BA: merch + Pay queue + expenses + End of shift; SA/ASA: bay + detailing + merch walk-in. Sale write = `complete_pos_sale`. Settings thin: `ops_pos_settings` + `shift_close_field_config`. End of shift attests paid-sales baseline; does **not** pay payroll |
+| Payroll run | Dual track: **Floor** (bay + POS) vs **Fixed** (company-wide, no bay). Fixed wizard: Period → Employees → Commissions → full Review. Packages may omit branch (books under `hq`). Dashboard **Pending floor pay** stacks accepted end-of-shift days with no covering floor run; when `pending_floor_optional` is false, floor confirm is **hard-blocked** until closes are accepted. CA deduct is **manual in wizard only** (approve binds `staff_id`). Day report uses `shopDaySettlement` (paid POS + attendance preview). **Money contract:** `docs/OPS/MONEY-CONTRACT.md`. **Docs:** `docs/PAYROLL/` |
+| Operations Lead | Network-wide role (`operations_lead`): planner + POS + queue (TL∪BA), all branches, My Pay, **no attendance clock**. **Ops Lab** (`/operations/roadmap`) — customizable types/statuses, status notify to all Ops Lab peers, audited actions for SA. Multi-branch forms/EoS; detailing compensation is service-agnostic (not ceramic-only). |
+| Cash advance | Staff request via ops form `cash_advance`. Approve/decline on **Payroll** (not POS). Approved rows feed POS daily close / shift-close (`total_expenses_minor`, cash left). End of shift is a 4-step wizard; **Total sales** = paid POS (legacy key `square_sales_minor`) |
+| Expense report | ASA draft/submit → expenses `pending_approval`. SA approve → `pending_payment` (not P&L yet). `approve_paid` or later `mark_paid` → `paid` → P&L. Interface: `review_expense_report` |
 
 ## Intentional denorm
 

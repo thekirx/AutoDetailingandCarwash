@@ -3,10 +3,15 @@ import { Link, Navigate } from 'react-router-dom'
 import { Building2, Pencil, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canCreateBranches, canManageBranches } from '@/auth/permissions'
-import { archiveBranch, createBranch, listBranches, setBranchHours, updateBranch } from '@/lib/adminApi'
+import { archiveBranch, createBranch, listBranches, listBranchOperatingHours, saveBranchOperatingHours, updateBranch } from '@/lib/adminApi'
 import { filterBranchesForProfile } from '@/queue/queueLogic'
 import { branchStatusLabel } from '@/lib/branches'
-import { dayOfWeekToIso } from '@/lib/branchHours'
+import {
+  WEEKDAY_LABELS,
+  defaultWeekHours,
+  formatHoursSummary,
+  normalizeWeekHours,
+} from '@/lib/branchOperatingHours'
 import BranchLocationPicker from '@/components/BranchLocationPicker'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,43 +29,6 @@ const empty = {
   latitude: null,
   longitude: null,
   status: 'active',
-  opensAt: '',
-  closesAt: '',
-  closedWeekdays: [],
-}
-
-/* ISO weekday numbering (1 = Monday); converted to the table's 0=Sunday
-   day_of_week when saved. */
-const WEEKDAYS = [
-  { iso: 1, label: 'Mon' },
-  { iso: 2, label: 'Tue' },
-  { iso: 3, label: 'Wed' },
-  { iso: 4, label: 'Thu' },
-  { iso: 5, label: 'Fri' },
-  { iso: 6, label: 'Sat' },
-  { iso: 7, label: 'Sun' },
-]
-
-/** Postgres hands back "08:00:00"; <input type="time"> wants "08:00". */
-function timeForInput(value) {
-  const match = /^(\d{2}:\d{2})/.exec(String(value || ''))
-  return match ? match[1] : ''
-}
-
-/* branch_operating_hours holds a row per weekday. The editor exposes one
-   opening window plus closed-day toggles, so the form takes its times from the
-   first trading day and lists the rest as closed. */
-function hoursForForm(rows) {
-  const week = Array.isArray(rows) ? rows : []
-  const open = week.find((row) => !row.is_closed && row.opens_at && row.closes_at)
-  return {
-    opensAt: timeForInput(open?.opens_at),
-    closesAt: timeForInput(open?.closes_at),
-    closedWeekdays: week
-      .filter((row) => row.is_closed)
-      .map((row) => dayOfWeekToIso(row.day_of_week))
-      .sort((a, b) => a - b),
-  }
 }
 
 function statusFromRow(row) {
@@ -75,6 +43,7 @@ export default function BranchesManagePage() {
   const [rows, setRows] = useState([])
   const [form, setForm] = useState(empty)
   const [editingSlug, setEditingSlug] = useState(null)
+  const [hours, setHours] = useState(() => defaultWeekHours(''))
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -88,26 +57,6 @@ export default function BranchesManagePage() {
   }, [load, profile])
 
   if (!canManageBranches(profile)) return <Navigate to="/operations/access-denied" replace />
-
-  /* Hours ride on the same save button but go through their own RPC, so a
-     branch whose hours fail to write still keeps the rest of the edit. */
-  async function saveHours(slug) {
-    await setBranchHours({
-      slug,
-      opensAt: form.opensAt || null,
-      closesAt: form.closesAt || null,
-      closedWeekdays: form.closedWeekdays,
-    })
-  }
-
-  function toggleClosedWeekday(iso) {
-    setForm((f) => ({
-      ...f,
-      closedWeekdays: f.closedWeekdays.includes(iso)
-        ? f.closedWeekdays.filter((day) => day !== iso)
-        : [...f.closedWeekdays, iso].sort((a, b) => a - b),
-    }))
-  }
 
   async function onSubmit(event) {
     event.preventDefault()
@@ -124,13 +73,13 @@ export default function BranchesManagePage() {
       }
       if (editingSlug) {
         await updateBranch({ slug: editingSlug, ...payload })
-        await saveHours(editingSlug)
+        await saveBranchOperatingHours(editingSlug, hours)
         toast.success('Branch updated')
         setEditingSlug(null)
       } else {
         if (!canCreate) throw new Error('Only Super Admin can open new company sites.')
         await createBranch(payload)
-        await saveHours(form.slug)
+        await saveBranchOperatingHours(payload.slug, hours.length ? hours : defaultWeekHours(payload.slug))
         toast.success(
           form.status === 'coming_soon'
             ? 'Branch announced as coming soon'
@@ -138,6 +87,7 @@ export default function BranchesManagePage() {
         )
       }
       setForm(empty)
+      setHours(defaultWeekHours(''))
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -146,7 +96,7 @@ export default function BranchesManagePage() {
     }
   }
 
-  function startEdit(row) {
+  async function startEdit(row) {
     setEditingSlug(row.slug)
     setForm({
       name: row.name,
@@ -156,13 +106,26 @@ export default function BranchesManagePage() {
       latitude: row.latitude,
       longitude: row.longitude,
       status: statusFromRow(row),
-      ...hoursForForm(row.hours),
     })
+    try {
+      const week = await listBranchOperatingHours(row.slug)
+      setHours(normalizeWeekHours(week, row.slug))
+    } catch (err) {
+      toast.error(err.message)
+      setHours(defaultWeekHours(row.slug))
+    }
   }
 
   function cancelEdit() {
     setEditingSlug(null)
     setForm(empty)
+    setHours(defaultWeekHours(''))
+  }
+
+  function patchHour(day, patch) {
+    setHours((current) =>
+      current.map((row) => (row.day_of_week === day ? { ...row, ...patch } : row)),
+    )
   }
 
   async function setStatus(row, status) {
@@ -309,54 +272,49 @@ export default function BranchesManagePage() {
                 />
               </div>
 
-              <fieldset className="flex flex-col gap-3 rounded-lg border border-border p-4">
-                <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Opening hours
-                </legend>
+              <fieldset className="flex flex-col gap-3 rounded-xl border border-border p-3">
+                <Legend>Operating hours</Legend>
                 <p className="text-[11px] text-muted-foreground">
-                  Shown on the public homepage. Leave both times empty to hide open/closed status
-                  and show queue length only.
+                  Asia/Manila shop day. Public /branches shows this schedule and open/closed now.
+                  {hours.length ? ` Preview: ${formatHoursSummary(hours)}` : ''}
                 </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="b-opens">Opens</Label>
-                    <Input
-                      id="b-opens"
-                      type="time"
-                      value={form.opensAt}
-                      onChange={(e) => setForm((f) => ({ ...f, opensAt: e.target.value }))}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="b-closes">Closes</Label>
-                    <Input
-                      id="b-closes"
-                      type="time"
-                      value={form.closesAt}
-                      onChange={(e) => setForm((f) => ({ ...f, closesAt: e.target.value }))}
-                    />
-                  </div>
-                </div>
                 <div className="flex flex-col gap-2">
-                  <span className="text-[11px] text-muted-foreground">Closed on</span>
-                  <div className="flex flex-wrap gap-2">
-                    {WEEKDAYS.map((day) => {
-                      const isClosed = form.closedWeekdays.includes(day.iso)
-                      return (
-                        <button
-                          key={day.iso}
-                          type="button"
-                          onClick={() => toggleClosedWeekday(day.iso)}
-                          aria-pressed={isClosed}
-                          className={`min-h-9 rounded-md border px-3 text-[11px] font-semibold uppercase tracking-wider ${
-                            isClosed ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'
-                          }`}
-                        >
-                          {day.label}
-                        </button>
-                      )
-                    })}
-                  </div>
+                  {WEEKDAY_LABELS.map(({ day, short }) => {
+                    const row = hours.find((h) => h.day_of_week === day) || defaultWeekHours('')[day]
+                    return (
+                      <div key={day} className="grid grid-cols-[2.5rem_auto_1fr_1fr] items-center gap-2">
+                        <span className="text-xs font-medium tabular-nums">{short}</span>
+                        <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(row.is_closed)}
+                            onChange={(e) =>
+                              patchHour(day, {
+                                is_closed: e.target.checked,
+                                opens_at: e.target.checked ? null : row.opens_at || '08:00',
+                                closes_at: e.target.checked ? null : row.closes_at || '18:00',
+                              })
+                            }
+                          />
+                          Closed
+                        </label>
+                        <Input
+                          type="time"
+                          disabled={row.is_closed}
+                          value={row.opens_at || ''}
+                          onChange={(e) => patchHour(day, { opens_at: e.target.value, is_closed: false })}
+                          aria-label={`${short} opens`}
+                        />
+                        <Input
+                          type="time"
+                          disabled={row.is_closed}
+                          value={row.closes_at || ''}
+                          onChange={(e) => patchHour(day, { closes_at: e.target.value, is_closed: false })}
+                          aria-label={`${short} closes`}
+                        />
+                      </div>
+                    )
+                  })}
                 </div>
               </fieldset>
 

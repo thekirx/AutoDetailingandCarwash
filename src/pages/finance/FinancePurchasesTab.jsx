@@ -1,11 +1,7 @@
-/** Finance Purchases tab: expense CRUD with Xero-like status flow.
- * draft → pending_approval → approved → pending_payment → paid → posted.
- * Edit expense categories inline via the Categories tab; this tab focuses on bills.
- * CSV/Excel/PDF export. Mobile cards, desktop table. */
+/** Finance Bills & expenses — status flow + CRUD, dashboard chrome. */
 import { useMemo, useState } from 'react'
 import { Download, FileSpreadsheet, FileText, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,7 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
-import { downloadCsv, downloadExcel, printAsPdf } from '@/lib/financeData'
+import { downloadCsv, downloadExcel, formatFinanceWindow, printAsPdf } from '@/lib/financeData'
+import {
+  FinanceEmpty,
+  FinanceMetricCell,
+  FinanceMetricStrip,
+  FinancePanel,
+  FinanceTabSkeleton,
+} from './FinanceChrome'
 
 const STATUS_FLOW = ['draft', 'pending_approval', 'approved', 'pending_payment', 'paid', 'posted']
 const STATUS_LABEL = {
@@ -62,10 +65,22 @@ export default function FinancePurchasesTab({
     if (statusFilter !== 'all') rows = rows.filter((r) => r.status === statusFilter)
     if (query.trim()) {
       const q = query.trim().toLowerCase()
-      rows = rows.filter((r) => (r.title || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q))
+      rows = rows.filter(
+        (r) => (r.title || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q),
+      )
     }
     return rows
   }, [expenses, statusFilter, query])
+
+  const metrics = useMemo(() => {
+    const all = expenses || []
+    const total = filtered.reduce((s, r) => s + Number(r.total_minor || 0), 0)
+    const draft = all.filter((r) => r.status === 'draft').length
+    const awaiting = all.filter((r) => r.status === 'pending_approval' || r.status === 'pending_payment').length
+    const booked = all.filter((r) => r.status === 'paid' || r.status === 'posted')
+    const bookedMinor = booked.reduce((s, r) => s + Number(r.total_minor || 0), 0)
+    return { total, draft, awaiting, bookedCount: booked.length, bookedMinor }
+  }, [expenses, filtered])
 
   const exportColumns = useMemo(
     () => [
@@ -87,7 +102,8 @@ export default function FinancePurchasesTab({
     [branches, categories],
   )
 
-  const subtitle = `${range.start} to ${range.end} · ${filtered.length} bills · ${formatMoney(filtered.reduce((s, r) => s + Number(r.total_minor || 0), 0))}`
+  const windowLabel = formatFinanceWindow(range.start, range.end)
+  const subtitle = `${windowLabel} · ${filtered.length} bill${filtered.length === 1 ? '' : 's'}`
   const fileBase = `hakum-purchases-${range.start}-to-${range.end}`
 
   function openCreate() {
@@ -143,14 +159,13 @@ export default function FinancePurchasesTab({
     } else {
       const cat = categories.find((c) => c.id === form.category_id)
       const needsApproval = cat?.is_chemical || total > 500000
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('expenses')
         .insert({ ...payload, status: needsApproval ? 'pending_approval' : 'draft' })
         .select('id')
         .single()
       if (error) return toast.error(error.message)
       toast.success(needsApproval ? 'Expense submitted for approval' : 'Expense saved as draft')
-      void data
     }
     setShowForm(false)
     onReload?.()
@@ -181,232 +196,266 @@ export default function FinancePurchasesTab({
     }
   }
 
-  if (loading) return <PurchasesSkeleton />
+  if (loading) return <FinanceTabSkeleton metrics={4} />
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="finance-dash flex flex-col gap-5">
+      <FinanceMetricStrip label="Bills totals">
+        <FinanceMetricCell label="Filtered total" value={formatMoney(metrics.total)} hint={subtitle} tone="ink" />
+        <FinanceMetricCell label="Drafts" value={String(metrics.draft)} hint="In window" tone="muted" />
+        <FinanceMetricCell label="Awaiting action" value={String(metrics.awaiting)} hint="Approval or payment" tone="muted" />
+        <FinanceMetricCell
+          label="Paid + posted"
+          value={formatMoney(metrics.bookedMinor)}
+          hint={`${metrics.bookedCount} bills hit P&L`}
+          tone="up"
+        />
+      </FinanceMetricStrip>
+
       <div className="finance-toolbar">
         <div className="finance-toolbar-search">
-          <Search className="size-4" aria-hidden />
+          <Search aria-hidden />
           <input
             type="search"
             placeholder="Search by title or description"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search bills"
           />
         </div>
         <div className="finance-toolbar-actions">
           <select
-            className="finance-toolbar-select"
+            className="finance-toolbar-select min-h-10"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             aria-label="Filter by status"
           >
             <option value="all">All statuses</option>
             {STATUS_FLOW.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
             ))}
           </select>
           {canWrite ? (
-            <Button onClick={openCreate}>
-              <Plus className="size-3.5" /> New bill
+            <Button type="button" className="min-h-10 cursor-pointer" onClick={openCreate}>
+              <Plus data-icon="inline-start" />
+              New bill
             </Button>
           ) : null}
-          <Button variant="outline" onClick={() => downloadCsv(filtered, exportColumns, `${fileBase}.csv`)}>
-            <Download className="size-3.5" /> CSV
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-10 cursor-pointer"
+            onClick={() => downloadCsv(filtered, exportColumns, `${fileBase}.csv`)}
+          >
+            <Download data-icon="inline-start" />
+            CSV
           </Button>
-          <Button variant="outline" onClick={() => downloadExcel(filtered, exportColumns, `${fileBase}.xls`, 'Hakum Purchases')}>
-            <FileSpreadsheet className="size-3.5" /> Excel
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-10 cursor-pointer"
+            onClick={() => downloadExcel(filtered, exportColumns, `${fileBase}.xls`, 'Hakum Purchases')}
+          >
+            <FileSpreadsheet data-icon="inline-start" />
+            Excel
           </Button>
-          <Button variant="outline" onClick={() => printAsPdf(filtered, exportColumns, 'Hakum Purchases', subtitle)}>
-            <FileText className="size-3.5" /> PDF
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-10 cursor-pointer"
+            onClick={() => printAsPdf(filtered, exportColumns, 'Hakum Purchases', subtitle)}
+          >
+            <FileText data-icon="inline-start" />
+            PDF
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Bills</CardTitle>
-          <CardDescription>{subtitle}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {canWrite
-                ? 'No bills match these filters. Click New bill to record an expense.'
-                : 'No bills match these filters.'}
-            </p>
-          ) : (
-            <>
-              <div className="finance-mobile-list">
-                {filtered.map((row) => (
-                  <article key={`m-${row.id}`} className="finance-mobile-card">
-                    <div>
-                      <p className="finance-mobile-title">{row.title}</p>
-                      <p className="finance-mobile-sub">
-                        {branches.find((b) => b.slug === row.branch)?.name || row.branch} ·{' '}
-                        {categories.find((c) => c.id === row.category_id)?.name || 'Uncategorized'}
-                      </p>
-                    </div>
-                    <div className="finance-mobile-amount">
-                      <span className="tabular-nums">{formatMoney(row.total_minor)}</span>
-                      <Badge variant={STATUS_BADGE[row.status] || 'secondary'}>
-                        {STATUS_LABEL[row.status] || row.status}
-                      </Badge>
-                    </div>
-                    {canWrite ? (
-                      <div className="finance-mobile-actions">
-                        <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
-                          <Pencil className="size-3.5" /> Edit
-                        </Button>
-                        {nextStatus(row.status) ? (
-                          <Button size="sm" onClick={() => transition(row, nextStatus(row.status))}>
-                            {STATUS_LABEL[nextStatus(row.status)]}
-                          </Button>
-                        ) : null}
-                        <Button size="sm" variant="ghost" onClick={() => remove(row)}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    ) : null}
-                  </article>
+      {showForm && canWrite ? (
+        <FinancePanel title={editing ? 'Edit bill' : 'New bill'} description="Branch and category required. Chemicals and large bills need approval.">
+          <form onSubmit={save} className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-2 md:col-span-2">
+              <Label htmlFor="exp-title">Title</Label>
+              <Input
+                id="exp-title"
+                required
+                className="min-h-10"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2 md:col-span-2">
+              <Label htmlFor="exp-desc">Description</Label>
+              <Textarea
+                id="exp-desc"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="exp-qty">Quantity</Label>
+              <Input
+                id="exp-qty"
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                className="min-h-10"
+                value={form.quantity}
+                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="exp-unit">Unit cost (₱)</Label>
+              <Input
+                id="exp-unit"
+                required
+                className="min-h-10"
+                value={form.unit_cost}
+                onChange={(e) => setForm({ ...form, unit_cost: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="exp-branch">Branch</Label>
+              <select
+                id="exp-branch"
+                className="finance-toolbar-select min-h-10 w-full"
+                value={form.branch}
+                onChange={(e) => setForm({ ...form, branch: e.target.value })}
+              >
+                {writableBranches.map((b) => (
+                  <option key={b.slug} value={b.slug}>
+                    {b.name}
+                  </option>
                 ))}
-              </div>
-              <div className="finance-table-wrap">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Branch</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="font-medium">{row.title}</TableCell>
-                        <TableCell>{branches.find((b) => b.slug === row.branch)?.name || row.branch}</TableCell>
-                        <TableCell>{categories.find((c) => c.id === row.category_id)?.name || 'Uncategorized'}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatMoney(row.total_minor)}</TableCell>
-                        <TableCell>
-                          <Badge variant={STATUS_BADGE[row.status] || 'secondary'}>
-                            {STATUS_LABEL[row.status] || row.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="flex flex-wrap gap-2">
-                          {canWrite && (
-                            <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
-                              <Pencil className="size-3.5" /> Edit
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="exp-cat">Category</Label>
+              <select
+                id="exp-cat"
+                className="finance-toolbar-select min-h-10 w-full"
+                value={form.category_id}
+                onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.is_chemical ? ' (pre-approval)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-2 md:col-span-2">
+              <Button type="submit" className="min-h-10 cursor-pointer">
+                {editing ? 'Save changes' : 'Save bill'}
+              </Button>
+              <Button type="button" variant="ghost" className="min-h-10 cursor-pointer" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </FinancePanel>
+      ) : null}
+
+      <FinancePanel title="Bills" description={subtitle}>
+        {filtered.length === 0 ? (
+          <FinanceEmpty
+            title="No bills match these filters"
+            body={canWrite ? 'Record a bill with New bill, or widen status / search.' : 'Widen status or search, or ask someone with write access to post spend.'}
+            action={canWrite ? { label: 'New bill', onClick: openCreate } : null}
+          />
+        ) : (
+          <>
+            <div className="finance-mobile-list">
+              {filtered.map((row) => (
+                <article key={`m-${row.id}`} className="finance-mobile-card">
+                  <div>
+                    <p className="finance-mobile-title">{row.title}</p>
+                    <p className="finance-mobile-sub">
+                      {branches.find((b) => b.slug === row.branch)?.name || row.branch} ·{' '}
+                      {categories.find((c) => c.id === row.category_id)?.name || 'Uncategorized'}
+                    </p>
+                  </div>
+                  <div className="finance-mobile-amount">
+                    <span className="tabular-nums">{formatMoney(row.total_minor)}</span>
+                    <Badge variant={STATUS_BADGE[row.status] || 'secondary'}>
+                      {STATUS_LABEL[row.status] || row.status}
+                    </Badge>
+                  </div>
+                  {canWrite ? (
+                    <div className="finance-mobile-actions">
+                      <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openEdit(row)}>
+                        <Pencil data-icon="inline-start" />
+                        Edit
+                      </Button>
+                      {nextStatus(row.status) ? (
+                        <Button size="sm" className="cursor-pointer" onClick={() => transition(row, nextStatus(row.status))}>
+                          {STATUS_LABEL[nextStatus(row.status)]}
+                        </Button>
+                      ) : null}
+                      <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => remove(row)}>
+                        <Trash2 data-icon="inline-start" />
+                      </Button>
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+            <div className="finance-table-wrap">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-medium">{row.title}</TableCell>
+                      <TableCell>{branches.find((b) => b.slug === row.branch)?.name || row.branch}</TableCell>
+                      <TableCell>{categories.find((c) => c.id === row.category_id)?.name || 'Uncategorized'}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatMoney(row.total_minor)}</TableCell>
+                      <TableCell>
+                        <Badge variant={STATUS_BADGE[row.status] || 'secondary'}>
+                          {STATUS_LABEL[row.status] || row.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-2">
+                          {canWrite ? (
+                            <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openEdit(row)}>
+                              <Pencil data-icon="inline-start" />
+                              Edit
                             </Button>
-                          )}
+                          ) : null}
                           {canWrite && nextStatus(row.status) ? (
-                            <Button size="sm" onClick={() => transition(row, nextStatus(row.status))}>
+                            <Button size="sm" className="cursor-pointer" onClick={() => transition(row, nextStatus(row.status))}>
                               {STATUS_LABEL[nextStatus(row.status)]}
                             </Button>
                           ) : null}
-                          {canWrite && (
-                            <Button size="sm" variant="ghost" onClick={() => remove(row)}>
-                              <Trash2 className="size-3.5" />
+                          {canWrite ? (
+                            <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => remove(row)}>
+                              <Trash2 data-icon="inline-start" />
                             </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {showForm && canWrite ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editing ? 'Edit bill' : 'New bill'}</CardTitle>
-            <CardDescription>
-              {editing ? 'Update the expense record.' : 'Record an expense for the selected branch.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={save} className="grid gap-4 md:grid-cols-2">
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <Label htmlFor="exp-title">Title</Label>
-                <Input
-                  id="exp-title"
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <Label htmlFor="exp-desc">Description</Label>
-                <Textarea
-                  id="exp-desc"
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="exp-qty">Quantity</Label>
-                <Input
-                  id="exp-qty"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  value={form.quantity}
-                  onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="exp-unit">Unit cost (₱)</Label>
-                <Input
-                  id="exp-unit"
-                  required
-                  value={form.unit_cost}
-                  onChange={(e) => setForm({ ...form, unit_cost: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="exp-branch">Branch</Label>
-                <select
-                  id="exp-branch"
-                  className="finance-toolbar-select"
-                  value={form.branch}
-                  onChange={(e) => setForm({ ...form, branch: e.target.value })}
-                >
-                  {writableBranches.map((b) => (
-                    <option key={b.slug} value={b.slug}>{b.name}</option>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="exp-cat">Category</Label>
-                <select
-                  id="exp-cat"
-                  className="finance-toolbar-select"
-                  value={form.category_id}
-                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}{c.is_chemical ? ' (pre-approval)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-2 md:col-span-2">
-                <Button type="submit">{editing ? 'Save changes' : 'Save bill'}</Button>
-                <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>Cancel</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      ) : null}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
+      </FinancePanel>
     </div>
   )
 }
@@ -415,16 +464,4 @@ function nextStatus(status) {
   const i = STATUS_FLOW.indexOf(status)
   if (i < 0 || i >= STATUS_FLOW.length - 1) return null
   return STATUS_FLOW[i + 1]
-}
-
-function PurchasesSkeleton() {
-  return (
-    <Card>
-      <CardContent className="space-y-2">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="finance-skeleton-line h-10" />
-        ))}
-      </CardContent>
-    </Card>
-  )
 }

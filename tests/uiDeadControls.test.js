@@ -102,14 +102,14 @@ describe('P0 residual fixes (full-system 2026-08-01)', () => {
     assert.doesNotMatch(src, /getSession\(\)/)
   })
 
-  it('ReportsPage toasts expenses/crew/comps/books errors (RPT-P0-1)', () => {
+  it('ReportsPage redirects into Finance Reports tab (RPT-P0-1)', () => {
     const src = readFileSync(join(root, 'src/pages/ReportsPage.jsx'), 'utf8')
-    assert.match(src, /toast\.error\(err\.message\)/)
-    assert.match(src, /sales\.error/)
-    assert.match(src, /crew\.error/)
-    assert.match(src, /comps\.error/)
-    assert.match(src, /books\.error/)
-    assert.match(src, /from\('sales'\)\.select\('id'\)\.eq\('status', 'paid'\)/)
+    assert.match(src, /finance\?tab=reports/)
+    assert.match(src, /canAccessReports/)
+    const fin = readFileSync(join(root, 'src/pages/finance/FinanceReportsTab.jsx'), 'utf8')
+    assert.match(fin, /aggregateBestSellers/)
+    assert.match(fin, /scopeBranch/)
+    assert.match(fin, /toast\.error/)
   })
 
   it('Memberships hides Save for non-SA (OPS-M7)', () => {

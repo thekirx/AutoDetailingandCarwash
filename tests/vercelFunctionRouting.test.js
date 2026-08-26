@@ -18,6 +18,8 @@ const expected = {
   '/api/notify-ops-form': '/api/notifications?operation=notify-ops-form',
   '/api/notify-planner': '/api/notifications?operation=notify-planner',
   '/api/notify-pos': '/api/notifications?operation=notify-pos',
+  '/api/notify-shift-close': '/api/notifications?operation=notify-shift-close',
+  '/api/notify-ops-lab': '/api/notifications?operation=notify-ops-lab',
   '/api/notification-broadcast': '/api/notifications?operation=notification-broadcast',
   '/api/notification-broadcast-kinds': '/api/notifications?operation=notification-broadcast-kinds',
   '/api/notification-templates': '/api/notifications?operation=notification-templates',
@@ -98,7 +100,7 @@ describe('Vercel API rewrite contract', () => {
     assert.equal(readGatewayOperation({ url: destination.pathname + destination.search }), null)
   })
 
-  it('contains exactly six deployable JavaScript function entrypoints', () => {
+  it('contains exactly seven deployable JavaScript function entrypoints', () => {
     const files = readdirSync(new URL('../api/', import.meta.url))
       .filter((file) => file.endsWith('.js'))
       .sort()
@@ -109,6 +111,7 @@ describe('Vercel API rewrite contract', () => {
       'data-center.js',
       'finance.js',
       'notifications.js',
+      'public-inquiry.js',
       'staff.js',
     ])
   })

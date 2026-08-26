@@ -1,284 +1,498 @@
-/** Finance Overview tab: KPIs, income vs expense bar, payment-method breakdown,
- * top branches, recent POS sales. Real data only — no fake numbers. */
+/** Finance Dashboard — owner cash-flow view.
+ * Dense metric strip + trend/composition charts (shadcn Chart + Recharts).
+ * Real POS + P&L only — empty windows stay empty, with cues to act. */
 import { useMemo } from 'react'
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
-import { ArrowDownRight, ArrowUpRight, Building2, Wallet } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ArrowRight, FileBarChart, Receipt, ShoppingCart } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
 import { formatMoney } from '@/queue/queueApi'
-import { rollupPl, salesByBranch, shareOfTotal, sumMinor } from '@/lib/financeData'
+import {
+  financeOwnerInsights,
+  formatFinanceWindow,
+  pctChange,
+  plTrendByDay,
+  rollupPl,
+  salesByBranch,
+  shareOfTotal,
+  sumMinor,
+  topExpenseCategories,
+} from '@/lib/financeData'
+import {
+  FinanceEmpty,
+  FinanceMetricCell,
+  FinanceMetricStrip,
+  FinancePanel,
+  FinanceTabSkeleton,
+} from './FinanceChrome'
 
-const NAVY = '#020a31'
-const ACCENT = '#38bdf8'
-const POSITIVE = '#16a34a'
-const NEGATIVE = '#dc2626'
+const pesoTick = (v) => {
+  const n = Number(v) || 0
+  if (Math.abs(n) >= 1_000_000) return `₱${(n / 1_000_000).toFixed(1)}M`
+  if (Math.abs(n) >= 1_000) return `₱${(n / 1_000).toFixed(0)}k`
+  return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: 0 })}`
+}
+
+const shortDate = (ymd) => {
+  const [y, m, d] = String(ymd || '').split('-')
+  if (!y || !m || !d) return ymd || ''
+  return `${Number(d)}/${Number(m)}`
+}
+
+const cashflowConfig = {
+  income: { label: 'Income', color: '#052699' },
+  expenses: { label: 'Expenses', color: '#64748b' },
+  net: { label: 'Net', color: '#0f766e' },
+}
+
+const branchConfig = {
+  sales: { label: 'Sales', color: '#052699' },
+}
+
+const paymentConfig = {
+  cash: { label: 'Cash', color: '#020a31' },
+  gcash: { label: 'GCash', color: '#0ea5e9' },
+  card: { label: 'Card', color: '#94a3b8' },
+}
+
+const expenseConfig = {
+  amount: { label: 'Spend', color: '#b91c1c' },
+}
 
 export default function FinanceOverviewTab({
   plRows,
+  priorPlRows = [],
   salesRows,
   branchOptions,
   range,
+  compareRange = null,
   loading,
+  onNavigate,
 }) {
   const pl = useMemo(() => rollupPl(plRows), [plRows])
+  const prior = useMemo(() => rollupPl(priorPlRows), [priorPlRows])
+  const comparing = Boolean(compareRange)
   const byBranch = useMemo(() => salesByBranch(salesRows), [salesRows])
-  const recentSales = useMemo(() => {
-    return [...(salesRows || [])]
-      .sort((a, b) => (a.sale_date < b.sale_date ? 1 : -1))
-      .slice(0, 8)
-  }, [salesRows])
+  const trend = useMemo(() => plTrendByDay(plRows), [plRows])
+  const expenseBars = useMemo(() => topExpenseCategories(plRows, 6), [plRows])
+  const insights = useMemo(() => financeOwnerInsights(salesRows, plRows), [salesRows, plRows])
 
-  const paymentBreakdown = useMemo(() => {
+  const branchChart = useMemo(
+    () =>
+      byBranch.map((b) => ({
+        branch: branchOptions.find((x) => x.slug === b.branch)?.name || b.branch,
+        sales: b.total_sales_minor / 100,
+        sales_minor: b.total_sales_minor,
+        paid_count: b.paid_count,
+      })),
+    [byBranch, branchOptions],
+  )
+
+  const paymentStack = useMemo(() => {
     const cash = sumMinor(salesRows, 'cash_sales_minor')
     const gcash = sumMinor(salesRows, 'gcash_sales_minor')
     const card = sumMinor(salesRows, 'card_sales_minor')
+    const total = cash + gcash + card
+    if (total <= 0) return []
     return [
-      { name: 'Cash', value: cash, color: NAVY },
-      { name: 'GCash', value: gcash, color: ACCENT },
-      { name: 'Card', value: card, color: '#94a3b8' },
-    ].filter((p) => p.value > 0)
+      {
+        label: 'Mix',
+        cash: cash / 100,
+        gcash: gcash / 100,
+        card: card / 100,
+        cash_minor: cash,
+        gcash_minor: gcash,
+        card_minor: card,
+      },
+    ]
   }, [salesRows])
 
-  const incomeVsExpense = useMemo(
-    () => [
-      { name: 'Income', value: pl.income / 100, fill: NAVY },
-      { name: 'Expenses', value: pl.expenses / 100, fill: ACCENT },
-    ],
-    [pl],
-  )
-  const incomeExpenseTotal = (pl.income + pl.expenses) / 100
-  const paymentTotal = paymentBreakdown.reduce((sum, row) => sum + row.value, 0)
+  const paymentRows = useMemo(() => {
+    const cash = sumMinor(salesRows, 'cash_sales_minor')
+    const gcash = sumMinor(salesRows, 'gcash_sales_minor')
+    const card = sumMinor(salesRows, 'card_sales_minor')
+    const total = cash + gcash + card
+    return [
+      { name: 'Cash', minor: cash, color: paymentConfig.cash.color },
+      { name: 'GCash', minor: gcash, color: paymentConfig.gcash.color },
+      { name: 'Card', minor: card, color: paymentConfig.card.color },
+    ]
+      .filter((r) => r.minor > 0)
+      .map((r) => ({ ...r, ...shareOfTotal(r.minor, total) }))
+  }, [salesRows])
 
-  if (loading) {
-    return <OverviewSkeleton />
-  }
+  const recentSales = useMemo(() => {
+    return [...(salesRows || [])]
+      .sort((a, b) => (a.sale_date < b.sale_date ? 1 : -1))
+      .slice(0, 6)
+  }, [salesRows])
+
+  const incomeDelta = comparing ? pctChange(pl.income, prior.income) : null
+  const expenseDelta = comparing ? pctChange(pl.expenses, prior.expenses) : null
+  const netDelta = comparing ? pctChange(pl.net, prior.net) : null
+
+  if (loading) return <FinanceTabSkeleton metrics={6} lines={4} />
+
+  const hasCashflow = trend.some((d) => d.income_minor > 0 || d.expenses_minor > 0)
+  const windowLabel = formatFinanceWindow(range.start, range.end)
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="finance-kpi-row">
-        <KpiCard
-          label="Total income"
+    <div className="finance-dash flex flex-col gap-5">
+      <FinanceMetricStrip label="Business totals">
+        <FinanceMetricCell
+          label="Income"
           value={formatMoney(pl.income)}
-          delta={pl.income > 0 ? 'POS paid sales' : 'No paid sales in window'}
-          tone="positive"
-          icon={<Wallet className="size-4" aria-hidden />}
+          hint={
+            comparing && incomeDelta != null
+              ? `${incomeDelta > 0 ? '+' : ''}${incomeDelta}% vs compare`
+              : 'POS paid'
+          }
+          tone="ink"
         />
-        <KpiCard
-          label="Total expenses"
+        <FinanceMetricCell
+          label="Expenses"
           value={formatMoney(pl.expenses)}
-          delta="Paid + posted"
-          tone="neutral"
-          icon={<ArrowDownRight className="size-4" aria-hidden />}
+          hint={
+            comparing && expenseDelta != null
+              ? `${expenseDelta > 0 ? '+' : ''}${expenseDelta}% vs compare`
+              : 'Paid + posted'
+          }
+          tone="muted"
         />
-        <KpiCard
+        <FinanceMetricCell
           label={pl.net >= 0 ? 'Net profit' : 'Net loss'}
           value={formatMoney(pl.net)}
-          delta={`${pl.margin}% margin`}
-          tone={pl.net >= 0 ? 'positive' : 'negative'}
-          icon={<ArrowUpRight className="size-4" aria-hidden />}
+          hint={
+            comparing && netDelta != null
+              ? `${netDelta > 0 ? '+' : ''}${netDelta}% vs compare`
+              : `${pl.margin}% margin`
+          }
+          tone={pl.net >= 0 ? 'up' : 'down'}
         />
-        <KpiCard
-          label="Branches"
-          value={byBranch.length}
-          delta={branchOptions.length > 1 ? `${branchOptions.length} available` : 'Single branch'}
-          tone="neutral"
-          icon={<Building2 className="size-4" aria-hidden />}
+        <FinanceMetricCell label="Margin" value={`${pl.margin}%`} hint="Net ÷ income" tone="ink" />
+        <FinanceMetricCell
+          label="Paid tickets"
+          value={insights.paidCount.toLocaleString('en-PH')}
+          hint={byBranch.length ? `${byBranch.length} branch${byBranch.length === 1 ? '' : 'es'}` : 'No sales days'}
+          tone="ink"
         />
-      </div>
+        <FinanceMetricCell
+          label="Avg ticket"
+          value={insights.avgTicketMinor ? formatMoney(insights.avgTicketMinor) : '—'}
+          hint={insights.cashShare ? `${insights.cashShare}% cash` : 'Per paid sale'}
+          tone="ink"
+        />
+      </FinanceMetricStrip>
 
-      <div className="finance-grid-2-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Income vs expenses</CardTitle>
-            <CardDescription>{range.start} to {range.end}</CardDescription>
-          </CardHeader>
-          <CardContent className="h-72">
-            {pl.income === 0 && pl.expenses === 0 ? (
-              <EmptyChart label="No income or expenses in this window yet." />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={incomeVsExpense} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.08)" />
-                  <XAxis dataKey="name" stroke="#475569" fontSize={12} />
-                  <YAxis stroke="#475569" fontSize={11} tickFormatter={(v) => `₱${v.toLocaleString()}`} />
-                  <Tooltip
-                    formatter={(v) => {
-                      const { percent } = shareOfTotal(v, incomeExpenseTotal)
-                      return `${formatMoney(Math.round(v * 100))} · ${percent}%`
-                    }}
+      {comparing && compareRange ? (
+        <p className="finance-compare-note">
+          Comparing to {formatFinanceWindow(compareRange.start, compareRange.end)}
+        </p>
+      ) : null}
+
+      {onNavigate ? (
+        <nav className="finance-dash-links" aria-label="Finance modules">
+          <DashLink label="Sales" onClick={() => onNavigate('sales')} icon={<ShoppingCart aria-hidden />} />
+          <DashLink label="Bills & expenses" onClick={() => onNavigate('purchases')} icon={<Receipt aria-hidden />} />
+          <DashLink label="Profit and loss" onClick={() => onNavigate('pl')} icon={<FileBarChart aria-hidden />} />
+        </nav>
+      ) : null}
+
+      <FinancePanel
+        title="Cash flow"
+        description={`Income, expenses, and net by day · ${windowLabel}`}
+        actions={
+          hasCashflow ? (
+            <Badge variant="secondary" className="tabular-nums">
+              {trend.length} day{trend.length === 1 ? '' : 's'}
+            </Badge>
+          ) : null
+        }
+        bodyClassName="finance-chart-tall"
+      >
+        {hasCashflow ? (
+          <ChartContainer config={cashflowConfig} className="h-full w-full aspect-auto">
+            <AreaChart accessibilityLayer data={trend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={28}
+                tickFormatter={shortDate}
+              />
+              <YAxis tickLine={false} axisLine={false} width={52} tickFormatter={pesoTick} />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    indicator="line"
+                    labelFormatter={(v) => String(v)}
+                    formatter={(value, name) => (
+                      <span className="tabular-nums font-medium">
+                        {formatMoney(Math.round(Number(value) * 100))}
+                        <span className="text-muted-foreground font-normal"> · {cashflowConfig[name]?.label || name}</span>
+                      </span>
+                    )}
                   />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={120} />
+                }
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Area
+                type="monotone"
+                dataKey="income"
+                stroke="var(--color-income)"
+                fill="var(--color-income)"
+                fillOpacity={0.12}
+                strokeWidth={2}
+              />
+              <Area
+                type="monotone"
+                dataKey="expenses"
+                stroke="var(--color-expenses)"
+                fill="var(--color-expenses)"
+                fillOpacity={0.1}
+                strokeWidth={2}
+                strokeDasharray="4 3"
+              />
+              <Area
+                type="monotone"
+                dataKey="net"
+                stroke="var(--color-net)"
+                fill="var(--color-net)"
+                fillOpacity={0.08}
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ChartContainer>
+        ) : (
+          <FinanceEmpty
+            title="No cash-flow points yet"
+            body="Paid POS sales and paid/posted expenses appear here by Manila day. Close a shift or post a bill, then refresh."
+            action={onNavigate ? { label: 'Open Sales', onClick: () => onNavigate('sales') } : null}
+          />
+        )}
+      </FinancePanel>
+
+      <div className="finance-dash-split">
+        <FinancePanel title="Revenue by branch" description="POS paid sales in the window" bodyClassName="finance-chart-mid">
+          {branchChart.length > 0 ? (
+            <ChartContainer config={branchConfig} className="h-full w-full aspect-auto">
+              <BarChart
+                accessibilityLayer
+                data={branchChart}
+                layout="vertical"
+                margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
+              >
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={pesoTick} />
+                <YAxis
+                  type="category"
+                  dataKey="branch"
+                  width={88}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11 }}
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value) => (
+                        <span className="tabular-nums font-medium">
+                          {formatMoney(Math.round(Number(value) * 100))}
+                        </span>
+                      )}
+                    />
+                  }
+                />
+                <Bar dataKey="sales" fill="var(--color-sales)" radius={[0, 2, 2, 0]} maxBarSize={28} />
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <FinanceEmpty title="No branch sales" body="Paid tickets in this window will rank branches here." />
+          )}
+        </FinancePanel>
+
+        <FinancePanel title="Payment mix" description="Cash · GCash · Card" bodyClassName="finance-chart-mid">
+          {paymentStack.length > 0 ? (
+            <div className="flex h-full flex-col gap-4">
+              <ChartContainer config={paymentConfig} className="min-h-[88px] w-full aspect-auto flex-none">
+                <BarChart
+                  accessibilityLayer
+                  data={paymentStack}
+                  layout="vertical"
+                  margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+                  stackOffset="expand"
+                >
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="label" hide />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value, name) => (
+                          <span className="tabular-nums font-medium">
+                            {formatMoney(Math.round(Number(value) * 100))}
+                            <span className="text-muted-foreground font-normal">
+                              {' '}
+                              · {paymentConfig[name]?.label || name}
+                            </span>
+                          </span>
+                        )}
+                      />
+                    }
+                  />
+                  <Bar dataKey="cash" stackId="a" fill="var(--color-cash)" />
+                  <Bar dataKey="gcash" stackId="a" fill="var(--color-gcash)" />
+                  <Bar dataKey="card" stackId="a" fill="var(--color-card)" radius={[0, 2, 2, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment methods</CardTitle>
-            <CardDescription>How customers paid</CardDescription>
-          </CardHeader>
-          <CardContent className="h-72">
-            {paymentBreakdown.length === 0 ? (
-              <EmptyChart label="No paid sales in this window." />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={paymentBreakdown}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={85}
-                    paddingAngle={2}
-                  >
-                    {paymentBreakdown.map((p) => (
-                      <Cell key={p.name} fill={p.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v) => {
-                      const { percent } = shareOfTotal(v, paymentTotal)
-                      return `${formatMoney(v)} · ${percent}%`
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="finance-grid-2-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue by branch</CardTitle>
-            <CardDescription>POS paid sales in the window</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {byBranch.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No branch sales in this window.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Branch</TableHead>
-                    <TableHead className="text-right">Sales</TableHead>
-                    <TableHead className="text-right">Paid tickets</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {byBranch.map((b) => {
-                    const name = branchOptions.find((x) => x.slug === b.branch)?.name || b.branch
-                    return (
-                      <TableRow key={b.branch}>
-                        <TableCell className="font-medium">{name}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatMoney(b.total_sales_minor)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{b.paid_count}</TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent sales</CardTitle>
-            <CardDescription>Latest POS days in the window</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentSales.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No sales in this window.</p>
-            ) : (
-              <ul className="finance-recent-list">
-                {recentSales.map((row) => {
-                  const name = branchOptions.find((x) => x.slug === row.branch)?.name || row.branch
-                  return (
-                    <li key={`${row.branch}-${row.sale_date}`}>
-                      <div>
-                        <p className="finance-recent-branch">{name}</p>
-                        <p className="finance-recent-date">{row.sale_date}</p>
-                      </div>
-                      <div className="finance-recent-amount">
-                        <span className="tabular-nums">{formatMoney(row.total_sales_minor)}</span>
-                        <Badge variant="secondary">{row.paid_count} paid</Badge>
-                      </div>
-                    </li>
-                  )
-                })}
+              </ChartContainer>
+              <ul className="finance-mix-legend">
+                {paymentRows.map((r) => (
+                  <li key={r.name}>
+                    <span className="finance-mix-swatch" style={{ background: r.color }} aria-hidden />
+                    <span>{r.name}</span>
+                    <span className="tabular-nums text-muted-foreground">{r.percent}%</span>
+                    <span className="tabular-nums font-medium">{formatMoney(r.minor)}</span>
+                  </li>
+                ))}
               </ul>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          ) : (
+            <FinanceEmpty
+              title="No payments recorded"
+              body="Paid sale methods show as a share bar with pesos beside each method."
+            />
+          )}
+        </FinancePanel>
       </div>
-    </div>
-  )
-}
 
-function KpiCard({ label, value, delta, tone, icon }) {
-  const toneClass =
-    tone === 'positive'
-      ? 'finance-kpi-positive'
-      : tone === 'negative'
-        ? 'finance-kpi-negative'
-        : 'finance-kpi-neutral'
-  return (
-    <Card className={toneClass}>
-      <CardContent className="pt-5">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">{label}</p>
-          <span className="finance-kpi-icon" aria-hidden>{icon}</span>
-        </div>
-        <p className="mt-3 text-2xl font-semibold tabular-nums">{value}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{delta}</p>
-      </CardContent>
-    </Card>
-  )
-}
+      <div className="finance-dash-split">
+        <FinancePanel
+          title="Where spend goes"
+          description="Top expense categories"
+          actions={
+            onNavigate ? (
+              <Button type="button" variant="ghost" size="sm" className="cursor-pointer" onClick={() => onNavigate('pl')}>
+                Full P&amp;L
+                <ArrowRight data-icon="inline-end" />
+              </Button>
+            ) : null
+          }
+          bodyClassName="finance-chart-mid"
+        >
+          {expenseBars.length > 0 ? (
+            <ChartContainer config={expenseConfig} className="h-full w-full aspect-auto">
+              <BarChart
+                accessibilityLayer
+                data={expenseBars}
+                layout="vertical"
+                margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
+              >
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={pesoTick} />
+                <YAxis
+                  type="category"
+                  dataKey="category"
+                  width={100}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11 }}
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value) => (
+                        <span className="tabular-nums font-medium">
+                          {formatMoney(Math.round(Number(value) * 100))}
+                        </span>
+                      )}
+                    />
+                  }
+                />
+                <Bar dataKey="amount" fill="var(--color-amount)" radius={[0, 2, 2, 0]} maxBarSize={24} />
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <FinanceEmpty
+              title="No posted expenses"
+              body="Paid and posted bills land here by category."
+              action={onNavigate ? { label: 'Open bills', onClick: () => onNavigate('purchases') } : null}
+            />
+          )}
+        </FinancePanel>
 
-function EmptyChart({ label }) {
-  return (
-    <div className="grid h-full place-items-center">
-      <p className="text-sm text-muted-foreground">{label}</p>
-    </div>
-  )
-}
-
-function OverviewSkeleton() {
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="finance-kpi-row">
-        {[0, 1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardContent className="pt-5">
-              <div className="finance-skeleton-line w-20" />
-              <div className="finance-skeleton-line mt-4 w-32 h-7" />
-              <div className="finance-skeleton-line mt-3 w-16" />
-            </CardContent>
-          </Card>
-        ))}
+        <FinancePanel title="Owner watchlist" description="What to check before the next ops call">
+          <ul className="finance-cue-list">
+            {insights.cues.map((cue) => (
+              <li key={cue.text} data-tone={cue.tone}>
+                {cue.text}
+              </li>
+            ))}
+          </ul>
+          {insights.expenseRatio != null ? (
+            <p className="finance-cue-foot tabular-nums">
+              Expense ratio {insights.expenseRatio}%
+              {insights.busiestDay ? ` · Peak day ${insights.busiestDay}` : ''}
+            </p>
+          ) : null}
+        </FinancePanel>
       </div>
-      <Card>
-        <CardContent className="h-72 finance-skeleton-block" />
-      </Card>
+
+      <FinancePanel title="Recent POS days" description="Latest sales days in the window">
+        {recentSales.length === 0 ? (
+          <FinanceEmpty title="No sales days" body="Paid POS days in this window will list here." />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Branch</TableHead>
+                <TableHead className="text-right">Sales</TableHead>
+                <TableHead className="text-right">Paid</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentSales.map((row) => {
+                const name = branchOptions.find((x) => x.slug === row.branch)?.name || row.branch
+                return (
+                  <TableRow key={`${row.branch}-${row.sale_date}`}>
+                    <TableCell className="tabular-nums">{row.sale_date}</TableCell>
+                    <TableCell className="font-medium">{name}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatMoney(row.total_sales_minor)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{row.paid_count}</TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </FinancePanel>
     </div>
+  )
+}
+
+function DashLink({ label, onClick, icon }) {
+  return (
+    <Button type="button" variant="outline" size="sm" className="finance-dash-link min-h-10 cursor-pointer" onClick={onClick}>
+      {icon}
+      {label}
+      <ArrowRight data-icon="inline-end" />
+    </Button>
   )
 }

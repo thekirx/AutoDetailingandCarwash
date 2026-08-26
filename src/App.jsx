@@ -48,8 +48,11 @@ const MyPayPage = lazy(() => import('./pages/MyPayPage'))
 const CrmPage = lazy(() => import('./pages/CrmPage'))
 const BookingBoardPage = lazy(() => import('./pages/BookingBoardPage'))
 const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
+const OpsRoadmapPage = lazy(() => import('./pages/OpsRoadmapPage'))
 const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
 const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
+const PosSettingsPage = lazy(() => import('./pages/settings/PosSettingsPage'))
+const PayrollSettingsPage = lazy(() => import('./pages/settings/PayrollSettingsPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const AttendancePage = lazy(() => import('./pages/AttendancePage'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage'))
@@ -200,12 +203,15 @@ export default function App() {
             <Route path="payroll" element={gate('payroll', <PayrollPage />)} />
             <Route path="my-pay" element={gate('my-pay', <MyPayPage />)} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
-            <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory?tab=services" replace />)} />
+            <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory" replace />)} />
             <Route path="products" element={gate('inventory', <Navigate to="/operations/inventory?tab=merch" replace />)} />
             <Route path="sms" element={gate('crm', <Navigate to="/operations/crm?tab=sms" replace />)} />
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />
             <Route path="planning" element={gate('planning', <PlanningBoardPage />)} />
+            <Route path="roadmap" element={gate('roadmap', <OpsRoadmapPage />)} />
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
+            <Route path="settings/pos" element={gate('settings', <PosSettingsPage />)} />
+            <Route path="settings/payroll" element={gate('settings', <PayrollSettingsPage />)} />
             <Route path="content" element={gate('content', <ContentAdminPage />)} />
             <Route path="notifications" element={gate('notifications', <NotificationsPage />)} />
             <Route path="history" element={gate('history', <HistoryPage />)} />

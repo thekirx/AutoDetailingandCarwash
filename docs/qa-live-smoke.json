@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-13T04:22:00.168Z",
+  "at": "2026-08-20T07:52:30.435Z",
   "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
   "results": [
     {
@@ -15,7 +15,7 @@
     {
       "id": "C3-bookings",
       "ok": true,
-      "note": "n=8 statuses=completed|waiting"
+      "note": "n=8 statuses=completed|pending"
     },
     {
       "id": "C5-sales",
@@ -48,6 +48,11 @@
       "note": "ok"
     },
     {
+      "id": "login-asa",
+      "ok": true,
+      "note": "role=assistant_super_admin branch=null"
+    },
+    {
       "id": "login-tl",
       "ok": true,
       "note": "role=team_lead branch=bacoor"
@@ -69,6 +74,16 @@
     },
     {
       "id": "login-staff",
+      "ok": true,
+      "note": "role=staff branch=bacoor"
+    },
+    {
+      "id": "login-staff2",
+      "ok": true,
+      "note": "role=staff branch=bacoor"
+    },
+    {
+      "id": "login-staff3",
       "ok": true,
       "note": "role=staff branch=bacoor"
     },

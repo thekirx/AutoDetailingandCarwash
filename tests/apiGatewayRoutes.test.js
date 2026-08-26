@@ -6,6 +6,7 @@ import bookingsGateway, { operations as bookings } from '../api/bookings.js'
 import notificationsGateway, { operations as notifications } from '../api/notifications.js'
 import financeGateway, { operations as finance } from '../api/finance.js'
 import dataCenterGateway, { operations as dataCenter } from '../api/data-center.js'
+import publicInquiryGateway, { operations as publicInquiry } from '../api/public-inquiry.js'
 
 function response() {
   const out = { statusCode: 200, headers: {}, body: '' }
@@ -39,10 +40,11 @@ const domains = [
     'notifications',
     notificationsGateway,
     notifications,
-    ['birthday-greetings', 'busybee', 'lifecycle-sms', 'notification-broadcast', 'notification-broadcast-kinds', 'notification-settings', 'notification-templates', 'notify-booking', 'notify-ops-form', 'notify-planner', 'notify-pos', 'push-subscribe', 'send-push'],
+    ['birthday-greetings', 'busybee', 'lifecycle-sms', 'notification-broadcast', 'notification-broadcast-kinds', 'notification-settings', 'notification-templates', 'notify-booking', 'notify-ops-form', 'notify-ops-lab', 'notify-planner', 'notify-pos', 'notify-shift-close', 'push-subscribe', 'send-push'],
   ],
   ['finance', financeGateway, finance, ['send-finance-quote']],
   ['data-center', dataCenterGateway, dataCenter, ['data-center']],
+  ['public-inquiry', publicInquiryGateway, publicInquiry, ['complaints', 'contact', 'partnership']],
 ]
 
 describe('domain gateway allowlists', () => {

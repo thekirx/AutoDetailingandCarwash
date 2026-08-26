@@ -9,6 +9,8 @@ import { isDemoLoginEnabled } from '../src/lib/demoLogin.js'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const page = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
 const envProd = readFileSync(join(root, '.env.production'), 'utf8')
+const opsLoginPage = readFileSync(join(root, 'src/pages/LoginPage.jsx'), 'utf8')
+const customerLoginPage = readFileSync(join(root, 'src/pages/CustomerSignInPage.jsx'), 'utf8')
 
 describe('Floor status cards → queue lanes', () => {
   it('parses lane query and builds queue hrefs', () => {
@@ -46,5 +48,23 @@ describe('Vercel demo login visibility', () => {
     assert.match(envProd, /VITE_ENABLE_DEMO_LOGIN=true/)
     assert.equal(isDemoLoginEnabled({ dev: false, flag: 'true', hostname: 'hakumautocare.com' }), true)
     assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'app.vercel.app' }), true)
+  })
+
+  it('demo chip title does not leak password in tooltip', () => {
+    const src = readFileSync(join(root, 'src/components/DemoAccountChips.jsx'), 'utf8')
+    assert.doesNotMatch(src, /title=\{`\$\{a\.email\}\$\{a\.password/)
+    assert.match(src, /title=\{a\.email \|\| a\.label\}/)
+    assert.match(src, /disabled=\{disabled\}/)
+  })
+
+  it('demo chips can auto sign-in on both login pages', () => {
+    assert.match(opsLoginPage, /const signInWithCredentials = async/)
+    assert.match(opsLoginPage, /await signInWithCredentials\(a\.email, a\.password\)/)
+    assert.match(opsLoginPage, /disabled=\{submitting\}/)
+
+    assert.match(customerLoginPage, /const signInWithCredentials = async/)
+    assert.match(customerLoginPage, /skipIntentCheck = false/)
+    assert.match(customerLoginPage, /await signInWithCredentials\(a\.email, a\.password, \{ skipIntentCheck: true \}\)/)
+    assert.match(customerLoginPage, /disabled=\{submitting\}/)
   })
 })

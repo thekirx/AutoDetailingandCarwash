@@ -66,6 +66,13 @@ export function CeramicSection() {
                       </Link>
                     </div>
                   </div>
+                  <Link
+                    className="ceramic-package-book"
+                    to="/book"
+                    state={{ service: 'Ceramic Coating', package: item.title }}
+                  >
+                    Book {item.title}
+                  </Link>
                 </div>
 
                 <div className="ceramic-package-details" id={item.detailsId} hidden={!open}>

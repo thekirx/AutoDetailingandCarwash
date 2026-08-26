@@ -17,6 +17,7 @@ import {
   LineChart,
   ListChecks,
   LogOut,
+  Map,
   Menu,
   MessageSquare,
   Package,
@@ -57,9 +58,9 @@ import {
   isSalesRole,
   ROLES,
   canSeeAllBranches,
-  redirectForRole,
   usesCommandShell,
 } from '../auth/permissions'
+import { resolvePostLoginPath } from '../auth/authRedirect'
 import NotificationBell from '@/components/NotificationBell'
 import UserSettingsModal from '@/components/UserSettingsModal'
 import { OpsInstallPopup } from '@/components/InstallGuide'
@@ -114,6 +115,7 @@ const iconMap = {
   Newspaper,
   Star,
   Banknote,
+  Map,
 }
 
 function formatRole(role) {
@@ -121,6 +123,7 @@ function formatRole(role) {
   if (role === 'BossMich') return 'Super Admin'
   if (role === 'assistant_super_admin') return 'Assistant Super Admin'
   if (role === 'admin') return 'Branch Admin'
+  if (role === 'operations_lead') return 'Operations Lead'
   if (role === 'staff') return 'Crew'
   if (role === 'marketing') return 'Marketing'
   if (role === 'detailer') return 'Detailer'
@@ -357,7 +360,7 @@ function MarketingFloorShell({ profile, signOut }) {
 
 function VideoEditorFloorShell({ profile, signOut }) {
   const dock = useMemo(() => getVideoEditorDock(profile), [profile])
-  const more = useMemo(() => getVideoEditorMore(), [])
+  const more = useMemo(() => getVideoEditorMore(profile), [profile])
   return (
     <FloorAppShell
       profile={profile}
@@ -373,7 +376,7 @@ function VideoEditorFloorShell({ profile, signOut }) {
 
 function DetailerFloorShell({ profile, signOut }) {
   const dock = useMemo(() => getDetailerDock(profile), [profile])
-  const more = useMemo(() => getDetailerMore(), [])
+  const more = useMemo(() => getDetailerMore(profile), [profile])
   return (
     <FloorAppShell
       profile={profile}
@@ -381,7 +384,7 @@ function DetailerFloorShell({ profile, signOut }) {
       brand={{ title: 'Hakum Detailing', fallbackName: 'Detailer', icon: <BrandMark /> }}
       dock={dock}
       more={more}
-      homeUrl="/operations/queue?family=detailing"
+      homeUrl="/operations/bookings"
       homeLabel="Open detailing"
     />
   )
@@ -523,11 +526,9 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
               homeUrl={
                 isBranchAdmin(profile)
                   ? '/operations/pos'
-                  : adminShell
-                    ? '/operations/console'
-                    : redirectForRole(profile?.role)
+                  : resolvePostLoginPath(profile, null)
               }
-              homeLabel={isBranchAdmin(profile) ? 'Open POS' : adminShell ? 'Open console' : 'Home'}
+              homeLabel={isBranchAdmin(profile) ? 'Open POS' : 'Home'}
             />
             <button
               type="button"

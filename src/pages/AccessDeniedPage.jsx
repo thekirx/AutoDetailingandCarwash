@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ShieldAlert } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { redirectForRole } from '@/auth/permissions'
+import { resolvePostLoginPath } from '@/auth/authRedirect'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -13,7 +13,7 @@ export default function AccessDeniedPage() {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
-  const home = profile?.role ? redirectForRole(profile.role) : '/operations/login'
+  const home = profile?.role ? resolvePostLoginPath(profile, null) : '/operations/login'
 
   const goLogin = async () => {
     setBusy(true)

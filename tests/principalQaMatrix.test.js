@@ -22,6 +22,7 @@ const OPS_KEYS = [
   'cars',
   'audit',
   'data-center',
+  'inquiries',
   'dashboard',
   'queue',
   'queue-new',
@@ -32,6 +33,8 @@ const OPS_KEYS = [
   'pos',
   'inventory',
   'finance',
+  'payroll',
+  'my-pay',
   'crm',
   'bookings',
   'planning',
@@ -53,14 +56,14 @@ function allowedKeys(p) {
 }
 
 describe('P0 access gates', () => {
-  it('P0-1 detailer may open detailing queue home', () => {
+  it('P0-1 detailer may open bookings for detailing work', () => {
     const p = profile(ROLES.DETAILER)
-    assert.equal(redirectForRole(ROLES.DETAILER), '/operations/queue?family=detailing')
-    assert.equal(allowRoute(p, 'queue'), true)
+    assert.equal(redirectForRole(ROLES.DETAILER), '/operations/bookings')
+    assert.equal(allowRoute(p, 'bookings'), true)
     assert.equal(allowRoute(p, 'attendance'), true)
     assert.equal(allowRoute(p, 'finance'), false)
     assert.equal(allowRoute(p, 'pos'), false)
-    assert.ok(getDetailerDock(p).some((i) => i.to.includes('family=detailing')))
+    assert.ok(getDetailerDock(p).some((i) => i.to === '/operations/bookings'))
   })
 
   it('P0-2 video_editor may open my-tasks + planning calendar', () => {
@@ -85,7 +88,7 @@ describe('Landing + shell matrix', () => {
     [ROLES.SALES, '/operations/bookings', 'floor'],
     [ROLES.MARKETING, '/operations/crm', 'floor'],
     [ROLES.VIDEO_EDITOR, '/operations/planning?tab=calendar', 'floor'],
-    [ROLES.DETAILER, '/operations/queue?family=detailing', 'floor'],
+    [ROLES.DETAILER, '/operations/bookings', 'floor'],
   ]
 
   for (const [role, home, shell] of cases) {
@@ -122,13 +125,26 @@ describe('Negative allowRoute denials', () => {
     assert.equal(allowRoute(p, 'queue'), false)
   })
 
-  it('investor finance+reports only', () => {
+  it('investor finance hub only (reports live under Finance tab)', () => {
     const p = profile(ROLES.INVESTOR)
     assert.deepEqual(allowedKeys(p).sort(), ['finance', 'reports'].sort())
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/finance', '/operations/reports'],
+      ['/operations/finance'],
     )
+    assert.equal(allowRoute(p, 'reports'), true)
+  })
+
+  it('every ROLES value has home, nav, and home route allowed', () => {
+    for (const role of Object.values(ROLES)) {
+      const p = profile(role)
+      const home = redirectForRole(role)
+      assert.ok(home.startsWith('/operations'), `${role} home`)
+      const nav = getOperationsNav(p)
+      assert.ok(nav.length > 0, `${role} nav empty`)
+      const routeKey = home.split('?')[0].replace('/operations/', '').split('/')[0]
+      assert.equal(allowRoute(p, routeKey), true, `${role} denied home ${routeKey}`)
+    }
   })
 
   it('team_lead queue ok, pos denied by default', () => {
@@ -140,10 +156,14 @@ describe('Negative allowRoute denials', () => {
     assert.equal(allowRoute(p, 'finance'), false)
   })
 
-  it('ASA without grants denied queue_all surfaces when gated', () => {
+  it('ASA empty grants keep console and queue; explicit false denies both', () => {
     const bare = profile(ROLES.ASSISTANT_SUPER_ADMIN, { permission_grants: {} })
     assert.equal(allowRoute(bare, 'console'), true)
-    // queue view still via ASA console tier in QUEUE_VIEWER
     assert.equal(allowRoute(bare, 'queue'), true)
+    const denied = profile(ROLES.ASSISTANT_SUPER_ADMIN, {
+      permission_grants: { console: false, queue_all: false },
+    })
+    assert.equal(allowRoute(denied, 'console'), false)
+    assert.equal(allowRoute(denied, 'queue'), false)
   })
 })

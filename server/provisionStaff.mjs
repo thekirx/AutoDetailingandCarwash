@@ -16,6 +16,7 @@ export function creatableRolesFor(callerRole) {
     return [
       'admin',
       'assistant_super_admin',
+      'operations_lead',
       'team_lead',
       'staff',
       'marketing',
@@ -180,12 +181,13 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
       id: authUser.id,
       full_name: fullName,
       role,
-      branch_slug: role === SUPER || role === ASSISTANT ? null : branchSlug,
+      branch_slug: role === SUPER || role === ASSISTANT || role === 'operations_lead' ? null : branchSlug,
       phone,
       username,
       login_email: email,
       permission_grants: role === ASSISTANT ? permissionGrants : {},
-      attendance_enabled: body.attendance_enabled !== false,
+      attendance_enabled:
+        role === 'operations_lead' ? false : body.attendance_enabled !== false,
       geofence_enabled: body.geofence_enabled !== false,
       employment_type: body.employment_type === 'on_call' ? 'on_call' : 'permanent',
       is_active: true,

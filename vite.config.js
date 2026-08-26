@@ -8,6 +8,7 @@ import { handleProvisionRequest } from './server/provisionCustomer.mjs'
 import { handleProvisionStaffRequest, handleUpdateStaffRequest } from './server/provisionStaff.mjs'
 import { handleCustomerPortalRequest } from './server/customerPortal.mjs'
 import { handlePublicBookRequest } from './server/publicBook.mjs'
+import { handlePublicInquiryRequest } from './server/publicInquiry.mjs'
 import { handleBookingStatusRequest } from './server/bookingStatus.mjs'
 import { handlePushSubscribeRequest, handleSendPushRequest } from './server/pushApi.mjs'
 import { handleBusybeeRequest } from './server/busybeeApi.mjs'
@@ -78,6 +79,7 @@ function provisionApiPlugin() {
         return handleCustomerHistoryRequest(req, res)
       })
       mount('/api/public-book', (req, res) => handlePublicBookRequest(req, res))
+      mount('/api/public-inquiry', (req, res) => handlePublicInquiryRequest(req, res))
       mount('/api/plate-lookup', async (req, res) => {
         const { handlePublicPlateLookup } = await import('./server/publicPlateLookup.mjs')
         return handlePublicPlateLookup(req, res)
@@ -100,6 +102,14 @@ function provisionApiPlugin() {
       mount('/api/notify-pos', async (req, res) => {
         const { handleNotifyPosRequest } = await import('./server/notifyPosApi.mjs')
         return handleNotifyPosRequest(req, res)
+      })
+      mount('/api/notify-shift-close', async (req, res) => {
+        const { handleNotifyShiftCloseRequest } = await import('./server/notifyShiftCloseApi.mjs')
+        return handleNotifyShiftCloseRequest(req, res)
+      })
+      mount('/api/notify-ops-lab', async (req, res) => {
+        const { handleNotifyOpsLabRequest } = await import('./server/notifyOpsRoadmapApi.mjs')
+        return handleNotifyOpsLabRequest(req, res)
       })
       mount('/api/lifecycle-sms', async (req, res) => {
         const { handleLifecycleSmsRequest } = await import('./server/lifecycleSmsApi.mjs')

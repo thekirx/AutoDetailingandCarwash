@@ -105,18 +105,20 @@ export default function CustomerSignInPage() {
   if (loading) return <LoadingScreen />
   if (user && profile?.role === 'customer') return <Navigate to="/account" replace />
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
+  const signInWithCredentials = async (nextIdentifier, nextPassword, { skipIntentCheck = false } = {}) => {
     setError('')
     setInfo('')
-    const intent = resolveCustomerAuthIntent({
-      status: setupStatus || 'unknown',
-      passwordProvided: Boolean(password),
-      flow: 'signin',
-    })
-    if (intent.action === 'activate') {
-      navigate(activateSignupHref(identifier.trim()))
-      return
+    const rawIdentifier = nextIdentifier.trim()
+    if (!skipIntentCheck) {
+      const intent = resolveCustomerAuthIntent({
+        status: setupStatus || 'unknown',
+        passwordProvided: Boolean(nextPassword),
+        flow: 'signin',
+      })
+      if (intent.action === 'activate') {
+        navigate(activateSignupHref(rawIdentifier))
+        return
+      }
     }
     setSubmitting(true)
     try {
@@ -124,15 +126,15 @@ export default function CustomerSignInPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          identifier: identifier.trim(),
-          password,
+          identifier: rawIdentifier,
+          password: nextPassword,
           action: 'signin',
           site_origin: window.location.origin,
         }),
       })
       const data = await res.json().catch(() => ({}))
       if (data.activate) {
-        navigate(activateSignupHref(identifier.trim()))
+        navigate(activateSignupHref(rawIdentifier))
         return
       }
       if (data.offer_signup) {
@@ -180,7 +182,7 @@ export default function CustomerSignInPage() {
       }
 
       if (sessionData.user.user_metadata?.must_set_password) {
-        navigate(activateSignupHref(identifier.trim()), { replace: true })
+        navigate(activateSignupHref(rawIdentifier), { replace: true })
         return
       }
       navigate('/account', { replace: true })
@@ -190,6 +192,11 @@ export default function CustomerSignInPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    await signInWithCredentials(identifier, password)
   }
 
   const handleSendSetup = async () => {
@@ -378,12 +385,14 @@ export default function CustomerSignInPage() {
       <DemoAccountChips
         title="Demo customer"
         accounts={demoCustomer ? [demoCustomer] : []}
-        onPick={(a) => {
+        disabled={submitting}
+        onPick={async (a) => {
           setIdentifier(a.email)
           setPassword(a.password)
           setError('')
           setInfo('')
           setSetupStatus(null)
+          await signInWithCredentials(a.email, a.password, { skipIntentCheck: true })
         }}
       />
     </HakumAuthShell>

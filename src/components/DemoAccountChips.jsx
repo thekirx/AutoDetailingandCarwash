@@ -1,7 +1,7 @@
 import { isDemoLoginEnabled } from '../lib/demoLogin'
 
 /** Compact demo account chips for ops / customer login — DEV, Vercel preview, or VITE_ENABLE_DEMO_LOGIN. */
-export default function DemoAccountChips({ accounts, onPick, title = 'Demo accounts' }) {
+export default function DemoAccountChips({ accounts, onPick, title = 'Demo accounts', disabled = false }) {
   if (!isDemoLoginEnabled()) return null
   if (!accounts?.length) return null
   return (
@@ -13,8 +13,9 @@ export default function DemoAccountChips({ accounts, onPick, title = 'Demo accou
             key={a.id || a.email}
             type="button"
             className="hakum-demo-chip"
+            disabled={disabled}
             onClick={() => onPick(a)}
-            title={`${a.email}${a.password ? ` · ${a.password}` : ''}`}
+            title={a.email || a.label}
           >
             <span>{a.label}</span>
             {a.hint ? <small>{a.hint}</small> : null}

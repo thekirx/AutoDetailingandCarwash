@@ -64,11 +64,13 @@ describe('C5 POS / C6 finance contracts', () => {
     assert.match(String(text), /Cash Advance Payment/)
   })
 
-  it('PosPage exposes expense + cash advance + pending tabs', async () => {
+  it('PosPage expenses + pending; cash advance approve is on Payroll', async () => {
     const src = await read('src/pages/PosPage.jsx')
     assert.match(src, /expense/i)
-    assert.match(src, /cash.?advance|Cash Advance/i)
+    assert.match(src, /Cash advances · Payroll/)
     assert.match(src, /pending/i)
+    const payroll = await read('src/pages/PayrollPage.jsx')
+    assert.match(payroll, /PayrollCashAdvancesPanel/)
   })
 })
 
@@ -128,8 +130,10 @@ describe('C1 provision roles + C10 compensation', () => {
     const crew = await read('src/pages/OperationsPages.jsx')
     const insights = await read('src/pages/CrmInsightsPanel.jsx')
     assert.doesNotMatch(settings, /toCompensationSettingsRow/)
-    assert.match(settings, /to: '\/operations\/payroll'/)
+    assert.match(settings, /settings\/payroll/)
     assert.doesNotMatch(settings, /upsert\(\{ id: 1, rules/)
+    assert.doesNotMatch(settings, /to: '\/operations\/people'/)
+    assert.doesNotMatch(settings, /Permission assignment/)
     assert.match(crew, /normalizeCompensationSettings/)
     assert.doesNotMatch(crew, /select\('rules'\)/)
     assert.match(insights, /collectPaged/)
@@ -144,11 +148,16 @@ describe('C1 provision roles + C10 compensation', () => {
     assert.match(queueApi, /collectPaged/)
     assert.doesNotMatch(queueApi, /\.limit\(2000\)/)
     const reports = await read('src/pages/ReportsPage.jsx')
-    assert.match(reports, /collectPaged/)
-    assert.match(reports, /from\('sales'\)\.select\('id'\)\.eq\('status', 'paid'\)/)
-    assert.match(reports, /collectInChunks|chunkIds/)
-    assert.match(reports, /\.order\('id'/)
-    assert.doesNotMatch(reports, /\.limit\(1000\)/)
+    assert.match(reports, /finance\?tab=reports/)
+    const financeReports = await read('src/pages/finance/FinanceReportsTab.jsx')
+    assert.match(financeReports, /collectPaged/)
+    assert.match(financeReports, /from\('sales'\)/)
+    assert.match(financeReports, /\.select\('id'\)/)
+    assert.match(financeReports, /eq\('status', 'paid'\)/)
+    assert.match(financeReports, /collectInChunks/)
+    assert.match(financeReports, /aggregateBestSellers/)
+    assert.match(financeReports, /\.order\('id'/)
+    assert.doesNotMatch(financeReports, /\.limit\(1000\)/)
     assert.match(queueApi, /\.order\('in_progress_at'/)
     const adminApi = await read('src/lib/adminApi.js')
     assert.match(adminApi, /collectInChunks/)
@@ -173,10 +182,10 @@ describe('C1 provision roles + C10 compensation', () => {
 })
 
 describe('C11 ASA/BA scope gates', () => {
-  it('BA reviews/audit/people yes; data-center SA-only; investor people denied', () => {
+  it('BA reviews/audit yes, people no; data-center SA-only; investor people denied', () => {
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'reviews'), true)
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'audit'), true)
-    assert.equal(allowRoute({ role: ROLES.ADMIN }, 'people'), true)
+    assert.equal(allowRoute({ role: ROLES.ADMIN }, 'people'), false)
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'data-center'), false)
     assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'data-center'), true)
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'people'), false)

@@ -13,12 +13,19 @@ import { fileURLToPath } from 'node:url'
 import {
   PAYOUT_FREQUENCIES,
   PAYROLL_WIZARD_STEPS,
+  FIXED_SALARY_BOOKS_BRANCH,
+  addPayrollCommission,
   adjustPayrollLine,
   buildPayrollPreview,
+  groupPayrollLinesByStaff,
   ownPayTotalMinor,
   payrollBlocksConfirm,
   payrollPeriodRange,
+  payrollWizardSteps,
+  prorateMonthlyPackageMinor,
   rebuildWashPoolLines,
+  removeStaffFromPayrollPreview,
+  resolveFixedSalaryBranch,
 } from '../src/lib/payroll.js'
 import {
   DEFAULT_COMPENSATION_RULES,
@@ -29,6 +36,7 @@ import {
   ROLES,
   allowRoute,
   canAccessPayroll,
+  canApproveCashAdvance,
   canRunPayroll,
   canViewOwnPay,
   getOperationsNav,
@@ -38,8 +46,15 @@ import {
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('payroll period range', () => {
-  it('daily / weekly / biweekly / monthly use Manila calendar literals', () => {
-    assert.deepEqual(PAYOUT_FREQUENCIES, ['daily', 'weekly', 'biweekly', 'monthly'])
+  it('daily / weekly / biweekly / monthly / custom use Manila calendar literals', () => {
+    assert.deepEqual(PAYOUT_FREQUENCIES, [
+      'daily',
+      'weekly',
+      'biweekly',
+      'semimonthly',
+      'monthly',
+      'custom',
+    ])
     assert.deepEqual(payrollPeriodRange('daily', '2026-08-19'), {
       start: '2026-08-19',
       end: '2026-08-19',
@@ -52,9 +67,21 @@ describe('payroll period range', () => {
       start: '2026-08-17',
       end: '2026-08-30',
     })
+    assert.deepEqual(payrollPeriodRange('semimonthly', '2026-08-10'), {
+      start: '2026-08-01',
+      end: '2026-08-15',
+    })
+    assert.deepEqual(payrollPeriodRange('semimonthly', '2026-08-20'), {
+      start: '2026-08-16',
+      end: '2026-08-31',
+    })
     assert.deepEqual(payrollPeriodRange('monthly', '2026-08-19'), {
       start: '2026-08-01',
       end: '2026-08-31',
+    })
+    assert.deepEqual(payrollPeriodRange('custom', '2026-08-19', { start: '2026-08-01', end: '2026-08-15' }), {
+      start: '2026-08-01',
+      end: '2026-08-15',
     })
   })
 })
@@ -191,7 +218,7 @@ describe('payroll compensation settings persist frequency', () => {
     assert.equal(row.payout_frequency, 'biweekly')
     assert.equal(row.payout_weekday, 5)
     assert.equal(row.wash_pool_pct, 40)
-    assert.equal(normalizeCompensationSettings({ payout_frequency: 'nope' }).payout_frequency, 'weekly')
+    assert.equal(normalizeCompensationSettings({ payout_frequency: 'nope' }).payout_frequency, 'semimonthly')
   })
 })
 
@@ -206,14 +233,17 @@ describe('payroll RBAC', () => {
 
     assert.equal(canAccessPayroll(sa), true)
     assert.equal(canRunPayroll(sa), true)
+    assert.equal(canApproveCashAdvance(sa), true)
     assert.equal(canViewOwnPay(sa), false)
     assert.equal(allowRoute(sa, 'payroll'), true)
     assert.equal(allowRoute(sa, 'my-pay'), false)
 
     assert.equal(canAccessPayroll(asaWrite), true)
     assert.equal(canRunPayroll(asaWrite), true)
+    assert.equal(canApproveCashAdvance(asaWrite), true)
     assert.equal(canViewOwnPay(asaWrite), true)
     assert.equal(canRunPayroll(asaView), false)
+    assert.equal(canApproveCashAdvance(asaView), false)
     assert.equal(canAccessPayroll(asaView), true)
     assert.equal(canAccessPayroll(asaNone), false)
 
@@ -223,6 +253,7 @@ describe('payroll RBAC', () => {
     assert.equal(allowRoute(staff, 'payroll'), false)
     assert.equal(canViewOwnPay(ba), true)
     assert.equal(canAccessPayroll(ba), false)
+    assert.equal(canApproveCashAdvance(ba), false)
   })
 
   it('sidebar lists Payroll for SA and My pay for crew, not SA', () => {
@@ -236,6 +267,109 @@ describe('payroll RBAC', () => {
   })
 })
 
+describe('monthly salary proration + dual run kinds', () => {
+  it('prorates monthly package by frequency', () => {
+    assert.equal(prorateMonthlyPackageMinor(3_000_000, 'monthly'), 3_000_000)
+    assert.equal(prorateMonthlyPackageMinor(3_000_000, 'semimonthly'), 1_500_000)
+    assert.equal(prorateMonthlyPackageMinor(3_000_000, 'weekly'), Math.round((3_000_000 * 12) / 52))
+    assert.equal(prorateMonthlyPackageMinor(3_000_000, 'daily'), 100_000)
+  })
+
+  it('fixed run includes packages only; floor run excludes packages', () => {
+    const pkg = {
+      id: 'pkg-1',
+      staff_id: 'staff-ba',
+      package_kind: 'fixed',
+      amount_minor: 3_000_000,
+      branch: null,
+      effective_from: '2026-01-01',
+      staff: { id: 'staff-ba', full_name: 'BA' },
+    }
+    const sales = [
+      {
+        id: 'sale-wash',
+        branch: 'bacoor',
+        status: 'paid',
+        total_minor: 100000,
+        occurred_at: '2026-08-19T10:00:00+08:00',
+        sale_line_items: [{ line_total_minor: 100000, services: { pay_category: 'wash' } }],
+      },
+    ]
+    const attendance = [
+      {
+        id: 'staff-ty',
+        staff_id: 'staff-ty',
+        full_name: 'Ty',
+        role: 'staff',
+        branch_slug: 'bacoor',
+        attendance_date: '2026-08-19',
+        status: 'present',
+      },
+    ]
+    const floor = buildPayrollPreview({
+      period: { start: '2026-08-19', end: '2026-08-19' },
+      rules: { wash_pool_pct: 35 },
+      sales,
+      attendance,
+      packages: [pkg],
+      runKind: 'floor',
+      frequency: 'weekly',
+    })
+    assert.equal(floor.lines.some((l) => l.kind === 'package_fixed'), false)
+    assert.ok(floor.lines.some((l) => l.kind === 'wash_pool'))
+
+    const fixed = buildPayrollPreview({
+      period: { start: '2026-08-17', end: '2026-08-23' },
+      rules: { wash_pool_pct: 35 },
+      sales,
+      attendance,
+      packages: [pkg],
+      runKind: 'fixed',
+      frequency: 'weekly',
+    })
+    assert.equal(fixed.proof.length, 0)
+    const line = fixed.lines.find((l) => l.kind === 'package_fixed')
+    assert.ok(line)
+    assert.equal(line.branch, FIXED_SALARY_BOOKS_BRANCH)
+    assert.equal(line.pay_minor, Math.round((3_000_000 * 12) / 52))
+  })
+
+  it('fixed wizard steps are period → people → extras → review', () => {
+    assert.deepEqual(
+      payrollWizardSteps('fixed').map((s) => s.id),
+      ['period', 'people', 'extras', 'review'],
+    )
+    assert.equal(resolveFixedSalaryBranch({}), FIXED_SALARY_BOOKS_BRANCH)
+  })
+
+  it('groups employees and supports commission + skip', () => {
+    const pkgLine = {
+      key: 'package_fixed:staff-ba:hq:package:1',
+      kind: 'package_fixed',
+      staff_id: 'staff-ba',
+      staff_name: 'BA',
+      branch: 'hq',
+      pay_minor: 1500000,
+      amount_minor: 1500000,
+      direction: 'add',
+      label: 'Monthly salary',
+    }
+    let lines = [pkgLine]
+    lines = addPayrollCommission(lines, {
+      staff: { id: 'staff-ba', full_name: 'BA' },
+      label: 'Sales commission',
+      amountMinor: 50000,
+    })
+    const groups = groupPayrollLinesByStaff(lines)
+    assert.equal(groups.length, 1)
+    assert.equal(groups[0].salary_minor, 1500000)
+    assert.equal(groups[0].commission_minor, 50000)
+    assert.equal(groups[0].total_minor, 1550000)
+    const trimmed = removeStaffFromPayrollPreview(lines, 'staff-ba')
+    assert.equal(trimmed.length, 0)
+  })
+})
+
 describe('payroll wizard + RPC wiring', () => {
   it('four wizard steps and run_payroll settles POS-proofed lines', () => {
     assert.deepEqual(
@@ -243,10 +377,18 @@ describe('payroll wizard + RPC wiring', () => {
       ['period', 'proof', 'lines', 'confirm'],
     )
     const page = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
-    assert.match(page, /PAYROLL_WIZARD_STEPS/)
+    assert.match(page, /async function loadProof/)
+    assert.match(page, /onClick=\{loadProof\}/)
+    assert.match(page, /payrollWizardSteps/)
+    assert.match(page, /PAYROLL_RUN_KINDS/)
+    assert.match(page, /groupPayrollLinesByStaff/)
+    assert.match(page, /addPayrollCommission/)
+    assert.match(page, /Load salaried employees/)
     assert.match(page, /run_payroll/)
     assert.match(page, /canRunPayroll/)
     assert.match(page, /hakum-payroll/)
+    assert.match(page, /Floor pay|Fixed salary/)
+    assert.match(page, /Company-wide salaries|no bay/)
     const mine = readFileSync(join(root, 'src/pages/MyPayPage.jsx'), 'utf8')
     assert.match(mine, /payroll_run_lines/)
     assert.match(mine, /canViewOwnPay/)

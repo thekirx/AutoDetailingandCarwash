@@ -32,7 +32,49 @@ describe('POS checkout workflow seam', () => {
     )
   })
 
-  it('cash advance inbox is fail-closed: kind + POS branch, never empty-branch leak', () => {
+  it('blocks pay when a package/detailing line has no service_id (normalized as service)', () => {
+    assert.equal(
+      posCartBlocksCheckout([{ item_type: 'package', id: null, missing_service: true }]),
+      true,
+    )
+    assert.equal(posCartBlocksCheckout([{ item_type: 'detailing', id: 'svc-d1' }]), false)
+  })
+
+  it('normalizes package and detailing cart lines to service for complete_pos_sale', async () => {
+    const { buildPosSalePayload, normalizePosLineItemType } = await import('../src/lib/posSale.js')
+    assert.equal(normalizePosLineItemType('package'), 'service')
+    assert.equal(normalizePosLineItemType('detailing'), 'service')
+    assert.equal(normalizePosLineItemType('product'), 'product')
+    const payload = buildPosSalePayload({
+      branch: 'bacoor',
+      paymentMethod: 'cash',
+      cart: [
+        { item_type: 'package', id: 'pkg-1', name: 'Express', quantity: 1, unit_price_minor: 50000 },
+        { item_type: 'detailing', id: 'det-1', name: 'Ceramic', quantity: 1, unit_price_minor: 900000 },
+      ],
+    })
+    assert.deepEqual(
+      payload.lines.map((l) => ({ item_type: l.item_type, service_id: l.service_id, product_id: l.product_id })),
+      [
+        { item_type: 'service', service_id: 'pkg-1', product_id: null },
+        { item_type: 'service', service_id: 'det-1', product_id: null },
+      ],
+    )
+  })
+
+  it('handoff after pay uses bay catalog tab not legacy services', () => {
+    const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
+    assert.match(pos, /setTab\(branchAdmin \? 'merch' : 'bay'\)/)
+    assert.doesNotMatch(pos, /setTab\(branchAdmin \? 'merch' : 'services'\)/)
+  })
+
+  it('Sell tab links to Pay queue instead of duplicating handoff cards', () => {
+    const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
+    assert.match(pos, /Open Pay queue/)
+    assert.doesNotMatch(pos, /Waiting for payment/)
+  })
+
+  it('cash advance inbox is fail-closed: kind + branch, never empty-branch leak', () => {
     const ca = (branch) => ({
       ops_forms: { kind: 'cash_advance' },
       payload: { branch },
@@ -42,6 +84,7 @@ describe('POS checkout workflow seam', () => {
     assert.equal(cashAdvanceVisibleOnPos(ca('bacoor'), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), true)
     assert.equal(cashAdvanceVisibleOnPos({ ops_forms: { kind: 'complaint' }, payload: { branch: 'bacoor' } }, { posBranch: 'bacoor', branchScopeList: null }), false)
     assert.equal(cashAdvanceVisibleOnPos(ca('bacoor'), { posBranch: 'bacoor', branchScopeList: null }), true)
+    assert.equal(cashAdvanceVisibleOnPos(ca('bacoor'), { branch: 'bacoor', branchScopeList: null }), true)
   })
 
   it('PPF pay_category is PPF on tiles and Bacoor close, not Queue wash', () => {
@@ -53,19 +96,24 @@ describe('POS checkout workflow seam', () => {
     assert.equal(rows[0].bucket, 'ppf')
   })
 
-  it('POS page keeps handoff on merch add, gates expense/CA, blocks orphan pay', () => {
+  it('POS page keeps handoff on merch add, gates expense, loads approved CA for close only', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
     assert.match(pos, /keepQueueHandoffWhenAdding/)
     assert.match(pos, /posCartBlocksCheckout/)
     assert.match(pos, /cashAdvanceVisibleOnPos/)
     assert.match(pos, /canWriteFinance\(profile\)/)
-    assert.match(pos, /canEditPlanning\(profile\)/)
-    assert.match(pos, /const SHELL_TABS = \['checkout', 'pending', 'expenses', 'cash-advance', 'dashboard'\]/)
+    assert.match(pos, /loadApprovedCashAdvances/)
+    assert.match(pos, /const SHELL_TABS = \['checkout', 'pending', 'expenses', 'dashboard'\]/)
+    assert.doesNotMatch(pos, /TabsTrigger value="cash-advance"/)
+    assert.match(pos, /\/operations\/payroll\?tab=cash-advance/)
     assert.doesNotMatch(pos, /SHELL_TABS = \[[^\]]*'services'/)
     assert.match(pos, /writeAudit/)
     assert.match(pos, /notify-pos/)
     assert.match(pos, /buildVisitHandoffCartLines/)
     assert.match(pos, /expenseCountsOnDailyClose/)
+    const payroll = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
+    assert.match(payroll, /cash-advance/)
+    assert.match(payroll, /PayrollCashAdvancesPanel/)
   })
 
   it('complete_pos_sale rejects null service_id and settles pending_payment transactions', () => {
@@ -91,7 +139,7 @@ describe('POS checkout workflow seam', () => {
     assert.match(sql, /sales_status_check/)
   })
 
-  it('daily close skips ceramic/payroll drafts and counts POS day expenses', () => {
+  it('daily close skips ceramic/payroll drafts and pending payment; counts POS day expenses', () => {
     assert.equal(
       expenseCountsOnDailyClose({
         status: 'draft',
@@ -112,6 +160,14 @@ describe('POS checkout workflow seam', () => {
       expenseCountsOnDailyClose({ status: 'draft', description: null, expense_kind: 'daily', title: 'ice' }),
       true,
     )
+    assert.equal(
+      expenseCountsOnDailyClose({ status: 'pending_payment', description: 'expense_report:x:y', expense_kind: 'other' }),
+      false,
+    )
+    assert.equal(
+      expenseCountsOnDailyClose({ status: 'pending_approval', description: null, expense_kind: 'daily' }),
+      false,
+    )
     const report = buildBacoorDailyReport({
       branch: 'bacoor',
       date: '2026-08-19',
@@ -119,6 +175,7 @@ describe('POS checkout workflow seam', () => {
       expenses: [
         { status: 'draft', description: 'ceramic:x:crew', expense_kind: 'salary_carwash', amount_minor: 40000, label: 'crew' },
         { status: 'draft', expense_kind: 'daily', amount_minor: 2000, label: 'ice' },
+        { status: 'pending_payment', expense_kind: 'other', amount_minor: 9000, label: 'utilities' },
       ],
     })
     assert.equal(report.carwash_salary_minor, 0)

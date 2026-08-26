@@ -7,11 +7,17 @@ import {
   financeRange,
   financeRangeIso,
   financeCompareRange,
+  formatFinanceWindow,
+  pctChange,
   mergePlByCategory,
   rollupPl,
   plByCategory,
+  plTrendByDay,
+  topExpenseCategories,
+  financeOwnerInsights,
   salesByDay,
   salesByBranch,
+  salesLedgerRows,
   retentionBuckets,
   toCsv,
   toExcelHtml,
@@ -25,7 +31,7 @@ describe('financeData tabs + presets', () => {
   it('exposes six tabs with stable ids', () => {
     assert.deepEqual(
       FINANCE_TABS.map((t) => t.id),
-      ['overview', 'sales', 'purchases', 'pl', 'categories', 'reports'],
+      ['overview', 'sales', 'purchases', 'pl', 'shift-close', 'expense-reports', 'categories', 'reports'],
     )
     assert.ok(FINANCE_TABS.every((t) => t.label && t.hint))
   })
@@ -33,6 +39,10 @@ describe('financeData tabs + presets', () => {
   it('date presets cover today through custom', () => {
     const ids = DATE_PRESETS.map((p) => p.value)
     assert.ok(ids.includes('today'))
+    assert.ok(ids.includes('yesterday'))
+    assert.ok(ids.includes('last_7'))
+    assert.ok(ids.includes('last_30'))
+    assert.ok(ids.includes('last_month'))
     assert.ok(ids.includes('custom'))
     assert.ok(ids.includes('3mo'))
     assert.ok(ids.includes('6mo'))
@@ -44,6 +54,24 @@ describe('financeRange', () => {
     const r = financeRange('today', '', '', FIXED_NOW)
     assert.equal(r.start, r.end)
     assert.match(r.start, /^2026-08-11$/)
+  })
+
+  it('yesterday is the prior calendar day', () => {
+    const r = financeRange('yesterday', '', '', FIXED_NOW)
+    assert.equal(r.start, '2026-08-10')
+    assert.equal(r.end, '2026-08-10')
+  })
+
+  it('last_7 spans today and 6 days earlier', () => {
+    const r = financeRange('last_7', '', '', FIXED_NOW)
+    assert.equal(r.end, '2026-08-11')
+    assert.equal(r.start, '2026-08-05')
+  })
+
+  it('last_month is the previous calendar month', () => {
+    const r = financeRange('last_month', '', '', FIXED_NOW)
+    assert.equal(r.start, '2026-07-01')
+    assert.equal(r.end, '2026-07-31')
   })
 
   it('month returns first and last day of the current month', () => {
@@ -74,6 +102,73 @@ describe('financeRange', () => {
     const r = financeRangeIso('today', '', '', FIXED_NOW)
     assert.equal(r.startIso, `${r.start}T00:00:00+08:00`)
     assert.equal(r.endIso, `${r.end}T23:59:59.999+08:00`)
+  })
+})
+
+describe('formatFinanceWindow + pctChange', () => {
+  it('formats a single day and a same-month span', () => {
+    assert.match(formatFinanceWindow('2026-08-11', '2026-08-11'), /11/)
+    assert.match(formatFinanceWindow('2026-08-01', '2026-08-31'), /1–31 Aug 2026|1-31 Aug 2026/)
+  })
+
+  it('pctChange handles zero prior and normal deltas', () => {
+    assert.equal(pctChange(0, 0), null)
+    assert.equal(pctChange(100, 0), 100)
+    assert.equal(pctChange(110, 100), 10)
+  })
+})
+
+describe('dashboard series helpers', () => {
+  it('plTrendByDay rolls income and expenses per day in pesos', () => {
+    const series = plTrendByDay([
+      { period_date: '2026-08-02', kind: 'expense', category: 'Rent', amount_minor: 50000 },
+      { period_date: '2026-08-01', kind: 'income', category: 'POS sales', amount_minor: 100000 },
+      { period_date: '2026-08-01', kind: 'expense', category: 'Payroll', amount_minor: 20000 },
+      { period_date: '2026-08-02', kind: 'income', category: 'POS sales', amount_minor: 80000 },
+    ])
+    assert.deepEqual(
+      series.map((d) => d.date),
+      ['2026-08-01', '2026-08-02'],
+    )
+    assert.equal(series[0].income, 1000)
+    assert.equal(series[0].expenses, 200)
+    assert.equal(series[0].net, 800)
+    assert.equal(series[1].net_minor, 30000)
+  })
+
+  it('topExpenseCategories ranks spend and financeOwnerInsights stays empty-safe', () => {
+    const tops = topExpenseCategories([
+      { kind: 'expense', category: 'Rent', amount_minor: 90000 },
+      { kind: 'expense', category: 'Chemicals', amount_minor: 40000 },
+      { kind: 'income', category: 'POS sales', amount_minor: 200000 },
+    ], 2)
+    assert.equal(tops.length, 2)
+    assert.equal(tops[0].category, 'Rent')
+    assert.equal(tops[0].amount, 900)
+
+    const empty = financeOwnerInsights([], [])
+    assert.equal(empty.paidCount, 0)
+    assert.equal(empty.cues.length, 1)
+    assert.match(empty.cues[0].text, /No paid sales/)
+
+    const hot = financeOwnerInsights(
+      [
+        {
+          sale_date: '2026-08-10',
+          branch: 'bacoor',
+          total_sales_minor: 100000,
+          cash_sales_minor: 80000,
+          paid_count: 4,
+        },
+      ],
+      [
+        { kind: 'income', category: 'POS sales', amount_minor: 100000 },
+        { kind: 'expense', category: 'Rent', amount_minor: 85000 },
+      ],
+    )
+    assert.equal(hot.avgTicketMinor, 25000)
+    assert.equal(hot.cashShare, 80)
+    assert.ok(hot.cues.some((c) => c.tone === 'warn'))
   })
 })
 
@@ -184,6 +279,17 @@ describe('salesByDay + salesByBranch', () => {
     assert.equal(out[0].branch, 'bacoor')
     assert.equal(out[0].total_sales_minor, 17000)
     assert.equal(out[1].branch, 'batangas')
+  })
+
+  it('salesLedgerRows keeps branch × day rows newest first', () => {
+    const out = salesLedgerRows(rows)
+    assert.equal(out.length, 3)
+    assert.equal(out[0].sale_date, '2026-08-11')
+    assert.equal(out[0].branch, 'bacoor')
+    assert.equal(out[1].branch, 'bacoor')
+    assert.equal(out[1].cash_minor, 6000)
+    assert.equal(out[2].branch, 'batangas')
+    assert.equal(out[2].cash_minor, 5000)
   })
 })
 

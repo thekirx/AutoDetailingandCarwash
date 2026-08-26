@@ -1,5 +1,9 @@
 /** Shared POS + floor payment method labels (PH bay checkout). */
 
+import { classifySaleBucket } from './posSellables.js'
+
+const DETAILING_POS_BUCKETS = new Set(['ceramic_coating', 'nano_tint', 'ppf'])
+
 export const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
   { value: 'gcash', label: 'GCash' },
@@ -30,34 +34,36 @@ export function paymentMethodLabel(raw) {
 /**
  * Classify a paid sale into floor counter buckets.
  * Queue app = carwash booking only; detailing bookings + walk-in products → counter.
+ * ponytail: delegates to posSellables so floor board matches POS/Bacoor close.
  */
-export function classifyFloorSaleBucket(row = {}) {
-  const payCat = String(row.pay_category || row.bookings?.services?.pay_category || '').toLowerCase()
-  const serviceName = String(
-    row.service_name || row.bookings?.services?.name || row.services?.name || '',
-  ).toLowerCase()
-  const tags = Array.isArray(row.product_tags) ? row.product_tags.map((t) => String(t).toLowerCase()) : []
-  const category = String(row.product_category || row.category || '').toLowerCase()
+function saleRowToPosInput(row = {}) {
+  const hasBooking = Boolean(row.booking_id)
+  const hasProductSignal =
+    row.item_type === 'product' ||
+    (Array.isArray(row.product_tags) && row.product_tags.length > 0) ||
+    Boolean(row.product_category || row.category)
 
-  if (tags.some((t) => t.includes('cloth') || t === 'hakum' || t === 'apparel')) return 'clothing'
-  if (category.includes('cloth') || serviceName.includes('clothing')) return 'clothing'
-  if (tags.some((t) => t === 'coffee' || t === 'free_coffee') || category === 'coffee') return 'coffee'
-  if (serviceName.includes('coffee') || serviceName.includes('refresh')) return 'coffee'
-  if (
-    tags.some((t) => ['accessories', 'scents', 'merch', 'sellable'].includes(t)) ||
-    category === 'accessories' ||
-    category === 'merch'
-  ) {
-    return 'merch'
+  return {
+    serviceSlug: row.services?.slug || row.bookings?.services?.slug,
+    payCategory: row.pay_category || row.bookings?.services?.pay_category,
+    itemType: row.item_type || (hasProductSignal || !hasBooking ? 'product' : 'service'),
+    serviceName: row.service_name || row.bookings?.services?.name || row.services?.name,
+    productTags: row.product_tags,
+    productCategory: row.product_category || row.category,
+    productName: row.product_name || row.name,
   }
-  if (payCat === 'detailing' || payCat === 'ppf' || serviceName.includes('ceramic') || serviceName.includes('ppf') || serviceName.includes('tint')) {
-    return 'detailing'
-  }
-  if (row.booking_id && (payCat === 'wash' || payCat === 'package' || payCat === 'general' || payCat === 'addon' || !payCat)) {
-    return 'carwash'
-  }
-  if (row.booking_id) return 'detailing'
+}
+
+function posBucketToFloor(bucket) {
+  if (bucket === 'car_wash') return 'carwash'
+  if (DETAILING_POS_BUCKETS.has(bucket)) return 'detailing'
+  if (bucket === 'coffee') return 'coffee'
+  if (bucket === 'clothing') return 'clothing'
   return 'merch'
+}
+
+export function classifyFloorSaleBucket(row = {}) {
+  return posBucketToFloor(classifySaleBucket(saleRowToPosInput(row)))
 }
 
 /**

@@ -9,7 +9,7 @@ const navigation = [
   { label: 'Bookings', to: '/admin/bookings', icon: CalendarDays },
   { label: 'Queue', to: '/operations/queue', icon: ListOrdered },
   { label: 'Customers', to: '/admin/customers', icon: Users },
-  { label: 'Reports', to: '/operations/reports', icon: ChartNoAxesCombined },
+  { label: 'Reports', to: '/operations/finance?tab=reports', icon: ChartNoAxesCombined },
 ]
 
 export default function AdminLayout() {

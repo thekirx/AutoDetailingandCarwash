@@ -24,7 +24,7 @@ export const SERVICE_KINDS = [
     id: 'package',
     label: 'Packages',
     shortLabel: 'Package',
-    hint: 'Bundled same-day packages. Queue numbers reset daily.',
+    hint: 'Bundled same-day mix of services, or a custom package price. Queue numbers reset daily.',
     categories: ['package', 'ppf'],
   },
   {
@@ -45,6 +45,24 @@ export const PAY_CATEGORY_OPTIONS = [
   { value: 'ppf', label: 'Package (PPF / film)', kind: 'package' },
   { value: 'detailing', label: 'Detailing (multi-day)', kind: 'detailing' },
 ]
+
+/** Inventory create forms: bay = services+packages; detailing = multi-day only. */
+export function payCategoryOptionsForCatalogScope(scope = 'all') {
+  const key = String(scope || 'all')
+  if (key === 'bay') {
+    return PAY_CATEGORY_OPTIONS.filter((row) => row.kind === 'service' || row.kind === 'package')
+  }
+  if (key === 'detailing') {
+    return PAY_CATEGORY_OPTIONS.filter((row) => row.kind === 'detailing')
+  }
+  return PAY_CATEGORY_OPTIONS
+}
+
+export function defaultPayCategoryForCatalogScope(scope = 'all') {
+  if (String(scope) === 'detailing') return 'detailing'
+  if (String(scope) === 'bay') return 'general'
+  return 'general'
+}
 
 const CATEGORY_TO_KIND = Object.fromEntries(
   PAY_CATEGORY_OPTIONS.map((row) => [row.value, row.kind]),
@@ -70,6 +88,27 @@ export function filterServicesByKind(services, kindId) {
   return (services || []).filter((svc) => serviceKindFromPayCategory(svc.pay_category) === kindId)
 }
 
+/** POS Sell: same-day Services + Packages in one tab (excludes multi-day detailing SKUs). */
+export function filterPosBayCatalog(services) {
+  const detailingSlugs = new Set(FLOOR_DETAILING_SERVICE_SLUGS)
+  return (services || []).filter((svc) => {
+    const slug = String(svc.slug || '').toLowerCase()
+    if (detailingSlugs.has(slug)) return false
+    const kind = serviceKindFromPayCategory(svc.pay_category)
+    return kind === 'service' || kind === 'package'
+  })
+}
+
+/** POS Sell: multi-day detailing (Ceramic / Tint / PPF / Paint Maint + detailing category). */
+export function filterPosDetailingCatalog(services) {
+  const detailingSlugs = new Set(FLOOR_DETAILING_SERVICE_SLUGS)
+  return (services || []).filter((svc) => {
+    const slug = String(svc.slug || '').toLowerCase()
+    if (detailingSlugs.has(slug)) return true
+    return serviceKindFromPayCategory(svc.pay_category) === 'detailing'
+  })
+}
+
 /** Prefer floor detailing SKUs (Ceramic / Paint Maint / Tint / PPF); fall back to any active detailing row. */
 export function filterFloorDetailingServices(services) {
   const rows = services || []
@@ -83,6 +122,25 @@ export function filterFloorDetailingServices(services) {
     })
   }
   return filterServicesByKind(rows, 'detailing')
+}
+
+/**
+ * Bookings board is multi-day detailing only (ceramic, paint maint, tint, PPF).
+ * Wash / same-day packages stay on Queue.
+ */
+export function isBookingBoardService(service = {}) {
+  const slug = String(service?.slug || '').toLowerCase()
+  if (FLOOR_DETAILING_SERVICE_SLUGS.includes(slug)) return true
+  const cat = String(service?.pay_category || '').toLowerCase()
+  return cat === 'detailing' || cat === 'ppf'
+}
+
+export function isBookingBoardRow(booking = {}) {
+  const svc = booking?.services || {}
+  return isBookingBoardService({
+    slug: svc.slug || booking?.service_slug,
+    pay_category: svc.pay_category || booking?.service_pay_category,
+  })
 }
 
 export function searchServices(services, query) {

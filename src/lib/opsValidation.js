@@ -70,23 +70,31 @@ export function validateServiceInput({ name, slug, price, duration_minutes, disp
 
   const SIZE_SLUGS = ['small', 'medium', 'large', 'extra_large']
   const sizePriceMinor = {}
-  let hasSizeMatrix = size_prices && typeof size_prices === 'object'
+  let filledSizes = []
 
-  if (hasSizeMatrix) {
+  if (size_prices && typeof size_prices === 'object') {
     for (const size of SIZE_SLUGS) {
       const raw = size_prices[size]
+      if (raw === '' || raw == null) continue
       const n = Number(raw)
       if (!Number.isFinite(n) || n < 0) {
         errors.push(`Price for ${size.replace('_', ' ')} must be 0 or greater.`)
         break
       }
       sizePriceMinor[size] = Math.round(n * 100)
+      filledSizes.push(size)
     }
   }
 
-  // Compat: single `price` = Medium when matrix omitted
-  const priceNum = hasSizeMatrix ? sizePriceMinor.medium / 100 : Number(price)
-  if (!hasSizeMatrix && (!Number.isFinite(priceNum) || priceNum < 0)) {
+  const hasSizeMatrix = filledSizes.length > 0
+  let priceNum = Number(price)
+  if (hasSizeMatrix) {
+    const anchor =
+      sizePriceMinor.medium
+      ?? sizePriceMinor[filledSizes[0]]
+    priceNum = anchor / 100
+  }
+  if (!Number.isFinite(priceNum) || priceNum < 0) {
     errors.push('Price must be a number 0 or greater.')
   }
 
@@ -110,14 +118,8 @@ export function validateServiceInput({ name, slug, price, duration_minutes, disp
     name: trimmedName,
     slug: normalizedSlug,
     price_minor: Math.round(Number(priceNum) * 100),
-    size_price_minor: hasSizeMatrix
-      ? sizePriceMinor
-      : {
-          small: Math.round(priceNum * 100),
-          medium: Math.round(priceNum * 100),
-          large: Math.round(priceNum * 100),
-          extra_large: Math.round(priceNum * 100),
-        },
+    // Empty object = flat catalog price only (optional size matrix)
+    size_price_minor: hasSizeMatrix ? sizePriceMinor : {},
     duration_minutes: duration,
     display_order: order,
     pay_category: category,

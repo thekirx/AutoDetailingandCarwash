@@ -1,6 +1,14 @@
-/** Client-side spam friction for public forms (CUST-H9). Not a CAPTCHA — pairs with WITH CHECK (true). */
+/** Client-side spam friction for public forms (CUST-H9). Not a CAPTCHA — pairs with /api/public-inquiry. */
 export function createPublicFormGuard() {
   return { openedAt: Date.now(), honeypot: '' }
+}
+
+/** Normalize guard fields from API JSON bodies (server + client). */
+export function parsePublicFormGuard(body = {}) {
+  return {
+    openedAt: Number(body.form_opened_at ?? body.openedAt ?? 0),
+    honeypot: String(body.company_website ?? body.honeypot ?? ''),
+  }
 }
 
 /**

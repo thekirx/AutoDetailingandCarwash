@@ -42,6 +42,19 @@ describe('floor board roster + financials', () => {
     assert.equal(fin.coffee_sales_minor, 200)
     assert.equal(fin.pos_sales_minor, 700)
   })
+
+  it('delegates floor buckets to posSellables classifier', async () => {
+    const { classifySaleBucket, posBucketToBacoor } = await import('../src/lib/posSellables.js')
+    const row = { booking_id: 'b1', pay_category: 'wash', service_name: 'Carwash' }
+    const posBucket = classifySaleBucket({
+      itemType: 'service',
+      payCategory: row.pay_category,
+      serviceName: row.service_name,
+    })
+    assert.equal(posBucket, 'car_wash')
+    assert.equal(classifyFloorSaleBucket(row), 'carwash')
+    assert.equal(posBucketToBacoor(posBucket), 'carwash')
+  })
 })
 
 describe('compensation engine', () => {
@@ -89,8 +102,12 @@ describe('compensation engine', () => {
       ceramic_crew_solo_pct: 15,
       ceramic_crew_split_pct: 8,
       ceramic_detailer_split_pct: 12,
-      payout_frequency: 'weekly',
+      payout_frequency: 'semimonthly',
       payout_weekday: 5,
+      attendance_present_weight: 1,
+      attendance_late_weight: 0.7,
+      pending_floor_optional: false,
+      cash_advance_auto_deduct: false,
     })
     assert.equal(normalizeCompensationSettings(null).wash_pool_pct, 35)
   })
