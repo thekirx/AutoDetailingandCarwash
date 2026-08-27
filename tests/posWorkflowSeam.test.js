@@ -104,6 +104,8 @@ describe('POS checkout workflow seam', () => {
     assert.match(pos, /canWriteFinance\(profile\)/)
     assert.match(pos, /loadApprovedCashAdvances/)
     assert.match(pos, /const SHELL_TABS = \['checkout', 'pending', 'expenses', 'dashboard'\]/)
+    assert.match(pos, /POS_SETTINGS_TAB/)
+    assert.match(pos, /PosGuideCard/)
     assert.doesNotMatch(pos, /TabsTrigger value="cash-advance"/)
     assert.match(pos, /\/operations\/payroll\?tab=cash-advance/)
     assert.doesNotMatch(pos, /SHELL_TABS = \[[^\]]*'services'/)

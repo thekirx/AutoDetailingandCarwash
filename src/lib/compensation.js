@@ -124,6 +124,48 @@ export function attendanceWeight(status, rules = {}, clock = {}) {
   return 0
 }
 
+/** UI presets — late crew still earn; this is their share vs on-time (stored as 0–1 weight). */
+export const LATE_PAY_SHARE_PRESETS = Object.freeze([
+  { id: 'full', label: 'No penalty', percent: 100, hint: 'Late gets same share as on time' },
+  { id: 'standard', label: 'Standard', percent: 70, hint: 'Hakum default' },
+  { id: 'half', label: 'Half share', percent: 50, hint: 'Late gets half of on-time pay' },
+  { id: 'none', label: 'No pay if late', percent: 0, hint: 'Only on-time crew split the pool' },
+])
+
+export function latePaySharePercent(rules = {}) {
+  const w = Number(normalizeCompensationSettings(rules).attendance_late_weight)
+  const pct = Math.round((Number.isFinite(w) ? w : 0.7) * 100)
+  return Math.max(0, Math.min(100, pct))
+}
+
+export function latePayWeightFromPercent(percent) {
+  const p = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)))
+  return p / 100
+}
+
+/** ponytail: demo only — illustrates splitWashPool weight math for Settings copy. */
+export function demoWashPoolSplit({
+  poolMinor = 1_000_000,
+  onTimeCount = 2,
+  lateCount = 1,
+  lateWeight = 0.7,
+} = {}) {
+  const onTime = Math.max(0, Number(onTimeCount) || 0)
+  const late = Math.max(0, Number(lateCount) || 0)
+  const lw = Number.isFinite(Number(lateWeight)) ? Number(lateWeight) : 0.7
+  const weightSum = onTime + late * lw
+  if (!weightSum || !poolMinor) {
+    return { perOnTimeMinor: 0, perLateMinor: 0, weightSum, poolMinor: poolMinor || 0 }
+  }
+  const unit = poolMinor / weightSum
+  return {
+    perOnTimeMinor: Math.round(unit),
+    perLateMinor: Math.round(unit * lw),
+    weightSum,
+    poolMinor,
+  }
+}
+
 /** Wash pool is bay crew only — not detailers, TL, office, or sales. */
 function inWashPoolRoster(row) {
   const role = String(row?.role || 'staff').toLowerCase()

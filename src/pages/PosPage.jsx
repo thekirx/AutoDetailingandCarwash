@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
-import { Cake, Gift, Link2, LogOut, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
+import { Cake, Gift, Link2, LogOut, MapPin, Receipt, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { allowRoute, canAccessPos, canAccessSettings, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
@@ -50,6 +50,15 @@ import {
   computeCeramicPay,
   effectiveCeramicToggles,
 } from '@/lib/compensation'
+import {
+  POS_SETTINGS_TAB,
+  resolvePosShellTab,
+  summarizePendingHandoffs,
+  summarizeTodayPos,
+  buildPosWashPoolPreview,
+} from '@/lib/posInsights'
+import PosSettingsPanel from '@/pages/pos/PosSettingsPanel'
+import { PosGuideCard, PosPendingEmpty, PosSalaryPreviewCard, PosStatsBoard } from '@/pages/pos/PosPanels'
 
 const SHELL_TABS = ['checkout', 'pending', 'expenses', 'dashboard']
 
@@ -59,10 +68,8 @@ export default function PosPage() {
   const branchAdmin = isBranchAdmin(profile)
   const canManageCatalog = canManageServices(profile)
   const canOpenFinance = allowRoute(profile, 'finance')
-  const requestedShellTab = SHELL_TABS.includes(searchParams.get('tab'))
-    ? searchParams.get('tab')
-    : 'checkout'
-  const shellTab = requestedShellTab
+  const showSettingsTab = canAccessSettings(profile)
+  const shellTab = resolvePosShellTab(searchParams.get('tab'), { canSettings: showSettingsTab })
   const scopeList = getBranchScopeList(profile)
   const canPickPosBranch = canSeeAllBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
   const branchLocked = !canPickPosBranch
@@ -168,6 +175,30 @@ export default function PosPage() {
       { label: 'Other merch', value: formatMoney(categoryTotals.merch) },
     ],
     [categoryTotals],
+  )
+
+  const todaySummary = useMemo(
+    () =>
+      summarizeTodayPos({
+        todayStats,
+        handoffs,
+        todayExpenses,
+        expenseFilter: expenseCountsOnDailyClose,
+      }),
+    [todayStats, handoffs, todayExpenses],
+  )
+
+  const pendingSummary = useMemo(() => summarizePendingHandoffs(handoffs), [handoffs])
+
+  const washPreview = useMemo(
+    () =>
+      buildPosWashPoolPreview({
+        carWashMinor: categoryTotals.car_wash,
+        washPoolPct: compRules.wash_pool_pct,
+        attendanceRows: todayAttendance,
+        rules: compRules,
+      }),
+    [categoryTotals.car_wash, compRules, todayAttendance],
   )
 
   const load = useCallback(async () => {
@@ -1078,14 +1109,8 @@ export default function PosPage() {
   }
 
   const checkoutBody = (
-    <div className="mt-6 flex flex-col gap-6">
-      <PosDayHero
-        sales={formatMoney(todayStats?.total_sales_minor || 0)}
-        paid={todayStats?.paid_count ?? 0}
-        queue={handoffs.length}
-        avg={formatMoney(todayStats?.average_ticket_minor || 0)}
-        families={familyTiles}
-      />
+    <div className="flex flex-col gap-6">
+      <PosStatsBoard stats={todaySummary} compact />
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
           Daily sales report
@@ -1098,10 +1123,10 @@ export default function PosPage() {
       </div>
 
       {handoffs.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
           <div>
             <p className="font-medium">
-              {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} waiting for payment
+              {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} waiting · {formatMoney(pendingSummary.totalMinor)}
             </p>
             <p className="text-sm text-muted-foreground">Open Pay queue to settle floor handoffs.</p>
           </div>
@@ -1110,7 +1135,6 @@ export default function PosPage() {
             className="min-h-11"
             onClick={() => {
               setShellTab('pending')
-              setSearchParams({ tab: 'pending' }, { replace: true })
             }}
           >
             Open Pay queue
@@ -1236,41 +1260,58 @@ export default function PosPage() {
   )
 
   const pendingBody = (
-    <div className="mt-4 flex flex-col gap-4">
-      {handoffs.length === 0 ? (
-        <div className="planner-empty">
-          <strong>No pending payments</strong>
-          <p>Queue tickets land here when a car is ready to pay.</p>
-        </div>
+    <div className="flex flex-col gap-4">
+      {handoffs.length > 0 ? (
+        <>
+          <Card className="border-primary/15 bg-muted/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Pending payments</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} ·{' '}
+                <span className="font-mono tabular-nums font-medium text-foreground">
+                  {formatMoney(pendingSummary.totalMinor)}
+                </span>{' '}
+                total
+              </p>
+            </CardHeader>
+          </Card>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {handoffs.map((row) => {
+              const booking = row.bookings || {}
+              return (
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => {
+                    loadHandoff(row)
+                    setShellTab('checkout')
+                  }}
+                  className="flex min-h-[88px] flex-col rounded-xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:bg-accent/20 active:scale-[0.99]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium">{booking.customer_name || 'Customer'}</p>
+                    <Badge variant="secondary">
+                      {booking.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{booking.vehicle_plate || 'No plate'}</p>
+                  <p className="mt-auto pt-3 font-mono text-xl font-semibold tabular-nums">
+                    {formatMoney(row.amount_minor || booking.final_price_minor || 0)}
+                  </p>
+                  <p className="mt-1 text-xs text-primary">Tap to open checkout</p>
+                </button>
+              )
+            })}
+          </div>
+        </>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {handoffs.map((row) => {
-            const booking = row.bookings || {}
-            return (
-              <button
-                key={row.id}
-                type="button"
-                onClick={() => { loadHandoff(row); setShellTab('checkout') }}
-                className="planner-ticket min-h-[88px] rounded-xl border border-border bg-background p-4 text-left transition hover:border-primary/50 hover:bg-accent/30"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium">{booking.customer_name || 'Customer'}</p>
-                  <Badge variant="secondary">
-                    {booking.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'}
-                  </Badge>
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{booking.vehicle_plate || '—'}</p>
-                <p className="mt-3 text-xl font-semibold tabular-nums">{formatMoney(row.amount_minor || booking.final_price_minor || 0)}</p>
-              </button>
-            )
-          })}
-        </div>
+        <PosPendingEmpty />
       )}
     </div>
   )
 
   const expensesBody = (
-    <div className="mt-4 flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Submit expense</CardTitle>
@@ -1360,16 +1401,13 @@ export default function PosPage() {
   )
 
   const dashboardBody = (
-    <div className="mt-4 flex flex-col gap-6">
-      <PosDayHero
-        sales={formatMoney(todayStats?.total_sales_minor || 0)}
-        paid={todayStats?.paid_count ?? 0}
-        queue={handoffs.length}
-        avg={formatMoney(todayStats?.average_ticket_minor || 0)}
-        families={[
-          ...familyTiles,
-          { label: 'Today expenses', value: formatMoney(todayExpenses.filter(expenseCountsOnDailyClose).reduce((s, r) => s + Number(r.total_minor || 0), 0)) },
-        ]}
+    <div className="flex flex-col gap-6">
+      <PosStatsBoard stats={todaySummary} categoryRows={familyTiles} />
+      <PosSalaryPreviewCard
+        washPreview={washPreview}
+        compRules={compRules}
+        canPayroll={allowRoute(profile, 'payroll')}
+        canAttendance={allowRoute(profile, 'attendance')}
       />
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
@@ -1381,9 +1419,9 @@ export default function PosPage() {
           </Button>
         )}
         {canOpenFinance ? (
-        <Button type="button" variant="secondary" className="min-h-11" asChild>
-          <Link to="/operations/finance?tab=purchases">Open Finance · expenses</Link>
-        </Button>
+          <Button type="button" variant="secondary" className="min-h-11" asChild>
+            <Link to="/operations/finance?tab=purchases">Open Finance · expenses</Link>
+          </Button>
         ) : null}
         {allowRoute(profile, 'payroll') ? (
           <Button type="button" variant="outline" className="min-h-11" asChild>
@@ -1394,35 +1432,35 @@ export default function PosPage() {
     </div>
   )
 
+  const settingsBody = showSettingsTab ? (
+    <div className="flex flex-col gap-4">
+      <PosSettingsPanel embedded />
+      <Button type="button" variant="link" className="min-h-11 w-fit px-0" asChild>
+        <Link to="/operations/settings/pos">Open full POS settings page</Link>
+      </Button>
+    </div>
+  ) : null
+
   return (
-    <section className={`hakum-pos planner-v2 flex flex-col ${branchAdmin ? 'gap-4' : 'gap-6'}`}>
-      <header className="planner-v2-head hakum-pos-head">
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">
+    <section className="hakum-pos mx-auto flex w-full max-w-7xl flex-col gap-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <header className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-2xl">
+          <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
             {branchAdmin ? 'Counter' : 'Point of sale'}
           </p>
-          <h1>{branchAdmin ? 'POS' : 'POS'}</h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2">
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">POS</h1>
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm leading-relaxed text-muted-foreground">
             <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
             <span>
               {branchAdmin
-                ? `Sell merch, take queue payment, close the day · ${branchLabel}`
-                : `Sell, pay queue tickets, expenses, end of shift · ${branchLabel}`}
+                ? `Merch, queue payment, expenses, end of shift · ${branchLabel}`
+                : `Sell, pay queue, expenses, crew pay preview · ${branchLabel}`}
             </span>
           </p>
         </div>
-        <div className="hakum-pos-head-actions">
-          {canAccessSettings(profile) ? (
-            <Button type="button" variant="outline" className="min-h-11" asChild>
-              <Link to="/operations/settings/pos">POS settings</Link>
-            </Button>
-          ) : null}
+        <div className="flex flex-wrap items-center gap-2">
           {canSubmitShiftClose(profile) ? (
-            <Button
-              type="button"
-              className="hakum-pos-end-shift min-h-11 gap-2"
-              onClick={openEndOfShift}
-            >
+            <Button type="button" variant="destructive" className="min-h-11 gap-2" onClick={openEndOfShift}>
               <LogOut data-icon="inline-start" aria-hidden />
               End of shift
             </Button>
@@ -1436,17 +1474,48 @@ export default function PosPage() {
         </div>
       </header>
 
-      <Tabs value={shellTab} onValueChange={setShellTab} className="w-full">
-        <TabsList variant="line" className="hakum-pos-tabs planner-v2-tabs">
-          <TabsTrigger value="checkout" className="min-h-11">Sell</TabsTrigger>
-          <TabsTrigger value="pending" className="min-h-11">Pay queue{handoffs.length ? ` (${handoffs.length})` : ''}</TabsTrigger>
-          <TabsTrigger value="expenses" className="min-h-11">Expenses</TabsTrigger>
-          <TabsTrigger value="dashboard" className="min-h-11">Today</TabsTrigger>
+      <PosGuideCard defaultOpen={shellTab === 'checkout'} />
+
+      <Tabs value={shellTab} onValueChange={setShellTab} className="flex w-full flex-col gap-5">
+        <TabsList className="inline-flex h-11 w-full gap-1 p-1 sm:w-auto">
+          <TabsTrigger value="checkout" className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
+            <ShoppingBag className="size-4" aria-hidden />
+            Sell
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
+            <Receipt className="size-4" aria-hidden />
+            Pay queue{handoffs.length ? ` (${handoffs.length})` : ''}
+          </TabsTrigger>
+          <TabsTrigger value="expenses" className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
+            Expenses
+          </TabsTrigger>
+          <TabsTrigger value="dashboard" className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
+            Today
+          </TabsTrigger>
+          {showSettingsTab ? (
+            <TabsTrigger value={POS_SETTINGS_TAB} className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
+              <Settings2 className="size-4" aria-hidden />
+              Settings
+            </TabsTrigger>
+          ) : null}
         </TabsList>
-        <TabsContent value="checkout">{checkoutBody}</TabsContent>
-        <TabsContent value="pending">{pendingBody}</TabsContent>
-        <TabsContent value="expenses">{expensesBody}</TabsContent>
-        <TabsContent value="dashboard">{dashboardBody}</TabsContent>
+        <TabsContent value="checkout" className="mt-0 outline-none">
+          {checkoutBody}
+        </TabsContent>
+        <TabsContent value="pending" className="mt-0 outline-none">
+          {pendingBody}
+        </TabsContent>
+        <TabsContent value="expenses" className="mt-0 outline-none">
+          {expensesBody}
+        </TabsContent>
+        <TabsContent value="dashboard" className="mt-0 outline-none">
+          {dashboardBody}
+        </TabsContent>
+        {showSettingsTab ? (
+          <TabsContent value={POS_SETTINGS_TAB} className="mt-0 outline-none">
+            {settingsBody}
+          </TabsContent>
+        ) : null}
       </Tabs>
 
       <Sheet
@@ -1940,40 +2009,5 @@ function CatalogGrid({ items, onAdd, empty, birthdayPerk }) {
         )
       })}
     </div>
-  )
-}
-
-function PosDayHero({ sales, paid, queue, avg, families = [] }) {
-  return (
-    <>
-      <div className="hakum-pos-hero planner-ticket">
-        <p>Sales today</p>
-        <strong>{sales}</strong>
-        <dl>
-          <div>
-            <dt>Paid</dt>
-            <dd>{paid}</dd>
-          </div>
-          <div>
-            <dt>Queue to pay</dt>
-            <dd>{queue}</dd>
-          </div>
-          <div>
-            <dt>Avg ticket</dt>
-            <dd>{avg}</dd>
-          </div>
-        </dl>
-      </div>
-      {families.length ? (
-        <div className="hakum-pos-families" role="list">
-          {families.map((row) => (
-            <div key={row.label} role="listitem">
-              <span>{row.label}</span>
-              <b>{row.value}</b>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </>
   )
 }
