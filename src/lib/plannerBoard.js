@@ -90,6 +90,9 @@ export const DEFAULT_PLAN_LISTS = [
   { title: 'Done', position: 2 },
 ]
 
+/** Fixed list for detailing completion outcomes 2–3 (Experience investigation). */
+export const EXPERIENCE_LIST_TITLE = 'Experience'
+
 /** Hakum navy, ink, stub gold — category dots, not a rainbow picker. */
 export const PLANNER_SWATCHES = ['#052699', '#020a31', '#c4a35a', '#334155', '#64748b']
 

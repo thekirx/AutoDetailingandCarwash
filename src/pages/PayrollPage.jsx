@@ -24,10 +24,17 @@ import {
   addPayrollAdjustment,
   addPayrollCommission,
   adjustPayrollLine,
+  applySalaryDraftExtrasToPreview,
   buildPayrollPreview,
+  buildPendingFloorPayrollQueue,
   buildRunPayrollPayload,
+  collectSalaryDraftExtrasFromCloses,
+  filterCeramicExpensesForSales,
+  floorConfirmBlockedByPendingCloses,
   groupPayrollLinesByStaff,
   netPayrollLinesMinor,
+  posProofTotalsByBranchDay,
+  saleBusinessDate,
   payrollBlocksConfirm,
   payrollPeriodRange,
   payrollWizardSteps,
@@ -35,9 +42,6 @@ import {
   rebuildWashPoolLines,
   removeStaffFromPayrollPreview,
   resolveFixedSalaryBranch,
-  buildPendingFloorPayrollQueue,
-  floorConfirmBlockedByPendingCloses,
-  posProofTotalsByBranchDay,
   validatePayrollAdjustment,
   validatePayrollCustomRange,
 } from '@/lib/payroll'
@@ -176,7 +180,11 @@ export default function PayrollPage() {
           sale_id: s.sale_id,
           branch: s.branch,
           total_minor: s.total_minor,
-          business_date: String(s.sales?.occurred_at || '').slice(0, 10),
+          occurred_at: s.sales?.occurred_at || null,
+          business_date: saleBusinessDate({
+            occurred_at: s.sales?.occurred_at,
+            business_date: s.business_date,
+          }),
         })),
       }))
     let q = supabase
@@ -328,7 +336,7 @@ export default function PayrollPage() {
           : collectPaged(async (from, to) => {
               let q = supabase
                 .from('sales')
-                .select('id, branch, status, total_minor, occurred_at, sale_line_items(line_total_minor, services(pay_category))')
+                .select('id, branch, status, total_minor, occurred_at, sale_line_items(line_total_minor, services(pay_category, salary_pct))')
                 .eq('status', 'paid')
                 .gte('occurred_at', startIso)
                 .lte('occurred_at', endIso)
@@ -354,12 +362,13 @@ export default function PayrollPage() {
         isFixed
           ? emptyList
           : collectPaged(async (from, to) => {
+              // Soft lower bound only — drafts may land after the sale day; sale-id filter below is truth.
+              const softStart = `${periodStart}T00:00:00+08:00`
               let q = supabase
                 .from('expenses')
-                .select('description, total_minor, branch, expense_kind')
+                .select('description, total_minor, branch, expense_kind, created_at')
                 .or('description.like.ceramic:%,description.like.detailing:%')
-                .gte('created_at', startIso)
-                .lte('created_at', endIso)
+                .gte('created_at', softStart)
               if (branch) q = q.eq('branch', branch)
               const { data, error } = await q.range(from, to)
               if (error) throw error
@@ -372,18 +381,18 @@ export default function PayrollPage() {
               if (error) throw error
               return data || []
             }, 1000),
-        (() => {
-          let q = supabase
-            .from('staff_pay_packages')
-            .select(
-              'id, staff_id, package_kind, amount_minor, effective_from, notes, is_active, branch, staff_profiles(id, full_name, branch_slug, role)',
-            )
-            .eq('is_active', true)
-            .lte('effective_from', periodEnd)
-          // Fixed salary: company-wide packages (any / null branch). Floor: bay packages only.
-          if (!isFixed && branch) q = q.eq('branch', branch)
-          return q
-        })(),
+        isFixed
+          ? (() => {
+              let q = supabase
+                .from('staff_pay_packages')
+                .select(
+                  'id, staff_id, package_kind, amount_minor, effective_from, notes, is_active, branch, staff_profiles(id, full_name, branch_slug, role)',
+                )
+                .eq('is_active', true)
+                .lte('effective_from', periodEnd)
+              return q
+            })()
+          : Promise.resolve({ data: [], error: null }),
         supabase
           .from('staff_profiles')
           .select('id, full_name, role, branch_slug')
@@ -392,7 +401,7 @@ export default function PayrollPage() {
       ])
       if (pkgRows.error) throw pkgRows.error
       if (staffRows.error) throw staffRows.error
-      setPackages(pkgRows.data || [])
+      if (isFixed) setPackages(pkgRows.data || [])
       setStaffRoster(staffRows.data || [])
 
       const attendance = (attRows || []).map((row) => ({
@@ -404,23 +413,37 @@ export default function PayrollPage() {
         attendance_date: row.attendance_date,
         status: row.status,
       }))
-      const packageInput = (pkgRows.data || []).map((p) => ({
-        ...p,
-        staff: p.staff_profiles,
-        staff_name: p.staff_profiles?.full_name,
-        branch: p.branch,
-      }))
-      const next = buildPayrollPreview({
+      const packageInput = isFixed
+        ? (pkgRows.data || []).map((p) => ({
+            ...p,
+            staff: p.staff_profiles,
+            staff_name: p.staff_profiles?.full_name,
+            branch: p.branch,
+          }))
+        : []
+      const ceramicForSales = filterCeramicExpensesForSales(expRows, salesRows)
+      let next = buildPayrollPreview({
         period: { start: periodStart, end: periodEnd },
         rules,
         sales: salesRows,
         attendance,
-        ceramicExpenses: expRows,
+        ceramicExpenses: ceramicForSales,
         claimedSaleIds: (claimedRows || []).map((r) => r.sale_id),
         packages: packageInput,
         runKind,
         frequency,
       })
+      if (!isFixed) {
+        const drafts = collectSalaryDraftExtrasFromCloses(pendingCloses, {
+          branch,
+          periodStart,
+          periodEnd,
+          readyOnly: true,
+        })
+        if (drafts.length) {
+          next = applySalaryDraftExtrasToPreview(next, drafts, staffRows.data || [])
+        }
+      }
       setPreview(next)
       setStep(1)
       toast.success(
@@ -448,6 +471,10 @@ export default function PayrollPage() {
   }
 
   async function confirmRun() {
+    if (preview?.run_kind && preview.run_kind !== 'all' && preview.run_kind !== runKind) {
+      toast.error(`Preview is ${preview.run_kind} pay — switch type or reload proof before confirming`)
+      return
+    }
     const closeGate = floorConfirmBlockedByPendingCloses({
       pendingFloorOptional: rules.pending_floor_optional,
       runKind,
@@ -580,6 +607,26 @@ export default function PayrollPage() {
                         <p className="mt-2 text-xs text-muted-foreground">
                           {group.days.map((d) => d.business_date).join(' · ')}
                         </p>
+                        {group.salary_draft_extras?.length ? (
+                          <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/30 px-2 py-1.5 text-xs">
+                            <p className="font-medium text-foreground">
+                              BA salary drafts · {group.salary_draft_extras.length}
+                            </p>
+                            <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                              {group.salary_draft_extras.slice(0, 6).map((e, i) => (
+                                <li key={`${e.staff_name}-${e.amount_minor}-${i}`} className="tabular-nums">
+                                  {e.kind === 'deduction' ? 'Deduct' : 'Extra'} · {e.staff_name} ·{' '}
+                                  {formatMoney(e.amount_minor)}
+                                  {e.note ? ` · ${e.note}` : ''}
+                                  {e.business_date ? ` · ${e.business_date}` : ''}
+                                </li>
+                              ))}
+                              {group.salary_draft_extras.length > 6 ? (
+                                <li>+{group.salary_draft_extras.length - 6} more</li>
+                              ) : null}
+                            </ul>
+                          </div>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {group.ready_count > 0 ? (
@@ -1383,7 +1430,7 @@ export default function PayrollPage() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="rule-day">Typical payday</Label>
+                <Label htmlFor="rule-day">Typical payday (reminder)</Label>
                 <NamedSelect
                   id="rule-day"
                   value={String(rules.payout_weekday)}
@@ -1391,6 +1438,9 @@ export default function PayrollPage() {
                   onChange={(value) => setRules((prev) => ({ ...prev, payout_weekday: Number(value) }))}
                   options={WEEKDAYS}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Label only — period math still uses the frequency windows above (not this weekday).
+                </p>
               </div>
               {[
                 { key: 'wash_pool_pct', label: 'Wash pool %', step: '1' },

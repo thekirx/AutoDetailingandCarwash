@@ -30,6 +30,9 @@ export default function ShiftCloseWizard({
   setShiftReasons,
   shiftFieldErrors,
   setShiftFieldErrors,
+  salaryDraftExtras = [],
+  setSalaryDraftExtras,
+  staffOptions = [],
   onSubmit,
   shiftSubmitting,
 }) {
@@ -52,6 +55,44 @@ export default function ShiftCloseWizard({
     }
     return baselineSnap[key] || 0
   }
+
+  function addSalaryDraft() {
+    if (!setSalaryDraftExtras) return
+    setSalaryDraftExtras((prev) => [
+      ...(prev || []),
+      { staff_id: '', staff_name: '', amount_pesos: '', note: '', kind: 'extra' },
+    ])
+  }
+
+  function updateSalaryDraft(idx, patch) {
+    if (!setSalaryDraftExtras) return
+    setSalaryDraftExtras((prev) =>
+      (prev || []).map((row, i) => {
+        if (i !== idx) return row
+        const next = { ...row, ...patch }
+        if (Object.prototype.hasOwnProperty.call(patch, 'staff_id')) {
+          const opt = (staffOptions || []).find((s) => String(s.id) === String(patch.staff_id))
+          if (opt) next.staff_name = opt.full_name
+        }
+        return next
+      }),
+    )
+  }
+
+  function removeSalaryDraft(idx) {
+    if (!setSalaryDraftExtras) return
+    setSalaryDraftExtras((prev) => (prev || []).filter((_, i) => i !== idx))
+  }
+
+  /** UI rows use amount_pesos; PosPage maps via attachSalaryDraftExtras. */
+  const draftRowsForSubmit = (salaryDraftExtras || []).map((row) => ({
+    staff_id: row.staff_id || null,
+    staff_name: row.staff_name,
+    amount_minor:
+      row.amount_minor != null ? row.amount_minor : parsePesosToMinor(row.amount_pesos) ?? 0,
+    note: row.note,
+    kind: row.kind,
+  }))
 
   function renderField(key) {
     const cfg = shiftFieldConfig.find((f) => f.field_key === key)
@@ -111,6 +152,94 @@ export default function ShiftCloseWizard({
       </div>
     )
   }
+
+  const salaryDraftPanel = setSalaryDraftExtras ? (
+    <div className="space-y-2 rounded-xl border border-dashed border-border p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-bold tracking-wide text-muted-foreground uppercase">
+            Salary drafts (not payroll)
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Extra pay or deductions for SA to see on floor confirm — does not post pay.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="min-h-9" onClick={addSalaryDraft}>
+          Add draft
+        </Button>
+      </div>
+      {(salaryDraftExtras || []).map((row, idx) => (
+        <div key={idx} className="grid gap-2 rounded-lg border border-border bg-card/40 p-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Staff</Label>
+            {staffOptions.length ? (
+              <select
+                className="min-h-10 rounded-md border border-input bg-background px-2 text-sm"
+                value={row.staff_id || ''}
+                onChange={(e) => updateSalaryDraft(idx, { staff_id: e.target.value })}
+              >
+                <option value="">Name only…</option>
+                {staffOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                className="min-h-10"
+                placeholder="Staff name"
+                value={row.staff_name || ''}
+                onChange={(e) => updateSalaryDraft(idx, { staff_name: e.target.value })}
+              />
+            )}
+            {staffOptions.length && !row.staff_id ? (
+              <Input
+                className="min-h-10"
+                placeholder="Or type staff name"
+                value={row.staff_name || ''}
+                onChange={(e) => updateSalaryDraft(idx, { staff_name: e.target.value })}
+              />
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Kind</Label>
+            <select
+              className="min-h-10 rounded-md border border-input bg-background px-2 text-sm"
+              value={row.kind || 'extra'}
+              onChange={(e) => updateSalaryDraft(idx, { kind: e.target.value })}
+            >
+              <option value="extra">Extra pay</option>
+              <option value="deduction">Deduction</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Amount (₱)</Label>
+            <Input
+              inputMode="decimal"
+              className="min-h-10"
+              value={row.amount_pesos ?? (row.amount_minor != null ? minorToPesosInput(row.amount_minor) : '')}
+              onChange={(e) => updateSalaryDraft(idx, { amount_pesos: e.target.value })}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Note</Label>
+            <div className="flex gap-2">
+              <Input
+                className="min-h-10"
+                value={row.note || ''}
+                onChange={(e) => updateSalaryDraft(idx, { note: e.target.value })}
+                placeholder="Optional"
+              />
+              <Button type="button" variant="ghost" className="min-h-10 shrink-0" onClick={() => removeSalaryDraft(idx)}>
+                Remove
+              </Button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : null
 
   return (
     <div className="space-y-4 text-sm">
@@ -211,6 +340,7 @@ export default function ShiftCloseWizard({
             </p>
           ) : null}
           {keysForStep().map(renderField)}
+          {stepMeta.id === 'detail' ? salaryDraftPanel : null}
         </div>
       ) : null}
 
@@ -231,6 +361,20 @@ export default function ShiftCloseWizard({
               )
             })}
           </ul>
+          {draftRowsForSubmit.filter((r) => r.staff_name && r.amount_minor > 0).length ? (
+            <div className="rounded-xl border border-border p-3 text-xs">
+              <p className="font-medium">Salary drafts for SA</p>
+              <ul className="mt-1 space-y-1 text-muted-foreground">
+                {draftRowsForSubmit
+                  .filter((r) => r.staff_name && r.amount_minor > 0)
+                  .map((r, i) => (
+                    <li key={i} className="tabular-nums">
+                      {r.kind === 'deduction' ? 'Deduct' : 'Extra'} · {r.staff_name} · {formatMoney(r.amount_minor)}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ) : null}
           <p className="text-xs text-muted-foreground">
             Ended · {shiftEndedAtLocal ? shiftEndedAtLocal.replace('T', ' ') : '—'}
           </p>

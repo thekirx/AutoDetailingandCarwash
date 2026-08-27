@@ -9,5 +9,7 @@ export function isPaymentHandoffStatus(status) {
 
 /** Statuses that may enter the payment RPC (matches send_queue_ticket_to_payment). */
 export function canEnterPaymentHandoff(currentStatus) {
-  return ['final_checking', 'for_payment', 'completed', 'in_progress'].includes(String(currentStatus || ''))
+  return ['final_checking', 'for_releasing', 'for_payment', 'completed', 'in_progress'].includes(
+    String(currentStatus || ''),
+  )
 }

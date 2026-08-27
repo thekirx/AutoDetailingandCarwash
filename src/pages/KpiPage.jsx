@@ -5,6 +5,7 @@ import { canAccessInquiries, canSeeAllBranches, canSeeAllKpiBranches, getBranchS
 import { listBranches } from '@/lib/adminApi'
 import { applyBranchScope, collectPaged, resolveKpiRpcBranch } from '@/lib/crmInsights'
 import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaCount, kpiStatHover } from '@/lib/kpiPart8'
+import { isOverSla } from '@/lib/ownerRevisionsPhase7'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import {
@@ -164,7 +165,7 @@ export default function KpiPage() {
 
   useEffect(() => {
     listBranches().then(setBranches).catch(() => {})
-    supabase.from('services').select('id, name').eq('is_active', true).then(({ data }) => setServices(data || []))
+    supabase.from('services').select('id, name, sla_minutes').eq('is_active', true).then(({ data }) => setServices(data || []))
   }, [])
 
   useEffect(() => {
@@ -173,6 +174,10 @@ export default function KpiPage() {
 
   const serviceNames = useMemo(
     () => Object.fromEntries(services.map((s) => [s.id, s.name])),
+    [services],
+  )
+  const serviceSla = useMemo(
+    () => Object.fromEntries(services.map((s) => [s.id, s.sla_minutes])),
     [services],
   )
   const avgCycle = useMemo(() => averageCycleMinutes(bookings), [bookings])
@@ -351,7 +356,15 @@ export default function KpiPage() {
                     <TableRow key={r.service_id}>
                       <TableCell>{r.name}</TableCell>
                       <TableCell>{r.count}</TableCell>
-                      <TableCell>{r.avg_min ?? '—'}</TableCell>
+                      <TableCell
+                        className={
+                          isOverSla(r.avg_min, serviceSla[r.service_id])
+                            ? 'font-semibold text-red-600 dark:text-red-400'
+                            : ''
+                        }
+                      >
+                        {r.avg_min ?? '—'}
+                      </TableCell>
                     </TableRow>
                   ))}
                   {!byService.length && (

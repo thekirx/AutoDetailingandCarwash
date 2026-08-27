@@ -1,27 +1,38 @@
-/** Super Admin inventory — bay services/packages, detailing, and merch. */
+/** Inventory — SA/ASA catalog tabs; BA (and SA) branch restock / Sunday recon. */
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessInventory } from '@/auth/permissions'
+import { canAccessInventory, canManageServices, canRestockInventory } from '@/auth/permissions'
 import ServicesManagePage from '@/pages/ServicesManagePage'
 import ProductsManagePage from '@/pages/ProductsManagePage'
+import BranchInventoryPage from '@/pages/BranchInventoryPage'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-const INVENTORY_TABS = ['bay', 'detailing', 'merch']
+const CATALOG_TABS = ['bay', 'detailing', 'merch', 'stock']
+const BA_TABS = ['restock', 'recon']
 
 export default function InventoryPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
+  const canCatalog = canManageServices(profile)
+  const canStock = canRestockInventory(profile)
   const raw = searchParams.get('tab')
-  // Legacy ?tab=services → bay
-  const tab = INVENTORY_TABS.includes(raw)
-    ? raw
-    : raw === 'services'
-      ? 'bay'
-      : 'bay'
 
   if (!canAccessInventory(profile)) {
     return <Navigate to="/operations/pos" replace />
   }
+
+  // BA-only: restock/recon via BranchInventoryPage (its own tabs).
+  if (!canCatalog && canStock) {
+    return <BranchInventoryPage />
+  }
+
+  const tab = CATALOG_TABS.includes(raw)
+    ? raw
+    : raw === 'services'
+      ? 'bay'
+      : BA_TABS.includes(raw)
+        ? 'stock'
+        : 'bay'
 
   function setTab(next) {
     setSearchParams(next === 'bay' ? {} : { tab: next }, { replace: true })
@@ -34,7 +45,7 @@ export default function InventoryPage() {
           <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">Catalog</p>
           <h1>Inventory</h1>
           <p>
-            Create bay services and packages, multi-day detailing, and merch stock — same split as POS Sell.
+            Create bay services and packages, multi-day detailing, merch stock, and branch restock / Sunday recon.
           </p>
         </div>
       </header>
@@ -53,6 +64,11 @@ export default function InventoryPage() {
           <TabsTrigger value="merch" className="min-h-11 min-w-[7rem] flex-1">
             Merch / sellables
           </TabsTrigger>
+          {canStock ? (
+            <TabsTrigger value="stock" className="min-h-11 min-w-[7rem] flex-1">
+              Branch stock
+            </TabsTrigger>
+          ) : null}
         </TabsList>
         <TabsContent value="bay" className="mt-0 outline-none">
           <ServicesManagePage embedded catalogScope="bay" />
@@ -63,6 +79,11 @@ export default function InventoryPage() {
         <TabsContent value="merch" className="mt-0 outline-none">
           <ProductsManagePage embedded />
         </TabsContent>
+        {canStock ? (
+          <TabsContent value="stock" className="mt-0 outline-none">
+            <BranchInventoryPage embedded />
+          </TabsContent>
+        ) : null}
       </Tabs>
     </section>
   )

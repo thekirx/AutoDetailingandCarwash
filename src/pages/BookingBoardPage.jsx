@@ -53,6 +53,12 @@ import {
 } from '@/queue/queueLogic'
 import { assignStaff, fetchPresentAssignableStaff, fetchServices } from '@/queue/queueApi'
 import { filterFloorDetailingServices, isBookingBoardRow } from '@/lib/serviceKinds'
+import {
+  COMPLETION_OUTCOMES,
+  bookingCalendarEventPropGetter,
+  bookingCalendarEventTitle,
+  bookingUpdateObjectPath,
+} from '@/lib/detailingCompletion'
 import CancellationReasonDialog from '@/components/CancellationReasonDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -308,6 +314,10 @@ export default function BookingBoardPage() {
   const [assignBranchDialog, setAssignBranchDialog] = useState(null)
   const [assignBranchSlug, setAssignBranchSlug] = useState('')
   const [assignBranchSaving, setAssignBranchSaving] = useState(false)
+  const [statusDialog, setStatusDialog] = useState(null)
+  const [statusOutcome, setStatusOutcome] = useState('')
+  const [statusPhotoFiles, setStatusPhotoFiles] = useState([])
+  const [statusSaving, setStatusSaving] = useState(false)
   const formServices = useMemo(() => filterFloorDetailingServices(services), [services])
   const boardStatuses = useMemo(() => getBookingBoardStatuses(profile), [profile])
   const visibleColumns = useMemo(
@@ -482,7 +492,7 @@ export default function BookingBoardPage() {
         const end = b.scheduled_end ? new Date(b.scheduled_end) : new Date(start.getTime() + 60 * 60_000)
         return {
           id: b.id,
-          title: `${b.customer_name} · ${b.vehicle_plate || b.branch}`,
+          title: bookingCalendarEventTitle(b),
           start,
           end,
           resource: b,
@@ -556,7 +566,39 @@ export default function BookingBoardPage() {
       }
       return
     }
-    await applyStatusMove(booking, status)
+    setStatusOutcome('')
+    setStatusPhotoFiles([])
+    setStatusDialog({ booking, status })
+  }
+
+  async function confirmStatusMove() {
+    if (!statusDialog) return
+    const { booking, status } = statusDialog
+    if (status === 'completed' && !statusOutcome) {
+      toast.error('Pick a completion outcome.')
+      return
+    }
+    setStatusSaving(true)
+    try {
+      let notifyPhotos = false
+      for (const file of statusPhotoFiles) {
+        const path = bookingUpdateObjectPath(booking.id, file.name)
+        if (!path) continue
+        const { error: upErr } = await supabase.storage.from('booking-updates').upload(path, file, { upsert: false })
+        if (upErr) {
+          toast.error(upErr.message || 'Photo upload failed')
+          return
+        }
+        notifyPhotos = true
+      }
+      const ok = await applyStatusMove(booking, status, {
+        ...(status === 'completed' ? { completion_outcome: statusOutcome } : {}),
+        ...(notifyPhotos ? { notify_photos: true } : {}),
+      })
+      if (ok) setStatusDialog(null)
+    } finally {
+      setStatusSaving(false)
+    }
   }
 
   async function confirmAssignBranch() {
@@ -1214,13 +1256,14 @@ export default function BookingBoardPage() {
         <TabsContent value="calendar" className="mt-4">
           <Card className="overflow-hidden">
             <CardContent className="p-3 sm:p-4">
-              <div className="booking-calendar planning-calendar min-h-[28rem] text-foreground [&_.rbc-toolbar]:mb-3 [&_.rbc-toolbar_button]:min-h-10 [&_.rbc-toolbar_button]:cursor-pointer [&_.rbc-toolbar_button]:rounded-md [&_.rbc-toolbar_button]:border [&_.rbc-toolbar_button]:border-border [&_.rbc-toolbar_button]:bg-background [&_.rbc-toolbar_button]:px-3 [&_.rbc-toolbar_button]:text-foreground [&_.rbc-month-view]:rounded-xl [&_.rbc-month-view]:border [&_.rbc-month-view]:border-border [&_.rbc-time-header]:min-h-12 [&_.rbc-time-header-content_.rbc-header]:min-h-11 [&_.rbc-time-header-content_.rbc-header]:flex [&_.rbc-time-header-content_.rbc-header]:items-center [&_.rbc-time-header-content_.rbc-header]:justify-center [&_.rbc-header]:border-border [&_.rbc-header]:bg-muted/50 [&_.rbc-header]:py-2 [&_.rbc-header]:text-xs [&_.rbc-header]:font-semibold [&_.rbc-header]:text-foreground [&_.rbc-off-range-bg]:bg-muted/30 [&_.rbc-today]:bg-primary/5 [&_.rbc-event]:border-0 [&_.rbc-event]:bg-primary [&_.rbc-event]:text-primary-foreground [&_.rbc-time-content]:border-border [&_.rbc-timeslot-group]:border-border [&_.rbc-day-bg]:border-border [&_.rbc-month-row]:border-border [&_.rbc-label]:text-muted-foreground">
+              <div className="booking-calendar planning-calendar min-h-[28rem] text-foreground [&_.rbc-toolbar]:mb-3 [&_.rbc-toolbar_button]:min-h-10 [&_.rbc-toolbar_button]:cursor-pointer [&_.rbc-toolbar_button]:rounded-md [&_.rbc-toolbar_button]:border [&_.rbc-toolbar_button]:border-border [&_.rbc-toolbar_button]:bg-background [&_.rbc-toolbar_button]:px-3 [&_.rbc-toolbar_button]:text-foreground [&_.rbc-month-view]:rounded-xl [&_.rbc-month-view]:border [&_.rbc-month-view]:border-border [&_.rbc-time-header]:min-h-12 [&_.rbc-time-header-content_.rbc-header]:min-h-11 [&_.rbc-time-header-content_.rbc-header]:flex [&_.rbc-time-header-content_.rbc-header]:items-center [&_.rbc-time-header-content_.rbc-header]:justify-center [&_.rbc-header]:border-border [&_.rbc-header]:bg-muted/50 [&_.rbc-header]:py-2 [&_.rbc-header]:text-xs [&_.rbc-header]:font-semibold [&_.rbc-header]:text-foreground [&_.rbc-off-range-bg]:bg-muted/30 [&_.rbc-today]:bg-primary/5 [&_.rbc-event]:border-0 [&_.rbc-time-content]:border-border [&_.rbc-timeslot-group]:border-border [&_.rbc-day-bg]:border-border [&_.rbc-month-row]:border-border [&_.rbc-label]:text-muted-foreground">
                 <BigCalendar
                   localizer={localizer}
                   events={calendarEvents}
                   defaultView={Views.WEEK}
                   views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
                   dayLayoutAlgorithm="no-overlap"
+                  eventPropGetter={bookingCalendarEventPropGetter}
                   formats={{
                     dayFormat: (date, culture, loc) => loc.format(date, 'EEE M/d', culture),
                     dayHeaderFormat: (date, culture, loc) => loc.format(date, 'EEE MMM d', culture),
@@ -1496,6 +1539,64 @@ export default function BookingBoardPage() {
             </Button>
             <Button type="button" className="cursor-pointer" disabled={crewLoading || !crewOptions.length} onClick={confirmCrewStart}>
               {crewLoading ? 'Starting…' : 'Assign & start'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(statusDialog)}
+        onOpenChange={(open) => {
+          if (!open) setStatusDialog(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {statusDialog?.status === 'completed'
+                ? 'Complete detailing visit'
+                : `Move to ${detailingBoardStatusLabel(statusDialog?.status) || statusDialog?.status || 'next'}`}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            {statusDialog?.status === 'completed' ? (
+              <div className="grid gap-2">
+                <Label htmlFor="bk-outcome">Completion outcome</Label>
+                <Select value={statusOutcome || undefined} onValueChange={setStatusOutcome}>
+                  <SelectTrigger id="bk-outcome" className="min-h-11 cursor-pointer">
+                    <SelectValue placeholder="Select outcome" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMPLETION_OUTCOMES.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+            <div className="grid gap-2">
+              <Label htmlFor="bk-update-photos">Progress photos (optional)</Label>
+              <Input
+                id="bk-update-photos"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic"
+                multiple
+                className="min-h-11 cursor-pointer"
+                onChange={(e) => setStatusPhotoFiles([...e.target.files || []])}
+              />
+              <p className="text-xs text-muted-foreground">
+                Photos upload to a private folder for this visit. Customer gets SMS + push when attached.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setStatusDialog(null)} disabled={statusSaving}>
+              Cancel
+            </Button>
+            <Button type="button" className="cursor-pointer" disabled={statusSaving} onClick={confirmStatusMove}>
+              {statusSaving ? 'Saving…' : 'Confirm'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1672,7 +1672,7 @@ export function CrewPage() {
                     return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
                   }}
                 />
-              </Panel>
+        </Panel>
               <Panel title="Deployable (not on a ticket)" icon={Users}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
       </div>
           )}

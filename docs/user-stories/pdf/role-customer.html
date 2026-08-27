@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Role — Customer &amp; guest</title>
+<style>
+  :root {
+    --blue: #052699; --navy: #020a31; --ink: #0f172a; --muted: #64748b;
+    --paper: #f7f8fb; --line: #e2e8f0; --ok: #15803d; --ok-bg: #f0fdf4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 16px/1.55 "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 420px at 10% -10%, rgba(5,38,153,.12), transparent 60%),
+      linear-gradient(180deg, #eef1f8 0%, var(--paper) 28%, #fff 100%);
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 18px 64px; }
+  header.hero {
+    padding: 28px; border-radius: 18px; color: #f1f1ed;
+    background:
+      radial-gradient(circle at 85% 15%, #2d59d3, transparent 42%),
+      linear-gradient(145deg, #03156b 0%, var(--navy) 55%, #01061c 100%);
+  }
+  header.hero .eyebrow { margin: 0 0 10px; font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; opacity: .78; }
+  header.hero h1 { margin: 0 0 8px; font-size: clamp(1.45rem, 3vw, 2rem); font-weight: 700; }
+  header.hero p { margin: 0; max-width: 58ch; opacity: .9; }
+  header.hero .meta { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.18); font-size: 12px; opacity: .85; }
+  .tabs {
+    display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 0; padding: 10px;
+    border-radius: 14px; background: #fff; border: 1px solid var(--line);
+    position: sticky; top: 6px; z-index: 5;
+  }
+  .tab-btn {
+    appearance: none; border: 0; cursor: pointer; padding: 8px 12px; border-radius: 999px;
+    background: transparent; color: var(--muted); font: 700 11px/1.2 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: .03em;
+  }
+  .tab-btn:hover { color: var(--blue); background: rgba(5,38,153,.06); }
+  .tab-btn.active { color: #fff; background: var(--blue); }
+  .tab-panel { display: none; margin-top: 20px; }
+  .tab-panel.active { display: block; }
+  .tab-intro { margin: 0 0 16px; padding: 12px 14px; border-left: 3px solid var(--blue); background: #fff; border-radius: 0 10px 10px 0; color: var(--muted); }
+  .role-card { margin: 0 0 16px; padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; }
+  .block { margin: 0 0 22px; padding: 20px 22px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+  .block h2 { margin: 0 0 8px; font-size: 1.2rem; color: var(--navy); }
+  .lead { margin: 0 0 12px; color: var(--muted); }
+  .story { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
+  .story .as, .story .want, .story .so { margin: 4px 0; }
+  ul.ac { list-style: none; padding: 8px 0 0; margin: 8px 0 0; }
+  ul.ac li { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0; padding: 8px 10px; border-radius: 8px; background: var(--ok-bg); }
+  ul.ac .box { flex: 0 0 18px; height: 18px; margin-top: 2px; border-radius: 4px; border: 1.5px solid var(--ok); display: grid; place-items: center; font-size: 11px; font-weight: 800; color: var(--ok); background: #fff; }
+  .table-wrap { overflow: auto; margin: 12px 0 8px; border: 1px solid var(--line); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: #f1f5f9; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .chart-card { margin: 0 0 24px; padding: 16px 18px 20px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+  .chart-head h2 { margin: 0 0 6px; font-size: 1.08rem; color: var(--navy); }
+  .chart-head p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+  .mermaid { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow: auto; min-height: 120px; }
+  .mermaid svg { max-width: 100%; height: auto; }
+  footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  ol, ul:not(.ac) { margin: .5em 0 .9em; padding-left: 1.25em; }
+  p { margin: .55em 0; }
+  @media print {
+    body { background: #fff; }
+    .tabs { display: none !important; }
+    .tab-panel { display: block !important; break-before: page; page-break-before: always; }
+    .tab-panel:first-of-type { break-before: avoid; page-break-before: avoid; }
+    .tab-panel::before {
+      content: attr(data-print-title);
+      display: block; margin: 0 0 14px; font-size: 18px; font-weight: 800; color: var(--navy);
+      padding-bottom: 8px; border-bottom: 2px solid var(--blue);
+    }
+    header.hero { box-shadow: none; }
+    .block, .chart-card, .story { box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+    .mermaid { break-inside: avoid; page-break-inside: avoid; }
+  }
+
+.tabs { display: none !important; }
+.tab-panel { display: block !important; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head><body>
+<div class="wrap">
+<header class="hero">
+  <p class="eyebrow">Hakum Auto Care · Owner pack</p>
+  <h1>Role — Customer &amp; guest</h1>
+  <p>Account, garage, history. Guests see lobby queue. Never staff tools.</p>
+</header>
+<section class="tab-panel active" data-print-title="Role — Customer &amp; guest">
+<div class="role-card"><p><strong>Opens first:</strong> My account · <strong>Main job:</strong> Garage, history, queue status</p></div>
+<article class="chart-card">
+  <div class="chart-head">
+    <h2>Customer &amp; guest</h2>
+    <p>Account for signed-in customers; public queue for the lobby.</p>
+  </div>
+  <pre class="mermaid">flowchart TB
+  Guest[Lobby guest] --> PQ[Public queue status]
+  Cust[Signed-in customer] --> Acc[My account]
+  Acc --> Gar[Garage and history]
+  Acc --> AQ[Account queue]
+  Cust -.->|Never| Ops[Staff tools]</pre>
+</article>
+<section class="block">
+  <h2>Stories</h2>
+  
+  <article class="story">
+  <p class="as"><strong>As</strong> a customer</p>
+  <p class="want"><strong>I want</strong> phone sign-in / signup / claim</p>
+  <p class="so"><strong>So that</strong> visit history stays on one customer profile</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Clear steps: phone → name/plate → birthday perk → password</span></li><li class="done"><span class="box">✓</span><span>Team Lead can pre-create an account that still needs a password</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> a signed-in customer</p>
+  <p class="want"><strong>I want</strong> vehicles and past visits</p>
+  <p class="so"><strong>So that</strong> I recognize my plates at the bay</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Garage and history in the account app</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> a guest in the lobby</p>
+  <p class="want"><strong>I want</strong> public queue status by branch</p>
+  <p class="so"><strong>So that</strong> I see progress without logging in</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Public queue shows only safe status info</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> a customer</p>
+  <p class="want"><strong>I want</strong> My account as home</p>
+  <p class="so"><strong>So that</strong> I never open staff Payroll / People / POS</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Home is My account</span></li><li class="done"><span class="box">✓</span><span>Staff operations stay blocked</span></li></ul>
+</article>
+</section>
+</section>
+</div>
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis', htmlLabels: true } })
+</script>
+</body></html>

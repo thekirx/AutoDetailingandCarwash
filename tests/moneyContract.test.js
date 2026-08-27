@@ -33,8 +33,10 @@ describe('money contract seams', () => {
       runs: [],
       posProofByKey: proof,
     })
-    assert.equal(q.days[0].close_sales_minor, 2000000)
-    assert.equal(q.days[0].pos_proof_minor, 2175000)
+    // Public seam: days array with .groups / .ready_day_count attached (Payroll page).
+    assert.equal(q.length, 1)
+    assert.equal(q[0].close_sales_minor, 2000000)
+    assert.equal(q[0].pos_proof_minor, 2175000)
     assert.equal(q.groups[0].pos_proof_known, true)
   })
 
@@ -92,5 +94,15 @@ describe('money contract seams', () => {
       shiftCloseHasActivity({ sales: [{ status: 'paid', total_minor: 100 }] }),
       true,
     )
+  })
+
+  it('Branch Admin cannot access or run payroll (BA drafts only)', async () => {
+    const { canAccessPayroll, canRunPayroll, ROLES } = await import('../src/auth/permissions.js')
+    const ba = { role: ROLES.ADMIN, id: 'ba-1' }
+    assert.equal(canAccessPayroll(ba), false)
+    assert.equal(canRunPayroll(ba), false)
+    const boss = { role: ROLES.SUPER_ADMIN, id: 'sa-1' }
+    assert.equal(canAccessPayroll(boss), true)
+    assert.equal(canRunPayroll(boss), true)
   })
 })

@@ -26,7 +26,13 @@ import {
   validateCrewUsername,
 } from './queueLogic'
 import { writeAudit } from '../lib/audit'
+import { aggregateBestSellers, collectInChunks, collectPaged } from '../lib/crmInsights'
 import { splitFloorBoardLanes, sumFloorLaneCounts } from '../lib/floorBoardLanes'
+import {
+  aggregateCarSizePerSale,
+  aggregateChemicalUsageByWeek,
+  chemicalUsageNeedsStub,
+} from '../lib/ownerRevisionsPhase7'
 import { resolveServicePriceMinor } from '../lib/servicePricing'
 import { createTtlCache } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
@@ -40,7 +46,6 @@ import {
 } from '../lib/queueCustomerName'
 import { isValidCustomerPlate } from '../lib/customerAuth'
 import { plateSuggestPrefix, PLATE_SUGGEST_LIMIT, rankPlateSuggestions } from '../lib/plateSuggest'
-import { collectPaged } from '../lib/crmInsights'
 
 const timingWarningsCache = createTtlCache(120_000)
 
@@ -62,6 +67,8 @@ export const QUEUE_BOARD_SELECT = `
   vehicle_type,
   service_id,
   service_name,
+  service_duration_minutes,
+  service_sla_minutes,
   base_price_minor,
   final_price_minor,
   assigned_staff_id,
@@ -75,8 +82,12 @@ export const QUEUE_BOARD_SELECT = `
   created_at,
   notes,
   visit_group_id,
+  waiting_at,
   in_progress_at,
   final_checking_at,
+  for_payment_at,
+  completed_at,
+  cancelled_at,
   redo_at,
   redo_reason,
   service_pay_category
@@ -367,6 +378,9 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
       kpi: { total_wait_minutes: 0, avg_service_minutes: null, failed_qa_count: 0, cancelled_count: 0 },
       recentSales: [],
       adminRoster: [],
+      carSizeBySale: [],
+      bestSellers: [],
+      chemicalUsage: { stub: true, weeks: [] },
     }
   }
 
@@ -374,7 +388,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     'id, branch, status, queue_number, customer_name, vehicle_plate, vehicle_make, vehicle_model, service_id, final_price_minor, price_minor, waiting_at, in_progress_at, final_checking_at, for_payment_at, completed_at, cancelled_at, redo_at, created_at, notes, services(name, pay_category)'
 
   const salesSelect =
-    'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, queue_number, services(name, pay_category))'
+    'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, vehicle_type, queue_number, services(name, pay_category))'
 
   let adminStaffQuery = supabase
     .from('staff_profiles')
@@ -481,6 +495,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
   const startedJobs = (startedRows || []).map(toJob)
   const salesRows = (salesRaw || []).map((row) => ({
     ...row,
+    vehicle_type: row.bookings?.vehicle_type || null,
     pay_category: row.bookings?.services?.pay_category || null,
     service_name: row.bookings?.services?.name || null,
   }))
@@ -508,6 +523,72 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     periodJobs,
   })
 
+  // Phase 7: car size / best sellers / chemical usage (recon or stub)
+  let bestSellers = []
+  let chemicalUsage = { stub: true, weeks: [] }
+  try {
+    const saleIds = salesRows.map((r) => r.id).filter(Boolean).slice(0, 400)
+    if (saleIds.length) {
+      const lineRows = await collectInChunks(saleIds, async (chunk, from, to) => {
+        const { data, error } = await supabase
+          .from('sale_line_items')
+          .select('name, item_type, line_total_minor, sale_id')
+          .in('sale_id', chunk)
+          .order('id', { ascending: true })
+          .range(from, to)
+        if (error) throw error
+        return data || []
+      })
+      bestSellers = aggregateBestSellers(lineRows, 8)
+    }
+  } catch (err) {
+    console.warn('Floor board best sellers unavailable', err?.message || err)
+  }
+
+  try {
+    let reconQuery = supabase
+      .from('inventory_recons')
+      .select(
+        'id, branch_slug, week_of, status, inventory_recon_lines(product_id, previous_qty, leftover_qty)',
+      )
+      .in('status', ['submitted', 'approved'])
+      .gte('week_of', start)
+      .lte('week_of', end)
+      .order('week_of', { ascending: true })
+      .limit(40)
+    if (branchScope && branchScope !== 'all' && typeof branchScope === 'string') {
+      reconQuery = reconQuery.eq('branch_slug', branchScope)
+    }
+    const { data: recons, error: reconErr } = await reconQuery
+    if (reconErr) throw reconErr
+    if (chemicalUsageNeedsStub(recons)) {
+      chemicalUsage = { stub: true, weeks: [] }
+    } else {
+      const productIds = [
+        ...new Set(
+          (recons || []).flatMap((r) =>
+            (r.inventory_recon_lines || []).map((l) => l.product_id).filter(Boolean),
+          ),
+        ),
+      ]
+      let productById = {}
+      if (productIds.length) {
+        const { data: products } = await supabase
+          .from('products')
+          .select('id, name, price_minor')
+          .in('id', productIds)
+        productById = Object.fromEntries((products || []).map((p) => [p.id, p]))
+      }
+      chemicalUsage = {
+        stub: false,
+        weeks: aggregateChemicalUsageByWeek(recons || [], productById),
+      }
+    }
+  } catch (err) {
+    console.warn('Floor board chemical usage unavailable', err?.message || err)
+    chemicalUsage = { stub: true, weeks: [], error: String(err?.message || err) }
+  }
+
   return {
     ...snapshot,
     laneCounts: sumFloorLaneCounts(laneCountsByFamily),
@@ -517,6 +598,9 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     kpi,
     recentSales: salesRows.slice(0, 40),
     adminRoster: buildAdminRoster(adminStaffRes.data || []),
+    carSizeBySale: aggregateCarSizePerSale(salesRows),
+    bestSellers,
+    chemicalUsage,
   }
 }
 
@@ -1223,6 +1307,13 @@ export async function markTicketRedo(ticket, reason = '') {
   const note = String(reason || '').trim()
   const now = new Date().toISOString()
   const lineIds = await getVisitLineIds(ticket)
+  // Capture prior crew so Failed QA counts against them and restart keeps the same people.
+  const { data: priorAssign } = await supabase
+    .from('queue_assignments')
+    .select('staff_id')
+    .in('booking_id', lineIds)
+    .is('released_at', null)
+  const priorStaffIds = [...new Set((priorAssign || []).map((r) => r.staff_id).filter(Boolean))]
   const { error } = await supabase
     .from('bookings')
     .update({
@@ -1230,9 +1321,36 @@ export async function markTicketRedo(ticket, reason = '') {
       redo_at: now,
       redo_by: profile.id,
       redo_reason: note || null,
+      redo_staff_ids: priorStaffIds.length ? priorStaffIds : null,
     })
     .in('id', lineIds)
-  if (error) throw formatQueueActionError(error)
+  if (error) {
+    // Column may be missing pre-migration — retry without redo_staff_ids
+    if (/redo_staff_ids/i.test(error.message || '')) {
+      const retry = await supabase
+        .from('bookings')
+        .update({
+          status: 'redo',
+          redo_at: now,
+          redo_by: profile.id,
+          redo_reason: note || null,
+        })
+        .in('id', lineIds)
+      if (retry.error) throw formatQueueActionError(retry.error)
+    } else {
+      throw formatQueueActionError(error)
+    }
+  }
+  if (priorStaffIds.length) {
+    try {
+      await supabase.rpc('sync_queue_assignments', {
+        input_booking_id: ticket.booking_id,
+        input_staff_ids: priorStaffIds,
+      })
+    } catch {
+      /* best-effort keep prior crew */
+    }
+  }
   await writeAudit({
     action: 'redo',
     entityType: 'booking',
@@ -1244,6 +1362,7 @@ export async function markTicketRedo(ticket, reason = '') {
       branch: ticket.branch,
       reason: note || null,
       visit_group_id: ticket.visit_group_id || null,
+      prior_staff_ids: priorStaffIds,
     },
   })
   try {

@@ -257,6 +257,72 @@ export function ticketElapsedMinutes(ticket, nowMs = Date.now()) {
   return Math.max(0, Math.round((end - start) / 60_000))
 }
 
+/** Minutes spent in a lane before leaving it (or still there). */
+const STATUS_ENTERED_AT = {
+  waiting: 'waiting_at',
+  in_progress: 'in_progress_at',
+  final_checking: 'final_checking_at',
+  for_payment: 'for_payment_at',
+}
+
+const STATUS_LEFT_AT = {
+  waiting: ['in_progress_at', 'final_checking_at', 'for_payment_at', 'completed_at', 'cancelled_at', 'redo_at'],
+  in_progress: ['final_checking_at', 'for_payment_at', 'completed_at', 'cancelled_at', 'redo_at'],
+  final_checking: ['for_payment_at', 'completed_at', 'cancelled_at', 'redo_at', 'in_progress_at'],
+  for_payment: ['completed_at', 'cancelled_at', 'redo_at'],
+}
+
+export function statusDwellMinutes(ticket, status, nowMs = Date.now()) {
+  const key = String(status || '')
+  const enterField = STATUS_ENTERED_AT[key]
+  if (!enterField || !ticket) return null
+  const startIso = ticket[enterField] || (key === 'waiting' ? ticket.created_at : null)
+  if (!startIso) return null
+  const start = new Date(startIso).getTime()
+  if (!Number.isFinite(start)) return null
+  const leaveFields = STATUS_LEFT_AT[key] || []
+  const ends = leaveFields
+    .map((f) => (ticket[f] ? new Date(ticket[f]).getTime() : NaN))
+    .filter((t) => Number.isFinite(t) && t >= start)
+  const end = ends.length ? Math.min(...ends) : nowMs
+  return Math.max(0, Math.round((end - start) / 60_000))
+}
+
+/** Average dwell minutes per lane across tickets (excludes completed-only lanes). */
+export function averageDwellByStatus(tickets = [], nowMs = Date.now()) {
+  const lanes = ['waiting', 'in_progress', 'final_checking', 'for_payment']
+  const out = {}
+  for (const lane of lanes) {
+    const vals = (tickets || [])
+      .map((t) => statusDwellMinutes(t, lane, nowMs))
+      .filter((n) => n != null && Number.isFinite(n))
+    out[lane] = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null
+  }
+  return out
+}
+
+/** FIFO: oldest waiting_at (else created_at), then lower queue_number. */
+export function sortTicketsFifo(tickets = []) {
+  return [...(tickets || [])].sort((a, b) => {
+    const aT = new Date(a.waiting_at || a.created_at || 0).getTime()
+    const bT = new Date(b.waiting_at || b.created_at || 0).getTime()
+    if (aT !== bT) return aT - bT
+    const aQ = Number(a.queue_number) || 0
+    const bQ = Number(b.queue_number) || 0
+    return aQ - bQ
+  })
+}
+
+/** Booking id of the next FIFO car in waiting (or first active lane). */
+export function fifoNextTicketId(tickets = []) {
+  const waiting = sortTicketsFifo((tickets || []).filter((t) => String(t.status) === 'waiting'))
+  if (waiting[0]?.booking_id) return waiting[0].booking_id
+  const active = sortTicketsFifo(
+    (tickets || []).filter((t) => ['waiting', 'in_progress', 'final_checking'].includes(String(t.status))),
+  )
+  return active[0]?.booking_id || null
+}
+
 export function matchesDurationFilter(minutes, filterKey) {
   const key = String(filterKey || 'all')
   if (key === 'all' || minutes == null) return key === 'all' ? true : false
@@ -793,3 +859,6 @@ export function getPlateLookupStatus(plateNumber, hasMatch) {
     ? 'Existing customer found'
     : 'No record found. This will be added as a new customer/vehicle record.'
 }
+
+/** Day-scoped temp role (e.g. crew → team_lead). Re-export for queue/clock callers. */
+export { resolveEffectiveRole } from '../lib/ownerRevisionsPhase7.js'

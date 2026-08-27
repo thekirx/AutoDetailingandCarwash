@@ -364,6 +364,15 @@ export default function CustomerAccountPage() {
                 })}
               </ol>
             ) : null}
+            {activeVisit.update_photos?.length ? (
+              <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Progress photos">
+                {activeVisit.update_photos.map((photo) => (
+                  <a key={photo.path || photo.url} href={photo.url} target="_blank" rel="noreferrer">
+                    <img src={photo.url} alt="" className="size-16 rounded-lg object-cover" />
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </article>
         ) : (
           <div className="capp-empty">
@@ -639,7 +648,7 @@ export default function CustomerAccountPage() {
                 </div>
               ) : (
                 history.map((row) => (
-                  <article key={row.id} className="capp-row" style={{ cursor: 'default' }}>
+                  <article key={row.id} className="capp-row" style={{ cursor: 'default', flexWrap: 'wrap' }}>
                     <span className="capp-thumb" style={{ display: 'grid', placeItems: 'center', width: '2.6rem', height: '2.6rem' }}>
                       <CalendarDays className="size-4" />
                     </span>
@@ -648,6 +657,19 @@ export default function CustomerAccountPage() {
                       <em>
                         {formatWhen(row.created_at || row.scheduled_start)} · {branchLabel(branches, row.branch) || row.branch}
                       </em>
+                      {row.update_photos?.length ? (
+                        <span className="mt-2 flex flex-wrap gap-1.5">
+                          {row.update_photos.map((photo) => (
+                            <a key={photo.path || photo.url} href={photo.url} target="_blank" rel="noreferrer">
+                              <img
+                                src={photo.url}
+                                alt=""
+                                className="size-14 rounded-lg object-cover"
+                              />
+                            </a>
+                          ))}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="shrink-0 text-sm font-bold tabular-nums text-[color:var(--capp-navy)]">
                       {formatMoney(row.final_price_minor)}

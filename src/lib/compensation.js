@@ -79,36 +79,84 @@ export function toCompensationSettingsRow(rules, { id = 1 } = {}) {
   }
 }
 
+/** HH:MM or ISO timestamp → minutes from midnight. Null if unparseable. */
+export function hhmmToMinutes(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return null
+  const iso = /T(\d{2}):(\d{2})/.exec(raw)
+  if (iso) return Number(iso[1]) * 60 + Number(iso[2])
+  const hm = /^(\d{1,2}):(\d{2})/.exec(raw)
+  if (!hm) return null
+  return Number(hm[1]) * 60 + Number(hm[2])
+}
+
 /**
- * Lateness weight: present / late from rules (defaults 1 / 0.7), else 0.
- * ponytail: linear weights; upgrade to minute-based if SA asks.
+ * Pay share for a roster row.
+ * Absent / missing / off → 0 (no car, no pool).
+ * With clock_in + shift window → remaining shift / scheduled (what they naabutan).
+ * Else status: present = 1, late = 0.7.
  */
-export function attendanceWeight(status, rules = {}) {
-  const s = String(status || '').toLowerCase()
+export function attendanceWeight(status, rules = {}, clock = {}) {
+  const s = String(status || clock.attendance_status || clock.status || '').toLowerCase()
+  if (!s || s === 'absent' || s === 'off' || s === 'leave' || s === 'no_show') return 0
   const present = Number(rules.attendance_present_weight)
-  const late = Number(rules.attendance_late_weight)
-  if (s === 'present') return Number.isFinite(present) && present >= 0 ? present : 1
-  if (s === 'late') return Number.isFinite(late) && late >= 0 ? late : 0.7
+  const presentW = Number.isFinite(present) && present >= 0 ? present : 1
+  const start = hhmmToMinutes(clock.shift_start || clock.shiftStart)
+  const end = hhmmToMinutes(clock.shift_end || clock.shiftEnd)
+  const inn = hhmmToMinutes(clock.clock_in_at || clock.clockInAt || clock.clock_in)
+  const scheduledArg = Number(clock.scheduled_minutes || clock.scheduledMinutes)
+  const lateMins = Number(clock.minutes_late || clock.minutesLate)
+  let scheduledMins = Number.isFinite(scheduledArg) && scheduledArg > 0 ? scheduledArg : null
+  if (scheduledMins == null && start != null && end != null) scheduledMins = Math.max(1, end - start)
+  if (!scheduledMins) scheduledMins = 480
+  if (Number.isFinite(lateMins) && lateMins >= 0) {
+    return presentW * (Math.max(0, scheduledMins - lateMins) / scheduledMins)
+  }
+  if (inn != null && (start != null || end != null)) {
+    const endMins = end != null ? end : start + scheduledMins
+    return presentW * (Math.max(0, endMins - inn) / scheduledMins)
+  }
+  if (s === 'present') return presentW
+  if (s === 'late') {
+    const late = Number(rules.attendance_late_weight)
+    return Number.isFinite(late) && late >= 0 ? late : 0.7
+  }
   return 0
 }
 
-/** Split wash/package sales pool across on-shift crew + TL by attendance weight. */
-export function splitWashPool({ totalSalesMinor = 0, poolPct = 35, roster = [], rules = {} } = {}) {
+/** Wash pool is bay crew only — not detailers, TL, office, or sales. */
+function inWashPoolRoster(row) {
+  const role = String(row?.role || 'staff').toLowerCase()
+  return !['detailer', 'team_lead', 'admin', 'super_admin', 'investor', 'sales', 'marketing'].includes(role)
+}
+
+/** Split an amount across roster by attendance weight. Wash pool excludes non-bay roles. */
+export function splitWashPool({
+  totalSalesMinor = 0,
+  poolPct = 35,
+  roster = [],
+  rules = {},
+  forWashPool = true,
+} = {}) {
   const pool = Math.round((Number(totalSalesMinor) || 0) * (Number(poolPct) || 0) / 100)
-  const weighted = (roster || [])
+  const eligible = forWashPool ? (roster || []).filter((row) => inWashPoolRoster(row)) : roster || []
+  const weighted = eligible
     .map((row) => ({
       ...row,
-      weight: attendanceWeight(row.attendance_status || row.status, rules),
+      weight: attendanceWeight(row.attendance_status || row.status, rules, row),
     }))
     .filter((row) => row.weight > 0)
   const weightSum = weighted.reduce((sum, row) => sum + row.weight, 0)
   if (!pool || !weightSum) {
     return { pool_minor: pool, rows: weighted.map((row) => ({ ...row, pay_minor: 0 })) }
   }
-  const rows = weighted.map((row) => ({
-    ...row,
-    pay_minor: Math.round((pool * row.weight) / weightSum),
-  }))
+  let allocated = 0
+  const rows = weighted.map((row, i) => {
+    const pay =
+      i === weighted.length - 1 ? pool - allocated : Math.round((pool * row.weight) / weightSum)
+    allocated += pay
+    return { ...row, pay_minor: pay }
+  })
   return { pool_minor: pool, rows }
 }
 
@@ -233,6 +281,7 @@ export function buildCeramicCompensationExpenses({
   rules,
   toggles = {},
   paymentMethod,
+  assignedDetailerId = null,
 } = {}) {
   if (!saleId || !branch || branch === 'all') return []
   const amount = Math.round(Number(salesMinor) || 0)
@@ -265,6 +314,8 @@ export function buildCeramicCompensationExpenses({
       expense_kind: 'salary_detailer',
       branch,
       status: 'draft',
+      staff_id: assignedDetailerId || null,
+      assigned_staff_id: assignedDetailerId || null,
     })
   }
   return rows
@@ -299,15 +350,43 @@ function rosterAttendanceStatus(member) {
   return member?.attendance_status || member?.attendance?.status || (member?.is_present_today ? 'present' : 'absent')
 }
 
+function lineSalaryPct(line) {
+  const raw = line?.salary_pct ?? line?.services?.salary_pct
+  if (raw == null || raw === '') return null
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null
+}
+
+function isWashEligibleLine(line) {
+  const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
+  const kind = String(line?.catalog_kind || '').toLowerCase()
+  if (cat === 'detailing' || kind === 'detailing') return false
+  if (isCeramicCompensationLine(line)) return false
+  return true
+}
+
+/**
+ * Catalog salary_pct lines contribute directly to preview pool (pct of line total).
+ * Null salary_pct → stay in global wash base (washPoolAmountMinor × wash_pool_pct).
+ */
+export function salaryPctPoolMinor(sale) {
+  const lines = sale?.sale_line_items || sale?.lines || []
+  return (lines || []).reduce((sum, line) => {
+    if (!isWashEligibleLine(line)) return sum
+    const pct = lineSalaryPct(line)
+    if (pct == null) return sum
+    return sum + Math.round((Number(line.line_total_minor) || 0) * pct / 100)
+  }, 0)
+}
+
 /** Group today's wash/package sales + present roster into per-branch pool drafts for Finance. */
 export function washPoolAmountMinor(sale) {
   const lines = sale?.sale_line_items || sale?.lines || []
   if (lines.length) {
     return lines.reduce((sum, line) => {
-      const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
-      const kind = String(line?.catalog_kind || '').toLowerCase()
-      if (cat === 'detailing' || kind === 'detailing') return sum
-      if (isCeramicCompensationLine(line)) return sum
+      if (!isWashEligibleLine(line)) return sum
+      // Preview-only: optional catalog % replaces global pool for this SKU.
+      if (lineSalaryPct(line) != null) return sum
       return sum + (Number(line.line_total_minor) || 0)
     }, 0)
   }

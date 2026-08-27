@@ -85,7 +85,7 @@ export async function loadCustomerPortal({ accessToken }) {
       admin.from('customers').select('loyalty_stamps, loyalty_points, phone, email, full_name, date_of_birth').eq('id', userId).maybeSingle(),
       admin
         .from('vehicles')
-        .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url')
+        .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url, icon')
         .eq('customer_id', userId)
         .eq('is_archived', false)
         .order('plate_number'),
@@ -156,6 +156,30 @@ export async function loadCustomerPortal({ accessToken }) {
     visit: buildVisitProgress(row.status),
   }))
 
+  const historyRows = history.data || []
+  const photoBookingIds = [
+    ...new Set([...historyRows.map((r) => r.id), ...activeBookings.map((r) => r.id)].filter(Boolean)),
+  ]
+  const updatePhotosByBooking = {}
+  await Promise.all(
+    photoBookingIds.map(async (bookingId) => {
+      const { data: files } = await admin.storage.from('booking-updates').list(String(bookingId), { limit: 24 })
+      const names = (files || []).map((f) => f.name).filter((n) => n && !n.endsWith('/'))
+      if (!names.length) return
+      const paths = names.map((n) => `${bookingId}/${n}`)
+      const { data: signed } = await admin.storage.from('booking-updates').createSignedUrls(paths, 3600)
+      updatePhotosByBooking[bookingId] = (signed || [])
+        .filter((row) => row?.signedUrl)
+        .map((row) => ({ path: row.path, url: row.signedUrl }))
+    }),
+  )
+
+  const withPhotos = (rows) =>
+    (rows || []).map((row) => ({
+      ...row,
+      update_photos: updatePhotosByBooking[row.id] || [],
+    }))
+
   const profile = {
     id: userId,
     full_name: customerRow.data?.full_name || customer?.full_name || user.user_metadata?.full_name || 'Customer',
@@ -179,9 +203,9 @@ export async function loadCustomerPortal({ accessToken }) {
   return {
     profile,
     branches: branches.data || [],
-    history: history.data || [],
+    history: withPhotos(historyRows),
     purchases: purchases.data || [],
-    bookings: activeBookings,
+    bookings: withPhotos(activeBookings),
     vehicles: vehicles.data || [],
     queueCounts,
     loyalty: {
@@ -221,6 +245,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       vehicle_type: String(body.vehicle_type || 'sedan').trim() || 'sedan',
       color: String(body.color || '').trim() || null,
       photo_url: safeVehiclePhotoUrl(body.photo_url),
+      icon: String(body.icon || '').trim().toLowerCase() || null,
       is_archived: false,
     }
 
@@ -230,7 +255,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       .update(payload)
       .eq('normalized_plate_number', normalized)
       .eq('customer_id', userId)
-      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url')
+      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url, icon')
       .maybeSingle()
     if (ownErr) throw Object.assign(new Error(ownErr.message), { status: 400 })
     if (ownUpdate) return { ok: true, vehicle: ownUpdate }
@@ -247,7 +272,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const { data, error } = await admin
       .from('vehicles')
       .insert(payload)
-      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url')
+      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url, icon')
       .single()
     if (error) {
       // Race: another writer claimed the plate between select and insert
@@ -292,6 +317,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       vehicle_type: String(body.vehicle_type || 'sedan').trim() || 'sedan',
       color: String(body.color || '').trim() || null,
       photo_url: safeVehiclePhotoUrl(body.photo_url),
+      icon: String(body.icon || '').trim().toLowerCase() || null,
       is_archived: false,
     }
 
@@ -300,7 +326,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       .update(payload)
       .eq('id', vehicleId)
       .eq('customer_id', userId)
-      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url')
+      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url, icon')
       .single()
     if (error) {
       if (error.code === '23505') {

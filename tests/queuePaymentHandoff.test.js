@@ -75,6 +75,7 @@ describe('Queue payment handoff contract', () => {
     assert.equal(isPaymentHandoffStatus('for_payment'), true)
     assert.equal(isPaymentHandoffStatus('waiting'), false)
     assert.equal(canEnterPaymentHandoff('final_checking'), true)
+    assert.equal(canEnterPaymentHandoff('for_releasing'), true)
     assert.equal(canEnterPaymentHandoff('in_progress'), true)
     assert.equal(canEnterPaymentHandoff('waiting'), false)
   })

@@ -4,7 +4,13 @@
  */
 
 import { getLocalCalendarDate } from './localCalendarDate.js'
-import { PAYOUT_FREQUENCIES, splitWashPool, washPoolAmountMinor } from './compensation.js'
+import {
+  PAYOUT_FREQUENCIES,
+  salaryPctPoolMinor,
+  splitWashPool,
+  washPoolAmountMinor,
+} from './compensation.js'
+import { normalizeSalaryDraftExtras } from './shiftClose.js'
 
 export { PAYOUT_FREQUENCIES }
 
@@ -119,6 +125,10 @@ export function payrollPeriodRange(frequency, anchorYmd, customRange = null) {
     return { start, end }
   }
   if (freq === 'daily') return { start: ymd, end: ymd }
+  if (freq === 'annual' || freq === 'yearly') {
+    const [y] = ymd.split('-').map(Number)
+    return { start: `${y}-01-01`, end: `${y}-12-31` }
+  }
   if (freq === 'semimonthly') {
     const [y, m, day] = ymd.split('-').map(Number)
     if (day <= 15) {
@@ -156,13 +166,50 @@ export function validatePayrollCustomRange(start, end) {
 }
 
 function saleDay(sale) {
+  return saleBusinessDate(sale)
+}
+
+/**
+ * Shop business day for a sale (Asia/Manila). Never use UTC `.slice(0, 10)` on ISO timestamps.
+ */
+export function saleBusinessDate(sale) {
+  const explicit = sale?.business_date || sale?.occurred_on
+  if (explicit) {
+    const s = String(explicit).trim()
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+  }
   const raw = sale?.occurred_at || sale?.sale_date
   if (!raw) return null
   try {
-    return String(raw).length === 10 ? raw : getLocalCalendarDate(raw)
+    return String(raw).length === 10 ? String(raw).slice(0, 10) : getLocalCalendarDate(raw)
   } catch {
     return null
   }
+}
+
+/**
+ * Keep ceramic/detailing draft expenses whose sale_id is in the loaded POS set.
+ * Ignores expense created_at — drafts may be posted after the sale day.
+ */
+export function filterCeramicExpensesForSales(expenses = [], sales = []) {
+  const saleIds = new Set((sales || []).map((s) => String(s?.id || '')).filter(Boolean))
+  if (!saleIds.size) return []
+  return (expenses || []).filter((exp) => {
+    const parsed = parseCeramicKey(exp?.description)
+    return parsed && saleIds.has(String(parsed.saleId))
+  })
+}
+
+/** Stamp staff_id on CA form payloads when the submitter is known. */
+export function enrichCashAdvancePayload(payload = {}, profile = null) {
+  const out = { ...(payload && typeof payload === 'object' ? payload : {}) }
+  const existing = String(out.staff_id || '').trim()
+  const profileId = String(profile?.id || '').trim()
+  if (!existing && profileId) out.staff_id = profileId
+  if (!String(out.employee_name || '').trim() && profile?.full_name) {
+    out.employee_name = profile.full_name
+  }
+  return out
 }
 
 function inPeriod(day, period) {
@@ -215,7 +262,7 @@ function toLine({ kind, staff, branch, sourceKey, sourceSaleId, payMinor, date, 
 function splitAmount(roster, amountMinor, kind, { branch, sourceKey, sourceSaleId, date, rules }) {
   const pool = Math.round(Number(amountMinor) || 0)
   if (pool <= 0) return []
-  const split = splitWashPool({ totalSalesMinor: pool, poolPct: 100, roster, rules })
+  const split = splitWashPool({ totalSalesMinor: pool, poolPct: 100, roster, rules, forWashPool: false })
   if (!split.rows.length) {
     return [
       toLine({
@@ -263,6 +310,7 @@ export function buildPayrollPreview({
   const claimed = new Set((claimedSaleIds || []).map(String))
   const poolPct = Number(rules.wash_pool_pct)
   const washByBranchDay = new Map()
+  const salaryPctByBranchDay = new Map()
   const proof = []
   let posSalesMinor = 0
   const kind = String(runKind || 'all').toLowerCase()
@@ -279,7 +327,8 @@ export function buildPayrollPreview({
       const day = saleDay(sale)
       if (!branch || !inPeriod(day, period)) continue
       const wash = washPoolAmountMinor(sale)
-      if (wash <= 0) continue
+      const directPct = salaryPctPoolMinor(sale)
+      if (wash <= 0 && directPct <= 0) continue
       posSalesMinor += wash
       proof.push({
         sale_id: id,
@@ -290,16 +339,19 @@ export function buildPayrollPreview({
         occurred_at: sale.occurred_at || null,
       })
       const key = `${branch}|${day}`
-      washByBranchDay.set(key, (washByBranchDay.get(key) || 0) + wash)
+      if (wash > 0) washByBranchDay.set(key, (washByBranchDay.get(key) || 0) + wash)
+      if (directPct > 0) salaryPctByBranchDay.set(key, (salaryPctByBranchDay.get(key) || 0) + directPct)
     }
 
-    for (const [key, totalSalesMinor] of washByBranchDay) {
+    const allKeys = new Set([...washByBranchDay.keys(), ...salaryPctByBranchDay.keys()])
+    for (const key of allKeys) {
       const [branch, day] = key.split('|')
+      const roster = rosterFor(attendance, branch, day)
       const sourceKey = `compensation:${branch}:${day}`
       const split = splitWashPool({
-        totalSalesMinor,
+        totalSalesMinor: washByBranchDay.get(key) || 0,
         poolPct,
-        roster: rosterFor(attendance, branch, day),
+        roster,
         rules,
       })
       for (const row of split.rows) {
@@ -315,6 +367,28 @@ export function buildPayrollPreview({
           }),
         )
       }
+      const directMinor = salaryPctByBranchDay.get(key) || 0
+      if (directMinor > 0) {
+        const directSplit = splitWashPool({
+          totalSalesMinor: directMinor,
+          poolPct: 100,
+          roster,
+          rules,
+        })
+        for (const row of directSplit.rows) {
+          if (!row.pay_minor) continue
+          lines.push(
+            toLine({
+              kind: 'wash_pool',
+              staff: row,
+              branch,
+              sourceKey: `salary_pct:${branch}:${day}`,
+              payMinor: row.pay_minor,
+              date: day,
+            }),
+          )
+        }
+      }
     }
 
     for (const exp of ceramicExpenses || []) {
@@ -328,8 +402,18 @@ export function buildPayrollPreview({
       const lineKind = parsed.side === 'detailer' ? 'ceramic_detailer' : 'ceramic_crew'
       let roster = rosterFor(attendance, branch, day)
       if (lineKind === 'ceramic_detailer') {
-        const detailers = roster.filter((r) => String(r.role || '').toLowerCase() === 'detailer')
-        roster = detailers.length ? detailers : []
+        const assignedId =
+          exp.staff_id ||
+          exp.assigned_staff_id ||
+          sale?.assigned_staff_id ||
+          sale?.detailer_staff_id ||
+          sale?.booking?.assigned_staff_id
+        if (assignedId) {
+          roster = roster.filter((r) => String(r.staff_id || r.id) === String(assignedId))
+        } else {
+          const detailers = roster.filter((r) => String(r.role || '').toLowerCase() === 'detailer')
+          roster = detailers.length ? detailers : []
+        }
       }
       lines.push(
         ...splitAmount(roster, exp.total_minor, lineKind, {
@@ -459,6 +543,34 @@ export function addPayrollAdjustment(lines = [], { staff, branch, direction, lab
 }
 
 /** Commission / bonus convenience — always an add labeled for the review UI. */
+/**
+ * SA wizard applies approved cash advances as labeled deducts.
+ * Pending/draft rows are ignored. Never auto-runs inside buildPayrollPreview.
+ */
+export function applyCashAdvanceDeductions(lines = [], advances = []) {
+  let next = [...(lines || [])]
+  for (const ca of advances || []) {
+    const status = String(ca.status || '').toLowerCase()
+    if (!['approved', 'accepted', 'paid'].includes(status)) continue
+    const amount = Math.round(Number(ca.amount_minor) || 0)
+    const staff = ca.staff || {
+      id: ca.staff_id,
+      staff_id: ca.staff_id,
+      full_name: ca.staff_name || ca.employee_name || '',
+      branch_slug: ca.branch,
+    }
+    if (amount <= 0 || !(staff.staff_id || staff.id)) continue
+    next = addPayrollAdjustment(next, {
+      staff,
+      branch: ca.branch || staff.branch_slug,
+      direction: 'deduct',
+      label: ca.label || `Cash advance${ca.id ? ` · ${ca.id}` : ''}`,
+      amountMinor: amount,
+    })
+  }
+  return next
+}
+
 export function addPayrollCommission(lines = [], { staff, branch, label, amountMinor }) {
   const trimmed = String(label || 'Commission').trim() || 'Commission'
   return addPayrollAdjustment(lines, {
@@ -644,10 +756,8 @@ export function floorPayrollCoversDay(run, ymd, branch) {
     return claimed.some((sale) => {
       const saleBranch = String(sale.branch || run.branch || '').trim()
       if (saleBranch && saleBranch !== br) return false
-      const saleDay = String(
-        sale.business_date || sale.sale_date || sale.occurred_on || '',
-      ).slice(0, 10)
-      if (saleDay) return saleDay === day
+      const claimedDay = saleBusinessDate(sale)
+      if (claimedDay) return claimedDay === day
       // Sale row without a day — fall through to period only for that sale's absence
       return false
     })
@@ -664,6 +774,74 @@ export function floorPayrollCoversDay(run, ymd, branch) {
  * Coverage prefers claimed POS sale business dates when payroll_run_sales are present.
  * Optional posProofByKey: Map or object of `${branch}|${business_date}` → wash-eligible / total paid minor.
  */
+/**
+ * Collect BA salary draft extras from accepted/locked (or submitted) closes in a window.
+ */
+export function collectSalaryDraftExtrasFromCloses(
+  closes = [],
+  { branch = null, periodStart = null, periodEnd = null, readyOnly = true } = {},
+) {
+  const start = periodStart ? String(periodStart).slice(0, 10) : null
+  const end = periodEnd ? String(periodEnd).slice(0, 10) : null
+  const bay = branch ? String(branch).trim() : null
+  const out = []
+  for (const close of closes || []) {
+    const status = String(close.status || '')
+    if (readyOnly && !['accepted', 'locked'].includes(status)) continue
+    if (!readyOnly && !['submitted', 'accepted', 'locked'].includes(status)) continue
+    const d = String(close.business_date || '').slice(0, 10)
+    const b = String(close.branch || '').trim()
+    if (!d || !b) continue
+    if (bay && b !== bay) continue
+    if (start && d < start) continue
+    if (end && d > end) continue
+    const extras = normalizeSalaryDraftExtras(close.submitted?.salary_draft_extras)
+    for (const row of extras) {
+      out.push({
+        ...row,
+        branch: b,
+        business_date: d,
+        close_id: close.id || null,
+      })
+    }
+  }
+  return out
+}
+
+/** Seed preview adjustments from BA EoS drafts (SA still confirms). */
+export function applySalaryDraftExtrasToPreview(preview, drafts = [], staffRoster = []) {
+  if (!preview || !Array.isArray(preview.lines)) return preview
+  const byId = new Map((staffRoster || []).map((s) => [String(s.id || s.staff_id), s]))
+  let lines = [...preview.lines]
+  for (const draft of drafts || []) {
+    const staff =
+      (draft.staff_id && byId.get(String(draft.staff_id))) ||
+      (staffRoster || []).find(
+        (s) =>
+          String(s.full_name || s.staff_name || '').trim().toLowerCase() ===
+          String(draft.staff_name || '').trim().toLowerCase(),
+      ) || {
+        id: draft.staff_id || null,
+        staff_id: draft.staff_id || null,
+        full_name: draft.staff_name,
+      }
+    const note = draft.note ? `BA draft · ${draft.note}` : 'BA draft from end of shift'
+    lines = addPayrollAdjustment(lines, {
+      staff,
+      branch: draft.branch,
+      direction: draft.kind === 'deduction' ? 'deduct' : 'add',
+      label: note,
+      amountMinor: draft.amount_minor,
+    })
+  }
+  return {
+    ...preview,
+    lines,
+    total_payout_minor: netPayrollLinesMinor(lines),
+    salary_draft_extras: drafts,
+  }
+}
+
 export function buildPendingFloorPayrollQueue({ closes = [], runs = [], posProofByKey = null } = {}) {
   const readyStatuses = new Set(['accepted', 'locked'])
   const reviewStatuses = new Set(['submitted'])
@@ -690,6 +868,7 @@ export function buildPendingFloorPayrollQueue({ closes = [], runs = [], posProof
     const pos_proof_minor = proofMap?.has(proofKey)
       ? Math.round(Number(proofMap.get(proofKey)) || 0)
       : null
+    const salary_draft_extras = normalizeSalaryDraftExtras(close.submitted?.salary_draft_extras)
     days.push({
       close_id: close.id,
       branch,
@@ -700,6 +879,7 @@ export function buildPendingFloorPayrollQueue({ closes = [], runs = [], posProof
       close_sales_minor,
       pos_proof_minor,
       shift_ended_at: close.shift_ended_at || null,
+      salary_draft_extras,
     })
   }
 
@@ -722,12 +902,18 @@ export function buildPendingFloorPayrollQueue({ closes = [], runs = [], posProof
         pos_proof_known: false,
         period_start: row.business_date,
         period_end: row.business_date,
+        salary_draft_extras: [],
       })
     }
     const g = byBranch.get(row.branch)
     g.days.push(row)
     g.total_sales_minor += row.close_sales_minor
     g.close_sales_minor += row.close_sales_minor
+    if (row.salary_draft_extras?.length) {
+      g.salary_draft_extras.push(
+        ...row.salary_draft_extras.map((e) => ({ ...e, business_date: row.business_date })),
+      )
+    }
     if (row.pos_proof_minor != null) {
       g.pos_proof_minor += row.pos_proof_minor
       g.pos_proof_known = true
@@ -739,12 +925,10 @@ export function buildPendingFloorPayrollQueue({ closes = [], runs = [], posProof
   }
 
   const groups = [...byBranch.values()].sort((a, b) => a.branch.localeCompare(b.branch))
-  return {
-    days,
-    groups,
-    ready_day_count: days.filter((d) => d.ready).length,
-    review_day_count: days.filter((d) => !d.ready).length,
-  }
+  days.groups = groups
+  days.ready_day_count = days.filter((d) => d.ready).length
+  days.review_day_count = days.filter((d) => !d.ready).length
+  return days
 }
 
 /**
@@ -803,7 +987,8 @@ export function applyFloorPreviewToBacoorReport(report, preview, rules = {}) {
     const kind = String(row.kind || '')
     const amt = Math.round(Number(row.pay_minor) || 0)
     if (!amt) continue
-    if (kind === 'wash_pool' || kind === 'ceramic_crew') wash += amt
+    // Carwash salary cell = wash pool only. Ceramic crew/detailer are detailing splits.
+    if (kind === 'wash_pool') wash += amt
     else if (kind === 'ceramic_detailer') detailer += amt
   }
   const poolFallback = Math.round(Number(preview?.pool_minor) || 0)
@@ -821,7 +1006,7 @@ export function posProofTotalsByBranchDay(sales = []) {
   for (const sale of sales || []) {
     if (String(sale?.status || 'paid') !== 'paid') continue
     const branch = String(sale.branch || '').trim()
-    const day = String(sale.business_date || saleDay(sale) || '').slice(0, 10)
+    const day = String(saleBusinessDate(sale) || '').slice(0, 10)
     if (!branch || !day) continue
     const key = `${branch}|${day}`
     map.set(key, (map.get(key) || 0) + (Number(sale.total_minor) || 0))

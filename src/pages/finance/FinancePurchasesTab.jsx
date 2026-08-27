@@ -40,6 +40,7 @@ const STATUS_BADGE = {
 export default function FinancePurchasesTab({
   expenses,
   categories,
+  vendors = [],
   branches,
   writableBranches,
   canWrite,
@@ -58,6 +59,7 @@ export default function FinancePurchasesTab({
     unit_cost: '',
     branch: '',
     category_id: '',
+    vendor_id: '',
   })
 
   const filtered = useMemo(() => {
@@ -115,6 +117,7 @@ export default function FinancePurchasesTab({
       unit_cost: '',
       branch: writableBranches[0]?.slug || '',
       category_id: categories[0]?.id || '',
+      vendor_id: '',
     })
     setShowForm(true)
   }
@@ -128,6 +131,7 @@ export default function FinancePurchasesTab({
       unit_cost: String((row.unit_cost_minor ?? 0) / 100),
       branch: row.branch || '',
       category_id: row.category_id || '',
+      vendor_id: row.vendor_id || '',
     })
     setShowForm(true)
   }
@@ -151,6 +155,7 @@ export default function FinancePurchasesTab({
       total_minor: total,
       branch: form.branch,
       category_id: form.category_id,
+      vendor_id: form.vendor_id || null,
     }
     if (editing) {
       const { error } = await supabase.from('expenses').update(payload).eq('id', editing.id)
@@ -344,6 +349,22 @@ export default function FinancePurchasesTab({
                   <option key={c.id} value={c.id}>
                     {c.name}
                     {c.is_chemical ? ' (pre-approval)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="exp-vendor">Vendor (optional)</Label>
+              <select
+                id="exp-vendor"
+                className="finance-toolbar-select min-h-10 w-full"
+                value={form.vendor_id}
+                onChange={(e) => setForm({ ...form, vendor_id: e.target.value })}
+              >
+                <option value="">—</option>
+                {vendors.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
                   </option>
                 ))}
               </select>

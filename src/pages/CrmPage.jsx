@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
-import { Car, Contact, MessageSquare, Pencil, Plus, Search, UserPlus } from 'lucide-react'
+import { Contact, MessageSquare, Pencil, Plus, Search, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessCrm, canWriteFinance, canViewQueueOperations, getBranchScopeList, isAdmin } from '@/auth/permissions'
 import { listBranches, listMembershipTiers } from '@/lib/adminApi'
@@ -30,10 +30,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import {
+  VEHICLE_ICON_PRESETS,
+  normalizeVehicleIcon,
+  vehicleIconGlyph,
+} from '@/lib/ownerRevisionsPhase7'
 
 const CRM_TABS = ['directory', 'groups', 'insights', 'sms']
 const emptyForm = { first_name: '', last_name: '', phone: '', email: '', plate: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan' }
-const emptyVehicle = { plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan', color: '' }
+const emptyVehicle = { plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan', color: '', icon: '' }
 
 async function provisionCustomer(body) {
   const token = await getAccessTokenFresh()
@@ -116,7 +121,7 @@ export default function CrmPage() {
     }
 
     const select =
-      'id, full_name, first_name, last_name, phone, email, loyalty_points, loyalty_stamps, created_at'
+      'id, full_name, first_name, last_name, phone, email, loyalty_points, loyalty_stamps, created_at, notify_sms, notify_push, is_disabled'
     try {
       if (customerIds) {
         const rows = []
@@ -171,7 +176,7 @@ export default function CrmPage() {
     setSelected(row)
     setLoadingDetail(true)
     const [v, b, l, m] = await Promise.all([
-      supabase.from('vehicles').select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color').eq('customer_id', row.id).eq('is_archived', false),
+      supabase.from('vehicles').select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, icon').eq('customer_id', row.id).eq('is_archived', false),
       supabase
         .from('bookings')
         .select('id, status, branch, scheduled_start, vehicle_plate, queue_number, final_price_minor, service_id')
@@ -245,6 +250,9 @@ export default function CrmPage() {
           full_name,
           phone: editing.phone?.trim() || null,
           email: editing.email?.trim() || null,
+          notify_sms: editing.notify_sms !== false,
+          notify_push: editing.notify_push !== false,
+          is_disabled: Boolean(editing.is_disabled),
           updated_at: new Date().toISOString(),
         })
         .eq('id', editing.id)
@@ -279,6 +287,7 @@ export default function CrmPage() {
         vehicle_model: vehicleForm.vehicle_model.trim() || null,
         vehicle_type: vehicleForm.vehicle_type || 'sedan',
         color: vehicleForm.color.trim() || null,
+        icon: normalizeVehicleIcon(vehicleForm.icon),
         is_archived: false,
       })
       if (error) throw error
@@ -665,6 +674,9 @@ export default function CrmPage() {
                   full_name: selected.full_name,
                   phone: selected.phone || '',
                   email: selected.email || '',
+                  notify_sms: selected.notify_sms !== false,
+                  notify_push: selected.notify_push !== false,
+                  is_disabled: Boolean(selected.is_disabled),
                 })}
               >
                 <Pencil className="mr-1 size-4" /> Edit profile
@@ -719,7 +731,7 @@ export default function CrmPage() {
                 </div>
                 {vehicles.map((v) => (
                   <div key={v.id} className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
-                    <Car className="mt-0.5 size-4 text-primary" />
+                    <span className="mt-0.5 text-lg" aria-hidden>{vehicleIconGlyph(v.icon)}</span>
                     <div>
                       <p className="font-medium">{v.plate_number}</p>
                       <p className="text-muted-foreground">
@@ -814,6 +826,33 @@ export default function CrmPage() {
               </div>
               <div className="flex flex-col gap-2"><Label>Phone</Label><Input value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} /></div>
               <div className="flex flex-col gap-2"><Label>Email</Label><Input type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} /></div>
+              <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
+                <Label className="mb-1">Notifications</Label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editing.notify_sms !== false}
+                    onChange={(e) => setEditing({ ...editing, notify_sms: e.target.checked })}
+                  />
+                  SMS updates
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editing.notify_push !== false}
+                    onChange={(e) => setEditing({ ...editing, notify_push: e.target.checked })}
+                  />
+                  Push notifications
+                </label>
+                <label className="flex items-center gap-2 text-sm text-rose-700 dark:text-rose-300">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editing.is_disabled)}
+                    onChange={(e) => setEditing({ ...editing, is_disabled: e.target.checked })}
+                  />
+                  Disable account (mute all)
+                </label>
+              </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
                 <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
@@ -849,6 +888,26 @@ export default function CrmPage() {
                 </Select>
               </div>
               <div className="flex flex-col gap-2"><Label>Color</Label><Input value={vehicleForm.color} onChange={(e) => setVehicleForm({ ...vehicleForm, color: e.target.value })} /></div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Icon</Label>
+              <div className="flex flex-wrap gap-2">
+                {VEHICLE_ICON_PRESETS.map((p) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    title={p.label}
+                    className={`min-h-11 min-w-11 rounded-xl border px-2 text-lg ${
+                      vehicleForm.icon === p.key
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border bg-card'
+                    }`}
+                    onClick={() => setVehicleForm({ ...vehicleForm, icon: p.key })}
+                  >
+                    {p.glyph}
+                  </button>
+                ))}
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setAddingVehicle(false)}>Cancel</Button>

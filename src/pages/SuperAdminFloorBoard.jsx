@@ -550,6 +550,96 @@ export default function SuperAdminFloorBoard() {
         </div>
       </Section>
 
+      <Section eyebrow="Insights" title="Car size & best sellers">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+              Car size per sale
+            </p>
+            {(board?.carSizeBySale || []).length ? (
+              <ul className="mt-3 space-y-2">
+                {(board.carSizeBySale || []).slice(0, 8).map((row) => {
+                  const max = Math.max(...(board.carSizeBySale || []).map((r) => r.count), 1)
+                  const pct = Math.round((row.count / max) * 100)
+                  return (
+                    <li key={row.size}>
+                      <div className="flex justify-between gap-2 text-sm">
+                        <span className="capitalize font-medium">{String(row.size).replace(/_/g, ' ')}</span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {row.count} · {formatMoney(row.total_minor)}
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-primary/70" style={{ width: `${pct}%` }} />
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">No sized sales in this timeline.</p>
+            )}
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+              Best package / service
+            </p>
+            {(board?.bestSellers || []).length ? (
+              <ol className="mt-3 space-y-2">
+                {(board.bestSellers || []).slice(0, 5).map((row, i) => (
+                  <li key={`${row.name}-${i}`} className="flex justify-between gap-2 text-sm">
+                    <span className="truncate font-medium">
+                      {i === 0 ? '★ ' : ''}
+                      {row.name}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-muted-foreground">
+                      ₱{Number(row.total || 0).toLocaleString('en-PH', { maximumFractionDigits: 0 })}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">No line items to rank yet.</p>
+            )}
+          </div>
+        </div>
+      </Section>
+
+      <Section eyebrow="Inventory" title="Chemical usage">
+        {board?.chemicalUsage?.stub ? (
+          <p className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
+            Needs Sunday recon — weekly chemical usage × unit cost charts appear after branch admins submit
+            internal-use leftover counts.
+          </p>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="mb-3 text-xs text-muted-foreground">Usage qty × product unit cost (from recon lines).</p>
+            <ul className="space-y-2">
+              {(board?.chemicalUsage?.weeks || []).map((w) => {
+                const maxCost = Math.max(
+                  ...(board.chemicalUsage.weeks || []).map((x) => x.cost_minor),
+                  1,
+                )
+                const pct = Math.round((w.cost_minor / maxCost) * 100)
+                return (
+                  <li key={w.week_of}>
+                    <div className="flex justify-between gap-2 text-sm">
+                      <span className="font-medium">Week of {w.week_of}</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {w.usage_qty} units · {formatMoney(w.cost_minor)}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-amber-500/80" style={{ width: `${pct}%` }} />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+      </Section>
+
       <Section
         eyebrow="Jobs"
         title="Job details"

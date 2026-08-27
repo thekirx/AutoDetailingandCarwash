@@ -8,6 +8,8 @@
     "build": "vite build",
     "generate:brand-meta": "node scripts/generate-brand-meta-assets.mjs",
     "generate:flowcharts-pdf": "node scripts/export-flowcharts-pdf.mjs",
+    "generate:owner-stories": "node scripts/export-user-stories-pdf.mjs",
+    "verify:owner-stories": "node scripts/verify-owner-stories.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "e2e:newrequest": "node scripts/e2e-newrequest.mjs",

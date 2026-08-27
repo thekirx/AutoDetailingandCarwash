@@ -11,7 +11,10 @@ export const FINANCE_TABS = [
   { id: 'pl', label: 'Profit and loss', hint: 'Income vs expenses by category', group: 'Accounting' },
   { id: 'shift-close', label: 'Shift reviews', hint: 'End-of-shift closes vs POS baseline', group: 'Accounting' },
   { id: 'expense-reports', label: 'Expense reports', hint: 'ASA category reports posted to expenses', group: 'Accounting' },
-  { id: 'categories', label: 'Categories', hint: 'Expense categories and kinds', group: 'Settings' },
+  { id: 'vendors', label: 'Vendors', hint: 'Supplier contacts for bills', group: 'Settings' },
+  { id: 'quotes', label: 'Quotations', hint: 'Email quotations to CRM customers', group: 'Settings' },
+  { id: 'corporate', label: 'Corporate', hint: 'HQ books, EOM roll-up, manual cash balance', group: 'Settings' },
+  { id: 'categories', label: 'Categories', hint: 'Expense categories (POS daily-expense source)', group: 'Settings' },
   { id: 'reports', label: 'Reports', hint: 'Sales, operations, and retention exports', group: 'Reports' },
 ]
 

@@ -28,10 +28,22 @@ import {
 const FIXED_NOW = new Date(2026, 7, 11, 13, 0, 0) // Aug 11, 2026 1pm PHT
 
 describe('financeData tabs + presets', () => {
-  it('exposes six tabs with stable ids', () => {
+  it('exposes finance tabs with stable ids', () => {
     assert.deepEqual(
       FINANCE_TABS.map((t) => t.id),
-      ['overview', 'sales', 'purchases', 'pl', 'shift-close', 'expense-reports', 'categories', 'reports'],
+      [
+        'overview',
+        'sales',
+        'purchases',
+        'pl',
+        'shift-close',
+        'expense-reports',
+        'vendors',
+        'quotes',
+        'corporate',
+        'categories',
+        'reports',
+      ],
     )
     assert.ok(FINANCE_TABS.every((t) => t.label && t.hint))
   })

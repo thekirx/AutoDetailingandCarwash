@@ -29,11 +29,20 @@ const checking = buildBookingNotifyPayload(booking, 'final_checking')
 assert.equal(checking.kind, 'booking_status')
 assert.match(checking.sms, /final checking/i)
 
+const releasing = buildBookingNotifyPayload(booking, 'for_releasing')
+assert.equal(releasing.kind, 'booking_status')
+assert.match(releasing.sms, /releas|ready|pick/i)
+
 assert.equal(buildBookingNotifyPayload(booking, 'nope'), null)
 
 const redo = buildBookingNotifyPayload(booking, 'redo')
 assert.equal(redo.kind, 'booking_status')
 assert.match(redo.sms, /redoing/i)
+
+const photos = buildBookingNotifyPayload(booking, 'photos_ready')
+assert.equal(photos.kind, 'booking_photos')
+assert.match(photos.sms, /photos ready|app/i)
+assert.equal(photos.url, '/account')
 
 const off = buildBookingNotifyPayload(booking, 'pending', {
   'booking.pending.customer': { enabled: false },

@@ -33,9 +33,7 @@ Pending queue is a **reminder** of shop days Finance has (or is) reviewing that 
 |-------|----------|
 | DB / Settings UI | Boolean on `compensation_settings` |
 | Payroll home | Stronger copy + banner when `false` |
-| `confirmRun` | **Does not check** |
-
-Calling it a “hard gate” is **false**. Enforcing it would be a product change (block confirm while ready pending days exist).
+| `confirmRun` | Calls `floorConfirmBlockedByPendingCloses`. When `pending_floor_optional === false`, submitted or missing accepted close **blocks** floor confirm. |
 
 ## Finance “Floor pay” column
 

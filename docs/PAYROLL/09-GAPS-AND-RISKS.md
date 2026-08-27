@@ -2,31 +2,32 @@
 
 ## Critical / high
 
-| # | Risk | Severity |
-|---|------|----------|
-| 1 | `cash_advance_auto_deduct` non-functional (status, staff_id, units) | **Critical** (honesty) |
-| 2 | `pending_floor_optional` not enforced on confirm | **High** (honesty) |
-| 3 | Package kinds collapsed to `adjustment` in RPC → My Pay mislabel | **High** |
-| 4 | CA form unbound to `staff_profiles` | **High** (ops + deduct) |
+| # | Risk | Severity | Status |
+|---|------|----------|--------|
+| 1 | CA auto-deduct off; wizard deduct only | — | **Closed** (contract) |
+| 2 | `pending_floor_optional = false` hard gate | — | **Closed** |
+| 3 | Package kinds → My Pay labels | — | **Closed** (`payroll_package_kinds_ca_repayment`) |
+| 4 | CA form unbound to `staff_profiles` | — | **Closed** — staff submit stamps `staff_id`; Payroll approve still requires link if missing |
 
 ## Medium
 
-| # | Risk |
-|---|------|
-| 5 | Claimed `business_date` from UTC `occurred_at` slice vs Manila close date |
-| 6 | Ceramic expenses filtered by `created_at` not sale day |
-| 7 | Wash pool includes any present role (BA can share) |
-| 8 | `payout_weekday` dead |
-| 9 | Floor `loadProof` fetches packages then ignores them |
-| 10 | Wrong-kind confirm (floor vs fixed) easy on one tab |
+| # | Risk | Status |
+|---|------|--------|
+| 5 | Claimed `business_date` from UTC slice | **Closed** — `saleBusinessDate` (Asia/Manila) on pending coverage |
+| 6 | Ceramic expenses filtered by `created_at` not sale | **Closed** — `filterCeramicExpensesForSales` keys off sale id |
+| 7 | Wash pool bay crew only | By design (money contract E2) |
+| 8 | `payout_weekday` unused in period math | **Closed** — UI labeled reminder-only |
+| 9 | Floor `loadProof` fetched unused packages | **Closed** — packages load only for fixed runs |
+| 10 | Wrong-kind confirm easy | **Closed** — kind switch resets wizard; confirm rejects mismatched preview |
 
 ## Lower
 
-| # | Risk |
-|---|------|
-| 11 | Global advisory lock serializes all branch confirms |
-| 12 | ASA view sees full math without write (intentional, still sensitive) |
-| 13 | Settings “SA only” copy vs `isAdmin` write |
+| # | Risk | Status |
+|---|------|--------|
+| 11 | Global advisory lock serializes confirms | Accepted (safety) |
+| 12 | ASA view sees full math without write | Intentional |
+| 13 | Settings “SA only” copy vs `isAdmin` write | Open / copy |
+| 14 | `public_queue_*` SECURITY DEFINER views | **Intentional** — anon has no `bookings` SELECT; views expose only queue_number/status/pay_category. Do not flip to `security_invoker` without anon RLS. |
 
 ## What is *not* a bug
 
@@ -36,10 +37,12 @@
 - Pending ₱ ≠ POS proof ₱.
 - Manual confirm required (no nightly auto-pay).
 
+## Seam coverage (2026-08-26)
+
+Clock/attendance · wash pool isolation · detailing assignee · CA deduct · EoS → Finance → pending floor → `run_payroll` · hard gate · POS handoff · wash-pool-only salary preview · package kinds · **Manila sale day** · **ceramic-by-sale** · **CA staff_id stamp**.
+
 ## Architecture deepening candidates
 
-1. **Strong** — ShopDaySettlement vs FloorPayWindow named module (pending + coverage locality).
-2. **Strong** — CA pipeline: form staff_id + status contract + deduct units (or delete flag).
-3. **Worth exploring** — Preserve package kinds through `run_payroll` / My Pay labels.
-4. **Worth exploring** — Enforce or remove `pending_floor_optional`.
-5. **Speculative** — Role filter on wash roster (crew/TL only).
+1. ShopDaySettlement vs FloorPayWindow named module.
+2. Exact `expenses.description` fetch by sale-id chunks (scale) instead of `like` + soft `created_at` lower bound.
+3. Separate floor vs fixed entry routes (deeper UX).

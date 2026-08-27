@@ -56,7 +56,7 @@ function saleRowToPosInput(row = {}) {
 
 function posBucketToFloor(bucket) {
   if (bucket === 'car_wash') return 'carwash'
-  if (DETAILING_POS_BUCKETS.has(bucket)) return 'detailing'
+  if (bucket === 'detailing' || DETAILING_POS_BUCKETS.has(bucket)) return 'detailing'
   if (bucket === 'coffee') return 'coffee'
   if (bucket === 'clothing') return 'clothing'
   return 'merch'

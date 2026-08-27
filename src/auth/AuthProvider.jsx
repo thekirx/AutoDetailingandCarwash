@@ -13,6 +13,8 @@ import {
   isSuperAdmin,
 } from './permissions'
 import { resolveProfileWithCustomRole } from '../lib/roleDefinitions'
+import { getLocalCalendarDate } from '../lib/localCalendarDate'
+import { resolveEffectiveRole } from '../lib/ownerRevisionsPhase7'
 
 const AuthContext = createContext(null)
 
@@ -50,10 +52,40 @@ export function AuthProvider({ children }) {
         branch_slugs: branch_slugs.length ? branch_slugs : staffProfile.branch_slug ? [staffProfile.branch_slug] : [],
         email: user.email,
         source: 'staff_profiles',
+        base_role: staffProfile.role,
       }
       const def = staffProfile.role_definitions
       if (def?.is_active !== false && def?.role_key) {
         next = resolveProfileWithCustomRole(next, def)
+        next.base_role = next.role
+      }
+      // Day-scoped temp TL (staff_role_overrides) — Manila calendar date only
+      try {
+        const today = getLocalCalendarDate()
+        const { data: overrides } = await supabase
+          .from('staff_role_overrides')
+          .select('staff_id, role, branch_slug, on_date')
+          .eq('staff_id', user.id)
+          .eq('on_date', today)
+        const effective = resolveEffectiveRole(next, overrides || [], today)
+        const ov = (overrides || []).find((o) => String(o.staff_id) === String(user.id)) || overrides?.[0]
+        if (effective && effective !== next.role) {
+          next = {
+            ...next,
+            role: effective,
+            role_override: ov || null,
+            // Multi-branch: stamp override branch so TL queue scope works that day
+            branch_slug: next.branch_slug || ov?.branch_slug || next.branch_slug,
+            branch_slugs:
+              next.branch_slugs?.length
+                ? next.branch_slugs
+                : ov?.branch_slug
+                  ? [ov.branch_slug]
+                  : next.branch_slugs,
+          }
+        }
+      } catch (overrideErr) {
+        console.warn('[auth] role override unavailable', overrideErr?.message || overrideErr)
       }
       setProfile(next)
       return next

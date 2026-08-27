@@ -1,7 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
-import { notifyBookingStatus } from './notifyBooking.mjs'
+import { notifyBookingPhotosReady, notifyBookingStatus } from './notifyBooking.mjs'
 import { canStaffUpdateBookingStatus } from './bookingStatusAccess.mjs'
 import { canEnterPaymentHandoff, isPaymentHandoffStatus } from './queuePaymentHandoff.mjs'
+import {
+  assertDetailingCompletionOutcome,
+  buildExperiencePlanCardPayload,
+  EXPERIENCE_LIST_TITLE,
+  shouldCreateExperiencePlanCard,
+} from '../src/lib/detailingCompletion.js'
+import { nextPlanCardPosition, nextPlanListPosition } from '../src/lib/plannerBoard.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 
 function admin() {
@@ -21,11 +28,69 @@ function userClient(token) {
   })
 }
 
-const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'sales', 'team_lead', 'assistant_super_admin'])
+const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'sales', 'team_lead', 'assistant_super_admin', 'operations_lead'])
+
+async function ensureExperienceListId(db) {
+  let { data: board } = await db.from('plan_boards').select('id').order('created_at', { ascending: true }).limit(1).maybeSingle()
+  if (!board?.id) {
+    const { data: created, error } = await db.from('plan_boards').insert({ name: 'Hakum Planning' }).select('id').single()
+    if (error) throw error
+    board = created
+  }
+  const { data: lists } = await db.from('plan_lists').select('id, title, position').eq('board_id', board.id)
+  const existing = (lists || []).find((l) => l.title === EXPERIENCE_LIST_TITLE)
+  if (existing) return existing.id
+  const { data: row, error: listErr } = await db
+    .from('plan_lists')
+    .insert({
+      board_id: board.id,
+      title: EXPERIENCE_LIST_TITLE,
+      position: nextPlanListPosition(lists || []),
+    })
+    .select('id')
+    .single()
+  if (listErr) throw listErr
+  return row.id
+}
+
+async function insertExperienceInvestigation(db, booking, outcome, createdBy) {
+  const listId = await ensureExperienceListId(db)
+  const { data: cards } = await db.from('plan_cards').select('position').eq('list_id', listId)
+  const position = nextPlanCardPosition([{ id: listId, plan_cards: cards || [] }], listId)
+  const payload = buildExperiencePlanCardPayload({
+    booking,
+    outcome,
+    listId,
+    position,
+    createdBy,
+  })
+  const { data: card, error } = await db.from('plan_cards').insert(payload).select('id').single()
+  if (error) throw error
+
+  const { data: assignees } = await db
+    .from('staff_profiles')
+    .select('id')
+    .in('role', ['operations_lead', 'BossMich', 'assistant_super_admin'])
+    .eq('is_active', true)
+    .limit(12)
+
+  const ids = [...new Set((assignees || []).map((r) => r.id).filter(Boolean))]
+  if (ids.length) {
+    await db.from('plan_card_assignees').insert(
+      ids.map((staff_id) => ({
+        card_id: card.id,
+        staff_id,
+        assigned_by: createdBy || null,
+        status: 'todo',
+      })),
+    )
+  }
+  return card
+}
 
 /**
  * Ops updates booking status + triggers BusyBee SMS / push.
- * Body: { booking_id, status }
+ * Body: { booking_id, status, completion_outcome?, notify_photos?, branch?, cancellation_reason? }
  * for_payment always goes through send_queue_ticket_to_payment (creates pos_handoffs).
  */
 export async function handleBookingStatusRequest(req, res) {
@@ -69,7 +134,7 @@ export async function handleBookingStatusRequest(req, res) {
 
     const { data: existing, error: loadErr } = await db
       .from('bookings')
-      .select('id, branch, status')
+      .select('id, branch, status, customer_name, customer_phone, customer_id, vehicle_plate, service_id, services(name, slug, pay_category)')
       .eq('id', bookingId)
       .maybeSingle()
     if (loadErr) return json(res, 400, { error: loadErr.message })
@@ -142,6 +207,11 @@ export async function handleBookingStatusRequest(req, res) {
       }
     }
 
+    const outcomeGate = assertDetailingCompletionOutcome(existing, body.completion_outcome, {
+      nextStatus: status,
+    })
+    if (!outcomeGate.ok) return json(res, 400, { error: outcomeGate.error })
+
     const now = new Date().toISOString()
     const patch = {
       status,
@@ -153,6 +223,12 @@ export async function handleBookingStatusRequest(req, res) {
           }
         : {}),
       ...(status === 'waiting' ? { waiting_at: now } : {}),
+      ...(status === 'completed'
+        ? {
+            completed_at: now,
+            ...(outcomeGate.outcome ? { completion_outcome: outcomeGate.outcome } : {}),
+          }
+        : {}),
     }
 
     // Sales / SA / ASA may re-assign branch when moving to Assigned to Branch (confirmed).
@@ -183,9 +259,18 @@ export async function handleBookingStatusRequest(req, res) {
       .from('bookings')
       .update(patch)
       .eq('id', bookingId)
-      .select('*')
+      .select('*, services(name, slug, pay_category)')
       .single()
     if (error) return json(res, 400, { error: error.message })
+
+    let experienceCard = null
+    if (status === 'completed' && shouldCreateExperiencePlanCard(outcomeGate.outcome)) {
+      try {
+        experienceCard = await insertExperienceInvestigation(db, booking, outcomeGate.outcome, staff.id)
+      } catch (err) {
+        experienceCard = { error: String(err.message || err) }
+      }
+    }
 
     let notify = null
     try {
@@ -194,7 +279,27 @@ export async function handleBookingStatusRequest(req, res) {
       notify = { error: String(err.message || err) }
     }
 
-    return json(res, 200, { ok: true, booking: { id: booking.id, status: booking.status, branch: booking.branch }, notify })
+    let photosNotify = null
+    if (body.notify_photos) {
+      try {
+        photosNotify = await notifyBookingPhotosReady(booking)
+      } catch (err) {
+        photosNotify = { error: String(err.message || err) }
+      }
+    }
+
+    return json(res, 200, {
+      ok: true,
+      booking: {
+        id: booking.id,
+        status: booking.status,
+        branch: booking.branch,
+        completion_outcome: booking.completion_outcome || null,
+      },
+      experienceCard,
+      notify,
+      photosNotify,
+    })
   } catch (err) {
     return json(res, 500, { error: String(err.message || err) })
   }

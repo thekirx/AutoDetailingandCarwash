@@ -7,7 +7,7 @@ import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { buildPosSalePayload, buildVisitHandoffCartLines, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership } from '@/lib/posSale'
+import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canRemovePosCartLine, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership, removePosCartLine } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
@@ -17,6 +17,7 @@ import { approvedCaForCloseDay, formatBacoorReportText } from '@/lib/bacoorDaily
 import { buildShopDaySettlementReport, shopDayShouldClose } from '@/lib/shopDaySettlement'
 import {
   applyCaCollectedToCashLeft,
+  attachSalaryDraftExtras,
   canSubmitShiftClose,
   datetimeLocalToIso,
   moneySnapshotFromReport,
@@ -87,7 +88,13 @@ export default function PosPage() {
   const [customerId, setCustomerId] = useState('')
   const [linkedCustomer, setLinkedCustomer] = useState(null)
   const [guestName, setGuestName] = useState('')
+  const [guestFirstName, setGuestFirstName] = useState('')
+  const [guestLastName, setGuestLastName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
+  const [discountPercent, setDiscountPercent] = useState('')
+  const [discountAmountPesos, setDiscountAmountPesos] = useState('')
+  const [discountReason, setDiscountReason] = useState('')
   const [customerSearch, setCustomerSearch] = useState('')
   const [customerHits, setCustomerHits] = useState([])
   const [searchingCustomer, setSearchingCustomer] = useState(false)
@@ -117,6 +124,7 @@ export default function PosPage() {
   const [shiftSubmitting, setShiftSubmitting] = useState(false)
   const [shiftFieldConfig, setShiftFieldConfig] = useState([])
   const [shiftWizardStep, setShiftWizardStep] = useState(0)
+  const [salaryDraftExtras, setSalaryDraftExtras] = useState([])
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
   const [activeMembership, setActiveMembership] = useState(null)
@@ -176,7 +184,7 @@ export default function PosPage() {
         .eq('is_archived', false),
       supabase
         .from('products')
-        .select('id, name, price_minor, category, stock_qty, sku, tags')
+        .select('id, name, price_minor, category, stock_qty, sku, tags, usage_kind')
         .eq('is_active', true)
         .eq('is_archived', false),
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
@@ -225,6 +233,20 @@ export default function PosPage() {
       setPaymentOptions(normalized.payment_methods)
       setExpenseKinds(normalized.expense_kinds)
     }
+    // Finance expense_categories is source of truth when present
+    const { data: finCats } = await supabase
+      .from('expense_categories')
+      .select('id, name, kind, is_active')
+      .eq('is_active', true)
+      .order('name')
+    if (finCats?.length) {
+      setExpenseKinds(
+        finCats.map((c) => ({
+          value: String(c.kind || c.name || c.id).toLowerCase().replace(/\s+/g, '_'),
+          label: c.name,
+        })),
+      )
+    }
     setServices(
       (svc.data || []).map((row) => ({
         ...row,
@@ -233,7 +255,24 @@ export default function PosPage() {
       })),
     )
     const productRows = (prod.data || []).filter((p) => (branchAdmin ? productIsPosSellable(p) : true))
-    setProducts(productRows)
+    let stockMap = {}
+    if (branch && productRows.length) {
+      const { data: branchStock, error: stockErr } = await supabase
+        .from('product_branch_stock')
+        .select('product_id, qty')
+        .eq('branch_slug', branch)
+      if (stockErr) toast.error(stockErr.message)
+      else {
+        for (const row of branchStock || []) stockMap[row.product_id] = Number(row.qty) || 0
+      }
+    }
+    setProducts(
+      productRows.map((p) => ({
+        ...p,
+        branch_stock_qty: stockMap[p.id],
+        stock_qty: stockMap[p.id] != null ? stockMap[p.id] : p.stock_qty,
+      })),
+    )
     setTodayStats(stats.data)
     setTodaySales(saleRows)
     setHandoffs(handoffRes.data || [])
@@ -436,7 +475,7 @@ export default function PosPage() {
         id: p.id,
         name: p.name,
         price_minor: p.price_minor,
-        meta: `Stock ${p.stock_qty}${p.sku ? ` · ${p.sku}` : ''}`,
+        meta: `Stock ${p.branch_stock_qty != null ? p.branch_stock_qty : p.stock_qty}${p.sku ? ` · ${p.sku}` : ''}`,
       }))
       .filter((item) => !q || item.name.toLowerCase().includes(q) || (item.meta || '').toLowerCase().includes(q))
   }, [products, query, merchFamilyFilter])
@@ -537,8 +576,37 @@ export default function PosPage() {
   function resetCheckoutExtras() {
     clearCustomerLink()
     setGuestName('')
+    setGuestFirstName('')
+    setGuestLastName('')
+    setGuestEmail('')
     setGuestPhone('')
+    setDiscountPercent('')
+    setDiscountAmountPesos('')
+    setDiscountReason('')
     setPaymentMethod('cash')
+  }
+
+  function applyCartDiscount() {
+    const amountMinor = discountAmountPesos.trim()
+      ? Math.round(Number(discountAmountPesos) * 100)
+      : 0
+    const result = applyAdHocDiscount(cart, {
+      percent: Number(discountPercent) || 0,
+      amountMinor,
+      reason: discountReason,
+    })
+    if (!result.ok) {
+      toast.error(result.error)
+      return
+    }
+    setCart(result.cart)
+    writeAudit({
+      action: 'pos.discount',
+      entityType: 'pos_cart',
+      summary: `Ad-hoc discount: ${result.audit.reason}`,
+      meta: result.audit,
+    })
+    toast.success('Discount applied')
   }
 
   function addToCart(item, { loyaltyAward = false, birthdayAward = false } = {}) {
@@ -696,9 +764,16 @@ export default function PosPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({
-              customer_name: guestName.trim() || 'Walk-in customer',
+              customer_name:
+                [guestFirstName.trim(), guestLastName.trim()].filter(Boolean).join(' ') ||
+                guestName.trim() ||
+                'Walk-in customer',
+              customer_first_name: guestFirstName.trim() || undefined,
+              customer_last_name: guestLastName.trim() || undefined,
+              customer_email: guestEmail.trim() || undefined,
               customer_phone: guestPhone.trim(),
               site_origin: window.location.origin,
+              allow_walk_in_name: true,
             }),
           })
           const body = await res.json().catch(() => ({}))
@@ -715,8 +790,17 @@ export default function PosPage() {
     }
 
     const noteParts = []
-    if (!resolvedCustomerId && (guestName.trim() || guestPhone.trim())) {
-      noteParts.push(`Walk-in: ${[guestName.trim(), guestPhone.trim()].filter(Boolean).join(' · ')}`)
+    const walkInLabel = [
+      [guestFirstName.trim(), guestLastName.trim()].filter(Boolean).join(' ') || guestName.trim(),
+      guestPhone.trim(),
+      guestEmail.trim(),
+    ].filter(Boolean)
+    if (!resolvedCustomerId && walkInLabel.length) {
+      noteParts.push(`Walk-in: ${walkInLabel.join(' · ')}`)
+    }
+    if (cart.some((l) => l.adhoc_discount_applied)) {
+      const reasons = [...new Set(cart.filter((l) => l.adhoc_discount_reason).map((l) => l.adhoc_discount_reason))]
+      noteParts.push(`Discount: ${reasons.join('; ') || 'ad-hoc'}`)
     }
     if (linkedCustomer?.plate) noteParts.push(`Plate ${linkedCustomer.plate}`)
     if (cart.some((l) => l.is_loyalty_award && !l.is_birthday_award)) noteParts.push('Includes loyalty award line')
@@ -904,6 +988,7 @@ export default function PosPage() {
     setShiftOverrides({})
     setShiftReasons({})
     setShiftFieldErrors({})
+    setSalaryDraftExtras([])
     setShiftEndedError('')
     setShiftWizardStep(0)
     setShiftEndedAtLocal(toDatetimeLocalValue())
@@ -945,6 +1030,15 @@ export default function PosPage() {
       }
     }
     Object.assign(submitted, applyCaCollectedToCashLeft(baseline, submitted))
+    const draftForSubmit = (salaryDraftExtras || []).map((row) => ({
+      staff_id: row.staff_id || null,
+      staff_name: row.staff_name,
+      amount_minor:
+        row.amount_minor != null ? row.amount_minor : parsePesosToMinor(row.amount_pesos) ?? 0,
+      note: row.note,
+      kind: row.kind,
+    }))
+    Object.assign(submitted, attachSalaryDraftExtras(submitted, draftForSubmit))
     const validationBaseline = shiftCloseValidationBaseline(dailyReportData, submitted)
     const check = validateShiftCloseSubmit({
       baseline: validationBaseline,
@@ -1391,6 +1485,12 @@ export default function PosPage() {
                 setShiftReasons={setShiftReasons}
                 shiftFieldErrors={shiftFieldErrors}
                 setShiftFieldErrors={setShiftFieldErrors}
+                salaryDraftExtras={salaryDraftExtras}
+                setSalaryDraftExtras={setSalaryDraftExtras}
+                staffOptions={(todayAttendance || []).map((row) => ({
+                  id: row.staff_id,
+                  full_name: row.staff_profiles?.full_name || row.staff_id,
+                }))}
                 onSubmit={submitEndOfShift}
                 shiftSubmitting={shiftSubmitting || !branch}
               />
@@ -1470,22 +1570,62 @@ export default function PosPage() {
                         formatMoney(line.unit_price_minor)
                       )}{' '}
                       · {line.catalog_kind || line.item_type}
+                      {line.from_handoff ? ' · queue job' : ''}
                       {line.is_loyalty_award ? ' · loyalty' : ''}
                       {line.is_membership_included ? ' · member include' : ''}
                       {line.membership_discount_applied ? ' · member discount' : ''}
+                      {line.adhoc_discount_applied ? ' · discount' : ''}
                     </p>
+                    {line.from_handoff ? (
+                      <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                        Ask Team Lead to change the wash/detailing job.
+                      </p>
+                    ) : null}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="min-h-11 min-w-11"
-                    onClick={() => setCart((c) => c.filter((x) => x.key !== line.key))}
-                    aria-label="Remove"
-                  >
-                    <Trash2 />
-                  </Button>
+                  {canRemovePosCartLine(line) ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="min-h-11 min-w-11"
+                      onClick={() => setCart((c) => removePosCartLine(c, line.key))}
+                      aria-label="Remove"
+                    >
+                      <Trash2 />
+                    </Button>
+                  ) : (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Locked</span>
+                  )}
                 </div>
               ))}
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-dashed border-border bg-muted/20 p-3">
+              <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Ad-hoc discount</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  className="min-h-10"
+                  placeholder="% off"
+                  inputMode="decimal"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                />
+                <Input
+                  className="min-h-10"
+                  placeholder="₱ amount"
+                  inputMode="decimal"
+                  value={discountAmountPesos}
+                  onChange={(e) => setDiscountAmountPesos(e.target.value)}
+                />
+              </div>
+              <Input
+                className="min-h-10"
+                placeholder="Reason (required)"
+                value={discountReason}
+                onChange={(e) => setDiscountReason(e.target.value)}
+              />
+              <Button type="button" variant="secondary" className="min-h-10 w-full" onClick={applyCartDiscount}>
+                Apply discount
+              </Button>
             </div>
 
             <div className="space-y-3 rounded-xl border border-border bg-muted/25 p-4">
@@ -1569,21 +1709,40 @@ export default function PosPage() {
                   )}
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-name" className="text-xs text-muted-foreground">
-                        Name <span className="font-normal">(optional)</span>
+                      <Label htmlFor="pos-guest-first" className="text-xs text-muted-foreground">
+                        First name
                       </Label>
                       <Input
-                        id="pos-guest-name"
+                        id="pos-guest-first"
                         className="min-h-11"
-                        placeholder="Walk-in name"
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        autoComplete="name"
+                        placeholder="First"
+                        value={guestFirstName}
+                        onChange={(e) => {
+                          setGuestFirstName(e.target.value)
+                          setGuestName([e.target.value, guestLastName].filter(Boolean).join(' '))
+                        }}
+                        autoComplete="given-name"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pos-guest-last" className="text-xs text-muted-foreground">
+                        Last name
+                      </Label>
+                      <Input
+                        id="pos-guest-last"
+                        className="min-h-11"
+                        placeholder="Last"
+                        value={guestLastName}
+                        onChange={(e) => {
+                          setGuestLastName(e.target.value)
+                          setGuestName([guestFirstName, e.target.value].filter(Boolean).join(' '))
+                        }}
+                        autoComplete="family-name"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="pos-guest-phone" className="text-xs text-muted-foreground">
-                        Number <span className="font-normal">(optional)</span>
+                        Number
                       </Label>
                       <Input
                         id="pos-guest-phone"
@@ -1593,6 +1752,20 @@ export default function PosPage() {
                         value={guestPhone}
                         onChange={(e) => setGuestPhone(e.target.value)}
                         autoComplete="tel"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pos-guest-email" className="text-xs text-muted-foreground">
+                        Email <span className="font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        id="pos-guest-email"
+                        className="min-h-11"
+                        placeholder="name@…"
+                        type="email"
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        autoComplete="email"
                       />
                     </div>
                   </div>

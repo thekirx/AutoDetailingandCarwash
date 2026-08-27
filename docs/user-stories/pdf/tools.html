@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<title>Other tools — People, Planner, CRM, messages, settings</title>
+<style>
+  :root {
+    --blue: #052699; --navy: #020a31; --ink: #0f172a; --muted: #64748b;
+    --paper: #f7f8fb; --line: #e2e8f0; --ok: #15803d; --ok-bg: #f0fdf4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 16px/1.55 "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 420px at 10% -10%, rgba(5,38,153,.12), transparent 60%),
+      linear-gradient(180deg, #eef1f8 0%, var(--paper) 28%, #fff 100%);
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 18px 64px; }
+  header.hero {
+    padding: 28px; border-radius: 18px; color: #f1f1ed;
+    background:
+      radial-gradient(circle at 85% 15%, #2d59d3, transparent 42%),
+      linear-gradient(145deg, #03156b 0%, var(--navy) 55%, #01061c 100%);
+  }
+  header.hero .eyebrow { margin: 0 0 10px; font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; opacity: .78; }
+  header.hero h1 { margin: 0 0 8px; font-size: clamp(1.45rem, 3vw, 2rem); font-weight: 700; }
+  header.hero p { margin: 0; max-width: 58ch; opacity: .9; }
+  header.hero .meta { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.18); font-size: 12px; opacity: .85; }
+  .tabs {
+    display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 0; padding: 10px;
+    border-radius: 14px; background: #fff; border: 1px solid var(--line);
+    position: sticky; top: 6px; z-index: 5;
+  }
+  .tab-btn {
+    appearance: none; border: 0; cursor: pointer; padding: 8px 12px; border-radius: 999px;
+    background: transparent; color: var(--muted); font: 700 11px/1.2 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: .03em;
+  }
+  .tab-btn:hover { color: var(--blue); background: rgba(5,38,153,.06); }
+  .tab-btn.active { color: #fff; background: var(--blue); }
+  .tab-panel { display: none; margin-top: 20px; }
+  .tab-panel.active { display: block; }
+  .tab-intro { margin: 0 0 16px; padding: 12px 14px; border-left: 3px solid var(--blue); background: #fff; border-radius: 0 10px 10px 0; color: var(--muted); }
+  .role-card { margin: 0 0 16px; padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; }
+  .block { margin: 0 0 22px; padding: 20px 22px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+  .block h2 { margin: 0 0 8px; font-size: 1.2rem; color: var(--navy); }
+  .lead { margin: 0 0 12px; color: var(--muted); }
+  .story { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
+  .story .as, .story .want, .story .so { margin: 4px 0; }
+  ul.ac { list-style: none; padding: 8px 0 0; margin: 8px 0 0; }
+  ul.ac li { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0; padding: 8px 10px; border-radius: 8px; background: var(--ok-bg); }
+  ul.ac .box { flex: 0 0 18px; height: 18px; margin-top: 2px; border-radius: 4px; border: 1.5px solid var(--ok); display: grid; place-items: center; font-size: 11px; font-weight: 800; color: var(--ok); background: #fff; }
+  .table-wrap { overflow: auto; margin: 12px 0 8px; border: 1px solid var(--line); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: #f1f5f9; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .chart-card { margin: 0 0 24px; padding: 16px 18px 20px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+  .chart-head h2 { margin: 0 0 6px; font-size: 1.08rem; color: var(--navy); }
+  .chart-head p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+  .mermaid { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow: auto; min-height: 120px; }
+  .mermaid svg { max-width: 100%; height: auto; }
+  footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  ol, ul:not(.ac) { margin: .5em 0 .9em; padding-left: 1.25em; }
+  p { margin: .55em 0; }
+  @media print {
+    body { background: #fff; }
+    .tabs { display: none !important; }
+    .tab-panel { display: block !important; break-before: page; page-break-before: always; }
+    .tab-panel:first-of-type { break-before: avoid; page-break-before: avoid; }
+    .tab-panel::before {
+      content: attr(data-print-title);
+      display: block; margin: 0 0 14px; font-size: 18px; font-weight: 800; color: var(--navy);
+      padding-bottom: 8px; border-bottom: 2px solid var(--blue);
+    }
+    header.hero { box-shadow: none; }
+    .block, .chart-card, .story { box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+    .mermaid { break-inside: avoid; page-break-inside: avoid; }
+  }
+
+.tabs { display: none !important; }
+.tab-panel { display: block !important; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head><body>
+<div class="wrap">
+<header class="hero">
+  <p class="eyebrow">Hakum Auto Care · Owner pack</p>
+  <h1>Other tools — People, Planner, CRM, messages, settings</h1>
+  <p>Company tools beyond the bay money path.</p>
+</header>
+<section class="tab-panel active" data-print-title="Other tools — People, Planner, CRM, messages, settings">
+<article class="chart-card">
+  <div class="chart-head">
+    <h2>Planner proof loop</h2>
+    <p>Assign → proof → accept or send back.</p>
+  </div>
+  <pre class="mermaid">flowchart LR
+  A[Assign task] --> P[Submit proof]
+  P --> R{Review}
+  R -->|Accept| Done[Done]
+  R -->|Send back| P</pre>
+</article>
+<section class="block">
+  <h2>Ops Lab, Data Center, Console, Branches</h2>
+  <p class="lead">Leadership and network tools outside the bay checkout.</p>
+  <article class="story">
+  <p class="as"><strong>As</strong> Operations Lead</p>
+  <p class="want"><strong>I want</strong> Ops Lab roadmap as my planning home</p>
+  <p class="so"><strong>So that</strong> network work is visible without owning payroll</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Ops Lab opens first for Ops Lead</span></li><li class="done"><span class="box">✓</span><span>Roadmap for cross-branch ops</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Owner</p>
+  <p class="want"><strong>I want</strong> Data Center for company data tools</p>
+  <p class="so"><strong>So that</strong> exports and admin data stay owner-only</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Data Center is Super Admin scoped</span></li><li class="done"><span class="box">✓</span><span>Branch Admin and Ops Lead cannot open it</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Owner or assistant with console grant</p>
+  <p class="want"><strong>I want</strong> Admin Console and Floor Board</p>
+  <p class="so"><strong>So that</strong> company overview stays in one place</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Console home for Owner and Assistant</span></li><li class="done"><span class="box">✓</span><span>Floor Board when allowed</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Owner</p>
+  <p class="want"><strong>I want</strong> to manage branches</p>
+  <p class="so"><strong>So that</strong> each bay stays correctly named and active</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Branches manage under owner tools</span></li></ul>
+</article>
+</section>
+<section class="block">
+  <h2>People</h2>
+  
+  <article class="story">
+  <p class="as"><strong>As</strong> Owner or assistant with people rights</p>
+  <p class="want"><strong>I want</strong> to hire and edit staff</p>
+  <p class="so"><strong>So that</strong> roles, branches, and clock toggles match the floor</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>People directory and edit form</span></li><li class="done"><span class="box">✓</span><span>Temporary password when needed</span></li><li class="done"><span class="box">✓</span><span>Assistant grants editor</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Branch Admin</p>
+  <p class="want"><strong>I want</strong> never to open People</p>
+  <p class="so"><strong>So that</strong> hiring stays with owner / assistant</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>People is denied for Branch Admin</span></li></ul>
+</article>
+</section>
+<section class="block">
+  <h2>Planner &amp; My Tasks</h2>
+  
+  <article class="story">
+  <p class="as"><strong>As</strong> Branch Admin, Sales, or Ops Lead</p>
+  <p class="want"><strong>I want</strong> plan cards with categories and assignees</p>
+  <p class="so"><strong>So that</strong> shop work is tracked outside the wash queue</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Boards for Planner / Equipment / Cash Advance</span></li><li class="done"><span class="box">✓</span><span>Staff see assigned rows only</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> an assignee</p>
+  <p class="want"><strong>I want</strong> to submit photo proof when required</p>
+  <p class="so"><strong>So that</strong> editors accept or send back</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Proof optional unless required</span></li><li class="done"><span class="box">✓</span><span>Accept → done; send back → in progress</span></li></ul>
+</article>
+</section>
+<section class="block">
+  <h2>CRM, inventory, cars</h2>
+  
+  <article class="story">
+  <p class="as"><strong>As</strong> Owner, assistant, or Marketing</p>
+  <p class="want"><strong>I want</strong> customer records with notes</p>
+  <p class="so"><strong>So that</strong> floor and sales share one customer list</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>CRM gated by permission</span></li><li class="done"><span class="box">✓</span><span>Best sellers and retention in the filter window</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Owner or Team Lead</p>
+  <p class="want"><strong>I want</strong> Services, Detailing, and Merch on Inventory</p>
+  <p class="so"><strong>So that</strong> bay and multi-day catalogs stay separate</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Inventory mirrors what checkout sells</span></li><li class="done"><span class="box">✓</span><span>Cars catalog for plate/vehicle consistency</span></li></ul>
+</article>
+</section>
+<section class="block">
+  <h2>Messages, reviews, inquiries</h2>
+  
+  <article class="story">
+  <p class="as"><strong>As</strong> Sales, Marketing, or Owner/assistant</p>
+  <p class="want"><strong>I want</strong> one notifications hub</p>
+  <p class="so"><strong>So that</strong> booking and planner messages land in one place</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Route gated by permission</span></li><li class="done"><span class="box">✓</span><span>Templates and SMS toggles covered</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Owner or assistant</p>
+  <p class="want"><strong>I want</strong> partnership, contact, and complaints statuses</p>
+  <p class="so"><strong>So that</strong> public forms progress to archived</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Status actions match allowed values</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Team Lead / Owner / assistant</p>
+  <p class="want"><strong>I want</strong> to mark Failed QA and see scores</p>
+  <p class="so"><strong>So that</strong> quality stays visible</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Team Lead / Owner / assistant can mark Failed QA; Sales cannot</span></li></ul>
+</article>
+</section>
+<section class="block">
+  <h2>KPI, History, Memberships, Settings, Audit, Content</h2>
+  <p class="lead">Every leftover Command surface.</p>
+  <article class="story">
+  <p class="as"><strong>As</strong> Sales, Marketing, Team Lead, or Branch Admin</p>
+  <p class="want"><strong>I want</strong> visit history</p>
+  <p class="so"><strong>So that</strong> I can look up past visits</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>History in nav / dock where allowed</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Team Lead</p>
+  <p class="want"><strong>I want</strong> branch KPI board</p>
+  <p class="so"><strong>So that</strong> bay volume is visible without Finance P&amp;L</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>KPI in Team Lead more menu</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Owner</p>
+  <p class="want"><strong>I want</strong> memberships &amp; loyalty switches</p>
+  <p class="so"><strong>So that</strong> stamps / points / tiers stay kill-switchable</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Branch Admin denied by default</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Owner / assistant</p>
+  <p class="want"><strong>I want</strong> Settings hub with thin modules</p>
+  <p class="so"><strong>So that</strong> POS config and Payroll rules stay separate</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Payroll rules under settings/payroll</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Branch Admin or Owner</p>
+  <p class="want"><strong>I want</strong> audit log</p>
+  <p class="so"><strong>So that</strong> POS / sale actions are reviewable</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Audit allowed for Branch Admin</span></li></ul>
+</article><article class="story">
+  <p class="as"><strong>As</strong> Marketing or Owner/assistant</p>
+  <p class="want"><strong>I want</strong> site content and broadcast</p>
+  <p class="so"><strong>So that</strong> public site blocks and blasts stay role-gated</p>
+  <ul class="ac"><li class="done"><span class="box">✓</span><span>Content and broadcast under the right permissions</span></li></ul>
+</article>
+</section>
+</section>
+</div>
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis', htmlLabels: true } })
+</script>
+</body></html>
