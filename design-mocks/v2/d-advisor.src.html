@@ -1,0 +1,642 @@
+<title>What Does My Car Need</title>
+<style>
+@font-face{font-family:'Benzin';src:url(__A_fontDisplay__) format('woff2');font-weight:800;font-display:swap}
+@font-face{font-family:'Benzin';src:url(__A_fontDisplayMed__) format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBody__) format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyMed__) format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyBold__) format('woff2');font-weight:700;font-display:swap}
+
+/* -- Tokens - Hakum's ramp from design-tokens.css -------------------------- */
+:root{
+  /* ---- Hakum design tokens. Identical in every mock. ----
+     Values below are the ones in src/design-tokens.css; the --hk-* names are
+     the shared vocabulary, and each mock aliases its local names onto them. */
+  --hk-paper:var(--hk-paper);        /* --color-surface-page */
+  --hk-paper-2:#E7E7E1;
+  --hk-white:#FFFFFF;        /* --color-white */
+  --hk-navy:#020A31;         /* --color-surface-cinematic */
+  --hk-navy-2:#08133F;
+  --hk-navy-3:#0D1B52;
+  --hk-rule-dark:var(--hk-rule-dark);
+  --hk-blue:#052699;         /* --color-brand-primary */
+  --hk-blue-hover:#0A32B8;   /* --color-brand-primary-hover */
+  --hk-blue-active:#031D78;  /* --color-brand-primary-active */
+  --hk-blue-soft:#E8EDFF;    /* --color-brand-primary-soft */
+  --hk-blue-mid:var(--hk-blue-mid);
+  --hk-accent:#9DB4FF;       /* brand blue lifted to read on dark grounds */
+  --hk-ink:#333333;          /* --color-text-primary */
+  --hk-ink-2:#5A5A5A;
+  --hk-ink-3:#84847E;
+  --hk-rule:#DCDCD5;
+  --hk-on-navy:var(--hk-on-navy);
+  --hk-on-navy-dim:#6E79A8;
+  /* Type: the real brand pairing, no third family anywhere. */
+  --hk-display:'Benzin','Arial Black',sans-serif;
+  --hk-body:'Gilmer',Arial,sans-serif;
+  --paper:var(--hk-paper);
+  --paper-2:var(--hk-paper-2);
+  --white:var(--hk-white);
+  --navy:var(--hk-navy);
+  --navy-2:var(--hk-navy-2);
+  --blue:var(--hk-blue);
+  --blue-hover:var(--hk-blue-hover);
+  --blue-active:var(--hk-blue-active);
+  --blue-soft:var(--hk-blue-soft);
+  --blue-lift:var(--hk-accent);
+  --ink:var(--hk-ink);
+  --ink-2:var(--hk-ink-2);
+  --ink-3:var(--hk-ink-3);
+  --line:var(--hk-rule);
+  --display:var(--hk-display);
+  --body:var(--hk-body);
+  --shell:min(100% - 36px,1200px);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.62;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+a{color:inherit}
+p{margin:0}
+h1,h2,h3{margin:0;font-family:var(--display);font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-.025em;line-height:.92;text-wrap:balance}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.shell{width:var(--shell);margin-inline:auto}
+section{padding:clamp(66px,7.6vw,110px) 0;scroll-margin-top:66px}
+.skew{transform:skewX(-7deg);transform-origin:left bottom}
+.eyebrow{font-size:10px;font-weight:800;letter-spacing:.19em;text-transform:uppercase;color:var(--blue)}
+.eyebrow.on-navy{color:var(--blue-lift)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:11px;min-height:50px;padding:0 26px;border:1px solid transparent;border-radius:2px;font-family:var(--body);font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:transform .2s,background .2s,color .2s,border-color .2s,box-shadow .2s}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-blue:hover{background:var(--blue-hover);transform:translateY(-2px);box-shadow:0 12px 30px rgba(5,38,153,.26)}
+.btn-out{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn-out:hover{border-color:var(--blue);color:var(--blue)}
+.btn-white{background:#fff;color:var(--blue);border-color:#fff}
+.btn-white:hover{transform:translateY(-2px)}
+.cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+
+.topbar{position:sticky;top:0;z-index:40;background:rgba(241,241,237,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar-in{width:var(--shell);margin-inline:auto;height:66px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.topbar img{height:19px}
+.topnav{display:none;gap:26px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+@media(min-width:940px){.topnav{display:flex}}
+.topnav a{color:var(--ink-2);text-decoration:none}
+.topnav a:hover{color:var(--blue)}
+
+/* -- Hero: states the problem the advisor solves --------------------------- */
+.hero{padding:clamp(56px,7vw,104px) 0 clamp(40px,4.4vw,64px)}
+.hero-in{display:grid;gap:clamp(28px,3.4vw,54px);align-items:center}
+@media(min-width:940px){.hero-in{grid-template-columns:1.05fr .95fr}}
+.hero h1{margin-top:18px;font-size:clamp(2.1rem,4.6vw,3.5rem)}
+.hero h1 em{font-style:italic;color:var(--blue)}
+.hero>.shell>.hero-in>div>p{margin-top:22px;color:var(--ink-2);max-width:52ch;font-size:clamp(15px,1.4vw,17px)}
+.hero-figure{position:relative}
+.hero-figure img{width:100%;aspect-ratio:5/4;object-fit:cover}
+.hero-chip{position:absolute;left:0;bottom:0;background:var(--blue);color:#fff;padding:14px 18px;max-width:230px}
+.hero-chip strong{display:block;font-family:var(--display);font-style:italic;font-size:20px;line-height:1}
+.hero-chip span{display:block;margin-top:5px;font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase}
+
+/* -- The advisor - the centrepiece ----------------------------------------- */
+.advisor{background:var(--navy);color:var(--hk-paper)}
+.advisor-head{display:grid;gap:20px;margin-bottom:clamp(30px,3.4vw,46px)}
+@media(min-width:900px){.advisor-head{grid-template-columns:1fr .8fr;align-items:end;gap:50px}}
+.advisor-head h2{margin-top:16px;font-size:clamp(2.1rem,4.4vw,3.4rem);color:var(--hk-paper)}
+.advisor-head p{color:rgba(241,241,237,.76);max-width:54ch}
+.wizard{background:var(--navy-2);border:1px solid var(--hk-rule-dark)}
+.wiz-bar{display:flex;border-bottom:1px solid var(--hk-rule-dark)}
+.wiz-step{flex:1;padding:15px 12px;text-align:center;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--hk-on-navy);border-right:1px solid var(--hk-rule-dark);transition:color .25s,background .25s}
+.wiz-step:last-child{border-right:0}
+.wiz-step[aria-current="step"]{color:var(--navy);background:var(--blue-lift)}
+.wiz-step.done{color:var(--blue-lift)}
+.wiz-body{padding:clamp(24px,3.2vw,44px)}
+fieldset{margin:0;padding:0;border:0}
+legend{padding:0;font-family:var(--display);font-style:italic;font-size:clamp(1.3rem,2.3vw,1.9rem);text-transform:uppercase;letter-spacing:-.02em;color:var(--hk-paper)}
+.q-help{margin-top:12px;color:rgba(241,241,237,.7);font-size:14px;max-width:56ch}
+.opts{margin-top:26px;display:grid;gap:12px}
+@media(min-width:700px){.opts{grid-template-columns:repeat(3,1fr)}}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.opt span.face{display:flex;flex-direction:column;gap:7px;min-height:112px;padding:18px;border:1px solid var(--hk-rule-dark);background:rgba(2,10,49,.55);cursor:pointer;transition:border-color .2s,background .2s,transform .2s}
+.opt input:hover+.face{border-color:var(--hk-blue-mid)}
+.opt input:focus-visible+.face{outline:3px solid var(--blue-lift);outline-offset:2px}
+.opt input:checked+.face{border-color:var(--blue-lift);background:rgba(157,180,255,.12);transform:translateY(-2px)}
+.opt b{font-family:var(--body);font-size:13.5px;font-weight:700;color:var(--hk-paper)}
+.opt small{font-size:12.5px;line-height:1.5;color:rgba(241,241,237,.7)}
+.wiz-nav{margin-top:28px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.wiz-nav .muted{font-size:12px;color:var(--hk-on-navy)}
+.btn-lift{background:var(--blue-lift);color:var(--navy);border-color:var(--blue-lift)}
+.btn-lift:hover{background:var(--hk-blue-soft);transform:translateY(-2px)}
+.btn-lift[disabled]{opacity:.4;cursor:not-allowed;transform:none}
+.btn-quiet{background:transparent;color:var(--hk-paper);border-color:var(--hk-rule-dark)}
+.btn-quiet:hover{border-color:var(--blue-lift)}
+
+/* Result */
+.result{padding:clamp(24px,3.2vw,44px)}
+.result h3{font-size:clamp(1.5rem,2.8vw,2.2rem);color:var(--hk-paper)}
+.result>p{margin-top:14px;color:rgba(241,241,237,.78);max-width:58ch}
+.stack{margin:26px 0 0;padding:0;list-style:none;display:grid;gap:1px;background:var(--hk-rule-dark);border:1px solid var(--hk-rule-dark)}
+.stack li{background:var(--navy-2);padding:20px;display:grid;gap:12px;grid-template-columns:auto 1fr;align-items:start}
+.rank{width:30px;height:30px;display:grid;place-items:center;background:var(--blue-lift);color:var(--navy);font-family:var(--display);font-style:italic;font-size:12px}
+.rank.skip{background:var(--hk-rule-dark);color:var(--hk-on-navy)}
+.stack h4{margin:0;font-family:var(--body);font-size:14px;font-weight:700;color:var(--hk-paper)}
+.stack p{margin-top:6px;font-size:13.5px;color:rgba(241,241,237,.74);line-height:1.55}
+.stack .why{margin-top:9px;font-size:12.5px;color:var(--blue-lift)}
+
+/* -- Comparison table ------------------------------------------------------ */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--white)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13.5px}
+caption{text-align:left;padding:18px 20px;font-size:12px;color:var(--ink-2);border-bottom:1px solid var(--line)}
+th,td{padding:15px 18px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{background:var(--paper-2);font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink)}
+thead th.feat{background:var(--blue);color:#fff}
+tbody th{font-weight:700;font-size:13px;color:var(--ink);width:190px}
+td.on{color:var(--blue);font-weight:700}
+td.off{color:var(--ink-3)}
+tr:last-child th,tr:last-child td{border-bottom:0}
+.pill{display:inline-block;margin-top:6px;padding:3px 9px;background:var(--blue-soft);color:var(--blue-active);font-size:9.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+
+/* -- Services strip -------------------------------------------------------- */
+.head{display:grid;gap:20px;margin-bottom:clamp(32px,3.8vw,52px)}
+@media(min-width:920px){.head{grid-template-columns:1.1fr .9fr;align-items:end;gap:52px}}
+.head h2{margin-top:16px;font-size:clamp(2.2rem,4.8vw,3.7rem)}
+.head>p{color:var(--ink-2);max-width:56ch}
+.grid4{display:grid;gap:18px}
+@media(min-width:640px){.grid4{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1040px){.grid4{grid-template-columns:repeat(4,1fr)}}
+.svc{display:flex;flex-direction:column;background:var(--white);border:1px solid var(--line);border-top:4px solid var(--blue);text-decoration:none;overflow:hidden;transition:transform .26s,box-shadow .26s}
+.svc:hover{transform:translateY(-5px);box-shadow:0 20px 44px rgba(5,38,153,.15)}
+.svc img{width:100%;aspect-ratio:4/3;object-fit:cover}
+.svc-b{padding:22px;display:flex;flex-direction:column;flex:1}
+.svc-b h3{font-size:1.25rem;font-style:italic}
+.svc-b p{margin-top:10px;color:var(--ink-2);font-size:13px}
+.svc-go{margin-top:auto;padding-top:20px;font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
+
+/* -- Close ----------------------------------------------------------------- */
+.close{background:radial-gradient(circle at 76% 20%,var(--hk-blue-mid),var(--blue) 44%,var(--navy));color:#fff}
+.close h2{font-size:clamp(2.4rem,5.6vw,4.4rem);color:#fff}
+.close p{margin-top:18px;color:rgba(255,255,255,.82);max-width:52ch}
+footer{border-top:1px solid var(--line);padding:30px 0}
+.foot-in{width:var(--shell);margin-inline:auto;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+
+/* -- Detail view ----------------------------------------------------------- */
+.view[hidden]{display:none}
+.d-top{background:var(--navy);color:var(--hk-paper);padding:clamp(52px,6.4vw,94px) 0 clamp(40px,4.6vw,66px)}
+.back{display:inline-flex;align-items:center;gap:9px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.68);text-decoration:none}
+.back:hover{color:#fff}
+.d-top h1{margin-top:22px;font-size:clamp(2.4rem,5.8vw,4.6rem);color:var(--hk-paper)}
+.d-top .lede{margin-top:22px;max-width:58ch;color:rgba(255,255,255,.78);font-size:clamp(15px,1.4vw,17px)}
+.tiers{display:grid;gap:18px}
+@media(min-width:900px){.tiers{grid-template-columns:repeat(3,1fr)}}
+.tier{background:var(--white);border:1px solid var(--line);padding:clamp(22px,2.4vw,30px);display:flex;flex-direction:column}
+.tier.pop{border:2px solid var(--blue);position:relative}
+.tier-flag{position:absolute;top:-1px;right:-1px;background:var(--blue);color:#fff;padding:6px 12px;font-size:9px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+.tier h3{font-size:1.5rem;font-style:italic}
+.tier .sub{margin-top:7px;font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--blue)}
+.tier .mil{margin-top:18px;font-family:var(--display);font-style:italic;font-size:2rem;color:var(--ink)}
+.tier .mil small{font-size:.44em;color:var(--ink-2)}
+.tier>p{margin-top:12px;color:var(--ink-2);font-size:13.5px}
+.tier ul{margin:18px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.tier li{padding-left:20px;position:relative;font-size:13px;color:var(--ink-2)}
+.tier li::before{content:"+";position:absolute;left:0;color:var(--blue);font-weight:800}
+.tier .cta-row{margin-top:auto;padding-top:24px}
+.free{margin-top:clamp(30px,3.4vw,48px);background:var(--blue-soft);border-left:4px solid var(--blue);padding:clamp(20px,2.4vw,28px)}
+.free strong{display:block;font-family:var(--display);font-style:italic;font-size:1.15rem;text-transform:uppercase;color:var(--blue-active)}
+.free ul{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:7px}
+.free li{padding-left:20px;position:relative;font-size:13.5px;color:var(--ink)}
+.free li::before{content:"+";position:absolute;left:0;color:var(--blue);font-weight:800}
+.notes{margin:0;padding:22px 0 0;list-style:none;display:grid;gap:10px;border-top:1px solid var(--line)}
+.notes li{display:grid;grid-template-columns:30px 1fr;gap:12px;font-size:12.5px;color:var(--ink-3);line-height:1.6}
+.notes b{color:var(--blue);font-weight:800;font-size:11px}
+
+.js .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
+.js .reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.js .reveal{opacity:1;transform:none}}
+
+/* ---- Products strip: identical in every mock ---------------------------- */
+.hk-products{background:var(--hk-navy);color:var(--hk-paper);padding:clamp(44px,5vw,72px) 0}
+.hk-products-in{width:var(--shell);margin-inline:auto}
+.hk-products-head{display:grid;gap:14px;margin-bottom:clamp(26px,3vw,38px)}
+@media(min-width:860px){.hk-products-head{grid-template-columns:1fr .9fr;align-items:end;gap:44px}}
+.hk-products-head p.k{margin:0;font-family:var(--hk-body);font-size:10px;font-weight:800;letter-spacing:.19em;text-transform:uppercase;color:var(--hk-accent)}
+.hk-products-head h2{margin:8px 0 0;font-family:var(--hk-display);font-style:italic;font-weight:800;text-transform:uppercase;letter-spacing:-.025em;line-height:.94;font-size:clamp(1.8rem,3.6vw,2.8rem);color:var(--hk-paper);transform:skewX(-7deg);transform-origin:left bottom}
+.hk-products-head p.c{margin:0;font-family:var(--hk-body);color:rgba(241,241,237,.74);font-size:14px;max-width:52ch;line-height:1.6}
+.hk-brands{display:grid;gap:1px;background:var(--hk-rule-dark);border:1px solid var(--hk-rule-dark)}
+@media(min-width:520px){.hk-brands{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:860px){.hk-brands{grid-template-columns:repeat(4,1fr)}}
+.hk-brand{background:var(--hk-navy-2);padding:22px 20px;min-height:104px;display:flex;flex-direction:column;justify-content:center;gap:6px;transition:background .2s}
+.hk-brand:hover{background:var(--hk-navy-3)}
+.hk-brand strong{font-family:var(--hk-display);font-style:italic;font-weight:800;font-size:16.5px;letter-spacing:-.02em;text-transform:uppercase;color:var(--hk-paper)}
+.hk-brand span{font-family:var(--hk-body);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--hk-on-navy)}
+.hk-products-note{margin-top:16px;font-family:var(--hk-body);font-size:11.5px;color:var(--hk-on-navy-dim);line-height:1.6}
+.hk-products-note em{font-style:normal;display:inline-block;padding:3px 8px;border:1px dashed var(--hk-on-navy-dim);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+</style>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a href="#top" data-home><img src="__A_logoBlue__" alt="Hakum Auto Care"></a>
+    <nav class="topnav">
+      <a href="#advisor" data-home>Find what you need</a>
+      <a href="#services" data-home>Services</a>
+      <a href="#compare" data-home>Compare</a>
+      <a href="#book" data-home>Branches</a>
+    </nav>
+    <a class="btn btn-blue" href="#advisor" data-home>Find what you need</a>
+  </div>
+</header>
+
+<!-- === HOME =============================================================== -->
+<main class="view" id="view-home">
+
+<section class="hero" id="top">
+  <div class="shell hero-in">
+    <div>
+      <p class="eyebrow">Dasmari&ntilde;as / Bacoor / Batangas</p>
+      <h1>Most people book<br>the <em>wrong thing.</em></h1>
+      <p>Film, coating, and tint solve three different problems, and almost nobody needs all three. Answer three questions and we will tell you what your car actually needs &mdash; including when the answer is "less than you thought".</p>
+      <div class="cta-row">
+        <a class="btn btn-blue" href="#advisor">Find what I need</a>
+        <a class="btn btn-out" href="#compare">Just show me the table</a>
+      </div>
+    </div>
+    <figure class="hero-figure" style="margin:0">
+      <img src="__A_ppf__" alt="A vehicle being finished at Hakum Auto Care">
+      <figcaption class="hero-chip"><strong>90 seconds</strong><span>Three questions, one answer</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- The advisor -->
+<section class="advisor" id="advisor">
+  <div class="shell">
+    <div class="advisor-head reveal">
+      <div>
+        <p class="eyebrow on-navy">Find what you need</p>
+        <h2 class="skew">Three questions.</h2>
+      </div>
+      <p>No email required, nothing saved. The recommendation is based on how you actually use the car, and it will tell you honestly when a cheaper option is the right one.</p>
+    </div>
+
+    <div class="wizard reveal">
+      <div class="wiz-bar" role="list">
+        <div class="wiz-step" role="listitem" data-step="0" aria-current="step">01 &mdash; The car</div>
+        <div class="wiz-step" role="listitem" data-step="1">02 &mdash; Where it lives</div>
+        <div class="wiz-step" role="listitem" data-step="2">03 &mdash; How long you keep it</div>
+      </div>
+
+      <div class="wiz-body" id="wiz-body">
+        <form id="wiz">
+          <fieldset data-panel="0">
+            <legend>How old is the paint?</legend>
+            <p class="q-help">Film and coating both bond to the clear coat, so its condition decides what is worth doing.</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="age" value="new"><span class="face"><b>Brand new</b><small>Delivered in the last few months, paint still factory-perfect.</small></span></label>
+              <label class="opt"><input type="radio" name="age" value="used"><span class="face"><b>A few years in</b><small>Daily driven, some swirls or light scratches.</small></span></label>
+              <label class="opt"><input type="radio" name="age" value="worn"><span class="face"><b>Older or repainted</b><small>Visible defects, fading, or bodywork that has been resprayed.</small></span></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-panel="1" hidden>
+            <legend>Where does it spend its time?</legend>
+            <p class="q-help">Sun and road exposure change which layer earns its money first.</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="park" value="garage"><span class="face"><b>Garaged</b><small>Covered parking at home and mostly at work.</small></span></label>
+              <label class="opt"><input type="radio" name="park" value="mixed"><span class="face"><b>Mixed</b><small>Covered at night, open lots and street parking by day.</small></span></label>
+              <label class="opt"><input type="radio" name="park" value="open"><span class="face"><b>Open all day</b><small>Street or open lot, long highway runs, full sun.</small></span></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-panel="2" hidden>
+            <legend>How long are you keeping it?</legend>
+            <p class="q-help">Protection is priced per year of ownership. Short horizons rarely justify full-body film.</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="hold" value="short"><span class="face"><b>Under 2 years</b><small>Likely to sell or trade in soon.</small></span></label>
+              <label class="opt"><input type="radio" name="hold" value="mid"><span class="face"><b>3 to 5 years</b><small>The usual ownership window.</small></span></label>
+              <label class="opt"><input type="radio" name="hold" value="long"><span class="face"><b>Keeping it</b><small>Long-term, or a car you care about keeping original.</small></span></label>
+            </div>
+          </fieldset>
+
+          <div class="wiz-nav">
+            <button type="button" class="btn btn-quiet" id="wiz-back" hidden>Back</button>
+            <button type="button" class="btn btn-lift" id="wiz-next" disabled>Next question</button>
+            <span class="muted" id="wiz-count">Question 1 of 3</span>
+          </div>
+        </form>
+      </div>
+
+      <div class="result" id="wiz-result" hidden>
+        <p class="eyebrow on-navy">Our recommendation</p>
+        <h3 class="skew" id="res-title" style="margin-top:14px">&nbsp;</h3>
+        <p id="res-lede"></p>
+        <ul class="stack" id="res-stack"></ul>
+        <div class="wiz-nav">
+          <a class="btn btn-lift" href="#book">Book this at a branch</a>
+          <button type="button" class="btn btn-quiet" id="wiz-restart">Start over</button>
+        </div>
+      </div>
+      <p class="sr" role="status" aria-live="polite" id="wiz-live"></p>
+    </div>
+  </div>
+</section>
+
+<!-- Services -->
+<section id="services">
+  <div class="shell">
+    <div class="head reveal">
+      <div>
+        <p class="eyebrow">What each one actually does</p>
+        <h2 class="skew">Four jobs,<br>four answers.</h2>
+      </div>
+      <p>Plain descriptions, no upsell. Read these if you would rather decide for yourself.</p>
+    </div>
+    <div class="grid4 reveal">
+      <a class="svc" href="#/ppf" data-view="ppf"><img src="__A_ppf__" alt="Paint protection film at Hakum Auto Care"><div class="svc-b"><h3>Paint Protection Film</h3><p>A physical barrier. Solves stone chips and scratches &mdash; the damage you cannot polish out.</p><span class="svc-go">See the three tiers &rarr;</span></div></a>
+      <a class="svc" href="#compare"><img src="__A_ceramic__" alt="Ceramic coating at Hakum Auto Care"><div class="svc-b"><h3>Ceramic Coating</h3><p>A chemical layer. Solves gloss, water beading, and how often you have to wash it.</p><span class="svc-go">Compare tiers &rarr;</span></div></a>
+      <a class="svc" href="#compare"><img src="__A_tint__" alt="Nano ceramic tint at Hakum Auto Care"><div class="svc-b"><h3>Nano Ceramic Tint</h3><p>Glass, not paint. Solves cabin heat, UV, and a dashboard that cracks over time.</p><span class="svc-go">Compare tiers &rarr;</span></div></a>
+      <a class="svc" href="#book"><img src="__A_detailing__" alt="Premium wash and detailing at Hakum Auto Care"><div class="svc-b"><h3>Premium Wash &amp; Detailing</h3><p>The reset. Required before anything else bonds &mdash; and sometimes all a car needs.</p><span class="svc-go">Book detailing &rarr;</span></div></a>
+    </div>
+  </div>
+</section>
+
+<!-- Comparison -->
+<section id="compare" style="background:var(--paper-2)">
+  <div class="shell">
+    <div class="head reveal">
+      <div>
+        <p class="eyebrow">Side by side</p>
+        <h2 class="skew">What each<br>layer buys you.</h2>
+      </div>
+      <p>The same four questions people ask us in the bay, answered for all three services at once.</p>
+    </div>
+    <div class="tablewrap reveal">
+      <table>
+        <caption>Comparison of the three protective services. Scroll sideways on a narrow screen.</caption>
+        <thead>
+          <tr><th scope="col">&nbsp;</th><th scope="col" class="feat">Paint Protection Film</th><th scope="col">Ceramic Coating</th><th scope="col">Nano Ceramic Tint</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Stops stone chips</th><td class="on">Yes &mdash; the only one that does<span class="pill">7.5&ndash;8.5 mil</span></td><td class="off">No &mdash; chemical layer only</td><td class="off">Not applicable</td></tr>
+          <tr><th scope="row">Adds gloss and beading</th><td class="on">Yes, with the free coating on top</td><td class="on">Yes &mdash; this is its main job</td><td class="off">Not applicable</td></tr>
+          <tr><th scope="row">Reduces cabin heat</th><td class="off">No</td><td class="off">No</td><td class="on">Yes &mdash; rejects infrared at the glass</td></tr>
+          <tr><th scope="row">Self-heals light scratches</th><td class="on">Yes, with heat</td><td class="off">No</td><td class="off">No</td></tr>
+          <tr><th scope="row">Warranty</th><td class="on">5 or 8 years</td><td class="on">5 or 8 years</td><td>Manufacturer defect cover</td></tr>
+          <tr><th scope="row">Needs paint correction first</th><td>Yes, on anything not brand new</td><td>Yes, always &mdash; we never coat over defects</td><td class="off">No, it goes on glass</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<!-- Products we use - same band in every mock -->
+<section class="hk-products" id="products">
+  <div class="hk-products-in">
+    <div class="hk-products-head reveal">
+      <div>
+        <p class="k">Products we use</p>
+        <h2>What goes on your car.</h2>
+      </div>
+      <p class="c">We name our materials because the finish is only ever as good as they are. Film, coating, polish, and chemistry - on the record.</p>
+    </div>
+    <div class="hk-brands reveal">
+      <div class="hk-brand"><strong>ClearPro</strong><span>Paint protection film</span></div>
+      <div class="hk-brand"><strong>F1 Auto Films</strong><span>Window film</span></div>
+      <div class="hk-brand"><strong>Kisho</strong><span>Ceramic coating</span></div>
+      <div class="hk-brand"><strong>Menzerna</strong><span>Polishing compounds</span></div>
+      <div class="hk-brand"><strong>Rupes</strong><span>Polishing systems</span></div>
+      <div class="hk-brand"><strong>Sonax</strong><span>Detailing chemistry</span></div>
+      <div class="hk-brand"><strong>Meguiar's</strong><span>Surface care</span></div>
+      <div class="hk-brand"><strong>Microtex</strong><span>Towels &amp; applicators</span></div>
+    </div>
+    <p class="hk-products-note"><em>Set in type</em>Brand names are typeset, not logo artwork - supply the approved logo files and licensing and these become the real marks.</p>
+  </div>
+</section>
+
+<section class="close" id="book">
+  <div class="shell">
+    <p class="eyebrow" style="color:rgba(255,255,255,.72)">Book</p>
+    <h2 class="skew" style="margin-top:18px">Bring it in.</h2>
+    <p>Two branches open now, Dasmari&ntilde;as coming soon. Bring the car and we will inspect the paint before quoting anything.</p>
+    <div class="cta-row"><a class="btn btn-white" href="#top">Book a service</a><a class="btn btn-out" style="color:#fff;border-color:rgba(255,255,255,.42)" href="#advisor">Retake the questions</a></div>
+  </div>
+</section>
+</main>
+
+<!-- === PPF TIERS DETAIL =================================================== -->
+<main class="view" id="view-ppf" hidden>
+<section class="d-top">
+  <div class="shell">
+    <a class="back" href="#services" data-home><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All services</a>
+    <p class="eyebrow on-navy" style="margin-top:22px">Paint protection film</p>
+    <h1 class="skew">Three levels<br>of cover.</h1>
+    <p class="lede">The difference between them is how much of the car is wrapped and how thick the film is. Everything else &mdash; the prep, the free coatings, the inspection &mdash; is identical.</p>
+  </div>
+</section>
+
+<section>
+  <div class="shell">
+    <div class="tiers reveal">
+      <article class="tier">
+        <h3>Basic</h3>
+        <p class="sub">Partial PPF + ceramic coating</p>
+        <p class="mil">7.5<small> mil</small></p>
+        <p>Focused protection for the panels and lighting surfaces most exposed to daily wear.</p>
+        <ul><li>Hood</li><li>Headlights</li><li>Taillights</li><li>All four doors</li><li>2-layer ceramic on the rest of the exterior</li><li>5-year defect warranty</li></ul>
+        <div class="cta-row"><a class="btn btn-out" href="#book" data-home>Book Basic Protection</a></div>
+      </article>
+      <article class="tier pop">
+        <span class="tier-flag">Most popular</span>
+        <h3>Premium</h3>
+        <p class="sub">Full body PPF</p>
+        <p class="mil">7.5<small> mil</small></p>
+        <p>Complete, virtually invisible protection across the exterior and trims.</p>
+        <ul><li>Full exterior and trims</li><li>Roof, trunk, quarter panels</li><li>Mirrors, fenders, bumpers</li><li>Self-healing, hydrophobic film</li><li>5-year defect warranty</li><li>2-panel replacement, no questions asked</li></ul>
+        <div class="cta-row"><a class="btn btn-blue" href="#book" data-home>Book Premium Protection</a></div>
+      </article>
+      <article class="tier">
+        <h3>Platinum</h3>
+        <p class="sub">Full body, heavier defense</p>
+        <p class="mil">8.5<small> mil</small></p>
+        <p>Maximum full-body coverage with thicker film for stronger high-impact defense.</p>
+        <ul><li>Everything in Premium</li><li>Rocker panels</li><li>Additional high-impact areas</li><li>High-tier hydrophobic effect</li><li>8-year defect warranty</li><li>4-panel replacement</li></ul>
+        <div class="cta-row"><a class="btn btn-out" href="#book" data-home>Book Platinum Protection</a></div>
+      </article>
+    </div>
+
+    <div class="free reveal">
+      <strong>Included free with every tier</strong>
+      <ul>
+        <li>Ceramic coating across all painted areas and black trims</li>
+        <li>Glass ceramic coating treatment</li>
+        <li>Mag wheels ceramic coating treatment</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="shell">
+    <p class="eyebrow" style="margin-bottom:20px">Foot notes</p>
+    <ul class="notes reveal">
+      <li><b>01</b>PPF is not recommended for repainted bodywork. Repainted areas must be disclosed before application.</li>
+      <li><b>02</b>Complex curves and bumpers may still have minor visible seams or stretch marks.</li>
+      <li><b>03</b>Panel disassembly and edge wrapping are done only where technically feasible.</li>
+      <li><b>04</b>Warranty covers manufacturer defects: adhesive failure, bubbling, cracking, delamination, extreme yellowing. Minor yellowing is normal aging.</li>
+      <li><b>05</b>Film peeling caused by high-pressure washers is not covered. External road event damage is not covered.</li>
+      <li><b>06</b>Free ceramic coatings are maintenance coatings, not additional PPF layers.</li>
+      <li><b>07</b>Final installation inspection happens after 7 days. Pricing may change for oversized or heavily modified vehicles.</li>
+    </ul>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="foot-in">
+    <span>Hakum Auto Care &mdash; Dasmari&ntilde;as / Bacoor / Batangas</span>
+    <span>Design mock D &mdash; the advisor</span>
+  </div>
+</footer>
+
+<script>
+document.documentElement.classList.add('js');
+(function(){
+  var views={home:document.getElementById('view-home'),ppf:document.getElementById('view-ppf')};
+  function show(n){Object.keys(views).forEach(function(k){views[k].hidden=k!==n;});window.scrollTo(0,0);}
+  function route(){ if(location.hash==='#/ppf'){show('ppf');} else if(views.home.hidden){show('home');} }
+  window.addEventListener('hashchange',route);
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('a[data-home]'); if(a&&views.home.hidden){show('home');}
+  });
+  route();
+
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}});
+  },{rootMargin:'0px 0px -12% 0px'});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+
+  /* -- Advisor ----------------------------------------------------------
+     Scores the three services from the three answers, then explains the
+     reasoning rather than just naming a package. */
+  var panels=[].slice.call(document.querySelectorAll('fieldset[data-panel]'));
+  var steps=[].slice.call(document.querySelectorAll('.wiz-step'));
+  var back=document.getElementById('wiz-back'),next=document.getElementById('wiz-next');
+  var count=document.getElementById('wiz-count'),live=document.getElementById('wiz-live');
+  var body=document.getElementById('wiz-body'),result=document.getElementById('wiz-result');
+  var form=document.getElementById('wiz'),cur=0;
+  var names=['age','park','hold'];
+
+  function answered(i){ return !!form.querySelector('input[name="'+names[i]+'"]:checked'); }
+  function render(){
+    panels.forEach(function(p,i){p.hidden=i!==cur;});
+    steps.forEach(function(s,i){
+      if(i===cur){s.setAttribute('aria-current','step');} else {s.removeAttribute('aria-current');}
+      s.classList.toggle('done',i<cur);
+    });
+    back.hidden=cur===0;
+    next.disabled=!answered(cur);
+    next.textContent=cur===2?'See my recommendation':'Next question';
+    count.textContent='Question '+(cur+1)+' of 3';
+  }
+  form.addEventListener('change',function(){ next.disabled=!answered(cur); });
+  back.addEventListener('click',function(){ if(cur>0){cur--;render();} });
+  next.addEventListener('click',function(){
+    if(!answered(cur)) return;
+    if(cur<2){cur++;render();return;}
+    finish();
+  });
+
+  function val(n){ var el=form.querySelector('input[name="'+n+'"]:checked'); return el?el.value:''; }
+
+  function finish(){
+    var age=val('age'), park=val('park'), hold=val('hold');
+    var ppf=0, ceramic=0, tint=0, correction=0;
+    if(age==='new'){ppf+=3;ceramic+=2;}
+    if(age==='used'){ppf+=1;ceramic+=2;correction+=2;}
+    if(age==='worn'){ppf-=1;ceramic+=1;correction+=3;}
+    if(park==='garage'){tint+=0;ceramic+=1;}
+    if(park==='mixed'){tint+=2;ceramic+=1;ppf+=1;}
+    if(park==='open'){tint+=3;ceramic+=2;ppf+=1;}
+    if(hold==='short'){ppf-=2;ceramic+=1;}
+    if(hold==='mid'){ppf+=1;ceramic+=1;}
+    if(hold==='long'){ppf+=3;ceramic+=2;}
+
+    var reasons={
+      ppf:{
+        new:'Factory paint is worth protecting before it takes its first chip.',
+        used:'Existing chips stay under the film, so we correct first or wrap selectively.',
+        worn:'Film is not recommended over repainted or heavily defected panels.'
+      },
+      tint:{
+        garage:'Covered parking means heat is less of a daily problem.',
+        mixed:'Day parking in the open is where the cabin heat builds.',
+        open:'Full sun all day is exactly what nano ceramic is for.'
+      },
+      hold:{
+        short:'Under two years, full-body film rarely pays back before you sell.',
+        mid:'A three-to-five year hold is the sweet spot for coating.',
+        long:'Over a long hold, film costs less than the respray it prevents.'
+      }
+    };
+
+    var items=[], step=0;
+    function no(){ step++; return String(step).padStart(2,'0'); }
+    if(correction>=2){
+      items.push({rank:no(),title:'Paint correction first',
+        copy:'Before anything is bonded on, the defects come out. We never coat or wrap over swirls.',
+        why:'Because you told us the paint already has wear.'});
+    }
+    if(ppf>=4){
+      items.push({rank:no(),title:'Full body PPF - Premium or Platinum',
+        copy:'Complete coverage across the exterior and trims, with the free ceramic layers included.',
+        why:reasons.hold[hold]+' '+reasons.ppf[age]});
+    } else if(ppf>=2){
+      items.push({rank:no(),title:'Partial PPF - Basic',
+        copy:'Film on the hood, headlights, taillights, and doors; ceramic across everything else.',
+        why:'The panels that take the hits, without paying to wrap the ones that do not.'});
+    } else {
+      items.push({rank:'--',title:'Skip the film for now',skip:true,
+        copy:'We would not put film on this car today. Revisit it after correction, or on your next one.',
+        why:reasons.ppf[age]+' '+reasons.hold[hold]});
+    }
+    if(ceramic>=3){
+      items.push({rank:no(),title:'Ceramic coating - '+(hold==='long'?'Platinum, 8-year':'Premium, 5-year'),
+        copy:hold==='long'?'Our highest level of ceramic protection for maximum gloss and long-term paint preservation.':'Enhanced protection with deeper gloss and stronger hydrophobic performance.',
+        why:reasons.hold[hold]});
+    }
+    if(tint>=2){
+      items.push({rank:no(),title:'Nano ceramic tint',
+        copy:'Heat and UV rejected at the glass, without a darker cabin or lost signal.',
+        why:reasons.tint[park]});
+    } else {
+      items.push({rank:'--',title:'Tint is optional here',skip:true,
+        copy:'Worth it for comfort, but it is not solving an urgent problem for how you park.',
+        why:reasons.tint[park]});
+    }
+
+    var headline = ppf>=4 ? 'Protect it properly.' : ppf>=2 ? 'Cover what gets hit.' : 'Less than you expected.';
+    document.getElementById('res-title').textContent=headline;
+    document.getElementById('res-lede').textContent='Based on your three answers, here is what we would actually do to this car, in order.';
+    var ul=document.getElementById('res-stack'); ul.innerHTML='';
+    items.forEach(function(it){
+      var li=document.createElement('li');
+      var r=document.createElement('span'); r.className='rank'+(it.skip?' rank skip':''); r.textContent=it.rank;
+      if(it.skip) r.className='rank skip';
+      var d=document.createElement('div');
+      var h=document.createElement('h4'); h.textContent=it.title;
+      var p=document.createElement('p'); p.textContent=it.copy;
+      var w=document.createElement('p'); w.className='why'; w.textContent=it.why;
+      d.appendChild(h); d.appendChild(p); d.appendChild(w);
+      li.appendChild(r); li.appendChild(d); ul.appendChild(li);
+    });
+    body.hidden=true; result.hidden=false;
+    steps.forEach(function(s){s.classList.add('done');s.removeAttribute('aria-current');});
+    live.textContent='Recommendation ready: '+headline+' '+items.length+' items listed.';
+    result.scrollIntoView({block:'nearest'});
+  }
+
+  document.getElementById('wiz-restart').addEventListener('click',function(){
+    form.reset(); cur=0; result.hidden=true; body.hidden=false; render(); live.textContent='Questions reset.';
+  });
+  render();
+})();
+</script>

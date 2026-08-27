@@ -1,0 +1,512 @@
+<title>Know Before You Go</title>
+<style>
+@font-face{font-family:'Benzin';src:url(__A_fontDisplay__) format('woff2');font-weight:800;font-display:swap}
+@font-face{font-family:'Benzin';src:url(__A_fontDisplayMed__) format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBody__) format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyMed__) format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyBold__) format('woff2');font-weight:700;font-display:swap}
+
+/* -- Tokens - Hakum's ramp ------------------------------------------------- */
+:root{
+  /* ---- Hakum design tokens. Identical in every mock. ----
+     Values below are the ones in src/design-tokens.css; the --hk-* names are
+     the shared vocabulary, and each mock aliases its local names onto them. */
+  --hk-paper:#F1F1ED;        /* --color-surface-page */
+  --hk-paper-2:#E7E7E1;
+  --hk-white:#FFFFFF;        /* --color-white */
+  --hk-navy:#020A31;         /* --color-surface-cinematic */
+  --hk-navy-2:#08133F;
+  --hk-navy-3:#0D1B52;
+  --hk-rule-dark:#16255C;
+  --hk-blue:#052699;         /* --color-brand-primary */
+  --hk-blue-hover:#0A32B8;   /* --color-brand-primary-hover */
+  --hk-blue-active:#031D78;  /* --color-brand-primary-active */
+  --hk-blue-soft:#E8EDFF;    /* --color-brand-primary-soft */
+  --hk-blue-mid:#2D59D3;
+  --hk-accent:#9DB4FF;       /* brand blue lifted to read on dark grounds */
+  --hk-ink:#333333;          /* --color-text-primary */
+  --hk-ink-2:#5A5A5A;
+  --hk-ink-3:#84847E;
+  --hk-rule:#DCDCD5;
+  --hk-on-navy:#7E8AB8;
+  --hk-on-navy-dim:#6E79A8;
+  /* Type: the real brand pairing, no third family anywhere. */
+  --hk-display:'Benzin','Arial Black',sans-serif;
+  --hk-body:'Gilmer',Arial,sans-serif;
+  --paper:var(--hk-paper);
+  --paper-2:var(--hk-paper-2);
+  --white:var(--hk-white);
+  --navy:var(--hk-navy);
+  --blue:var(--hk-blue);
+  --blue-hover:var(--hk-blue-hover);
+  --blue-active:var(--hk-blue-active);
+  --soft:var(--hk-blue-soft);
+  --lift:var(--hk-accent);
+  --ink:var(--hk-ink);
+  --ink-2:var(--hk-ink-2);
+  --ink-3:var(--hk-ink-3);
+  --line:var(--hk-rule);
+  /* Status is semantic, deliberately outside the brand accent so "open" and
+     "busy" stay distinguishable. Also carried in text, never colour alone. */
+  --ok:#1B7A4B;
+  --ok-bg:#E4F3EA;
+  --busy:#8A5A00;
+  --busy-bg:#FBF0D9;
+  --shut:#6B6B66;
+  --shut-bg:#EDEDE8;
+  --display:var(--hk-display);
+  --body:var(--hk-body);
+  --shell:min(100% - 32px,1140px);
+  --bar:72px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased;padding-bottom:var(--bar)}
+@media(min-width:820px){body{padding-bottom:0}}
+img{display:block;max-width:100%}
+a{color:inherit}
+p{margin:0}
+h1,h2,h3{margin:0;font-family:var(--display);font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-.025em;line-height:.94;text-wrap:balance}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.shell{width:var(--shell);margin-inline:auto}
+section{padding:clamp(52px,6.4vw,92px) 0;scroll-margin-top:60px}
+.skew{transform:skewX(-7deg);transform-origin:left bottom}
+.eyebrow{font-size:10px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--blue)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 24px;border:1px solid transparent;border-radius:2px;font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:transform .2s,background .2s,color .2s,border-color .2s}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-blue:hover{background:var(--blue-hover);transform:translateY(-2px)}
+.btn-out{background:var(--white);color:var(--ink);border-color:var(--line)}
+.btn-out:hover{border-color:var(--blue);color:var(--blue)}
+.btn-white{background:#fff;color:var(--blue);border-color:#fff}
+.cta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+
+.topbar{position:sticky;top:0;z-index:40;background:rgba(241,241,237,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar-in{width:var(--shell);margin-inline:auto;height:60px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.topbar img{height:17px}
+.topnav{display:none;gap:24px;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+@media(min-width:900px){.topnav{display:flex}}
+.topnav a{color:var(--ink-2);text-decoration:none}
+.topnav a:hover{color:var(--blue)}
+.topbar .btn{display:none}
+@media(min-width:820px){.topbar .btn{display:inline-flex;min-height:40px;padding:0 18px}}
+
+/* -- Sticky action bar - the mobile spine ---------------------------------- */
+.actionbar{position:fixed;left:0;right:0;bottom:0;z-index:60;height:var(--bar);background:var(--white);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(2,10,49,.08);display:flex;align-items:center;gap:10px;padding:0 14px}
+@media(min-width:820px){.actionbar{display:none}}
+.actionbar .now{flex:1;min-width:0}
+.actionbar .now b{display:block;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.actionbar .now span{display:block;font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actionbar .btn{flex:none;min-height:46px;padding:0 18px}
+
+/* -- Hero - compact, answers "can I go now?" ------------------------------- */
+.hero{padding:clamp(34px,4.4vw,64px) 0 clamp(28px,3.4vw,44px)}
+.hero h1{margin-top:14px;font-size:clamp(2.1rem,5.4vw,4.1rem)}
+.hero h1 em{font-style:italic;color:var(--blue)}
+.hero>.shell>p{margin-top:16px;color:var(--ink-2);max-width:50ch;font-size:clamp(14.5px,1.35vw,16.5px)}
+
+/* -- Live branch status ---------------------------------------------------- */
+.branches{display:grid;gap:12px;margin-top:clamp(24px,3vw,36px)}
+@media(min-width:720px){.branches{grid-template-columns:repeat(3,1fr)}}
+.branch{background:var(--white);border:1px solid var(--line);padding:20px;display:flex;flex-direction:column;gap:12px;text-decoration:none;transition:transform .22s,box-shadow .22s,border-color .22s}
+.branch:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(2,10,49,.1);border-color:var(--blue)}
+.branch-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.branch h3{font-size:1.3rem}
+.status{flex:none;display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:999px;font-size:9.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.status::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.status.open{color:var(--ok);background:var(--ok-bg)}
+.status.busy{color:var(--busy);background:var(--busy-bg)}
+.status.shut{color:var(--shut);background:var(--shut-bg)}
+.branch dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}
+.branch dt{color:var(--ink-3);font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;align-self:center}
+.branch dd{margin:0;color:var(--ink);font-weight:700}
+.branch dd .tick{font-variant-numeric:tabular-nums}
+.queue{display:flex;align-items:center;gap:4px;margin-top:2px}
+.queue i{display:block;width:100%;height:6px;background:var(--paper-2)}
+.queue i.on{background:var(--blue)}
+.queue i.warn{background:var(--busy)}
+.branch .go{margin-top:auto;font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--blue)}
+.live-note{margin-top:14px;font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:8px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* -- Services as a scannable list, not a gallery --------------------------- */
+.head{display:grid;gap:16px;margin-bottom:clamp(26px,3.2vw,42px)}
+@media(min-width:900px){.head{grid-template-columns:1.1fr .9fr;align-items:end;gap:46px}}
+.head h2{margin-top:14px;font-size:clamp(2rem,4.4vw,3.3rem)}
+.head>p{color:var(--ink-2);max-width:54ch}
+.svclist{border:1px solid var(--line);background:var(--white)}
+.svcrow{display:grid;gap:14px;padding:18px 20px;border-bottom:1px solid var(--line);text-decoration:none;align-items:center;transition:background .2s}
+@media(min-width:760px){.svcrow{grid-template-columns:78px 1fr auto auto;gap:20px}}
+.svcrow:last-child{border-bottom:0}
+.svcrow:hover{background:var(--soft)}
+.svcrow img{width:78px;height:60px;object-fit:cover}
+.svcrow h3{font-size:1.1rem}
+.svcrow p{margin-top:5px;color:var(--ink-2);font-size:13px}
+.meta{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:5px 10px;background:var(--paper-2);font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap}
+.chip.time{background:var(--soft);color:var(--blue-active)}
+.svcrow .arrow{color:var(--blue);font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
+
+/* -- Comparison ------------------------------------------------------------ */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--white)}
+table{border-collapse:collapse;width:100%;min-width:660px;font-size:13.5px}
+caption{text-align:left;padding:16px 18px;font-size:12px;color:var(--ink-2);border-bottom:1px solid var(--line)}
+th,td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{background:var(--paper-2);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+thead th.feat{background:var(--blue);color:#fff}
+tbody th{font-weight:700;font-size:13px;width:170px}
+td.on{color:var(--blue);font-weight:700}
+td.off{color:var(--ink-3)}
+tr:last-child th,tr:last-child td{border-bottom:0}
+
+/* -- FAQ accordion from the real footnotes --------------------------------- */
+.faq{border:1px solid var(--line);background:var(--white)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq details:last-child{border-bottom:0}
+.faq summary{list-style:none;cursor:pointer;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:14px;font-weight:700;color:var(--ink)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--line);color:var(--blue);font-weight:800;transition:transform .2s,background .2s}
+.faq details[open] summary::after{content:"\2212";background:var(--soft)}
+.faq summary:hover{background:var(--soft)}
+.faq .ans{padding:0 20px 20px;color:var(--ink-2);font-size:13.5px;max-width:76ch}
+
+.close{background:var(--navy);color:#fff}
+.close h2{font-size:clamp(2.1rem,5vw,3.9rem);color:#fff}
+.close p{margin-top:16px;color:rgba(255,255,255,.8);max-width:50ch}
+.close .eyebrow{color:var(--lift)}
+footer{border-top:1px solid var(--line);padding:28px 0}
+.foot-in{width:var(--shell);margin-inline:auto;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+
+/* -- Detail view ----------------------------------------------------------- */
+.view[hidden]{display:none}
+.d-top{background:var(--navy);color:#fff;padding:clamp(40px,5.4vw,78px) 0 clamp(32px,4vw,54px)}
+.d-top .eyebrow{color:var(--lift)}
+.back{display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.7);text-decoration:none}
+.back:hover{color:#fff}
+.d-top h1{margin-top:20px;font-size:clamp(2.1rem,5.2vw,4rem);color:#fff}
+.d-top .lede{margin-top:20px;max-width:56ch;color:rgba(255,255,255,.78);font-size:clamp(14.5px,1.35vw,16.5px)}
+.steps{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:760px){.steps{grid-template-columns:repeat(4,1fr)}}
+.step{background:var(--white);padding:22px}
+.step b{display:block;font-family:var(--display);font-style:italic;font-size:13px;color:var(--blue)}
+.step strong{display:block;margin-top:8px;font-size:14px}
+.step p{margin-top:6px;font-size:13px;color:var(--ink-2)}
+.step .dur{margin-top:10px;display:inline-block;padding:4px 9px;background:var(--soft);color:var(--blue-active);font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.gal{display:grid;gap:12px}
+@media(min-width:760px){.gal{grid-template-columns:repeat(3,1fr)}}
+.gal figure{margin:0;position:relative;border:1px solid var(--line)}
+.gal img{width:100%;aspect-ratio:4/3;object-fit:cover}
+.gal figcaption{position:absolute;left:0;right:0;bottom:0;padding:10px 12px;background:linear-gradient(transparent,rgba(2,10,49,.9));color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.revs{display:grid;gap:12px}
+@media(min-width:860px){.revs{grid-template-columns:repeat(3,1fr)}}
+.rev{background:var(--white);border:1px solid var(--line);border-top:3px solid var(--blue);padding:22px;display:flex;flex-direction:column;gap:12px}
+.rev .stars{color:var(--blue);font-size:13px;letter-spacing:.12em}
+.rev blockquote{margin:0;font-size:14.5px;line-height:1.6}
+.rev cite{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.flag{display:inline-block;margin-bottom:10px;padding:4px 9px;border:1px dashed var(--ink-3);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+
+.js .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s cubic-bezier(.2,.7,.3,1),transform .6s cubic-bezier(.2,.7,.3,1)}
+.js .reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.js .reveal{opacity:1;transform:none}}
+
+/* ---- Products strip: identical in every mock ---------------------------- */
+.hk-products{background:var(--hk-navy);color:var(--hk-paper);padding:clamp(44px,5vw,72px) 0}
+.hk-products-in{width:var(--shell);margin-inline:auto}
+.hk-products-head{display:grid;gap:14px;margin-bottom:clamp(26px,3vw,38px)}
+@media(min-width:860px){.hk-products-head{grid-template-columns:1fr .9fr;align-items:end;gap:44px}}
+.hk-products-head p.k{margin:0;font-family:var(--hk-body);font-size:10px;font-weight:800;letter-spacing:.19em;text-transform:uppercase;color:var(--hk-accent)}
+.hk-products-head h2{margin:8px 0 0;font-family:var(--hk-display);font-style:italic;font-weight:800;text-transform:uppercase;letter-spacing:-.025em;line-height:.94;font-size:clamp(1.8rem,3.6vw,2.8rem);color:var(--hk-paper);transform:skewX(-7deg);transform-origin:left bottom}
+.hk-products-head p.c{margin:0;font-family:var(--hk-body);color:rgba(241,241,237,.74);font-size:14px;max-width:52ch;line-height:1.6}
+.hk-brands{display:grid;gap:1px;background:var(--hk-rule-dark);border:1px solid var(--hk-rule-dark)}
+@media(min-width:520px){.hk-brands{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:860px){.hk-brands{grid-template-columns:repeat(4,1fr)}}
+.hk-brand{background:var(--hk-navy-2);padding:22px 20px;min-height:104px;display:flex;flex-direction:column;justify-content:center;gap:6px;transition:background .2s}
+.hk-brand:hover{background:var(--hk-navy-3)}
+.hk-brand strong{font-family:var(--hk-display);font-style:italic;font-weight:800;font-size:16.5px;letter-spacing:-.02em;text-transform:uppercase;color:var(--hk-paper)}
+.hk-brand span{font-family:var(--hk-body);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--hk-on-navy)}
+.hk-products-note{margin-top:16px;font-family:var(--hk-body);font-size:11.5px;color:var(--hk-on-navy-dim);line-height:1.6}
+.hk-products-note em{font-style:normal;display:inline-block;padding:3px 8px;border:1px dashed var(--hk-on-navy-dim);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+</style>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a href="#top" data-home><img src="__A_logoBlue__" alt="Hakum Auto Care"></a>
+    <nav class="topnav">
+      <a href="#branches" data-home>Live status</a>
+      <a href="#services" data-home>Services</a>
+      <a href="#compare" data-home>Compare</a>
+      <a href="#faq" data-home>Questions</a>
+    </nav>
+    <a class="btn btn-blue" href="#branches" data-home>Book now</a>
+  </div>
+</header>
+
+<!-- === HOME =============================================================== -->
+<main class="view" id="view-home">
+
+<section class="hero" id="top">
+  <div class="shell">
+    <p class="eyebrow">Live branch status</p>
+    <h1>Know the queue<br>before you <em>leave home.</em></h1>
+    <p>Two branches open now. See what is waiting, how long the service takes, and book the slot &mdash; without ringing anyone.</p>
+  </div>
+</section>
+
+<section id="branches" style="padding-top:0">
+  <div class="shell">
+    <div class="branches reveal">
+      <a class="branch" href="#book">
+        <div class="branch-top"><h3>Bacoor</h3><span class="status open">Open</span></div>
+        <dl>
+          <dt>Waiting</dt><dd><span class="tick">2</span> vehicles</dd>
+          <dt>Next slot</dt><dd><span class="tick">10:40</span> today</dd>
+          <dt>Hours</dt><dd><span class="tick">8:00</span> &ndash; <span class="tick">18:00</span></dd>
+        </dl>
+        <div class="queue" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+        <span class="go">Book this branch &rarr;</span>
+      </a>
+      <a class="branch" href="#book">
+        <div class="branch-top"><h3>Batangas</h3><span class="status busy">Busy</span></div>
+        <dl>
+          <dt>Waiting</dt><dd><span class="tick">5</span> vehicles</dd>
+          <dt>Next slot</dt><dd><span class="tick">14:15</span> today</dd>
+          <dt>Hours</dt><dd><span class="tick">8:00</span> &ndash; <span class="tick">18:00</span></dd>
+        </dl>
+        <div class="queue" aria-hidden="true"><i class="warn"></i><i class="warn"></i><i class="warn"></i><i class="warn"></i><i class="warn"></i><i></i></div>
+        <span class="go">Book this branch &rarr;</span>
+      </a>
+      <a class="branch" href="#book">
+        <div class="branch-top"><h3>Dasmari&ntilde;as</h3><span class="status shut">Coming soon</span></div>
+        <dl>
+          <dt>Bay</dt><dd>Flagship &amp; PPF</dd>
+          <dt>Opening</dt><dd>Announced soon</dd>
+          <dt>Hours</dt><dd>&mdash;</dd>
+        </dl>
+        <div class="queue" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <span class="go">Join the waitlist &rarr;</span>
+      </a>
+    </div>
+    <p class="live-note"><span class="live-dot" aria-hidden="true"></span> <span class="flag" style="margin:0">Sample data &mdash; wires to the live queue</span> Queue and slot times shown here are illustrative.</p>
+  </div>
+</section>
+
+<section id="services" style="background:var(--paper-2)">
+  <div class="shell">
+    <div class="head reveal">
+      <div><p class="eyebrow">Services</p><h2 class="skew">What it takes,<br>and how long.</h2></div>
+      <p>Every service with the time it actually occupies the bay, so you can plan the day around it.</p>
+    </div>
+    <div class="svclist reveal">
+      <a class="svcrow" href="#/tint" data-view="tint">
+        <img src="__A_tint__" alt="Nano ceramic tint at Hakum Auto Care">
+        <div><h3>Nano Ceramic Tint</h3><p>Heat and UV rejected at the glass, without a darker cabin.</p></div>
+        <div class="meta"><span class="chip time">Half day</span><span class="chip">Same-day</span></div>
+        <span class="arrow">Details &rarr;</span>
+      </a>
+      <a class="svcrow" href="#compare">
+        <img src="__A_ppf__" alt="Paint protection film at Hakum Auto Care">
+        <div><h3>Paint Protection Film</h3><p>Physical barrier against chips and scratches. Three coverage levels.</p></div>
+        <div class="meta"><span class="chip time">2&ndash;5 days</span><span class="chip">Booking required</span></div>
+        <span class="arrow">Compare &rarr;</span>
+      </a>
+      <a class="svcrow" href="#compare">
+        <img src="__A_ceramic__" alt="Ceramic coating at Hakum Auto Care">
+        <div><h3>Ceramic Coating</h3><p>Correction first, then a bonded gloss layer. Five or eight year cover.</p></div>
+        <div class="meta"><span class="chip time">1&ndash;2 days</span><span class="chip">Booking required</span></div>
+        <span class="arrow">Compare &rarr;</span>
+      </a>
+      <a class="svcrow" href="#book">
+        <img src="__A_detailing__" alt="Premium wash and detailing at Hakum Auto Care">
+        <div><h3>Premium Wash &amp; Detailing</h3><p>Full interior and exterior reset. The prerequisite for everything else.</p></div>
+        <div class="meta"><span class="chip time">3&ndash;5 hours</span><span class="chip">Walk-in ok</span></div>
+        <span class="arrow">Book &rarr;</span>
+      </a>
+      <a class="svcrow" href="#book">
+        <img src="__A_carwash__" alt="Premium carwash at Hakum Auto Care">
+        <div><h3>Premium Carwash</h3><p>Exterior clean, wheel treatment, and hand finish.</p></div>
+        <div class="meta"><span class="chip time">45&ndash;60 min</span><span class="chip">Walk-in ok</span></div>
+        <span class="arrow">Book &rarr;</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="shell">
+    <div class="head reveal">
+      <div><p class="eyebrow">Side by side</p><h2 class="skew">Which one<br>solves your problem.</h2></div>
+      <p>Three services, four questions. Find the row that matches what is bothering you.</p>
+    </div>
+    <div class="tablewrap reveal">
+      <table>
+        <caption>What each protective service does. Scroll sideways on a narrow screen.</caption>
+        <thead><tr><th scope="col">&nbsp;</th><th scope="col" class="feat">Film</th><th scope="col">Coating</th><th scope="col">Tint</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Stone chips</th><td class="on">Stops them</td><td class="off">No</td><td class="off">n/a</td></tr>
+          <tr><th scope="row">Gloss &amp; beading</th><td class="on">Yes, free coating on top</td><td class="on">Its main job</td><td class="off">n/a</td></tr>
+          <tr><th scope="row">Cabin heat</th><td class="off">No</td><td class="off">No</td><td class="on">Rejects infrared</td></tr>
+          <tr><th scope="row">Bay time</th><td>2&ndash;5 days</td><td>1&ndash;2 days</td><td>Half day</td></tr>
+          <tr><th scope="row">Warranty</th><td class="on">5 or 8 years</td><td class="on">5 or 8 years</td><td>Defect cover</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="faq" style="background:var(--paper-2)">
+  <div class="shell">
+    <div class="head reveal">
+      <div><p class="eyebrow">Before you book</p><h2 class="skew">The things<br>people ask.</h2></div>
+      <p>The fine print, up front rather than buried at the bottom of a contract.</p>
+    </div>
+    <div class="faq reveal">
+      <details><summary>Can you put film over a repainted panel?</summary><div class="ans">We do not recommend it. PPF is not recommended for repainted bodywork, and repainted areas must be disclosed before application so we can plan around them.</div></details>
+      <details><summary>Will I see seams or stretch marks?</summary><div class="ans">On complex curves and bumpers, minor visible seams or stretch marks are possible. Panel disassembly and edge wrapping are done only where technically feasible &mdash; we will tell you which panels those are before starting.</div></details>
+      <details><summary>What exactly does the warranty cover?</summary><div class="ans">Manufacturer defects: adhesive failure, bubbling, cracking, delamination, and extreme yellowing. Minor yellowing is normal aging. Film peeling caused by high-pressure washers is not covered, and neither is external road event damage.</div></details>
+      <details><summary>Is the free ceramic coating the same as another layer of film?</summary><div class="ans">No. The free ceramic coatings included with every PPF package are maintenance coatings &mdash; they are not additional PPF layers.</div></details>
+      <details><summary>Do I need to come back after the installation?</summary><div class="ans">Yes. The final installation inspection happens after 7 days, once the film has settled. It is included, and it is where we catch any lifted edge.</div></details>
+      <details><summary>Can I run my coated car through an automatic wash?</summary><div class="ans">Please do not. Coated vehicles should be hand washed with pH-neutral shampoo. Brush washes will shorten the life of the coating, and an annual maintenance inspection keeps the warranty active.</div></details>
+      <details><summary>Will the price change when I arrive?</summary><div class="ans">Pricing may change for oversized or heavily modified vehicles, and correction work is quoted after we inspect the paint. We will show you the paint and agree the number before any work starts.</div></details>
+    </div>
+  </div>
+</section>
+
+
+<!-- Products we use - same band in every mock -->
+<section class="hk-products" id="products">
+  <div class="hk-products-in">
+    <div class="hk-products-head reveal">
+      <div>
+        <p class="k">Products we use</p>
+        <h2>What goes on your car.</h2>
+      </div>
+      <p class="c">We name our materials because the finish is only ever as good as they are. Film, coating, polish, and chemistry - on the record.</p>
+    </div>
+    <div class="hk-brands reveal">
+      <div class="hk-brand"><strong>ClearPro</strong><span>Paint protection film</span></div>
+      <div class="hk-brand"><strong>F1 Auto Films</strong><span>Window film</span></div>
+      <div class="hk-brand"><strong>Kisho</strong><span>Ceramic coating</span></div>
+      <div class="hk-brand"><strong>Menzerna</strong><span>Polishing compounds</span></div>
+      <div class="hk-brand"><strong>Rupes</strong><span>Polishing systems</span></div>
+      <div class="hk-brand"><strong>Sonax</strong><span>Detailing chemistry</span></div>
+      <div class="hk-brand"><strong>Meguiar's</strong><span>Surface care</span></div>
+      <div class="hk-brand"><strong>Microtex</strong><span>Towels &amp; applicators</span></div>
+    </div>
+    <p class="hk-products-note"><em>Set in type</em>Brand names are typeset, not logo artwork - supply the approved logo files and licensing and these become the real marks.</p>
+  </div>
+</section>
+
+<section class="close" id="book">
+  <div class="shell">
+    <p class="eyebrow">Book</p>
+    <h2 class="skew" style="margin-top:16px">Pick a branch.<br>Pick a time.</h2>
+    <p>Bacoor has the shorter queue today. Walk in for a wash or detail; film and coating need a booking.</p>
+    <div class="cta-row"><a class="btn btn-white" href="#branches">See live status</a><a class="btn btn-out" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.42)" href="#compare">Compare services</a></div>
+  </div>
+</section>
+</main>
+
+<!-- === TINT DETAIL ======================================================== -->
+<main class="view" id="view-tint" hidden>
+<section class="d-top">
+  <div class="shell">
+    <a class="back" href="#services" data-home><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All services</a>
+    <p class="eyebrow" style="margin-top:20px">Nano ceramic tint &mdash; half day</p>
+    <h1 class="skew">Cooler cabin.<br>Clearer drive.</h1>
+    <p class="lede">Drop the car in the morning and drive it home the same afternoon. Here is exactly what happens in between.</p>
+  </div>
+</section>
+
+<section>
+  <div class="shell">
+    <div class="head reveal"><div><p class="eyebrow">Your day</p><h2 class="skew">Four steps,<br>one afternoon.</h2></div><p>Timings are typical for a standard sedan. Panoramic roofs and heavily curved glass take longer.</p></div>
+    <div class="steps reveal">
+      <div class="step"><b>01</b><strong>Inspect &amp; measure</strong><p>We check existing film, glass condition, and confirm the legal shade for your vehicle.</p><span class="dur">20 min</span></div>
+      <div class="step"><b>02</b><strong>Strip &amp; clean</strong><p>Old film removed if present, glass fully decontaminated inside and out.</p><span class="dur">30&ndash;90 min</span></div>
+      <div class="step"><b>03</b><strong>Cut &amp; install</strong><p>Film cut to the glass, heat-formed, and squeegeed with the cabin protected throughout.</p><span class="dur">2&ndash;3 hrs</span></div>
+      <div class="step"><b>04</b><strong>Cure &amp; hand over</strong><p>Initial cure, final inspection, and aftercare briefing before you take the keys.</p><span class="dur">30 min</span></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="shell">
+    <div class="head reveal"><div><p class="eyebrow">The work</p><h2 class="skew">From our bays.</h2></div><p>Our own installations, not stock photography.</p></div>
+    <div class="gal reveal">
+      <figure><img src="__A_tint__" alt="Nano ceramic tint being applied to a door window"><figcaption>Film laid and squeegeed</figcaption></figure>
+      <figure><img src="__A_glass__" alt="Glass decontaminated before tint installation"><figcaption>Glass prepped first</figcaption></figure>
+      <figure><img src="__A_interior__" alt="Cabin protected during tint installation"><figcaption>Cabin protected throughout</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="shell">
+    <div class="head reveal"><div><p class="eyebrow">Reviews</p><h2 class="skew">What drivers said.</h2></div><p><span class="flag">Placeholder copy &mdash; send real reviews</span><br>Layout is final; swap in genuine customer reviews before this goes live.</p></div>
+    <div class="revs reveal">
+      <div class="rev"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><blockquote>"Dropped it at nine, picked it up at three. Cabin is noticeably cooler in traffic."</blockquote><cite>Placeholder &mdash; Bacoor</cite></div>
+      <div class="rev"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><blockquote>"Asked for the lightest legal shade and still got the heat rejection they promised."</blockquote><cite>Placeholder &mdash; Batangas</cite></div>
+      <div class="rev"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><blockquote>"Previous film went purple in a year. Two years on this one and it still looks new."</blockquote><cite>Placeholder &mdash; Bacoor</cite></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="shell">
+    <div class="head reveal"><div><p class="eyebrow">Before you book</p><h2 class="skew">Tint questions.</h2></div><p>The aftercare that actually matters in the first week.</p></div>
+    <div class="faq reveal">
+      <details><summary>Is there a legal limit on how dark I can go?</summary><div class="ans">Yes. Tint shade must comply with local visibility regulations, and we will advise the legal limit for your vehicle and glass before installation.</div></details>
+      <details><summary>When can I roll the windows down?</summary><div class="ans">After 3 to 5 days. The film needs that time to cure fully, and rolling a window down early can lift the edge.</div></details>
+      <details><summary>There is haze and small water pockets. Is that normal?</summary><div class="ans">Yes. Slight haze or small water pockets during curing are normal and clear on their own within the first week.</div></details>
+      <details><summary>What does the warranty cover?</summary><div class="ans">Manufacturer defects &mdash; bubbling, delamination, adhesive failure, and colour change. Damage from impact or aftermarket cleaning products is not covered.</div></details>
+      <details><summary>Will the price change for my car?</summary><div class="ans">It may for oversized vehicles, panoramic roofs, or heavily curved glass. Existing tint removal is quoted separately. Factory-tinted glass also changes the final appearance, and we will show you what to expect.</div></details>
+    </div>
+    <div class="cta-row"><a class="btn btn-blue" href="#branches" data-home>Book nano ceramic tint</a></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="foot-in">
+    <span>Hakum Auto Care &mdash; Dasmari&ntilde;as / Bacoor / Batangas</span>
+    <span>Design mock F &mdash; know before you go</span>
+  </div>
+</footer>
+
+<!-- Sticky mobile action bar: the current best branch is always one tap away -->
+<div class="actionbar">
+  <div class="now"><b>Shortest queue now</b><span id="bestBranch">Bacoor &mdash; 2 waiting, next 10:40</span></div>
+  <a class="btn btn-blue" href="#branches" data-home>Book</a>
+</div>
+
+<script>
+document.documentElement.classList.add('js');
+(function(){
+  var views={home:document.getElementById('view-home'),tint:document.getElementById('view-tint')};
+  function show(n){Object.keys(views).forEach(function(k){views[k].hidden=k!==n;});window.scrollTo(0,0);}
+  function route(){ if(location.hash==='#/tint'){show('tint');} else if(views.home.hidden){show('home');} }
+  window.addEventListener('hashchange',route);
+  document.addEventListener('click',function(e){var a=e.target.closest('a[data-home]');if(a&&views.home.hidden){show('home');}});
+  route();
+
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}});
+  },{rootMargin:'0px 0px -10% 0px'});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+
+  /* The action bar names whichever open branch has the shortest queue. In a
+     real build this reads the same live queue the app already exposes. */
+  var branches=[
+    {name:'Bacoor',waiting:2,slot:'10:40',open:true},
+    {name:'Batangas',waiting:5,slot:'14:15',open:true}
+  ];
+  var best=branches.filter(function(b){return b.open;})
+                   .sort(function(a,b){return a.waiting-b.waiting;})[0];
+  if(best){
+    document.getElementById('bestBranch').textContent =
+      best.name+' &mdash; '+best.waiting+' waiting, next '+best.slot;
+  }
+})();
+</script>

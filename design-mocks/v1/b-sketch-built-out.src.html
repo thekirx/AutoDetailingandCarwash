@@ -1,0 +1,533 @@
+<title>Pamper It, Protect It</title>
+<style>
+@font-face{font-family:'Benzin';src:url(__A_fontDisplay__) format('woff2');font-weight:800;font-display:swap}
+@font-face{font-family:'Benzin';src:url(__A_fontDisplayMed__) format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBody__) format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyMed__) format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyBold__) format('woff2');font-weight:700;font-display:swap}
+
+/* -- Tokens ---------------------------------------------------------------
+   Built to the reference cards: near-black ground, one red, hairline rules.
+   Committed single-world design &mdash; every colour painted, nothing inherited. */
+:root{
+  /* ---- Hakum design tokens. Identical in every mock. ----
+     Values below are the ones in src/design-tokens.css; the --hk-* names are
+     the shared vocabulary, and each mock aliases its local names onto them. */
+  --hk-paper:#F1F1ED;        /* --color-surface-page */
+  --hk-paper-2:#E7E7E1;
+  --hk-white:#FFFFFF;        /* --color-white */
+  --hk-navy:#020A31;         /* --color-surface-cinematic */
+  --hk-navy-2:#08133F;
+  --hk-navy-3:#0D1B52;
+  --hk-rule-dark:#16255C;
+  --hk-blue:#052699;         /* --color-brand-primary */
+  --hk-blue-hover:#0A32B8;   /* --color-brand-primary-hover */
+  --hk-blue-active:#031D78;  /* --color-brand-primary-active */
+  --hk-blue-soft:#E8EDFF;    /* --color-brand-primary-soft */
+  --hk-blue-mid:#2D59D3;
+  --hk-accent:#9DB4FF;       /* brand blue lifted to read on dark grounds */
+  --hk-ink:#333333;          /* --color-text-primary */
+  --hk-ink-2:#5A5A5A;
+  --hk-ink-3:#84847E;
+  --hk-rule:#DCDCD5;
+  --hk-on-navy:#7E8AB8;
+  --hk-on-navy-dim:#6E79A8;
+  /* Type: the real brand pairing, no third family anywhere. */
+  --hk-display:'Benzin','Arial Black',sans-serif;
+  --hk-body:'Gilmer',Arial,sans-serif;
+  --bg:var(--hk-navy);
+  --card:var(--hk-navy-2);
+  --card-2:var(--hk-navy-3);
+  --line:var(--hk-rule-dark);
+  --line-soft:var(--hk-navy-3);
+  --blue:var(--hk-blue);
+  --blue-bright:var(--hk-blue-hover);
+  --blue-text:var(--hk-accent);
+  --blue-soft:var(--hk-blue-soft);
+  --navy:var(--hk-navy);
+  --white:var(--hk-paper);
+  --grey:var(--hk-on-navy);
+  --grey-dim:var(--hk-on-navy-dim);
+  --display:var(--hk-display);
+  --body:var(--hk-body);
+  --shell:min(100% - 36px,1200px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--white);font-family:var(--body);line-height:1.62;-webkit-font-smoothing:antialiased}
+img,video{display:block;max-width:100%}
+a{color:inherit}
+p{margin:0}
+h1,h2,h3,h4{margin:0;font-family:var(--display);font-weight:800;text-transform:uppercase;letter-spacing:-.025em;line-height:.94;text-wrap:balance}
+:focus-visible{outline:2px solid var(--blue-bright);outline-offset:3px}
+.shell{width:var(--shell);margin-inline:auto}
+section{padding:clamp(70px,8.5vw,120px) 0;scroll-margin-top:64px}
+
+/* -- Chrome --------------------------------------------------------------- */
+.topbar{position:sticky;top:0;z-index:40;background:rgba(2,10,49,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line-soft)}
+.topbar-in{width:var(--shell);margin-inline:auto;height:64px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.topbar img{height:18px}
+.topnav{display:none;gap:26px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+@media(min-width:920px){.topnav{display:flex}}
+.topnav a{color:var(--grey);text-decoration:none;transition:color .2s}
+.topnav a:hover{color:var(--white)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:46px;padding:0 24px;border:1px solid transparent;font-family:var(--body);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:background .2s,color .2s,border-color .2s,transform .2s}
+.btn-red{background:var(--blue-bright);color:#fff;border-color:var(--blue-bright)}
+.btn-red:hover{background:var(--blue);transform:translateY(-2px)}
+.btn-line{background:transparent;color:var(--white);border-color:var(--line)}
+.btn-line:hover{border-color:var(--white)}
+.eyebrow{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--blue-text)}
+.eyebrow::before{content:"\2014";color:var(--blue-text)}
+
+/* -- 1. Video hero -------------------------------------------------------- */
+.hero{position:relative;padding:0;min-height:min(92vh,840px);display:flex;align-items:flex-end;overflow:hidden}
+.hero video,.hero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(2,10,49,.62),rgba(2,10,49,.26) 40%,var(--bg) 96%)}
+.hero-in{position:relative;z-index:2;width:var(--shell);margin-inline:auto;padding:clamp(90px,12vw,140px) 0 clamp(40px,4.5vw,64px)}
+.hero h1{margin-top:22px;font-size:clamp(1.9rem,7.4vw,6.2rem);line-height:.9;max-width:16ch}
+.hero h1 em{font-style:normal;color:var(--blue-text)}
+.hero p.lede{margin-top:24px;max-width:50ch;color:rgba(241,241,237,.8);font-size:clamp(15px,1.35vw,17px)}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+.hero-strip{position:relative;z-index:2;border-top:1px solid var(--line);background:rgba(2,10,49,.55)}
+.hero-strip-in{width:var(--shell);margin-inline:auto;display:grid;grid-template-columns:repeat(2,1fr);gap:1px}
+@media(min-width:800px){.hero-strip-in{grid-template-columns:repeat(4,1fr)}}
+.hero-strip div{padding:20px 4px}
+.hero-strip strong{display:block;font-family:var(--display);font-size:clamp(22px,2.6vw,34px);letter-spacing:-.03em}
+.hero-strip span{display:block;margin-top:5px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey-dim)}
+
+/* -- 2. Origin story ------------------------------------------------------ */
+.origin{display:grid;gap:clamp(28px,3.6vw,58px);align-items:center}
+@media(min-width:940px){.origin{grid-template-columns:1fr .92fr}}
+.origin-copy h2{margin-top:20px;font-size:clamp(2.1rem,4.6vw,3.5rem)}
+.origin-copy h2 em{font-style:normal;color:var(--blue-text)}
+.origin-copy>p{margin-top:20px;color:var(--grey);max-width:58ch}
+.origin-copy>p.first{color:var(--white);font-size:clamp(16px,1.6vw,19px)}
+.origin-figure{position:relative}
+.origin-figure img{width:100%;aspect-ratio:4/5;object-fit:cover}
+.origin-badge{position:absolute;right:0;bottom:0;padding:16px 20px;background:var(--blue-bright);color:#fff;max-width:210px}
+.origin-badge strong{display:block;font-family:var(--display);font-size:26px;line-height:1}
+.origin-badge span{display:block;margin-top:5px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+
+/* -- 3. Our services ------------------------------------------------------ */
+.head{display:grid;gap:20px;margin-bottom:clamp(34px,4vw,56px)}
+@media(min-width:900px){.head{grid-template-columns:1fr .8fr;align-items:end;gap:50px}}
+.head h2{margin-top:18px;font-size:clamp(2.1rem,4.8vw,3.6rem)}
+.head h2 em{font-style:normal;color:var(--blue-text)}
+.head>p{color:var(--grey);max-width:56ch}
+.svc-grid{display:grid;gap:18px}
+@media(min-width:720px){.svc-grid{grid-template-columns:repeat(2,1fr)}}
+.svc{position:relative;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line-soft);text-decoration:none;overflow:hidden;transition:border-color .25s,transform .25s}
+.svc:hover{border-color:var(--blue-text);transform:translateY(-4px)}
+.svc-media{position:relative;aspect-ratio:16/10;overflow:hidden}
+.svc-media img{width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.2,.7,.3,1)}
+.svc:hover .svc-media img{transform:scale(1.05)}
+.svc-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(8,19,63,.9))}
+.svc-num{position:absolute;z-index:2;top:14px;left:14px;width:32px;height:32px;display:grid;place-items:center;background:var(--blue-bright);color:#fff;font-family:var(--display);font-size:12px}
+.svc-body{padding:clamp(20px,2.3vw,28px);display:flex;flex-direction:column;flex:1}
+.svc-body h3{font-size:clamp(1.3rem,2vw,1.7rem)}
+.svc-body p{margin-top:11px;color:var(--grey);font-size:14px;max-width:44ch}
+.svc-go{margin-top:auto;padding-top:22px;display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue-text)}
+.svc-go svg{transition:transform .25s}
+.svc:hover .svc-go svg{transform:translateX(4px)}
+.svc-go .ext{margin-left:auto;color:var(--grey-dim);font-size:10px;letter-spacing:.1em}
+
+/* -- 4-6. The "Why" cards &mdash; the reference treatment ----------------------- */
+.why{display:grid;gap:clamp(20px,2.4vw,30px)}
+.why-card{display:grid;gap:0;background:var(--card);border:1px solid var(--line-soft);overflow:hidden}
+@media(min-width:900px){.why-card{grid-template-columns:.78fr 1fr}.why-card.flip{grid-template-columns:1fr .78fr}.why-card.flip .why-visual{order:2}}
+.why-visual{position:relative;min-height:260px}
+.why-visual img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.why-visual::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(2,10,49,.28),rgba(8,19,63,.86))}
+@media(max-width:899px){.why-visual::after{background:linear-gradient(180deg,rgba(2,10,49,.2),rgba(8,19,63,.9))}}
+.why-body{padding:clamp(26px,3.2vw,46px)}
+.why-body h3{margin-top:16px;font-size:clamp(1.7rem,3.4vw,2.7rem)}
+.why-body h3 em{font-style:normal;color:var(--blue-text)}
+.why-body>p{margin-top:18px;color:var(--grey);max-width:56ch;font-size:14.5px}
+.why-body>p b{color:var(--white);font-weight:700}
+.why-points{margin:26px 0 0;padding:0;list-style:none;display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft)}
+@media(min-width:560px){.why-points{grid-template-columns:repeat(2,1fr)}}
+.why-points li{background:var(--card);padding:18px;display:grid;grid-template-columns:34px 1fr;gap:14px;align-items:start}
+.why-icon{width:36px;height:36px;flex:none;display:grid;place-items:center;border:1px solid var(--blue-bright);color:var(--blue-text)}
+.why-points h4{font-family:var(--body);font-size:11.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--white)}
+.why-points p{margin-top:7px;color:var(--grey);font-size:13px;line-height:1.55}
+.why-cta{margin-top:26px}
+
+/* -- Detail view ---------------------------------------------------------- */
+.view[hidden]{display:none}
+.d-top{padding:clamp(48px,6vw,86px) 0 0}
+.back{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--grey);text-decoration:none}
+.back:hover{color:var(--blue-text)}
+.d-top h1{margin-top:22px;font-size:clamp(2.3rem,5.8vw,4.6rem)}
+.d-top h1 em{font-style:normal;color:var(--blue-text)}
+.d-top .lede{margin-top:22px;max-width:58ch;color:var(--grey);font-size:clamp(15px,1.45vw,17px)}
+/* Pictures & videos */
+.gal{display:grid;gap:14px}
+@media(min-width:760px){.gal{grid-template-columns:repeat(3,1fr);grid-auto-rows:210px}.gal .tall{grid-row:span 2}.gal .wide{grid-column:span 2}}
+.gal figure{position:relative;margin:0;overflow:hidden;background:var(--card);border:1px solid var(--line-soft)}
+.gal img,.gal video{width:100%;height:100%;object-fit:cover}
+.gal figcaption{position:absolute;left:0;right:0;bottom:0;padding:11px 13px;background:linear-gradient(transparent,rgba(2,10,49,.92));font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--white)}
+.gal .is-video::before{content:"\25B6";position:absolute;z-index:2;top:12px;right:13px;width:30px;height:30px;display:grid;place-items:center;background:var(--blue-bright);color:#fff;font-size:11px}
+/* Products used */
+.brands{display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft)}
+@media(min-width:520px){.brands{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:900px){.brands{grid-template-columns:repeat(4,1fr)}}
+.brand{background:var(--card);padding:26px 22px;min-height:116px;display:flex;flex-direction:column;justify-content:center;gap:7px;transition:background .22s}
+.brand:hover{background:var(--card-2)}
+.brand strong{font-family:var(--display);font-size:17px;letter-spacing:-.02em;text-transform:uppercase}
+.brand span{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--grey-dim)}
+/* Reviews */
+.revs{display:grid;gap:16px}
+@media(min-width:860px){.revs{grid-template-columns:repeat(3,1fr)}}
+.rev{background:var(--card);border:1px solid var(--line-soft);padding:clamp(22px,2.4vw,30px);display:flex;flex-direction:column;gap:14px}
+.rev .stars{color:var(--blue-text);letter-spacing:.12em;font-size:13px}
+.rev blockquote{margin:0;font-size:15px;line-height:1.6}
+.rev cite{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--grey-dim)}
+/* Pamper & protect */
+.pamper{background:linear-gradient(120deg,var(--blue) 0%,var(--navy) 62%,var(--card) 100%)}
+.pamper-in{display:grid;gap:26px;align-items:end}
+@media(min-width:900px){.pamper-in{grid-template-columns:1fr auto}}
+.pamper h2{font-size:clamp(2.2rem,5.4vw,4rem);color:#fff}
+.pamper p{margin-top:16px;color:rgba(255,255,255,.86);max-width:48ch}
+.pamper .eyebrow{color:#fff}
+.pamper .eyebrow::before{color:#fff}
+.pamper .btn-line{border-color:rgba(255,255,255,.5);color:#fff}
+.pamper .btn-red{background:#fff;color:var(--blue);border-color:#fff}
+.pamper .btn-red:hover{background:var(--white)}
+/* Foot notes */
+.notes{margin:0;padding:0;list-style:none;display:grid;gap:10px;border-top:1px solid var(--line-soft);padding-top:22px}
+.notes li{display:grid;grid-template-columns:30px 1fr;gap:12px;font-size:12.5px;color:var(--grey-dim);line-height:1.6}
+.notes b{color:var(--blue-text);font-weight:700;font-size:11px}
+.flag{display:inline-block;margin-bottom:12px;padding:4px 9px;border:1px dashed var(--grey-dim);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey-dim)}
+footer{border-top:1px solid var(--line-soft);padding:32px 0}
+.foot-in{width:var(--shell);margin-inline:auto;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--grey-dim)}
+
+.js .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
+.js .reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.js .reveal{opacity:1;transform:none}}
+
+/* ---- Products strip: identical in every mock ---------------------------- */
+.hk-products{background:var(--hk-navy);color:var(--hk-paper);padding:clamp(44px,5vw,72px) 0}
+.hk-products-in{width:var(--shell);margin-inline:auto}
+.hk-products-head{display:grid;gap:14px;margin-bottom:clamp(26px,3vw,38px)}
+@media(min-width:860px){.hk-products-head{grid-template-columns:1fr .9fr;align-items:end;gap:44px}}
+.hk-products-head p.k{margin:0;font-family:var(--hk-body);font-size:10px;font-weight:800;letter-spacing:.19em;text-transform:uppercase;color:var(--hk-accent)}
+.hk-products-head h2{margin:8px 0 0;font-family:var(--hk-display);font-style:italic;font-weight:800;text-transform:uppercase;letter-spacing:-.025em;line-height:.94;font-size:clamp(1.8rem,3.6vw,2.8rem);color:var(--hk-paper);transform:skewX(-7deg);transform-origin:left bottom}
+.hk-products-head p.c{margin:0;font-family:var(--hk-body);color:rgba(241,241,237,.74);font-size:14px;max-width:52ch;line-height:1.6}
+.hk-brands{display:grid;gap:1px;background:var(--hk-rule-dark);border:1px solid var(--hk-rule-dark)}
+@media(min-width:520px){.hk-brands{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:860px){.hk-brands{grid-template-columns:repeat(4,1fr)}}
+.hk-brand{background:var(--hk-navy-2);padding:22px 20px;min-height:104px;display:flex;flex-direction:column;justify-content:center;gap:6px;transition:background .2s}
+.hk-brand:hover{background:var(--hk-navy-3)}
+.hk-brand strong{font-family:var(--hk-display);font-style:italic;font-weight:800;font-size:16.5px;letter-spacing:-.02em;text-transform:uppercase;color:var(--hk-paper)}
+.hk-brand span{font-family:var(--hk-body);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--hk-on-navy)}
+.hk-products-note{margin-top:16px;font-family:var(--hk-body);font-size:11.5px;color:var(--hk-on-navy-dim);line-height:1.6}
+.hk-products-note em{font-style:normal;display:inline-block;padding:3px 8px;border:1px dashed var(--hk-on-navy-dim);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+</style>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a href="#top" data-home><img src="__A_logoOw__" alt="Hakum Auto Care"></a>
+    <nav class="topnav">
+      <a href="#origin" data-home>Our story</a>
+      <a href="#services" data-home>Services</a>
+      <a href="#why-ppf" data-home>Why PPF</a>
+      <a href="#why-ceramic" data-home>Why ceramic</a>
+      <a href="#why-tint" data-home>Why tint</a>
+    </nav>
+    <a class="btn btn-red" href="#book" data-home>Book now</a>
+  </div>
+</header>
+
+<!-- === HOME =============================================================== -->
+<main class="view" id="view-home">
+
+<!-- 1 &mdash; Video hero -->
+<section class="hero" id="top">
+  <video autoplay muted loop playsinline poster="__A_heroPoster__" aria-label="Hakum Auto Care detailing work in motion">
+    <source src="__A_heroVideo__" type="video/mp4">
+  </video>
+  <div class="hero-in">
+    <p class="eyebrow">Dasmari&ntilde;as / Bacoor / Batangas</p>
+    <h1>Give your car the <em>pampering</em> it deserves.</h1>
+    <p class="lede">Detailing, protection, and care by a team that treats every panel like it is going back on a showroom floor.</p>
+    <div class="hero-cta">
+      <a class="btn btn-red" href="#services">See what we do</a>
+      <a class="btn btn-line" href="#origin">Our story</a>
+    </div>
+  </div>
+</section>
+<div class="hero-strip">
+  <div class="hero-strip-in">
+    <div><strong>10+</strong><span>Years combined experience</span></div>
+    <div><strong>3,000+</strong><span>Satisfied clients</span></div>
+    <div><strong>15,000+</strong><span>Vehicles cared for yearly</span></div>
+    <div><strong>26</strong><span>Team members</span></div>
+  </div>
+</div>
+
+<!-- 2 &mdash; Origin story -->
+<section id="origin">
+  <div class="shell origin reveal">
+    <div class="origin-copy">
+      <p class="eyebrow">The Hakum story</p>
+      <h2>It began with cars that came back <em>worse.</em></h2>
+      <p class="first">Clean on the surface, damaged underneath &mdash; swirl marks polished in, film lifting at the corners, coatings that stopped beading after a month.</p>
+      <p>We opened Hakum to do it the slow way. Decontaminate before you protect. Wrap the edge if the panel will allow it. Write down the warranty and honour it. Nothing here is rushed, because everything here is permanent.</p>
+      <p>Today that standard runs across three branches and a team of twenty-six, on roughly fifteen thousand vehicles a year &mdash; and it has not moved once.</p>
+      <div class="hero-cta">
+        <a class="btn btn-line" href="#services">What we do</a>
+      </div>
+    </div>
+    <figure class="origin-figure" style="margin:0">
+      <img src="__A_about__" alt="A Hakum Auto Care technician finishing a panel">
+      <figcaption class="origin-badge"><strong>Est. Cavite</strong><span>Three branches, one standard</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 3 &mdash; Our services -->
+<section id="services">
+  <div class="shell">
+    <div class="head reveal">
+      <div>
+        <p class="eyebrow">Our services</p>
+        <h2>What we <em>do.</em></h2>
+      </div>
+      <p>Four core services. Open any one for the full picture &mdash; what it is, what we use, and what it costs you to skip it.</p>
+    </div>
+    <div class="svc-grid reveal">
+      <a class="svc" href="#why-ppf">
+        <div class="svc-media"><img src="__A_ppf__" alt="Paint protection film installed at Hakum Auto Care"><span class="svc-num">01</span></div>
+        <div class="svc-body">
+          <h3>Paint Protection Film</h3>
+          <p>A clear, self-healing layer that takes the stone chips and scratches your paint would otherwise keep forever.</p>
+          <span class="svc-go">Why PPF <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </div>
+      </a>
+      <a class="svc" href="#why-ceramic">
+        <div class="svc-media"><img src="__A_ceramic__" alt="Ceramic coating being applied at Hakum Auto Care"><span class="svc-num">02</span></div>
+        <div class="svc-body">
+          <h3>Ceramic Coating</h3>
+          <p>A glass-like layer bonded into the paint itself. Deeper gloss, water that sheets straight off, far easier upkeep.</p>
+          <span class="svc-go">Why ceramic <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </div>
+      </a>
+      <a class="svc" href="#/tint" data-view="tint" target="_blank" rel="noopener">
+        <div class="svc-media"><img src="__A_tint__" alt="Nano ceramic tint being installed at Hakum Auto Care"><span class="svc-num">03</span></div>
+        <div class="svc-body">
+          <h3>Nano Ceramic Tint</h3>
+          <p>Rejects heat and UV at the glass instead of just darkening it &mdash; a cooler cabin without losing your view out.</p>
+          <span class="svc-go">Why upgrade <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="ext">Opens in new tab</span></span>
+        </div>
+      </a>
+      <a class="svc" href="#book">
+        <div class="svc-media"><img src="__A_detailing__" alt="Premium wash and detailing at Hakum Auto Care"><span class="svc-num">04</span></div>
+        <div class="svc-body">
+          <h3>Premium Wash &amp; Detailing</h3>
+          <p>Deep interior and exterior care that resets the finish &mdash; and the groundwork everything else is bonded onto.</p>
+          <span class="svc-go">Book detailing <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- 4,5,6 &mdash; the three Why sections -->
+<section style="padding-top:0">
+  <div class="shell why">
+
+    <article class="why-card reveal" id="why-ppf">
+      <div class="why-visual"><img src="__A_ppf1__" alt="Paint protection film being installed on a Ford Ranger Raptor"></div>
+      <div class="why-body">
+        <p class="eyebrow">Why paint protection film</p>
+        <h3>From the <em>first mile.</em></h3>
+        <p>Your car is most vulnerable the moment it leaves the dealership. <b>Road debris, UV radiation, and environmental fallout</b> attack your paint every single day &mdash; quietly taking resale value and the finish you paid for with them.</p>
+        <ul class="why-points">
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h5m6 0h5M12 4v4m0 8v4"/></svg></span><div><h4>Self-healing technology</h4><p>Minor swirls and light scratches disappear with heat &mdash; your paint stays factory-perfect.</p></div></li>
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7.5 3v6c0 4-3.2 7.2-7.5 9-4.3-1.8-7.5-5-7.5-9V6z"/></svg></span><div><h4>Rock chip &amp; impact barrier</h4><p>7.5 mil of invisible armour absorbs road debris that would otherwise pit or chip bare paint permanently.</p></div></li>
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg></span><div><h4>Preserves resale value</h4><p>Pristine original paint commands thousands more at trade-in &mdash; PPF pays for itself many times over.</p></div></li>
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 5.5v13M5.5 12h13"/></svg></span><div><h4>UV &amp; chemical resistance</h4><p>Blocks UV fade and repels bird droppings, tree sap, and road chemicals that etch unprotected paint.</p></div></li>
+        </ul>
+        <div class="why-cta"><a class="btn btn-red" href="#book">Protect your vehicle today</a></div>
+      </div>
+    </article>
+
+    <article class="why-card flip reveal" id="why-ceramic">
+      <div class="why-visual"><img src="__A_ceramicGallery__" alt="A freshly ceramic-coated vehicle at Hakum Auto Care"></div>
+      <div class="why-body">
+        <p class="eyebrow">What is ceramic coating</p>
+        <h3>Beyond <em>a wax.</em></h3>
+        <p>Traditional waxes wash away in weeks. Ceramic coating is a different beast entirely &mdash; a <b>liquid polymer that bonds permanently at the molecular level</b> to your paint, creating a rigid, glass-like layer that wax and sealants simply cannot replicate.</p>
+        <ul class="why-points">
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.5l8 4.5v9l-8 4.5-8-4.5v-9z"/></svg></span><div><h4>Permanent molecular bond</h4><p>Unlike wax, ceramic chemically bonds to your paint &mdash; it cannot be washed or wiped off.</p></div></li>
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span><div><h4>Extreme gloss &amp; depth</h4><p>Nano-ceramic technology amplifies your paint's depth and clarity &mdash; it reads better than the day you bought it.</p></div></li>
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 6.5 6 10a6 6 0 01-12 0c0-3.5 6-10 6-10z"/></svg></span><div><h4>Hydrophobic self-cleaning</h4><p>Water, mud, and road grime bead up and sheet off effortlessly &mdash; keeping your car cleaner, longer.</p></div></li>
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 5.5v13M5.5 12h13"/></svg></span><div><h4>UV &amp; chemical resistance</h4><p>Blocks oxidation and UV fade, while repelling bird droppings, tree sap, and acid rain that etch bare paint.</p></div></li>
+        </ul>
+        <div class="why-cta"><a class="btn btn-red" href="#book">Get a ceramic coating quote</a></div>
+      </div>
+    </article>
+
+    <article class="why-card reveal" id="why-tint">
+      <div class="why-visual"><img src="__A_tint__" alt="Nano ceramic tint applied to a vehicle window"></div>
+      <div class="why-body">
+        <p class="eyebrow">Why upgrade to nano ceramic tint</p>
+        <h3>Not darker. <em>Cooler.</em></h3>
+        <p>Ordinary tint buys you privacy by blocking light. Nano ceramic rejects <b>heat and UV specifically</b> &mdash; so the cabin drops several degrees without the view, the night visibility, or your phone signal going with it.</p>
+        <ul class="why-points">
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2 2M17.8 17.8l2 2M2 12h3M19 12h3"/></svg></span><div><h4>Heat, not darkness</h4><p>Infrared is rejected at the glass, so you can run a lighter, legal shade and still feel the drop.</p></div></li>
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span><div><h4>Clarity kept</h4><p>No mirror haze and no purple fade over time. Night visibility stays honest.</p></div></li>
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5a10 10 0 0114 0M8 16a6 6 0 018 0"/><circle cx="12" cy="19.5" r="1"/></svg></span><div><h4>Signal-safe</h4><p>Unlike metallic film, nano ceramic does not interfere with GPS, radio, or mobile signal.</p></div></li>
+          <li><span class="why-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg></span><div><h4>Interior preserved</h4><p>UV is what cracks a dashboard and fades seats. Blocking it protects the part you actually sit in.</p></div></li>
+        </ul>
+        <div class="why-cta"><a class="btn btn-red" href="#/tint" data-view="tint" target="_blank" rel="noopener">Read the full tint story</a></div>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+
+<!-- Products we use - same band in every mock -->
+<section class="hk-products" id="products">
+  <div class="hk-products-in">
+    <div class="hk-products-head reveal">
+      <div>
+        <p class="k">Products we use</p>
+        <h2>What goes on your car.</h2>
+      </div>
+      <p class="c">We name our materials because the finish is only ever as good as they are. Film, coating, polish, and chemistry - on the record.</p>
+    </div>
+    <div class="hk-brands reveal">
+      <div class="hk-brand"><strong>ClearPro</strong><span>Paint protection film</span></div>
+      <div class="hk-brand"><strong>F1 Auto Films</strong><span>Window film</span></div>
+      <div class="hk-brand"><strong>Kisho</strong><span>Ceramic coating</span></div>
+      <div class="hk-brand"><strong>Menzerna</strong><span>Polishing compounds</span></div>
+      <div class="hk-brand"><strong>Rupes</strong><span>Polishing systems</span></div>
+      <div class="hk-brand"><strong>Sonax</strong><span>Detailing chemistry</span></div>
+      <div class="hk-brand"><strong>Meguiar's</strong><span>Surface care</span></div>
+      <div class="hk-brand"><strong>Microtex</strong><span>Towels &amp; applicators</span></div>
+    </div>
+    <p class="hk-products-note"><em>Set in type</em>Brand names are typeset, not logo artwork - supply the approved logo files and licensing and these become the real marks.</p>
+  </div>
+</section>
+
+<section class="pamper" id="book">
+  <div class="shell pamper-in reveal">
+    <div>
+      <p class="eyebrow">Pamper &amp; protect</p>
+      <h2 style="margin-top:18px">Book your car in.</h2>
+      <p>Tell us the vehicle and how you drive it. We will tell you honestly which of the four it actually needs.</p>
+    </div>
+    <div class="hero-cta" style="margin:0">
+      <a class="btn btn-red" href="#top">Book a service</a>
+      <a class="btn btn-line" href="#services">Compare services</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- === NANO TINT DETAIL (sketch 1) ======================================== -->
+<main class="view" id="view-tint" hidden>
+<section class="d-top">
+  <div class="shell">
+    <a class="back" href="#services" data-home><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All services</a>
+    <p class="eyebrow" style="margin-top:24px">03 / Nano ceramic tint</p>
+    <h1>Why nano <em>ceramic tint?</em></h1>
+    <p class="lede">Cooler cabin. Clearer drive. Here is the work, the film we use, what our customers said afterwards &mdash; and the fine print, in full.</p>
+  </div>
+</section>
+
+<!-- Pictures / videos -->
+<section style="padding-top:clamp(38px,4.4vw,60px)">
+  <div class="shell">
+    <div class="head reveal"><div><p class="eyebrow">Pictures &amp; videos</p><h2>The <em>work.</em></h2></div><p>Installations shot in our own bays &mdash; no stock photography, no borrowed cars.</p></div>
+    <div class="gal reveal">
+      <figure class="tall is-video"><video muted loop playsinline autoplay poster="__A_heroPoster__" aria-label="Tint installation in motion"><source src="__A_heroVideo__" type="video/mp4"></video><figcaption>Install in motion</figcaption></figure>
+      <figure class="wide"><img src="__A_tint__" alt="Nano ceramic tint being squeegeed onto a door window"><figcaption>Film laid and squeegeed</figcaption></figure>
+      <figure><img src="__A_glass__" alt="Glass decontaminated before tint application"><figcaption>Glass prepped first</figcaption></figure>
+      <figure><img src="__A_interior__" alt="Vehicle interior kept clean during installation"><figcaption>Cabin protected throughout</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- Products used -->
+<section style="padding-top:0">
+  <div class="shell">
+    <div class="head reveal"><div><p class="eyebrow">Products used</p><h2>What we <em>actually use.</em></h2></div><p>The brands on our shelf. We name them because the result is only ever as good as the material.</p></div>
+    <div class="brands reveal">
+      <div class="brand"><strong>F1 Auto Films</strong><span>Window film</span></div>
+      <div class="brand"><strong>ClearPro</strong><span>Paint protection film</span></div>
+      <div class="brand"><strong>Kisho</strong><span>Ceramic coating</span></div>
+      <div class="brand"><strong>Menzerna</strong><span>Polishing compounds</span></div>
+      <div class="brand"><strong>Rupes</strong><span>Polishing systems</span></div>
+      <div class="brand"><strong>Sonax</strong><span>Detailing chemistry</span></div>
+      <div class="brand"><strong>Meguiar's</strong><span>Surface care</span></div>
+      <div class="brand"><strong>Microtex</strong><span>Towels &amp; applicators</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Reviews -->
+<section style="padding-top:0">
+  <div class="shell">
+    <div class="head reveal"><div><p class="eyebrow">Reviews</p><h2>What drivers <em>said.</em></h2></div><p><span class="flag">Placeholder copy &mdash; send real reviews</span><br>Layout is final; swap in genuine customer reviews before this goes live.</p></div>
+    <div class="revs reveal">
+      <div class="rev"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><blockquote>"Traffic on Aguinaldo used to cook the cabin. Same drive now and the aircon barely works for it."</blockquote><cite>Placeholder &mdash; Dasmari&ntilde;as</cite></div>
+      <div class="rev"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><blockquote>"I asked for the lightest legal shade and still got the heat rejection. Night driving did not get worse at all."</blockquote><cite>Placeholder &mdash; Bacoor</cite></div>
+      <div class="rev"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><blockquote>"Previous shop's film went purple in a year. Two years on this one and it still looks like day one."</blockquote><cite>Placeholder &mdash; Batangas</cite></div>
+    </div>
+  </div>
+</section>
+
+<!-- Pamper & protect -->
+<section class="pamper">
+  <div class="shell pamper-in reveal">
+    <div><p class="eyebrow">Pamper &amp; protect</p><h2 style="margin-top:18px">Cooler cabin,<br>booked today.</h2><p>Bring the car in and we will measure the glass, talk shade, and quote you on the spot.</p></div>
+    <div class="hero-cta" style="margin:0"><a class="btn btn-red" href="#top" data-home>Book nano ceramic tint</a><a class="btn btn-line" href="#services" data-home>Other services</a></div>
+  </div>
+</section>
+
+<!-- Foot notes -->
+<section style="padding-top:clamp(44px,5vw,72px)">
+  <div class="shell">
+    <p class="eyebrow" style="margin-bottom:20px">Foot notes</p>
+    <ul class="notes reveal">
+      <li><b>01</b>Tint shade must comply with local visibility regulations. We will advise the legal limit for your vehicle and glass before installation.</li>
+      <li><b>02</b>Heat rejection figures vary by shade, glass type, and vehicle. Quoted performance refers to the film, not the finished cabin.</li>
+      <li><b>03</b>Factory-tinted glass changes the final appearance. Existing tint must be removed first, which is quoted separately.</li>
+      <li><b>04</b>Do not roll windows down for 3&ndash;5 days after installation while the film cures.</li>
+      <li><b>05</b>Slight haze or small water pockets during curing are normal and clear on their own.</li>
+      <li><b>06</b>Warranty covers manufacturer defects &mdash; bubbling, delamination, adhesive failure, and colour change. Damage from impact or aftermarket cleaning is not covered.</li>
+      <li><b>07</b>Pricing may change for oversized vehicles, panoramic roofs, or heavily curved glass.</li>
+    </ul>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="foot-in">
+    <span>Hakum Auto Care &mdash; Dasmari&ntilde;as / Bacoor / Batangas</span>
+    <span>Design mock B &mdash; built to the sketch</span>
+  </div>
+</footer>
+
+<script>
+document.documentElement.classList.add('js');
+(function(){
+  var views={home:document.getElementById('view-home'),tint:document.getElementById('view-tint')};
+  function show(n){Object.keys(views).forEach(function(k){views[k].hidden=k!==n;});window.scrollTo(0,0);}
+  function route(){ if(location.hash==='#/tint'){show('tint');} else if(views.home.hidden){show('home');} }
+  window.addEventListener('hashchange',route);
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('a[data-home]');
+    if(a&&views.home.hidden){show('home');}
+  });
+  route();
+
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}});
+  },{rootMargin:'0px 0px -12% 0px'});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+})();
+</script>
