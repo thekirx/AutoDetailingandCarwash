@@ -7,7 +7,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canSeeAllBranches, ROLES } from '@/auth/permissions'
-import QueueTicketEditModal from '@/components/QueueTicketEditModal'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { paymentMethodLabel } from '@/lib/paymentMethods'
 import { createCoalescedReload } from '@/lib/coalesceReload'
@@ -16,12 +15,11 @@ import {
   DASHBOARD_DATE_PRESETS,
   getDashboardDateRange,
 } from '@/queue/queueLogic'
-import { queueFamilyHref, ticketQueueFamily, QUEUE_FAMILY_DETAILING } from '@/lib/queueFamilies'
+import { queueFamilyHref } from '@/lib/queueFamilies'
 import {
   FLOOR_BOARD_FAMILY_META,
   floorLaneLabel,
 } from '@/lib/floorBoardLanes'
-import { serviceKindFromPayCategory, formatQueueNumberForKind } from '@/lib/serviceKinds'
 import { fetchBranches, fetchSuperAdminFloorBoard, formatMoney } from '@/queue/queueApi'
 
 function formatMinutes(total) {
@@ -54,7 +52,7 @@ function StatTile({ label, value, hint, tone = 'default', onClick, breakdown }) 
       <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">{value}</p>
       {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
       {breakdown ? (
-        <div className="pointer-events-none absolute inset-x-2 bottom-full z-10 mb-2 hidden rounded-xl border border-border bg-card p-3 text-left text-xs shadow-lg group-hover:block">
+        <div className="pointer-events-none absolute inset-x-2 bottom-full z-10 mb-2 hidden rounded-xl border border-border bg-card p-3 text-left text-xs shadow-lg group-hover:block group-focus-within:block">
           {breakdown}
         </div>
       ) : null}
@@ -95,8 +93,6 @@ export default function SuperAdminFloorBoard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [live, setLive] = useState(false)
-  const [jobFilter, setJobFilter] = useState('active')
-  const [editBookingId, setEditBookingId] = useState(null)
 
   const range = useMemo(
     () => getDashboardDateRange(datePreset, customStart, customEnd),
@@ -167,20 +163,17 @@ export default function SuperAdminFloorBoard() {
   const kpi = board?.kpi || {}
   const available = board?.availableStaff || []
   const absent = board?.absentStaff || []
-  const activeJobs = board?.activeQueue || []
-  const periodJobs = board?.periodJobs || []
-
-  const jobs =
-    jobFilter === 'active'
-      ? activeJobs
-      : jobFilter === 'completed'
-        ? periodJobs.filter((j) => j.status === 'completed')
-        : jobFilter === 'cancelled'
-          ? periodJobs.filter((j) => j.status === 'cancelled')
-          : [...activeJobs, ...periodJobs]
 
   function openFamilyLane(family, lane) {
     navigate(queueFamilyHref(family, { lane, branch: branchFilter }))
+  }
+
+  function openHistory(status) {
+    const params = new URLSearchParams()
+    if (branchFilter && branchFilter !== 'all') params.set('branch', branchFilter)
+    if (status) params.set('status', status)
+    const q = params.toString()
+    navigate(q ? `/operations/history?${q}` : '/operations/history')
   }
 
   function LaneStrip({ family }) {
@@ -201,7 +194,7 @@ export default function SuperAdminFloorBoard() {
       ...timelineStatuses.map((row) => ({
         ...row,
         hint: 'In timeline',
-        onClick: () => setJobFilter(row.id),
+        onClick: () => openHistory(row.id),
       })),
     ]
 
@@ -360,14 +353,7 @@ export default function SuperAdminFloorBoard() {
             value={loading && !board ? '…' : lanesByFamily.detailing?.completed ?? 0}
             tone="green"
             hint="In timeline"
-            onClick={() => setJobFilter('completed')}
-          />
-          <StatTile
-            label="Cancelled"
-            value={loading && !board ? '…' : lanesByFamily.detailing?.cancelled ?? 0}
-            tone="rose"
-            hint="In timeline"
-            onClick={() => setJobFilter('cancelled')}
+            onClick={() => openHistory('completed')}
           />
         </div>
       </Section>
@@ -486,17 +472,6 @@ export default function SuperAdminFloorBoard() {
       <Section eyebrow="Money" title="Financials">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
           <StatTile
-            label="Total sales"
-            value={loading && !board ? '…' : formatMoney(financials.total_sales_minor)}
-            tone="green"
-            hint="All POS · paid"
-            breakdown={
-              financials.total_sales_minor
-                ? `Queue (carwash) ${formatMoney(financials.queue_sales_minor || 0)} (${Math.round(((financials.queue_sales_minor || 0) / financials.total_sales_minor) * 100)}%) · Counter ${formatMoney(financials.pos_sales_minor || 0)} (${Math.round(((financials.pos_sales_minor || 0) / financials.total_sales_minor) * 100)}%)`
-                : 'No sales in timeline'
-            }
-          />
-          <StatTile
             label="Queue app sales"
             value={formatMoney(financials.queue_sales_minor)}
             hint="Carwash only"
@@ -525,21 +500,28 @@ export default function SuperAdminFloorBoard() {
             tone="rose"
             hint="Cancelled job value in timeline"
           />
-          <StatTile label="Paid tickets" value={financials.paid_count ?? 0} hint="Sale rows" />
+          <StatTile
+            label="Paid sales"
+            value={financials.paid_count ?? 0}
+            hint="Count of paid sale rows in timeline"
+            breakdown="Number of paid sales records (not peso amount). Queue and counter each add one row when paid."
+          />
         </div>
       </Section>
 
       <Section eyebrow="Tempo" title="KPI">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTile
-            label="Total waiting time"
-            value={formatMinutes(kpi.total_wait_minutes)}
-            hint="Sum of wait → start"
+            label="Avg waiting time"
+            value={kpi.avg_wait_minutes == null ? '—' : formatMinutes(kpi.avg_wait_minutes)}
+            hint="waiting_at → in_progress_at (avg)"
+            breakdown="Average minutes from bay wait stamp to service start for tickets that have both timestamps in this timeline."
           />
           <StatTile
             label="Avg time per service"
             value={kpi.avg_service_minutes == null ? '—' : formatMinutes(kpi.avg_service_minutes)}
-            hint="In progress → finish"
+            hint="in_progress → finish"
+            breakdown="Average minutes from in_progress_at to for_payment_at (else completed_at / final_checking_at). Shows — when no tickets in the timeline have both stamps."
           />
           <StatTile
             label="Failed QA"
@@ -555,6 +537,10 @@ export default function SuperAdminFloorBoard() {
           <div className="rounded-2xl border border-border bg-card p-4">
             <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
               Car size per sale
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Logic: each paid sale in the timeline counts once by booking vehicle size. Bar = count; amount = sum of
+              sale totals.
             </p>
             {(board?.carSizeBySale || []).length ? (
               <ul className="mt-3 space-y-2">
@@ -577,12 +563,17 @@ export default function SuperAdminFloorBoard() {
                 })}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-muted-foreground">No sized sales in this timeline.</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                No sized sales in this timeline — need paid sales with a vehicle size on the booking.
+              </p>
             )}
           </div>
           <div className="rounded-2xl border border-border bg-card p-4">
             <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
               Best package / service
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Logic: ranks sale line items for paid sales in the timeline by peso total. Top names shown.
             </p>
             {(board?.bestSellers || []).length ? (
               <ol className="mt-3 space-y-2">
@@ -599,7 +590,9 @@ export default function SuperAdminFloorBoard() {
                 ))}
               </ol>
             ) : (
-              <p className="mt-3 text-sm text-muted-foreground">No line items to rank yet.</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                No line items to rank — paid sales need package/service/POS line items.
+              </p>
             )}
           </div>
         </div>
@@ -608,12 +601,14 @@ export default function SuperAdminFloorBoard() {
       <Section eyebrow="Inventory" title="Chemical usage">
         {board?.chemicalUsage?.stub ? (
           <p className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-            Needs Sunday recon — weekly chemical usage × unit cost charts appear after branch admins submit
-            internal-use leftover counts.
+            Logic (Sunday recon): Branch admins submit weekly leftover counts. Usage = previous − leftover per product.
+            Cost = usage × unit cost. Charts appear after at least one submitted or approved recon in the timeline.
           </p>
         ) : (
           <div className="rounded-2xl border border-border bg-card p-4">
-            <p className="mb-3 text-xs text-muted-foreground">Usage qty × product unit cost (from recon lines).</p>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Usage = previous − leftover · Cost = usage × product unit cost (from recon lines).
+            </p>
             <ul className="space-y-2">
               {(board?.chemicalUsage?.weeks || []).map((w) => {
                 const maxCost = Math.max(
@@ -638,83 +633,6 @@ export default function SuperAdminFloorBoard() {
             </ul>
           </div>
         )}
-      </Section>
-
-      <Section
-        eyebrow="Jobs"
-        title="Job details"
-        action={
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: 'active', label: 'Live floor' },
-              { id: 'completed', label: 'Completed' },
-              { id: 'cancelled', label: 'Cancelled' },
-              { id: 'all', label: 'Mix' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setJobFilter(tab.id)}
-                className={`min-h-9 rounded-full border px-3 text-xs font-semibold ${
-                  jobFilter === tab.id
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border bg-card text-muted-foreground'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        }
-      >
-        <div className="grid max-h-[28rem] gap-3 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
-          {jobs.length ? (
-            jobs.slice(0, 60).map((ticket) => {
-              const family = ticketQueueFamily(ticket)
-              const kind = serviceKindFromPayCategory(ticket.service_pay_category)
-              const kindLabel =
-                kind === 'detailing' ? 'Detailing' : kind === 'package' ? 'Package' : 'Service'
-              return (
-                <button
-                  key={ticket.booking_id}
-                  type="button"
-                  onClick={() => setEditBookingId(ticket.booking_id)}
-                  className="rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-foreground">
-                        {ticket.customer_name || 'Customer'}
-                      </p>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">
-                        {ticket.branch}
-                        {ticket.queue_number != null
-                          ? ` · ${formatQueueNumberForKind(ticket.queue_number, ticket.service_pay_category)}`
-                          : ''}
-                        {' · '}
-                        {ticket.vehicle_plate || 'No plate'}
-                        {' · '}
-                        {kindLabel}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
-                      {floorLaneLabel(ticket.status, family)}
-                    </span>
-                  </div>
-                  <p className="mt-2 truncate text-sm text-foreground/80">
-                    {ticket.service_name || (family === QUEUE_FAMILY_DETAILING ? 'Detailing service' : 'Service')}
-                    {ticket.final_price_minor != null ? ` · ${formatMoney(ticket.final_price_minor)}` : ''}
-                  </p>
-                  <p className="mt-2 text-[11px] font-medium text-primary">View details</p>
-                </button>
-              )
-            })
-          ) : (
-            <p className="col-span-full rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
-              {loading ? 'Loading jobs…' : 'No jobs in this view.'}
-            </p>
-          )}
-        </div>
       </Section>
 
       <Section eyebrow="Recent paid" title="Sales feed">
@@ -753,15 +671,6 @@ export default function SuperAdminFloorBoard() {
           )}
         </div>
       </Section>
-
-      <QueueTicketEditModal
-        bookingId={editBookingId}
-        open={Boolean(editBookingId)}
-        onOpenChange={(open) => {
-          if (!open) setEditBookingId(null)
-        }}
-        onUpdated={load}
-      />
     </section>
   )
 }

@@ -39,7 +39,7 @@ import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { isDetailingPayCategory, isTicketOnTodayFloor } from '../lib/serviceKinds'
 import { aggregateSalesFinancials } from '../lib/paymentMethods'
 import { buildAdminRoster } from '../lib/floorBoardRoster'
-import { averageCycleMinutes, failedQaCount, totalWaitMinutes } from '../lib/kpiPart8'
+import { averageCycleMinutes, averageWaitMinutes, failedQaCount } from '../lib/kpiPart8'
 import {
   resolveQueueCustomerDisplayName,
   validateQueueTicketIdentity,
@@ -374,7 +374,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
       laneCountsByFamily: emptyByFamily,
       periodJobs: [],
       financials: { ...EMPTY_FINANCIALS, cancel_loss_minor: 0 },
-      kpi: { total_wait_minutes: 0, avg_service_minutes: null, failed_qa_count: 0, cancelled_count: 0 },
+      kpi: { avg_wait_minutes: null, avg_service_minutes: null, failed_qa_count: 0, cancelled_count: 0 },
       recentSales: [],
       adminRoster: [],
       carSizeBySale: [],
@@ -509,8 +509,9 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
 
   const cycleSample = [...completedJobs, ...startedJobs.filter((j) => j.for_payment_at || j.completed_at || j.final_checking_at)]
   const avg = averageCycleMinutes(cycleSample)
+  const avgWait = averageWaitMinutes(startedJobs)
   const kpi = {
-    total_wait_minutes: Math.round(totalWaitMinutes(startedJobs)),
+    avg_wait_minutes: avgWait == null ? null : Math.round(avgWait),
     avg_service_minutes: avg == null ? null : Math.round(avg),
     failed_qa_count: failedQaCount(redoJobs),
     cancelled_count: cancelledJobs.length,
