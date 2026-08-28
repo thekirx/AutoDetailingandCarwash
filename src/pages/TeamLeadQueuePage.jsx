@@ -343,7 +343,7 @@ export default function TeamLeadQueuePage() {
     if (datePreset === 'today') {
       rows = rows.filter((t) => {
         if (['waiting', 'in_progress', 'final_checking'].includes(t.status)) {
-          // Same-day services reset daily; detailing stays via isTicketOnTodayFloor upstream.
+          // Open lanes stay until POS completes — isTicketOnTodayFloor upstream.
           return true
         }
         return t.queue_date === todayKey || String(t.created_at || '').slice(0, 10) === todayKey

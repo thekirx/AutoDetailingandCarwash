@@ -67,7 +67,7 @@ export function posCartBlocksCheckout(cart = []) {
 
 /** Queue handoff wash/detailing lines stay locked — TL edits the booking. */
 export function canRemovePosCartLine(line) {
-  return !Boolean(line?.from_handoff)
+  return !(line?.from_handoff)
 }
 
 export function removePosCartLine(cart = [], lineKey) {

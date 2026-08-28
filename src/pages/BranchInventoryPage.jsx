@@ -1,8 +1,13 @@
 /** BA restock + Sunday recon; SA/ASA also approve recon and set absolute qty. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ClipboardCheck, Package } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageServices, canRestockInventory, getBranchScopeList } from '@/auth/permissions'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
+import { BRANCH_STOCK_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { applyOwnerSetQty, applyReconLine, applyRestockQty, reconUsageQty } from '@/lib/inventoryBranchStock'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
@@ -12,7 +17,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
+
+const BRANCH_STOCK_TABS = [
+  { id: 'restock', label: 'Restock', icon: Package },
+  { id: 'recon', label: 'Sunday Recon', icon: ClipboardCheck },
+]
 
 function mostRecentSunday(isoDate = getLocalCalendarDate()) {
   const d = new Date(`${isoDate}T12:00:00+08:00`)
@@ -304,19 +314,26 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
 
   if (!canRestockInventory(profile)) return null
 
-  return (
-    <section className={embedded ? '' : 'planner-v2 pb-8'}>
-      {!embedded && (
-        <header className="planner-v2-head mb-4">
-          <div>
-            <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">Branch stock</p>
-            <h1>Inventory</h1>
-            <p>Restock arrivals and Sunday leftover recon for your branch.</p>
-          </div>
-        </header>
-      )}
+  const branchStockStepIcons = {
+    restock: Package,
+    recon: ClipboardCheck,
+    pos: Package,
+    approve: ClipboardCheck,
+  }
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+  const body = (
+    <>
+      {!embedded ? (
+        <OpsGuideCard
+          title="How branch stock works"
+          description="Restock when shipment arrives. Submit Sunday recon for owner approval."
+          steps={BRANCH_STOCK_WORKFLOW_STEPS}
+          stepIcons={branchStockStepIcons}
+          defaultOpen={tab === 'restock'}
+        />
+      ) : null}
+
+      <div className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-[12rem] flex-col gap-1">
           <Label>Branch</Label>
           <Select value={branch} onValueChange={setBranch} disabled={!branchOptions.length}>
@@ -334,15 +351,8 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList variant="line" className="hakum-pos-tabs planner-v2-tabs mb-4 flex h-auto w-full flex-wrap gap-2">
-          <TabsTrigger value="restock" className="min-h-11 min-w-[7rem] flex-1">
-            Restock
-          </TabsTrigger>
-          <TabsTrigger value="recon" className="min-h-11 min-w-[7rem] flex-1">
-            Sunday Recon
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-5">
+        <OpsTabList tabs={BRANCH_STOCK_TABS} aria-label="Branch stock" />
 
         <TabsContent value="restock" className="mt-0 outline-none">
           <Table>
@@ -489,6 +499,19 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
           </div>
         </TabsContent>
       </Tabs>
-    </section>
+    </>
+  )
+
+  if (embedded) return body
+
+  return (
+    <OpsPageShell
+      className="hakum-inventory-branch"
+      eyebrow="Branch stock"
+      title="Inventory"
+      description="Restock arrivals and Sunday leftover recon for your branch."
+    >
+      {body}
+    </OpsPageShell>
   )
 }

@@ -126,7 +126,7 @@ export async function handleNotificationBroadcastRequest(req, res) {
         })
         sent += result?.sent || 0
         failed += result?.failed || 0
-      } catch (err) {
+      } catch {
         failed += userIds.length
       }
     }

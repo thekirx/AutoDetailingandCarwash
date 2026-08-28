@@ -1,9 +1,12 @@
 /** Employee payouts. Super Admin uses the Payroll register instead. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Banknote } from 'lucide-react'
+import { Banknote, CalendarDays, CircleDollarSign, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessPayroll, canViewOwnPay, getBranchScopeList } from '@/auth/permissions'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import { MY_PAY_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { branchSlugsForOwnPay } from '@/lib/branchScope'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
@@ -208,19 +211,37 @@ export default function MyPayPage() {
   const monthConfirmed = confirmedPayInCalendarWindow(open, { start: month.start, end: month.end })
   const periodConfirmed = confirmedPayInCalendarWindow(open, { start: period.start, end: period.end })
 
+  const myPayStepIcons = {
+    confirmed: Banknote,
+    estimate: CircleDollarSign,
+    advances: Wallet,
+    period: CalendarDays,
+  }
+
   return (
-    <section className="hakum-payroll flex flex-col gap-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
-      <header className="border-b border-border pb-4">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Pay</p>
-        <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-          <Banknote className="size-6 shrink-0 text-primary" aria-hidden />
-          My pay
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Confirmed pay is money already posted from Payroll — floor (wash/ceramic) and fixed salary both show here.
-          Estimates are unpaid wash-pool shares until a run confirms.
-        </p>
-      </header>
+    <OpsPageShell
+      className="hakum-payroll hakum-my-pay"
+      eyebrow="Pay"
+      title="My pay"
+      icon={Banknote}
+      description="Confirmed pay is money already posted from Payroll — floor (wash/ceramic) and fixed salary both show here. Estimates are unpaid wash-pool shares until a run confirms."
+      meta={
+        <>
+          <CalendarDays className="size-4 shrink-0 text-primary" aria-hidden />
+          <span className="tabular-nums">
+            {period.start} to {period.end}
+            {period.error ? ` · ${period.error}` : ''}
+          </span>
+        </>
+      }
+    >
+      <OpsGuideCard
+        title="How your pay works"
+        description="Confirmed vs estimate, advances, and report periods. Tap a step if this screen is new."
+        steps={MY_PAY_WORKFLOW_STEPS}
+        stepIcons={myPayStepIcons}
+        defaultOpen={!open.length}
+      />
 
       <Card>
         <CardHeader className="pb-2">
@@ -414,6 +435,6 @@ export default function MyPayPage() {
           </Link>
         </p>
       ) : null}
-    </section>
+    </OpsPageShell>
   )
 }

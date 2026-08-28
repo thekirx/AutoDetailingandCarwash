@@ -13,6 +13,7 @@ import {
   normalizeAssistantGrants,
 } from '@/auth/permissions'
 import AssistantGrantsEditor from '@/components/AssistantGrantsEditor'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import {
   deactivateStaffPerson,
   listBranches,
@@ -328,18 +329,18 @@ export default function PeopleManagePage() {
   }
 
   return (
-    <section className="flex flex-col gap-8">
-      <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Users & Access</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Users & Access</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {isSuperAdmin(profile)
-            ? 'Create roles, assign multi-branch scope, and toggle Assistant Super Admin grants. Reload after edits; open sessions pick up grant changes on next auth refresh.'
-            : canEditAssistantGrants(profile)
-              ? 'Manage people and ASA grants for your authority. Branch-scoped data follows assignments.'
-              : 'Create Team Leads and staff for your assigned branch.'}
-        </p>
-      </div>
+    <OpsPageShell
+      className="hakum-people"
+      eyebrow="Users and access"
+      title="Users and access"
+      description={
+        isSuperAdmin(profile)
+          ? 'Create roles, assign multi-branch scope, and toggle Assistant Super Admin grants. Reload after edits; open sessions pick up grant changes on next auth refresh.'
+          : canEditAssistantGrants(profile)
+            ? 'Manage people and ASA grants for your authority. Branch-scoped data follows assignments.'
+            : 'Create Team Leads and staff for your assigned branch.'
+      }
+    >
 
       {isSuperAdmin(profile) ? (
         <Card>
@@ -790,6 +791,6 @@ export default function PeopleManagePage() {
           )}
         </DialogContent>
       </Dialog>
-    </section>
+    </OpsPageShell>
   )
 }

@@ -11,7 +11,9 @@ import {
   canUseAttendanceClock,
   ROLES,
 } from '@/auth/permissions'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
 import { CrewAttendancePanel, CrewSettingsPanel } from '@/pages/crew/CrewAttendancePanels'
 
 /**
@@ -48,40 +50,25 @@ export default function AttendancePage() {
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
-      <header className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-2xl">
-          <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Operations</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">Attendance</h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {showClock
-              ? 'Time in inside the branch geofence. Present or late crew can be assigned to floor jobs. Late arrivals still earn — at a lower wash-pool share set in Settings.'
-              : 'Review branch attendance, override rows, and configure geofence, roles, and late-pay policy.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+    <OpsPageShell
+      className="hakum-attendance"
+      eyebrow="Operations"
+      title="Attendance"
+      description={
+        showClock
+          ? 'Time in inside the branch geofence. Present or late crew can be assigned to floor jobs. Late arrivals still earn — at a lower wash-pool share set in Settings.'
+          : 'Review branch attendance, override rows, and configure geofence, roles, and late-pay policy.'
+      }
+      meta={
+        <>
           <CalendarDays className="size-4 shrink-0 text-primary" aria-hidden />
           <span>Manila calendar day · geofence enforced per profile</span>
-        </div>
-      </header>
-
+        </>
+      }
+    >
       {tabs.length > 1 ? (
         <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-5">
-          <TabsList className="inline-flex h-11 w-full gap-1 p-1 sm:w-auto">
-            {tabs.map((t) => {
-              const Icon = t.icon
-              return (
-                <TabsTrigger
-                  key={t.id}
-                  value={t.id}
-                  className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial"
-                >
-                  <Icon aria-hidden />
-                  {t.label}
-                </TabsTrigger>
-              )
-            })}
-          </TabsList>
+          <OpsTabList aria-label="Attendance sections" tabs={tabs} />
 
           {showClock ? (
             <TabsContent value="clock" className="mt-0 outline-none">
@@ -122,6 +109,6 @@ export default function AttendancePage() {
           {tab === 'settings' && showSettings ? <CrewSettingsPanel profile={profile} /> : null}
         </>
       )}
-    </section>
+    </OpsPageShell>
   )
 }

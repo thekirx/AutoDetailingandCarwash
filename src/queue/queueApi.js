@@ -244,8 +244,7 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
 
   const today = getTodayDate()
   const queueRows = queue.data || []
-  // Same-day services/packages: waiting tickets from prior days drop off the floor.
-  // Detailing (and started work) stay until finished.
+  // Open jobs stay on the floor until POS completes — services, packages, detailing alike.
   const activeQueue = queueRows.filter(
     (ticket) => boardStatuses.includes(ticket.status) && isTicketOnTodayFloor(ticket, today),
   )

@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import { cn } from '@/lib/utils'
 import NotificationTemplatesPanel from '@/pages/notifications/NotificationTemplatesPanel'
 
@@ -80,18 +81,13 @@ export default function NotificationsPage() {
   }
 
   return (
-    <section className="notif-hub flex flex-col gap-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
-      <header className="border-b border-border pb-4">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Operations</p>
-        <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-          <Bell className="size-6 shrink-0 text-primary" aria-hidden />
-          Notifications
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          All shop push and SMS copy, paint-maintenance reminders, and customer broadcasts. Super Admin can edit every template.
-        </p>
-      </header>
-
+    <OpsPageShell
+      className="hakum-notifications notif-hub"
+      eyebrow="Operations"
+      title="Notifications"
+      icon={Bell}
+      description="All shop push and SMS copy, paint-maintenance reminders, and customer broadcasts. Super Admin can edit every template."
+    >
       {canReminders ? (
         <aside className="rounded-2xl border border-primary/25 bg-primary/[0.06] px-4 py-3 text-sm leading-relaxed">
           <p className="flex items-start gap-2 font-medium text-foreground">
@@ -173,7 +169,7 @@ export default function NotificationsPage() {
       {tab === 'broadcast' && canBroadcast ? (
         <BroadcastPanel canManageKinds={canReminders} />
       ) : null}
-    </section>
+    </OpsPageShell>
   )
 }
 

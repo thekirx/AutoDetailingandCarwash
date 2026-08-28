@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Star } from 'lucide-react'
+import { MessageSquareText, Star } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessReviews, getBranchScopeList, canSeeAllBranches } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import { REVIEWS_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { VISIT_REVIEW_AXES } from '@/lib/serviceReviews'
 
@@ -68,19 +72,21 @@ export default function ReviewsPage() {
         name: branches.find((b) => b.slug === slug)?.name || slug,
       }))
 
-  return (
-    <section className="flex flex-col gap-6">
-      <div>
-        <p className="mb-1 text-[10px] font-bold tracking-[0.22em] text-primary uppercase">Operations</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Service Reviews</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Customer ratings after completed visits. Average {avg ? avg.toFixed(1) : '—'} / 5 across {reviews.length}{' '}
-          review(s).
-        </p>
-      </div>
+  const reviewsStepIcons = {
+    'after-visit': Star,
+    'branch-filter': MessageSquareText,
+    'follow-up': MessageSquareText,
+    trends: Star,
+  }
 
-      <div className="flex flex-wrap gap-3">
-        {(seeAll || branchOptions.length > 1) && (
+  return (
+    <OpsPageShell
+      className="hakum-reviews"
+      eyebrow="Operations"
+      title="Service reviews"
+      description={`Customer ratings after completed visits. Average ${avg ? avg.toFixed(1) : '—'} / 5 across ${reviews.length} review(s).`}
+      meta={
+        seeAll || branchOptions.length > 1 ? (
           <Select value={branchFilter} onValueChange={setBranchFilter}>
             <SelectTrigger className="min-h-11 w-full sm:w-48">
               <SelectValue placeholder="Branch" />
@@ -96,19 +102,46 @@ export default function ReviewsPage() {
                 ))}
             </SelectContent>
           </Select>
-        )}
-      </div>
+        ) : null
+      }
+    >
+      <OpsGuideCard
+        title="How reviews work"
+        description="Post-visit scores by branch. Use comments and low axes to spot quality issues early."
+        steps={REVIEWS_WORKFLOW_STEPS}
+        stepIcons={reviewsStepIcons}
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {axisAvgs.map((axis) => (
-          <StatCard key={axis.id} label={axis.label} value={axis.avg ? axis.avg.toFixed(1) : '—'} />
+          <StatCard key={axis.id} label={axis.label} value={axis.avg ? axis.avg.toFixed(1) : '—'} loading={loading} />
         ))}
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-5 w-2/3" />
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : reviews.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No reviews yet.</p>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
+            <Star className="size-8 text-muted-foreground/40" aria-hidden />
+            <p className="font-medium">No reviews yet</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Ratings appear after customers complete the post-visit survey. Check back once visits finish at POS.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {reviews.map((r) => (
@@ -153,16 +186,20 @@ export default function ReviewsPage() {
           ))}
         </div>
       )}
-    </section>
+    </OpsPageShell>
   )
 }
 
-function StatCard({ label, value }) {
+function StatCard({ label, value, loading }) {
   return (
     <Card>
       <CardContent className="pt-5">
         <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">{label}</p>
-        <p className="mt-3 text-2xl font-semibold tabular-nums">{value}</p>
+        {loading ? (
+          <Skeleton className="mt-3 h-8 w-16" />
+        ) : (
+          <p className="mt-3 text-2xl font-semibold tabular-nums">{value}</p>
+        )}
       </CardContent>
     </Card>
   )

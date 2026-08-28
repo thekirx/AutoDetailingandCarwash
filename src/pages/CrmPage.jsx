@@ -20,6 +20,11 @@ import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import CustomerNotesPanel from '@/components/CustomerNotesPanel'
 import CrmInsightsPanel from '@/pages/CrmInsightsPanel'
 import SmsPage from '@/pages/SmsPage'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
+import { CRM_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
+import { opsTabSearchParams, resolveOpsTab } from '@/lib/opsShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,6 +42,14 @@ import {
 } from '@/lib/ownerRevisionsPhase7'
 
 const CRM_TABS = ['directory', 'groups', 'insights', 'sms']
+
+/** Source-scan contract — keep literal ids for ops shell tests. */
+const CRM_SHELL_TABS = Object.freeze([
+  { id: 'directory', label: 'Directory', icon: Contact },
+  { id: 'groups', label: 'Smart groups', icon: UserPlus },
+  { id: 'insights', label: 'Insights', icon: Search },
+  { id: 'sms', label: 'SMS', icon: MessageSquare },
+])
 const emptyForm = { first_name: '', last_name: '', phone: '', email: '', plate: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan' }
 const emptyVehicle = { plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan', color: '', icon: '' }
 
@@ -59,7 +72,7 @@ async function provisionCustomer(body) {
 export default function CrmPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = CRM_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'directory'
+  const tab = resolveOpsTab(searchParams.get('tab'), CRM_TABS, 'directory')
   const [customers, setCustomers] = useState([])
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(null)
@@ -396,37 +409,47 @@ export default function CrmPage() {
 
   const branchName = (slug) => branches.find((b) => b.slug === slug)?.name || slug
 
+  function setShellTab(next) {
+    setSearchParams(opsTabSearchParams(next, 'directory'), { replace: true })
+  }
+
+  const crmStepIcons = {
+    directory: Contact,
+    groups: UserPlus,
+    insights: Search,
+    sms: MessageSquare,
+  }
+
   return (
-    <section className="flex flex-col gap-6">
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">CRM</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Customer CRM</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Directory, smart visit groups, behavior insights, and SMS. Expense categories can be created here when you have Finance write access.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <OpsPageShell
+      className="hakum-crm"
+      eyebrow="CRM"
+      title="Customer CRM"
+      description="Directory, smart visit groups, behavior insights, and SMS. Expense categories can be created here when you have Finance write access."
+      actions={
+        <>
           {isAdmin(profile) ? (
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="min-h-11">
               <Link to="/operations/memberships">Memberships</Link>
             </Button>
           ) : null}
           {isAdmin(profile) ? (
-            <Button type="button" variant="outline" onClick={() => setRegisterOpen(true)}>
-              <UserPlus className="mr-1 size-4" /> Register account
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setRegisterOpen(true)}>
+              <UserPlus data-icon="inline-start" /> Register account
             </Button>
           ) : null}
-        </div>
-      </div>
+        </>
+      }
+    >
+      <OpsGuideCard
+        title="How CRM works"
+        description="Find customers, segment by visits, read sales insights, and send SMS from one screen."
+        steps={CRM_WORKFLOW_STEPS}
+        stepIcons={crmStepIcons}
+      />
 
-      <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'directory' ? {} : { tab: next }, { replace: true })}>
-        <TabsList className="flex h-auto flex-wrap gap-1">
-          <TabsTrigger value="directory">Directory</TabsTrigger>
-          <TabsTrigger value="groups">Smart groups</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
-          <TabsTrigger value="sms">SMS</TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onValueChange={setShellTab}>
+        <OpsTabList tabs={CRM_SHELL_TABS} aria-label="CRM sections" />
 
         <TabsContent value="groups" className="mt-6 flex flex-col gap-6">
           <Card>
@@ -950,7 +973,7 @@ export default function CrmPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </section>
+    </OpsPageShell>
   )
 }
 

@@ -152,21 +152,16 @@ export function searchServices(services, query) {
   })
 }
 
+/** Terminal — job leaves the floor only after POS release or explicit cancel. */
+const FLOOR_TERMINAL_STATUSES = new Set(['completed', 'cancelled'])
+
 /**
- * Same-day services/packages: hide stale waiting tickets from prior Manila days.
- * Detailing + already-started work always stay on the floor.
+ * Whether an open job belongs on the ops floor snapshot.
+ * ponytail: wash, package, and detailing stay until completed/cancelled — no midnight drop.
  */
-export function isTicketOnTodayFloor(ticket, todayDate) {
+export function isTicketOnTodayFloor(ticket, _todayDate) {
   if (!ticket) return false
-  const kind = serviceKindFromPayCategory(ticket.service_pay_category || ticket.pay_category)
-  if (kind === 'detailing') return true
-
-  const started = ['in_progress', 'final_checking', 'redo', 'for_payment'].includes(ticket.status)
-  if (started) return true
-
-  const qd = ticket.queue_date || null
-  if (!qd || !todayDate) return true
-  return String(qd) === String(todayDate)
+  return !FLOOR_TERMINAL_STATUSES.has(String(ticket.status || ''))
 }
 
 export function formatQueueNumberForKind(queueNumber, payCategory) {

@@ -54,6 +54,10 @@ import FinanceExpenseReportsTab from './finance/FinanceExpenseReportsTab'
 import FinanceVendorsTab from './finance/FinanceVendorsTab'
 import FinanceQuotesTab from './finance/FinanceQuotesTab'
 import FinanceCorporateTab from './finance/FinanceCorporateTab'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import { FINANCE_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
+import { opsTabSearchParams } from '@/lib/opsShell'
 
 const TAB_ICONS = {
   overview: LayoutDashboard,
@@ -245,48 +249,46 @@ export default function FinancePage() {
       setSearchParams({ tab: 'reports' }, { replace: true })
       return
     }
-    setSearchParams(next === 'overview' ? {} : { tab: next }, { replace: true })
+    setSearchParams(opsTabSearchParams(next, 'overview'), { replace: true })
   }
 
   const activeTab = visibleTabs.find((t) => t.id === tab) || FINANCE_TABS.find((t) => t.id === 'reports')
+  const ActiveIcon = TAB_ICONS[tab] || LayoutDashboard
+  const financeStepIcons = {
+    sales: ShoppingCart,
+    shift: ClipboardCheck,
+    bills: Receipt,
+    payroll: FileBarChart,
+  }
 
   return (
-    <section className="finance-shell">
-      <header className="finance-hero">
-        <div className="finance-hero-copy">
-          <p className="finance-eyebrow">Books · Hakum Auto Care</p>
-          <h1 className="finance-title">
-            {(() => {
-              const Icon = TAB_ICONS[tab] || LayoutDashboard
-              return <Icon aria-hidden />
-            })()}
-            {activeTab?.label || 'Dashboard'}
-          </h1>
-          <p className="finance-lead">
-            {activeTab?.hint || 'Finance overview'}
-            <span className="finance-lead-sep" aria-hidden>
-              ·
-            </span>
-            <span className="tabular-nums">{windowLabel}</span>
-            <span className="finance-lead-sep" aria-hidden>
-              ·
-            </span>
-            {branchName}
-          </p>
-        </div>
-
-        <div className="finance-hero-aside">
+    <OpsPageShell
+      className="finance-shell hakum-finance gap-4"
+      eyebrow="Books · Hakum Auto Care"
+      title={activeTab?.label || 'Dashboard'}
+      icon={ActiveIcon}
+      description={`${activeTab?.hint || 'Finance overview'} · ${windowLabel} · ${branchName}`}
+      actions={
+        <>
           <div className="finance-net-chip" data-tone={headlinePl.net >= 0 ? 'up' : 'down'}>
             <p className="finance-net-label">{headlinePl.net >= 0 ? 'Net profit' : 'Net loss'}</p>
-            <p className="finance-net-value tabular-nums">
-              {loading ? '—' : formatMoney(headlinePl.net)}
-            </p>
+            <p className="finance-net-value tabular-nums">{loading ? '—' : formatMoney(headlinePl.net)}</p>
           </div>
           <Badge variant={canWrite ? 'default' : 'secondary'} className="finance-role-badge">
             {canWrite ? 'Can edit' : 'View only'}
           </Badge>
-        </div>
-      </header>
+        </>
+      }
+    >
+      {!reportsOnly ? (
+        <OpsGuideCard
+          title="How Finance works"
+          description="Income from POS, expenses from bills, shift closes before payroll. Open a step if you are new to books."
+          steps={FINANCE_WORKFLOW_STEPS}
+          stepIcons={financeStepIcons}
+          defaultOpen={tab === 'overview'}
+        />
+      ) : null}
 
       <FinanceFilters
         branchOptions={branchOptions}
@@ -452,6 +454,6 @@ export default function FinancePage() {
           />
         </TabsContent>
       </Tabs>
-    </section>
+    </OpsPageShell>
   )
 }

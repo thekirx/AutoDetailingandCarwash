@@ -56,7 +56,7 @@ const accounts = [
   { email: 'admin@hakumautocare.com', password: 'HakumAdmin2026!', role: ROLES.ADMIN, home: '/operations/pos' },
   { email: 'teamlead@hakumautocare.com', password: 'HakumTL2026!', role: ROLES.TEAM_LEAD, home: '/operations/queue' },
   { email: 'sales@hakumautocare.com', password: 'HakumSales2026!', role: ROLES.SALES, home: '/operations/bookings' },
-  { email: 'staff1@hakumautocare.com', password: 'HakumStaff2026!', role: ROLES.STAFF, home: '/operations/my-tasks' },
+  { email: 'staff1@hakumautocare.com', password: 'HakumStaff2026!', role: ROLES.STAFF, home: '/operations/attendance' },
   { email: 'marketing@hakumautocare.com', password: 'HakumMkt2026!', role: ROLES.MARKETING, home: '/operations/crm' },
 ]
 

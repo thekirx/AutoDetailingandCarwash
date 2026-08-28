@@ -1,7 +1,18 @@
 /** Payroll register: SA/ASA wizard from POS proof → payout lines → confirm. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
-import { Banknote, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Banknote,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  History,
+  LayoutDashboard,
+  Play,
+  Receipt,
+  Settings2,
+  Wallet,
+} from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessPayroll,
@@ -55,6 +66,12 @@ import { Label } from '@/components/ui/label'
 import { NamedSelect } from '@/components/ui/named-select'
 import { toast } from 'sonner'
 import PayrollCashAdvancesPanel from '@/components/PayrollCashAdvancesPanel'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
+import { PAYROLL_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
+import { opsTabSearchParams, resolveOpsTab } from '@/lib/opsShell'
+import { Tabs } from '@/components/ui/tabs'
 
 const FREQ_LABELS = {
   daily: 'Daily',
@@ -66,6 +83,18 @@ const FREQ_LABELS = {
 }
 
 const SETTINGS_FREQUENCIES = PAYOUT_FREQUENCIES.filter((f) => f !== 'custom')
+
+/** Source-scan contract — keep literal ids for ops shell tests. */
+const PAYROLL_SHELL_TABS = [
+  { id: 'home', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'run', label: 'Run payroll', icon: Play },
+  { id: 'cash-advance', label: 'Cash advances', icon: Wallet },
+  { id: 'packages', label: 'Salaries', icon: Receipt },
+  { id: 'history', label: 'Payouts', icon: History },
+  { id: 'rules', label: 'Rules', icon: Settings2 },
+]
+
+const PAYROLL_TAB_IDS = PAYROLL_SHELL_TABS.map((t) => t.id)
 
 const WEEKDAYS = [
   { value: '0', label: 'Sunday' },
@@ -88,9 +117,7 @@ export default function PayrollPage() {
   const scope = getBranchScopeList(profile)
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const initialTab = ['home', 'run', 'cash-advance', 'packages', 'history', 'rules'].includes(tabParam)
-    ? tabParam
-    : 'home'
+  const initialTab = resolveOpsTab(tabParam, PAYROLL_TAB_IDS, 'home')
 
   const [tab, setTab] = useState(initialTab)
   const [step, setStep] = useState(0)
@@ -116,6 +143,13 @@ export default function PayrollPage() {
 
   const wizardSteps = useMemo(() => payrollWizardSteps(runKind), [runKind])
   const stepId = wizardSteps[step]?.id
+  const setShellTab = useCallback(
+    (next) => {
+      setTab(next)
+      setSearchParams(opsTabSearchParams(next, 'home'), { replace: true })
+    },
+    [setSearchParams],
+  )
   const staffGroups = useMemo(
     () => (preview?.lines ? groupPayrollLinesByStaff(preview.lines) : []),
     [preview?.lines],
@@ -267,8 +301,7 @@ export default function PayrollPage() {
     setPeriodEnd(period_end)
     setPreview(null)
     setStep(0)
-    setTab('run')
-    setSearchParams({ tab: 'run' }, { replace: true })
+    setShellTab('run')
     toast.message(
       readyDays.length > 1
         ? `Floor window ${period_start} → ${period_end} · ${readyDays.length} ready days`
@@ -520,43 +553,31 @@ export default function PayrollPage() {
 
   const gate = payrollBlocksConfirm(preview)
 
-  return (
-    <section className="hakum-payroll flex flex-col gap-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
-      <header className="border-b border-border pb-4">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Books</p>
-        <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-          <Banknote className="size-6 shrink-0 text-primary" aria-hidden />
-          Payroll
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Floor pay for crew who worked the bay. Fixed salary for office roles (monthly package, auto-split by
-          payout frequency). Cash advances approve here — not on POS.
-        </p>
-      </header>
+  const payrollStepIcons = {
+    'pos-proof': Receipt,
+    preview: ClipboardCheck,
+    confirm: Banknote,
+    settings: Settings2,
+  }
 
-      <div role="tablist" aria-label="Payroll sections" className="planner-v2-tabs">
-        {[
-          { id: 'home', label: 'Dashboard' },
-          { id: 'run', label: 'Run payroll' },
-          { id: 'cash-advance', label: 'Cash advances' },
-          { id: 'packages', label: 'Salaries' },
-          { id: 'history', label: 'Payouts' },
-          { id: 'rules', label: 'Rules' },
-        ].map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={tab === item.id ? 'is-on' : ''}
-            aria-pressed={tab === item.id}
-            onClick={() => {
-              setTab(item.id)
-              setSearchParams(item.id === 'home' ? {} : { tab: item.id }, { replace: true })
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+  return (
+    <OpsPageShell
+      className="hakum-payroll"
+      eyebrow="Books"
+      title="Payroll"
+      description="Floor pay for crew who worked the bay. Fixed salary for office roles (monthly package, auto-split by payout frequency). Cash advances approve here — not on POS."
+      icon={Banknote}
+    >
+      <OpsGuideCard
+        title="How payroll works"
+        description="From POS proof to posted payout. Open any step if this is your first run."
+        steps={PAYROLL_WORKFLOW_STEPS}
+        stepIcons={payrollStepIcons}
+        defaultOpen={tab === 'home'}
+      />
+
+      <Tabs value={tab} onValueChange={setShellTab} className="flex flex-col gap-5">
+        <OpsTabList tabs={PAYROLL_SHELL_TABS} aria-label="Payroll sections" />
 
       {tab === 'home' && (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -669,8 +690,7 @@ export default function PayrollPage() {
                 className="min-h-11"
                 onClick={() => {
                   setRunKind('floor')
-                  setTab('run')
-                  setSearchParams({ tab: 'run' }, { replace: true })
+                  setShellTab('run')
                   setStep(0)
                 }}
               >
@@ -682,8 +702,7 @@ export default function PayrollPage() {
                 className="min-h-11"
                 onClick={() => {
                   setRunKind('fixed')
-                  setTab('run')
-                  setSearchParams({ tab: 'run' }, { replace: true })
+                  setShellTab('run')
                   setStep(0)
                 }}
               >
@@ -1477,6 +1496,7 @@ export default function PayrollPage() {
           </CardContent>
         </Card>
       )}
-    </section>
+      </Tabs>
+    </OpsPageShell>
   )
 }

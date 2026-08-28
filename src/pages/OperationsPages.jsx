@@ -28,7 +28,7 @@ import {
   queueFamilyForProfile,
   QUEUE_FAMILIES,
 } from '../lib/queueFamilies'
-import { canAccessPayroll, canAccessPos, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, canWriteFinance, redirectForRole, ROLES, isSuperAdmin } from '../auth/permissions'
+import { canAccessPayroll, canAccessPos, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, ROLES, isSuperAdmin } from '../auth/permissions'
 import {
   DEFAULT_COMPENSATION_RULES,
   normalizeCompensationSettings,
@@ -87,7 +87,12 @@ import {
   paginateRows,
 } from '../lib/bookingTable'
 import { Button } from '../components/ui/button'
+import { Tabs } from '../components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
+import { QUEUE_WORKFLOW_STEPS, MY_TASKS_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { toast } from 'sonner'
 import { plateKindLabel, plateValidationError, PLATE_FIELD_HINT } from '../lib/customerAuth'
 import { applyPlateSuggestion, plateSuggestPrefix, rankPlateSuggestions } from '../lib/plateSuggest'
@@ -101,6 +106,11 @@ const statusTone = {
   redo: 'queue-status-pill queue-status-redo',
   completed: 'queue-status-pill queue-status-done',
 }
+
+const QUEUE_SHELL_TABS = Object.freeze([
+  { id: 'board', label: 'Board' },
+  { id: 'table', label: 'Table' },
+])
 
 const LANE_META = {
   confirmed: { icon: ClipboardList, hint: 'Assigned from Bookings' },
@@ -143,27 +153,6 @@ function QueueLanePager({ slice, onPage, label }) {
       >
         Next
       </button>
-    </div>
-  )
-}
-
-function PageHeader({ eyebrow, title, description, action, live = false }) {
-  return (
-    <div className="floor-compact-header flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-      <div className="min-w-0">
-        <div className="mb-1 flex flex-wrap items-center gap-2">
-          <p className="text-[10px] font-bold tracking-[0.22em] text-primary uppercase">{eyebrow}</p>
-          {live ? (
-            <span className="floor-live-pill" aria-live="polite">
-              <span className="floor-live-dot" aria-hidden />
-              Live
-            </span>
-          ) : null}
-      </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
-        {description && <p className="floor-desc mt-2 max-w-2xl text-muted-foreground">{description}</p>}
-      </div>
-      {action && <div className="flex shrink-0 flex-wrap gap-2">{action}</div>}
     </div>
   )
 }
@@ -440,21 +429,28 @@ function ScopedFloorDashboard() {
       : 'xl:grid-cols-5'
 
   return (
-    <section>
-      <PageHeader
-        eyebrow={profile?.role === 'admin' ? 'Branch Admin' : 'Team Lead'}
-        title={isTeamLeadFloor ? 'Floor' : 'Queue View'}
-        description={
-          profile?.role === 'admin'
-            ? 'High-level floor summary — waiting cars, detailing, and tickets ready for POS.'
-            : isTeamLeadFloor
-              ? `Jobs on your branch · ${branchLabel}. Open Queue to assign crew and run tickets.`
-              : 'Branch summary of queue volume, detailing jobs, crew, and handoffs. Open Queue for the full detail board.'
-        }
-        live={live}
-        action={<RefreshButton loading={loading || salesLoading} onClick={refreshAll} />}
-      />
-      <div className="mt-4 flex flex-col gap-3 sm:mt-5 sm:flex-row sm:flex-wrap sm:items-end">
+    <OpsPageShell
+      className="hakum-dashboard"
+      eyebrow={profile?.role === 'admin' ? 'Branch Admin' : 'Team Lead'}
+      title={isTeamLeadFloor ? 'Floor' : 'Queue View'}
+      description={
+        profile?.role === 'admin'
+          ? 'High-level floor summary — waiting cars, detailing, and tickets ready for POS.'
+          : isTeamLeadFloor
+            ? `Jobs on your branch · ${branchLabel}. Open Queue to assign crew and run tickets.`
+            : 'Branch summary of queue volume, detailing jobs, crew, and handoffs. Open Queue for the full detail board.'
+      }
+      meta={
+        live ? (
+          <span className="floor-live-pill" aria-live="polite">
+            <span className="floor-live-dot" aria-hidden />
+            Live
+          </span>
+        ) : null
+      }
+      actions={<RefreshButton loading={loading || salesLoading} onClick={refreshAll} />}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         {(seeAll || branchOptions.length > 1) && (
           <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
             Branch
@@ -673,7 +669,7 @@ function ScopedFloorDashboard() {
       </div>
         </Panel>
       ) : null}
-    </section>
+    </OpsPageShell>
   )
 }
 
@@ -819,43 +815,58 @@ function OperationsQueueBoardPage() {
         ]
       : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
 
+  const queueStepIcons = {
+    'stay-until-pos': Send,
+    assign: UserPlus,
+    payment: Wallet,
+    redo: ShieldAlert,
+  }
+
   return (
-    <section className="queue-board flex min-h-0 flex-col">
-      <PageHeader
-        eyebrow="Floor"
-        title="Queue"
-        description={
-          seeRedo
-            ? 'Same-day services and packages until payment. Redo is the owner QC lane. Detailing lives on Bookings.'
-            : 'Same-day services and packages — waiting, on the bay, and final check. Detailing lives on Bookings.'
-        }
-        live={live}
-        action={
-          canManageQueue ? (
-            <Link to="/operations/queue/new" className="floor-touch-btn inline-flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 font-semibold text-primary-foreground no-underline transition hover:opacity-90 sm:px-5">
-              <Plus size={18} aria-hidden />
-              New ticket
-            </Link>
-          ) : null
-        }
+    <OpsPageShell
+      className="hakum-queue queue-board"
+      eyebrow="Floor"
+      title="Queue"
+      description={
+        seeRedo
+          ? 'Same-day services and packages until POS completes the sale. Redo is the owner QC lane. Detailing lives on Bookings.'
+          : 'Same-day services and packages — waiting, on the bay, and final check until POS release. Detailing lives on Bookings.'
+      }
+      icon={CarFront}
+      meta={
+        live ? (
+          <span className="floor-live-pill" aria-live="polite">
+            <span className="floor-live-dot" aria-hidden />
+            Live
+          </span>
+        ) : null
+      }
+      actions={
+        canManageQueue ? (
+          <Link
+            to="/operations/queue/new"
+            className="floor-touch-btn inline-flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 font-semibold text-primary-foreground no-underline transition hover:opacity-90 sm:px-5"
+          >
+            <Plus size={18} aria-hidden />
+            New ticket
+          </Link>
+        ) : null
+      }
+    >
+      <OpsGuideCard
+        title="How the queue works"
+        description="Jobs stay on this board until POS completes the sale. Open any step if this is your first shift on floor."
+        steps={QUEUE_WORKFLOW_STEPS}
+        stepIcons={queueStepIcons}
       />
 
-      <div className="queue-board-toolbar mt-3 flex flex-col gap-3">
-        <div className="queue-board-controls">
-          <div className="queue-seg" role="group" aria-label="Queue layout">
-            {['board', 'table'].map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={view === mode}
-                onClick={() => setQueueView(mode)}
-              >
-                {mode === 'board' ? 'Board' : 'Table'}
-              </button>
-            ))}
-            </div>
-          <RefreshButton loading={loading} onClick={reload} />
-            </div>
+      <div className="queue-board-toolbar flex flex-col gap-3">
+        <Tabs value={view} onValueChange={setQueueView} className="min-w-0">
+          <div className="queue-board-controls flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <OpsTabList tabs={QUEUE_SHELL_TABS} aria-label="Queue layout" />
+            <RefreshButton loading={loading} onClick={reload} />
+          </div>
+        </Tabs>
         <div className="flex flex-wrap items-end gap-3">
           {(seeAll || branchOptions.length > 1) ? (
             <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
@@ -1164,7 +1175,7 @@ function OperationsQueueBoardPage() {
           onUpdated={reload}
         />
       ) : null}
-    </section>
+    </OpsPageShell>
   )
 }
 
@@ -1178,13 +1189,13 @@ export function QueueTicketPage() {
   if (!id) return <Navigate to="/operations/queue" replace />
 
   return (
-    <section>
+    <OpsPageShell className="hakum-queue-ticket" eyebrow="Queue" title="Ticket">
       <QueueTicketEditor
         bookingId={id}
         variant="page"
         onClose={() => navigate('/operations/queue')}
       />
-    </section>
+    </OpsPageShell>
   )
 }
 
@@ -1196,7 +1207,7 @@ export function NewQueueTicketPage() {
   const canChooseBranch = canOverrideQueueBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
   const [services, setServices] = useState([])
   const [branches, setBranches] = useState([])
-  const [plateMatch, setPlateMatch] = useState(null)
+  const [, setPlateMatch] = useState(null)
   const [plateLookupState, setPlateLookupState] = useState('idle')
   const [plateSuggestions, setPlateSuggestions] = useState([])
   const [form, setForm] = useState({
@@ -1397,10 +1408,14 @@ export function NewQueueTicketPage() {
   if (loading) return <LoadingPanel />
 
   return (
-    <section>
-      <PageHeader eyebrow="Create Queue Ticket" title="Add vehicle to queue" description="Required: LTO plate, conduction sticker, or temporary / TOP; phone; and at least one Service or Package. Detailing jobs belong on Bookings. Name is optional for fast walk-ins." />
-      {error && <p className="floor-alert floor-alert-error mt-5">{error}</p>}
-      <div className="mt-8">
+    <OpsPageShell
+      className="hakum-new-ticket"
+      eyebrow="Create Queue Ticket"
+      title="Add vehicle to queue"
+      description="Required: LTO plate, conduction sticker, or temporary / TOP; phone; and at least one Service or Package. Detailing jobs belong on Bookings. Name is optional for fast walk-ins."
+    >
+      {error && <p className="floor-alert floor-alert-error">{error}</p>}
+      <div>
         <Panel title="Ticket Form" icon={Plus}>
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
             <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase suggest-field">
@@ -1491,7 +1506,7 @@ export function NewQueueTicketPage() {
           </form>
         </Panel>
       </div>
-    </section>
+    </OpsPageShell>
   )
 }
 
@@ -1551,26 +1566,26 @@ export function CrewPage() {
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
   return (
-    <section>
-      <PageHeader
-        eyebrow="Crew"
-        title="Crew pool"
-        description="Present crew only can be assigned to jobs. Time in / out lives on Attendance."
-        action={(
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to="/operations/attendance"
-              className="floor-touch-btn inline-flex items-center rounded-2xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground no-underline"
-            >
-              Open Attendance
-            </Link>
-            <RefreshButton loading={loading} onClick={reload} />
-          </div>
-        )}
-      />
-      {actionError && <p className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{actionError}</p>}
+    <OpsPageShell
+      className="hakum-crew"
+      eyebrow="Crew"
+      title="Crew pool"
+      description="Present crew only can be assigned to jobs. Time in / out lives on Attendance."
+      actions={(
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to="/operations/attendance"
+            className="floor-touch-btn inline-flex items-center rounded-2xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground no-underline"
+          >
+            Open Attendance
+          </Link>
+          <RefreshButton loading={loading} onClick={reload} />
+        </div>
+      )}
+    >
+      {actionError && <p className="rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">{actionError}</p>}
 
-      <div className="mt-6 mb-4 grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground">
+      <div className="grid grid-cols-3 gap-3 text-center text-xs text-muted-foreground">
         <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{staffPool.length}</strong>Pool</span>
         <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{presentCount}</strong>Present</span>
         <span className="rounded-xl border border-border bg-card px-3 py-2"><strong className="block text-lg text-foreground">{availableStaff.length}</strong>Deployable</span>
@@ -1682,7 +1697,7 @@ export function CrewPage() {
           {crewTab === 'compensation' && (
             <CrewCompensationPanel profile={profile} staffPool={staffPool} branchFilter={getBranchScope(profile) || 'all'} />
           )}
-    </section>
+    </OpsPageShell>
   )
 }
 
@@ -1809,7 +1824,7 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
         </div>
       ) : null}
       <p className="mt-3 text-xs text-muted-foreground">
-        Estimate from today's paid wash sales. Confirmed pay is posted once from Payroll, not from this tab.
+        Estimate from today&apos;s paid wash sales. Confirmed pay is posted once from Payroll, not from this tab.
       </p>
       </Panel>
   )
@@ -1924,36 +1939,36 @@ export function MyTasksPage() {
   const isStaff = profile?.role === ROLES.STAFF
   const showPlannerCue = empty && canViewPlanning(profile)
   return (
-    <section className="planner-v2 px-1 sm:px-0">
-      <PageHeader
-        eyebrow="My Tasks"
-        title="Assigned work"
-        description="Queue floor jobs and planning cards assigned to you."
-        action={(
-          <div className="flex flex-wrap gap-2">
-            {isStaff ? (
-              <Link
-                to="/operations/attendance"
-                className="floor-touch-btn inline-flex items-center rounded-2xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground no-underline"
-              >
-                Attendance
-              </Link>
-            ) : null}
-            {showPlannerCue ? (
-              <Link
-                to="/operations/planning"
-                className="floor-touch-btn inline-flex items-center rounded-2xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground no-underline"
-              >
-                Open Planner
-              </Link>
-            ) : null}
-            <RefreshButton loading={loading} onClick={load} />
-          </div>
-        )}
+    <OpsPageShell
+      className="hakum-my-tasks planner-v2"
+      eyebrow="My Tasks"
+      title="Assigned work"
+      description="Queue floor jobs and planning cards assigned to you."
+      actions={
+        <div className="flex flex-wrap gap-2">
+          {isStaff ? (
+            <Button asChild variant="outline" className="min-h-11">
+              <Link to="/operations/attendance">Attendance</Link>
+            </Button>
+          ) : null}
+          {showPlannerCue ? (
+            <Button asChild variant="outline" className="min-h-11">
+              <Link to="/operations/planning">Open Planner</Link>
+            </Button>
+          ) : null}
+          <RefreshButton loading={loading} onClick={load} />
+        </div>
+      }
+    >
+      <OpsGuideCard
+        title="How my tasks work"
+        description="Queue assignments and planner cards assigned to you. Photo proof goes to Planner review."
+        steps={MY_TASKS_WORKFLOW_STEPS}
+        stepIcons={{ queue: CarFront, planning: ClipboardList, attendance: Clock3, planner: ClipboardList }}
       />
 
       {showPlannerCue ? (
-        <p className="mt-4 rounded-2xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+        <p className="rounded-2xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
           Nothing assigned to you yet. Assign cards from{' '}
           <Link to="/operations/planning" className="font-semibold text-primary underline-offset-4 hover:underline">
             Planner
@@ -1962,7 +1977,7 @@ export function MyTasksPage() {
         </p>
       ) : null}
 
-      <Panel title="Planning assignments" icon={ClipboardList} className="mt-6">
+      <Panel title="Planning assignments" icon={ClipboardList} className="mt-2">
         <div className="grid gap-4">
           {planRows.length ? planRows.map((row) => {
             const card = row.plan_cards
@@ -2003,20 +2018,20 @@ export function MyTasksPage() {
           {queueRows.length ? queueRows.map((row) => {
             const booking = row.bookings
             return (
-              <article key={row.id} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
+              <article key={row.id} className="planner-ticket rounded-2xl border border-border bg-card p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-lg font-semibold">{row.task_name || 'Queue service task'}</p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {booking?.vehicle_plate ? `${booking.vehicle_plate} · ` : ''}
                       {booking?.branch || '—'}
                       {booking?.queue_number ? ` · #${formatQueueNumber(booking.queue_number)}` : ''}
                     </p>
-                    <p className="mt-1 text-xs capitalize text-slate-400">{row.status}{booking?.status ? ` · ticket ${booking.status}` : ''}</p>
+                    <p className="mt-1 text-xs capitalize text-muted-foreground">{row.status}{booking?.status ? ` · ticket ${booking.status}` : ''}</p>
               </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     {row.booking_id && !isStaff && (
-                      <Link to={`/operations/queue/${row.booking_id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 no-underline">
+                      <Link to={`/operations/queue/${row.booking_id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-border px-4 py-2 text-sm font-semibold no-underline">
                         Open ticket
                       </Link>
                     )}
@@ -2025,7 +2040,7 @@ export function MyTasksPage() {
                         type="button"
                         disabled={saving === row.id}
                         onClick={() => markInProgress(row)}
-                        className="min-h-11 rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="min-h-11 rounded-2xl border border-border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {saving === row.id ? 'Saving…' : 'Acknowledge'}
                       </button>
@@ -2035,20 +2050,20 @@ export function MyTasksPage() {
                         type="button"
                         disabled={saving === row.id}
                         onClick={() => markQueueDone(row)}
-                        className="min-h-11 rounded-2xl border border-emerald-300/30 px-4 py-2 text-sm font-semibold text-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="min-h-11 rounded-2xl border border-emerald-300/30 px-4 py-2 text-sm font-semibold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {saving === row.id ? 'Saving…' : 'Mark done'}
                       </button>
                     )}
                   </div>
             </div>
-            {row.task_notes && <p className="mt-4 text-sm text-slate-400">{row.task_notes}</p>}
+            {row.task_notes && <p className="mt-4 text-sm text-muted-foreground">{row.task_notes}</p>}
           </article>
             )
           }) : <EmptyLine text={loading ? 'Loading…' : empty ? 'No assigned tasks right now.' : 'No queue assignments.'} />}
       </div>
       </Panel>
-    </section>
+    </OpsPageShell>
   )
 }
 

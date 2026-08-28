@@ -1,14 +1,36 @@
 /** Inventory — SA/ASA catalog tabs; BA (and SA) branch restock / Sunday recon. */
+import { useMemo } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
+import { Car, Package, ShoppingBag, Sparkles } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessInventory, canManageServices, canRestockInventory } from '@/auth/permissions'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
+import { INVENTORY_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
+import { opsTabSearchParams } from '@/lib/opsShell'
 import ServicesManagePage from '@/pages/ServicesManagePage'
 import ProductsManagePage from '@/pages/ProductsManagePage'
 import BranchInventoryPage from '@/pages/BranchInventoryPage'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 
 const CATALOG_TABS = ['bay', 'detailing', 'merch', 'stock']
 const BA_TABS = ['restock', 'recon']
+
+/** Source-scan contract — keep literal ids for ops shell tests. */
+const INVENTORY_SHELL_TABS = [
+  { id: 'bay', label: 'Services & packages', icon: Car },
+  { id: 'detailing', label: 'Detailing', icon: Sparkles },
+  { id: 'merch', label: 'Merch / sellables', icon: ShoppingBag },
+  { id: 'stock', label: 'Branch stock', icon: Package },
+]
+
+function resolveInventoryTab(raw) {
+  if (CATALOG_TABS.includes(raw)) return raw
+  if (raw === 'services') return 'bay'
+  if (BA_TABS.includes(raw)) return 'stock'
+  return 'bay'
+}
 
 export default function InventoryPage() {
   const { profile } = useAuth()
@@ -16,6 +38,12 @@ export default function InventoryPage() {
   const canCatalog = canManageServices(profile)
   const canStock = canRestockInventory(profile)
   const raw = searchParams.get('tab')
+  const tab = resolveInventoryTab(raw)
+
+  const visibleTabs = useMemo(
+    () => INVENTORY_SHELL_TABS.filter((t) => t.id !== 'stock' || canStock),
+    [canStock],
+  )
 
   if (!canAccessInventory(profile)) {
     return <Navigate to="/operations/pos" replace />
@@ -26,50 +54,35 @@ export default function InventoryPage() {
     return <BranchInventoryPage />
   }
 
-  const tab = CATALOG_TABS.includes(raw)
-    ? raw
-    : raw === 'services'
-      ? 'bay'
-      : BA_TABS.includes(raw)
-        ? 'stock'
-        : 'bay'
-
   function setTab(next) {
-    setSearchParams(next === 'bay' ? {} : { tab: next }, { replace: true })
+    setSearchParams(opsTabSearchParams(next, 'bay'), { replace: true })
+  }
+
+  const inventoryStepIcons = {
+    bay: Car,
+    detailing: Sparkles,
+    merch: ShoppingBag,
+    stock: Package,
   }
 
   return (
-    <section className="planner-v2 pb-8">
-      <header className="planner-v2-head mb-4">
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">Catalog</p>
-          <h1>Inventory</h1>
-          <p>
-            Create bay services and packages, multi-day detailing, merch stock, and branch restock / Sunday recon.
-          </p>
-        </div>
-      </header>
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList
-          variant="line"
-          className="hakum-pos-tabs planner-v2-tabs mb-4 flex h-auto w-full flex-wrap gap-2"
-          aria-label="Inventory catalog"
-        >
-          <TabsTrigger value="bay" className="min-h-11 min-w-[7rem] flex-1">
-            Services & packages
-          </TabsTrigger>
-          <TabsTrigger value="detailing" className="min-h-11 min-w-[7rem] flex-1">
-            Detailing
-          </TabsTrigger>
-          <TabsTrigger value="merch" className="min-h-11 min-w-[7rem] flex-1">
-            Merch / sellables
-          </TabsTrigger>
-          {canStock ? (
-            <TabsTrigger value="stock" className="min-h-11 min-w-[7rem] flex-1">
-              Branch stock
-            </TabsTrigger>
-          ) : null}
-        </TabsList>
+    <OpsPageShell
+      className="hakum-inventory"
+      eyebrow="Catalog"
+      title="Inventory"
+      description="Create bay services and packages, multi-day detailing, merch stock, and branch restock / Sunday recon."
+    >
+      <OpsGuideCard
+        title="How inventory works"
+        description="Catalog tabs feed POS and Bookings. Branch stock keeps merch counts honest."
+        steps={INVENTORY_WORKFLOW_STEPS.filter((s) => s.id !== 'stock' || canStock)}
+        stepIcons={inventoryStepIcons}
+        defaultOpen={tab === 'bay'}
+      />
+
+      <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-5">
+        <OpsTabList tabs={visibleTabs} aria-label="Inventory catalog" />
+
         <TabsContent value="bay" className="mt-0 outline-none">
           <ServicesManagePage embedded catalogScope="bay" />
         </TabsContent>
@@ -85,6 +98,6 @@ export default function InventoryPage() {
           </TabsContent>
         ) : null}
       </Tabs>
-    </section>
+    </OpsPageShell>
   )
 }

@@ -28,6 +28,8 @@ import {
   SHIFT_CLOSE_MONEY_KEYS,
 } from '@/lib/shiftClose'
 import ShiftCloseWizard from '@/components/ShiftCloseWizard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -59,8 +61,6 @@ import {
 } from '@/lib/posInsights'
 import PosSettingsPanel from '@/pages/pos/PosSettingsPanel'
 import { PosGuideCard, PosPendingEmpty, PosSalaryPreviewCard, PosStatsBoard } from '@/pages/pos/PosPanels'
-
-const SHELL_TABS = ['checkout', 'pending', 'expenses', 'dashboard']
 
 export default function PosPage() {
   const { profile } = useAuth()
@@ -1181,19 +1181,7 @@ export default function PosPage() {
 
       {branchAdmin ? (
         <div>
-          <div className="planner-v2-tabs mb-3" role="toolbar" aria-label="Merch family">
-            {MERCH_FAMILIES.map((fam) => (
-              <button
-                key={fam.id}
-                type="button"
-                className={merchFamilyFilter === fam.id ? 'is-on' : ''}
-                aria-pressed={merchFamilyFilter === fam.id}
-                onClick={() => setMerchFamilyFilter(fam.id)}
-              >
-                {fam.label}
-              </button>
-            ))}
-          </div>
+          <MerchFamilyToolbar value={merchFamilyFilter} onChange={setMerchFamilyFilter} />
           <p className="mb-3 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
             Merch / items ({merchItems.length})
           </p>
@@ -1234,19 +1222,7 @@ export default function PosPage() {
             />
           </TabsContent>
           <TabsContent value="merch" className="mt-4">
-            <div className="planner-v2-tabs mb-3" role="toolbar" aria-label="Merch family">
-              {MERCH_FAMILIES.map((fam) => (
-                <button
-                  key={fam.id}
-                  type="button"
-                  className={merchFamilyFilter === fam.id ? 'is-on' : ''}
-                  aria-pressed={merchFamilyFilter === fam.id}
-                  onClick={() => setMerchFamilyFilter(fam.id)}
-                >
-                  {fam.label}
-                </button>
-              ))}
-            </div>
+            <MerchFamilyToolbar value={merchFamilyFilter} onChange={setMerchFamilyFilter} />
             <CatalogGrid
               items={merchItems}
               onAdd={addToCart}
@@ -1442,23 +1418,23 @@ export default function PosPage() {
   ) : null
 
   return (
-    <section className="hakum-pos mx-auto flex w-full max-w-7xl flex-col gap-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
-      <header className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-2xl">
-          <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
-            {branchAdmin ? 'Counter' : 'Point of sale'}
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">POS</h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm leading-relaxed text-muted-foreground">
-            <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
-            <span>
-              {branchAdmin
-                ? `Merch, queue payment, expenses, end of shift · ${branchLabel}`
-                : `Sell, pay queue, expenses, crew pay preview · ${branchLabel}`}
-            </span>
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <OpsPageShell
+      className="hakum-pos"
+      eyebrow={branchAdmin ? 'Counter' : 'Point of sale'}
+      title="POS"
+      description={
+        branchAdmin
+          ? `Merch, queue payment, expenses, end of shift · ${branchLabel}`
+          : `Sell, pay queue, expenses, crew pay preview · ${branchLabel}`
+      }
+      meta={
+        <>
+          <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+          <span>{branchLabel}</span>
+        </>
+      }
+      actions={
+        <>
           {canSubmitShiftClose(profile) ? (
             <Button type="button" variant="destructive" className="min-h-11 gap-2" onClick={openEndOfShift}>
               <LogOut data-icon="inline-start" aria-hidden />
@@ -1471,34 +1447,22 @@ export default function PosPage() {
               Cart · {cart.length} · {formatMoney(cartTotal)}
             </Button>
           ) : null}
-        </div>
-      </header>
-
+        </>
+      }
+    >
       <PosGuideCard defaultOpen={shellTab === 'checkout'} />
 
       <Tabs value={shellTab} onValueChange={setShellTab} className="flex w-full flex-col gap-5">
-        <TabsList className="inline-flex h-11 w-full gap-1 p-1 sm:w-auto">
-          <TabsTrigger value="checkout" className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
-            <ShoppingBag className="size-4" aria-hidden />
-            Sell
-          </TabsTrigger>
-          <TabsTrigger value="pending" className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
-            <Receipt className="size-4" aria-hidden />
-            Pay queue{handoffs.length ? ` (${handoffs.length})` : ''}
-          </TabsTrigger>
-          <TabsTrigger value="expenses" className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
-            Expenses
-          </TabsTrigger>
-          <TabsTrigger value="dashboard" className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
-            Today
-          </TabsTrigger>
-          {showSettingsTab ? (
-            <TabsTrigger value={POS_SETTINGS_TAB} className="h-9 min-h-9 flex-1 gap-2 px-4 sm:flex-initial">
-              <Settings2 className="size-4" aria-hidden />
-              Settings
-            </TabsTrigger>
-          ) : null}
-        </TabsList>
+        <OpsTabList
+          aria-label="POS sections"
+          tabs={[
+            { id: 'checkout', label: 'Sell', icon: ShoppingBag },
+            { id: 'pending', label: 'Pay queue', icon: Receipt, badge: handoffs.length || undefined },
+            { id: 'expenses', label: 'Expenses' },
+            { id: 'dashboard', label: 'Today' },
+            ...(showSettingsTab ? [{ id: POS_SETTINGS_TAB, label: 'Settings', icon: Settings2 }] : []),
+          ]}
+        />
         <TabsContent value="checkout" className="mt-0 outline-none">
           {checkoutBody}
         </TabsContent>
@@ -1910,7 +1874,26 @@ export default function PosPage() {
           </div>
         </SheetContent>
       </Sheet>
-    </section>
+    </OpsPageShell>
+  )
+}
+
+function MerchFamilyToolbar({ value, onChange }) {
+  return (
+    <div className="mb-3 flex flex-wrap gap-2" role="toolbar" aria-label="Merch family">
+      {MERCH_FAMILIES.map((fam) => (
+        <Button
+          key={fam.id}
+          type="button"
+          variant={value === fam.id ? 'default' : 'outline'}
+          className="min-h-11"
+          aria-pressed={value === fam.id}
+          onClick={() => onChange(fam.id)}
+        >
+          {fam.label}
+        </Button>
+      ))}
+    </div>
   )
 }
 

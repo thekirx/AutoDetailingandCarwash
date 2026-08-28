@@ -9,6 +9,7 @@ import {
   toCompensationSettingsRow,
 } from '@/lib/compensation'
 import { supabase } from '@/lib/supabase'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -46,24 +47,22 @@ export default function PayrollSettingsPage() {
   }
 
   return (
-    <section className="flex flex-col gap-6 pb-8">
-      <header className="border-b border-border pb-4">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Settings</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Payroll settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Attendance weights, pending-floor policy, and cash-advance netting. Pool % and ceramic splits stay on Payroll →
-          Rules.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+    <OpsPageShell
+      className="hakum-payroll-settings"
+      eyebrow="Settings"
+      title="Payroll settings"
+      description="Attendance weights, pending-floor policy, and cash-advance netting. Pool % and ceramic splits stay on Payroll → Rules."
+      actions={
+        <>
           <Button type="button" variant="outline" className="min-h-11" asChild>
             <Link to="/operations/settings">← Company settings</Link>
           </Button>
           <Button type="button" variant="secondary" className="min-h-11" asChild>
             <Link to="/operations/payroll?tab=rules">Open pool / ceramic rules</Link>
           </Button>
-        </div>
-      </header>
-
+        </>
+      }
+    >
       <Card>
         <CardHeader>
           <CardTitle>Policy</CardTitle>
@@ -123,6 +122,6 @@ export default function PayrollSettingsPage() {
           </form>
         </CardContent>
       </Card>
-    </section>
+    </OpsPageShell>
   )
 }

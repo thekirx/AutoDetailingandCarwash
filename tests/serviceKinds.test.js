@@ -52,23 +52,28 @@ describe('serviceKinds', () => {
     assert.ok(payCategoryOptionsForCatalogScope('detailing').every((r) => r.kind === 'detailing'))
   })
 
-  it('keeps detailing on the floor across days; drops stale same-day waiting', () => {
+  it('keeps open wash/package/detailing on the floor until POS completes', () => {
     const today = '2026-08-08'
+    const yesterday = '2026-08-07'
+    for (const cat of ['wash', 'package', 'detailing']) {
+      assert.equal(
+        isTicketOnTodayFloor({ status: 'waiting', queue_date: yesterday, service_pay_category: cat }, today),
+        true,
+        `waiting ${cat}`,
+      )
+      assert.equal(
+        isTicketOnTodayFloor({ status: 'for_payment', queue_date: yesterday, service_pay_category: cat }, today),
+        true,
+        `for_payment ${cat}`,
+      )
+    }
     assert.equal(
-      isTicketOnTodayFloor({ status: 'waiting', queue_date: '2026-08-07', service_pay_category: 'wash' }, today),
+      isTicketOnTodayFloor({ status: 'completed', queue_date: yesterday, service_pay_category: 'wash' }, today),
       false,
     )
     assert.equal(
-      isTicketOnTodayFloor({ status: 'waiting', queue_date: '2026-08-07', service_pay_category: 'detailing' }, today),
-      true,
-    )
-    assert.equal(
-      isTicketOnTodayFloor({ status: 'in_progress', queue_date: '2026-08-07', service_pay_category: 'wash' }, today),
-      true,
-    )
-    assert.equal(
-      isTicketOnTodayFloor({ status: 'waiting', queue_date: today, service_pay_category: 'package' }, today),
-      true,
+      isTicketOnTodayFloor({ status: 'cancelled', queue_date: yesterday, service_pay_category: 'package' }, today),
+      false,
     )
   })
 

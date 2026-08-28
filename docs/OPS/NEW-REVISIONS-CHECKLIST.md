@@ -24,16 +24,16 @@ This audit found **0 GAP** items against the brief after P0–P7. Residuals are 
 
 ---
 
-## Fresh verification (this session)
+## Fresh verification (this session — 2026-08-28)
 
 | Claim | Command | Result |
 |-------|---------|--------|
-| Owner-revision seam suite | `node --test tests/ownerRevisionsPhase2.test.js tests/ownerRevisionsPhase5.test.js tests/ownerRevisionsPhase6.test.js tests/ownerRevisionsPhase7.test.js tests/inventoryBranchStock.test.js tests/moneyContract.test.js tests/posSale.test.js tests/notifyShiftCloseOwnerSms.test.js tests/queueLogic.test.js tests/notifyBooking.test.js` | **exit 0** · **74/74 pass** |
-| Production build | `npm run build` | **exit 0** · `✓ built in 32.09s` |
-| Schema columns | Supabase `execute_sql` | `bookings.completion_outcome`, `redo_staff_ids`, `products.usage_kind`, `services.salary_pct` / `sla_minutes` / `duration_minutes`, `vehicles.icon`, `customers.notify_*` / `is_disabled` |
-| Schema tables | Supabase `execute_sql` | `product_branch_stock`, `inventory_recons`, `inventory_recon_lines`, `vendors`, `finance_quotes`, `corporate_balances`, `staff_role_overrides` |
-| Storage | Supabase `execute_sql` | bucket `booking-updates` |
-| History indexes | Supabase `pg_indexes` | `customers_active_phone_uidx`, `bookings_customer_phone_idx`, `bookings_vehicle_plate_idx`, `bookings_normalized_plate_created_idx` |
+| Owner-revision seam suite | `node --test` (phase2/5/6/7 + inventory + money + pos + notify + queue + qa + opsShell) | **exit 0** · **120/120 pass** |
+| Production build | `npm run build` | **exit 0** · `✓ built in 18.49s` |
+| ESLint | `npm run lint` | **exit 0** · 0 errors, 3 warnings |
+| Branch stock seed | Supabase `execute_sql` + `scripts/seed-branch-stock.sql` | **bacoor/batangas/hq: 8 rows each** |
+| Readiness smoke | `node scripts/e2e-readiness.mjs` | **exit 0** |
+| Ops cutover smoke | `npm run e2e:cutover` | **exit 0** — investor/mute/stock/BA payroll block; 4 manual warnings |
 
 **Not verified this session:** browser E2E walkthrough (TL → POS → EoS → Finance accept → owner SMS → SA payroll). Treat as ops smoke before production cutover.
 
@@ -212,13 +212,13 @@ This audit found **0 GAP** items against the brief after P0–P7. Residuals are 
 
 ## Ops cutover checklist (before owner demo)
 
-- [ ] Set `OWNER_SMS_PHONE` (or BossMich phone) and BusyBee keys; accept one test close; confirm SMS body matches Bacoor report buckets
-- [ ] Seed `product_branch_stock` for resellable SKUs per branch (POS fail-closed if missing)
-- [ ] Run one Sunday recon BA → SA approve; confirm floor chemical chart leaves stub
-- [ ] BA EoS with `salary_draft_extras` → Finance accept → SA pending floor shows drafts → confirm pay (BA still blocked from Payroll confirm)
-- [ ] Detailing complete with outcome 2/3 → Experience card appears
-- [ ] Investor login: no HQ/Corporate tab or balances
-- [ ] Mute customer SMS/push and confirm notify skipped
+- [ ] Set `OWNER_SMS_PHONE` (or BossMich phone) and BusyBee keys; accept one test close; confirm SMS body matches Bacoor report buckets — **report shape verified** via `e2e-ops-cutover`; live SMS needs accept in Finance UI
+- [x] Seed `product_branch_stock` for resellable SKUs per branch (POS fail-closed if missing) — **2026-08-28**: 100 qty × 8 SKUs × all branches via Supabase SQL
+- [ ] Run one Sunday recon BA → SA approve; confirm floor chemical chart leaves stub — **0 approved recons** in DB; manual walkthrough still needed
+- [ ] BA EoS with `salary_draft_extras` → Finance accept → SA pending floor shows drafts → confirm pay (BA still blocked from Payroll confirm) — **BA `run_payroll` blocked** verified; draft extras need live EoS
+- [ ] Detailing complete with outcome 2/3 → Experience card appears — **0 experience cards** in DB; manual complete dialog needed
+- [x] Investor login: no HQ/Corporate tab or balances — **`e2e-ops-cutover`**: nav Finance-only, RLS denies `corporate_balances`, branch filter hides HQ
+- [x] Mute customer SMS/push and confirm notify skipped — **`e2e-ops-cutover`**: CRM flags → `notifyBookingStatus` skipped
 
 ---
 

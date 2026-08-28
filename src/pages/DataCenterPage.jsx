@@ -12,6 +12,7 @@ import {
   daysSince,
 } from '@/lib/dataCenterLogic'
 import { usePageMeta } from '@/lib/pageMeta'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -199,23 +200,18 @@ export default function DataCenterPage() {
   }
 
   return (
-    <section className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Data permanence</p>
-          <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
-            <Database className="size-8 text-primary" aria-hidden />
-            Data Center
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Super Admin only. Catalog and CRM can be exported and re-imported. Floor, sales, and finance restore from
-            Supabase PITR. Purge is retention-based and skips rows blocked by live tickets or transactions.
-          </p>
-        </div>
-        <Button variant="outline" onClick={load} disabled={loading}>
+    <OpsPageShell
+      className="hakum-data-center"
+      eyebrow="Data permanence"
+      title="Data Center"
+      icon={Database}
+      description="Super Admin only. Catalog and CRM can be exported and re-imported. Floor, sales, and finance restore from Supabase PITR. Purge is retention-based and skips rows blocked by live tickets or transactions."
+      actions={
+        <Button variant="outline" className="min-h-11" onClick={load} disabled={loading}>
           {loading ? 'Refreshing…' : 'Refresh'}
         </Button>
-      </div>
+      }
+    >
 
       {overdue ? (
         <Card className="border-amber-500/40 bg-amber-500/10">
@@ -435,6 +431,6 @@ export default function DataCenterPage() {
           )}
         </CardContent>
       </Card>
-    </section>
+    </OpsPageShell>
   )
 }

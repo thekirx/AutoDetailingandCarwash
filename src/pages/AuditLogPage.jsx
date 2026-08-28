@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canAccessAudit } from '@/auth/permissions'
 import { listAuditLogs } from '@/lib/audit'
 import { formatAuditDetail } from '@/lib/auditDetail'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -42,17 +43,17 @@ export default function AuditLogPage() {
   if (!canAccessAudit(profile)) return <Navigate to="/operations/access-denied" replace />
 
   return (
-    <section className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Governance</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Audit log</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Super Admin and Admin actions on people, branches, services, and related ops mutations.
-          </p>
-        </div>
-        <Button variant="outline" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</Button>
-      </div>
+    <OpsPageShell
+      className="hakum-audit"
+      eyebrow="Governance"
+      title="Audit log"
+      description="Super Admin and Admin actions on people, branches, services, and related ops mutations."
+      actions={
+        <Button variant="outline" className="min-h-11" onClick={load} disabled={loading}>
+          {loading ? 'Refreshing…' : 'Refresh'}
+        </Button>
+      }
+    >
 
       <Card>
         <CardHeader>
@@ -93,6 +94,6 @@ export default function AuditLogPage() {
           )}
         </CardContent>
       </Card>
-    </section>
+    </OpsPageShell>
   )
 }

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Copy, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarDays, Copy, ExternalLink, FileText, Pencil, Plus, Trash2 } from 'lucide-react'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageSiteContent } from '@/auth/permissions'
 import ContentBlockEditor from '@/components/content/ContentBlockEditor'
@@ -13,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { NamedSelect } from '@/components/ui/named-select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { listBranches } from '@/lib/adminApi'
 import { normalizeBlocks, slugifyContentTitle } from '@/lib/contentBlocks'
@@ -212,20 +214,20 @@ export default function ContentAdminPage() {
   }
 
   return (
-    <section className="flex flex-col gap-6 pb-10">
-      <header className="border-b border-border pb-4">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Content</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Blogs &amp; Events</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          WordPress-style blocks: headings, images, videos, lists, quotes, and optional form buttons on events.
-        </p>
-      </header>
-
+    <OpsPageShell
+      className="hakum-content"
+      eyebrow="Content"
+      title="Blogs & Events"
+      description="WordPress-style blocks: headings, images, videos, lists, quotes, and optional form buttons on events."
+    >
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="blogs">Blogs</TabsTrigger>
-          <TabsTrigger value="events">Events</TabsTrigger>
-        </TabsList>
+        <OpsTabList
+          aria-label="Content sections"
+          tabs={[
+            { id: 'blogs', label: 'Blogs', icon: FileText },
+            { id: 'events', label: 'Events', icon: CalendarDays },
+          ]}
+        />
 
         <TabsContent value="blogs" className="mt-4 space-y-4">
           <div className="flex justify-end">
@@ -526,6 +528,6 @@ export default function ContentAdminPage() {
           )}
         </DialogContent>
       </Dialog>
-    </section>
+    </OpsPageShell>
   )
 }
