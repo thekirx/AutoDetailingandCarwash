@@ -20,6 +20,7 @@ import {
   FLOOR_BOARD_FAMILY_META,
   floorLaneLabel,
 } from '@/lib/floorBoardLanes'
+import { formatCarSizeLabel } from '@/lib/ownerRevisionsPhase7'
 import { fetchBranches, fetchSuperAdminFloorBoard, formatMoney } from '@/queue/queueApi'
 
 function formatMinutes(total) {
@@ -514,13 +515,21 @@ export default function SuperAdminFloorBoard() {
           <StatTile
             label="Avg waiting time"
             value={kpi.avg_wait_minutes == null ? '—' : formatMinutes(kpi.avg_wait_minutes)}
-            hint="waiting_at → in_progress_at (avg)"
-            breakdown="Average minutes from bay wait stamp to service start for tickets that have both timestamps in this timeline."
+            hint={
+              kpi.wait_sample_n
+                ? `waiting → start · avg of ${kpi.wait_sample_n} ticket${kpi.wait_sample_n === 1 ? '' : 's'}`
+                : 'No wait stamps in timeline'
+            }
+            breakdown="Average minutes from bay wait stamp (waiting_at) to service start (in_progress_at) for tickets that have both timestamps in this timeline."
           />
           <StatTile
             label="Avg time per service"
             value={kpi.avg_service_minutes == null ? '—' : formatMinutes(kpi.avg_service_minutes)}
-            hint="in_progress → finish"
+            hint={
+              kpi.cycle_sample_n
+                ? `in_progress → finish · avg of ${kpi.cycle_sample_n} ticket${kpi.cycle_sample_n === 1 ? '' : 's'}`
+                : 'No finish stamps in timeline'
+            }
             breakdown="Average minutes from in_progress_at to for_payment_at (else completed_at / final_checking_at). Shows — when no tickets in the timeline have both stamps."
           />
           <StatTile
@@ -550,7 +559,7 @@ export default function SuperAdminFloorBoard() {
                   return (
                     <li key={row.size}>
                       <div className="flex justify-between gap-2 text-sm">
-                        <span className="capitalize font-medium">{String(row.size).replace(/_/g, ' ')}</span>
+                        <span className="capitalize font-medium">{formatCarSizeLabel(row.size)}</span>
                         <span className="tabular-nums text-muted-foreground">
                           {row.count} · {formatMoney(row.total_minor)}
                         </span>

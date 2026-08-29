@@ -16,9 +16,11 @@ import {
   customerNotifyAllowed,
   canCreateStaffRoleOverride,
   canRevokeStaffRoleOverride,
+  formatCarSizeLabel,
   isOverSla,
   normalizeVehicleIcon,
   resolveEffectiveRole,
+  saleLinesFromBookingServices,
 } from '../src/lib/ownerRevisionsPhase7.js'
 import { ROLES } from '../src/auth/permissions.js'
 
@@ -56,6 +58,24 @@ describe('floor board insights helpers', () => {
     )
     assert.equal(top[0].name, 'Wash')
     assert.equal(top[0].total, 800)
+  })
+
+  it('falls back to booking service_name when line items are missing', () => {
+    const lines = saleLinesFromBookingServices([
+      { service_name: 'Ceramic Coat', total_minor: 150000 },
+      { bookings: { services: { name: 'Express Wash' } }, total_minor: 25000 },
+      { total_minor: 999 }, // no name → skipped
+    ])
+    assert.equal(lines.length, 2)
+    assert.equal(lines[0].name, 'Ceramic Coat')
+    assert.equal(lines[0].line_total_minor, 150000)
+    const top = aggregateBestSellers(lines, 2)
+    assert.equal(top[0].name, 'Ceramic Coat')
+  })
+
+  it('labels unknown car size for the owner', () => {
+    assert.equal(formatCarSizeLabel('unknown'), 'No size on booking')
+    assert.equal(formatCarSizeLabel('medium'), 'medium')
   })
 
   it('chemical usage charts from recon lines; empty → stub', () => {

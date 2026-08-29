@@ -40,5 +40,13 @@ describe('floor board owner feedback cuts', () => {
     assert.match(src, /each paid sale in the timeline counts once by booking vehicle size/)
     assert.match(src, /ranks sale line items for paid sales/)
     assert.match(src, /Usage = previous/)
+    assert.match(src, /formatCarSizeLabel/)
+    assert.match(src, /wait_sample_n|No wait stamps in timeline/)
+  })
+
+  it('exposes KPI sample counts and best-seller fallback in API', () => {
+    assert.match(api, /wait_sample_n/)
+    assert.match(api, /cycle_sample_n/)
+    assert.match(api, /saleLinesFromBookingServices/)
   })
 })

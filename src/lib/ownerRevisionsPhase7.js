@@ -51,6 +51,31 @@ export function aggregateCarSizePerSale(rows = []) {
   return Object.values(map).sort((a, b) => b.count - a.count || b.total_minor - a.total_minor)
 }
 
+/** Owner-readable car size label (unknown = no booking size). */
+export function formatCarSizeLabel(size) {
+  const key = String(size || '').trim().toLowerCase()
+  if (!key || key === 'unknown') return 'No size on booking'
+  return key.replace(/_/g, ' ')
+}
+
+/**
+ * When sale_line_items are missing, rank paid sales by booking service_name.
+ * Returns aggregateBestSellers-compatible line stubs (line_total_minor).
+ */
+export function saleLinesFromBookingServices(salesRows = []) {
+  return (salesRows || [])
+    .map((s) => {
+      const name = String(s.service_name || s.bookings?.services?.name || '').trim()
+      if (!name) return null
+      return {
+        name,
+        item_type: 'service',
+        line_total_minor: Number(s.total_minor || 0) || 0,
+      }
+    })
+    .filter(Boolean)
+}
+
 /**
  * Weekly chemical usage × unit cost from approved/submitted recon lines.
  * @param {Array<{ week_of, branch_slug, status, inventory_recon_lines?: Array }>} recons

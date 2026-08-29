@@ -32,6 +32,7 @@ import {
   aggregateCarSizePerSale,
   aggregateChemicalUsageByWeek,
   chemicalUsageNeedsStub,
+  saleLinesFromBookingServices,
 } from '../lib/ownerRevisionsPhase7'
 import { resolveServicePriceMinor } from '../lib/servicePricing'
 import { createTtlCache } from '../lib/coalesceReload'
@@ -39,7 +40,13 @@ import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { isDetailingPayCategory, isTicketOnTodayFloor } from '../lib/serviceKinds'
 import { aggregateSalesFinancials } from '../lib/paymentMethods'
 import { buildAdminRoster } from '../lib/floorBoardRoster'
-import { averageCycleMinutes, averageWaitMinutes, failedQaCount } from '../lib/kpiPart8'
+import {
+  averageCycleMinutes,
+  averageWaitMinutes,
+  bookingCycleMinutes,
+  bookingWaitMinutes,
+  failedQaCount,
+} from '../lib/kpiPart8'
 import {
   resolveQueueCustomerDisplayName,
   validateQueueTicketIdentity,
@@ -374,7 +381,14 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
       laneCountsByFamily: emptyByFamily,
       periodJobs: [],
       financials: { ...EMPTY_FINANCIALS, cancel_loss_minor: 0 },
-      kpi: { avg_wait_minutes: null, avg_service_minutes: null, failed_qa_count: 0, cancelled_count: 0 },
+      kpi: {
+        avg_wait_minutes: null,
+        wait_sample_n: 0,
+        avg_service_minutes: null,
+        cycle_sample_n: 0,
+        failed_qa_count: 0,
+        cancelled_count: 0,
+      },
       recentSales: [],
       adminRoster: [],
       carSizeBySale: [],
@@ -510,9 +524,17 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
   const cycleSample = [...completedJobs, ...startedJobs.filter((j) => j.for_payment_at || j.completed_at || j.final_checking_at)]
   const avg = averageCycleMinutes(cycleSample)
   const avgWait = averageWaitMinutes(startedJobs)
+  const waitSampleN = startedJobs
+    .map(bookingWaitMinutes)
+    .filter((n) => Number.isFinite(n) && n >= 0).length
+  const cycleSampleN = cycleSample
+    .map(bookingCycleMinutes)
+    .filter((n) => Number.isFinite(n) && n >= 0).length
   const kpi = {
     avg_wait_minutes: avgWait == null ? null : Math.round(avgWait),
+    wait_sample_n: waitSampleN,
     avg_service_minutes: avg == null ? null : Math.round(avg),
+    cycle_sample_n: cycleSampleN,
     failed_qa_count: failedQaCount(redoJobs),
     cancelled_count: cancelledJobs.length,
   }
@@ -541,8 +563,15 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
       })
       bestSellers = aggregateBestSellers(lineRows, 8)
     }
+    if (!bestSellers.length && salesRows.length) {
+      // Permanent: POS/queue sales without line rows still rank by booking service.
+      bestSellers = aggregateBestSellers(saleLinesFromBookingServices(salesRows), 8)
+    }
   } catch (err) {
     console.warn('Floor board best sellers unavailable', err?.message || err)
+    if (salesRows.length) {
+      bestSellers = aggregateBestSellers(saleLinesFromBookingServices(salesRows), 8)
+    }
   }
 
   try {
