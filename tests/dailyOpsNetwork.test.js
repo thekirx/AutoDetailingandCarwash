@@ -11,9 +11,12 @@ import { fileURLToPath } from 'node:url'
 import { ROLES, allowRoute } from '../src/auth/permissions.js'
 import { isAssignableAttendanceStatus } from '../src/queue/queueLogic.js'
 import {
+  attendanceRowForPayroll,
   attendanceWeight,
   buildCeramicCompensationExpenses,
   hhmmToMinutes,
+  hoursForAttendanceDay,
+  indexBranchOperatingHours,
 } from '../src/lib/compensation.js'
 import {
   addPayrollAdjustment,
@@ -38,6 +41,7 @@ const read = (rel) => readFileSync(join(root, rel), 'utf8')
 const DAY = '2026-08-22'
 const BACOOR = 'bacoor'
 const IMUS = 'imus'
+const SILANG = 'silang'
 const RULES = { wash_pool_pct: 35 }
 const SHIFT = { shift_start: '08:00', shift_end: '16:00' }
 
@@ -126,6 +130,76 @@ describe('Principal QA — clock math (naabutan nila)', () => {
     assert.equal(attendanceWeight('present', {}, { ...SHIFT, clock_in_at: '08:00' }), 1)
     assert.equal(attendanceWeight('late', {}, { ...SHIFT, clock_in_at: '09:00' }), 0.875)
     assert.equal(attendanceWeight('absent', {}, { ...SHIFT, clock_in_at: '10:00' }), 0)
+  })
+
+  it('uses live DB field checked_in_at (ISO) the same as clock_in_at', () => {
+    assert.equal(
+      attendanceWeight('late', {}, { ...SHIFT, checked_in_at: `${DAY}T09:00:00+08:00` }),
+      0.875,
+    )
+    assert.equal(
+      attendanceWeight('late', {}, { ...SHIFT, checked_in_at: `${DAY}T08:00:00+08:00` }),
+      1,
+    )
+  })
+
+  it('maps geo time-in UTC ISO (toISOString) to Asia/Manila wall clock, not UTC digits', () => {
+    // 09:00 Manila = 01:00 UTC — naive T(\d\d) parse would yield 01:00 and overpay
+    assert.equal(hhmmToMinutes(`${DAY}T01:00:00.000Z`), 540)
+    assert.equal(
+      attendanceWeight('late', {}, { ...SHIFT, checked_in_at: `${DAY}T01:00:00.000Z` }),
+      0.875,
+    )
+    // 08:00 Manila = 00:00 UTC
+    assert.equal(
+      attendanceWeight('present', {}, { ...SHIFT, checked_in_at: `${DAY}T00:00:00.000Z` }),
+      1,
+    )
+  })
+
+  it('status late without any clock falls back to 0.7', () => {
+    assert.equal(attendanceWeight('late', {}, { ...SHIFT }), 0.7)
+  })
+
+  it('payroll maps DB attendance rows with checked_in_at into remaining-shift weights', () => {
+    const mapped = attendanceRowForPayroll(
+      {
+        staff_id: 'crew-late',
+        branch_slug: BACOOR,
+        attendance_date: DAY,
+        status: 'late',
+        checked_in_at: `${DAY}T09:00:00+08:00`,
+        staff_profiles: { full_name: 'Late Ana', role: 'staff' },
+      },
+      { opens_at: '08:00', closes_at: '16:00' },
+    )
+    assert.equal(mapped.checked_in_at.slice(0, 13), `${DAY}T09`)
+    assert.equal(attendanceWeight(mapped.status, {}, mapped), 0.875)
+  })
+
+  it('indexes operating hours per branch×weekday so multi-branch payroll does not share one shift', () => {
+    const index = indexBranchOperatingHours([
+      { branch_slug: BACOOR, day_of_week: 6, opens_at: '08:00', closes_at: '16:00' },
+      { branch_slug: IMUS, day_of_week: 6, opens_at: '09:00', closes_at: '18:00' },
+      { branch_slug: SILANG, day_of_week: 6, opens_at: '10:00', closes_at: '19:00', is_closed: true },
+    ])
+    const bacoorH = hoursForAttendanceDay(index, BACOOR, DAY)
+    const imusH = hoursForAttendanceDay(index, IMUS, DAY)
+    assert.equal(bacoorH.opens_at, '08:00')
+    assert.equal(imusH.opens_at, '09:00')
+    assert.equal(hoursForAttendanceDay(index, SILANG, DAY), null)
+
+    const lateBacoor = attendanceRowForPayroll(
+      { staff_id: 'a', branch_slug: BACOOR, attendance_date: DAY, status: 'late', checked_in_at: `${DAY}T09:00:00+08:00` },
+      bacoorH,
+    )
+    const lateImus = attendanceRowForPayroll(
+      { staff_id: 'b', branch_slug: IMUS, attendance_date: DAY, status: 'late', checked_in_at: `${DAY}T10:00:00+08:00` },
+      imusH,
+    )
+    // Bacoor 08–16, in 09:00 → 7/8; Imus 09–18, in 10:00 → 8/9
+    assert.equal(attendanceWeight('late', {}, lateBacoor), 0.875)
+    assert.equal(Number(attendanceWeight('late', {}, lateImus).toFixed(6)), Number((8 / 9).toFixed(6)))
   })
 
   it('absent crew cannot be assigned a car; late still can', () => {
@@ -246,6 +320,61 @@ describe('Principal QA — Bacoor vs Imus isolation + late/absent wash pool', ()
       runKind: 'floor',
     })
     assert.equal(preview.lines.find((l) => l.kind === 'ceramic_detailer')?.staff_id, 'imus-det')
+  })
+
+  it('solo crew (no detailer) gets 20% ceramic share; detailer line is 0', () => {
+    const drafts = buildCeramicCompensationExpenses({
+      saleId: 'sale-solo',
+      branch: IMUS,
+      salesMinor: 1_000_000,
+      toggles: { freeShirt: false, cardPayment: false, detailerAssigned: false, crewAssisted: true },
+    })
+    const crew = drafts.find((d) => /:crew$/i.test(d.description))
+    const det = drafts.find((d) => /:detailer$/i.test(d.description))
+    assert.equal(crew?.total_minor, 200_000)
+    assert.equal(det?.total_minor ?? 0, 0)
+  })
+
+  it('card payment applies card fee before crew/detailer split', () => {
+    const drafts = buildCeramicCompensationExpenses({
+      saleId: 'sale-card',
+      branch: IMUS,
+      salesMinor: 1_000_000,
+      toggles: { freeShirt: false, cardPayment: true, detailerAssigned: true, crewAssisted: true },
+      assignedDetailerId: 'imus-det',
+    })
+    // 3.5% card → 965_000 net; 10/10 split → 96_500 each
+    const crew = drafts.find((d) => /:crew$/i.test(d.description))
+    const det = drafts.find((d) => /:detailer$/i.test(d.description))
+    assert.equal(crew?.total_minor, 96_500)
+    assert.equal(det?.total_minor, 96_500)
+  })
+
+  it('Silang wash pool stays isolated from Bacoor and Imus', () => {
+    const SILANG = 'silang'
+    const silangCrew = staff('silang-crew', 'Silang Crew', SILANG, 'present', { clock_in_at: '08:00' })
+    const silangWash = {
+      id: 'sale-silang-wash',
+      branch: SILANG,
+      status: 'paid',
+      total_minor: 80_000,
+      occurred_at: `${DAY}T11:00:00+08:00`,
+      sale_line_items: [{ line_total_minor: 80_000, services: { pay_category: 'wash' } }],
+    }
+    const preview = buildPayrollPreview({
+      period: { start: DAY, end: DAY },
+      rules: RULES,
+      sales: [bacoorWash, imusWash, silangWash],
+      attendance: [bacoorOnTime, imusCrew, silangCrew],
+      runKind: 'floor',
+    })
+    const silangLines = preview.lines.filter((l) => l.kind === 'wash_pool' && l.branch === SILANG)
+    assert.equal(silangLines.length, 1)
+    assert.equal(silangLines[0].pay_minor, 28_000)
+    assert.equal(
+      preview.lines.filter((l) => l.kind === 'wash_pool' && l.branch === BACOOR).reduce((s, l) => s + l.pay_minor, 0),
+      70_000,
+    )
   })
 })
 
@@ -405,6 +534,10 @@ describe('Principal QA — wiring scan includes booking assign + geo clock', () 
     assert.match(read('src/pages/PosPage.jsx'), /submit_shift_close/)
     assert.match(read('src/pages/finance/FinanceShiftCloseTab.jsx'), /review_shift_close/)
     assert.match(read('src/pages/PayrollPage.jsx'), /run_payroll/)
+    assert.match(read('src/pages/PayrollPage.jsx'), /checked_in_at/)
+    assert.match(read('src/pages/PayrollPage.jsx'), /attendanceRowForPayroll/)
     assert.match(read('src/lib/payroll.js'), /applyCashAdvanceDeductions/)
+    assert.match(read('src/pages/PayrollPage.jsx'), /indexBranchOperatingHours|hoursForAttendanceDay/)
+    assert.match(read('src/lib/compensation.js'), /checked_in_at/)
   })
 })

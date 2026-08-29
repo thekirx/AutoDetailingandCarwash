@@ -16,6 +16,7 @@ Each epic links acceptance criteria to seam tests in `tests/`.
 | Payroll & compensation | [epic-payroll.md](./epic-payroll.md) | Super Admin, ASA, Crew |
 | Late, absent, CA, commissions | [epic-commissions-attendance.md](./epic-commissions-attendance.md) | Super Admin, Branch Admin, Crew, Detailer |
 | Finance & books | [epic-finance.md](./epic-finance.md) | Super Admin, ASA, Investor |
+| **QA acceptance (multi-branch)** | [epic-qa-multi-branch-shop-day.md](./epic-qa-multi-branch-shop-day.md) | PO / Scrum / Principal QA |
 
 **Locked path map:** [shop-day-flow.md](./shop-day-flow.md) · Money contract: `docs/OPS/MONEY-CONTRACT.md`
 

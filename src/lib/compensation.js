@@ -79,15 +79,84 @@ export function toCompensationSettingsRow(rules, { id = 1 } = {}) {
   }
 }
 
-/** HH:MM or ISO timestamp → minutes from midnight. Null if unparseable. */
+/** HH:MM or ISO timestamp → minutes from midnight (Asia/Manila for ISO). Null if unparseable. */
 export function hhmmToMinutes(value) {
   const raw = String(value || '').trim()
   if (!raw) return null
-  const iso = /T(\d{2}):(\d{2})/.exec(raw)
-  if (iso) return Number(iso[1]) * 60 + Number(iso[2])
-  const hm = /^(\d{1,2}):(\d{2})/.exec(raw)
-  if (!hm) return null
-  return Number(hm[1]) * 60 + Number(hm[2])
+  // Plain wall-clock HH:MM (shift windows, demo clocks) — use as written.
+  if (!raw.includes('T')) {
+    const hm = /^(\d{1,2}):(\d{2})/.exec(raw)
+    if (!hm) return null
+    return Number(hm[1]) * 60 + Number(hm[2])
+  }
+  // Live attendance stores UTC ISO via toISOString(); never take the UTC digits literally.
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return null
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d)
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value)
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value)
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
+  const h = hour === 24 ? 0 : hour
+  return h * 60 + minute
+}
+
+/** Default bay shift when branch hours are missing (Manila shop day). */
+export const DEFAULT_BAY_SHIFT = Object.freeze({ shift_start: '08:00', shift_end: '16:00' })
+
+/** Index branch_operating_hours rows as `${branch_slug}|${day_of_week}` → row. */
+export function indexBranchOperatingHours(rows = []) {
+  const out = Object.create(null)
+  for (const h of rows || []) {
+    if (h?.is_closed) continue
+    const slug = h.branch_slug || h.branch
+    const dow = Number(h.day_of_week)
+    if (!slug || !Number.isFinite(dow)) continue
+    out[`${slug}|${dow}`] = h
+  }
+  return out
+}
+
+/** Manila weekday 0–6 for a YYYY-MM-DD shop date. */
+export function manilaDayOfWeek(ymd) {
+  const day = String(ymd || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null
+  return new Date(`${day}T12:00:00+08:00`).getUTCDay()
+}
+
+/** Look up opens/closes for one attendance row's branch×date. */
+export function hoursForAttendanceDay(hoursIndex, branchSlug, attendanceDate) {
+  const dow = manilaDayOfWeek(attendanceDate)
+  if (dow == null || !branchSlug) return null
+  return hoursIndex?.[`${branchSlug}|${dow}`] || null
+}
+
+/**
+ * Map a staff_attendance DB row (+ optional hours) into a payroll roster clock shape.
+ * Poka-yoke: always expose checked_in_at so remaining-shift late math can run.
+ */
+export function attendanceRowForPayroll(row = {}, hours = null) {
+  const opens = hours?.opens_at || hours?.opensAt || DEFAULT_BAY_SHIFT.shift_start
+  const closes = hours?.closes_at || hours?.closesAt || DEFAULT_BAY_SHIFT.shift_end
+  return {
+    id: row.staff_id || row.id,
+    staff_id: row.staff_id || row.id,
+    full_name: row.staff_profiles?.full_name || row.full_name || '',
+    role: row.staff_profiles?.role || row.role || '',
+    branch_slug: row.branch_slug || row.branch,
+    attendance_date: row.attendance_date || row.date,
+    status: row.status,
+    attendance_status: row.status,
+    checked_in_at: row.checked_in_at || row.checkedInAt || null,
+    clock_in_at: row.clock_in_at || row.clockInAt || null,
+    minutes_late: row.minutes_late ?? row.minutesLate ?? null,
+    shift_start: opens,
+    shift_end: closes,
+  }
 }
 
 /**
@@ -103,18 +172,25 @@ export function attendanceWeight(status, rules = {}, clock = {}) {
   const presentW = Number.isFinite(present) && present >= 0 ? present : 1
   const start = hhmmToMinutes(clock.shift_start || clock.shiftStart)
   const end = hhmmToMinutes(clock.shift_end || clock.shiftEnd)
-  const inn = hhmmToMinutes(clock.clock_in_at || clock.clockInAt || clock.clock_in)
+  // Live attendance stores checked_in_at (ISO); demos/tests may use clock_in_at HH:MM.
+  const inn = hhmmToMinutes(
+    clock.clock_in_at ||
+      clock.clockInAt ||
+      clock.clock_in ||
+      clock.checked_in_at ||
+      clock.checkedInAt,
+  )
   const scheduledArg = Number(clock.scheduled_minutes || clock.scheduledMinutes)
   const lateMins = Number(clock.minutes_late || clock.minutesLate)
   let scheduledMins = Number.isFinite(scheduledArg) && scheduledArg > 0 ? scheduledArg : null
   if (scheduledMins == null && start != null && end != null) scheduledMins = Math.max(1, end - start)
   if (!scheduledMins) scheduledMins = 480
   if (Number.isFinite(lateMins) && lateMins >= 0) {
-    return presentW * (Math.max(0, scheduledMins - lateMins) / scheduledMins)
+    return presentW * Math.min(1, Math.max(0, scheduledMins - lateMins) / scheduledMins)
   }
   if (inn != null && (start != null || end != null)) {
     const endMins = end != null ? end : start + scheduledMins
-    return presentW * (Math.max(0, endMins - inn) / scheduledMins)
+    return presentW * Math.min(1, Math.max(0, endMins - inn) / scheduledMins)
   }
   if (s === 'present') return presentW
   if (s === 'late') {
@@ -456,7 +532,7 @@ export function buildCompensationPostPlan({
   const rosterByBranch = {}
   for (const member of roster || []) {
     const status = rosterAttendanceStatus(member)
-    if (attendanceWeight(status) <= 0) continue
+    if (attendanceWeight(status, {}, member) <= 0) continue
     const branch = member.branch_slug || (branchFilter && branchFilter !== 'all' ? branchFilter : null)
     if (!branch) continue
     if (branchFilter && branchFilter !== 'all' && branch !== branchFilter) continue

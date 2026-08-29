@@ -24,6 +24,9 @@ import { listBranches } from '@/lib/adminApi'
 import {
   DEFAULT_COMPENSATION_RULES,
   PAYOUT_FREQUENCIES,
+  attendanceRowForPayroll,
+  hoursForAttendanceDay,
+  indexBranchOperatingHours,
   normalizeCompensationSettings,
   toCompensationSettingsRow,
 } from '@/lib/compensation'
@@ -384,7 +387,9 @@ export default function PayrollPage() {
           : collectPaged(async (from, to) => {
               let q = supabase
                 .from('staff_attendance')
-                .select('staff_id, branch_slug, attendance_date, status, staff_profiles(id, full_name, role)')
+                .select(
+                  'staff_id, branch_slug, attendance_date, status, checked_in_at, staff_profiles(id, full_name, role)',
+                )
                 .gte('attendance_date', periodStart)
                 .lte('attendance_date', periodEnd)
               if (branch) q = q.eq('branch_slug', branch)
@@ -437,15 +442,25 @@ export default function PayrollPage() {
       if (isFixed) setPackages(pkgRows.data || [])
       setStaffRoster(staffRows.data || [])
 
-      const attendance = (attRows || []).map((row) => ({
-        id: row.staff_id,
-        staff_id: row.staff_id,
-        full_name: row.staff_profiles?.full_name || '',
-        role: row.staff_profiles?.role || '',
-        branch_slug: row.branch_slug,
-        attendance_date: row.attendance_date,
-        status: row.status,
-      }))
+      const hourSlugs = [
+        ...new Set((attRows || []).map((r) => r.branch_slug).filter(Boolean)),
+      ]
+      let hoursIndex = Object.create(null)
+      if (hourSlugs.length) {
+        const { data: hourRows, error: hourErr } = await supabase
+          .from('branch_operating_hours')
+          .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+          .in('branch_slug', hourSlugs)
+        if (hourErr) throw hourErr
+        hoursIndex = indexBranchOperatingHours(hourRows)
+      }
+
+      const attendance = (attRows || []).map((row) =>
+        attendanceRowForPayroll(
+          row,
+          hoursForAttendanceDay(hoursIndex, row.branch_slug, row.attendance_date),
+        ),
+      )
       const packageInput = isFixed
         ? (pkgRows.data || []).map((p) => ({
             ...p,

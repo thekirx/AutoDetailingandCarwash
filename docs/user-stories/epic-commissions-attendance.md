@@ -12,6 +12,8 @@
 
 - [x] On-time present weight = 1
 - [x] Clock-in 60 minutes late on an 8h shift → weight 0.875
+- [x] Live DB field `checked_in_at` (ISO) counts the same as `clock_in_at`
+- [x] Payroll `loadProof` maps `checked_in_at` + branch hours (or default 08:00–16:00)
 - [x] Status `late` without a clock still falls back to 0.7
 - [x] Wash pool remainder lands on the last crew row (no ₱0.01 drift)
 
