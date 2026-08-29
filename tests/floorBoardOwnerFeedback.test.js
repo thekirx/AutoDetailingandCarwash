@@ -38,7 +38,7 @@ describe('floor board owner feedback cuts', () => {
 
   it('documents insights and chemical logic for the owner', () => {
     assert.match(src, /each paid sale in the timeline counts once by booking vehicle size/)
-    assert.match(src, /ranks sale line items for paid sales/)
+    assert.match(src, /ranks sale line items/)
     assert.match(src, /Usage = previous/)
     assert.match(src, /formatCarSizeLabel/)
     assert.match(src, /wait_sample_n|No wait stamps in timeline/)
@@ -48,5 +48,6 @@ describe('floor board owner feedback cuts', () => {
     assert.match(api, /wait_sample_n/)
     assert.match(api, /cycle_sample_n/)
     assert.match(api, /saleLinesFromBookingServices/)
+    assert.match(api, /uniqueBookingsById/)
   })
 })

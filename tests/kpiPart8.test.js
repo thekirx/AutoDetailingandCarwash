@@ -6,6 +6,7 @@ import {
   bookingWaitMinutes,
   failedQaCount,
   totalWaitMinutes,
+  uniqueBookingsById,
 } from '../src/lib/kpiPart8.js'
 
 describe('averageWaitMinutes (owner floor KPI)', () => {
@@ -37,5 +38,28 @@ describe('averageWaitMinutes (owner floor KPI)', () => {
     ]
     assert.equal(Math.round(averageCycleMinutes(rows)), 60)
     assert.equal(failedQaCount([{ redo_at: '2026-08-08T04:50:00.000Z' }]), 1)
+  })
+
+  it('dedupes cycle sample tickets by booking_id', () => {
+    const dup = [
+      {
+        booking_id: 'a',
+        in_progress_at: '2026-08-08T02:00:00.000Z',
+        completed_at: '2026-08-08T03:00:00.000Z',
+      },
+      {
+        booking_id: 'a',
+        in_progress_at: '2026-08-08T02:00:00.000Z',
+        completed_at: '2026-08-08T03:00:00.000Z',
+      },
+      {
+        booking_id: 'b',
+        in_progress_at: '2026-08-08T04:00:00.000Z',
+        completed_at: '2026-08-08T05:00:00.000Z',
+      },
+    ]
+    const uniq = uniqueBookingsById(dup)
+    assert.equal(uniq.length, 2)
+    assert.equal(Math.round(averageCycleMinutes(uniq)), 60)
   })
 })

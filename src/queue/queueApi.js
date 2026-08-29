@@ -46,6 +46,7 @@ import {
   bookingCycleMinutes,
   bookingWaitMinutes,
   failedQaCount,
+  uniqueBookingsById,
 } from '../lib/kpiPart8'
 import {
   resolveQueueCustomerDisplayName,
@@ -521,7 +522,10 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     ),
   }
 
-  const cycleSample = [...completedJobs, ...startedJobs.filter((j) => j.for_payment_at || j.completed_at || j.final_checking_at)]
+  const cycleSample = uniqueBookingsById([
+    ...completedJobs,
+    ...startedJobs.filter((j) => j.for_payment_at || j.completed_at || j.final_checking_at),
+  ])
   const avg = averageCycleMinutes(cycleSample)
   const avgWait = averageWaitMinutes(startedJobs)
   const waitSampleN = startedJobs

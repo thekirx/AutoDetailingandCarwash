@@ -37,6 +37,17 @@ export function averageCycleMinutes(bookings = []) {
   return mins.reduce((a, b) => a + b, 0) / mins.length
 }
 
+/** Deduplicate booking rows so cycle/wait samples count each ticket once. */
+export function uniqueBookingsById(rows = []) {
+  const map = new Map()
+  for (const row of rows || []) {
+    const id = row?.booking_id || row?.id
+    if (!id || map.has(id)) continue
+    map.set(id, row)
+  }
+  return [...map.values()]
+}
+
 /** Failed QA = tickets that entered redo (redo_at set) in the sample. */
 export function failedQaCount(bookings = []) {
   return bookings.filter((b) => b?.redo_at || String(b?.status || '') === 'redo').length

@@ -582,7 +582,7 @@ export default function SuperAdminFloorBoard() {
               Best package / service
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Logic: ranks sale line items for paid sales in the timeline by peso total. Top names shown.
+              Logic: ranks sale line items by peso total; if none, uses booking service name × sale total.
             </p>
             {(board?.bestSellers || []).length ? (
               <ol className="mt-3 space-y-2">
@@ -600,7 +600,7 @@ export default function SuperAdminFloorBoard() {
               </ol>
             ) : (
               <p className="mt-3 text-sm text-muted-foreground">
-                No line items to rank — paid sales need package/service/POS line items.
+                No ranked sellers — need paid sales with line items or a booking service name.
               </p>
             )}
           </div>
