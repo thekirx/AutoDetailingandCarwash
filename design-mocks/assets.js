@@ -45,6 +45,18 @@ const map = {
   about:          'src/assets/about/about-hkm-21.webp',
 };
 
+// Product brand marks, normalised into uniform tiles by logos/normalize.js.
+// A brand with no file simply has no key here, and the build reports it.
+const LOGOS = {
+  logoClearpro: 'clearpro',  logoF1:       'f1-auto-films',
+  logoKisho:    'kisho',     logoMenzerna: 'menzerna',
+  logoRupes:    'rupes',     logoSonax:    'sonax',
+  logoMeguiars: 'meguiars',  logoMicrotex: 'microtex',
+};
+for (const [key, slug] of Object.entries(LOGOS)) {
+  map[key] = 'design-mocks/logos/build/' + slug + '.png';
+}
+
 // Stills pulled from the real install sequence, at the four stages the
 // captions name: align, form, form, seal, protected.
 ['001','046','090','135','181'].forEach((n, i) => {

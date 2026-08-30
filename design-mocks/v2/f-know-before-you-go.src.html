@@ -35,6 +35,7 @@
   --hk-body:'Gilmer',Arial,sans-serif;
   --paper:var(--hk-paper);
   --paper-2:var(--hk-paper-2);
+  --elev:0 1px 2px rgba(2,10,49,.05),0 8px 24px -12px rgba(2,10,49,.16);
   --white:var(--hk-white);
   --navy:var(--hk-navy);
   --blue:var(--hk-blue);
@@ -101,15 +102,34 @@ section{padding:clamp(52px,6.4vw,92px) 0;scroll-margin-top:60px}
 .actionbar .btn{flex:none;min-height:46px;padding:0 18px}
 
 /* -- Hero - compact, answers "can I go now?" ------------------------------- */
+/* The page argues that you can know the bay's state before you drive over, so
+   the hero shows the bay and states it, rather than only describing it. */
 .hero{padding:clamp(34px,4.4vw,64px) 0 clamp(28px,3.4vw,44px)}
-.hero h1{margin-top:14px;font-size:clamp(2.1rem,5.4vw,4.1rem)}
+.hero .shell{display:grid;gap:clamp(26px,3vw,52px);align-items:center}
+@media(min-width:900px){.hero .shell{grid-template-columns:1.02fr .98fr}}
+.hero h1{margin-top:14px;font-size:clamp(2rem,4.2vw,3.1rem)}
 .hero h1 em{font-style:italic;color:var(--blue)}
-.hero>.shell>p{margin-top:16px;color:var(--ink-2);max-width:50ch;font-size:clamp(14.5px,1.35vw,16.5px)}
+.hero-copy>p{margin-top:16px;color:var(--ink-2);max-width:46ch;font-size:clamp(14.5px,1.35vw,16.5px)}
+.hero-cta{margin-top:26px;display:flex;flex-wrap:wrap;gap:10px}
+
+.hero-figure{position:relative;margin:0;overflow:hidden;background:var(--paper-2)}
+.hero-figure img{display:block;width:100%;height:100%;aspect-ratio:4/3;object-fit:cover}
+.hero-live{
+  position:absolute;left:0;bottom:0;display:flex;flex-wrap:wrap;align-items:baseline;
+  gap:4px 10px;padding:14px 18px;background:var(--white);
+  box-shadow:0 -1px 0 var(--rule);
+}
+.hero-live .dot{
+  width:8px;height:8px;border-radius:50%;background:var(--ok);align-self:center;
+}
+.hero-live b{font-family:var(--display);font-style:italic;font-size:15px;text-transform:uppercase;letter-spacing:-.01em;color:var(--ink)}
+.hero-live i{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+@media(min-width:900px){.hero-figure img{aspect-ratio:5/4}}
 
 /* -- Live branch status ---------------------------------------------------- */
 .branches{display:grid;gap:12px;margin-top:clamp(24px,3vw,36px)}
 @media(min-width:720px){.branches{grid-template-columns:repeat(3,1fr)}}
-.branch{background:var(--white);border:1px solid var(--line);padding:20px;display:flex;flex-direction:column;gap:12px;text-decoration:none;transition:transform .22s,box-shadow .22s,border-color .22s}
+.branch{box-shadow:var(--elev);background:var(--white);border:1px solid var(--line);padding:20px;display:flex;flex-direction:column;gap:12px;text-decoration:none;transition:transform .22s,box-shadow .22s,border-color .22s}
 .branch:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(2,10,49,.1);border-color:var(--blue)}
 .branch-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .branch h3{font-size:1.3rem}
@@ -136,12 +156,16 @@ section{padding:clamp(52px,6.4vw,92px) 0;scroll-margin-top:60px}
 @media(min-width:900px){.head{grid-template-columns:1.1fr .9fr;align-items:end;gap:46px}}
 .head h2{margin-top:14px;font-size:clamp(2rem,4.4vw,3.3rem)}
 .head>p{color:var(--ink-2);max-width:54ch}
-.svclist{border:1px solid var(--line);background:var(--white)}
-.svcrow{display:grid;gap:14px;padding:18px 20px;border-bottom:1px solid var(--line);text-decoration:none;align-items:center;transition:background .2s}
-@media(min-width:760px){.svcrow{grid-template-columns:78px 1fr auto auto;gap:20px}}
+/* One elevation step for anything raised off the page; sections that need to
+   read as one object use the same value so the page has a single depth. */
+.svclist{border:1px solid var(--line);background:var(--white);box-shadow:var(--elev)}
+.svcrow{display:grid;gap:14px;padding:16px 20px;border-bottom:1px solid var(--line);text-decoration:none;align-items:center;transition:background .2s}
+@media(min-width:760px){.svcrow{grid-template-columns:132px 1fr auto auto;gap:22px;padding:18px 22px}}
 .svcrow:last-child{border-bottom:0}
 .svcrow:hover{background:var(--soft)}
-.svcrow img{width:78px;height:60px;object-fit:cover}
+/* The bay photography is the reason to trust the times in these rows, so it is
+   given enough width to actually be read as a photograph. */
+.svcrow img{width:100%;max-width:132px;aspect-ratio:11/8;height:auto;object-fit:cover;display:block}
 .svcrow h3{font-size:1.1rem}
 .svcrow p{margin-top:5px;color:var(--ink-2);font-size:13px}
 .meta{display:flex;gap:8px;flex-wrap:wrap}
@@ -150,7 +174,7 @@ section{padding:clamp(52px,6.4vw,92px) 0;scroll-margin-top:60px}
 .svcrow .arrow{color:var(--blue);font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
 
 /* -- Comparison ------------------------------------------------------------ */
-.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--white)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--white);box-shadow:var(--elev)}
 table{border-collapse:collapse;width:100%;min-width:660px;font-size:13.5px}
 caption{text-align:left;padding:16px 18px;font-size:12px;color:var(--ink-2);border-bottom:1px solid var(--line)}
 th,td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
@@ -162,7 +186,7 @@ td.off{color:var(--ink-3)}
 tr:last-child th,tr:last-child td{border-bottom:0}
 
 /* -- FAQ accordion from the real footnotes --------------------------------- */
-.faq{border:1px solid var(--line);background:var(--white)}
+.faq{border:1px solid var(--line);background:var(--white);box-shadow:var(--elev)}
 .faq details{border-bottom:1px solid var(--line)}
 .faq details:last-child{border-bottom:0}
 .faq summary{list-style:none;cursor:pointer;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:14px;font-weight:700;color:var(--ink)}
@@ -226,6 +250,12 @@ footer{border-top:1px solid var(--line);padding:28px 0}
 .hk-brand:hover{background:var(--hk-navy-3)}
 .hk-brand strong{font-family:var(--hk-display);font-style:italic;font-weight:800;font-size:16.5px;letter-spacing:-.02em;text-transform:uppercase;color:var(--hk-paper)}
 .hk-brand span{font-family:var(--hk-body);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--hk-on-navy)}
+
+/* Product marks. Supplier artwork arrives at eight different sizes and
+   grounds, so logos/normalize.js trims each to its mark and re-centres it on
+   one tile; the cell only has to hold that tile at a consistent width. */
+.hk-brand .mark,.brand .mark{display:block;width:100%;max-width:196px;height:auto;border-radius:2px}
+.hk-brand,.brand{align-items:flex-start}
 .hk-products-note{margin-top:16px;font-family:var(--hk-body);font-size:11.5px;color:var(--hk-on-navy-dim);line-height:1.6}
 .hk-products-note em{font-style:normal;display:inline-block;padding:3px 8px;border:1px dashed var(--hk-on-navy-dim);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
 </style>
@@ -248,9 +278,23 @@ footer{border-top:1px solid var(--line);padding:28px 0}
 
 <section class="hero" id="top">
   <div class="shell">
-    <p class="eyebrow">Live branch status</p>
-    <h1>Know the queue<br>before you <em>leave home.</em></h1>
-    <p>Two branches open now. See what is waiting, how long the service takes, and book the slot &mdash; without ringing anyone.</p>
+    <div class="hero-copy">
+      <p class="eyebrow">Live branch status</p>
+      <h1>Know the queue<br>before you <em>leave home.</em></h1>
+      <p>Two branches open now. See what is waiting, how long the service takes, and book the slot &mdash; without ringing anyone.</p>
+      <div class="hero-cta">
+        <a class="btn btn-blue" href="#branches">See live status</a>
+        <a class="btn btn-out" href="#services">What it takes</a>
+      </div>
+    </div>
+    <figure class="hero-figure">
+      <img src="__A_carwash__" alt="A car being washed in a Hakum bay" width="1200" height="900">
+      <figcaption class="hero-live">
+        <span class="dot" aria-hidden="true"></span>
+        <b>Bacoor is open</b>
+        <i>2 waiting &middot; next slot 10:40</i>
+      </figcaption>
+    </figure>
   </div>
 </section>
 
@@ -385,16 +429,16 @@ footer{border-top:1px solid var(--line);padding:28px 0}
       <p class="c">We name our materials because the finish is only ever as good as they are. Film, coating, polish, and chemistry - on the record.</p>
     </div>
     <div class="hk-brands reveal">
-      <div class="hk-brand"><strong>ClearPro</strong><span>Paint protection film</span></div>
-      <div class="hk-brand"><strong>F1 Auto Films</strong><span>Window film</span></div>
-      <div class="hk-brand"><strong>Kisho</strong><span>Ceramic coating</span></div>
-      <div class="hk-brand"><strong>Menzerna</strong><span>Polishing compounds</span></div>
-      <div class="hk-brand"><strong>Rupes</strong><span>Polishing systems</span></div>
-      <div class="hk-brand"><strong>Sonax</strong><span>Detailing chemistry</span></div>
-      <div class="hk-brand"><strong>Meguiar's</strong><span>Surface care</span></div>
-      <div class="hk-brand"><strong>Microtex</strong><span>Towels &amp; applicators</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoClearpro__" alt="ClearPro" width="720" height="400"><span>Paint protection film</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoF1__" alt="F1 Auto Films" width="720" height="400"><span>Window film</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoKisho__" alt="Kisho" width="720" height="400"><span>Ceramic coating</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoMenzerna__" alt="Menzerna" width="720" height="400"><span>Polishing compounds</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoRupes__" alt="Rupes" width="720" height="400"><span>Polishing systems</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoSonax__" alt="Sonax" width="720" height="400"><span>Detailing chemistry</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoMeguiars__" alt="Meguiar&#39;s" width="720" height="400"><span>Surface care</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoMicrotex__" alt="Microtex" width="720" height="400"><span>Towels &amp; applicators</span></div>
     </div>
-    <p class="hk-products-note"><em>Set in type</em>Brand names are typeset, not logo artwork - supply the approved logo files and licensing and these become the real marks.</p>
+    <p class="hk-products-note"><em>Supplier marks</em>Logo artwork as supplied by each distributor. Confirm display rights with each brand before launch.</p>
   </div>
 </section>
 

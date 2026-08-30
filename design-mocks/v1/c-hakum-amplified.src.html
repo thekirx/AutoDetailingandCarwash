@@ -200,6 +200,12 @@ footer{background:var(--paper);border-top:1px solid var(--line);padding:32px 0}
 .brand{background:var(--white);padding:26px 22px;min-height:112px;display:flex;flex-direction:column;justify-content:center;gap:6px}
 .brand strong{font-family:var(--display);font-style:italic;font-size:17px;text-transform:uppercase;color:var(--ink)}
 .brand span{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+
+/* Product marks. Supplier artwork arrives at eight different sizes and
+   grounds, so logos/normalize.js trims each to its mark and re-centres it on
+   one tile; the cell only has to hold that tile at a consistent width. */
+.hk-brand .mark,.brand .mark{display:block;width:100%;max-width:196px;height:auto;border-radius:2px}
+.hk-brand,.brand{align-items:flex-start}
 .revs{display:grid;gap:16px}
 @media(min-width:860px){.revs{grid-template-columns:repeat(3,1fr)}}
 .rev{background:var(--white);border:1px solid var(--line);border-top:3px solid var(--blue);padding:clamp(22px,2.4vw,30px);display:flex;flex-direction:column;gap:14px}
@@ -394,16 +400,16 @@ footer{background:var(--paper);border-top:1px solid var(--line);padding:32px 0}
       <p class="c">We name our materials because the finish is only ever as good as they are. Film, coating, polish, and chemistry - on the record.</p>
     </div>
     <div class="hk-brands reveal">
-      <div class="hk-brand"><strong>ClearPro</strong><span>Paint protection film</span></div>
-      <div class="hk-brand"><strong>F1 Auto Films</strong><span>Window film</span></div>
-      <div class="hk-brand"><strong>Kisho</strong><span>Ceramic coating</span></div>
-      <div class="hk-brand"><strong>Menzerna</strong><span>Polishing compounds</span></div>
-      <div class="hk-brand"><strong>Rupes</strong><span>Polishing systems</span></div>
-      <div class="hk-brand"><strong>Sonax</strong><span>Detailing chemistry</span></div>
-      <div class="hk-brand"><strong>Meguiar's</strong><span>Surface care</span></div>
-      <div class="hk-brand"><strong>Microtex</strong><span>Towels &amp; applicators</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoClearpro__" alt="ClearPro" width="720" height="400"><span>Paint protection film</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoF1__" alt="F1 Auto Films" width="720" height="400"><span>Window film</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoKisho__" alt="Kisho" width="720" height="400"><span>Ceramic coating</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoMenzerna__" alt="Menzerna" width="720" height="400"><span>Polishing compounds</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoRupes__" alt="Rupes" width="720" height="400"><span>Polishing systems</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoSonax__" alt="Sonax" width="720" height="400"><span>Detailing chemistry</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoMeguiars__" alt="Meguiar&#39;s" width="720" height="400"><span>Surface care</span></div>
+      <div class="hk-brand"><img class="mark" src="__A_logoMicrotex__" alt="Microtex" width="720" height="400"><span>Towels &amp; applicators</span></div>
     </div>
-    <p class="hk-products-note"><em>Set in type</em>Brand names are typeset, not logo artwork - supply the approved logo files and licensing and these become the real marks.</p>
+    <p class="hk-products-note"><em>Supplier marks</em>Logo artwork as supplied by each distributor. Confirm display rights with each brand before launch.</p>
   </div>
 </section>
 
@@ -449,14 +455,14 @@ footer{background:var(--paper);border-top:1px solid var(--line);padding:32px 0}
   <div class="shell">
     <div class="head reveal"><div><p class="eyebrow">Products used</p><h2 class="skew">What we use.</h2></div><p>The brands on our shelf. We name them because the result is only ever as good as the material.</p></div>
     <div class="brands reveal">
-      <div class="brand"><strong>Kisho</strong><span>Ceramic coating</span></div>
-      <div class="brand"><strong>Menzerna</strong><span>Polishing compounds</span></div>
-      <div class="brand"><strong>Rupes</strong><span>Polishing systems</span></div>
-      <div class="brand"><strong>Sonax</strong><span>Detailing chemistry</span></div>
-      <div class="brand"><strong>Meguiar's</strong><span>Surface care</span></div>
-      <div class="brand"><strong>Microtex</strong><span>Towels &amp; applicators</span></div>
-      <div class="brand"><strong>ClearPro</strong><span>Paint protection film</span></div>
-      <div class="brand"><strong>F1 Auto Films</strong><span>Window film</span></div>
+      <div class="brand"><img class="mark" src="__A_logoKisho__" alt="Kisho" width="720" height="400"><span>Ceramic coating</span></div>
+      <div class="brand"><img class="mark" src="__A_logoMenzerna__" alt="Menzerna" width="720" height="400"><span>Polishing compounds</span></div>
+      <div class="brand"><img class="mark" src="__A_logoRupes__" alt="Rupes" width="720" height="400"><span>Polishing systems</span></div>
+      <div class="brand"><img class="mark" src="__A_logoSonax__" alt="Sonax" width="720" height="400"><span>Detailing chemistry</span></div>
+      <div class="brand"><img class="mark" src="__A_logoMeguiars__" alt="Meguiar&#39;s" width="720" height="400"><span>Surface care</span></div>
+      <div class="brand"><img class="mark" src="__A_logoMicrotex__" alt="Microtex" width="720" height="400"><span>Towels &amp; applicators</span></div>
+      <div class="brand"><img class="mark" src="__A_logoClearpro__" alt="ClearPro" width="720" height="400"><span>Paint protection film</span></div>
+      <div class="brand"><img class="mark" src="__A_logoF1__" alt="F1 Auto Films" width="720" height="400"><span>Window film</span></div>
     </div>
   </div>
 </section>
