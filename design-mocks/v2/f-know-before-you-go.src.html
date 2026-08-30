@@ -264,6 +264,75 @@ footer{border-top:1px solid var(--line);padding:28px 0}
 .hk-brand,.brand{align-items:flex-start}
 .hk-products-note{margin-top:16px;font-family:var(--hk-body);font-size:11.5px;color:var(--hk-on-navy-dim);line-height:1.6}
 .hk-products-note em{font-style:normal;display:inline-block;padding:3px 8px;border:1px dashed var(--hk-on-navy-dim);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+
+/* ==== The eight shared sections =========================================
+   Same eight as D and E, ordered for this mock's argument: the branch you are
+   driving to comes first, then the services, then the proof. ================*/
+
+/* Hero: the clip plays behind the type. */
+.hero{position:relative;padding:0;overflow:hidden;min-height:min(80vh,700px);display:flex;align-items:flex-end}
+.hero video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(2,10,49,.52) 0%,rgba(2,10,49,.34) 46%,rgba(2,10,49,.95) 100%)}
+.hero .shell{position:relative;z-index:2;display:block;padding:clamp(96px,12vw,140px) 0 clamp(34px,4vw,54px)}
+.hero h1{margin-top:14px;font-size:clamp(2rem,5vw,3.8rem)}
+.hero-copy>p{margin-top:16px;color:rgba(241,241,237,.82);max-width:48ch;font-size:clamp(14.5px,1.35vw,16.5px)}
+.hero-live{
+  margin-top:26px;display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 10px;
+  padding:12px 18px;background:rgba(2,10,49,.72);border:1px solid var(--line);
+}
+.hero-live .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.hero-live b{font-family:var(--display);font-style:italic;font-size:15px;text-transform:uppercase;color:var(--ink)}
+.hero-live i{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+
+/* Service sections: picture one side, the numbers the other. */
+.svc-sec{padding:clamp(62px,7.2vw,110px) 0}
+.svc-sec .shell{display:grid;gap:clamp(26px,3.4vw,56px);align-items:center}
+@media(min-width:940px){
+  .svc-sec .shell{grid-template-columns:1fr 1fr}
+  .svc-sec.flip .svc-fig{order:2}
+}
+.svc-fig{position:relative;margin:0;overflow:hidden;background:var(--white)}
+.svc-fig img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.svc-fig figcaption{position:absolute;left:0;bottom:0;padding:10px 14px;background:rgba(2,10,49,.9);color:var(--ink);font-family:var(--display);font-style:italic;font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.svc-sec h2{margin-top:14px;font-size:clamp(1.9rem,4.2vw,3rem)}
+.svc-sec .lede{margin-top:18px;color:var(--ink-2);max-width:48ch}
+.spec-list{margin:24px 0 0;padding:0;list-style:none;display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+.spec-list li{background:var(--white);padding:13px 16px;display:flex;justify-content:space-between;gap:16px;font-size:13.5px}
+.spec-list span{color:var(--ink-3)}
+.spec-list b{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+/* Brands credited on the service they belong to. */
+.credit{margin-top:22px;display:inline-flex;align-items:center;gap:12px;text-decoration:none}
+.credit img{width:96px;height:auto;display:block;border:1px solid var(--line)}
+.credit span{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.svc-sec .cta-row{margin-top:24px}
+
+/* Photos */
+.photos{padding:clamp(62px,7.2vw,110px) 0;background:var(--paper-2)}
+.mosaic{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:860px){.mosaic{grid-template-columns:repeat(4,1fr);grid-auto-rows:200px}}
+.mosaic figure{margin:0;position:relative;overflow:hidden;background:var(--white)}
+.mosaic img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s cubic-bezier(.2,.7,.3,1)}
+.mosaic figure:hover img{transform:scale(1.05)}
+@media(min-width:860px){.mosaic .tall{grid-row:span 2}.mosaic .wide{grid-column:span 2}}
+.mosaic figcaption{position:absolute;left:0;bottom:0;padding:8px 12px;background:rgba(2,10,49,.88);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+
+/* Events */
+.events{padding:clamp(62px,7.2vw,110px) 0}
+.event-card{display:grid;border:1px solid var(--line);background:var(--white);overflow:hidden;box-shadow:var(--elev)}
+@media(min-width:820px){.event-card{grid-template-columns:1.1fr 1fr}}
+.event-card img{width:100%;height:100%;aspect-ratio:4/3;max-height:420px;object-fit:cover;display:block}
+.event-body{padding:clamp(24px,3vw,40px);display:flex;flex-direction:column;justify-content:center;gap:14px}
+.event-meta{display:flex;flex-wrap:wrap;gap:8px}
+.event-meta i{font-style:normal;padding:4px 10px;background:var(--soft);color:var(--blue-fg);font-size:9.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.event-body h3{font-size:clamp(1.35rem,2.4vw,1.9rem);font-style:italic;color:var(--ink)}
+.event-body p{color:var(--ink-2);font-size:14px;max-width:46ch}
+.all-link{margin-top:4px;display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--blue-fg);text-decoration:none}
+.all-link:hover{text-decoration:underline}
+
+/* The booking close rides with the branches, since that is the booking step */
+.branch-close{margin-top:clamp(30px,3.6vw,48px);display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;padding-top:clamp(26px,3vw,40px);border-top:1px solid var(--line)}
+.branch-close h3{font-size:clamp(1.5rem,3vw,2.2rem);color:var(--ink)}
+.branch-close p{margin-top:10px;color:var(--ink-2);max-width:44ch;font-size:14px}
 </style>
 
 <header class="topbar">
@@ -271,9 +340,11 @@ footer{border-top:1px solid var(--line);padding:28px 0}
     <a href="#top" data-home><img src="__A_logoBlue__" alt="Hakum Auto Care"></a>
     <nav class="topnav">
       <a href="#branches" data-home>Live status</a>
-      <a href="#services" data-home>Services</a>
-      <a href="#compare" data-home>Compare</a>
-      <a href="#faq" data-home>Questions</a>
+      <a href="#tint" data-home>Tint</a>
+      <a href="#ppf" data-home>PPF</a>
+      <a href="#ceramic" data-home>Ceramic</a>
+      <a href="#events" data-home>Events</a>
+      <a href="#photos" data-home>Photos</a>
     </nav>
     <a class="btn btn-blue" href="#branches" data-home>Book now</a>
   </div>
@@ -283,31 +354,31 @@ footer{border-top:1px solid var(--line);padding:28px 0}
 <main class="view" id="view-home">
 
 <section class="hero" id="top">
+  <video autoplay muted loop playsinline poster="__A_heroPoster__" aria-label="Detailing work at Hakum Auto Care">
+    <source src="__A_heroVideo__" type="video/mp4">
+  </video>
   <div class="shell">
     <div class="hero-copy">
       <p class="eyebrow">Live branch status</p>
       <h1>Know the queue<br>before you <em>leave home.</em></h1>
       <p>Two branches open now. See what is waiting, how long the service takes, and book the slot &mdash; without ringing anyone.</p>
-      <div class="hero-cta">
-        <a class="btn btn-blue" href="#branches">See live status</a>
-        <a class="btn btn-out" href="#services">What it takes</a>
-      </div>
-    </div>
-    <figure class="hero-figure">
-      <img src="__A_carwash__" alt="A car being washed in a Hakum bay" width="1200" height="900">
-      <figcaption class="hero-live">
+      <p class="hero-live">
         <span class="dot" aria-hidden="true"></span>
         <b>Bacoor is open</b>
         <i>2 waiting &middot; next slot 10:40</i>
-      </figcaption>
-    </figure>
+      </p>
+      <div class="cta-row" style="margin-top:26px">
+        <a class="btn btn-blue" href="#branches">See live status</a>
+        <a class="btn btn-out" href="#tint">What it takes</a>
+      </div>
+    </div>
   </div>
 </section>
 
 <section id="branches" style="padding-top:0">
   <div class="shell">
     <div class="branches reveal">
-      <a class="branch" href="#book">
+      <a class="branch" href="#branches">
         <div class="branch-top"><h3>Bacoor</h3><span class="status open">Open</span></div>
         <dl>
           <dt>Waiting</dt><dd><span class="tick">2</span> vehicles</dd>
@@ -317,7 +388,7 @@ footer{border-top:1px solid var(--line);padding:28px 0}
         <div class="queue" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
         <span class="go">Book this branch &rarr;</span>
       </a>
-      <a class="branch" href="#book">
+      <a class="branch" href="#branches">
         <div class="branch-top"><h3>Batangas</h3><span class="status busy">Busy</span></div>
         <dl>
           <dt>Waiting</dt><dd><span class="tick">5</span> vehicles</dd>
@@ -327,7 +398,7 @@ footer{border-top:1px solid var(--line);padding:28px 0}
         <div class="queue" aria-hidden="true"><i class="warn"></i><i class="warn"></i><i class="warn"></i><i class="warn"></i><i class="warn"></i><i></i></div>
         <span class="go">Book this branch &rarr;</span>
       </a>
-      <a class="branch" href="#book">
+      <a class="branch" href="#branches">
         <div class="branch-top"><h3>Dasmari&ntilde;as</h3><span class="status shut">Coming soon</span></div>
         <dl>
           <dt>Bay</dt><dd>Flagship &amp; PPF</dd>
@@ -338,122 +409,129 @@ footer{border-top:1px solid var(--line);padding:28px 0}
         <span class="go">Join the waitlist &rarr;</span>
       </a>
     </div>
+    <div class="branch-close reveal">
+      <div>
+        <h3 class="skew">Bring it in.</h3>
+        <p>Bacoor has the shorter queue today. Walk in for a wash or detail; film and coating need a booking.</p>
+      </div>
+      <div class="cta-row">
+        <a class="btn btn-blue" href="#branches">Book a service</a>
+        <a class="btn btn-out" href="#tint">Compare services</a>
+      </div>
+    </div>
     <p class="live-note"><span class="live-dot" aria-hidden="true"></span> <span class="flag" style="margin:0">Sample data &mdash; wires to the live queue</span> Queue and slot times shown here are illustrative.</p>
   </div>
 </section>
 
-<section id="services" style="background:var(--paper-2)">
+<!-- Tint -->
+<section class="svc-sec" id="tint" style="background:var(--paper-2)">
   <div class="shell">
-    <div class="head reveal">
-      <div><p class="eyebrow">Services</p><h2 class="skew">What it takes,<br>and how long.</h2></div>
-      <p>Every service with the time it actually occupies the bay, so you can plan the day around it.</p>
-    </div>
-    <div class="svclist reveal">
-      <a class="svcrow" href="#/tint" data-view="tint">
-        <img src="__A_tint__" alt="Nano ceramic tint at Hakum Auto Care">
-        <div><h3>Nano Ceramic Tint</h3><p>Heat and UV rejected at the glass, without a darker cabin.</p></div>
-        <div class="meta"><span class="chip time">Half day</span><span class="chip">Same-day</span></div>
-        <span class="arrow">Details &rarr;</span>
-      </a>
-      <a class="svcrow" href="#compare">
-        <img src="__A_ppf__" alt="Paint protection film at Hakum Auto Care">
-        <div><h3>Paint Protection Film</h3><p>Physical barrier against chips and scratches. Three coverage levels.</p></div>
-        <div class="meta"><span class="chip time">2&ndash;5 days</span><span class="chip">Booking required</span></div>
-        <span class="arrow">Compare &rarr;</span>
-      </a>
-      <a class="svcrow" href="#compare">
-        <img src="__A_ceramic__" alt="Ceramic coating at Hakum Auto Care">
-        <div><h3>Ceramic Coating</h3><p>Correction first, then a bonded gloss layer. Five or eight year cover.</p></div>
-        <div class="meta"><span class="chip time">1&ndash;2 days</span><span class="chip">Booking required</span></div>
-        <span class="arrow">Compare &rarr;</span>
-      </a>
-      <a class="svcrow" href="#book">
-        <img src="__A_detailing__" alt="Premium wash and detailing at Hakum Auto Care">
-        <div><h3>Premium Wash &amp; Detailing</h3><p>Full interior and exterior reset. The prerequisite for everything else.</p></div>
-        <div class="meta"><span class="chip time">3&ndash;5 hours</span><span class="chip">Walk-in ok</span></div>
-        <span class="arrow">Book &rarr;</span>
-      </a>
-      <a class="svcrow" href="#book">
-        <img src="__A_carwash__" alt="Premium carwash at Hakum Auto Care">
-        <div><h3>Premium Carwash</h3><p>Exterior clean, wheel treatment, and hand finish.</p></div>
-        <div class="meta"><span class="chip time">45&ndash;60 min</span><span class="chip">Walk-in ok</span></div>
-        <span class="arrow">Book &rarr;</span>
-      </a>
+    <figure class="svc-fig reveal">
+      <img src="__A_tint__" alt="Nano ceramic tint being fitted at Hakum Auto Care">
+      <figcaption>Half a day in the bay</figcaption>
+    </figure>
+    <div class="reveal">
+      <p class="eyebrow">Nano ceramic tint</p>
+      <h2 class="skew">In and out<br>the same day.</h2>
+      <p class="lede">The one service you can book on a lunch break. Heat and UV are rejected at the glass rather than by darkening the cabin, so the car stays as easy to see out of at night.</p>
+      <ul class="spec-list">
+        <li><span>Bay time</span><b>Half a day</b></li>
+        <li><span>Booking</span><b>Same-day slots</b></li>
+        <li><span>Rejects</span><b>Infrared and UV</b></li>
+        <li><span>Warranty</span><b>Manufacturer defect</b></li>
+      </ul>
+      <a class="credit" href="#tint"><img src="__A_logoF1__" alt="F1 Auto Films" width="720" height="400"><span>Film by F1 Auto Films</span></a>
+      <div class="cta-row"><a class="btn btn-blue" href="#/tint" data-view="tint">See the tint page</a></div>
     </div>
   </div>
 </section>
 
-<section id="compare">
+<!-- PPF -->
+<section class="svc-sec flip" id="ppf">
   <div class="shell">
-    <div class="head reveal">
-      <div><p class="eyebrow">Side by side</p><h2 class="skew">Which one<br>solves your problem.</h2></div>
-      <p>Three services, four questions. Find the row that matches what is bothering you.</p>
-    </div>
-    <div class="tablewrap reveal">
-      <table>
-        <caption>What each protective service does. Scroll sideways on a narrow screen.</caption>
-        <thead><tr><th scope="col">&nbsp;</th><th scope="col" class="feat">Film</th><th scope="col">Coating</th><th scope="col">Tint</th></tr></thead>
-        <tbody>
-          <tr><th scope="row">Stone chips</th><td class="on">Stops them</td><td class="off">No</td><td class="off">n/a</td></tr>
-          <tr><th scope="row">Gloss &amp; beading</th><td class="on">Yes, free coating on top</td><td class="on">Its main job</td><td class="off">n/a</td></tr>
-          <tr><th scope="row">Cabin heat</th><td class="off">No</td><td class="off">No</td><td class="on">Rejects infrared</td></tr>
-          <tr><th scope="row">Bay time</th><td>2&ndash;5 days</td><td>1&ndash;2 days</td><td>Half day</td></tr>
-          <tr><th scope="row">Warranty</th><td class="on">5 or 8 years</td><td class="on">5 or 8 years</td><td>Defect cover</td></tr>
-        </tbody>
-      </table>
+    <figure class="svc-fig reveal">
+      <img src="__A_ppf__" alt="Paint protection film being installed at Hakum Auto Care">
+      <figcaption>Book ahead &mdash; 2 to 5 days</figcaption>
+    </figure>
+    <div class="reveal">
+      <p class="eyebrow">Paint protection film</p>
+      <h2 class="skew">Plan for<br>a few days.</h2>
+      <p class="lede">Film is the long one. The car stays with us while every panel is aligned, formed and sealed, so this is the service to book around your week rather than drop in for.</p>
+      <ul class="spec-list">
+        <li><span>Bay time</span><b>2&ndash;5 days</b></li>
+        <li><span>Booking</span><b>Required</b></li>
+        <li><span>Thickness</span><b>7.5&ndash;8.5 mil</b></li>
+        <li><span>Warranty</span><b>5 or 8 years</b></li>
+      </ul>
+      <a class="credit" href="#ppf"><img src="__A_logoClearpro__" alt="ClearPro" width="720" height="400"><span>Film by ClearPro</span></a>
+      <div class="cta-row"><a class="btn btn-out" href="#branches">Check bay availability</a></div>
     </div>
   </div>
 </section>
 
-<section id="faq" style="background:var(--paper-2)">
+<!-- Ceramic -->
+<section class="svc-sec" id="ceramic" style="background:var(--paper-2)">
   <div class="shell">
-    <div class="head reveal">
-      <div><p class="eyebrow">Before you book</p><h2 class="skew">The things<br>people ask.</h2></div>
-      <p>The fine print, up front rather than buried at the bottom of a contract.</p>
-    </div>
-    <div class="faq reveal">
-      <details><summary>Can you put film over a repainted panel?</summary><div class="ans">We do not recommend it. PPF is not recommended for repainted bodywork, and repainted areas must be disclosed before application so we can plan around them.</div></details>
-      <details><summary>Will I see seams or stretch marks?</summary><div class="ans">On complex curves and bumpers, minor visible seams or stretch marks are possible. Panel disassembly and edge wrapping are done only where technically feasible &mdash; we will tell you which panels those are before starting.</div></details>
-      <details><summary>What exactly does the warranty cover?</summary><div class="ans">Manufacturer defects: adhesive failure, bubbling, cracking, delamination, and extreme yellowing. Minor yellowing is normal aging. Film peeling caused by high-pressure washers is not covered, and neither is external road event damage.</div></details>
-      <details><summary>Is the free ceramic coating the same as another layer of film?</summary><div class="ans">No. The free ceramic coatings included with every PPF package are maintenance coatings &mdash; they are not additional PPF layers.</div></details>
-      <details><summary>Do I need to come back after the installation?</summary><div class="ans">Yes. The final installation inspection happens after 7 days, once the film has settled. It is included, and it is where we catch any lifted edge.</div></details>
-      <details><summary>Can I run my coated car through an automatic wash?</summary><div class="ans">Please do not. Coated vehicles should be hand washed with pH-neutral shampoo. Brush washes will shorten the life of the coating, and an annual maintenance inspection keeps the warranty active.</div></details>
-      <details><summary>Will the price change when I arrive?</summary><div class="ans">Pricing may change for oversized or heavily modified vehicles, and correction work is quoted after we inspect the paint. We will show you the paint and agree the number before any work starts.</div></details>
+    <figure class="svc-fig reveal">
+      <img src="__A_ceramic__" alt="Ceramic coating applied at Hakum Auto Care">
+      <figcaption>One to two days</figcaption>
+    </figure>
+    <div class="reveal">
+      <p class="eyebrow">Ceramic coating</p>
+      <h2 class="skew">Correction<br>comes first.</h2>
+      <p class="lede">Coating is quick; the paint correction under it is not. We never coat over defects, so the honest booking is a day or two &mdash; and we will tell you at the inspection which it is.</p>
+      <ul class="spec-list">
+        <li><span>Bay time</span><b>1&ndash;2 days</b></li>
+        <li><span>Booking</span><b>Required</b></li>
+        <li><span>Tiers</span><b>Premium or Platinum</b></li>
+        <li><span>Warranty</span><b>5 or 8 years</b></li>
+      </ul>
+      <a class="credit" href="#ceramic"><img src="__A_logoKisho__" alt="Kisho" width="720" height="400"><span>Coating by Kisho</span></a>
+      <div class="cta-row"><a class="btn btn-out" href="#branches">Check bay availability</a></div>
     </div>
   </div>
 </section>
 
-
-<!-- Products we use - same band in every mock -->
-<section class="hk-products" id="products">
-  <div class="hk-products-in">
-    <div class="hk-products-head reveal">
+<!-- Events -->
+<section class="events" id="events">
+  <div class="shell">
+    <div class="head reveal">
       <div>
-        <p class="k">Products we use</p>
-        <h2>What goes on your car.</h2>
+        <p class="eyebrow">Community</p>
+        <h2 class="skew">Events &amp; meets.</h2>
       </div>
-      <p class="c">We name our materials because the finish is only ever as good as they are. Film, coating, polish, and chemistry - on the record.</p>
+      <p>Promotions, branch events, and car meets from Hakum Auto Care.</p>
     </div>
-    <div class="hk-brands reveal">
-      <div class="hk-brand"><img class="mark" src="__A_logoClearpro__" alt="ClearPro" width="720" height="400"><span>Paint protection film</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoF1__" alt="F1 Auto Films" width="720" height="400"><span>Window film</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoKisho__" alt="Kisho" width="720" height="400"><span>Ceramic coating</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoMenzerna__" alt="Menzerna" width="720" height="400"><span>Polishing compounds</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoRupes__" alt="Rupes" width="720" height="400"><span>Polishing systems</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoSonax__" alt="Sonax" width="720" height="400"><span>Detailing chemistry</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoMeguiars__" alt="Meguiar&#39;s" width="720" height="400"><span>Surface care</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoMicrotex__" alt="Microtex" width="720" height="400"><span>Towels &amp; applicators</span></div>
-    </div>
-    <p class="hk-products-note"><em>Supplier marks</em>Logo artwork as supplied by each distributor. Confirm display rights with each brand before launch.</p>
+    <article class="event-card reveal">
+      <img src="__A_about__" alt="Cars gathered at a Hakum Auto Care meet">
+      <div class="event-body">
+        <div class="event-meta"><i>Sample listing</i><i>Bacoor</i></div>
+        <h3>Cars &amp; Coffee at Bacoor</h3>
+        <p>An open morning at the Bacoor bay. Walk in without a booking, see the queue board, and watch a tint installation run start to finish.</p>
+        <a class="all-link" href="#events">View all events <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </article>
   </div>
 </section>
 
-<section class="close" id="book">
+<!-- Photos -->
+<section class="photos" id="photos">
   <div class="shell">
-    <p class="eyebrow">Book</p>
-    <h2 class="skew" style="margin-top:16px">Pick a branch.<br>Pick a time.</h2>
-    <p>Bacoor has the shorter queue today. Walk in for a wash or detail; film and coating need a booking.</p>
-    <div class="cta-row"><a class="btn btn-white" href="#branches">See live status</a><a class="btn btn-out" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.42)" href="#compare">Compare services</a></div>
+    <div class="head reveal">
+      <div>
+        <p class="eyebrow">Inside Hakum</p>
+        <h2 class="skew">Photos.</h2>
+      </div>
+      <p>The bays you are booking into &mdash; our own cars, our own floors, no stock photography.</p>
+    </div>
+    <div class="mosaic reveal">
+      <figure class="tall"><img src="__A_carwash__" alt="A car being washed at Hakum Auto Care"><figcaption>Wash bay</figcaption></figure>
+      <figure class="wide"><img src="__A_ceramicGallery__" alt="A finished car after ceramic coating"><figcaption>Coated and cured</figcaption></figure>
+      <figure><img src="__A_glass__" alt="Glass decontaminated before tinting"><figcaption>Glass prep</figcaption></figure>
+      <figure><img src="__A_detailing__" alt="Paint correction under inspection lighting"><figcaption>Correction</figcaption></figure>
+      <figure><img src="__A_interior__" alt="Interior detailing in progress"><figcaption>Interior</figcaption></figure>
+      <figure><img src="__A_ppf5__" alt="A vehicle with paint protection film installed"><figcaption>Film, finished</figcaption></figure>
+    </div>
   </div>
 </section>
 </main>
@@ -462,7 +540,7 @@ footer{border-top:1px solid var(--line);padding:28px 0}
 <main class="view" id="view-tint" hidden>
 <section class="d-top">
   <div class="shell">
-    <a class="back" href="#services" data-home><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All services</a>
+    <a class="back" href="#tint" data-home><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All services</a>
     <p class="eyebrow" style="margin-top:20px">Nano ceramic tint &mdash; half day</p>
     <h1 class="skew">Cooler cabin.<br>Clearer drive.</h1>
     <p class="lede">Drop the car in the morning and drive it home the same afternoon. Here is exactly what happens in between.</p>

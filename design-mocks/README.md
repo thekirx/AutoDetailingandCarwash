@@ -15,8 +15,26 @@ wins gets rebuilt as React routes against the live catalog.
 | B — Sketch, built out | The client sketch followed box for box | Navy | Nano tint | The reference card treatment |
 | C — Hakum Amplified | Current identity kept intact, pushed harder | Paper | Ceramic | Draggable real before/after |
 | D — What Does My Car Need | Answers "which service do I actually need?" | Paper | PPF tiers | Three-question advisor |
-| E — Between Your Paint | Shows the work rather than describing it | Navy | PPF | Scroll-scrubbed 46-frame canvas |
+| E — Between Your Paint | Shows the work rather than describing it | Navy | PPF | Scroll-scrubbed install canvas |
 | F — Know Before You Go | Treats the site as a tool, mobile first | Navy | Nano tint | Live branch queue + bay times |
+
+## Shared sections in D, E and F
+
+D, E and F carry the same eight sections — hero, PPF, ceramic, tint, photos,
+events, branches, footer — so they can be compared on treatment and order
+rather than on content. Hero is always first and the footer always last; the
+order between them differs per mock, and each mock's own idea lives inside one
+of the eight rather than as a ninth section:
+
+| Mock | Order | Where its idea lives |
+| --- | --- | --- |
+| D | ppf, ceramic, tint, photos, events, branches | The advisor sits in the hero |
+| E | ppf, photos, ceramic, tint, events, branches | The PPF section *is* the scrubbed install |
+| F | branches, tint, ppf, ceramic, events, photos | Branches carry the live queue |
+
+Product brands are credited on the service they belong to rather than pooled
+into one wall of logos, which is how the live site does it. Mock C carries no
+product marks at all.
 
 ## Shared design system
 

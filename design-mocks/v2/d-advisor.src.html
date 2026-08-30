@@ -77,12 +77,12 @@ section{padding:clamp(66px,7.6vw,110px) 0;scroll-margin-top:66px}
 .btn-white:hover{transform:translateY(-2px)}
 .cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
 
-.topbar{position:sticky;top:0;z-index:40;background:rgba(241,241,237,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar{position:sticky;top:0;z-index:40;background:rgba(2,10,49,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(157,180,255,.16)}
 .topbar-in{width:var(--shell);margin-inline:auto;height:66px;display:flex;align-items:center;justify-content:space-between;gap:18px}
 .topbar img{height:19px}
 .topnav{display:none;gap:26px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
 @media(min-width:940px){.topnav{display:flex}}
-.topnav a{color:var(--ink-2);text-decoration:none}
+.topnav a{color:rgba(241,241,237,.78);text-decoration:none}
 .topnav a:hover{color:var(--blue)}
 
 /* -- Hero: states the problem the advisor solves --------------------------- */
@@ -261,16 +261,119 @@ footer{border-top:1px solid var(--line);padding:30px 0}
 .hk-brand,.brand{align-items:flex-start}
 .hk-products-note{margin-top:16px;font-family:var(--hk-body);font-size:11.5px;color:var(--hk-on-navy-dim);line-height:1.6}
 .hk-products-note em{font-style:normal;display:inline-block;padding:3px 8px;border:1px dashed var(--hk-on-navy-dim);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+
+/* ==== The eight shared sections =========================================
+   D, E and F now carry the same eight sections so they can be compared on
+   treatment and order rather than on content. This mock leads with the
+   advisor inside the hero, then walks the three services in the order the
+   advisor recommends them. ==================================================*/
+
+/* Hero: the clip runs behind the headline, the advisor sits under it. */
+.hero{position:relative;padding:0;background:var(--navy)}
+.hero-film{position:relative;min-height:min(78vh,660px);display:flex;align-items:flex-end;overflow:hidden}
+.hero-film video,.hero-film img.plate{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero-film::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(2,10,49,.52) 0%,rgba(2,10,49,.36) 46%,rgba(2,10,49,.93) 100%)}
+.hero-in{position:relative;z-index:1;width:var(--shell);margin-inline:auto;display:block;padding:clamp(90px,12vw,140px) 0 clamp(34px,4vw,54px)}
+.hero h1{margin-top:18px;font-size:clamp(2.1rem,5.4vw,4.2rem);color:var(--hk-paper)}
+.hero h1 em{font-style:italic;color:var(--blue-lift)}
+.hero-lede{margin-top:22px;color:rgba(241,241,237,.82);max-width:54ch;font-size:clamp(15px,1.4vw,17px)}
+.hero .eyebrow{color:var(--blue-lift)}
+.hero .cta-row{margin-top:30px}
+
+/* Service sections: picture one side, the specification the other, sides
+   alternating down the page so the eye has somewhere new to land. */
+.svc-sec{padding:clamp(66px,7.6vw,116px) 0}
+.svc-sec .shell{display:grid;gap:clamp(28px,3.6vw,60px);align-items:center}
+@media(min-width:940px){
+  .svc-sec .shell{grid-template-columns:1fr 1fr}
+  .svc-sec.flip .svc-fig{order:2}
+}
+.svc-fig{position:relative;margin:0;overflow:hidden;background:var(--paper-2)}
+.svc-fig img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.svc-fig figcaption{
+  position:absolute;left:0;bottom:0;padding:10px 14px;background:var(--navy);
+  color:var(--hk-paper);font-family:var(--display);font-style:italic;font-size:12px;
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.svc-sec h2{margin-top:14px;font-size:clamp(2rem,4.4vw,3.2rem)}
+.svc-sec .lede{margin-top:18px;color:var(--ink-2);max-width:48ch}
+.spec-list{margin:26px 0 0;padding:0;list-style:none;display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+.spec-list li{background:var(--white);padding:13px 16px;display:flex;justify-content:space-between;gap:16px;font-size:13.5px}
+.spec-list b{font-weight:700;font-variant-numeric:tabular-nums}
+/* Brands are credited on the service they belong to, the way the live site
+   does it, rather than pooled into one wall of logos. */
+.credit{margin-top:22px;display:inline-flex;align-items:center;gap:12px;text-decoration:none}
+.credit img{width:96px;height:auto;display:block;border:1px solid var(--line)}
+.credit span{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-2)}   /* --ink-3 lands at 3.3:1 at this size */
+.svc-sec .cta-row{margin-top:26px}
+
+/* Photos: an uneven mosaic, because a regular grid of equal tiles reads as a
+   stock gallery rather than as a record of the work. */
+.photos{background:var(--navy);color:var(--hk-paper);padding:clamp(66px,7.6vw,116px) 0}
+.photos .head h2,.photos .head .eyebrow{color:var(--hk-paper)}
+.photos .head .eyebrow{color:var(--blue-lift)}
+.photos .head>p{color:rgba(241,241,237,.74)}
+.mosaic{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:860px){.mosaic{grid-template-columns:repeat(4,1fr);grid-auto-rows:200px}}
+.mosaic figure{margin:0;position:relative;overflow:hidden;background:var(--navy-2,#08133F)}
+.mosaic img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s cubic-bezier(.2,.7,.3,1)}
+.mosaic figure:hover img{transform:scale(1.05)}
+@media(min-width:860px){
+  .mosaic .tall{grid-row:span 2}
+  .mosaic .wide{grid-column:span 2}
+}
+.mosaic figcaption{
+  position:absolute;left:0;bottom:0;padding:8px 12px;background:rgba(2,10,49,.86);
+  font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--hk-paper);
+}
+
+/* Events */
+.events{padding:clamp(66px,7.6vw,116px) 0;background:var(--paper-2)}
+.event-card{display:grid;gap:0;border:1px solid var(--line);background:var(--white);box-shadow:var(--elev);overflow:hidden}
+@media(min-width:820px){.event-card{grid-template-columns:1.1fr 1fr}}
+.event-card img{width:100%;height:100%;aspect-ratio:4/3;max-height:420px;object-fit:cover;display:block}
+.event-body{padding:clamp(24px,3vw,40px);display:flex;flex-direction:column;justify-content:center;gap:14px}
+.event-meta{display:flex;flex-wrap:wrap;gap:8px}
+.event-meta i{font-style:normal;padding:4px 10px;background:var(--soft,#E8EDFF);color:var(--blue);font-size:9.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.event-body h3{font-size:clamp(1.4rem,2.6vw,2rem);font-style:italic}
+.event-body p{color:var(--ink-2);font-size:14px;max-width:46ch}
+.all-link{margin-top:22px;display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--blue);text-decoration:none}
+.all-link:hover{text-decoration:underline}
+
+/* Branches, and the booking close folded into them */
+.branches-sec{padding:clamp(66px,7.6vw,116px) 0;background:var(--navy);color:var(--hk-paper)}
+.branches-sec .head h2{color:var(--hk-paper)}
+.branches-sec .head .eyebrow{color:var(--blue-lift)}
+.branches-sec .head>p{color:rgba(241,241,237,.74)}
+.branch-grid{display:grid;gap:14px}
+@media(min-width:780px){.branch-grid{grid-template-columns:repeat(3,1fr)}}
+.branch-card{
+  background:var(--navy-2,#08133F);border:1px solid var(--hk-rule-dark);
+  padding:24px;display:flex;flex-direction:column;gap:14px;text-decoration:none;
+  box-shadow:inset 0 1px 0 rgba(157,180,255,.14);transition:border-color .2s,transform .2s;
+}
+.branch-card:hover{transform:translateY(-3px);border-color:var(--blue-lift)}
+.branch-card h3{font-size:1.35rem;font-style:italic;color:var(--hk-paper)}
+.branch-card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:13px}
+.branch-card dt{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--hk-on-navy);align-self:center}
+.branch-card dd{margin:0;color:var(--hk-paper);font-variant-numeric:tabular-nums}
+.branch-card .go{margin-top:auto;font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--blue-lift)}
+.branch-close{margin-top:clamp(34px,4vw,56px);display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;padding-top:clamp(30px,3.4vw,44px);border-top:1px solid var(--hk-rule-dark)}
+.branch-close h3{font-size:clamp(1.6rem,3.2vw,2.4rem);color:var(--hk-paper)}
+.branch-close p{margin-top:10px;color:rgba(241,241,237,.74);max-width:44ch;font-size:14px}
 </style>
 
 <header class="topbar">
   <div class="topbar-in">
-    <a href="#top" data-home><img src="__A_logoBlue__" alt="Hakum Auto Care"></a>
+    <a href="#top" data-home><img src="__A_logoOw__" alt="Hakum Auto Care"></a>
     <nav class="topnav">
       <a href="#advisor" data-home>Find what you need</a>
-      <a href="#services" data-home>Services</a>
-      <a href="#compare" data-home>Compare</a>
-      <a href="#book" data-home>Branches</a>
+      <a href="#ppf" data-home>PPF</a>
+      <a href="#ceramic" data-home>Ceramic</a>
+      <a href="#tint" data-home>Tint</a>
+      <a href="#photos" data-home>Photos</a>
+      <a href="#events" data-home>Events</a>
+      <a href="#branches" data-home>Branches</a>
     </nav>
     <a class="btn btn-blue" href="#advisor" data-home>Find what you need</a>
   </div>
@@ -280,24 +383,20 @@ footer{border-top:1px solid var(--line);padding:30px 0}
 <main class="view" id="view-home">
 
 <section class="hero" id="top">
-  <div class="shell hero-in">
-    <div>
+  <div class="hero-film">
+    <video autoplay muted loop playsinline poster="__A_heroPoster__" aria-label="Detailing work at Hakum Auto Care">
+      <source src="__A_heroVideo__" type="video/mp4">
+    </video>
+    <div class="hero-in">
       <p class="eyebrow">Dasmari&ntilde;as / Bacoor / Batangas</p>
       <h1>Most people book<br>the <em>wrong thing.</em></h1>
-      <p>Film, coating, and tint solve three different problems, and almost nobody needs all three. Answer three questions and we will tell you what your car actually needs &mdash; including when the answer is "less than you thought".</p>
+      <p class="hero-lede">Film, coating, and tint solve three different problems, and almost nobody needs all three. Answer three questions and we will tell you what your car actually needs &mdash; including when the answer is "less than you thought".</p>
       <div class="cta-row">
         <a class="btn btn-blue" href="#advisor">Find what I need</a>
-        <a class="btn btn-out" href="#compare">Just show me the table</a>
+        <a class="btn btn-out" style="color:#fff;border-color:rgba(255,255,255,.42)" href="#ppf">Read the services</a>
       </div>
     </div>
-    <figure class="hero-figure" style="margin:0">
-      <img src="__A_ppf__" alt="A vehicle being finished at Hakum Auto Care">
-      <figcaption class="hero-chip"><strong>90 seconds</strong><span>Three questions, one answer</span></figcaption>
-    </figure>
   </div>
-</section>
-
-<!-- The advisor -->
 <section class="advisor" id="advisor">
   <div class="shell">
     <div class="advisor-head reveal">
@@ -361,7 +460,7 @@ footer{border-top:1px solid var(--line);padding:30px 0}
         <p id="res-lede"></p>
         <ul class="stack" id="res-stack"></ul>
         <div class="wiz-nav">
-          <a class="btn btn-lift" href="#book">Book this at a branch</a>
+          <a class="btn btn-lift" href="#branches">Book this at a branch</a>
           <button type="button" class="btn btn-quiet" id="wiz-restart">Start over</button>
         </div>
       </div>
@@ -369,86 +468,157 @@ footer{border-top:1px solid var(--line);padding:30px 0}
     </div>
   </div>
 </section>
+</section>
 
-<!-- Services -->
-<section id="services">
+<!-- PPF -->
+<section class="svc-sec" id="ppf">
+  <div class="shell">
+    <figure class="svc-fig reveal">
+      <img src="__A_ppf__" alt="Paint protection film being installed at Hakum Auto Care">
+      <figcaption>Bay 01 &mdash; Dasmari&ntilde;as</figcaption>
+    </figure>
+    <div class="reveal">
+      <p class="eyebrow">Paint protection film</p>
+      <h2 class="skew">A barrier,<br>not a polish.</h2>
+      <p class="lede">Film is the only one of the three that stops a stone chip. It is a physical layer over the paint, cut to the panel and wrapped at the edge wherever the panel allows it.</p>
+      <ul class="spec-list">
+        <li><span>Thickness</span><b>7.5&ndash;8.5 mil</b></li>
+        <li><span>Coverage</span><b>Partial to full body</b></li>
+        <li><span>Warranty</span><b>5 or 8 years</b></li>
+        <li><span>Bay time</span><b>2&ndash;5 days</b></li>
+      </ul>
+      <a class="credit" href="#ppf"><img src="__A_logoClearpro__" alt="ClearPro" width="720" height="400"><span>Film by ClearPro</span></a>
+      <div class="cta-row"><a class="btn btn-blue" href="#/ppf" data-view="ppf">See the three tiers</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- Ceramic -->
+<section class="svc-sec flip" id="ceramic" style="background:var(--paper-2)">
+  <div class="shell">
+    <figure class="svc-fig reveal">
+      <img src="__A_ceramic__" alt="Ceramic coating applied at Hakum Auto Care">
+      <figcaption>Coating booth</figcaption>
+    </figure>
+    <div class="reveal">
+      <p class="eyebrow">Ceramic coating</p>
+      <h2 class="skew">Gloss that<br>survives washing.</h2>
+      <p class="lede">A chemical layer bonded to the clear coat. It will not stop a chip, but it is what keeps the finish beading and makes the car far quicker to wash. We correct the paint first &mdash; we never coat over defects.</p>
+      <ul class="spec-list">
+        <li><span>Layers</span><b>Premium or Platinum</b></li>
+        <li><span>Warranty</span><b>5 or 8 years</b></li>
+        <li><span>Correction</span><b>Always first</b></li>
+        <li><span>Bay time</span><b>1&ndash;2 days</b></li>
+      </ul>
+      <a class="credit" href="#ceramic"><img src="__A_logoKisho__" alt="Kisho" width="720" height="400"><span>Coating by Kisho</span></a>
+      <div class="cta-row"><a class="btn btn-out" href="#advisor">Which one fits my car?</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- Tint -->
+<section class="svc-sec" id="tint">
+  <div class="shell">
+    <figure class="svc-fig reveal">
+      <img src="__A_tint__" alt="Nano ceramic tint being fitted at Hakum Auto Care">
+      <figcaption>Glass, not paint</figcaption>
+    </figure>
+    <div class="reveal">
+      <p class="eyebrow">Nano ceramic tint</p>
+      <h2 class="skew">Cooler cabin,<br>same view out.</h2>
+      <p class="lede">The only one of the three that works on glass. It rejects infrared at the window rather than darkening the cabin, which is why the dashboard stops cooking and the aircon stops fighting the sun.</p>
+      <ul class="spec-list">
+        <li><span>Rejects</span><b>Infrared and UV</b></li>
+        <li><span>Visibility</span><b>Unchanged at night</b></li>
+        <li><span>Warranty</span><b>Manufacturer defect</b></li>
+        <li><span>Bay time</span><b>Half a day</b></li>
+      </ul>
+      <a class="credit" href="#tint"><img src="__A_logoF1__" alt="F1 Auto Films" width="720" height="400"><span>Film by F1 Auto Films</span></a>
+      <div class="cta-row"><a class="btn btn-out" href="#advisor">Do I need this?</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- Photos -->
+<section class="photos" id="photos">
   <div class="shell">
     <div class="head reveal">
       <div>
-        <p class="eyebrow">What each one actually does</p>
-        <h2 class="skew">Four jobs,<br>four answers.</h2>
+        <p class="eyebrow">Inside Hakum</p>
+        <h2 class="skew">Photos.</h2>
       </div>
-      <p>Plain descriptions, no upsell. Read these if you would rather decide for yourself.</p>
+      <p>Our own bays, our own cars, our own work &mdash; no stock photography anywhere on this page.</p>
     </div>
-    <div class="grid4 reveal">
-      <a class="svc" href="#/ppf" data-view="ppf"><img src="__A_ppf__" alt="Paint protection film at Hakum Auto Care"><span class="svc-tag" aria-hidden="true">Film</span><div class="svc-b"><h3>Paint Protection Film</h3><p>A physical barrier. Solves stone chips and scratches &mdash; the damage you cannot polish out.</p><span class="svc-go">See the three tiers &rarr;</span></div></a>
-      <a class="svc" href="#compare"><img src="__A_ceramic__" alt="Ceramic coating at Hakum Auto Care"><span class="svc-tag" aria-hidden="true">Coating</span><div class="svc-b"><h3>Ceramic Coating</h3><p>A chemical layer. Solves gloss, water beading, and how often you have to wash it.</p><span class="svc-go">Compare tiers &rarr;</span></div></a>
-      <a class="svc" href="#compare"><img src="__A_tint__" alt="Nano ceramic tint at Hakum Auto Care"><span class="svc-tag" aria-hidden="true">Glass</span><div class="svc-b"><h3>Nano Ceramic Tint</h3><p>Glass, not paint. Solves cabin heat, UV, and a dashboard that cracks over time.</p><span class="svc-go">Compare tiers &rarr;</span></div></a>
-      <a class="svc" href="#book"><img src="__A_detailing__" alt="Premium wash and detailing at Hakum Auto Care"><span class="svc-tag" aria-hidden="true">Reset</span><div class="svc-b"><h3>Premium Wash &amp; Detailing</h3><p>The reset. Required before anything else bonds &mdash; and sometimes all a car needs.</p><span class="svc-go">Book detailing &rarr;</span></div></a>
+    <div class="mosaic reveal">
+      <figure class="tall"><img src="__A_detailing__" alt="Paint correction under inspection lighting"><figcaption>Correction</figcaption></figure>
+      <figure class="wide"><img src="__A_ceramicGallery__" alt="A finished car after ceramic coating"><figcaption>Coated and cured</figcaption></figure>
+      <figure><img src="__A_interior__" alt="Interior detailing in progress"><figcaption>Interior</figcaption></figure>
+      <figure><img src="__A_glass__" alt="Glass decontaminated before tinting"><figcaption>Glass prep</figcaption></figure>
+      <figure><img src="__A_ppf5__" alt="A vehicle with paint protection film installed"><figcaption>Film, finished</figcaption></figure>
+      <figure><img src="__A_carwash__" alt="A car being washed at Hakum Auto Care"><figcaption>Wash bay</figcaption></figure>
     </div>
   </div>
 </section>
 
-<!-- Comparison -->
-<section id="compare" style="background:var(--paper-2)">
+<!-- Events -->
+<section class="events" id="events">
   <div class="shell">
     <div class="head reveal">
       <div>
-        <p class="eyebrow">Side by side</p>
-        <h2 class="skew">What each<br>layer buys you.</h2>
+        <p class="eyebrow">Community</p>
+        <h2 class="skew">Events &amp; meets.</h2>
       </div>
-      <p>The same four questions people ask us in the bay, answered for all three services at once.</p>
+      <p>Promotions, branch events, and car meets from Hakum Auto Care.</p>
     </div>
-    <div class="tablewrap reveal">
-      <table>
-        <caption>Comparison of the three protective services. Scroll sideways on a narrow screen.</caption>
-        <thead>
-          <tr><th scope="col">&nbsp;</th><th scope="col" class="feat">Paint Protection Film</th><th scope="col">Ceramic Coating</th><th scope="col">Nano Ceramic Tint</th></tr>
-        </thead>
-        <tbody>
-          <tr><th scope="row">Stops stone chips</th><td class="on">Yes &mdash; the only one that does<span class="pill">7.5&ndash;8.5 mil</span></td><td class="off">No &mdash; chemical layer only</td><td class="off">Not applicable</td></tr>
-          <tr><th scope="row">Adds gloss and beading</th><td class="on">Yes, with the free coating on top</td><td class="on">Yes &mdash; this is its main job</td><td class="off">Not applicable</td></tr>
-          <tr><th scope="row">Reduces cabin heat</th><td class="off">No</td><td class="off">No</td><td class="on">Yes &mdash; rejects infrared at the glass</td></tr>
-          <tr><th scope="row">Self-heals light scratches</th><td class="on">Yes, with heat</td><td class="off">No</td><td class="off">No</td></tr>
-          <tr><th scope="row">Warranty</th><td class="on">5 or 8 years</td><td class="on">5 or 8 years</td><td>Manufacturer defect cover</td></tr>
-          <tr><th scope="row">Needs paint correction first</th><td>Yes, on anything not brand new</td><td>Yes, always &mdash; we never coat over defects</td><td class="off">No, it goes on glass</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <article class="event-card reveal">
+      <img src="__A_about__" alt="Cars gathered at a Hakum Auto Care meet">
+      <div class="event-body">
+        <div class="event-meta"><i>Sample listing</i><i>Bacoor</i></div>
+        <h3>Cars &amp; Coffee at Bacoor</h3>
+        <p>An open morning at the Bacoor bay &mdash; bring the car, walk the floor, and see a film and coating installation from start to finish.</p>
+        <a class="all-link" href="#events">View all events <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </article>
   </div>
 </section>
 
-
-<!-- Products we use - same band in every mock -->
-<section class="hk-products" id="products">
-  <div class="hk-products-in">
-    <div class="hk-products-head reveal">
-      <div>
-        <p class="k">Products we use</p>
-        <h2>What goes on your car.</h2>
-      </div>
-      <p class="c">We name our materials because the finish is only ever as good as they are. Film, coating, polish, and chemistry - on the record.</p>
-    </div>
-    <div class="hk-brands reveal">
-      <div class="hk-brand"><img class="mark" src="__A_logoClearpro__" alt="ClearPro" width="720" height="400"><span>Paint protection film</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoF1__" alt="F1 Auto Films" width="720" height="400"><span>Window film</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoKisho__" alt="Kisho" width="720" height="400"><span>Ceramic coating</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoMenzerna__" alt="Menzerna" width="720" height="400"><span>Polishing compounds</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoRupes__" alt="Rupes" width="720" height="400"><span>Polishing systems</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoSonax__" alt="Sonax" width="720" height="400"><span>Detailing chemistry</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoMeguiars__" alt="Meguiar&#39;s" width="720" height="400"><span>Surface care</span></div>
-      <div class="hk-brand"><img class="mark" src="__A_logoMicrotex__" alt="Microtex" width="720" height="400"><span>Towels &amp; applicators</span></div>
-    </div>
-    <p class="hk-products-note"><em>Supplier marks</em>Logo artwork as supplied by each distributor. Confirm display rights with each brand before launch.</p>
-  </div>
-</section>
-
-<section class="close" id="book">
+<!-- Branches -->
+<section class="branches-sec" id="branches">
   <div class="shell">
-    <p class="eyebrow" style="color:rgba(255,255,255,.72)">Book</p>
-    <h2 class="skew" style="margin-top:18px">Bring it in.</h2>
-    <p>Two branches open now, Dasmari&ntilde;as coming soon. Bring the car and we will inspect the paint before quoting anything.</p>
-    <div class="cta-row"><a class="btn btn-white" href="#top">Book a service</a><a class="btn btn-out" style="color:#fff;border-color:rgba(255,255,255,.42)" href="#advisor">Retake the questions</a></div>
+    <div class="head reveal">
+      <div>
+        <p class="eyebrow">Where we are</p>
+        <h2 class="skew">Three branches,<br>one standard.</h2>
+      </div>
+      <p>Bring the car in and we will inspect the paint before quoting anything.</p>
+    </div>
+    <div class="branch-grid reveal">
+      <a class="branch-card" href="#branches">
+        <h3>Bacoor</h3>
+        <dl><dt>Hours</dt><dd>8:00 &ndash; 18:00</dd><dt>Bays</dt><dd>Wash, detail, coating</dd></dl>
+        <span class="go">Book this branch &rarr;</span>
+      </a>
+      <a class="branch-card" href="#branches">
+        <h3>Batangas</h3>
+        <dl><dt>Hours</dt><dd>8:00 &ndash; 18:00</dd><dt>Bays</dt><dd>Wash, detail, tint</dd></dl>
+        <span class="go">Book this branch &rarr;</span>
+      </a>
+      <a class="branch-card" href="#branches">
+        <h3>Dasmari&ntilde;as</h3>
+        <dl><dt>Opening</dt><dd>Announced soon</dd><dt>Bays</dt><dd>Flagship &amp; PPF</dd></dl>
+        <span class="go">Join the waitlist &rarr;</span>
+      </a>
+    </div>
+    <div class="branch-close reveal">
+      <div>
+        <h3 class="skew">Bring it in.</h3>
+        <p>Two branches open now, Dasmari&ntilde;as coming soon.</p>
+      </div>
+      <div class="cta-row">
+        <a class="btn btn-white" href="#branches">Book a service</a>
+        <a class="btn btn-out" style="color:#fff;border-color:rgba(255,255,255,.42)" href="#advisor">Retake the questions</a>
+      </div>
+    </div>
   </div>
 </section>
 </main>
@@ -457,7 +627,7 @@ footer{border-top:1px solid var(--line);padding:30px 0}
 <main class="view" id="view-ppf" hidden>
 <section class="d-top">
   <div class="shell">
-    <a class="back" href="#services" data-home><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All services</a>
+    <a class="back" href="#ppf" data-home><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All services</a>
     <p class="eyebrow on-navy" style="margin-top:22px">Paint protection film</p>
     <h1 class="skew">Three levels<br>of cover.</h1>
     <p class="lede">The difference between them is how much of the car is wrapped and how thick the film is. Everything else &mdash; the prep, the free coatings, the inspection &mdash; is identical.</p>
@@ -473,7 +643,7 @@ footer{border-top:1px solid var(--line);padding:30px 0}
         <p class="mil">7.5<small> mil</small></p>
         <p>Focused protection for the panels and lighting surfaces most exposed to daily wear.</p>
         <ul><li>Hood</li><li>Headlights</li><li>Taillights</li><li>All four doors</li><li>2-layer ceramic on the rest of the exterior</li><li>5-year defect warranty</li></ul>
-        <div class="cta-row"><a class="btn btn-out" href="#book" data-home>Book Basic Protection</a></div>
+        <div class="cta-row"><a class="btn btn-out" href="#branches" data-home>Book Basic Protection</a></div>
       </article>
       <article class="tier pop">
         <span class="tier-flag">Most popular</span>
@@ -482,7 +652,7 @@ footer{border-top:1px solid var(--line);padding:30px 0}
         <p class="mil">7.5<small> mil</small></p>
         <p>Complete, virtually invisible protection across the exterior and trims.</p>
         <ul><li>Full exterior and trims</li><li>Roof, trunk, quarter panels</li><li>Mirrors, fenders, bumpers</li><li>Self-healing, hydrophobic film</li><li>5-year defect warranty</li><li>2-panel replacement, no questions asked</li></ul>
-        <div class="cta-row"><a class="btn btn-blue" href="#book" data-home>Book Premium Protection</a></div>
+        <div class="cta-row"><a class="btn btn-blue" href="#branches" data-home>Book Premium Protection</a></div>
       </article>
       <article class="tier">
         <h3>Platinum</h3>
@@ -490,7 +660,7 @@ footer{border-top:1px solid var(--line);padding:30px 0}
         <p class="mil">8.5<small> mil</small></p>
         <p>Maximum full-body coverage with thicker film for stronger high-impact defense.</p>
         <ul><li>Everything in Premium</li><li>Rocker panels</li><li>Additional high-impact areas</li><li>High-tier hydrophobic effect</li><li>8-year defect warranty</li><li>4-panel replacement</li></ul>
-        <div class="cta-row"><a class="btn btn-out" href="#book" data-home>Book Platinum Protection</a></div>
+        <div class="cta-row"><a class="btn btn-out" href="#branches" data-home>Book Platinum Protection</a></div>
       </article>
     </div>
 

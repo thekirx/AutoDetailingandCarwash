@@ -27,9 +27,10 @@ const map = {
   logoBlue: 'public/branding/hakum-lw-blue.png',
   markOw:   'public/branding/hakum-mark-ow.png',
 
-  // Hero.
-  heroVideo:  'src/assets/hero/desktop-hero.mp4',
-  heroPoster: 'public/media/hero/hakum-precision-poster.webp',
+  // Hero. The supplied clip is 4K HEVC at 39.7 MB — too large to inline and not
+  // playable in Chrome — so media/ holds a 1080p H.264 transcode of it.
+  heroVideo:  'design-mocks/media/hero-hakum.mp4',
+  heroPoster: 'design-mocks/media/hero-hakum-poster.webp',
 
   // Services.
   ppf:            'src/assets/services/paint-protection-film.webp',
@@ -66,10 +67,11 @@ for (const [key, slug] of Object.entries(LOGOS)) {
 const assets = {};
 for (const [k, rel] of Object.entries(map)) assets[k] = uri(rel);
 
-// Mock E scrubs the sequence itself. Every second frame keeps the motion
-// smooth at ~90 steps while halving what the page has to carry.
+// Mock E scrubs the sequence itself. Every third frame holds ~60 steps, which
+// still reads as continuous while keeping the page well inside its budget now
+// that it carries the hero clip as well.
 const frames = [];
-for (let n = 1; n <= 181; n += 2) {
+for (let n = 1; n <= 181; n += 3) {
   frames.push(uri('public/ppf-frames/desktop/ppf_' + String(n).padStart(3, '0') + '.webp'));
 }
 assets.__FRAMES__ = frames;
