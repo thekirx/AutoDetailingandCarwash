@@ -39,8 +39,13 @@ const icon = assets.markOw;
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
-fs.rmSync(OUT, { recursive: true, force: true });
+// Clear the generated pages but keep .vercel — it holds the link to the
+// hosting project, and losing it makes the next deploy create a new one.
 fs.mkdirSync(OUT, { recursive: true });
+for (const f of fs.readdirSync(OUT)) {
+  if (f === '.vercel') continue;
+  fs.rmSync(path.join(OUT, f), { recursive: true, force: true });
+}
 
 for (const [src, slug, description] of PAGES) {
   let body = fs.readFileSync(path.join(S, `mock-${src}.html`), 'utf8');
