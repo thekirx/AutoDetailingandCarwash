@@ -11,12 +11,12 @@ wins gets rebuilt as React routes against the live catalog.
 
 | Mock | Idea | Ground | Detail page | Signature |
 | --- | --- | --- | --- | --- |
-| A — The Measured Finish | Sells on specification: thickness, coverage, warranty years | Navy | PPF | Measurement rail tracking your position |
+| A — The Measured Finish | Sells on specification: thickness, coverage, warranty years | Graphite | PPF | Measurement rail tracking your position |
 | B — Sketch, built out | The client sketch followed box for box | Navy | Nano tint | The reference card treatment |
 | C — Hakum Amplified | Current identity kept intact, pushed harder | Paper | Ceramic | Draggable real before/after |
 | D — What Does My Car Need | Answers "which service do I actually need?" | Paper | PPF tiers | Three-question advisor |
 | E — Between Your Paint | Shows the work rather than describing it | Navy | PPF | Scroll-scrubbed 46-frame canvas |
-| F — Know Before You Go | Treats the site as a tool, mobile first | Paper | Nano tint | Live branch queue + bay times |
+| F — Know Before You Go | Treats the site as a tool, mobile first | Navy | Nano tint | Live branch queue + bay times |
 
 ## Shared design system
 
@@ -75,9 +75,9 @@ node design-mocks/build.js v2/d-advisor.src.html d.html
 - **Origin story** in mock B is drafted from existing positioning, not supplied copy.
 - **Queue and slot times** in mock F are sample data, marked in the UI. In a real
   build this reads the live queue the app already exposes.
-- **Product brand names** (ClearPro, F1 Auto Films, Kisho, Menzerna, Rupes,
-  Sonax, Meguiar's, Microtex) are set in type, not logo artwork. Supplying the
-  approved logo files and confirming licensing turns them into the real marks.
+- **Product brand marks** are the supplier artwork, normalised onto uniform
+  tiles by `logos/normalize.js`. Display rights still need confirming with each
+  brand before launch.
 
 ## Note on encoding
 

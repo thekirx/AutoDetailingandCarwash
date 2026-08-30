@@ -35,10 +35,14 @@
   /* Type: the real brand pairing, no third family anywhere. */
   --hk-display:'Benzin','Arial Black',sans-serif;
   --hk-body:'Gilmer',Arial,sans-serif;
-  --ink:var(--hk-navy);
-  --ink-2:var(--hk-navy-2);
+  /* A and B had both settled on the same navy ground with the same photographic
+     hero, which made two different arguments look like one page. This mock is
+     the one that sells on measurement, so it moves onto a graphite instrument
+     ground — the same family, read as a gauge rather than a showroom. */
+  --ink:#0A0B10;
+  --ink-2:#12141B;
   --ink-3:var(--hk-navy-3);
-  --line:var(--hk-rule-dark);
+  --line:#242732;
   --blue:var(--hk-blue);
   --blue-hover:var(--hk-blue-hover);
   --blue-deep:var(--hk-blue-active);
@@ -88,7 +92,7 @@ p{margin:0}
 .topnav a{color:var(--grey);text-decoration:none;transition:color .2s}
 .topnav a:hover{color:var(--paper)}
 
-.btn{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 22px;border:1px solid transparent;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:background .22s,color .22s,border-color .22s,transform .22s}
+.btn{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 22px;border:1px solid transparent;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:background .22s,color .22s,border-color .22s,transform .22s;border-radius:999px}
 .btn-primary{background:var(--paper);color:var(--blue);border-color:var(--paper)}
 .btn-primary:hover{transform:translateY(-2px);background:var(--hk-white)}
 .btn-ghost{background:transparent;color:var(--paper);border-color:var(--line)}
@@ -107,7 +111,10 @@ section{padding:clamp(76px,9vw,132px) 0;scroll-margin-top:66px}
 .hero{position:relative;padding:0;min-height:min(94vh,860px);display:flex;align-items:flex-end;overflow:hidden;border-bottom:1px solid var(--line)}
 .hero-bg{position:absolute;inset:0}
 .hero-bg img{width:100%;height:100%;object-fit:cover;opacity:.72}
-.hero-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(2,10,49,.58) 0%,rgba(2,10,49,.22) 40%,var(--ink) 96%)}
+/* Graded to the graphite ground, not navy — the tint is most of what made
+   this hero read as the same page as mock B. */
+.hero-bg img{filter:saturate(.45)}
+.hero-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,11,16,.62) 0%,rgba(10,11,16,.30) 40%,var(--ink) 96%)}
 .hero-in{position:relative;width:var(--shell);margin-inline:auto;padding:clamp(90px,12vw,130px) 0 clamp(34px,4vw,52px)}
 .hero h1{margin-top:26px;font-size:clamp(1.95rem,8.6vw,7.4rem);line-height:.84}
 .hero h1 em{font-style:normal;color:var(--signal)}
