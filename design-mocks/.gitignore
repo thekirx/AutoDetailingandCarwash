@@ -1,0 +1,5 @@
+# Build outputs. Regenerate with `node design-mocks/all.js` — the sources plus
+# the repo's own assets are the record; these are tens of MB of base64.
+assets.json
+mock-*.html
+site/
