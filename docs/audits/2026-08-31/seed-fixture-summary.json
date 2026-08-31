@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "mode": "dry-run",
+  "meta": {
+    "generated_for": "full-system-audit",
+    "day": "2026-08-22",
+    "month_start": "2026-08-01",
+    "month_end": "2026-08-31",
+    "branches": [
+      "bacoor",
+      "imus"
+    ]
+  },
+  "counts": {
+    "staff": 10,
+    "attendance_days": 30,
+    "attendance_rows": 180,
+    "sales_month": 79,
+    "sales_shop_day": 5,
+    "expenses": 6,
+    "shift_closes": 5,
+    "bookings": 2,
+    "customers": 3,
+    "expense_reports": 1,
+    "operating_hours": 14
+  },
+  "tables": [
+    "branch_operating_hours",
+    "staff_profiles",
+    "staff_attendance",
+    "sales",
+    "expenses",
+    "shift_close_reports",
+    "bookings",
+    "customers",
+    "expense_categories",
+    "expense_reports",
+    "payroll_runs"
+  ]
+}

@@ -1,0 +1,330 @@
+{
+  "ok": true,
+  "base": "http://127.0.0.1:4173",
+  "outDir": "docs/audits/2026-08-31/screenshots",
+  "captured": 80,
+  "failed": 0,
+  "authed": true,
+  "results": [
+    {
+      "ok": true,
+      "file": "public--home--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "public--services--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "public--packages--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "public--book--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "public--queue--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "public--branches--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "public--contact--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "public--events--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "public--blog--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "console--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "dashboard--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "queue--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "crew--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "attendance--clock--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "attendance--register--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "attendance--settings--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "kpi--crew--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "kpi--compare--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "kpi--service--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "kpi--sales--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "pos--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "inventory--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "bookings--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--overview--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--sales--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--purchases--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--pl--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--shift-close--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--expense-reports--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--reports--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "payroll--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "crm--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "planning--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "settings--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "people--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "branches--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "cars--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "audit--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "data-center--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "notifications--desktop.png"
+    },
+    {
+      "ok": true,
+      "file": "public--home--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "public--services--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "public--packages--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "public--book--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "public--queue--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "public--branches--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "public--contact--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "public--events--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "public--blog--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "console--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "dashboard--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "queue--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "crew--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "attendance--clock--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "attendance--register--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "attendance--settings--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "kpi--crew--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "kpi--compare--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "kpi--service--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "kpi--sales--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "pos--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "inventory--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "bookings--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--overview--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--sales--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--purchases--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--pl--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--shift-close--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--expense-reports--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "finance--reports--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "payroll--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "crm--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "planning--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "settings--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "people--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "branches--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "cars--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "audit--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "data-center--mobile.png"
+    },
+    {
+      "ok": true,
+      "file": "notifications--mobile.png"
+    }
+  ]
+}

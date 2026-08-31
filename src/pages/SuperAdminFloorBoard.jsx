@@ -143,6 +143,7 @@ export default function SuperAdminFloorBoard() {
         scheduleReload,
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, scheduleReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_attendance' }, scheduleReload)
       .subscribe((status) => setLive(status === 'SUBSCRIBED'))
     return () => {
@@ -507,6 +508,20 @@ export default function SuperAdminFloorBoard() {
             hint="Count of paid sale rows in timeline"
             breakdown="Number of paid sales records (not peso amount). Queue and counter each add one row when paid."
           />
+          <StatTile
+            label="Posted expenses"
+            value={formatMoney(financials.expense_minor)}
+            tone="amber"
+            hint="Paid · posted in timeline"
+            breakdown="Sum of expense total_minor for paid/posted rows created in this timeline (same statuses as Finance P&L). Approved-but-unpaid bills are excluded."
+          />
+          <StatTile
+            label={(financials.net_minor ?? 0) >= 0 ? 'Net profit' : 'Net loss'}
+            value={formatMoney(financials.net_minor)}
+            tone={(financials.net_minor ?? 0) >= 0 ? 'green' : 'rose'}
+            hint="Paid sales − paid/posted expenses"
+            breakdown="total_sales_minor minus expense_minor for the same timeline. Full category P&L remains on Finance."
+          />
         </div>
       </Section>
 
@@ -610,8 +625,9 @@ export default function SuperAdminFloorBoard() {
       <Section eyebrow="Inventory" title="Chemical usage">
         {board?.chemicalUsage?.stub ? (
           <p className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-            Logic (Sunday recon): Branch admins submit weekly leftover counts. Usage = previous − leftover per product.
-            Cost = usage × unit cost. Charts appear after at least one submitted or approved recon in the timeline.
+            No Sunday recon in this timeline yet. Branch admins submit weekly leftover counts (Inventory → Sunday
+            Recon). Usage = previous − leftover; cost = usage × unit cost. Bars appear after at least one submitted or
+            approved recon — empty is intentional, not missing data.
           </p>
         ) : (
           <div className="rounded-2xl border border-border bg-card p-4">

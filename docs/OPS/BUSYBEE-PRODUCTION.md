@@ -28,6 +28,13 @@ Never use `VITE_*` for BusyBee keys.
 
 Shop-wide gate: `app_settings.sms_notifications.enabled` must be `true`.
 
+**Current ops posture (2026-08-31):** shop SMS is **OFF** until BrandTxt whitelists the live egress IP (office was `27.49.15.199`; prior whitelist `180.190.249.189` still returns `ErrorCode 11`). Toggle via CRM → SMS or:
+
+```bash
+node scripts/set-sms-shop-gate.mjs off
+node scripts/set-sms-shop-gate.mjs on
+```
+
 ## Local verification
 
 ```bash

@@ -381,7 +381,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
       laneCounts: sumFloorLaneCounts(emptyByFamily),
       laneCountsByFamily: emptyByFamily,
       periodJobs: [],
-      financials: { ...EMPTY_FINANCIALS, cancel_loss_minor: 0 },
+      financials: { ...EMPTY_FINANCIALS, cancel_loss_minor: 0, expense_minor: 0, net_minor: 0 },
       kpi: {
         avg_wait_minutes: null,
         wait_sample_n: 0,
@@ -411,7 +411,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     .in('role', ['marketing', 'video_editor', 'admin', 'assistant_super_admin', 'team_lead'])
   adminStaffQuery = scopedStaffQuery(adminStaffQuery, branchScope)
 
-  const [completedRows, cancelledRows, redoRows, startedRows, salesRaw, adminStaffRes] = await Promise.all([
+  const [completedRows, cancelledRows, redoRows, startedRows, salesRaw, expenseRaw, adminStaffRes] = await Promise.all([
     collectScoped(() =>
       scopedQuery(
         supabase
@@ -476,6 +476,18 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
         branchScope,
       ),
     ),
+    collectScoped(() =>
+      scopedQuery(
+        supabase
+          .from('expenses')
+          .select('id, total_minor, status, branch, created_at')
+          .in('status', ['paid', 'posted'])
+          .gte('created_at', startIso)
+          .lte('created_at', endIso)
+          .order('created_at', { ascending: false }),
+        branchScope,
+      ),
+    ),
     adminStaffQuery,
   ])
   if (adminStaffRes.error) console.warn('Admin roster unavailable', adminStaffRes.error)
@@ -514,12 +526,19 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     service_name: row.bookings?.services?.name || null,
   }))
 
+  const expense_minor = (expenseRaw || []).reduce(
+    (sum, row) => sum + (Number(row.total_minor) || 0),
+    0,
+  )
+  const salesFinancials = aggregateSalesFinancials(salesRows)
   const financials = {
-    ...aggregateSalesFinancials(salesRows),
+    ...salesFinancials,
     cancel_loss_minor: cancelledJobs.reduce(
       (sum, row) => sum + Number(row.final_price_minor || 0),
       0,
     ),
+    expense_minor,
+    net_minor: (Number(salesFinancials.total_sales_minor) || 0) - expense_minor,
   }
 
   const cycleSample = uniqueBookingsById([

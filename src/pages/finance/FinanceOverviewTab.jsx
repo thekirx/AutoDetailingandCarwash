@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { ArrowRight, FileBarChart, Receipt, ShoppingCart } from 'lucide-react'
+import { ArrowRight, Download, FileBarChart, FileSpreadsheet, FileText, Receipt, ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -24,10 +24,13 @@ import {
 } from '@/components/ui/chart'
 import { formatMoney } from '@/queue/queueApi'
 import {
+  downloadCsv,
+  downloadExcel,
   financeOwnerInsights,
   formatFinanceWindow,
   pctChange,
   plTrendByDay,
+  printAsPdf,
   rollupPl,
   salesByBranch,
   shareOfTotal,
@@ -146,11 +149,41 @@ export default function FinanceOverviewTab({
   const incomeDelta = comparing ? pctChange(pl.income, prior.income) : null
   const expenseDelta = comparing ? pctChange(pl.expenses, prior.expenses) : null
   const netDelta = comparing ? pctChange(pl.net, prior.net) : null
+  const windowLabel = formatFinanceWindow(range?.start, range?.end)
+
+  const overviewExportRows = useMemo(
+    () => [
+      { metric: 'Income', amount: formatMoney(pl.income) },
+      { metric: 'Expenses', amount: formatMoney(pl.expenses) },
+      { metric: 'Net profit', amount: formatMoney(pl.net) },
+      { metric: 'Margin %', amount: `${pl.margin}%` },
+      { metric: 'Paid tickets', amount: String(insights.paidCount) },
+      ...byBranch.map((b) => ({
+        metric: `Sales · ${b.branch}`,
+        amount: formatMoney(b.total_sales_minor),
+      })),
+      ...expenseBars.map((e) => ({
+        metric: `Expense · ${e.category}`,
+        amount: formatMoney(e.amount_minor),
+      })),
+    ],
+    [pl, insights.paidCount, byBranch, expenseBars],
+  )
+  const exportCols = [
+    { key: 'metric', label: 'Metric' },
+    { key: 'amount', label: 'Amount' },
+  ]
+  function exportOverview(kind) {
+    const title = `Finance overview · ${windowLabel}`
+    const file = `finance-overview-${range.start}_${range.end}`
+    if (kind === 'csv') downloadCsv(overviewExportRows, exportCols, `${file}.csv`)
+    else if (kind === 'excel') downloadExcel(overviewExportRows, exportCols, `${file}.xls`, title)
+    else printAsPdf(overviewExportRows, exportCols, title, windowLabel)
+  }
 
   if (loading) return <FinanceTabSkeleton metrics={6} lines={4} />
 
   const hasCashflow = trend.some((d) => d.income_minor > 0 || d.expenses_minor > 0)
-  const windowLabel = formatFinanceWindow(range.start, range.end)
 
   return (
     <div className="finance-dash flex flex-col gap-5">
@@ -213,6 +246,22 @@ export default function FinanceOverviewTab({
           <DashLink label="Profit and loss" onClick={() => onNavigate('pl')} icon={<FileBarChart aria-hidden />} />
         </nav>
       ) : null}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">Export overview</span>
+        <Button type="button" variant="outline" size="sm" className="cursor-pointer" onClick={() => exportOverview('csv')}>
+          <Download data-icon="inline-start" />
+          CSV
+        </Button>
+        <Button type="button" variant="outline" size="sm" className="cursor-pointer" onClick={() => exportOverview('excel')}>
+          <FileSpreadsheet data-icon="inline-start" />
+          Excel
+        </Button>
+        <Button type="button" variant="outline" size="sm" className="cursor-pointer" onClick={() => exportOverview('pdf')}>
+          <FileText data-icon="inline-start" />
+          PDF
+        </Button>
+      </div>
 
       <FinancePanel
         title="Cash flow"

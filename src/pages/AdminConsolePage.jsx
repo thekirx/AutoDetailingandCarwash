@@ -137,17 +137,33 @@ export default function AdminConsolePage() {
               icon={CircleDollarSign}
               tone="good"
             />
+            <MetricCard
+              label="Period expenses"
+              value={formatPeso(snap?.approvedExpenseMinor)}
+              detail={
+                snap?.pendingExpenseMinor
+                  ? `${formatPeso(snap.pendingExpenseMinor)} pending`
+                  : 'Approved + paid (pulse sample)'
+              }
+              icon={CircleDollarSign}
+              tone={snap?.approvedExpenseMinor ? 'warn' : 'default'}
+            />
+            <MetricCard
+              label={(snap?.profitMinor ?? 0) >= 0 ? 'Period profit' : 'Period loss'}
+              value={formatPeso(snap?.profitMinor)}
+              detail="Revenue − approved/paid expenses"
+              icon={CircleDollarSign}
+              tone={(snap?.profitMinor ?? 0) >= 0 ? 'good' : 'bad'}
+            />
             <MetricCard label="Active queue" value={String(snap?.queueRows?.length || 0)} detail="Waiting → payment" icon={ClipboardList} />
             <MetricCard label="Low stock SKUs" value={String(snap?.lowStock?.length || 0)} detail="≤ 10 units" icon={Boxes} tone={snap?.lowStock?.length ? 'warn' : 'good'} />
-            <MetricCard label="Active staff" value={String(staffCounts.total)} detail={`${staffCounts.leads} TL · ${staffCounts.crew} crew`} icon={Users} />
-            <MetricCard label="Branches" value={String(snap?.branches?.length || 0)} detail="Active sites" icon={ClipboardList} />
           </div>
           <p className="text-sm text-muted-foreground">
-            Period books (income, expenses, net) live on{' '}
+            Pulse sample is recent sales days + recent expense rows — full P&amp;L lives on{' '}
             <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/operations/finance">
               Finance
             </Link>
-            . Console is today&apos;s ops pulse only.
+            . Staff count: {staffCounts.total} ({staffCounts.leads} TL · {staffCounts.crew} crew · {snap?.branches?.length || 0} sites).
           </p>
 
           <Tabs defaultValue="queue">
