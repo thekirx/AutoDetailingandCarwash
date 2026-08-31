@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react'
 
-import BeforeAfterSection from '../components/public/home/BeforeAfterSection'
-import EventsPreviewSection from '../components/public/home/EventsPreviewSection'
-import HomeEndingSections from '../components/public/home/HomeEndingSections'
-import HomeHeroSection from '../components/public/home/HomeHeroSection'
+import BdHero from '../components/public/bredesign/BdHero'
+import { BdBranches, BdEvents } from '../components/public/bredesign/BdEventsBranches'
 import {
-  CeramicSection,
-  MediaGallerySection,
-  NanoCeramicTintSection,
-  PpfInformationSection,
-} from '../components/public/home/HomeServiceSections'
-import LatestPostSection from '../components/public/home/LatestPostSection'
-import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
+  BdBook,
+  BdOrigin,
+  BdPhotos,
+  BdServices,
+  BdWhySections,
+} from '../components/public/bredesign/BdSections'
+import useReveal from '../components/public/bredesign/useReveal'
 import { usePublicBranches, branchCityName } from '../lib/branches'
 import { loadHomepageContent } from '../lib/homepageContent'
 import { supabase } from '../lib/supabase'
@@ -22,11 +20,9 @@ const INITIAL_CONTENT = {
 }
 
 export default function PublicLandingPage() {
-  const { branches } = usePublicBranches()
-  /* The hero location line names every branch we want people to know about, so it
-     reads the visible list (active + coming soon). `branches` stays bookable-only —
-     the live queue and hero status cards below have nothing to show for a branch
-     that has not opened yet. */
+  /* Visible = active plus coming soon. The branches section deliberately shows
+     a branch that has not opened yet, badged as such, so a customer in that city
+     knows it is coming rather than concluding we are not there. */
   const { branches: visibleBranches } = usePublicBranches({ mode: 'visible' })
   const [content, setContent] = useState(INITIAL_CONTENT)
   const locationLine = visibleBranches.length
@@ -49,18 +45,18 @@ export default function PublicLandingPage() {
     return () => { active = false }
   }, [])
 
+  useReveal()
+
   return (
     <>
-      <HomeHeroSection locationLine={locationLine} />
-      <CeramicSection />
-      <PpfInformationSection />
-      <PpfPackagesSection />
-      <NanoCeramicTintSection />
-      <BeforeAfterSection />
-      <MediaGallerySection />
-      <LatestPostSection state={content.post} />
-      <EventsPreviewSection state={content.event} />
-      <HomeEndingSections branches={branches} />
+      <BdHero locationLine={locationLine} />
+      <BdOrigin />
+      <BdServices />
+      <BdWhySections />
+      <BdPhotos />
+      <BdEvents state={content.event} />
+      <BdBranches branches={visibleBranches} />
+      <BdBook />
     </>
   )
 }

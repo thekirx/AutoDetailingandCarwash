@@ -20,6 +20,23 @@ const navItems = [
   ['Contact', '/contact'],
 ]
 
+// Marketing routes. Everything not listed keeps the shipping look: the booking
+// flow, the live queue, sign-in and the account area all stay as they are.
+const BREDESIGN_ROUTES = [
+  '/home',
+  '/services',
+  '/packages',
+  '/branches',
+  '/partnerships',
+  '/events',
+  '/blog',
+  '/contact',
+  '/complaints',
+  '/terms',
+  '/privacy',
+  '/cookies',
+]
+
 function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
   return (
     <header className={`public-header ${className} ${open ? 'menu-open' : ''}`.trim()}>
@@ -106,6 +123,12 @@ export default function PublicLayout() {
   const isCustomer = !loading && Boolean(user) && profile?.role === 'customer'
   // /account: phone app chrome on mobile; landing header + wide layout on desktop.
   const accountRoute = pathname.startsWith('/account')
+  // BreDESIGN covers the marketing site only. /book, /queue and the auth pages
+  // stay on the shipping styles, so the class that scopes the new stylesheet is
+  // applied by route rather than to the whole public layout.
+  const bredesignRoute = BREDESIGN_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  )
 
   useEffect(() => setOpen(false), [pathname])
 
@@ -129,8 +152,14 @@ export default function PublicLayout() {
     )
   }
 
+  const homeRoute = pathname === '/home' || pathname === '/'
+
   return (
-    <div className="public-site">
+    <div
+      className={`public-site${bredesignRoute ? ' bredesign' : ''}${
+        bredesignRoute && homeRoute ? ' bd-home' : ''
+      }`}
+    >
       <PublicPageMeta />
       <PublicSiteHeader open={open} setOpen={setOpen} isCustomer={isCustomer} />
 

@@ -1,0 +1,854 @@
+/* BreDESIGN — the marketing site rebuilt in the language of design mock B.
+ *
+ * Everything here is scoped under `.bredesign`, which PublicLayout puts on the
+ * marketing routes only. That scoping is not stylistic tidiness: styles.css is
+ * a 12k-line sheet shared by the marketing site, the booking flow and the
+ * operations console, so an unscoped rule written for the homepage can reach
+ * the booking board. Nothing in this file can.
+ *
+ * Colour and type are the tokens already in design-tokens.css. The --bd-*
+ * names below are the vocabulary the sections speak; each one either points at
+ * a shipped token or is derived from one, so the site cannot drift from the
+ * brand by editing this file alone.
+ */
+
+.bredesign {
+  /* ---- Ground ---------------------------------------------------------- */
+  --bd-navy: var(--color-surface-cinematic);   /* #020A31 */
+  --bd-navy-2: #08133f;                        /* derived: panels */
+  --bd-navy-3: #0d1b52;                        /* derived: raised panels */
+  --bd-rule: #16255c;                          /* derived: hairlines on navy */
+
+  /* ---- Brand ----------------------------------------------------------- */
+  --bd-blue: var(--color-brand-primary);
+  --bd-blue-hover: var(--color-brand-primary-hover);
+  --bd-blue-active: var(--color-brand-primary-active);
+  --bd-blue-soft: var(--color-brand-primary-soft);
+  --bd-blue-mid: #2d59d3;                      /* from the shipping radial gradient */
+  --bd-accent: #9db4ff;                        /* brand blue lifted to read on navy */
+
+  /* ---- Ink ------------------------------------------------------------- */
+  --bd-paper: var(--color-surface-page);       /* #F1F1ED — primary text here */
+  --bd-ink-2: rgba(241, 241, 237, 0.78);
+  --bd-ink-3: #7e8ab8;
+  --bd-ink-4: #6e79a8;
+
+  /* ---- Type ------------------------------------------------------------ */
+  --bd-display: var(--font-display);
+  --bd-body: var(--font-body);
+
+  /* ---- Metrics --------------------------------------------------------- */
+  --bd-shell: min(100% - 36px, 1180px);
+  --bd-section: clamp(70px, 8vw, 124px);
+  --bd-lit: inset 0 1px 0 rgba(157, 180, 255, 0.14);
+
+  background: var(--bd-navy);
+  color: var(--bd-ink-2);
+  font-family: var(--bd-body);
+}
+
+/* ---- Primitives -------------------------------------------------------- */
+
+.bredesign .bd-shell {
+  width: var(--bd-shell);
+  margin-inline: auto;
+}
+
+.bredesign section {
+  padding: var(--bd-section) 0;
+}
+
+.bredesign h1,
+.bredesign h2,
+.bredesign h3 {
+  margin: 0;
+  font-family: var(--bd-display);
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+  line-height: 0.92;
+  color: var(--bd-paper);
+  text-wrap: balance;
+}
+
+.bredesign p {
+  margin: 0;
+}
+
+.bredesign .bd-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--bd-body);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+/* The rule before the eyebrow is mock B's tell — it marks where a section
+   starts without needing a divider across the whole page. */
+.bredesign .bd-eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 1px;
+  background: currentColor;
+  flex: none;
+}
+
+.bredesign .bd-skew {
+  transform: skewX(-7deg);
+  transform-origin: left bottom;
+}
+
+/* ---- Buttons ----------------------------------------------------------- */
+/* Pills, matching the shipping site's own CTA shape. */
+
+.bredesign .bd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 24px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: var(--bd-body);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.bredesign .bd-btn-primary {
+  background: var(--bd-blue);
+  color: #fff;
+  border-color: var(--bd-blue);
+}
+.bredesign .bd-btn-primary:hover {
+  background: var(--bd-blue-hover);
+  transform: translateY(-2px);
+}
+
+.bredesign .bd-btn-quiet {
+  background: transparent;
+  color: var(--bd-paper);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+.bredesign .bd-btn-quiet:hover {
+  border-color: var(--bd-accent);
+  color: var(--bd-accent);
+}
+
+.bredesign .bd-btn-light {
+  background: #fff;
+  color: var(--bd-blue);
+  border-color: #fff;
+}
+.bredesign .bd-btn-light:hover {
+  transform: translateY(-2px);
+}
+
+.bredesign .bd-btn:focus-visible,
+.bredesign a:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 3px;
+}
+
+.bredesign .bd-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ---- Section heading pattern ------------------------------------------- */
+
+.bredesign .bd-head {
+  display: grid;
+  gap: 18px;
+  margin-bottom: clamp(30px, 3.6vw, 50px);
+}
+@media (min-width: 900px) {
+  .bredesign .bd-head {
+    grid-template-columns: 1fr 0.85fr;
+    align-items: end;
+    gap: 44px;
+  }
+}
+.bredesign .bd-head h2 {
+  margin-top: 14px;
+  font-size: clamp(2rem, 4.6vw, 3.4rem);
+}
+.bredesign .bd-head > p {
+  color: var(--bd-ink-2);
+  max-width: 52ch;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+/* ---- Motion ------------------------------------------------------------ */
+
+.bredesign .bd-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.3, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.bredesign .bd-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bredesign .bd-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .bredesign .bd-btn:hover {
+    transform: none;
+  }
+}
+
+/* ==== Hero =============================================================== */
+
+.bredesign .bd-hero {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+.bredesign .bd-hero-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Graded rather than flatly dimmed: the top of the frame stays a photograph,
+   and the type sits on ground dark enough to read against. */
+.bredesign .bd-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(2, 10, 49, 0.58) 0%,
+    rgba(2, 10, 49, 0.36) 42%,
+    rgba(2, 10, 49, 0.96) 100%
+  );
+}
+.bredesign .bd-hero-in {
+  position: relative;
+  z-index: 1;
+  padding: clamp(120px, 15vw, 210px) 0 clamp(44px, 5vw, 72px);
+}
+.bredesign .bd-hero h1 {
+  margin-top: 22px;
+  font-size: clamp(2.1rem, 6.4vw, 5rem);
+  line-height: 0.88;
+}
+.bredesign .bd-hero h1 em {
+  font-style: italic;
+  color: var(--bd-accent);
+}
+.bredesign .bd-hero-lede {
+  margin-top: 24px;
+  max-width: 46ch;
+  color: rgba(241, 241, 237, 0.84);
+  font-size: clamp(15px, 1.4vw, 17px);
+  line-height: 1.6;
+}
+.bredesign .bd-hero-cta {
+  margin-top: 30px;
+}
+
+/* Stats sit inside the hero, on the darkest part of the grade. */
+.bredesign .bd-stats {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid var(--bd-rule);
+}
+.bredesign .bd-stats-in {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 28px 20px;
+  padding: clamp(30px, 3.4vw, 44px) 0 clamp(34px, 4vw, 54px);
+}
+@media (min-width: 780px) {
+  .bredesign .bd-stats-in {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.bredesign .bd-stat-value {
+  display: block;
+  font-family: var(--bd-display);
+  font-style: italic;
+  font-weight: 800;
+  font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--bd-paper);
+  font-variant-numeric: tabular-nums;
+}
+.bredesign .bd-stat-label {
+  display: block;
+  margin-top: 10px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bd-ink-3);
+}
+
+/* ==== Origin ============================================================= */
+
+.bredesign .bd-origin-in {
+  display: grid;
+  gap: clamp(30px, 3.6vw, 56px);
+  align-items: center;
+}
+@media (min-width: 940px) {
+  .bredesign .bd-origin-in {
+    grid-template-columns: 1fr 0.92fr;
+  }
+}
+.bredesign .bd-origin h2 {
+  margin-top: 20px;
+  font-size: clamp(1.9rem, 4.2vw, 3.1rem);
+}
+.bredesign .bd-origin h2 em {
+  font-style: italic;
+  color: var(--bd-accent);
+}
+.bredesign .bd-origin-lead {
+  margin-top: 24px;
+  color: var(--bd-paper);
+  font-size: 15.5px;
+  line-height: 1.65;
+  max-width: 46ch;
+}
+.bredesign .bd-origin-body {
+  margin-top: 14px;
+  color: var(--bd-ink-2);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 48ch;
+}
+.bredesign .bd-origin-cta {
+  margin-top: 26px;
+}
+.bredesign .bd-origin-fig {
+  position: relative;
+  margin: 0;
+}
+.bredesign .bd-origin-fig img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+}
+.bredesign .bd-origin-fig figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 16px 20px;
+  background: var(--bd-blue);
+  max-width: 60%;
+}
+.bredesign .bd-origin-fig strong {
+  display: block;
+  font-family: var(--bd-display);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.05;
+  color: #fff;
+}
+.bredesign .bd-origin-fig span {
+  display: block;
+  margin-top: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+/* Anything on the page that is not yet signed off says so, rather than
+   quietly reading as approved copy. */
+.bredesign .bd-draft-note {
+  margin-top: 18px;
+  display: inline-block;
+  padding: 4px 9px;
+  border: 1px dashed var(--bd-ink-4);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--bd-ink-3);
+}
+
+/* ==== Services grid ====================================================== */
+
+.bredesign .bd-services {
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-services h2 em {
+  font-style: italic;
+  color: var(--bd-accent);
+}
+.bredesign .bd-service-grid {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 700px) {
+  .bredesign .bd-service-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.bredesign .bd-service {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 380px;
+  overflow: hidden;
+  text-decoration: none;
+  background: var(--bd-navy-3);
+  border: 1px solid var(--bd-rule);
+  transition: transform 0.24s, border-color 0.24s;
+}
+.bredesign .bd-service:hover {
+  transform: translateY(-4px);
+  border-color: var(--bd-accent);
+}
+.bredesign .bd-service img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.bredesign .bd-service:hover img {
+  transform: scale(1.04);
+}
+/* Graded from the bottom so the top of each card stays a photograph. */
+.bredesign .bd-service::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(2, 10, 49, 0.96) 0%,
+    rgba(2, 10, 49, 0.8) 34%,
+    rgba(2, 10, 49, 0.14) 70%,
+    rgba(2, 10, 49, 0) 100%
+  );
+}
+.bredesign .bd-service-num {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 1;
+  padding: 5px 9px;
+  background: var(--bd-blue);
+  color: #fff;
+  font-family: var(--bd-display);
+  font-style: italic;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.bredesign .bd-service-body {
+  position: relative;
+  z-index: 1;
+  padding: 24px;
+}
+.bredesign .bd-service-body h3 {
+  font-size: 1.25rem;
+}
+.bredesign .bd-service-body p {
+  margin-top: 10px;
+  color: rgba(241, 241, 237, 0.82);
+  font-size: 13.5px;
+  line-height: 1.6;
+  max-width: 42ch;
+}
+.bredesign .bd-service-go {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+
+/* ==== Why sections ======================================================= */
+
+.bredesign .bd-why-in {
+  display: grid;
+  gap: clamp(28px, 3.4vw, 54px);
+  align-items: center;
+}
+@media (min-width: 940px) {
+  .bredesign .bd-why-in {
+    grid-template-columns: 1fr 1.05fr;
+  }
+  .bredesign .bd-why.is-flipped .bd-why-fig {
+    order: 2;
+  }
+}
+.bredesign .bd-why.is-flipped {
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-why-fig {
+  margin: 0;
+  overflow: hidden;
+}
+.bredesign .bd-why-fig img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+.bredesign .bd-why-copy h2 {
+  margin-top: 16px;
+  font-size: clamp(1.9rem, 4.2vw, 3rem);
+}
+.bredesign .bd-why-copy h2 em {
+  font-style: italic;
+  color: var(--bd-accent);
+}
+.bredesign .bd-why-lede {
+  margin-top: 20px;
+  color: var(--bd-ink-2);
+  font-size: 14.5px;
+  line-height: 1.7;
+  max-width: 52ch;
+}
+.bredesign .bd-why-lede strong {
+  color: var(--bd-paper);
+  font-weight: 700;
+}
+.bredesign .bd-why-points {
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 1px;
+  background: var(--bd-rule);
+  border: 1px solid var(--bd-rule);
+}
+@media (min-width: 620px) {
+  .bredesign .bd-why-points {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.bredesign .bd-why-points li {
+  background: var(--bd-navy);
+  padding: 16px 18px;
+}
+.bredesign .bd-why.is-flipped .bd-why-points li {
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-why-points strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bd-paper);
+}
+.bredesign .bd-why-points span {
+  display: block;
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--bd-ink-2);
+}
+.bredesign .bd-why-cta {
+  margin-top: 26px;
+}
+
+/* ==== Photos ============================================================= */
+
+.bredesign .bd-photos {
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-mosaic {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 860px) {
+  .bredesign .bd-mosaic {
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 200px;
+  }
+  .bredesign .bd-mosaic .bd-tall {
+    grid-row: span 2;
+  }
+  .bredesign .bd-mosaic .bd-wide {
+    grid-column: span 2;
+  }
+}
+.bredesign .bd-mosaic figure {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bd-navy-3);
+}
+.bredesign .bd-mosaic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.bredesign .bd-mosaic figure:hover img {
+  transform: scale(1.05);
+}
+.bredesign .bd-mosaic figcaption {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 8px 12px;
+  background: rgba(2, 10, 49, 0.88);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bd-paper);
+}
+
+/* ==== Book ============================================================== */
+
+.bredesign .bd-book {
+  background:
+    radial-gradient(120% 140% at 12% 0%, var(--bd-blue-mid) 0%, transparent 58%),
+    var(--bd-blue);
+}
+.bredesign .bd-book-in {
+  display: grid;
+  gap: 28px;
+  align-items: end;
+}
+@media (min-width: 900px) {
+  .bredesign .bd-book-in {
+    grid-template-columns: 1fr auto;
+  }
+}
+.bredesign .bd-book h2 {
+  margin-top: 18px;
+  font-size: clamp(2.1rem, 5vw, 3.8rem);
+  color: #fff;
+}
+.bredesign .bd-book p {
+  margin-top: 18px;
+  color: rgba(255, 255, 255, 0.86);
+  max-width: 44ch;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+.bredesign .bd-eyebrow-light {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* ==== Events ============================================================= */
+
+.bredesign .bd-event {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  box-shadow: var(--bd-lit);
+}
+@media (min-width: 820px) {
+  .bredesign .bd-event {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+.bredesign .bd-event-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 420px;
+  object-fit: cover;
+}
+.bredesign .bd-event-body {
+  padding: clamp(24px, 3vw, 40px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+.bredesign .bd-event-date {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+.bredesign .bd-event-body h3 {
+  font-size: clamp(1.35rem, 2.5vw, 1.95rem);
+}
+.bredesign .bd-event-summary {
+  color: var(--bd-ink-2);
+  font-size: 14px;
+  line-height: 1.65;
+  max-width: 46ch;
+}
+.bredesign .bd-all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+  text-decoration: none;
+}
+.bredesign .bd-all-link:hover {
+  text-decoration: underline;
+}
+
+/* ==== Branches =========================================================== */
+
+.bredesign .bd-branches {
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-branch-grid {
+  display: grid;
+  gap: 14px;
+}
+@media (min-width: 780px) {
+  .bredesign .bd-branch-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+.bredesign .bd-branch {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  text-decoration: none;
+  background: var(--bd-navy-3);
+  border: 1px solid var(--bd-rule);
+  box-shadow: var(--bd-lit);
+  transition: transform 0.2s, border-color 0.2s;
+}
+.bredesign .bd-branch:hover {
+  transform: translateY(-3px);
+  border-color: var(--bd-accent);
+}
+.bredesign .bd-branch-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.bredesign .bd-branch-top h3 {
+  font-size: 1.2rem;
+}
+.bredesign .bd-branch-address {
+  color: var(--bd-ink-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.bredesign .bd-branch-go {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+
+/* Status colours sit deliberately outside the brand accent so "open" and
+   "coming soon" stay distinguishable. Never colour alone — the word is there. */
+.bredesign .bd-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.bredesign .bd-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.bredesign .bd-status-open {
+  color: #5bd48f;
+  background: rgba(91, 212, 143, 0.14);
+}
+.bredesign .bd-status-soon {
+  color: #f2b84b;
+  background: rgba(242, 184, 75, 0.15);
+}
+.bredesign .bd-status-shut {
+  color: #98a1c0;
+  background: rgba(152, 161, 192, 0.14);
+}
+
+/* A long branch name and its status badge must not squeeze each other; the
+   badge drops to its own line before either gets clipped. */
+.bredesign .bd-branch-top {
+  flex-wrap: wrap;
+}
+.bredesign .bd-branch-top h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bredesign .bd-status {
+  flex: none;
+}
+
+/* ==== Shared chrome ======================================================
+   The header and footer are rendered by PublicLayout for every public route,
+   so they are adjusted here rather than in styles.css — these overrides reach
+   the marketing pages and nothing else. */
+
+/* Pills, so the header CTAs match the buttons on the page below them. */
+.bredesign .header-book,
+.bredesign .header-auth {
+  border-radius: 999px;
+}
+.bredesign .header-auth {
+  padding-inline: 18px;
+}
+
+/* The footer sat on its own near-black while every section above it is navy,
+   which read as the page ending twice. */
+.bredesign .public-footer {
+  background: var(--bd-navy);
+}
+.bredesign .public-footer,
+.bredesign .footer-pitch,
+.bredesign .footer-details,
+.bredesign .footer-navigation {
+  border-color: var(--bd-rule);
+}
+
+/* The homepage now closes on its own "Book your car in" section, so the
+   footer's pitch block was the same call to action twice in a row. It is kept
+   for the other marketing pages, which have no closing section of their own. */
+.bredesign.bd-home .footer-pitch {
+  display: none;
+}
