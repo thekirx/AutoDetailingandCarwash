@@ -4,13 +4,14 @@
  *   BASE_URL=http://127.0.0.1:5173 node scripts/screenshot-audit.mjs
  *   node scripts/screenshot-audit.mjs --public-only   # skip auth pages
  *
- * Auth (optional): AUDIT_EMAIL + AUDIT_PASSWORD for Super Admin session.
- * Without auth, only public routes are captured.
+ * Auth (required for ops): AUDIT_EMAIL + AUDIT_PASSWORD for Super Admin session.
+ * Without auth, only public routes are captured (or fail if ops expected).
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer'
+import { isLoginWallUrl, isOpsAuthedUrl } from './screenshotAuth.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const stamp = '2026-08-31'
@@ -73,15 +74,28 @@ const OPS_ROUTES = [
   { slug: 'notifications', path: '/operations/notifications' },
 ]
 
+async function dismissCookieBanner(page) {
+  const btn = await page.$('.cookie-consent-secondary, .cookie-consent-primary')
+  if (!btn) return
+  await btn.click().catch(() => null)
+  await new Promise((r) => setTimeout(r, 200))
+}
+
 async function shot(page, route, viewport) {
   const name = `${route.slug}--${viewport.name}.png`
   const file = join(outDir, name)
   try {
     await page.setViewport({ width: viewport.width, height: viewport.height, deviceScaleFactor: 1 })
     await page.goto(`${BASE}${route.path}`, { waitUntil: 'networkidle2', timeout: 45000 })
+    await dismissCookieBanner(page)
     await new Promise((r) => setTimeout(r, 800))
+    const url = page.url()
+    // Ops routes must not silently capture the login wall.
+    if (route.path.startsWith('/operations') && isLoginWallUrl(url)) {
+      return { ok: false, file: name, error: `login wall at ${url}` }
+    }
     await page.screenshot({ path: file, fullPage: true })
-    return { ok: true, file: name }
+    return { ok: true, file: name, url }
   } catch (err) {
     return { ok: false, file: name, error: String(err?.message || err) }
   }
@@ -90,14 +104,27 @@ async function shot(page, route, viewport) {
 async function tryLogin(page) {
   if (!email || !password) return false
   await page.goto(`${BASE}/operations/login`, { waitUntil: 'networkidle2', timeout: 45000 })
+  await dismissCookieBanner(page)
   await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 15000 })
-  await page.type('input[type="email"], input[name="email"]', email, { delay: 10 })
-  await page.type('input[type="password"], input[name="password"]', password, { delay: 10 })
+  const emailSel = await page.$('input[type="email"], input[name="email"]')
+  const passSel = await page.$('input[type="password"], input[name="password"]')
+  if (!emailSel || !passSel) return false
+  await emailSel.click({ clickCount: 3 })
+  await emailSel.type(email, { delay: 10 })
+  await passSel.click({ clickCount: 3 })
+  await passSel.type(password, { delay: 10 })
   await Promise.all([
     page.click('button[type="submit"]'),
-    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 45000 }).catch(() => null),
+    page.waitForFunction(
+      () => {
+        const p = location.pathname
+        return p.startsWith('/operations') && !p.includes('/login')
+      },
+      { timeout: 45000 },
+    ).catch(() => null),
   ])
-  return page.url().includes('/operations')
+  await new Promise((r) => setTimeout(r, 500))
+  return isOpsAuthedUrl(page.url())
 }
 
 const browser = await puppeteer.launch({
@@ -111,6 +138,13 @@ let authed = false
 if (!publicOnly) {
   try {
     authed = await tryLogin(page)
+    if (!authed && email && password) {
+      results.push({
+        ok: false,
+        step: 'login',
+        error: `login failed — still at ${page.url()} (cookie banner dismissed; check credentials)`,
+      })
+    }
   } catch (err) {
     results.push({ ok: false, step: 'login', error: String(err?.message || err) })
   }
@@ -134,15 +168,16 @@ for (const viewport of VIEWPORTS) {
 
 await browser.close()
 
+const failed = results.filter((r) => r.ok === false)
 const summary = {
-  ok: results.every((r) => r.ok !== false || r.step === 'auth'),
+  ok: failed.length === 0,
   base: BASE,
   outDir: `docs/audits/${stamp}/screenshots`,
   captured: results.filter((r) => r.ok).length,
-  failed: results.filter((r) => r.ok === false).length,
+  failed: failed.length,
   authed,
   results,
 }
 writeFileSync(join(root, 'docs/audits', stamp, 'screenshots-manifest.json'), JSON.stringify(summary, null, 2))
 console.log(JSON.stringify(summary, null, 2))
-process.exit(summary.failed > 0 && !authed && publicOnly === false ? 0 : summary.failed && authed ? 1 : 0)
+process.exit(failed.length > 0 ? 1 : 0)

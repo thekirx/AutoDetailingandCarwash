@@ -660,11 +660,12 @@ export async function fetchAdminConsoleSnapshot(profile, branchFilter = 'all') {
   const todaySales = salesRows.filter((r) => r.sale_date === today)
   const todayRevenueMinor = todaySales.reduce((sum, r) => sum + Number(r.total_sales_minor || 0), 0)
 
+  // Align with Finance / Floor Board: books pulse uses paid + posted only.
   const approvedExpenseMinor = expenseRows
-    .filter((r) => ['approved', 'paid'].includes(r.status))
+    .filter((r) => ['paid', 'posted'].includes(r.status))
     .reduce((sum, r) => sum + Number(r.total_minor || 0), 0)
   const pendingExpenseMinor = expenseRows
-    .filter((r) => ['draft', 'pending_approval'].includes(r.status))
+    .filter((r) => ['draft', 'pending_approval', 'approved'].includes(r.status))
     .reduce((sum, r) => sum + Number(r.total_minor || 0), 0)
 
   const profitMinor = revenueMinor - approvedExpenseMinor

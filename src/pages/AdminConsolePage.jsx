@@ -129,7 +129,7 @@ export default function AdminConsolePage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             <MetricCard
               label="Today revenue"
               value={formatPeso(snap?.todayRevenueMinor)}
@@ -138,20 +138,27 @@ export default function AdminConsolePage() {
               tone="good"
             />
             <MetricCard
-              label="Period expenses"
+              label="Sample revenue"
+              value={formatPeso(snap?.revenueMinor)}
+              detail="Recent daily sales rows (not calendar month)"
+              icon={CircleDollarSign}
+              tone="good"
+            />
+            <MetricCard
+              label="Sample expenses"
               value={formatPeso(snap?.approvedExpenseMinor)}
               detail={
                 snap?.pendingExpenseMinor
-                  ? `${formatPeso(snap.pendingExpenseMinor)} pending`
-                  : 'Approved + paid (pulse sample)'
+                  ? `${formatPeso(snap.pendingExpenseMinor)} draft/pending/approved`
+                  : 'Paid + posted (pulse sample)'
               }
               icon={CircleDollarSign}
               tone={snap?.approvedExpenseMinor ? 'warn' : 'default'}
             />
             <MetricCard
-              label={(snap?.profitMinor ?? 0) >= 0 ? 'Period profit' : 'Period loss'}
+              label={(snap?.profitMinor ?? 0) >= 0 ? 'Sample profit' : 'Sample loss'}
               value={formatPeso(snap?.profitMinor)}
-              detail="Revenue − approved/paid expenses"
+              detail={`${formatPeso(snap?.revenueMinor)} − ${formatPeso(snap?.approvedExpenseMinor)}`}
               icon={CircleDollarSign}
               tone={(snap?.profitMinor ?? 0) >= 0 ? 'good' : 'bad'}
             />
@@ -159,7 +166,7 @@ export default function AdminConsolePage() {
             <MetricCard label="Low stock SKUs" value={String(snap?.lowStock?.length || 0)} detail="≤ 10 units" icon={Boxes} tone={snap?.lowStock?.length ? 'warn' : 'good'} />
           </div>
           <p className="text-sm text-muted-foreground">
-            Pulse sample is recent sales days + recent expense rows — full P&amp;L lives on{' '}
+            Pulse sample is recent sales days + recent expense rows — not the Finance reporting window. Full P&amp;L lives on{' '}
             <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/operations/finance">
               Finance
             </Link>
@@ -170,10 +177,10 @@ export default function AdminConsolePage() {
             <OpsTabList
               aria-label="Console sections"
               tabs={[
-                { id: 'queue', label: 'Queue by branch', icon: ClipboardList },
+                { id: 'queue', label: 'Queue', icon: ClipboardList },
                 { id: 'stock', label: 'Stock', icon: Boxes },
                 { id: 'expenses', label: 'Expenses', icon: CircleDollarSign },
-                { id: 'bookings', label: 'Recent tickets', icon: Users },
+                { id: 'bookings', label: 'Tickets', icon: Users },
               ]}
             />
 

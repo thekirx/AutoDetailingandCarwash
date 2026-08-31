@@ -73,9 +73,11 @@ Clock → TL wash / Sales detailing → POS paid → EoS → Finance accept → 
 
 ## Known residuals
 
-1. Live DB seed of full sales/attendance month is optional — dry-run fixture is authoritative for seam tests; live mode upserts operating hours + tagged expenses only.
+1. Live DB seed of full sales/attendance month is optional — dry-run fixture is authoritative for seam tests; live mode upserts operating hours + tagged expenses only (`SEED-LIVE` still open if ops want DB population).
 2. Shop SMS remains **off** until BusyBee IP whitelist is intentionally re-enabled.
-3. Visual revision of screenshots is a human pass — open `screenshots/` and mark items in `OWNER-REVISIONS.md`.
+3. Visual pass completed this session — see `OWNER-REVISIONS.md` (SHOT-AUTH, AC-PULSE, TAB-MOBILE). Re-run harness after UI changes:
+   `BASE_URL=http://127.0.0.1:4173 AUDIT_EMAIL=… AUDIT_PASSWORD=… node scripts/screenshot-audit.mjs`
+4. P6 counter-sale creator ACL is **wontfix** (single-BA lounge). KPI trend charts remain on Finance Overview only.
 
 ## Owner revisions
 
