@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { currentHeroTier, h264TierFor } from '../../../lib/heroTier'
+import {
+  currentHeroOrientation,
+  currentHeroTier,
+  h264TierFor,
+  portraitTierFor,
+} from '../../../lib/heroTier'
 import { isHeroLogoMoment } from '../../../lib/homeHero'
 import { fetchHomeStats, STAT_BASE, STATIC_STATS, withBase } from '../../../lib/homeStats'
 
 import heroPoster from '../../../assets/hero/bredesign-hero-poster.webp'
+import portrait1080Av1 from '../../../assets/hero/bredesign-hero-portrait-1080.av1.mp4'
+import portrait1080H264 from '../../../assets/hero/bredesign-hero-portrait-1080.h264.mp4'
+import portrait720Av1 from '../../../assets/hero/bredesign-hero-portrait-720.av1.mp4'
+import portraitPoster from '../../../assets/hero/bredesign-hero-portrait-poster.webp'
 import hero1080Av1 from '../../../assets/hero/bredesign-hero-1080.av1.mp4'
 import hero1080H264 from '../../../assets/hero/bredesign-hero-1080.h264.mp4'
 import hero1440Av1 from '../../../assets/hero/bredesign-hero-1440.av1.mp4'
@@ -50,6 +59,14 @@ const AV1_BY_TIER = {
 const H264_BY_TIER = {
   720: hero720H264,
   1080: hero1080H264,
+}
+
+/* The portrait cut is a different edit, not a crop: 13.07s against the wide
+   cut's 16.40s, and it carries no opening mark. Its mark windows are the
+   'mobile' entry that already describes this exact clip. */
+const PORTRAIT_AV1_BY_TIER = {
+  720: portrait720Av1,
+  1080: portrait1080Av1,
 }
 
 function CountUp({ value, suffix }) {
@@ -107,6 +124,12 @@ export default function BdHero({ locationLine }) {
      resize would swap the file mid-play for a window drag, so the tier is
      chosen once — a dragged window is not worth restarting the clip. */
   const [tier] = useState(currentHeroTier)
+  const [orientation] = useState(currentHeroOrientation)
+  const isPortrait = orientation === 'portrait'
+  const markVariant = isPortrait ? 'mobile' : 'bredesign'
+  const poster = isPortrait ? portraitPoster : heroPoster
+  const av1Src = isPortrait ? PORTRAIT_AV1_BY_TIER[portraitTierFor(tier)] : AV1_BY_TIER[tier]
+  const h264Src = isPortrait ? portrait1080H264 : H264_BY_TIER[h264TierFor(tier)]
   /* The clip opens and closes on the Hakum mark. The overlay copy clears while
      the mark is on screen so the two never share the frame, and comes back a
      beat after it goes — the same treatment the shipping hero uses. */
@@ -129,7 +152,7 @@ export default function BdHero({ locationLine }) {
 
     // Recomputed from the current time on every tick, so a loop restart needs
     // no special case — the new time simply reads as inside the opening window.
-    const sync = () => setLogoMoment(isHeroLogoMoment('bredesign', node.currentTime))
+    const sync = () => setLogoMoment(isHeroLogoMoment(markVariant, node.currentTime))
 
     node.addEventListener('timeupdate', sync)
     node.addEventListener('seeked', sync)
@@ -138,7 +161,7 @@ export default function BdHero({ locationLine }) {
       node.removeEventListener('timeupdate', sync)
       node.removeEventListener('seeked', sync)
     }
-  }, [videoFailed])
+  }, [videoFailed, markVariant])
 
   // With no video there is no mark to avoid, so the copy simply shows.
   const copyHidden = !videoFailed && logoMoment
@@ -146,7 +169,7 @@ export default function BdHero({ locationLine }) {
   return (
     <section className="bd-hero" id="top">
       {videoFailed ? (
-        <img className="bd-hero-media" src={heroPoster} alt="" />
+        <img className="bd-hero-media" src={poster} alt="" />
       ) : (
         <video
           ref={videoRef}
@@ -155,14 +178,14 @@ export default function BdHero({ locationLine }) {
           muted
           loop
           playsInline
-          poster={heroPoster}
+          poster={poster}
           preload="metadata"
           aria-hidden="true"
           tabIndex={-1}
           onError={() => setVideoFailed(true)}
         >
-          <source src={AV1_BY_TIER[tier]} type={AV1_TYPE} />
-          <source src={H264_BY_TIER[h264TierFor(tier)]} type="video/mp4" />
+          <source src={av1Src} type={AV1_TYPE} />
+          <source src={h264Src} type="video/mp4" />
         </video>
       )}
 

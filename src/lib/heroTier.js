@@ -16,6 +16,20 @@
 
 export const HERO_TIERS = [720, 1080, 1440, 2160]
 
+/* Two cuts, not two encodes of one cut. The desktop clip is 16:9 and the
+   mobile clip is a 9:16 re-frame — cropping the wide one into a phone's tall
+   viewport drops the polisher and the person out of frame entirely, which is
+   the whole reason a separate portrait edit exists. Chosen on the shape of the
+   viewport rather than its width, so a phone held sideways gets the wide cut. */
+export function pickHeroOrientation({ width = 1440, height = 900 } = {}) {
+  return height > width ? 'portrait' : 'landscape'
+}
+
+export function currentHeroOrientation() {
+  if (typeof window === 'undefined') return 'landscape'
+  return pickHeroOrientation({ width: window.innerWidth, height: window.innerHeight })
+}
+
 const TOP_TIER_MIN_CORES = 8
 
 export function pickHeroTier({
@@ -63,5 +77,11 @@ export function currentHeroTier() {
    to 1080p: the same picture at 1440p in H.264 is roughly 15 MB, which defeats
    the point of offering a higher tier at all. */
 export function h264TierFor(tier) {
+  return tier <= 720 ? 720 : 1080
+}
+
+/* The portrait cut ships at 720 and 1080 only: no phone draws more, and the
+   H.264 fallback there is a single 1080 file. */
+export function portraitTierFor(tier) {
   return tier <= 720 ? 720 : 1080
 }
