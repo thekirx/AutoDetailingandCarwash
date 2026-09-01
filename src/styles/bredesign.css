@@ -910,7 +910,7 @@
 }
 .bredesign .footer-branches > a span {
   font-size: 11px;
-  color: #8f98ad;
+  color: #a2abc0;   /* #8f98ad measured 4.09:1 here, just under AA */
 }
 .bredesign .footer-branches > a small {
   color: #9aa3b8;
@@ -1198,4 +1198,49 @@
    narrow enough that the eye returns more often than it reads. */
 .bredesign .partnership-card-head p {
   max-width: 46ch;
+}
+
+/* ==== Light sections inside the dark scope ==============================
+   The scope paints text for a dark ground. A section that sets its own paper
+   background inside it inherits that ink and renders near-white on near-white
+   — which is how the ceramic band's heading became invisible.
+   Any section with a light ground of its own belongs on this list. */
+
+.bredesign .coating-section,
+.bredesign .bd-on-paper {
+  color: var(--color-text-primary);
+}
+.bredesign .coating-section h1,
+.bredesign .coating-section h2,
+.bredesign .coating-section h3,
+.bredesign .bd-on-paper h1,
+.bredesign .bd-on-paper h2,
+.bredesign .bd-on-paper h3 {
+  color: var(--color-text-primary);
+}
+/* Anything inside those sections that sits on its own photograph keeps light
+   ink — the ceramic package panels are a paper section containing dark cards,
+   so the rule above would otherwise darken the type laid over the picture. */
+.bredesign .coating-section .ceramic-package-panel,
+.bredesign .coating-section .ceramic-package-panel h1,
+.bredesign .coating-section .ceramic-package-panel h2,
+.bredesign .coating-section .ceramic-package-panel h3 {
+  color: var(--color-text-inverse);
+}
+
+/* PPF packages: the step numeral lands at 4.09:1 and the two supporting lines
+   at 12px. Small lifts, no layout change. */
+.bredesign .ppf-detail-block p,
+.bredesign .ppf-model-attribution {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.bredesign .ppf-step-index {
+  color: rgba(241, 241, 237, 0.72);
+}
+
+/* The package tab numerals ship at 9px on #7892ed — 4.09:1, just under AA. */
+.bredesign .package-tabs button span {
+  color: #9db4ff;
+  font-size: 10px;
 }
