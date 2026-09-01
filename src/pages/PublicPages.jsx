@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CeramicSection } from '../components/public/home/HomeServiceSections'
 
@@ -195,115 +195,106 @@ export function BranchesPage() {
     }
   }, [branches])
 
+  useReveal()
+
   return (
-    <section className="hb-sites">
-      <div className="lq-picker-bg" aria-hidden />
-      <div className="lq-picker-noise" aria-hidden />
-      <div className="public-shell hb-sites-inner">
-        <div className="hb-sites-copy">
-          <img src="/branding/hakum-wm-ow.png" alt="Hakum" className="lq-picker-wm" width={180} height={44} />
-          <p className="lq-kicker">
-            <span className="lq-pulse">
-              <span className="lq-pulse-dot" aria-hidden />
-              Find Hakum
-            </span>
-          </p>
-          <h1 className="lq-picker-title">
+    <>
+      <BdPageHero
+        eyebrow="Find Hakum"
+        title={
+          <>
             Our branches.
             <br />
-            <i>One standard.</i>
-          </h1>
-          <p className="lq-picker-lede">
-            Premium care across {branchLabel(branches.length)}. Comfortable spaces and teams who take pride in the details.
-          </p>
-          <nav className="hb-sites-links" aria-label="Quick links">
-            <Link className="lq-text-link" to="/queue">
-              Live queue
-            </Link>
-            <Link className="lq-text-link" to="/book">
-              Book a service
-            </Link>
-            <Link className="lq-text-link" to="/contact">
-              Contact
-            </Link>
-          </nav>
-        </div>
+            <em>One standard.</em>
+          </>
+        }
+        copy={`Premium care across ${branchLabel(branches.length)}. Comfortable spaces, and teams who take pride in the details.`}
+      >
+        <nav className="bd-cta-row bd-page-hero-links" aria-label="Quick links">
+          <Link className="bd-btn bd-btn-primary" to="/book">
+            Book a service
+          </Link>
+          <Link className="bd-btn bd-btn-quiet" to="/queue">
+            Live queue
+          </Link>
+        </nav>
+      </BdPageHero>
 
-        <div className="hb-sites-grid" aria-label="Branch locations">
-          {error ? <p className="lq-picker-error">{error}</p> : null}
-          {loading ? (
-            <>
-              <div className="lq-skeleton hb-sites-skel" />
-              <div className="lq-skeleton hb-sites-skel" />
-            </>
+      <section id="locations">
+        <div className="bd-shell">
+          {error ? (
+            <p className="bd-state is-error" role="alert">
+              {error}
+            </p>
           ) : null}
-          {branches.map((b, index) => (
-            <BranchSiteCard key={b.slug} branch={b} index={index} hours={hoursBySlug[b.slug] || []} />
-          ))}
-          {!loading && !branches.length ? (
-            <p className="lq-picker-empty">No branches listed yet.</p>
+          {loading ? <p className="bd-state">Loading branches…</p> : null}
+
+          <div className="bd-site-grid bd-reveal">
+            {branches.map((b) => (
+              <BranchSiteCard key={b.slug} branch={b} hours={hoursBySlug[b.slug] || []} />
+            ))}
+          </div>
+
+          {!loading && !branches.length && !error ? (
+            <p className="bd-state">No branches listed yet.</p>
           ) : null}
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   )
 }
 
-function BranchSiteCard({ branch, index, hours = [] }) {
+function BranchSiteCard({ branch, hours = [] }) {
   const comingSoon = Boolean(branch.coming_soon)
   const mapsUrl =
     branch.latitude != null && branch.longitude != null
       ? `https://www.openstreetmap.org/?mlat=${branch.latitude}&mlon=${branch.longitude}#map=16/${branch.latitude}/${branch.longitude}`
       : null
   const summary = hours.length ? formatHoursSummary(hours) : null
-  const badge = comingSoon ? 'Coming soon' : hours.length ? openNowLabel(hours) : 'Hours TBD'
+  // openNowLabel reads the live hours, so the badge is a fact rather than a
+  // static label; a branch with no hours on file says so instead of guessing.
+  const badge = comingSoon ? 'Coming soon' : hours.length ? openNowLabel(hours) : 'Hours to be confirmed'
+  const tone = comingSoon ? 'soon' : hours.length && /open/i.test(badge) ? 'open' : 'shut'
 
   return (
-    <article className={`hb-site${comingSoon ? ' is-soon' : ''}`} style={{ '--i': index }}>
-      <div className="hb-site-shell">
-        <div className="hb-site-core">
-          <div className="hb-site-visual">
-            <img src="/branding/hakum-mark-ow.png" alt="" className="hb-site-mark" width={44} height={44} />
-            <span className="hb-site-badge">{badge}</span>
-          </div>
-          <div className="hb-site-body">
-            <p className="hb-site-kicker">Hakum Auto Care</p>
-            <h2 className="hb-site-title">{branch.name}</h2>
-            <p className="hb-site-address">{branch.address || 'Address coming soon'}</p>
-            <p className="hb-site-hours">
-              {comingSoon
-                ? 'Opening soon — ask us for updates'
-                : summary || 'Queue times vary by branch load'}
-            </p>
-            <div className="hb-site-actions">
-              {comingSoon ? (
-                <Link className="hb-btn hb-btn-primary" to="/contact">
-                  Ask about opening
-                  <span className="hb-btn-arrow" aria-hidden>
-                    ↗
-                  </span>
-                </Link>
-              ) : (
-                <>
-                  <Link className="hb-btn hb-btn-primary" to="/book">
-                    Book this branch
-                    <span className="hb-btn-arrow" aria-hidden>
-                      ↗
-                    </span>
-                  </Link>
-                  <Link className="hb-btn hb-btn-ghost" to={`/queue/${branch.slug}`}>
-                    Live queue
-                  </Link>
-                </>
-              )}
-              {mapsUrl ? (
-                <a className="hb-text-link" href={mapsUrl} target="_blank" rel="noreferrer">
-                  Open map
-                </a>
-              ) : null}
-            </div>
-          </div>
-        </div>
+    <article className="bd-site">
+      <div className="bd-site-top">
+        <h2>{branch.name.replace(/^Hakum Auto Care\s*/i, '') || branch.name}</h2>
+        <span className={`bd-status bd-status-${tone}`}>
+          <i aria-hidden="true" />
+          {badge}
+        </span>
+      </div>
+
+      <dl className="bd-site-facts">
+        <dt>Address</dt>
+        <dd>{branch.address || 'Address coming soon'}</dd>
+        <dt>Hours</dt>
+        <dd>
+          {comingSoon ? 'Opening soon — ask us for updates' : summary || 'Queue times vary by branch load'}
+        </dd>
+      </dl>
+
+      <div className="bd-site-actions">
+        {comingSoon ? (
+          <Link className="bd-btn bd-btn-primary" to="/contact">
+            Ask about opening
+          </Link>
+        ) : (
+          <>
+            <Link className="bd-btn bd-btn-primary" to="/book">
+              Book this branch
+            </Link>
+            <Link className="bd-btn bd-btn-quiet" to={`/queue/${branch.slug}`}>
+              Live queue
+            </Link>
+          </>
+        )}
+        {mapsUrl ? (
+          <a className="bd-site-map" href={mapsUrl} target="_blank" rel="noreferrer noopener">
+            Open in maps <ArrowUpRight size={13} aria-hidden="true" />
+          </a>
+        ) : null}
       </div>
     </article>
   )

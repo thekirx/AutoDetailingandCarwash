@@ -1092,3 +1092,80 @@
   font-size: 14px;
   line-height: 1.65;
 }
+
+/* ==== Branch locations =================================================== */
+
+.bredesign .bd-page-hero-links {
+  margin-top: 28px;
+}
+.bredesign .bd-site-grid {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 760px) {
+  .bredesign .bd-site-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+}
+.bredesign .bd-site {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: clamp(22px, 2.6vw, 32px);
+  background: var(--bd-navy-2);
+  border: 1px solid var(--bd-rule);
+  box-shadow: var(--bd-lit);
+}
+.bredesign .bd-site-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.bredesign .bd-site-top h2 {
+  font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bredesign .bd-site-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 18px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.bredesign .bd-site-facts dt {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--bd-ink-3);
+  padding-top: 3px;
+}
+.bredesign .bd-site-facts dd {
+  margin: 0;
+  color: var(--bd-paper);
+}
+.bredesign .bd-site-actions {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.bredesign .bd-site-map {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+  text-decoration: none;
+}
+.bredesign .bd-site-map:hover {
+  text-decoration: underline;
+}
