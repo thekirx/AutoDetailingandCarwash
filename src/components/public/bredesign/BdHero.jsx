@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { isHeroLogoMoment } from '../../../lib/homeHero'
+
 import heroPoster from '../../../assets/hero/bredesign-hero-poster.webp'
 import heroVideo from '../../../assets/hero/bredesign-hero.mp4'
 
@@ -63,6 +65,31 @@ function CountUp({ value, suffix }) {
 
 export default function BdHero({ locationLine }) {
   const [videoFailed, setVideoFailed] = useState(false)
+  /* The clip opens and closes on the Hakum mark. The overlay copy clears while
+     the mark is on screen so the two never share the frame, and comes back a
+     beat after it goes — the same treatment the shipping hero uses. */
+  const [logoMoment, setLogoMoment] = useState(true)
+  const videoRef = useRef(null)
+
+  useEffect(() => {
+    const node = videoRef.current
+    if (!node) return undefined
+
+    // Recomputed from the current time on every tick, so a loop restart needs
+    // no special case — the new time simply reads as inside the opening window.
+    const sync = () => setLogoMoment(isHeroLogoMoment('bredesign', node.currentTime))
+
+    node.addEventListener('timeupdate', sync)
+    node.addEventListener('seeked', sync)
+    sync()
+    return () => {
+      node.removeEventListener('timeupdate', sync)
+      node.removeEventListener('seeked', sync)
+    }
+  }, [videoFailed])
+
+  // With no video there is no mark to avoid, so the copy simply shows.
+  const copyHidden = !videoFailed && logoMoment
 
   return (
     <section className="bd-hero" id="top">
@@ -70,6 +97,7 @@ export default function BdHero({ locationLine }) {
         <img className="bd-hero-media" src={heroPoster} alt="" />
       ) : (
         <video
+          ref={videoRef}
           className="bd-hero-media"
           autoPlay
           muted
@@ -85,7 +113,10 @@ export default function BdHero({ locationLine }) {
         </video>
       )}
 
-      <div className="bd-shell bd-hero-in">
+      <div
+        className={`bd-shell bd-hero-in${copyHidden ? ' is-logo-moment' : ''}`}
+        aria-hidden={copyHidden || undefined}
+      >
         <p className="bd-eyebrow">{locationLine}</p>
         <h1>
           Give your car

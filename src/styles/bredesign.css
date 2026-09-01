@@ -852,3 +852,20 @@
 .bredesign.bd-home .footer-pitch {
   display: none;
 }
+
+/* The clip opens and closes on the Hakum mark; the copy steps aside for it
+   rather than sitting on top of it. Hidden from assistive tech too while it is
+   out, so a screen reader is not told about a heading nobody can see. */
+.bredesign .bd-hero-in {
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.bredesign .bd-hero-in.is-logo-moment {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bredesign .bd-hero-in {
+    transition: none;
+  }
+}
