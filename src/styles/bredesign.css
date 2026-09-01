@@ -1207,15 +1207,28 @@
    Any section with a light ground of its own belongs on this list. */
 
 .bredesign .coating-section,
+.bredesign .content-section,
 .bredesign .bd-on-paper {
   color: var(--color-text-primary);
 }
 .bredesign .coating-section h1,
 .bredesign .coating-section h2,
 .bredesign .coating-section h3,
+.bredesign .content-section h1,
+.bredesign .content-section h2,
+.bredesign .content-section h3,
 .bredesign .bd-on-paper h1,
 .bredesign .bd-on-paper h2,
 .bredesign .bd-on-paper h3 {
+  color: var(--color-text-primary);
+}
+/* Links and labels inside a paper section take the brand blue, not the lifted
+   accent — the accent is tuned for navy and measures under 2:1 on paper. */
+.bredesign .content-section .dark-link,
+.bredesign .content-section a {
+  color: var(--bd-blue);
+}
+.bredesign .content-section label {
   color: var(--color-text-primary);
 }
 /* Anything inside those sections that sits on its own photograph keeps light
@@ -1251,4 +1264,127 @@
 .bredesign .ppf-information-heading span {
   font-size: 14px;
   line-height: 1.6;
+}
+
+/* ==== Events list ======================================================== */
+
+.bredesign .bd-event-stack {
+  display: grid;
+  gap: 18px;
+}
+.bredesign .bd-event-row {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  box-shadow: var(--bd-lit);
+}
+@media (min-width: 820px) {
+  .bredesign .bd-event-row {
+    grid-template-columns: 0.9fr 1.1fr;
+  }
+}
+.bredesign .bd-event-media {
+  display: block;
+  overflow: hidden;
+}
+.bredesign .bd-event-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 360px;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.bredesign .bd-event-media:hover img {
+  transform: scale(1.04);
+}
+.bredesign .bd-event-row-body {
+  padding: clamp(22px, 2.8vw, 36px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+.bredesign .bd-event-row-body h2 {
+  font-size: clamp(1.3rem, 2.4vw, 1.85rem);
+}
+.bredesign .bd-event-row-body h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+.bredesign .bd-event-row-body h2 a:hover {
+  color: var(--bd-accent);
+}
+
+/* .dark-link is named for a light ground — it is a dark ink, so on navy it
+   measures 1.52:1. Used by the events and blog page footers. */
+.bredesign .dark-link {
+  color: var(--bd-accent);
+}
+.bredesign .dark-link:hover {
+  color: var(--bd-paper);
+}
+
+/* ==== Blog list ========================================================== */
+
+.bredesign .bd-post {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  box-shadow: var(--bd-lit);
+  transition: transform 0.24s, border-color 0.24s;
+}
+.bredesign .bd-post:hover {
+  transform: translateY(-4px);
+  border-color: var(--bd-accent);
+}
+.bredesign .bd-post-media {
+  display: block;
+  overflow: hidden;
+}
+.bredesign .bd-post-media img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.bredesign .bd-post:hover .bd-post-media img {
+  transform: scale(1.04);
+}
+.bredesign .bd-post-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+.bredesign .bd-post-body h2 {
+  font-size: 1.2rem;
+}
+.bredesign .bd-post-body h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+.bredesign .bd-post-body h2 a:hover {
+  color: var(--bd-accent);
+}
+/* Excerpts run to whatever length the author wrote, so the card caps them
+   rather than growing to fit and breaking the row rhythm. */
+.bredesign .bd-post-excerpt {
+  color: var(--bd-ink-2);
+  font-size: 14px;
+  line-height: 1.65;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bredesign .bd-post-body .bd-card-go {
+  margin-top: auto;
+  text-decoration: none;
 }
