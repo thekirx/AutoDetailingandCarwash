@@ -869,3 +869,52 @@
     transition: none;
   }
 }
+
+/* ==== Readability pass ==================================================
+   Measured against WCAG AA on the actual rendered page rather than eyeballed.
+   Two classes of problem: body copy set too small to read comfortably on a
+   dark ground, and inherited footer chrome that fails contrast outright. */
+
+/* 13.5px and 12.5px are fine on paper and hard work reversed out of navy.
+   Body copy moves to 14.5px and the feature cells to 13.5px, both with looser
+   leading — reversed type needs more air than dark-on-light. */
+.bredesign .bd-service-body p {
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+.bredesign .bd-why-points span {
+  font-size: 14px;
+  line-height: 1.65;
+}
+.bredesign .bd-head > p,
+.bredesign .bd-event-summary,
+.bredesign .bd-branch-address {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.bredesign .bd-why-lede {
+  font-size: 15.5px;
+  line-height: 1.75;
+}
+
+/* The footer nav ships at 9px on #535966 — 2.74:1, well under AA, and below
+   any sensible minimum size regardless of contrast. Same for the branch
+   numerals at 3.09:1. Lifted to 11px and an ink that clears 4.5:1 on the
+   footer ground. */
+.bredesign .footer-navigation {
+  font-size: 11px;
+  color: #9aa3b8;
+}
+.bredesign .footer-navigation a:hover {
+  color: var(--bd-paper);
+}
+.bredesign .footer-branches > a span {
+  font-size: 11px;
+  color: #8f98ad;
+}
+.bredesign .footer-branches > a small {
+  color: #9aa3b8;
+}
+.bredesign .footer-kicker {
+  color: #9aa3b8;
+}

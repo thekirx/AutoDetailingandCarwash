@@ -20,22 +20,12 @@ const navItems = [
   ['Contact', '/contact'],
 ]
 
-// Marketing routes. Everything not listed keeps the shipping look: the booking
-// flow, the live queue, sign-in and the account area all stay as they are.
-const BREDESIGN_ROUTES = [
-  '/home',
-  '/services',
-  '/packages',
-  '/branches',
-  '/partnerships',
-  '/events',
-  '/blog',
-  '/contact',
-  '/complaints',
-  '/terms',
-  '/privacy',
-  '/cookies',
-]
+// Routes actually rebuilt in BreDESIGN. A page only joins this list once its
+// own sections exist, because the scope repaints headings and body text for a
+// dark ground — applied to a page still built for paper, it renders white
+// headings on a paper section and they vanish. The remaining marketing routes
+// keep the shipping look until Phase 4 rebuilds them.
+const BREDESIGN_ROUTES = ['/home']
 
 function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
   return (
