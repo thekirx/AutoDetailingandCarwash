@@ -1244,3 +1244,11 @@
   color: #9db4ff;
   font-size: 10px;
 }
+
+/* The install sequence's chapter copy and intro line ship at 13px. They sit
+   over footage rather than a flat ground, where small type is harder still. */
+.bredesign .ppf-information-chapter p,
+.bredesign .ppf-information-heading span {
+  font-size: 14px;
+  line-height: 1.6;
+}

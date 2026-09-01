@@ -97,10 +97,10 @@ export function BdServices() {
   )
 }
 
-export function BdWhySections() {
+export function BdWhySections({ exclude = [] }) {
   return (
     <>
-      {WHY_SECTIONS.map((section) => (
+      {WHY_SECTIONS.filter((s) => !exclude.includes(s.id)).map((section) => (
         <section
           className={`bd-why${section.flip ? ' is-flipped' : ''}`}
           id={section.id}
