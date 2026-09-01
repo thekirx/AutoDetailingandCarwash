@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { getHeroVideoVariant, isHeroLogoMoment } from '../../../lib/homeHero'
+import { currentHeroTier, h264TierFor } from '../../../lib/heroTier'
+import { isHeroLogoMoment } from '../../../lib/homeHero'
 import { fetchHomeStats, STAT_BASE, STATIC_STATS, withBase } from '../../../lib/homeStats'
 
 import heroPoster from '../../../assets/hero/bredesign-hero-poster.webp'
 import hero1080Av1 from '../../../assets/hero/bredesign-hero-1080.av1.mp4'
 import hero1080H264 from '../../../assets/hero/bredesign-hero-1080.h264.mp4'
+import hero1440Av1 from '../../../assets/hero/bredesign-hero-1440.av1.mp4'
+import hero2160Av1 from '../../../assets/hero/bredesign-hero-2160.av1.mp4'
 import hero720Av1 from '../../../assets/hero/bredesign-hero-720.av1.mp4'
 import hero720H264 from '../../../assets/hero/bredesign-hero-720.h264.mp4'
 
@@ -37,9 +40,16 @@ function buildStats(live) {
    without it Safari would claim the AV1 file and fail to decode. */
 const AV1_TYPE = 'video/mp4; codecs="av01.0.08M.08"'
 
-const HERO_SOURCES = {
-  desktop: { av1: hero1080Av1, h264: hero1080H264 },
-  mobile: { av1: hero720Av1, h264: hero720H264 },
+const AV1_BY_TIER = {
+  720: hero720Av1,
+  1080: hero1080Av1,
+  1440: hero1440Av1,
+  2160: hero2160Av1,
+}
+
+const H264_BY_TIER = {
+  720: hero720H264,
+  1080: hero1080H264,
 }
 
 function CountUp({ value, suffix }) {
@@ -93,17 +103,10 @@ function CountUp({ value, suffix }) {
 export default function BdHero({ locationLine }) {
   const [videoFailed, setVideoFailed] = useState(false)
   const [live, setLive] = useState({ servicesDone: null, returningClients: null })
-  /* A phone showing a 390px-wide backdrop has no use for a 1080p file, so it
-     gets the 720p cut instead — a third of the bytes over a mobile connection. */
-  const [variant, setVariant] = useState(() =>
-    typeof window === 'undefined' ? 'desktop' : getHeroVideoVariant(window.innerWidth),
-  )
-
-  useEffect(() => {
-    const onResize = () => setVariant(getHeroVideoVariant(window.innerWidth))
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
+  /* Sized to the pixels this screen can actually draw, then held. Re-picking on
+     resize would swap the file mid-play for a window drag, so the tier is
+     chosen once — a dragged window is not worth restarting the clip. */
+  const [tier] = useState(currentHeroTier)
   /* The clip opens and closes on the Hakum mark. The overlay copy clears while
      the mark is on screen so the two never share the frame, and comes back a
      beat after it goes — the same treatment the shipping hero uses. */
@@ -146,9 +149,6 @@ export default function BdHero({ locationLine }) {
         <img className="bd-hero-media" src={heroPoster} alt="" />
       ) : (
         <video
-          // Keyed on the variant so a resize across the breakpoint remounts the
-          // element; changing <source> children alone would not reload it.
-          key={variant}
           ref={videoRef}
           className="bd-hero-media"
           autoPlay
@@ -161,8 +161,8 @@ export default function BdHero({ locationLine }) {
           tabIndex={-1}
           onError={() => setVideoFailed(true)}
         >
-          <source src={HERO_SOURCES[variant].av1} type={AV1_TYPE} />
-          <source src={HERO_SOURCES[variant].h264} type="video/mp4" />
+          <source src={AV1_BY_TIER[tier]} type={AV1_TYPE} />
+          <source src={H264_BY_TIER[h264TierFor(tier)]} type="video/mp4" />
         </video>
       )}
 
