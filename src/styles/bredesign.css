@@ -1208,6 +1208,9 @@
 
 .bredesign .coating-section,
 .bredesign .content-section,
+.bredesign .contact-page,
+.bredesign .booking-page,
+.bredesign .legal-page,
 .bredesign .bd-on-paper {
   color: var(--color-text-primary);
 }
@@ -1217,6 +1220,15 @@
 .bredesign .content-section h1,
 .bredesign .content-section h2,
 .bredesign .content-section h3,
+.bredesign .contact-page h1,
+.bredesign .contact-page h2,
+.bredesign .contact-page h3,
+.bredesign .booking-page h1,
+.bredesign .booking-page h2,
+.bredesign .booking-page h3,
+.bredesign .legal-page h1,
+.bredesign .legal-page h2,
+.bredesign .legal-page h3,
 .bredesign .bd-on-paper h1,
 .bredesign .bd-on-paper h2,
 .bredesign .bd-on-paper h3 {
@@ -1225,11 +1237,25 @@
 /* Links and labels inside a paper section take the brand blue, not the lifted
    accent — the accent is tuned for navy and measures under 2:1 on paper. */
 .bredesign .content-section .dark-link,
-.bredesign .content-section a {
+.bredesign .content-section a,
+.bredesign .contact-page a,
+.bredesign .booking-page a,
+.bredesign .legal-page a {
   color: var(--bd-blue);
 }
-.bredesign .content-section label {
+.bredesign .content-section label,
+.bredesign .contact-page label,
+.bredesign .booking-page label,
+.bredesign .contact-page strong,
+.bredesign .booking-page strong {
   color: var(--color-text-primary);
+}
+/* Cards inside these paper pages that carry their own dark ground keep the
+   light ink they were designed with. */
+.bredesign .contact-page .contact-card.is-dark,
+.bredesign .contact-page .contact-card.is-dark strong,
+.bredesign .booking-page .booking-card.is-dark {
+  color: var(--color-text-inverse);
 }
 /* Anything inside those sections that sits on its own photograph keeps light
    ink — the ceramic package panels are a paper section containing dark cards,
@@ -1387,4 +1413,27 @@
 .bredesign .bd-post-body .bd-card-go {
   margin-top: auto;
   text-decoration: none;
+}
+
+/* Paper-page inks that sit a hair under AA once the ground is correct. */
+/* #777 measures 4.48:1 on these cards — a hair under AA at 13px. The text is
+   in a child of the class that names it, which is why targeting the container
+   did nothing. */
+.bredesign .contact-card-hint,
+.bredesign .contact-branch-copy small,
+.bredesign .contact-branch-copy span {
+  color: #5f5f5f;
+}
+/* The shipping rule is .booking-grid>div>p:last-child, which is more specific
+   than a plain descendant selector — matching it is why this needed the same
+   shape rather than a shorter one. #777 measures 3.88:1 on the paper ground. */
+.bredesign .booking-grid > div > p:last-child {
+  color: var(--color-text-secondary);
+}
+/* Legal prose ran to ~93 characters. Long-form text is the one place line
+   length matters most, since the eye makes the return sweep hundreds of times. */
+.bredesign .legal-body p,
+.bredesign .legal-body li,
+.bredesign .legal-note {
+  max-width: 74ch;
 }
