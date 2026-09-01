@@ -1,7 +1,18 @@
 /** Payroll register: SA/ASA wizard from POS proof → payout lines → confirm. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
-import { Banknote, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Banknote,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  History,
+  LayoutDashboard,
+  Play,
+  Receipt,
+  Settings2,
+  Wallet,
+} from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessPayroll,
@@ -13,6 +24,9 @@ import { listBranches } from '@/lib/adminApi'
 import {
   DEFAULT_COMPENSATION_RULES,
   PAYOUT_FREQUENCIES,
+  attendanceRowForPayroll,
+  hoursForAttendanceDay,
+  indexBranchOperatingHours,
   normalizeCompensationSettings,
   toCompensationSettingsRow,
 } from '@/lib/compensation'
@@ -24,10 +38,17 @@ import {
   addPayrollAdjustment,
   addPayrollCommission,
   adjustPayrollLine,
+  applySalaryDraftExtrasToPreview,
   buildPayrollPreview,
+  buildPendingFloorPayrollQueue,
   buildRunPayrollPayload,
+  collectSalaryDraftExtrasFromCloses,
+  filterCeramicExpensesForSales,
+  floorConfirmBlockedByPendingCloses,
   groupPayrollLinesByStaff,
   netPayrollLinesMinor,
+  posProofTotalsByBranchDay,
+  saleBusinessDate,
   payrollBlocksConfirm,
   payrollPeriodRange,
   payrollWizardSteps,
@@ -35,9 +56,6 @@ import {
   rebuildWashPoolLines,
   removeStaffFromPayrollPreview,
   resolveFixedSalaryBranch,
-  buildPendingFloorPayrollQueue,
-  floorConfirmBlockedByPendingCloses,
-  posProofTotalsByBranchDay,
   validatePayrollAdjustment,
   validatePayrollCustomRange,
 } from '@/lib/payroll'
@@ -51,6 +69,12 @@ import { Label } from '@/components/ui/label'
 import { NamedSelect } from '@/components/ui/named-select'
 import { toast } from 'sonner'
 import PayrollCashAdvancesPanel from '@/components/PayrollCashAdvancesPanel'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
+import { PAYROLL_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
+import { opsTabSearchParams, resolveOpsTab } from '@/lib/opsShell'
+import { Tabs } from '@/components/ui/tabs'
 
 const FREQ_LABELS = {
   daily: 'Daily',
@@ -62,6 +86,18 @@ const FREQ_LABELS = {
 }
 
 const SETTINGS_FREQUENCIES = PAYOUT_FREQUENCIES.filter((f) => f !== 'custom')
+
+/** Source-scan contract — keep literal ids for ops shell tests. */
+const PAYROLL_SHELL_TABS = [
+  { id: 'home', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'run', label: 'Run payroll', icon: Play },
+  { id: 'cash-advance', label: 'Cash advances', icon: Wallet },
+  { id: 'packages', label: 'Salaries', icon: Receipt },
+  { id: 'history', label: 'Payouts', icon: History },
+  { id: 'rules', label: 'Rules', icon: Settings2 },
+]
+
+const PAYROLL_TAB_IDS = PAYROLL_SHELL_TABS.map((t) => t.id)
 
 const WEEKDAYS = [
   { value: '0', label: 'Sunday' },
@@ -84,9 +120,7 @@ export default function PayrollPage() {
   const scope = getBranchScopeList(profile)
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const initialTab = ['home', 'run', 'cash-advance', 'packages', 'history', 'rules'].includes(tabParam)
-    ? tabParam
-    : 'home'
+  const initialTab = resolveOpsTab(tabParam, PAYROLL_TAB_IDS, 'home')
 
   const [tab, setTab] = useState(initialTab)
   const [step, setStep] = useState(0)
@@ -112,6 +146,13 @@ export default function PayrollPage() {
 
   const wizardSteps = useMemo(() => payrollWizardSteps(runKind), [runKind])
   const stepId = wizardSteps[step]?.id
+  const setShellTab = useCallback(
+    (next) => {
+      setTab(next)
+      setSearchParams(opsTabSearchParams(next, 'home'), { replace: true })
+    },
+    [setSearchParams],
+  )
   const staffGroups = useMemo(
     () => (preview?.lines ? groupPayrollLinesByStaff(preview.lines) : []),
     [preview?.lines],
@@ -176,7 +217,11 @@ export default function PayrollPage() {
           sale_id: s.sale_id,
           branch: s.branch,
           total_minor: s.total_minor,
-          business_date: String(s.sales?.occurred_at || '').slice(0, 10),
+          occurred_at: s.sales?.occurred_at || null,
+          business_date: saleBusinessDate({
+            occurred_at: s.sales?.occurred_at,
+            business_date: s.business_date,
+          }),
         })),
       }))
     let q = supabase
@@ -259,8 +304,7 @@ export default function PayrollPage() {
     setPeriodEnd(period_end)
     setPreview(null)
     setStep(0)
-    setTab('run')
-    setSearchParams({ tab: 'run' }, { replace: true })
+    setShellTab('run')
     toast.message(
       readyDays.length > 1
         ? `Floor window ${period_start} → ${period_end} · ${readyDays.length} ready days`
@@ -328,7 +372,7 @@ export default function PayrollPage() {
           : collectPaged(async (from, to) => {
               let q = supabase
                 .from('sales')
-                .select('id, branch, status, total_minor, occurred_at, sale_line_items(line_total_minor, services(pay_category))')
+                .select('id, branch, status, total_minor, occurred_at, sale_line_items(line_total_minor, services(pay_category, salary_pct))')
                 .eq('status', 'paid')
                 .gte('occurred_at', startIso)
                 .lte('occurred_at', endIso)
@@ -343,7 +387,9 @@ export default function PayrollPage() {
           : collectPaged(async (from, to) => {
               let q = supabase
                 .from('staff_attendance')
-                .select('staff_id, branch_slug, attendance_date, status, staff_profiles(id, full_name, role)')
+                .select(
+                  'staff_id, branch_slug, attendance_date, status, checked_in_at, staff_profiles(id, full_name, role)',
+                )
                 .gte('attendance_date', periodStart)
                 .lte('attendance_date', periodEnd)
               if (branch) q = q.eq('branch_slug', branch)
@@ -354,12 +400,13 @@ export default function PayrollPage() {
         isFixed
           ? emptyList
           : collectPaged(async (from, to) => {
+              // Soft lower bound only — drafts may land after the sale day; sale-id filter below is truth.
+              const softStart = `${periodStart}T00:00:00+08:00`
               let q = supabase
                 .from('expenses')
-                .select('description, total_minor, branch, expense_kind')
+                .select('description, total_minor, branch, expense_kind, created_at')
                 .or('description.like.ceramic:%,description.like.detailing:%')
-                .gte('created_at', startIso)
-                .lte('created_at', endIso)
+                .gte('created_at', softStart)
               if (branch) q = q.eq('branch', branch)
               const { data, error } = await q.range(from, to)
               if (error) throw error
@@ -372,18 +419,18 @@ export default function PayrollPage() {
               if (error) throw error
               return data || []
             }, 1000),
-        (() => {
-          let q = supabase
-            .from('staff_pay_packages')
-            .select(
-              'id, staff_id, package_kind, amount_minor, effective_from, notes, is_active, branch, staff_profiles(id, full_name, branch_slug, role)',
-            )
-            .eq('is_active', true)
-            .lte('effective_from', periodEnd)
-          // Fixed salary: company-wide packages (any / null branch). Floor: bay packages only.
-          if (!isFixed && branch) q = q.eq('branch', branch)
-          return q
-        })(),
+        isFixed
+          ? (() => {
+              let q = supabase
+                .from('staff_pay_packages')
+                .select(
+                  'id, staff_id, package_kind, amount_minor, effective_from, notes, is_active, branch, staff_profiles(id, full_name, branch_slug, role)',
+                )
+                .eq('is_active', true)
+                .lte('effective_from', periodEnd)
+              return q
+            })()
+          : Promise.resolve({ data: [], error: null }),
         supabase
           .from('staff_profiles')
           .select('id, full_name, role, branch_slug')
@@ -392,35 +439,59 @@ export default function PayrollPage() {
       ])
       if (pkgRows.error) throw pkgRows.error
       if (staffRows.error) throw staffRows.error
-      setPackages(pkgRows.data || [])
+      if (isFixed) setPackages(pkgRows.data || [])
       setStaffRoster(staffRows.data || [])
 
-      const attendance = (attRows || []).map((row) => ({
-        id: row.staff_id,
-        staff_id: row.staff_id,
-        full_name: row.staff_profiles?.full_name || '',
-        role: row.staff_profiles?.role || '',
-        branch_slug: row.branch_slug,
-        attendance_date: row.attendance_date,
-        status: row.status,
-      }))
-      const packageInput = (pkgRows.data || []).map((p) => ({
-        ...p,
-        staff: p.staff_profiles,
-        staff_name: p.staff_profiles?.full_name,
-        branch: p.branch,
-      }))
-      const next = buildPayrollPreview({
+      const hourSlugs = [
+        ...new Set((attRows || []).map((r) => r.branch_slug).filter(Boolean)),
+      ]
+      let hoursIndex = Object.create(null)
+      if (hourSlugs.length) {
+        const { data: hourRows, error: hourErr } = await supabase
+          .from('branch_operating_hours')
+          .select('branch_slug, day_of_week, opens_at, closes_at, is_closed')
+          .in('branch_slug', hourSlugs)
+        if (hourErr) throw hourErr
+        hoursIndex = indexBranchOperatingHours(hourRows)
+      }
+
+      const attendance = (attRows || []).map((row) =>
+        attendanceRowForPayroll(
+          row,
+          hoursForAttendanceDay(hoursIndex, row.branch_slug, row.attendance_date),
+        ),
+      )
+      const packageInput = isFixed
+        ? (pkgRows.data || []).map((p) => ({
+            ...p,
+            staff: p.staff_profiles,
+            staff_name: p.staff_profiles?.full_name,
+            branch: p.branch,
+          }))
+        : []
+      const ceramicForSales = filterCeramicExpensesForSales(expRows, salesRows)
+      let next = buildPayrollPreview({
         period: { start: periodStart, end: periodEnd },
         rules,
         sales: salesRows,
         attendance,
-        ceramicExpenses: expRows,
+        ceramicExpenses: ceramicForSales,
         claimedSaleIds: (claimedRows || []).map((r) => r.sale_id),
         packages: packageInput,
         runKind,
         frequency,
       })
+      if (!isFixed) {
+        const drafts = collectSalaryDraftExtrasFromCloses(pendingCloses, {
+          branch,
+          periodStart,
+          periodEnd,
+          readyOnly: true,
+        })
+        if (drafts.length) {
+          next = applySalaryDraftExtrasToPreview(next, drafts, staffRows.data || [])
+        }
+      }
       setPreview(next)
       setStep(1)
       toast.success(
@@ -448,6 +519,10 @@ export default function PayrollPage() {
   }
 
   async function confirmRun() {
+    if (preview?.run_kind && preview.run_kind !== 'all' && preview.run_kind !== runKind) {
+      toast.error(`Preview is ${preview.run_kind} pay — switch type or reload proof before confirming`)
+      return
+    }
     const closeGate = floorConfirmBlockedByPendingCloses({
       pendingFloorOptional: rules.pending_floor_optional,
       runKind,
@@ -493,43 +568,31 @@ export default function PayrollPage() {
 
   const gate = payrollBlocksConfirm(preview)
 
-  return (
-    <section className="hakum-payroll flex flex-col gap-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
-      <header className="border-b border-border pb-4">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Books</p>
-        <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-          <Banknote className="size-6 shrink-0 text-primary" aria-hidden />
-          Payroll
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Floor pay for crew who worked the bay. Fixed salary for office roles (monthly package, auto-split by
-          payout frequency). Cash advances approve here — not on POS.
-        </p>
-      </header>
+  const payrollStepIcons = {
+    'pos-proof': Receipt,
+    preview: ClipboardCheck,
+    confirm: Banknote,
+    settings: Settings2,
+  }
 
-      <div role="tablist" aria-label="Payroll sections" className="planner-v2-tabs">
-        {[
-          { id: 'home', label: 'Dashboard' },
-          { id: 'run', label: 'Run payroll' },
-          { id: 'cash-advance', label: 'Cash advances' },
-          { id: 'packages', label: 'Salaries' },
-          { id: 'history', label: 'Payouts' },
-          { id: 'rules', label: 'Rules' },
-        ].map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={tab === item.id ? 'is-on' : ''}
-            aria-pressed={tab === item.id}
-            onClick={() => {
-              setTab(item.id)
-              setSearchParams(item.id === 'home' ? {} : { tab: item.id }, { replace: true })
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+  return (
+    <OpsPageShell
+      className="hakum-payroll"
+      eyebrow="Books"
+      title="Payroll"
+      description="Floor pay for crew who worked the bay. Fixed salary for office roles (monthly package, auto-split by payout frequency). Cash advances approve here — not on POS."
+      icon={Banknote}
+    >
+      <OpsGuideCard
+        title="How payroll works"
+        description="From POS proof to posted payout. Open any step if this is your first run."
+        steps={PAYROLL_WORKFLOW_STEPS}
+        stepIcons={payrollStepIcons}
+        defaultOpen={tab === 'home'}
+      />
+
+      <Tabs value={tab} onValueChange={setShellTab} className="flex flex-col gap-5">
+        <OpsTabList tabs={PAYROLL_SHELL_TABS} aria-label="Payroll sections" />
 
       {tab === 'home' && (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -580,6 +643,26 @@ export default function PayrollPage() {
                         <p className="mt-2 text-xs text-muted-foreground">
                           {group.days.map((d) => d.business_date).join(' · ')}
                         </p>
+                        {group.salary_draft_extras?.length ? (
+                          <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/30 px-2 py-1.5 text-xs">
+                            <p className="font-medium text-foreground">
+                              BA salary drafts · {group.salary_draft_extras.length}
+                            </p>
+                            <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                              {group.salary_draft_extras.slice(0, 6).map((e, i) => (
+                                <li key={`${e.staff_name}-${e.amount_minor}-${i}`} className="tabular-nums">
+                                  {e.kind === 'deduction' ? 'Deduct' : 'Extra'} · {e.staff_name} ·{' '}
+                                  {formatMoney(e.amount_minor)}
+                                  {e.note ? ` · ${e.note}` : ''}
+                                  {e.business_date ? ` · ${e.business_date}` : ''}
+                                </li>
+                              ))}
+                              {group.salary_draft_extras.length > 6 ? (
+                                <li>+{group.salary_draft_extras.length - 6} more</li>
+                              ) : null}
+                            </ul>
+                          </div>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {group.ready_count > 0 ? (
@@ -622,8 +705,7 @@ export default function PayrollPage() {
                 className="min-h-11"
                 onClick={() => {
                   setRunKind('floor')
-                  setTab('run')
-                  setSearchParams({ tab: 'run' }, { replace: true })
+                  setShellTab('run')
                   setStep(0)
                 }}
               >
@@ -635,8 +717,7 @@ export default function PayrollPage() {
                 className="min-h-11"
                 onClick={() => {
                   setRunKind('fixed')
-                  setTab('run')
-                  setSearchParams({ tab: 'run' }, { replace: true })
+                  setShellTab('run')
                   setStep(0)
                 }}
               >
@@ -1383,7 +1464,7 @@ export default function PayrollPage() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="rule-day">Typical payday</Label>
+                <Label htmlFor="rule-day">Typical payday (reminder)</Label>
                 <NamedSelect
                   id="rule-day"
                   value={String(rules.payout_weekday)}
@@ -1391,6 +1472,9 @@ export default function PayrollPage() {
                   onChange={(value) => setRules((prev) => ({ ...prev, payout_weekday: Number(value) }))}
                   options={WEEKDAYS}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Label only — period math still uses the frequency windows above (not this weekday).
+                </p>
               </div>
               {[
                 { key: 'wash_pool_pct', label: 'Wash pool %', step: '1' },
@@ -1427,6 +1511,7 @@ export default function PayrollPage() {
           </CardContent>
         </Card>
       )}
-    </section>
+      </Tabs>
+    </OpsPageShell>
   )
 }

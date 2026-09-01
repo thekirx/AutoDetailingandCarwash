@@ -446,7 +446,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
             {variant === 'modal' ? (
               <details
                 className="queue-ticket-crew-fold rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm"
-                defaultOpen={startBlockedByCrew}
+                open={startBlockedByCrew || undefined}
               >
                 <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 font-semibold text-foreground">
                   <UserPlus className="text-primary" size={18} aria-hidden />

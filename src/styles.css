@@ -2624,8 +2624,7 @@ html:not(.dark) .floor-shell .floor-alert-error {
 }
 .planning-calendar .rbc-event {
   border: 0 !important;
-  background: var(--primary) !important;
-  color: var(--primary-foreground) !important;
+  /* background/color come from eventPropGetter (service / branch distinction) */
   box-shadow: none;
 }
 .planning-calendar .rbc-show-more {
@@ -3153,7 +3152,7 @@ html:not(.dark) .floor-shell .floor-alert-error {
   align-items: center;
   gap: 0.45rem;
   flex-shrink: 0;
-  min-height: 2.65rem;
+  min-height: 44px;
   padding: 0 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
@@ -3271,7 +3270,7 @@ html:not(.dark) .floor-shell .floor-alert-error {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.05rem;
-  min-height: 3.15rem;
+  min-height: 44px;
   padding: 0.45rem 0.55rem;
   border: 1px solid var(--border);
   border-radius: 0.7rem;
@@ -7891,8 +7890,7 @@ button.bk-ticket-compact {
 }
 .planning-calendar .rbc-event {
   border: 0 !important;
-  background: var(--primary) !important;
-  color: var(--primary-foreground) !important;
+  /* background/color come from eventPropGetter (service / branch distinction) */
   box-shadow: none;
 }
 .planning-calendar .rbc-show-more {
@@ -8776,7 +8774,7 @@ button.bk-ticket-compact {
   align-items: center;
   gap: 0.45rem;
   flex-shrink: 0;
-  min-height: 2.65rem;
+  min-height: 44px;
   padding: 0 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
@@ -8894,7 +8892,7 @@ button.bk-ticket-compact {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.05rem;
-  min-height: 3.15rem;
+  min-height: 44px;
   padding: 0.45rem 0.55rem;
   border: 1px solid var(--border);
   border-radius: 0.7rem;

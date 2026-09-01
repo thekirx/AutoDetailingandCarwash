@@ -28,7 +28,6 @@ import {
   resolveFixedSalaryBranch,
 } from '../src/lib/payroll.js'
 import {
-  DEFAULT_COMPENSATION_RULES,
   normalizeCompensationSettings,
   toCompensationSettingsRow,
 } from '../src/lib/compensation.js'

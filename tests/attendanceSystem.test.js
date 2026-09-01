@@ -55,6 +55,7 @@ describe('Attendance system RBAC + page', () => {
 
   it('AttendancePage + network apply API + crew gate migration wired', () => {
     const page = readFileSync(join(root, 'src/pages/AttendancePage.jsx'), 'utf8')
+    const panels = readFileSync(join(root, 'src/pages/crew/CrewAttendancePanels.jsx'), 'utf8')
     const api = readFileSync(join(root, 'src/queue/attendanceApi.js'), 'utf8')
     const app = readFileSync(join(root, 'src/App.jsx'), 'utf8')
     const crew = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
@@ -67,10 +68,14 @@ describe('Attendance system RBAC + page', () => {
       'utf8',
     )
     assert.match(page, /canUseAttendanceClock/)
-    assert.match(page, /CrewAttendancePanel/)
+    assert.match(page, /Tabs/)
     assert.match(page, /CrewSettingsPanel/)
+    assert.match(panels, /CrewAttendancePanel/)
+    assert.match(panels, /Late arrival pay/)
+    assert.match(panels, /wash pool share/)
+    assert.match(panels, /fetchCrewFloorSnapshot/)
     assert.match(api, /applyNetworkAttendanceSettings/)
-    assert.match(api, /same geofence \+ shifts on every branch/)
+    assert.match(api, /fetchCrewFloorSnapshot/)
     assert.match(app, /path="attendance"/)
     assert.match(crew, /Open Attendance/)
     assert.doesNotMatch(crew, /Crew & attendance/)

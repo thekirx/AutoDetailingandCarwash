@@ -16,7 +16,7 @@ import {
   peopleInAttendanceRoles,
 } from '../lib/attendanceRoles'
 import { getCurrentProfile } from './queueApi'
-import { formatQueueActionError, getBranchScope, NO_BRANCH_SCOPE } from './queueLogic'
+import { formatQueueActionError, getBranchScope, getCrewAttendanceModel, NO_BRANCH_SCOPE } from './queueLogic'
 
 const ATTENDANCE_ROLES_KEY = 'attendance_roles'
 
@@ -323,6 +323,40 @@ export function readBrowserPosition() {
       (err) => reject(new Error(err.message || 'Location permission denied.')),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
+  })
+}
+
+/** Today’s bay crew floor — present/late gating matches queue assign rules. */
+export async function fetchCrewFloorSnapshot(branchSlug) {
+  if (!branchSlug) {
+    return getCrewAttendanceModel({ staffPool: [], attendance: [], busyStaff: [] })
+  }
+  const today = getTodayDateSafe()
+  const personSelect = 'id, full_name, role, branch_slug, phone, is_active'
+  const [staffRes, attRes, busyRes] = await Promise.all([
+    supabase
+      .from('staff_profiles')
+      .select(personSelect)
+      .eq('is_active', true)
+      .eq('branch_slug', branchSlug)
+      .eq('role', 'staff')
+      .order('full_name'),
+    supabase
+      .from('staff_attendance')
+      .select('id, staff_id, branch_slug, attendance_date, status, checked_in_at, checked_out_at')
+      .eq('branch_slug', branchSlug)
+      .eq('attendance_date', today),
+    supabase
+      .from('busy_staff_view')
+      .select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at')
+      .eq('branch_slug', branchSlug)
+      .limit(200),
+  ])
+  if (staffRes.error) throw formatQueueActionError(staffRes.error)
+  return getCrewAttendanceModel({
+    staffPool: staffRes.data || [],
+    attendance: attRes.data || [],
+    busyStaff: busyRes.error ? [] : busyRes.data || [],
   })
 }
 

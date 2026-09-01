@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
+import { BarChart3, Car, GitCompare, MessageSquareWarning, Receipt, Users } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessInquiries, canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { applyBranchScope, collectPaged, resolveKpiRpcBranch } from '@/lib/crmInsights'
 import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaCount, kpiStatHover } from '@/lib/kpiPart8'
+import { isOverSla } from '@/lib/ownerRevisionsPhase7'
+import { opsTabSearchParams, resolveOpsTab } from '@/lib/opsShell'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import {
@@ -13,15 +16,28 @@ import {
   requiresTeamLeadBranchSetup,
   resolveBranchFilter,
 } from '@/queue/queueLogic'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
+import { KPI_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
+
+/** Source-scan contract — keep literal ids for ops shell tests. */
+const KPI_SHELL_TABS = Object.freeze([
+  { id: 'crew', label: 'Crew', icon: Users },
+  { id: 'compare', label: 'Branch compare', icon: GitCompare },
+  { id: 'service', label: 'By service', icon: Car },
+  { id: 'sales', label: 'Sales', icon: Receipt },
+  { id: 'complaints', label: 'Complaints', icon: MessageSquareWarning },
+])
 
 function todayISO() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
@@ -29,8 +45,18 @@ function todayISO() {
 
 export default function KpiPage() {
   const { profile, canViewQueueOperations } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const isTl = profile?.role === ROLES.TEAM_LEAD
-  const [tab, setTab] = useState('crew')
+  const canSalesTabs = isTl || canSeeAllBranches(profile) || profile?.role === ROLES.ADMIN
+  const canComplaints = canSalesTabs && canAccessInquiries(profile)
+  const allowedTabs = useMemo(() => {
+    const ids = ['crew', 'compare', 'service']
+    if (canSalesTabs) ids.push('sales')
+    if (canComplaints) ids.push('complaints')
+    return ids
+  }, [canSalesTabs, canComplaints])
+  const tab = resolveOpsTab(searchParams.get('tab'), allowedTabs, 'crew')
+  const visibleTabs = KPI_SHELL_TABS.filter((t) => allowedTabs.includes(t.id))
   const [crewRows, setCrewRows] = useState([])
   const [bookings, setBookings] = useState([])
   const [sales, setSales] = useState([])
@@ -164,7 +190,7 @@ export default function KpiPage() {
 
   useEffect(() => {
     listBranches().then(setBranches).catch(() => {})
-    supabase.from('services').select('id, name').eq('is_active', true).then(({ data }) => setServices(data || []))
+    supabase.from('services').select('id, name, sla_minutes').eq('is_active', true).then(({ data }) => setServices(data || []))
   }, [])
 
   useEffect(() => {
@@ -173,6 +199,10 @@ export default function KpiPage() {
 
   const serviceNames = useMemo(
     () => Object.fromEntries(services.map((s) => [s.id, s.name])),
+    [services],
+  )
+  const serviceSla = useMemo(
+    () => Object.fromEntries(services.map((s) => [s.id, s.sla_minutes])),
     [services],
   )
   const avgCycle = useMemo(() => averageCycleMinutes(bookings), [bookings])
@@ -203,17 +233,25 @@ export default function KpiPage() {
         name: branches.find((b) => b.slug === slug)?.name || slug,
       }))
 
+  function setShellTab(next) {
+    setSearchParams(opsTabSearchParams(next, 'crew'), { replace: true })
+  }
+
+  const kpiStepIcons = {
+    crew: Users,
+    compare: GitCompare,
+    service: Car,
+    sales: Receipt,
+  }
+
   return (
-    <section className="planner-v2 flex flex-col gap-6">
-      <header className="planner-v2-head">
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">Queue KPI</p>
-          <h1>Crew and branch</h1>
-          <p>
-            Hover a number for sample size and share of this range · {range.start} → {range.end}
-            {loading ? ' · Loading…' : ''}
-          </p>
-        </div>
+    <OpsPageShell
+      className="hakum-kpi"
+      eyebrow="Queue KPI"
+      title="Crew and branch"
+      description={`Hover a number for sample size and share of this range · ${range.start} → ${range.end}${loading ? ' · Loading…' : ''}`}
+      icon={BarChart3}
+      actions={
         <div className="flex flex-wrap gap-2">
           {(canSeeAllKpiBranches(profile) || branchOptions.length > 1) && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
@@ -246,9 +284,16 @@ export default function KpiPage() {
               {services.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={load}>Refresh</Button>
+          <Button variant="outline" className="min-h-11" onClick={load}>Refresh</Button>
         </div>
-      </header>
+      }
+    >
+      <OpsGuideCard
+        title="How KPI works"
+        description="Crew and branch metrics for coaching. Paid sales here are context — Payroll uses POS proof."
+        steps={KPI_WORKFLOW_STEPS.filter((s) => s.id !== 'sales' || canSalesTabs)}
+        stepIcons={kpiStepIcons}
+      />
 
       <TooltipProvider delay={120}>
         <div className="flex flex-col gap-4">
@@ -270,18 +315,8 @@ export default function KpiPage() {
         </div>
       </TooltipProvider>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="flex h-auto flex-wrap gap-1">
-          <TabsTrigger value="crew">Crew</TabsTrigger>
-          <TabsTrigger value="compare">Branch compare</TabsTrigger>
-          <TabsTrigger value="service">By service</TabsTrigger>
-          {(isTl || canSeeAllBranches(profile) || profile?.role === ROLES.ADMIN) && (
-            <>
-              <TabsTrigger value="sales">Sales</TabsTrigger>
-              {canAccessInquiries(profile) && <TabsTrigger value="complaints">Complaints</TabsTrigger>}
-            </>
-          )}
-        </TabsList>
+      <Tabs value={tab} onValueChange={setShellTab}>
+        <OpsTabList tabs={visibleTabs} aria-label="KPI sections" />
 
         <TabsContent value="crew" className="mt-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -351,7 +386,15 @@ export default function KpiPage() {
                     <TableRow key={r.service_id}>
                       <TableCell>{r.name}</TableCell>
                       <TableCell>{r.count}</TableCell>
-                      <TableCell>{r.avg_min ?? '—'}</TableCell>
+                      <TableCell
+                        className={
+                          isOverSla(r.avg_min, serviceSla[r.service_id])
+                            ? 'font-semibold text-red-600 dark:text-red-400'
+                            : ''
+                        }
+                      >
+                        {r.avg_min ?? '—'}
+                      </TableCell>
                     </TableRow>
                   ))}
                   {!byService.length && (
@@ -426,7 +469,7 @@ export default function KpiPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </section>
+    </OpsPageShell>
   )
 }
 

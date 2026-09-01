@@ -4,9 +4,11 @@ import { Inbox, Mail, Phone, RefreshCw } from 'lucide-react'
 
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessInquiries } from '@/auth/permissions'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import { supabase } from '@/lib/supabase'
 import { SITE_TYPE_LABELS, PARTNERSHIP_STATUSES, CONTACT_STATUSES } from '@/lib/partnershipInquiry'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 
 const TABS = [
@@ -15,7 +17,7 @@ const TABS = [
   { key: 'complaints', label: 'Complaints', table: 'complaints' },
 ]
 
-export const COMPLAINT_STATUSES = ['submitted', 'review', 'resolved', 'closed']
+const COMPLAINT_STATUSES = ['submitted', 'review', 'resolved', 'closed']
 
 const COLUMNS = {
   partnership: 'id, site_type, name, email, contact_number, city, message, status, created_at',
@@ -217,18 +219,19 @@ export default function InquiriesPage() {
     statusFilter === 'all' ? rows : rows.filter((row) => String(row.status || '') === statusFilter)
 
   return (
-    <div className="inquiries-page">
-      <header className="inquiries-head">
-        <div>
-          <h1>Inquiries</h1>
-          <p>Messages submitted from the public website. Visible to Super Admin and Assistant Super Admin only.</p>
-        </div>
+    <OpsPageShell
+      className="hakum-inquiries inquiries-page"
+      eyebrow="Inbox"
+      title="Inquiries"
+      icon={Inbox}
+      description="Messages submitted from the public website. Visible to Super Admin and Assistant Super Admin only."
+      actions={
         <button type="button" onClick={load} disabled={loading} className="inquiries-refresh">
           <RefreshCw size={14} aria-hidden="true" />
           Refresh
         </button>
-      </header>
-
+      }
+    >
       <div className="inquiries-tabs" role="tablist">
         {TABS.map((t) => (
           <button
@@ -312,6 +315,6 @@ export default function InquiriesPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </OpsPageShell>
   )
 }

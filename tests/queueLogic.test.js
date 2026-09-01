@@ -24,6 +24,9 @@ import {
   parsePesoInputToMinor,
   normalizeVehicleType,
   OPS_BOARD_STATUSES,
+  averageDwellByStatus,
+  fifoNextTicketId,
+  sortTicketsFifo,
 } from '../src/queue/queueLogic.js'
 
 describe('queue logic', () => {
@@ -304,5 +307,47 @@ describe('queue logic', () => {
     assert.equal(custom.start.getFullYear(), 2026)
     assert.equal(custom.start.getMonth(), 0)
     assert.equal(custom.start.getDate(), 1)
+  })
+
+  it('sorts tickets FIFO by waiting_at then queue_number', () => {
+    const sorted = sortTicketsFifo([
+      { booking_id: 'b', waiting_at: '2026-08-27T10:00:00+08:00', queue_number: 2 },
+      { booking_id: 'a', waiting_at: '2026-08-27T09:00:00+08:00', queue_number: 5 },
+      { booking_id: 'c', waiting_at: '2026-08-27T09:00:00+08:00', queue_number: 1 },
+    ])
+    assert.deepEqual(sorted.map((t) => t.booking_id), ['c', 'a', 'b'])
+  })
+
+  it('badges oldest waiting as FIFO next', () => {
+    assert.equal(
+      fifoNextTicketId([
+        { booking_id: 'later', status: 'waiting', waiting_at: '2026-08-27T11:00:00+08:00' },
+        { booking_id: 'first', status: 'waiting', waiting_at: '2026-08-27T09:00:00+08:00' },
+        { booking_id: 'busy', status: 'in_progress', waiting_at: '2026-08-27T08:00:00+08:00' },
+      ]),
+      'first',
+    )
+  })
+
+  it('averages dwell minutes per status lane', () => {
+    const now = new Date('2026-08-27T10:30:00+08:00').getTime()
+    const avg = averageDwellByStatus(
+      [
+        {
+          status: 'waiting',
+          waiting_at: '2026-08-27T10:00:00+08:00',
+        },
+        {
+          status: 'in_progress',
+          waiting_at: '2026-08-27T09:00:00+08:00',
+          in_progress_at: '2026-08-27T10:20:00+08:00',
+        },
+      ],
+      now,
+    )
+    // waiting: 30m (still waiting) + 80m (left at in_progress) → avg 55
+    assert.equal(avg.waiting, 55)
+    assert.equal(avg.in_progress, 10)
+    assert.equal(avg.final_checking, null)
   })
 })

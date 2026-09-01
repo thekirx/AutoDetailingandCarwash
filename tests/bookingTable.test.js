@@ -114,7 +114,9 @@ describe('booking table ledger', () => {
     const page = readFileSync(join(root, 'src/pages/BookingBoardPage.jsx'), 'utf8')
     const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
     assert.match(page, /BOOKING_TABS = \['board', 'list', 'table', 'calendar'\]/)
-    assert.match(page, /TabsTrigger value="list"/)
+    assert.match(page, /BOOKING_SHELL_TABS/)
+    assert.match(page, /OpsTabList/)
+    assert.match(page, /id: 'list'/)
     const boardBlock = page.slice(
       page.indexOf('TabsContent value="board"'),
       page.indexOf('TabsContent value="list"'),

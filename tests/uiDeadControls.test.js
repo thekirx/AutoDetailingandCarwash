@@ -121,7 +121,8 @@ describe('P0 residual fixes (full-system 2026-08-01)', () => {
 
   it('Memberships Program tab exposes SA loyalty kill-switches', () => {
     const src = readFileSync(join(root, 'src/pages/MembershipsPage.jsx'), 'utf8')
-    assert.match(src, /TabsTrigger value="program"/)
+    assert.match(src, /id: 'program'/)
+    assert.match(src, /TabsContent value="program"/)
     assert.match(src, /stamps_enabled/)
     assert.match(src, /stamp_earn_mode/)
     assert.match(src, /pay_categories/)

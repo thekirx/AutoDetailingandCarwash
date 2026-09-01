@@ -4,6 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { applyTemplateText, bookingNotifyVars, bookingTemplateKey } from '../src/lib/notificationTemplates.js'
+import { customerNotifyAllowed } from '../src/lib/ownerRevisionsPhase7.js'
 import { smsNotificationsEnabledFromSetting } from '../src/lib/smsNotificationsToggle.js'
 import { busybeeSendSms } from './busybee.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
@@ -65,6 +66,16 @@ const STATUS_COPY = {
     opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} final check @ ${b.branch}`,
     opsUrl: '/operations/queue',
   },
+  for_releasing: {
+    kind: 'booking_status',
+    title: 'Ready for release',
+    sms: (b) =>
+      `Hakum Auto Care: ${b.vehicle_plate || 'Your vehicle'} is ready for release at ${b.branch}.`,
+    body: (b) => `${b.vehicle_plate || 'Your vehicle'} is ready for release.`,
+    opsTitle: 'For releasing',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} releasing @ ${b.branch}`,
+    opsUrl: '/operations/bookings',
+  },
   for_payment: {
     kind: 'booking_status',
     title: 'Ready for payment',
@@ -100,6 +111,16 @@ const STATUS_COPY = {
     opsTitle: 'Redo on floor',
     opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} redo @ ${b.branch}`,
     opsUrl: '/operations/queue',
+  },
+  photos_ready: {
+    kind: 'booking_photos',
+    title: 'Progress photos ready',
+    sms: (b) =>
+      `Hakum Auto Care: New photos for ${b.vehicle_plate || 'your vehicle'} are ready in the Hakum app.`,
+    body: () => 'Progress photos for your visit are ready in the app.',
+    opsTitle: 'Progress photos sent',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} photos @ ${b.branch}`,
+    opsUrl: '/operations/bookings',
   },
 }
 
@@ -208,10 +229,24 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
 
   const result = { sms: null, inbox: null, push: null, ops: null, smsEnabled: true }
 
+  let customerPrefs = null
+  if (payload.userId) {
+    const { data: cust } = await db
+      .from('customers')
+      .select('id, notify_sms, notify_push, is_disabled')
+      .eq('id', payload.userId)
+      .maybeSingle()
+    customerPrefs = cust
+  }
+
+  if (customerPrefs && !customerNotifyAllowed(customerPrefs, 'sms') && !customerNotifyAllowed(customerPrefs, 'push')) {
+    return { skipped: true, reason: 'customer_disabled_or_muted', sms: null, inbox: null, push: null, ops: null }
+  }
+
   const smsOn = await isSmsNotificationsEnabled(db)
   result.smsEnabled = smsOn
 
-  if (payload.phone && smsOn) {
+  if (payload.phone && smsOn && customerNotifyAllowed(customerPrefs, 'sms')) {
     let userSmsOk = true
     if (payload.userId) {
       const { data: authUser, error: authErr } = await db.auth.admin.getUserById(payload.userId)
@@ -242,6 +277,8 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
         providerResponse: 'user_metadata.sms_opt_in=false',
       })
     }
+  } else if (payload.phone && customerPrefs && !customerNotifyAllowed(customerPrefs, 'sms')) {
+    result.sms = { ok: false, status: 'muted', providerResponse: 'customers.notify_sms=false or is_disabled' }
   } else if (payload.phone && !smsOn) {
     result.sms = { ok: false, status: 'disabled', providerResponse: 'SMS notifications toggled off by admin' }
     await logSmsEvent(db, {
@@ -255,7 +292,7 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
     })
   }
 
-  if (payload.userId) {
+  if (payload.userId && customerNotifyAllowed(customerPrefs, 'push')) {
     result.inbox = await writeInbox(db, [payload.userId], payload)
     try {
       result.push = await sendWebPushToUsers({
@@ -269,6 +306,8 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
     } catch (err) {
       result.push = { error: String(err.message || err) }
     }
+  } else if (payload.userId) {
+    result.push = { ok: false, status: 'muted', providerResponse: 'customers.notify_push=false or is_disabled' }
   }
 
   const opsCopy = buildOpsNotifyCopy(booking, status, templates)
@@ -312,4 +351,9 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
 /** @deprecated name kept for tests — delegates to paint-maintenance program module. */
 export async function seedMaintenanceReminder(db, booking) {
   return applyPaintMaintenanceOnComplete(db, booking)
+}
+
+/** Customer push + SMS when progress photos land on a visit. */
+export async function notifyBookingPhotosReady(booking) {
+  return notifyBookingStatus(booking, 'photos_ready')
 }

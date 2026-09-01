@@ -49,9 +49,11 @@ Paid POS (services / packages / detailing / merch)
 
 | ID | Decision |
 |----|----------|
-| C1 | Report shows **salary lines from payroll % engine** (wash pool + detailing splits), not a mystery typed total. |
+| C1 | Report **carwash salary cell** = wash-pool preview only. Detailing splits (ceramic crew + assigned detailer) stay on payroll lines / detailer salary — not extra carwash salary. |
 | C2 / I2 | **Principal:** One pay path. Floor confirm is official pay. Report salary = **preview** of that path. BA `salary_*` expenses = **drawer cash-out** of that day — do not treat as a second wash-pool. Same night: Finance accept → SA/ASA confirm floor. |
 | C3 | System fills salary lines from preview; BA may still log drawer cash-out expenses. |
+| C4 | **BA salary draft (hybrid):** Branch Admin may edit extra pay / deductions on End of Shift as **draft notes** on `shift_close_reports.submitted` (e.g. `salary_draft_extras`). Those notes **surface on the SA/ASA payroll wizard** — they never post `payroll_runs`. BA **cannot** call `run_payroll`. |
+| C5 | Optional nullable `salary_pct` on catalog services/packages may adjust floor **preview** only. Default remains global wash pool + ceramic splits. Never auto-pay from catalog %. |
 | Detailing | Every detailing job can produce **manual ceramic/detailing expense** output (existing ceramic keys). |
 
 ### End of shift ↔ Payroll
@@ -63,7 +65,7 @@ Paid POS (services / packages / detailing / merch)
 | D3 | `pending_floor_optional = false` → **hard block** floor confirm until closes for those days are accepted/locked. |
 | D4 | EoS required only if there were sales, expenses, or CA activity that day. |
 | E1 | Floor = paid wash-eligible × wash pool % × attendance. |
-| E2 | Pool = anyone marked present (incl. BA if present). Future: optional crew/TL-only filter. |
+| E2 | Wash pool = **bay crew** (`staff`) with attendance weight > 0. Detailer, team lead, admin, sales, marketing excluded. BA shares only if clocked as bay crew. |
 | E3 | Ceramic/detailing from ceramic expense keys on paid detailing. |
 | E4 | Daily **or** accumulate accepted days — both supported. |
 | G4 | One close per branch per day; SA switches branch. |
@@ -83,7 +85,15 @@ Paid POS (services / packages / detailing / merch)
 | F4 | Column = **Floor coverage** (posted / pending / awaiting review). | Stops “close ₱ was paid” misread. |
 | G1 | BA = merch + Pay queue + expenses + EoS. | Less wrong tickets; SA/ASA for walk-in bay/detailing. |
 | G2 | EoS: BA + SA/ASA (existing `canSubmitShiftClose`). | |
-| G3 | Floor confirm: SA + ASA `finance_write` only. | |
+| G3 | Floor confirm: SA + ASA `finance_write` only. Branch Admin never confirms floor or fixed payroll. |
+
+### BA draft vs SA confirm (owner revisions 2026-08-27)
+
+| Who | May do | Must not |
+|-----|--------|----------|
+| **Branch Admin** | Run EoS; edit salary **preview** cells and draft extras; see estimate on Crew | Open Payroll register; call `run_payroll`; invent sales |
+| **SA / ASA (`finance_write`)** | Accept close; confirm floor/fixed; apply draft extras as wizard lines | Auto-pay without confirm |
+| **Finance accept** | Unlock pending floor | Rewrite paid POS totals |
 
 ---
 

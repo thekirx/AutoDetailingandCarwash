@@ -115,7 +115,7 @@ async function attachAuthToCrmRow(admin, { existing, fullName, phone, password, 
   throw Object.assign(new Error(createError?.message || 'Could not activate this visit. Ask the shop.'), { status: 400 })
 }
 
-async function claimTeamLeadAccount(admin, { existing, body, fullName, phone, emailRaw, password, plate, dob, requestOrigin }) {
+async function claimTeamLeadAccount(admin, { existing, fullName, phone, emailRaw, password, plate, dob, requestOrigin }) {
   const { data: authWrap } = await admin.auth.admin.getUserById(existing.id)
   let user = authWrap?.user || null
   const path = resolveClaimPath({ customer: existing, authUser: user })

@@ -75,7 +75,8 @@ describe('pending floor payroll from shift closes', () => {
       runs: [run],
     })
     assert.equal(queue.ready_day_count, 1)
-    assert.equal(queue.days[0].business_date, '2026-08-19')
+    // Public seam: queue is the days array (with .groups / .ready_day_count attached).
+    assert.equal(queue[0].business_date, '2026-08-19')
   })
 
   it('does not treat fixed salary as covering floor days', () => {

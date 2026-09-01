@@ -3,27 +3,22 @@
 **Audience:** AI / engineer on `AutoDetailingandCarwash`  
 **Goal:** Wire BusyBee (Brandtxt) SMS so Team Lead status updates send SMS. Prefer a **Supabase Edge Function** (server secrets), not client `VITE_` keys.
 
-> **Security:** Values below are copied from the legacy Hakum `.env copy` so the new project can work immediately. Treat this file as sensitive. After the new project is live, **rotate** the Brandtxt API key in the BusyBee/Brandtxt dashboard and update Supabase secrets. Never commit these into a public repo as `NEXT_PUBLIC_*` / `VITE_*`.
+> **Security:** Store API keys in `.env` (local) and Vercel/Supabase secrets only — **never** in git. Rotate keys if exposed in chat or docs.
 
 ---
 
-## 1. Credentials (from legacy Hakum)
+## 1. Credentials (from BrandTxt / BusyBee portal)
 
-| Purpose | Legacy env name | Value |
-|---------|-----------------|-------|
-| Brandtxt API key | `VITE_Api_Key` | `ljrJYCL46Sbgt0208lneoJ1zim8eR/5z6z/Jqpo3wqM=` |
-| Brandtxt Client ID | `VITE_Client_Id` | `28b7f868-4032-4d21-abf2-8a6953da8b4b` |
-| Sender ID | `VITE_SenderID` | `HAKUM` |
-| SendSMS URL | `VITE_CURL` | `https://app.brandtxt.io/api/v2/SendSMS` |
+| Purpose | App env name | Notes |
+|---------|--------------|-------|
+| Brandtxt API key | `BUSYBEE_API_KEY` | Server-only |
+| Brandtxt Client ID | `BUSYBEE_CLIENT_ID` | Server-only |
+| Sender ID | `BUSYBEE_SENDER_ID` | Default `HAKUM` |
+| API base URL | `BUSYBEE_API_BASE_URL` | `https://app.brandtxt.io` |
 
-Legacy Supabase project (reference only — new app may use a different project):
+Legacy `VITE_*` names are **deprecated** — this app uses Vercel/server routes (`server/busybee.mjs`), not browser keys.
 
-| Purpose | Value |
-|---------|-------|
-| `VITE_SUPABASE_URL` | `https://ildfelfpncfwogcumbcj.supabase.co` |
-| `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsZGZlbGZwbmNmd29nY3VtYmNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgyMzIyNzcsImV4cCI6MjA2MzgwODI3N30.Q1R621y0SmiUNfZiDv39wx-_G71i9mXS9CdOL2iWzyU` |
-
-Use the **new project’s** Supabase URL/anon key for the app. Put BusyBee secrets only in **Edge Function secrets** (or server env), not in the browser bundle.
+Supabase URL/anon key: use **your current project** from Dashboard → Settings → API.
 
 ---
 
@@ -34,9 +29,9 @@ Use the **new project’s** Supabase URL/anon key for the app. Put BusyBee secre
 Set these on the Supabase project used by AutoDetailingandCarwash:
 
 ```bash
-# CLI
-supabase secrets set BRANDTXT_API_KEY="ljrJYCL46Sbgt0208lneoJ1zim8eR/5z6z/Jqpo3wqM="
-supabase secrets set BRANDTXT_CLIENT_ID="28b7f868-4032-4d21-abf2-8a6953da8b4b"
+# CLI — paste values from BrandTxt portal, not from git
+supabase secrets set BRANDTXT_API_KEY="your-api-key"
+supabase secrets set BRANDTXT_CLIENT_ID="your-client-id"
 supabase secrets set BRANDTXT_SENDER_ID="HAKUM"
 supabase secrets set BRANDTXT_URL="https://app.brandtxt.io/api/v2/SendSMS"
 ```
@@ -60,8 +55,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_new_anon_key
 If you run the function locally or a Next API route instead of Edge:
 
 ```bash
-BRANDTXT_API_KEY=ljrJYCL46Sbgt0208lneoJ1zim8eR/5z6z/Jqpo3wqM=
-BRANDTXT_CLIENT_ID=28b7f868-4032-4d21-abf2-8a6953da8b4b
+BRANDTXT_API_KEY=
+BRANDTXT_CLIENT_ID=
 BRANDTXT_SENDER_ID=HAKUM
 BRANDTXT_URL=https://app.brandtxt.io/api/v2/SendSMS
 ```
@@ -319,8 +314,8 @@ Implement `app/api/send-sms/route.ts` with the same payload/phone/templates. Gat
   "GroupId": "",
   "Message": "Hey! Your vehicle ABC-1234 is 1 in the queue...",
   "MobileNumbers": "639171234567",
-  "ApiKey": "ljrJYCL46Sbgt0208lneoJ1zim8eR/5z6z/Jqpo3wqM=",
-  "ClientId": "28b7f868-4032-4d21-abf2-8a6953da8b4b"
+  "ApiKey": "<from BUSYBEE_API_KEY>",
+  "ClientId": "<from BUSYBEE_CLIENT_ID>"
 }
 ```
 

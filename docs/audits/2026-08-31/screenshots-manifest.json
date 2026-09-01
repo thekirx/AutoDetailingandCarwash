@@ -1,0 +1,410 @@
+{
+  "ok": true,
+  "base": "http://127.0.0.1:4173",
+  "outDir": "docs/audits/2026-08-31/screenshots",
+  "captured": 80,
+  "failed": 0,
+  "authed": true,
+  "results": [
+    {
+      "ok": true,
+      "file": "public--home--desktop.png",
+      "url": "http://127.0.0.1:4173/home"
+    },
+    {
+      "ok": true,
+      "file": "public--services--desktop.png",
+      "url": "http://127.0.0.1:4173/services"
+    },
+    {
+      "ok": true,
+      "file": "public--packages--desktop.png",
+      "url": "http://127.0.0.1:4173/packages"
+    },
+    {
+      "ok": true,
+      "file": "public--book--desktop.png",
+      "url": "http://127.0.0.1:4173/book"
+    },
+    {
+      "ok": true,
+      "file": "public--queue--desktop.png",
+      "url": "http://127.0.0.1:4173/queue"
+    },
+    {
+      "ok": true,
+      "file": "public--branches--desktop.png",
+      "url": "http://127.0.0.1:4173/branches"
+    },
+    {
+      "ok": true,
+      "file": "public--contact--desktop.png",
+      "url": "http://127.0.0.1:4173/contact"
+    },
+    {
+      "ok": true,
+      "file": "public--events--desktop.png",
+      "url": "http://127.0.0.1:4173/events"
+    },
+    {
+      "ok": true,
+      "file": "public--blog--desktop.png",
+      "url": "http://127.0.0.1:4173/blog"
+    },
+    {
+      "ok": true,
+      "file": "console--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/console"
+    },
+    {
+      "ok": true,
+      "file": "dashboard--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/dashboard"
+    },
+    {
+      "ok": true,
+      "file": "queue--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/queue"
+    },
+    {
+      "ok": true,
+      "file": "crew--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/crew"
+    },
+    {
+      "ok": true,
+      "file": "attendance--clock--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/attendance"
+    },
+    {
+      "ok": true,
+      "file": "attendance--register--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/attendance?tab=register"
+    },
+    {
+      "ok": true,
+      "file": "attendance--settings--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/attendance?tab=settings"
+    },
+    {
+      "ok": true,
+      "file": "kpi--crew--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/kpi"
+    },
+    {
+      "ok": true,
+      "file": "kpi--compare--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/kpi?tab=compare"
+    },
+    {
+      "ok": true,
+      "file": "kpi--service--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/kpi?tab=service"
+    },
+    {
+      "ok": true,
+      "file": "kpi--sales--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/kpi?tab=sales"
+    },
+    {
+      "ok": true,
+      "file": "pos--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/pos"
+    },
+    {
+      "ok": true,
+      "file": "inventory--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/inventory"
+    },
+    {
+      "ok": true,
+      "file": "bookings--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/bookings"
+    },
+    {
+      "ok": true,
+      "file": "finance--overview--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/finance"
+    },
+    {
+      "ok": true,
+      "file": "finance--sales--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=sales"
+    },
+    {
+      "ok": true,
+      "file": "finance--purchases--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=purchases"
+    },
+    {
+      "ok": true,
+      "file": "finance--pl--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=pl"
+    },
+    {
+      "ok": true,
+      "file": "finance--shift-close--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=shift-close"
+    },
+    {
+      "ok": true,
+      "file": "finance--expense-reports--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=expense-reports"
+    },
+    {
+      "ok": true,
+      "file": "finance--reports--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=reports"
+    },
+    {
+      "ok": true,
+      "file": "payroll--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/payroll"
+    },
+    {
+      "ok": true,
+      "file": "crm--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/crm"
+    },
+    {
+      "ok": true,
+      "file": "planning--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/planning"
+    },
+    {
+      "ok": true,
+      "file": "settings--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/settings"
+    },
+    {
+      "ok": true,
+      "file": "people--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/people"
+    },
+    {
+      "ok": true,
+      "file": "branches--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/branches"
+    },
+    {
+      "ok": true,
+      "file": "cars--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/cars"
+    },
+    {
+      "ok": true,
+      "file": "audit--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/audit"
+    },
+    {
+      "ok": true,
+      "file": "data-center--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/data-center"
+    },
+    {
+      "ok": true,
+      "file": "notifications--desktop.png",
+      "url": "http://127.0.0.1:4173/operations/notifications"
+    },
+    {
+      "ok": true,
+      "file": "public--home--mobile.png",
+      "url": "http://127.0.0.1:4173/home"
+    },
+    {
+      "ok": true,
+      "file": "public--services--mobile.png",
+      "url": "http://127.0.0.1:4173/services"
+    },
+    {
+      "ok": true,
+      "file": "public--packages--mobile.png",
+      "url": "http://127.0.0.1:4173/packages"
+    },
+    {
+      "ok": true,
+      "file": "public--book--mobile.png",
+      "url": "http://127.0.0.1:4173/book"
+    },
+    {
+      "ok": true,
+      "file": "public--queue--mobile.png",
+      "url": "http://127.0.0.1:4173/queue"
+    },
+    {
+      "ok": true,
+      "file": "public--branches--mobile.png",
+      "url": "http://127.0.0.1:4173/branches"
+    },
+    {
+      "ok": true,
+      "file": "public--contact--mobile.png",
+      "url": "http://127.0.0.1:4173/contact"
+    },
+    {
+      "ok": true,
+      "file": "public--events--mobile.png",
+      "url": "http://127.0.0.1:4173/events"
+    },
+    {
+      "ok": true,
+      "file": "public--blog--mobile.png",
+      "url": "http://127.0.0.1:4173/blog"
+    },
+    {
+      "ok": true,
+      "file": "console--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/console"
+    },
+    {
+      "ok": true,
+      "file": "dashboard--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/dashboard"
+    },
+    {
+      "ok": true,
+      "file": "queue--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/queue"
+    },
+    {
+      "ok": true,
+      "file": "crew--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/crew"
+    },
+    {
+      "ok": true,
+      "file": "attendance--clock--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/attendance"
+    },
+    {
+      "ok": true,
+      "file": "attendance--register--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/attendance?tab=register"
+    },
+    {
+      "ok": true,
+      "file": "attendance--settings--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/attendance?tab=settings"
+    },
+    {
+      "ok": true,
+      "file": "kpi--crew--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/kpi"
+    },
+    {
+      "ok": true,
+      "file": "kpi--compare--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/kpi?tab=compare"
+    },
+    {
+      "ok": true,
+      "file": "kpi--service--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/kpi?tab=service"
+    },
+    {
+      "ok": true,
+      "file": "kpi--sales--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/kpi?tab=sales"
+    },
+    {
+      "ok": true,
+      "file": "pos--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/pos"
+    },
+    {
+      "ok": true,
+      "file": "inventory--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/inventory"
+    },
+    {
+      "ok": true,
+      "file": "bookings--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/bookings"
+    },
+    {
+      "ok": true,
+      "file": "finance--overview--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/finance"
+    },
+    {
+      "ok": true,
+      "file": "finance--sales--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=sales"
+    },
+    {
+      "ok": true,
+      "file": "finance--purchases--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=purchases"
+    },
+    {
+      "ok": true,
+      "file": "finance--pl--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=pl"
+    },
+    {
+      "ok": true,
+      "file": "finance--shift-close--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=shift-close"
+    },
+    {
+      "ok": true,
+      "file": "finance--expense-reports--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=expense-reports"
+    },
+    {
+      "ok": true,
+      "file": "finance--reports--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/finance?tab=reports"
+    },
+    {
+      "ok": true,
+      "file": "payroll--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/payroll"
+    },
+    {
+      "ok": true,
+      "file": "crm--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/crm"
+    },
+    {
+      "ok": true,
+      "file": "planning--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/planning"
+    },
+    {
+      "ok": true,
+      "file": "settings--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/settings"
+    },
+    {
+      "ok": true,
+      "file": "people--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/people"
+    },
+    {
+      "ok": true,
+      "file": "branches--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/branches"
+    },
+    {
+      "ok": true,
+      "file": "cars--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/cars"
+    },
+    {
+      "ok": true,
+      "file": "audit--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/audit"
+    },
+    {
+      "ok": true,
+      "file": "data-center--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/data-center"
+    },
+    {
+      "ok": true,
+      "file": "notifications--mobile.png",
+      "url": "http://127.0.0.1:4173/operations/notifications"
+    }
+  ]
+}

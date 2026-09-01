@@ -13,6 +13,7 @@ import {
   normalizeAssistantGrants,
 } from '@/auth/permissions'
 import AssistantGrantsEditor from '@/components/AssistantGrantsEditor'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import {
   deactivateStaffPerson,
   listBranches,
@@ -32,6 +33,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import {
+  canCreateStaffRoleOverride,
+  canRevokeStaffRoleOverride,
+} from '@/lib/ownerRevisionsPhase7'
 import { validateRoleDefinition, BASELINE_TEMPLATES } from '@/lib/roleDefinitions'
 
 const ROLE_LABELS = {
@@ -126,6 +132,12 @@ export default function PeopleManagePage() {
     baseline_template: 'staff',
     grants: { ...DEFAULT_ASSISTANT_GRANTS },
   })
+  const [overrideForm, setOverrideForm] = useState({
+    staff_id: '',
+    branch_slug: '',
+    on_date: getLocalCalendarDate(),
+  })
+  const [overrides, setOverrides] = useState([])
 
   const roleOptions = useMemo(() => {
     const base = [
@@ -149,21 +161,32 @@ export default function PeopleManagePage() {
   }, [profile])
 
   const load = useCallback(async () => {
-    const [p, b, defs] = await Promise.all([
+    const [p, b, defs, ov] = await Promise.all([
       listStaffPeople({ includeInactive: true }),
       listBranches(),
       supabase.from('role_definitions').select('*').eq('is_active', true).order('label'),
+      supabase
+        .from('staff_role_overrides')
+        .select('id, staff_id, role, branch_slug, on_date, created_at')
+        .gte('on_date', getLocalCalendarDate())
+        .order('on_date', { ascending: true })
+        .limit(40),
     ])
     const scopedBranches = filterBranchesForProfile(b, profile)
     const scopedPeople = filterPeopleForProfile(p, profile)
     setPeople(scopedPeople)
     setBranches(scopedBranches)
     if (!defs.error) setRoleDefs(defs.data || [])
+    if (!ov.error) setOverrides(ov.data || [])
     const defaultBranch = pickDefaultBranchSlug(profile, scopedBranches)
     setForm((f) => ({
       ...f,
       branch_slug: f.branch_slug || defaultBranch,
       branch_slugs: f.branch_slugs.length ? f.branch_slugs : defaultBranch ? [defaultBranch] : [],
+    }))
+    setOverrideForm((f) => ({
+      ...f,
+      branch_slug: f.branch_slug || defaultBranch,
     }))
   }, [profile])
 
@@ -172,6 +195,53 @@ export default function PeopleManagePage() {
   }, [load, profile])
 
   if (!canManagePeople(profile)) return <Navigate to="/operations/access-denied" replace />
+
+  async function createTempTl(event) {
+    event.preventDefault()
+    if (!canCreateStaffRoleOverride(profile)) {
+      toast.error('Only SA/ASA or branch admin can assign a temp Team Lead.')
+      return
+    }
+    if (!overrideForm.staff_id || !overrideForm.branch_slug || !overrideForm.on_date) {
+      toast.error('Pick crew, branch, and date.')
+      return
+    }
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('staff_role_overrides').insert({
+        staff_id: overrideForm.staff_id,
+        role: 'team_lead',
+        branch_slug: overrideForm.branch_slug,
+        on_date: overrideForm.on_date,
+        created_by: profile.id,
+      })
+      if (error) throw error
+      toast.success('Temp Team Lead set for that day')
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function revokeOverride(id) {
+    if (!canRevokeStaffRoleOverride(profile)) {
+      toast.error('Only Super Admin can revoke overrides.')
+      return
+    }
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('staff_role_overrides').delete().eq('id', id)
+      if (error) throw error
+      toast.success('Override revoked')
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function onSubmit(event) {
     event.preventDefault()
@@ -259,18 +329,18 @@ export default function PeopleManagePage() {
   }
 
   return (
-    <section className="flex flex-col gap-8">
-      <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Users & Access</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Users & Access</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {isSuperAdmin(profile)
-            ? 'Create roles, assign multi-branch scope, and toggle Assistant Super Admin grants. Reload after edits; open sessions pick up grant changes on next auth refresh.'
-            : canEditAssistantGrants(profile)
-              ? 'Manage people and ASA grants for your authority. Branch-scoped data follows assignments.'
-              : 'Create Team Leads and staff for your assigned branch.'}
-        </p>
-      </div>
+    <OpsPageShell
+      className="hakum-people"
+      eyebrow="Users and access"
+      title="Users and access"
+      description={
+        isSuperAdmin(profile)
+          ? 'Create roles, assign multi-branch scope, and toggle Assistant Super Admin grants. Reload after edits; open sessions pick up grant changes on next auth refresh.'
+          : canEditAssistantGrants(profile)
+            ? 'Manage people and ASA grants for your authority. Branch-scoped data follows assignments.'
+            : 'Create Team Leads and staff for your assigned branch.'
+      }
+    >
 
       {isSuperAdmin(profile) ? (
         <Card>
@@ -525,6 +595,85 @@ export default function PeopleManagePage() {
         </Card>
       </div>
 
+      {canCreateStaffRoleOverride(profile) ? (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Temp Team Lead</CardTitle>
+            <CardDescription>
+              Assign crew as Team Lead for one Manila calendar day (branch-scoped). Super Admin can revoke.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={createTempTl} className="grid gap-3 sm:grid-cols-4">
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label>Crew</Label>
+                <Select
+                  value={overrideForm.staff_id}
+                  onValueChange={(staff_id) => setOverrideForm((f) => ({ ...f, staff_id }))}
+                >
+                  <SelectTrigger className="min-h-11"><SelectValue placeholder="Select staff" /></SelectTrigger>
+                  <SelectContent>
+                    {people
+                      .filter((p) => p.is_active && ['staff', 'team_lead'].includes(p.role))
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.full_name} ({p.role})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Branch</Label>
+                <Select
+                  value={overrideForm.branch_slug}
+                  onValueChange={(branch_slug) => setOverrideForm((f) => ({ ...f, branch_slug }))}
+                >
+                  <SelectTrigger className="min-h-11"><SelectValue placeholder="Branch" /></SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.slug} value={b.slug}>{b.name || b.slug}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  className="min-h-11"
+                  value={overrideForm.on_date}
+                  onChange={(e) => setOverrideForm((f) => ({ ...f, on_date: e.target.value }))}
+                />
+              </div>
+              <Button type="submit" className="min-h-11 sm:col-span-4" disabled={saving}>
+                {saving ? 'Saving…' : 'Assign temp TL'}
+              </Button>
+            </form>
+            <ul className="space-y-2 text-sm">
+              {overrides.map((row) => {
+                const name = people.find((p) => p.id === row.staff_id)?.full_name || row.staff_id.slice(0, 8)
+                return (
+                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2">
+                    <span>
+                      {name} · {row.branch_slug} · {String(row.on_date).slice(0, 10)} · {row.role}
+                    </span>
+                    {canRevokeStaffRoleOverride(profile) ? (
+                      <Button size="sm" variant="ghost" disabled={saving} onClick={() => revokeOverride(row.id)}>
+                        Revoke
+                      </Button>
+                    ) : null}
+                  </li>
+                )
+              })}
+              {!overrides.length ? (
+                <li className="text-muted-foreground">No upcoming day overrides.</li>
+              ) : null}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent className="max-h-[90svh] overflow-y-auto">
           <DialogHeader>
@@ -642,6 +791,6 @@ export default function PeopleManagePage() {
           )}
         </DialogContent>
       </Dialog>
-    </section>
+    </OpsPageShell>
   )
 }

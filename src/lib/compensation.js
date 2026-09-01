@@ -79,36 +79,202 @@ export function toCompensationSettingsRow(rules, { id = 1 } = {}) {
   }
 }
 
+/** HH:MM or ISO timestamp → minutes from midnight (Asia/Manila for ISO). Null if unparseable. */
+export function hhmmToMinutes(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return null
+  // Plain wall-clock HH:MM (shift windows, demo clocks) — use as written.
+  if (!raw.includes('T')) {
+    const hm = /^(\d{1,2}):(\d{2})/.exec(raw)
+    if (!hm) return null
+    return Number(hm[1]) * 60 + Number(hm[2])
+  }
+  // Live attendance stores UTC ISO via toISOString(); never take the UTC digits literally.
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return null
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d)
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value)
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value)
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
+  const h = hour === 24 ? 0 : hour
+  return h * 60 + minute
+}
+
+/** Default bay shift when branch hours are missing (Manila shop day). */
+export const DEFAULT_BAY_SHIFT = Object.freeze({ shift_start: '08:00', shift_end: '16:00' })
+
+/** Index branch_operating_hours rows as `${branch_slug}|${day_of_week}` → row. */
+export function indexBranchOperatingHours(rows = []) {
+  const out = Object.create(null)
+  for (const h of rows || []) {
+    if (h?.is_closed) continue
+    const slug = h.branch_slug || h.branch
+    const dow = Number(h.day_of_week)
+    if (!slug || !Number.isFinite(dow)) continue
+    out[`${slug}|${dow}`] = h
+  }
+  return out
+}
+
+/** Manila weekday 0–6 for a YYYY-MM-DD shop date. */
+export function manilaDayOfWeek(ymd) {
+  const day = String(ymd || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null
+  return new Date(`${day}T12:00:00+08:00`).getUTCDay()
+}
+
+/** Look up opens/closes for one attendance row's branch×date. */
+export function hoursForAttendanceDay(hoursIndex, branchSlug, attendanceDate) {
+  const dow = manilaDayOfWeek(attendanceDate)
+  if (dow == null || !branchSlug) return null
+  return hoursIndex?.[`${branchSlug}|${dow}`] || null
+}
+
 /**
- * Lateness weight: present / late from rules (defaults 1 / 0.7), else 0.
- * ponytail: linear weights; upgrade to minute-based if SA asks.
+ * Map a staff_attendance DB row (+ optional hours) into a payroll roster clock shape.
+ * Poka-yoke: always expose checked_in_at so remaining-shift late math can run.
  */
-export function attendanceWeight(status, rules = {}) {
-  const s = String(status || '').toLowerCase()
+export function attendanceRowForPayroll(row = {}, hours = null) {
+  const opens = hours?.opens_at || hours?.opensAt || DEFAULT_BAY_SHIFT.shift_start
+  const closes = hours?.closes_at || hours?.closesAt || DEFAULT_BAY_SHIFT.shift_end
+  return {
+    id: row.staff_id || row.id,
+    staff_id: row.staff_id || row.id,
+    full_name: row.staff_profiles?.full_name || row.full_name || '',
+    role: row.staff_profiles?.role || row.role || '',
+    branch_slug: row.branch_slug || row.branch,
+    attendance_date: row.attendance_date || row.date,
+    status: row.status,
+    attendance_status: row.status,
+    checked_in_at: row.checked_in_at || row.checkedInAt || null,
+    clock_in_at: row.clock_in_at || row.clockInAt || null,
+    minutes_late: row.minutes_late ?? row.minutesLate ?? null,
+    shift_start: opens,
+    shift_end: closes,
+  }
+}
+
+/**
+ * Pay share for a roster row.
+ * Absent / missing / off → 0 (no car, no pool).
+ * With clock_in + shift window → remaining shift / scheduled (what they naabutan).
+ * Else status: present = 1, late = 0.7.
+ */
+export function attendanceWeight(status, rules = {}, clock = {}) {
+  const s = String(status || clock.attendance_status || clock.status || '').toLowerCase()
+  if (!s || s === 'absent' || s === 'off' || s === 'leave' || s === 'no_show') return 0
   const present = Number(rules.attendance_present_weight)
-  const late = Number(rules.attendance_late_weight)
-  if (s === 'present') return Number.isFinite(present) && present >= 0 ? present : 1
-  if (s === 'late') return Number.isFinite(late) && late >= 0 ? late : 0.7
+  const presentW = Number.isFinite(present) && present >= 0 ? present : 1
+  const start = hhmmToMinutes(clock.shift_start || clock.shiftStart)
+  const end = hhmmToMinutes(clock.shift_end || clock.shiftEnd)
+  // Live attendance stores checked_in_at (ISO); demos/tests may use clock_in_at HH:MM.
+  const inn = hhmmToMinutes(
+    clock.clock_in_at ||
+      clock.clockInAt ||
+      clock.clock_in ||
+      clock.checked_in_at ||
+      clock.checkedInAt,
+  )
+  const scheduledArg = Number(clock.scheduled_minutes || clock.scheduledMinutes)
+  const lateMins = Number(clock.minutes_late || clock.minutesLate)
+  let scheduledMins = Number.isFinite(scheduledArg) && scheduledArg > 0 ? scheduledArg : null
+  if (scheduledMins == null && start != null && end != null) scheduledMins = Math.max(1, end - start)
+  if (!scheduledMins) scheduledMins = 480
+  if (Number.isFinite(lateMins) && lateMins >= 0) {
+    return presentW * Math.min(1, Math.max(0, scheduledMins - lateMins) / scheduledMins)
+  }
+  if (inn != null && (start != null || end != null)) {
+    const endMins = end != null ? end : start + scheduledMins
+    return presentW * Math.min(1, Math.max(0, endMins - inn) / scheduledMins)
+  }
+  if (s === 'present') return presentW
+  if (s === 'late') {
+    const late = Number(rules.attendance_late_weight)
+    return Number.isFinite(late) && late >= 0 ? late : 0.7
+  }
   return 0
 }
 
-/** Split wash/package sales pool across on-shift crew + TL by attendance weight. */
-export function splitWashPool({ totalSalesMinor = 0, poolPct = 35, roster = [], rules = {} } = {}) {
+/** UI presets — late crew still earn; this is their share vs on-time (stored as 0–1 weight). */
+export const LATE_PAY_SHARE_PRESETS = Object.freeze([
+  { id: 'full', label: 'No penalty', percent: 100, hint: 'Late gets same share as on time' },
+  { id: 'standard', label: 'Standard', percent: 70, hint: 'Hakum default' },
+  { id: 'half', label: 'Half share', percent: 50, hint: 'Late gets half of on-time pay' },
+  { id: 'none', label: 'No pay if late', percent: 0, hint: 'Only on-time crew split the pool' },
+])
+
+export function latePaySharePercent(rules = {}) {
+  const w = Number(normalizeCompensationSettings(rules).attendance_late_weight)
+  const pct = Math.round((Number.isFinite(w) ? w : 0.7) * 100)
+  return Math.max(0, Math.min(100, pct))
+}
+
+export function latePayWeightFromPercent(percent) {
+  const p = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)))
+  return p / 100
+}
+
+/** ponytail: demo only — illustrates splitWashPool weight math for Settings copy. */
+export function demoWashPoolSplit({
+  poolMinor = 1_000_000,
+  onTimeCount = 2,
+  lateCount = 1,
+  lateWeight = 0.7,
+} = {}) {
+  const onTime = Math.max(0, Number(onTimeCount) || 0)
+  const late = Math.max(0, Number(lateCount) || 0)
+  const lw = Number.isFinite(Number(lateWeight)) ? Number(lateWeight) : 0.7
+  const weightSum = onTime + late * lw
+  if (!weightSum || !poolMinor) {
+    return { perOnTimeMinor: 0, perLateMinor: 0, weightSum, poolMinor: poolMinor || 0 }
+  }
+  const unit = poolMinor / weightSum
+  return {
+    perOnTimeMinor: Math.round(unit),
+    perLateMinor: Math.round(unit * lw),
+    weightSum,
+    poolMinor,
+  }
+}
+
+/** Wash pool is bay crew only — not detailers, TL, office, or sales. */
+function inWashPoolRoster(row) {
+  const role = String(row?.role || 'staff').toLowerCase()
+  return !['detailer', 'team_lead', 'admin', 'super_admin', 'investor', 'sales', 'marketing'].includes(role)
+}
+
+/** Split an amount across roster by attendance weight. Wash pool excludes non-bay roles. */
+export function splitWashPool({
+  totalSalesMinor = 0,
+  poolPct = 35,
+  roster = [],
+  rules = {},
+  forWashPool = true,
+} = {}) {
   const pool = Math.round((Number(totalSalesMinor) || 0) * (Number(poolPct) || 0) / 100)
-  const weighted = (roster || [])
+  const eligible = forWashPool ? (roster || []).filter((row) => inWashPoolRoster(row)) : roster || []
+  const weighted = eligible
     .map((row) => ({
       ...row,
-      weight: attendanceWeight(row.attendance_status || row.status, rules),
+      weight: attendanceWeight(row.attendance_status || row.status, rules, row),
     }))
     .filter((row) => row.weight > 0)
   const weightSum = weighted.reduce((sum, row) => sum + row.weight, 0)
   if (!pool || !weightSum) {
     return { pool_minor: pool, rows: weighted.map((row) => ({ ...row, pay_minor: 0 })) }
   }
-  const rows = weighted.map((row) => ({
-    ...row,
-    pay_minor: Math.round((pool * row.weight) / weightSum),
-  }))
+  let allocated = 0
+  const rows = weighted.map((row, i) => {
+    const pay =
+      i === weighted.length - 1 ? pool - allocated : Math.round((pool * row.weight) / weightSum)
+    allocated += pay
+    return { ...row, pay_minor: pay }
+  })
   return { pool_minor: pool, rows }
 }
 
@@ -233,6 +399,7 @@ export function buildCeramicCompensationExpenses({
   rules,
   toggles = {},
   paymentMethod,
+  assignedDetailerId = null,
 } = {}) {
   if (!saleId || !branch || branch === 'all') return []
   const amount = Math.round(Number(salesMinor) || 0)
@@ -265,6 +432,8 @@ export function buildCeramicCompensationExpenses({
       expense_kind: 'salary_detailer',
       branch,
       status: 'draft',
+      staff_id: assignedDetailerId || null,
+      assigned_staff_id: assignedDetailerId || null,
     })
   }
   return rows
@@ -299,15 +468,43 @@ function rosterAttendanceStatus(member) {
   return member?.attendance_status || member?.attendance?.status || (member?.is_present_today ? 'present' : 'absent')
 }
 
+function lineSalaryPct(line) {
+  const raw = line?.salary_pct ?? line?.services?.salary_pct
+  if (raw == null || raw === '') return null
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null
+}
+
+function isWashEligibleLine(line) {
+  const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
+  const kind = String(line?.catalog_kind || '').toLowerCase()
+  if (cat === 'detailing' || kind === 'detailing') return false
+  if (isCeramicCompensationLine(line)) return false
+  return true
+}
+
+/**
+ * Catalog salary_pct lines contribute directly to preview pool (pct of line total).
+ * Null salary_pct → stay in global wash base (washPoolAmountMinor × wash_pool_pct).
+ */
+export function salaryPctPoolMinor(sale) {
+  const lines = sale?.sale_line_items || sale?.lines || []
+  return (lines || []).reduce((sum, line) => {
+    if (!isWashEligibleLine(line)) return sum
+    const pct = lineSalaryPct(line)
+    if (pct == null) return sum
+    return sum + Math.round((Number(line.line_total_minor) || 0) * pct / 100)
+  }, 0)
+}
+
 /** Group today's wash/package sales + present roster into per-branch pool drafts for Finance. */
 export function washPoolAmountMinor(sale) {
   const lines = sale?.sale_line_items || sale?.lines || []
   if (lines.length) {
     return lines.reduce((sum, line) => {
-      const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
-      const kind = String(line?.catalog_kind || '').toLowerCase()
-      if (cat === 'detailing' || kind === 'detailing') return sum
-      if (isCeramicCompensationLine(line)) return sum
+      if (!isWashEligibleLine(line)) return sum
+      // Preview-only: optional catalog % replaces global pool for this SKU.
+      if (lineSalaryPct(line) != null) return sum
       return sum + (Number(line.line_total_minor) || 0)
     }, 0)
   }
@@ -335,7 +532,7 @@ export function buildCompensationPostPlan({
   const rosterByBranch = {}
   for (const member of roster || []) {
     const status = rosterAttendanceStatus(member)
-    if (attendanceWeight(status) <= 0) continue
+    if (attendanceWeight(status, {}, member) <= 0) continue
     const branch = member.branch_slug || (branchFilter && branchFilter !== 'all' ? branchFilter : null)
     if (!branch) continue
     if (branchFilter && branchFilter !== 'all' && branch !== branchFilter) continue

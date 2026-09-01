@@ -13,6 +13,7 @@ import {
   normalizeWeekHours,
 } from '@/lib/branchOperatingHours'
 import BranchLocationPicker from '@/components/BranchLocationPicker'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -163,16 +164,16 @@ export default function BranchesManagePage() {
   }
 
   return (
-    <section className="flex flex-col gap-8">
-      <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Sites</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Branches</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          {canCreate
-            ? 'Add a Philippine site with map pin. Active branches get live queue, booking, staff assignment, and show on customer visits. Coming soon sites appear on the public branches page without accepting bookings yet.'
-            : 'Update geo and status for your assigned sites. Opening or archiving company sites is Super Admin only.'}
-        </p>
-      </div>
+    <OpsPageShell
+      className="hakum-branches"
+      eyebrow="Sites"
+      title="Branches"
+      description={
+        canCreate
+          ? 'Add a Philippine site with map pin. Active branches get live queue, booking, staff assignment, and show on customer visits. Coming soon sites appear on the public branches page without accepting bookings yet.'
+          : 'Update geo and status for your assigned sites. Opening or archiving company sites is Super Admin only.'
+      }
+    >
 
       <div className={`grid gap-6 ${canCreate || editingSlug ? 'xl:grid-cols-[minmax(0,420px)_1fr]' : ''}`}>
         {(canCreate || editingSlug) ? (
@@ -409,7 +410,7 @@ export default function BranchesManagePage() {
           </CardContent>
         </Card>
       </div>
-    </section>
+    </OpsPageShell>
   )
 }
 

@@ -314,3 +314,31 @@ export function canReviewShiftClose(profile) {
   }
   return false
 }
+
+/**
+ * BA salary draft extras for EoS (stored on shift_close_reports.submitted.salary_draft_extras).
+ * Never posts payroll — SA/ASA apply on the floor wizard.
+ */
+export function normalizeSalaryDraftExtras(raw) {
+  const list = Array.isArray(raw) ? raw : []
+  const out = []
+  for (const row of list) {
+    const kind = row?.kind === 'deduction' ? 'deduction' : row?.kind === 'extra' ? 'extra' : null
+    const amount_minor = Math.round(Number(row?.amount_minor) || 0)
+    const staff_name = String(row?.staff_name || '').trim()
+    if (!kind || amount_minor <= 0 || !staff_name) continue
+    const staff_id = String(row?.staff_id || '').trim() || null
+    const note = String(row?.note || '').trim()
+    out.push({ staff_id, staff_name, amount_minor, note, kind })
+  }
+  return out
+}
+
+/** Merge normalized extras onto a submitted money snapshot (jsonb key). */
+export function attachSalaryDraftExtras(submitted, extras) {
+  const next = { ...(submitted && typeof submitted === 'object' ? submitted : {}) }
+  const normalized = normalizeSalaryDraftExtras(extras)
+  if (normalized.length) next.salary_draft_extras = normalized
+  else delete next.salary_draft_extras
+  return next
+}

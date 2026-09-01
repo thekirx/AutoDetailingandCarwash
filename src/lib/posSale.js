@@ -65,6 +65,106 @@ export function posCartBlocksCheckout(cart = []) {
   )
 }
 
+/** Queue handoff wash/detailing lines stay locked — TL edits the booking. */
+export function canRemovePosCartLine(line) {
+  return !(line?.from_handoff)
+}
+
+export function removePosCartLine(cart = [], lineKey) {
+  const target = (cart || []).find((x) => x.key === lineKey)
+  if (target && !canRemovePosCartLine(target)) return [...(cart || [])]
+  return (cart || []).filter((x) => x.key !== lineKey)
+}
+
+/**
+ * Ad-hoc ticket discount (not membership). Requires reason; returns new cart + audit meta.
+ * percent: 1–100 off non-handoff priced lines, or amountMinor flat off distributed.
+ */
+export function applyAdHocDiscount(cart = [], { percent = 0, amountMinor = 0, reason = '' } = {}) {
+  const why = String(reason || '').trim()
+  if (why.length < 3) {
+    return { ok: false, error: 'Discount needs a reason (3+ characters)', cart: cart || [] }
+  }
+  const pct = Math.max(0, Math.min(100, Number(percent) || 0))
+  const flat = Math.max(0, Math.floor(Number(amountMinor) || 0))
+  if (!pct && !flat) {
+    return { ok: false, error: 'Enter a discount percent or amount', cart: cart || [] }
+  }
+  let next = (cart || []).map((line) => ({ ...line }))
+  let discountedMinor = 0
+  if (pct > 0) {
+    next = next.map((line) => {
+      if (line.from_handoff || line.is_loyalty_award || line.is_birthday_award || line.is_membership_included) {
+        return line
+      }
+      const list = Math.max(Math.floor(Number(line.list_price_minor ?? line.unit_price_minor) || 0), 0)
+      const unit = Math.max(0, Math.round(list * (1 - pct / 100)))
+      discountedMinor += (list - unit) * Math.max(1, Number(line.quantity) || 1)
+      return {
+        ...line,
+        list_price_minor: list,
+        unit_price_minor: unit,
+        price_minor: unit,
+        adhoc_discount_applied: unit !== list,
+        adhoc_discount_reason: why,
+      }
+    })
+  } else {
+    const eligible = next.filter(
+      (line) =>
+        !line.from_handoff &&
+        !line.is_loyalty_award &&
+        !line.is_birthday_award &&
+        !line.is_membership_included,
+    )
+    const pool = eligible.reduce(
+      (sum, line) =>
+        sum + Math.max(Math.floor(Number(line.unit_price_minor) || 0), 0) * Math.max(1, Number(line.quantity) || 1),
+      0,
+    )
+    if (pool <= 0) {
+      return { ok: false, error: 'No eligible lines for a flat discount', cart: cart || [] }
+    }
+    const take = Math.min(flat, pool)
+    discountedMinor = take
+    let remaining = take
+    next = next.map((line) => {
+      if (
+        line.from_handoff ||
+        line.is_loyalty_award ||
+        line.is_birthday_award ||
+        line.is_membership_included
+      ) {
+        return line
+      }
+      const qty = Math.max(1, Number(line.quantity) || 1)
+      const list = Math.max(Math.floor(Number(line.list_price_minor ?? line.unit_price_minor) || 0), 0)
+      const lineTotal = list * qty
+      const share = remaining > 0 ? Math.min(remaining, Math.round((lineTotal / pool) * take)) : 0
+      remaining -= share
+      const unit = Math.max(0, Math.floor((lineTotal - share) / qty))
+      return {
+        ...line,
+        list_price_minor: list,
+        unit_price_minor: unit,
+        price_minor: unit,
+        adhoc_discount_applied: unit !== list,
+        adhoc_discount_reason: why,
+      }
+    })
+  }
+  return {
+    ok: true,
+    cart: next,
+    audit: {
+      reason: why,
+      percent: pct || null,
+      amount_minor: flat || discountedMinor,
+      discounted_minor: discountedMinor,
+    },
+  }
+}
+
 /**
  * Cash advance branch filter for Payroll inbox + POS daily-close load.
  * Empty payload.branch is out (fail-closed).

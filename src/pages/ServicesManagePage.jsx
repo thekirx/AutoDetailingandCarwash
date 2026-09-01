@@ -39,6 +39,9 @@ function emptyForm(catalogScope = 'all') {
     display_order: '0',
     pay_category: defaultPayCategoryForCatalogScope(catalogScope),
     price: '',
+    salary_pct: '',
+    duration_minutes: '60',
+    sla_minutes: '',
     use_size_pricing: false,
     size_prices: emptySizePriceForm(''),
     size_enabled: { small: false, medium: true, large: false, extra_large: false },
@@ -150,6 +153,9 @@ function formFromService(row) {
     ...row,
     price: String(Number(row.price_minor || 0) / 100),
     description: row.description || '',
+    salary_pct: row.salary_pct == null || row.salary_pct === '' ? '' : String(row.salary_pct),
+    duration_minutes: row.duration_minutes != null ? String(row.duration_minutes) : '60',
+    sla_minutes: row.sla_minutes != null && row.sla_minutes !== '' ? String(row.sla_minutes) : '',
     use_size_pricing: sized,
     size_prices: prices,
     size_enabled,
@@ -237,6 +243,9 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
         pay_category: editing.pay_category,
         display_order: editing.display_order,
         is_active: editing.is_active,
+        salary_pct: editing.salary_pct,
+        duration_minutes: editing.duration_minutes,
+        sla_minutes: editing.sla_minutes,
         included_service_ids:
           serviceKindFromPayCategory(editing.pay_category) === 'package'
             ? editing.included_service_ids || []
@@ -367,6 +376,43 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                 <p className="text-xs text-muted-foreground">Uses Medium (or first enabled size) as catalog price.</p>
               ) : null}
             </div>
+            <div className="flex flex-col gap-2">
+              <Label>Salary % (optional)</Label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                className="min-h-11"
+                value={form.salary_pct}
+                onChange={(e) => setForm({ ...form, salary_pct: e.target.value })}
+                placeholder="Blank = global wash pool"
+              />
+              <p className="text-xs text-muted-foreground">Preview only — does not auto-pay.</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Duration (minutes)</Label>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                className="min-h-11"
+                value={form.duration_minutes}
+                onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>SLA (minutes, optional)</Label>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                className="min-h-11"
+                value={form.sla_minutes}
+                onChange={(e) => setForm({ ...form, sla_minutes: e.target.value })}
+                placeholder="Red in queue/KPI if over"
+              />
+            </div>
             <div className="md:col-span-2 flex flex-col gap-2">
               <Label>Description</Label>
               <Input
@@ -410,6 +456,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Duration / SLA</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -417,7 +464,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
             <TableBody>
               {!scopedRows.length ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                  <TableCell colSpan={6} className="text-sm text-muted-foreground">
                     Nothing here yet — use the form above to create the first item.
                   </TableCell>
                 </TableRow>
@@ -456,6 +503,10 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                         ) : (
                           <div className="text-[10px] text-muted-foreground">Flat</div>
                         )}
+                      </TableCell>
+                      <TableCell className="text-sm tabular-nums text-muted-foreground">
+                        {s.duration_minutes != null ? `${s.duration_minutes}m` : '—'}
+                        {s.sla_minutes != null ? ` / SLA ${s.sla_minutes}m` : ''}
                       </TableCell>
                       <TableCell>{s.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
                       <TableCell className="text-right">
@@ -523,6 +574,44 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                   onChange={(e) => setEditing({ ...editing, price: e.target.value })}
                   disabled={editing.use_size_pricing}
                 />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Salary % (optional)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="min-h-11"
+                  value={editing.salary_pct ?? ''}
+                  onChange={(e) => setEditing({ ...editing, salary_pct: e.target.value })}
+                  placeholder="Blank = global wash pool"
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label>Duration (minutes)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    className="min-h-11"
+                    value={editing.duration_minutes ?? ''}
+                    onChange={(e) => setEditing({ ...editing, duration_minutes: e.target.value })}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>SLA (minutes)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    className="min-h-11"
+                    value={editing.sla_minutes ?? ''}
+                    onChange={(e) => setEditing({ ...editing, sla_minutes: e.target.value })}
+                    placeholder="Optional"
+                  />
+                </div>
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Description</Label>

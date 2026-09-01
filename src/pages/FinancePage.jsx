@@ -12,9 +12,12 @@ import {
   BookOpen,
   ClipboardCheck,
   FileSpreadsheet,
+  Building2,
+  Truck,
+  Mail,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessFinance, canOpenFinanceHub, canSeeAllBranches, canWriteFinance } from '@/auth/permissions'
+import { canAccessFinance, canOpenFinanceHub, canSeeAllBranches, canWriteFinance, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
@@ -31,6 +34,12 @@ import {
   branchScopeList,
   rollupPl,
 } from '@/lib/financeData'
+import {
+  canAccessCorporateFinance,
+  canManageFinanceVendors,
+  filterFinanceBranchOptions,
+  labelFinanceBranch,
+} from '@/lib/financeCorporate'
 import { collectPaged } from '@/lib/crmInsights'
 import { formatMoney } from '@/queue/queueApi'
 import FinanceFilters from './finance/FinanceFilters'
@@ -42,6 +51,13 @@ import FinanceCategoriesTab from './finance/FinanceCategoriesTab'
 import FinanceReportsTab from './finance/FinanceReportsTab'
 import FinanceShiftCloseTab from './finance/FinanceShiftCloseTab'
 import FinanceExpenseReportsTab from './finance/FinanceExpenseReportsTab'
+import FinanceVendorsTab from './finance/FinanceVendorsTab'
+import FinanceQuotesTab from './finance/FinanceQuotesTab'
+import FinanceCorporateTab from './finance/FinanceCorporateTab'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import { FINANCE_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
+import { opsTabSearchParams } from '@/lib/opsShell'
 
 const TAB_ICONS = {
   overview: LayoutDashboard,
@@ -50,6 +66,9 @@ const TAB_ICONS = {
   pl: FileBarChart,
   'shift-close': ClipboardCheck,
   'expense-reports': FileSpreadsheet,
+  vendors: Truck,
+  quotes: Mail,
+  corporate: Building2,
   categories: Tags,
   reports: BookOpen,
 }
@@ -58,13 +77,24 @@ export default function FinancePage() {
   const { profile } = useAuth()
   const booksAccess = canAccessFinance(profile)
   const canWrite = booksAccess && canWriteFinance(profile)
+  const canManageVendors = canManageFinanceVendors(profile)
+  const showCorporate = canAccessCorporateFinance(profile)
   const reportsOnly = !booksAccess && canOpenFinanceHub(profile)
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = reportsOnly ? 'reports' : resolveFinanceTab(searchParams.get('tab'))
-  const visibleTabs = reportsOnly ? FINANCE_TABS.filter((t) => t.id === 'reports') : FINANCE_TABS
+  const visibleTabs = useMemo(() => {
+    if (reportsOnly) return FINANCE_TABS.filter((t) => t.id === 'reports')
+    return FINANCE_TABS.filter((t) => {
+      if (t.id === 'corporate') return showCorporate
+      // Quotes write is SA/ASA/admin; investor has no SELECT on finance_quotes
+      if (t.id === 'quotes' && profile?.role === ROLES.INVESTOR) return false
+      return true
+    })
+  }, [reportsOnly, showCorporate, profile?.role])
 
   const [branches, setBranches] = useState([])
   const [categories, setCategories] = useState([])
+  const [vendors, setVendors] = useState([])
   const [salesRows, setSalesRows] = useState([])
   const [plRows, setPlRows] = useState([])
   const [priorPlRows, setPriorPlRows] = useState([])
@@ -89,13 +119,22 @@ export default function FinancePage() {
   )
 
   const branchOptions = useMemo(() => {
+    const labeled = (list) =>
+      filterFinanceBranchOptions(list, profile).map((b) => ({
+        slug: b.slug,
+        name: labelFinanceBranch(b),
+      }))
     if (scope === null) {
-      return [{ slug: 'all', name: 'All branches' }, ...branches]
+      return [{ slug: 'all', name: 'All branches' }, ...labeled(branches)]
     }
-    return branches
-      .filter((b) => scope.includes(b.slug))
-      .map((b) => ({ slug: b.slug, name: b.name }))
-  }, [branches, scope])
+    return labeled(branches.filter((b) => scope.includes(b.slug)))
+  }, [branches, scope, profile])
+
+  useEffect(() => {
+    if (branchFilter !== 'all' && branchOptions.length && !branchOptions.some((b) => b.slug === branchFilter)) {
+      setBranchFilter(branchOptions[0]?.slug || 'all')
+    }
+  }, [branchFilter, branchOptions])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -129,7 +168,7 @@ export default function FinancePage() {
         priorQ = scopeBranch(priorQ, profile, branchFilter)
       }
 
-      const [branchRows, cats, sales, pl, expRows, prior] = await Promise.all([
+      const [branchRows, cats, sales, pl, expRows, prior, vendorRes] = await Promise.all([
         listBranches(),
         supabase.from('expense_categories').select('id, name, is_chemical, kind').order('name'),
         salesQ,
@@ -137,7 +176,7 @@ export default function FinancePage() {
         collectPaged(async (from, to) => {
           let q = supabase
             .from('expenses')
-            .select('id, title, description, total_minor, branch, status, expense_kind, category_id, created_at, quantity, unit_cost_minor')
+            .select('id, title, description, total_minor, branch, status, expense_kind, category_id, vendor_id, created_at, quantity, unit_cost_minor')
             .gte('created_at', startIso)
             .lte('created_at', endIso)
             .order('created_at', { ascending: false })
@@ -148,13 +187,17 @@ export default function FinancePage() {
           return data || []
         }, 1000),
         priorQ || Promise.resolve({ data: [], error: null }),
+        supabase.from('vendors').select('id, name, is_active').eq('is_active', true).order('name'),
       ])
       if (cats.error) throw cats.error
       if (sales.error) throw sales.error
       if (pl.error) throw pl.error
       if (prior.error) throw prior.error
+      // ponytail: vendors table may be missing until P5 migration — soft-fail empty list
+      if (vendorRes.error) console.warn('vendors load:', vendorRes.error.message)
       setBranches(branchRows || [])
       setCategories(cats.data || [])
+      setVendors(vendorRes.error ? [] : vendorRes.data || [])
       setSalesRows(sales.data || [])
       setPlRows(pl.data || [])
       setPriorPlRows(prior.data || [])
@@ -175,8 +218,12 @@ export default function FinancePage() {
   useEffect(() => {
     if (reportsOnly && searchParams.get('tab') !== 'reports') {
       setSearchParams({ tab: 'reports' }, { replace: true })
+      return
     }
-  }, [reportsOnly, searchParams, setSearchParams])
+    if (!reportsOnly && !visibleTabs.some((t) => t.id === tab)) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [reportsOnly, searchParams, setSearchParams, visibleTabs, tab])
 
   const writableBranches = useMemo(() => {
     if (scope === null) return branches
@@ -202,48 +249,46 @@ export default function FinancePage() {
       setSearchParams({ tab: 'reports' }, { replace: true })
       return
     }
-    setSearchParams(next === 'overview' ? {} : { tab: next }, { replace: true })
+    setSearchParams(opsTabSearchParams(next, 'overview'), { replace: true })
   }
 
   const activeTab = visibleTabs.find((t) => t.id === tab) || FINANCE_TABS.find((t) => t.id === 'reports')
+  const ActiveIcon = TAB_ICONS[tab] || LayoutDashboard
+  const financeStepIcons = {
+    sales: ShoppingCart,
+    shift: ClipboardCheck,
+    bills: Receipt,
+    payroll: FileBarChart,
+  }
 
   return (
-    <section className="finance-shell">
-      <header className="finance-hero">
-        <div className="finance-hero-copy">
-          <p className="finance-eyebrow">Books · Hakum Auto Care</p>
-          <h1 className="finance-title">
-            {(() => {
-              const Icon = TAB_ICONS[tab] || LayoutDashboard
-              return <Icon aria-hidden />
-            })()}
-            {activeTab?.label || 'Dashboard'}
-          </h1>
-          <p className="finance-lead">
-            {activeTab?.hint || 'Finance overview'}
-            <span className="finance-lead-sep" aria-hidden>
-              ·
-            </span>
-            <span className="tabular-nums">{windowLabel}</span>
-            <span className="finance-lead-sep" aria-hidden>
-              ·
-            </span>
-            {branchName}
-          </p>
-        </div>
-
-        <div className="finance-hero-aside">
+    <OpsPageShell
+      className="finance-shell hakum-finance gap-4"
+      eyebrow="Books · Hakum Auto Care"
+      title={activeTab?.label || 'Dashboard'}
+      icon={ActiveIcon}
+      description={`${activeTab?.hint || 'Finance overview'} · ${windowLabel} · ${branchName}`}
+      actions={
+        <>
           <div className="finance-net-chip" data-tone={headlinePl.net >= 0 ? 'up' : 'down'}>
             <p className="finance-net-label">{headlinePl.net >= 0 ? 'Net profit' : 'Net loss'}</p>
-            <p className="finance-net-value tabular-nums">
-              {loading ? '—' : formatMoney(headlinePl.net)}
-            </p>
+            <p className="finance-net-value tabular-nums">{loading ? '—' : formatMoney(headlinePl.net)}</p>
           </div>
           <Badge variant={canWrite ? 'default' : 'secondary'} className="finance-role-badge">
             {canWrite ? 'Can edit' : 'View only'}
           </Badge>
-        </div>
-      </header>
+        </>
+      }
+    >
+      {!reportsOnly ? (
+        <OpsGuideCard
+          title="How Finance works"
+          description="Income from POS, expenses from bills, shift closes before payroll. Open a step if you are new to books."
+          steps={FINANCE_WORKFLOW_STEPS}
+          stepIcons={financeStepIcons}
+          defaultOpen={tab === 'overview'}
+        />
+      ) : null}
 
       <FinanceFilters
         branchOptions={branchOptions}
@@ -332,8 +377,9 @@ export default function FinancePage() {
           <FinancePurchasesTab
             expenses={expenses}
             categories={categories}
+            vendors={vendors}
             branches={branches}
-            writableBranches={writableBranches}
+            writableBranches={writableBranches.map((b) => ({ ...b, name: labelFinanceBranch(b) }))}
             canWrite={canWrite}
             range={range}
             loading={loading}
@@ -374,6 +420,24 @@ export default function FinancePage() {
           />
         </TabsContent>
 
+        <TabsContent value="vendors" className="finance-tab-panel">
+          <FinanceVendorsTab
+            canManage={canManageVendors}
+            onVendorsChange={(rows) => setVendors((rows || []).filter((v) => v.is_active))}
+          />
+        </TabsContent>
+
+        <TabsContent value="quotes" className="finance-tab-panel">
+          <FinanceQuotesTab
+            canWrite={canWrite}
+            branches={writableBranches.map((b) => ({ ...b, name: labelFinanceBranch(b) }))}
+          />
+        </TabsContent>
+
+        <TabsContent value="corporate" className="finance-tab-panel">
+          <FinanceCorporateTab profile={profile} range={range} />
+        </TabsContent>
+
         <TabsContent value="categories" className="finance-tab-panel">
           <FinanceCategoriesTab categories={categories} canWrite={canWrite} onReload={load} />
         </TabsContent>
@@ -390,6 +454,6 @@ export default function FinancePage() {
           />
         </TabsContent>
       </Tabs>
-    </section>
+    </OpsPageShell>
   )
 }

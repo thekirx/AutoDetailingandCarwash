@@ -30,6 +30,24 @@ function mapDbError(error, fallback = 'Request failed.') {
   return new Error(msg)
 }
 
+/** Nullable catalog salary % (0–100). Blank → null. */
+function parseOptionalSalaryPct(raw) {
+  if (raw == null || raw === '') return null
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null
+  return n
+}
+
+/** Optional SLA minutes. Blank → null. */
+function parseOptionalSlaMinutes(raw) {
+  if (raw == null || raw === '') return null
+  const n = Number(raw)
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+    throw new Error('SLA minutes must be a positive whole number.')
+  }
+  return n
+}
+
 export async function listBranches({ includeArchived = false } = {}) {
   const key = includeArchived ? 'all' : 'active'
   const hit = branchesCache.get()
@@ -417,7 +435,7 @@ export async function listServices({ includeArchived = false } = {}) {
   let q = supabase
     .from('services')
     .select(
-      'id, name, slug, description, price_minor, duration_minutes, pay_category, is_active, is_archived, display_order, loyalty_weight, included_service_ids, service_size_prices(size_slug, price_minor)',
+      'id, name, slug, description, price_minor, duration_minutes, sla_minutes, pay_category, salary_pct, is_active, is_archived, display_order, loyalty_weight, included_service_ids, service_size_prices(size_slug, price_minor)',
     )
     .order('display_order')
   if (!includeArchived) q = q.eq('is_archived', false)
@@ -476,10 +494,12 @@ export async function createService(payload) {
     description: payload.description?.trim() || null,
     price_minor: v.price_minor,
     duration_minutes: v.duration_minutes,
+    sla_minutes: parseOptionalSlaMinutes(payload.sla_minutes),
     pay_category: v.pay_category,
     display_order: v.display_order,
     is_active: true,
     is_archived: false,
+    salary_pct: parseOptionalSalaryPct(payload.salary_pct),
   }
   if (Array.isArray(payload.included_service_ids)) {
     row.included_service_ids = payload.included_service_ids.filter(Boolean)
@@ -515,10 +535,12 @@ export async function updateService(id, payload) {
     description: payload.description?.trim() || null,
     price_minor: v.price_minor,
     duration_minutes: v.duration_minutes,
+    sla_minutes: parseOptionalSlaMinutes(payload.sla_minutes),
     pay_category: v.pay_category,
     display_order: v.display_order,
     is_active: payload.is_active,
     updated_at: new Date().toISOString(),
+    salary_pct: parseOptionalSalaryPct(payload.salary_pct),
   }
   if (payload.is_active === undefined) delete patch.is_active
   if (Array.isArray(payload.included_service_ids)) {
@@ -638,11 +660,12 @@ export async function fetchAdminConsoleSnapshot(profile, branchFilter = 'all') {
   const todaySales = salesRows.filter((r) => r.sale_date === today)
   const todayRevenueMinor = todaySales.reduce((sum, r) => sum + Number(r.total_sales_minor || 0), 0)
 
+  // Align with Finance / Floor Board: books pulse uses paid + posted only.
   const approvedExpenseMinor = expenseRows
-    .filter((r) => ['approved', 'paid'].includes(r.status))
+    .filter((r) => ['paid', 'posted'].includes(r.status))
     .reduce((sum, r) => sum + Number(r.total_minor || 0), 0)
   const pendingExpenseMinor = expenseRows
-    .filter((r) => ['draft', 'pending_approval'].includes(r.status))
+    .filter((r) => ['draft', 'pending_approval', 'approved'].includes(r.status))
     .reduce((sum, r) => sum + Number(r.total_minor || 0), 0)
 
   const profitMinor = revenueMinor - approvedExpenseMinor
@@ -942,7 +965,7 @@ function normalizeProductTags(raw) {
 export async function listProducts({ includeArchived = false } = {}) {
   let q = supabase
     .from('products')
-    .select('id, name, sku, category, price_minor, stock_qty, stock_group, branch_slug, tags, is_active, is_archived, updated_at')
+    .select('id, name, sku, category, price_minor, stock_qty, stock_group, branch_slug, tags, usage_kind, is_active, is_archived, updated_at')
     .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
@@ -965,6 +988,7 @@ export async function createProduct(payload) {
     stock_group: stockGroupFromName(payload.stock_group || name),
     branch_slug: payload.branch_slug || null,
     tags: tags.length ? tags : ['sellable', 'merch'],
+    usage_kind: payload.usage_kind === 'internal' ? 'internal' : 'resellable',
     is_active: payload.is_active !== false,
     is_archived: false,
   }
@@ -995,6 +1019,7 @@ export async function updateProduct(id, payload) {
     stock_group: stockGroupFromName(payload.stock_group || name),
     branch_slug: payload.branch_slug || null,
     tags: normalizeProductTags(payload.tags),
+    usage_kind: payload.usage_kind === 'internal' ? 'internal' : 'resellable',
     is_active: payload.is_active !== false,
     updated_at: new Date().toISOString(),
   }

@@ -291,9 +291,15 @@ export function canManageServices(profile) {
   return false
 }
 
-/** Inventory Management area (services + merch) — same gate as catalog CRUD. */
+/** BA restock + Sunday recon (scoped). SA/ASA with catalog access also. */
+export function canRestockInventory(profile) {
+  if (canManageServices(profile)) return true
+  return profile?.role === ROLES.ADMIN
+}
+
+/** Inventory area: full catalog (SA/ASA) or BA restock/recon only. */
 export function canAccessInventory(profile) {
-  return canManageServices(profile)
+  return canManageServices(profile) || canRestockInventory(profile)
 }
 
 export function canManageCrew(profile) {
@@ -535,6 +541,7 @@ export function canSubmitOpsFormKind(profile, kind) {
     if (isSuperAdmin(profile)) return false
     return has(profile, [
       ROLES.STAFF,
+      ROLES.DETAILER,
       ROLES.TEAM_LEAD,
       ROLES.OPERATIONS_LEAD,
       ROLES.ADMIN,
@@ -560,6 +567,9 @@ export function canEditQueueOperations(profile) {
   if (isOperationsLead(profile)) return true
   return profile?.role === ROLES.TEAM_LEAD
 }
+
+/** Re-export day override resolver for clock/queue callers. */
+export { resolveEffectiveRole } from '../lib/ownerRevisionsPhase7.js'
 
 export function canViewQueueOperations(profile) {
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
@@ -744,6 +754,7 @@ export function getOperationsNav(profile) {
       nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
       nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
       nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
+      nav('Inventory', '/operations/inventory', 'Package', 'counter'),
       nav('Reviews', '/operations/reviews', 'Star', 'customers'),
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
       nav('Ops Lab', '/operations/roadmap', 'Map', 'work'),
@@ -1029,6 +1040,7 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'queue',
   'attendance',
   'pos',
+  'inventory',
   'reviews',
   'planning',
   'roadmap',

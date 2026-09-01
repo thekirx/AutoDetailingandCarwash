@@ -7,6 +7,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { ExternalLink, Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessOpsRoadmap } from '@/auth/permissions'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import {
   boardKindMeta,
   catalogStatusesToOptions,
@@ -526,17 +527,13 @@ export default function OpsRoadmapPage() {
   if (!allowed) return <Navigate to="/operations/access-denied" replace />
 
   return (
-    <section className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-[family-name:var(--font-ops)] text-2xl font-semibold tracking-tight sm:text-3xl">
-            Ops Lab
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Shared suggestions for leadership. Status changes notify everyone with access; every action is audited.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <OpsPageShell
+      className="hakum-ops-lab"
+      eyebrow="Leadership"
+      title="Ops Lab"
+      description="Shared suggestions for leadership. Status changes notify everyone with access; every action is audited."
+      actions={
+        <>
           <Button type="button" variant="outline" className="gap-1.5" onClick={() => setSettingsOpen(true)}>
             <Settings2 className="size-4" />
             Settings
@@ -545,9 +542,9 @@ export default function OpsRoadmapPage() {
             <Plus className="size-4" />
             Add suggestion
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <Dialog open={addOpen} onOpenChange={onAddOpenChange}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
@@ -862,6 +859,6 @@ export default function OpsRoadmapPage() {
           </p>
         </CardContent>
       </Card>
-    </section>
+    </OpsPageShell>
   )
 }

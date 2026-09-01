@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { isSuperAdmin } from '@/auth/permissions'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -169,14 +170,12 @@ export default function CarsCatalogPage() {
   }
 
   return (
-    <section className="flex flex-col gap-6">
-      <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Masterlist</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Cars catalog</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Super Admin CRUD for the TL queue picker. PH makes/models (1990s–present) seed the list; edit opens in a modal.
-        </p>
-      </div>
+    <OpsPageShell
+      className="hakum-cars"
+      eyebrow="Masterlist"
+      title="Cars catalog"
+      description="Super Admin CRUD for the TL queue picker. PH makes/models (1990s–present) seed the list; edit opens in a modal."
+    >
 
       <Card>
         <CardHeader>
@@ -313,6 +312,6 @@ export default function CarsCatalogPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </section>
+    </OpsPageShell>
   )
 }

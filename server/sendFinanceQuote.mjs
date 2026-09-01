@@ -37,13 +37,16 @@ export async function sendFinanceQuote({ accessToken, body }) {
   const amountLabel = String(body.amount_label || '').trim()
   const notes = String(body.notes || '').trim()
   const branch = String(body.branch || '').trim()
+  const customerId = body.customer_id ? String(body.customer_id) : null
+  const amountMinor = Math.max(0, Math.round(Number(body.amount_minor) || 0))
 
   if (!to || !to.includes('@')) throw Object.assign(new Error('Valid recipient email is required'), { status: 400 })
 
   const apiKey = process.env.RESEND_API_KEY
+  let result
   if (!apiKey) {
     // ponytail: allow local/dev without Resend — return preview payload
-    return {
+    result = {
       ok: true,
       preview: true,
       message: 'RESEND_API_KEY not set — quote not sent (preview only)',
@@ -51,26 +54,77 @@ export async function sendFinanceQuote({ accessToken, body }) {
       subject,
       html: buildHtml({ title, amountLabel, notes, branch }),
     }
+  } else {
+    const from = process.env.RESEND_FROM || 'Hakum Auto Care <onboarding@resend.dev>'
+    const html = buildHtml({ title, amountLabel, notes, branch })
+    const idempotencyKey = `finance-quote/${staff.id}/${to}/${Buffer.from(subject + amountLabel).toString('base64url').slice(0, 24)}`
+
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify({ from, to: [to], subject, html }),
+    })
+    const payload = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw Object.assign(new Error(payload.message || payload.error || 'Resend send failed'), { status: 502 })
+    }
+    result = { ok: true, id: payload.id, to, subject }
   }
 
-  const from = process.env.RESEND_FROM || 'Hakum Auto Care <onboarding@resend.dev>'
-  const html = buildHtml({ title, amountLabel, notes, branch })
-  const idempotencyKey = `finance-quote/${staff.id}/${to}/${Buffer.from(subject + amountLabel).toString('base64url').slice(0, 24)}`
+  const sentAt = new Date().toISOString()
+  let quoteId = null
+  if (customerId) {
+    const { data: quoteRow, error: quoteErr } = await admin
+      .from('finance_quotes')
+      .insert({
+        customer_id: customerId,
+        amount_minor: amountMinor,
+        sent_at: sentAt,
+        created_by: staff.id,
+        meta: {
+          to,
+          subject,
+          title,
+          branch: branch || null,
+          amount_label: amountLabel || null,
+          preview: Boolean(result.preview),
+          resend_id: result.id || null,
+        },
+      })
+      .select('id')
+      .maybeSingle()
+    if (quoteErr) {
+      console.warn('finance_quotes insert skipped:', quoteErr.message)
+    } else {
+      quoteId = quoteRow?.id || null
+    }
+  }
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'Idempotency-Key': idempotencyKey,
+  const { error: auditErr } = await admin.from('audit_logs').insert({
+    actor_id: staff.id,
+    actor_role: staff.role,
+    action: 'finance.quote_send',
+    entity_type: 'finance_quotes',
+    entity_id: quoteId,
+    summary: result.preview
+      ? `Finance quote preview to ${to}`
+      : `Finance quote sent to ${to}`,
+    meta: {
+      to,
+      subject,
+      customer_id: customerId,
+      amount_minor: amountMinor,
+      preview: Boolean(result.preview),
+      resend_id: result.id || null,
     },
-    body: JSON.stringify({ from, to: [to], subject, html }),
   })
-  const payload = await res.json().catch(() => ({}))
-  if (!res.ok) {
-    throw Object.assign(new Error(payload.message || payload.error || 'Resend send failed'), { status: 502 })
-  }
-  return { ok: true, id: payload.id, to, subject }
+  if (auditErr) console.warn('finance quote audit skipped:', auditErr.message)
+
+  return { ...result, quote_id: quoteId, amount_minor: amountMinor }
 }
 
 function buildHtml({ title, amountLabel, notes, branch }) {

@@ -49,6 +49,7 @@ import {
   withLiveBranchOptions,
 } from '@/lib/opsForms'
 import { toast } from 'sonner'
+import { enrichCashAdvancePayload } from '@/lib/payroll'
 
 function FieldBuilder({ fields, onChange, disabled }) {
   const rows = normalizeFields(fields)
@@ -389,15 +390,17 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     const errors = validatePayload(activeFormFields, payload)
     if (errors[0]) return toast.error(errors[0])
     const calendarAt = extractCalendarAt(activeFormFields, payload)
+    const submitPayload =
+      activeForm.kind === 'cash_advance' ? enrichCashAdvancePayload(payload, profile) : payload
     let planCardId = null
     if (pushPlanning && listId && manageTemplates) {
-      const title = submissionTitle(activeForm, payload)
+      const title = submissionTitle(activeForm, submitPayload)
       const { data: card, error: cardErr } = await supabase
         .from('plan_cards')
         .insert({
           list_id: listId,
           title: title.slice(0, 200),
-          description: formatFormPayloadDescription(payload),
+          description: formatFormPayloadDescription(submitPayload),
           due_at: calendarAt,
           position: Date.now() % 1_000_000,
           labels:
@@ -418,11 +421,15 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
       .from('ops_form_submissions')
       .insert({
         form_id: activeForm.id,
-        payload,
+        payload: submitPayload,
         plan_card_id: planCardId,
         due_at: calendarAt,
         calendar_at: calendarAt,
-        respondent_label: payload.customer_name || payload.name || payload.employee_name || null,
+        respondent_label:
+          submitPayload.customer_name ||
+          submitPayload.name ||
+          submitPayload.employee_name ||
+          null,
         source: 'staff',
         status: 'new',
       })
@@ -430,7 +437,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
       .single()
     if (error) toast.error(error.message)
     else {
-      await notifyComplaintIfNeeded(activeForm, payload, inserted?.id)
+      await notifyComplaintIfNeeded(activeForm, submitPayload, inserted?.id)
       toast.success(planCardId ? 'Submitted and added to Tasks' : 'Submission saved')
       setPayload({})
       load()

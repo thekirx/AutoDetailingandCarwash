@@ -1,0 +1,6 @@
+﻿audit+seam tests: 61/61 pass (node --test …Audit + adminConsoleProfit + floorBoardPlPulse + screenshotAuth + busybeeHealth)
+npm run build: exit 0
+screenshot-audit: captured 80 failed 0 authed true (auth gate rejects /operations/login)
+VIS-REVIEW: closed — SHOT-AUTH, AC-PULSE, TAB-MOBILE fixed this session
+SEED-LIVE: still open (optional)
+P6: wontfix

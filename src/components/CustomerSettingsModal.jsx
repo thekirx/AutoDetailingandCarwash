@@ -12,6 +12,11 @@ import PushToggle from '@/components/PushToggle'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Link } from 'react-router-dom'
 import { isValidCustomerPlate, plateValidationError, PLATE_FIELD_HINT, safeVehiclePhotoUrl } from '@/lib/customerAuth'
+import {
+  VEHICLE_ICON_PRESETS,
+  normalizeVehicleIcon,
+  vehicleIconGlyph,
+} from '@/lib/ownerRevisionsPhase7'
 
 async function portalAction(action, payload) {
   const token = await getAccessTokenFresh()
@@ -60,7 +65,7 @@ export default function CustomerSettingsModal({
   const [password2, setPassword2] = useState('')
   const [smsOptIn, setSmsOptIn] = useState(true)
   const [smsBusy, setSmsBusy] = useState(false)
-  const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+  const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '', icon: '' })
   const [editingId, setEditingId] = useState('')
   const [plateError, setPlateError] = useState('')
   const [photoPreview, setPhotoPreview] = useState('')
@@ -79,7 +84,7 @@ export default function CustomerSettingsModal({
     setBirthday(profile?.date_of_birth ? String(profile.date_of_birth).slice(0, 10) : '')
     setPassword('')
     setPassword2('')
-    setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+    setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '', icon: '' })
     setEditingId('')
     setPlateError('')
     setPhotoPreview('')
@@ -92,6 +97,7 @@ export default function CustomerSettingsModal({
         vehicle_model: initialVehicle.vehicle_model || '',
         color: initialVehicle.color || '',
         photo_url: initialVehicle.photo_url || '',
+        icon: initialVehicle.icon || '',
       })
       setEditingId(initialVehicle.id || '')
       setPhotoPreview(initialVehicle.photo_url || '')
@@ -238,10 +244,11 @@ export default function CustomerSettingsModal({
     try {
       await portalAction(editingId ? 'update-vehicle' : 'add-vehicle', {
         ...car,
+        icon: normalizeVehicleIcon(car.icon),
         vehicle_id: editingId || undefined,
       })
       toast.success(editingId ? 'Plate updated' : 'Car saved to your garage')
-      setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+      setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '', icon: '' })
       setEditingId('')
       setPlateError('')
       setPhotoPreview('')
@@ -456,12 +463,13 @@ export default function CustomerSettingsModal({
                       vehicle_model: v.vehicle_model || '',
                       color: v.color || '',
                       photo_url: v.photo_url || '',
+                      icon: v.icon || '',
                     })
                     setPhotoPreview(v.photo_url || '')
                     setPlateError('')
                   }}
                 >
-                  <strong>{v.plate_number}</strong>
+                  <strong>{vehicleIconGlyph(v.icon)} {v.plate_number}</strong>
                   <em>{[v.vehicle_make, v.vehicle_model].filter(Boolean).join(' ') || 'Saved car'}</em>
                 </button>
               ))}
@@ -470,7 +478,7 @@ export default function CustomerSettingsModal({
                 className={`capp-chip capp-chip-btn${!editingId ? ' is-active' : ''}`}
                 onClick={() => {
                   setEditingId('')
-                  setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '' })
+                  setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '', icon: '' })
                   setPhotoPreview('')
                   setPlateError('')
                 }}
@@ -518,6 +526,23 @@ export default function CustomerSettingsModal({
             <span>Color (optional)</span>
             <input id="car-color" value={car.color} onChange={(e) => setCar((c) => ({ ...c, color: e.target.value }))} />
           </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <p className="capp-label" style={{ margin: 0 }}>Icon</p>
+            <div className="capp-chips">
+              {VEHICLE_ICON_PRESETS.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  className={`capp-chip capp-chip-btn${car.icon === p.key ? ' is-active' : ''}`}
+                  title={p.label}
+                  onClick={() => setCar((c) => ({ ...c, icon: p.key }))}
+                >
+                  <strong>{p.glyph}</strong>
+                  <em>{p.label}</em>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <p className="capp-label" style={{ margin: 0 }}>Vehicle photo</p>

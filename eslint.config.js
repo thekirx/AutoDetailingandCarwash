@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist', '.vercel', '.worktrees', 'public/push-sw.js', 'dev-dist'] },
+  { ignores: ['dist', '.vercel', '.worktrees', 'public/push-sw.js', 'dev-dist', 'docs/_assets/**'] },
   js.configs.recommended,
   react.configs.flat.recommended,
   react.configs.flat['jsx-runtime'],
@@ -19,7 +19,10 @@ export default [
       parserOptions: { ecmaVersion: 'latest', ecmaFeatures: { jsx: true }, sourceType: 'module' },
     },
     settings: { react: { version: 'detect' } },
-    rules: { 'react/prop-types': 'off' },
+    rules: {
+      'react/prop-types': 'off',
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
   },
   {
     // Node/API tooling — not browser
@@ -36,10 +39,18 @@ export default [
     rules: { 'react/no-unknown-property': 'off' },
   },
   {
+    files: ['scripts/export-flowcharts-pdf.mjs', 'scripts/export-user-stories-pdf.mjs', 'scripts/verify-owner-pdf-charts.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     files: ['**/src/components/ui/**/*.{js,jsx}'],
     rules: {
       'react-refresh/only-export-components': 'off',
       'no-unused-vars': ['error', { varsIgnorePattern: '^React$', argsIgnorePattern: '^_' }],
     },
+  },
+  {
+    files: ['**/src/components/NotificationBell.jsx', '**/src/pages/InquiriesPage.jsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
   },
 ]

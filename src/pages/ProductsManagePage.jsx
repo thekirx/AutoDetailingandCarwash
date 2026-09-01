@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { MERCH_FAMILIES, productMatchesMerchFamily } from '@/lib/posSellables'
 import { toast } from 'sonner'
 
-const empty = { name: '', sku: '', category: 'merch', price: '', stock_qty: '0', branch_slug: '', tags: 'sellable,merch' }
+const empty = { name: '', sku: '', category: 'merch', price: '', stock_qty: '0', branch_slug: '', tags: 'sellable,merch', usage_kind: 'resellable' }
 
 export default function ProductsManagePage({ embedded = false }) {
   const { profile } = useAuth()
@@ -83,6 +83,8 @@ export default function ProductsManagePage({ embedded = false }) {
         price: editing.price,
         stock_qty: editing.stock_qty,
         branch_slug: editing.branch_slug || null,
+        usage_kind: editing.usage_kind || 'resellable',
+        tags: editing.tags,
         is_active: editing.is_active,
       })
       toast.success('Merch item updated')
@@ -184,6 +186,16 @@ export default function ProductsManagePage({ embedded = false }) {
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
+                <Label>Usage</Label>
+                <Select value={form.usage_kind || 'resellable'} onValueChange={(v) => setForm({ ...form, usage_kind: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="resellable">Resellable (POS)</SelectItem>
+                    <SelectItem value="internal">Internal use (Sunday recon)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
                 <Label>Sellable tags</Label>
                 <Input
                   value={form.tags}
@@ -254,6 +266,7 @@ export default function ProductsManagePage({ embedded = false }) {
                         price: String(Number(row.price_minor) / 100),
                         stock_qty: String(row.stock_qty ?? 0),
                         branch_slug: row.branch_slug || '',
+                        usage_kind: row.usage_kind || 'resellable',
                         tags: Array.isArray(row.tags) ? row.tags.join(',') : '',
                         is_active: row.is_active,
                       })}>Edit</Button>
@@ -297,6 +310,19 @@ export default function ProductsManagePage({ embedded = false }) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-2"><Label>Price (₱)</Label><Input required type="number" min="0" step="0.01" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} /></div>
                 <div className="flex flex-col gap-2"><Label>Stock</Label><Input required type="number" min="0" value={editing.stock_qty} onChange={(e) => setEditing({ ...editing, stock_qty: e.target.value })} /></div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Usage</Label>
+                <Select
+                  value={editing.usage_kind || 'resellable'}
+                  onValueChange={(v) => setEditing({ ...editing, usage_kind: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="resellable">Resellable (POS)</SelectItem>
+                    <SelectItem value="internal">Internal use (Sunday recon)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Sellable tags</Label>

@@ -17,7 +17,7 @@ describe('Team Lead Queue Manager mobile port', () => {
     assert.match(ops, /OperationsQueueBoardPage/)
     assert.match(page, /Queue/)
     assert.match(page, /Add/)
-    assert.match(page, /Plate history/)
+    assert.match(page, /Plate \/ phone history/)
     assert.doesNotMatch(page, /Motorcycle/)
   })
 

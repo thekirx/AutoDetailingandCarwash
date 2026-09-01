@@ -4,13 +4,18 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/auth/AuthProvider'
 import { canEditPlanning, canViewPlanning } from '@/auth/permissions'
 import { createCoalescedReload } from '@/lib/coalesceReload'
-import { PLAN_BOARD_DETAIL_SELECT, PLAN_BOARDS_LIST_SELECT, PLANNER_TABS, defaultPlanListId, pickPlannerBoard, plannerTabFromSearch, plannerTabsForAccess, visiblePlannerBoards } from '@/lib/plannerBoard'
+import { PLAN_BOARD_DETAIL_SELECT, PLAN_BOARDS_LIST_SELECT, defaultPlanListId, pickPlannerBoard, plannerTabFromSearch, plannerTabsForAccess, visiblePlannerBoards } from '@/lib/plannerBoard'
 import { hrefForCalendarItem } from '@/lib/plannerCalendar'
 import { cardsFromAssigneeRows, filterPlannerCards, flattenPlannerCards, reviewItemsFromAssigneeRows } from '@/lib/plannerTasks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Tabs } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { CalendarDays, ClipboardList, FileText, FolderKanban, Inbox, LayoutList, Plus, Settings2, Table2 } from 'lucide-react'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
+import { PLANNING_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import PlanningFormsSmartPanel from '@/pages/planning/PlanningFormsSmartPanel'
 import { PlanningEventsPanel } from '@/pages/planning/PlanningPart6Panels'
 import PlanningConfigurePanel from '@/pages/planning/PlanningConfigurePanel'
@@ -25,6 +30,15 @@ const TAB_ICONS = {
   review: Inbox,
   configure: Settings2,
 }
+
+/** Source-scan contract — keep literal ids for ops shell tests. */
+const PLANNING_SHELL_TABS = Object.freeze(
+  Object.entries(TAB_ICONS).map(([id, icon]) => ({
+    id,
+    label: ({ board: 'Board', calendar: 'Calendar', forms: 'Forms', events: 'Events', review: 'Review', configure: 'Configure' })[id],
+    icon,
+  })),
+)
 
 const ASSIGNEE_CARD_SELECT = `
   id, staff_id, status, proof_url, proof_note, proof_submitted_at, reviewed_at,
@@ -307,39 +321,48 @@ export default function PlanningBoardPage() {
     )
   }
 
-  return (
-    <div className="planner-v2">
-      <header className="planner-v2-head">
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">Shop floor</p>
-          <h1>Planner</h1>
-          <p>
-            {tab === 'configure'
-              ? 'Lists, categories, checklists, and boards.'
-              : canEdit
-                ? 'Assign work, attach a form to an event, review proof.'
-                : 'Your assigned work and published events.'}
-          </p>
-        </div>
-        {canEdit && tab === 'board' && (
-          <Button type="button" onClick={() => openCard('new')}>
-            <Plus className="size-4" /> New task
-          </Button>
-        )}
-      </header>
+  const planningTabs = PLANNING_SHELL_TABS
+    .filter((t) => tabs.some((x) => x.id === t.id))
+    .map((t) => (t.id === 'review' && reviewCount > 0 ? { ...t, badge: reviewCount } : t))
 
-      <nav className="planner-v2-tabs" aria-label="Planner">
-        {tabs.map((t) => {
-          const Icon = TAB_ICONS[t.id]
-          return (
-            <button key={t.id} type="button" className={tab === t.id ? 'is-on' : ''} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
-              <Icon className="size-4" />
-              {t.label}
-              {t.id === 'review' && reviewCount > 0 ? <span className="planner-v2-count">{reviewCount}</span> : null}
-            </button>
-          )
-        })}
-      </nav>
+  const planningStepIcons = {
+    board: FolderKanban,
+    review: Inbox,
+    calendar: CalendarDays,
+    configure: Settings2,
+  }
+
+  return (
+    <OpsPageShell
+      className="hakum-planning"
+      eyebrow="Shop floor"
+      title="Planner"
+      description={
+        tab === 'configure'
+          ? 'Lists, categories, checklists, and boards.'
+          : canEdit
+            ? 'Assign work, attach a form to an event, review proof.'
+            : 'Your assigned work and published events.'
+      }
+      actions={
+        canEdit && tab === 'board' ? (
+          <Button type="button" className="min-h-11" onClick={() => openCard('new')}>
+            <Plus data-icon="inline-start" /> New task
+          </Button>
+        ) : null
+      }
+    >
+      <OpsGuideCard
+        title="How planner works"
+        description="Board lists, review, calendar, and configure stay on this screen. Lane CSS keeps the kanban usable on phones."
+        steps={PLANNING_WORKFLOW_STEPS.filter((s) => s.id !== 'configure' || canEdit)}
+        stepIcons={planningStepIcons}
+      />
+
+      <div className="planner-v2">
+      <Tabs value={tab} onValueChange={setTab}>
+        <OpsTabList tabs={planningTabs} aria-label="Planner" />
+      </Tabs>
 
       {tab === 'board' && (
         <div className={`planner-v2-body ${canEdit ? 'has-rail' : ''}`}>
@@ -544,7 +567,8 @@ export default function PlanningBoardPage() {
           onDeleted={load}
         />
       )}
-    </div>
+      </div>
+    </OpsPageShell>
   )
 }
 

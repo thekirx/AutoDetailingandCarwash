@@ -23,10 +23,13 @@ import {
 } from '../lib/queueFamilies'
 import { createCoalescedReload } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
+import { isOverSla } from '../lib/ownerRevisionsPhase7'
 import { supabase } from '../lib/supabase'
 import {
   DURATION_FILTERS,
   QUEUE_DATE_PRESETS,
+  averageDwellByStatus,
+  fifoNextTicketId,
   formatQueueNumber,
   getBranchScope,
   getOpsBoardStatuses,
@@ -35,7 +38,9 @@ import {
   matchesTicketSearch,
   normalizePlate,
   requiresTeamLeadBranchSetup,
+  sortTicketsFifo,
   STATUS_LABELS,
+  statusShortLabel,
   ticketElapsedMinutes,
 } from '../queue/queueLogic'
 import { fetchTeamLeadDayBoard, formatMoney } from '../queue/queueApi'
@@ -66,14 +71,14 @@ function formatDuration(mins) {
   return m ? `${h}h ${m}m` : `${h}h`
 }
 
-function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage }) {
+function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage, isFifoNext }) {
   const status = ticket.status
   const kind = serviceKindFromPayCategory(ticket.service_pay_category)
   const services = (ticket.service_names?.length
     ? ticket.service_names
     : [ticket.service_name].filter(Boolean))
   const price = Number(ticket.final_price_minor ?? ticket.base_price_minor ?? 0)
-  const waitMins = minutesBetween(ticket.created_at, ticket.in_progress_at || ticket.actual_start)
+  const waitMins = minutesBetween(ticket.waiting_at || ticket.created_at, ticket.in_progress_at || ticket.actual_start)
   const processMins = minutesBetween(
     ticket.in_progress_at || ticket.actual_start,
     ticket.actual_end || ticket.final_checking_at,
@@ -82,6 +87,9 @@ function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage }) {
     ticket.created_at,
     ticket.actual_end || (['waiting', 'in_progress', 'final_checking'].includes(status) ? null : ticket.actual_end),
   )
+  const sla = ticket.service_sla_minutes
+  const processOver = isOverSla(processMins, sla)
+  const totalOver = isOverSla(totalMins, sla)
   const sizeLabel = ticket.vehicle_type
     ? String(ticket.vehicle_type).replace(/_/g, ' ')
     : ''
@@ -96,6 +104,11 @@ function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="qmgr-plate">{ticket.vehicle_plate || 'NO PLATE'}</span>
+            {isFifoNext ? (
+              <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                Next
+              </span>
+            ) : null}
             <span className={`qmgr-status qmgr-status-${status}`}>
               {STATUS_LABELS[status] || status}
             </span>
@@ -144,11 +157,15 @@ function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage }) {
             </div>
             <div>
               <p className="qmgr-meta-label">Process</p>
-              <p className="qmgr-meta-value">{formatDuration(processMins)}</p>
+              <p className={`qmgr-meta-value ${processOver ? 'text-red-600 dark:text-red-400' : ''}`}>
+                {formatDuration(processMins)}
+              </p>
             </div>
             <div>
               <p className="qmgr-meta-label">Duration</p>
-              <p className="qmgr-meta-value">{formatDuration(totalMins)}</p>
+              <p className={`qmgr-meta-value ${totalOver ? 'text-red-600 dark:text-red-400' : ''}`}>
+                {formatDuration(totalMins)}
+              </p>
             </div>
             <div>
               <p className="qmgr-meta-label">Customer</p>
@@ -326,7 +343,7 @@ export default function TeamLeadQueuePage() {
     if (datePreset === 'today') {
       rows = rows.filter((t) => {
         if (['waiting', 'in_progress', 'final_checking'].includes(t.status)) {
-          // Same-day services reset daily; detailing stays via isTicketOnTodayFloor upstream.
+          // Open lanes stay until POS completes — isTicketOnTodayFloor upstream.
           return true
         }
         return t.queue_date === todayKey || String(t.created_at || '').slice(0, 10) === todayKey
@@ -347,28 +364,65 @@ export default function TeamLeadQueuePage() {
         return d >= start && d <= end
       })
     }
-    return rows.filter(
+    rows = rows.filter(
       (t) =>
         matchesTicketSearch(t, search) &&
         matchesDurationFilter(ticketElapsedMinutes(t), durationFilter),
     )
+    return sortTicketsFifo(rows)
   }, [boardTickets, dayGrouped, statusFilter, search, boardStatuses, datePreset, durationFilter, today])
 
+  const nextFifoId = useMemo(() => fifoNextTicketId(boardTickets), [boardTickets])
+
+  const dwellAverages = useMemo(
+    () => averageDwellByStatus(
+      boardTickets.filter((t) => boardStatuses.includes(t.status) || t.status === 'for_payment'),
+    ),
+    [boardTickets, boardStatuses],
+  )
+
   const runHistory = async () => {
-    const plate = normalizePlate(historyPlate)
-    if (!plate) {
-      setHistoryError('Enter a plate number')
+    const q = String(historyPlate || '').trim()
+    if (!q) {
+      setHistoryError('Enter a plate or phone number')
       return
     }
     setHistoryLoading(true)
     setHistoryError('')
     try {
-      const { data, error: histErr } = await supabase
-        .from('operations_queue_board')
-        .select(QUEUE_BOARD_SELECT_MIN)
-        .ilike('vehicle_plate', `%${plate}%`)
-        .order('created_at', { ascending: false })
-        .limit(40)
+      const params = new URLSearchParams({ q, limit: '40' })
+      const res = await fetch(`/api/customer-history?${params}`)
+      const body = await res.json().catch(() => ({}))
+      if (res.ok) {
+        const visits = body.visits || body.rows || body.timeline || []
+        if (Array.isArray(visits) && visits.length) {
+          const mapped = visits.map((v) => ({
+            booking_id: v.booking_id || v.id,
+            vehicle_plate: v.vehicle_plate || v.plate,
+            status: v.status,
+            final_price_minor: v.final_price_minor ?? v.total_minor,
+            base_price_minor: v.base_price_minor,
+            service_name: v.service_name || (v.services || []).join(', '),
+            created_at: v.created_at || v.visited_at,
+            customer_phone: v.customer_phone || v.phone,
+            visit_group_id: v.visit_group_id,
+          }))
+          setHistoryRows(groupVisitTickets(mapped))
+          return
+        }
+      }
+      // Fallback: board plate/phone search when API empty or unavailable
+      const plate = normalizePlate(q)
+      const digits = q.replace(/\D/g, '')
+      let query = supabase.from('operations_queue_board').select(QUEUE_BOARD_SELECT_MIN)
+      if (plate && plate.length >= 3) {
+        query = query.ilike('vehicle_plate', `%${plate}%`)
+      } else if (digits.length >= 7) {
+        query = query.ilike('customer_phone', `%${digits}%`)
+      } else {
+        query = query.or(`vehicle_plate.ilike.%${q}%,customer_phone.ilike.%${q}%`)
+      }
+      const { data, error: histErr } = await query.order('created_at', { ascending: false }).limit(40)
       if (histErr) throw histErr
       setHistoryRows(groupVisitTickets(data || []))
     } catch (err) {
@@ -458,7 +512,7 @@ export default function TeamLeadQueuePage() {
       >
         <summary className="qmgr-history-summary">
           <History size={15} aria-hidden />
-          Plate history
+          Plate / phone history
         </summary>
         <div className="qmgr-history-body">
           <label className="qmgr-search">
@@ -466,8 +520,8 @@ export default function TeamLeadQueuePage() {
             <input
               type="search"
               value={historyPlate}
-              onChange={(e) => setHistoryPlate(e.target.value.toUpperCase())}
-              placeholder="Plate number…"
+              onChange={(e) => setHistoryPlate(e.target.value)}
+              placeholder="Plate or phone…"
               enterKeyHint="search"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -502,12 +556,26 @@ export default function TeamLeadQueuePage() {
                   </span>
                 </button>
               )) : (
-                <p className="text-sm text-muted-foreground">No history for that plate.</p>
+                <p className="text-sm text-muted-foreground">No history for that plate or phone.</p>
               )}
             </div>
           ) : null}
         </div>
       </details>
+
+      {Object.keys(dwellAverages).length ? (
+        <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground" aria-label="Average dwell by status">
+          {['waiting', 'in_progress', 'final_checking', 'for_payment'].map((key) => {
+            const avg = dwellAverages[key]
+            if (avg == null) return null
+            return (
+              <span key={key} className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5">
+                {statusShortLabel(key)} avg {formatDuration(Math.round(avg))}
+              </span>
+            )
+          })}
+        </div>
+      ) : null}
 
       <div className="qmgr-status-grid" role="toolbar" aria-label="Filter by status">
         {statusFilters.map((item) => {
@@ -550,6 +618,7 @@ export default function TeamLeadQueuePage() {
               onToggle={() => setExpandedId((id) => (id === ticket.booking_id ? null : ticket.booking_id))}
               onOpen={canManageQueue ? setEditBookingId : undefined}
               canManage={canManageQueue}
+              isFifoNext={ticket.booking_id === nextFifoId}
             />
           ))
         ) : (
@@ -579,7 +648,8 @@ export default function TeamLeadQueuePage() {
 /** Minimal select for plate history (avoids pulling unused board columns). */
 const QUEUE_BOARD_SELECT_MIN = `
   booking_id, branch, queue_number, queue_date, status, customer_name, customer_phone,
-  vehicle_plate, vehicle_make, vehicle_model, vehicle_type, service_name,
+  vehicle_plate, vehicle_make, vehicle_model, vehicle_type, service_name, service_sla_minutes,
   base_price_minor, final_price_minor, assigned_staff_name, created_at, visit_group_id,
-  service_pay_category, in_progress_at, final_checking_at, actual_start, actual_end
+  service_pay_category, waiting_at, in_progress_at, final_checking_at, for_payment_at,
+  actual_start, actual_end
 `

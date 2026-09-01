@@ -5,6 +5,8 @@ import {
   canAccessConsole,
   canAccessPayroll,
 } from '@/auth/permissions'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import { SETTINGS_HUB_COPY } from '@/components/ops/opsGuideCopy'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 /** Policy destinations only — People / Branches / Audit / Content stay in Command nav. */
@@ -37,14 +39,12 @@ export default function SettingsHubPage() {
   }
 
   return (
-    <section className="flex flex-col gap-6 pb-8">
-      <header className="border-b border-border pb-4">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Settings</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Company settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          POS and payroll policy. People, branches, content, and audit stay in the main Command menu.
-        </p>
-      </header>
+    <OpsPageShell
+      className="hakum-settings-hub"
+      eyebrow={SETTINGS_HUB_COPY.eyebrow}
+      title={SETTINGS_HUB_COPY.title}
+      description={SETTINGS_HUB_COPY.description}
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         {tiles.map((tile) => {
           const Icon = tile.icon
@@ -70,6 +70,6 @@ export default function SettingsHubPage() {
           )
         })}
       </div>
-    </section>
+    </OpsPageShell>
   )
 }

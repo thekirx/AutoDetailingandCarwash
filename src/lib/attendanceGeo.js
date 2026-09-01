@@ -86,31 +86,59 @@ export function shiftTimeToLabel(t) {
   return String(t).slice(0, 5)
 }
 
-/** Build ISO timestamp from local calendar date + HH:MM (admin override clock). */
+/** Build ISO from Asia/Manila calendar date + HH:MM (admin override clock). */
 export function combineLocalDateAndTime(dateYmd, hhmm) {
   if (!dateYmd || !hhmm) return null
   const m = String(hhmm).trim().match(/^(\d{1,2}):(\d{2})$/)
   if (!m) return null
   const [y, mo, d] = String(dateYmd).split('-').map(Number)
   if (![y, mo, d].every(Number.isFinite)) return null
-  return new Date(y, mo - 1, d, Number(m[1]), Number(m[2]), 0, 0).toISOString()
+  const hh = String(Number(m[1])).padStart(2, '0')
+  const mm = m[2]
+  // ponytail: PH has no DST; literal +08 avoids browser-TZ skew for SA abroad.
+  const stamp = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}T${hh}:${mm}:00+08:00`
+  const parsed = new Date(stamp)
+  if (Number.isNaN(parsed.getTime())) return null
+  return parsed.toISOString()
 }
 
 export function isoToLocalHhmm(iso) {
   if (!iso) return ''
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  // Ops wall clock is Asia/Manila — never browser local (SA abroad) or UTC digits.
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d)
+  const hour = parts.find((p) => p.type === 'hour')?.value
+  const minute = parts.find((p) => p.type === 'minute')?.value
+  if (hour == null || minute == null) return ''
+  const h = Number(hour) === 24 ? 0 : Number(hour)
+  return `${String(h).padStart(2, '0')}:${minute}`
 }
 
-/** Compare HH:MM against now in local time for late detection */
+/** Compare shift HH:MM against now in Asia/Manila (ops TZ), not browser local. */
 export function isLateVsShift(shiftStart, now = new Date()) {
   if (!shiftStart) return false
   const [hh, mm] = String(shiftStart).slice(0, 5).split(':').map(Number)
   if (!Number.isFinite(hh)) return false
   const startMins = hh * 60 + (mm || 0)
-  const nowMins = now.getHours() * 60 + now.getMinutes()
-  return nowMins > startMins + 5
+  const d = now instanceof Date ? now : new Date(now)
+  if (Number.isNaN(d.getTime())) return false
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d)
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value)
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value)
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return false
+  const h = hour === 24 ? 0 : hour
+  return h * 60 + minute > startMins + 5
 }
 
 export function recentDays(n = 14, anchor = new Date()) {

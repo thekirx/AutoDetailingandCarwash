@@ -46,7 +46,8 @@ describe('crew assign + booking board mobile', () => {
       'utf8',
     )
     assert.match(layout, /hakum-mark-ow\.png/)
-    assert.match(page, /hakum-mark-blue\.png/)
+    assert.match(page, /OpsPageShell/)
+    assert.match(page, /CalendarDays/)
     assert.match(page, /bk-status-strip/)
     assert.match(page, /className="bk-board"/)
     assert.match(page, /bookingLaneDomId/)

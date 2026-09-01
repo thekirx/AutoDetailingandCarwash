@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { Crown, Gift, Pencil, Plus, Settings2, Sparkles } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessMemberships, isSuperAdmin } from '@/auth/permissions'
@@ -22,6 +22,11 @@ import {
 import { LOYALTY_PAY_CATEGORIES } from '@/lib/loyaltyLogic'
 import { formatMoney } from '@/queue/queueApi'
 import { formatSizePriceRange } from '@/lib/servicePricing'
+import OpsGuideCard from '@/components/ops/OpsGuideCard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
+import { MEMBERSHIPS_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
+import { opsTabSearchParams, resolveOpsTab } from '@/lib/opsShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,9 +35,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
+
+const MEMBERSHIP_TAB_IDS = ['program', 'tiers', 'loyalty', 'scoring', 'assign']
+
+/** Source-scan contract — keep literal ids for ops shell tests. */
+const MEMBERSHIPS_SHELL_TABS = Object.freeze([
+  { id: 'program', label: 'Program', icon: Settings2 },
+  { id: 'tiers', label: 'Premium plans', icon: Crown },
+  { id: 'loyalty', label: 'Stamp thresholds', icon: Gift },
+  { id: 'scoring', label: 'Service scoring', icon: Sparkles },
+  { id: 'assign', label: 'Assign members', icon: Plus },
+])
 
 const emptyTier = {
   name: '',
@@ -78,7 +94,12 @@ function settingsToProgramForm(row) {
 
 export default function MembershipsPage() {
   const { profile } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const superAdmin = isSuperAdmin(profile)
+  const defaultTab = superAdmin ? 'program' : 'tiers'
+  const allowedTabs = superAdmin ? MEMBERSHIP_TAB_IDS : MEMBERSHIP_TAB_IDS.filter((id) => id !== 'program')
+  const tab = resolveOpsTab(searchParams.get('tab'), allowedTabs, defaultTab)
+  const visibleTabs = MEMBERSHIPS_SHELL_TABS.filter((item) => allowedTabs.includes(item.id))
   const [tiers, setTiers] = useState([])
   const [milestones, setMilestones] = useState([])
   const [services, setServices] = useState([])
@@ -120,6 +141,18 @@ export default function MembershipsPage() {
   const activeTiers = useMemo(() => tiers.filter((t) => t.is_active), [tiers])
 
   if (!canAccessMemberships(profile)) return <Navigate to="/operations/access-denied" replace />
+
+  function setShellTab(next) {
+    setSearchParams(opsTabSearchParams(next, defaultTab), { replace: true })
+  }
+
+  const membershipStepIcons = {
+    program: Settings2,
+    tiers: Crown,
+    loyalty: Gift,
+    scoring: Sparkles,
+    assign: Plus,
+  }
 
   async function onCreateTier(event) {
     event.preventDefault()
@@ -272,25 +305,21 @@ export default function MembershipsPage() {
   }
 
   return (
-    <section className="flex flex-col gap-8">
-      <div>
-        <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Membership</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Plans & loyalty</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Super Admin controls the whole loyalty program — stamps, points, memberships, carwash-only earn, and per-service scores. POS honors these settings live.
-        </p>
-      </div>
+    <OpsPageShell
+      className="hakum-memberships"
+      eyebrow="Membership"
+      title="Plans and loyalty"
+      description="Super Admin controls the whole loyalty program — stamps, points, memberships, carwash-only earn, and per-service scores. POS honors these settings live."
+    >
+      <OpsGuideCard
+        title="How memberships work"
+        description="Program toggles, tiers, stamp milestones, and service weights feed POS and CRM on the next checkout."
+        steps={MEMBERSHIPS_WORKFLOW_STEPS.filter((step) => step.id !== 'program' || superAdmin)}
+        stepIcons={membershipStepIcons}
+      />
 
-      <Tabs defaultValue={superAdmin ? 'program' : 'tiers'}>
-        <TabsList className="flex h-auto flex-wrap gap-1">
-          {superAdmin ? (
-            <TabsTrigger value="program"><Settings2 data-icon="inline-start" /> Program</TabsTrigger>
-          ) : null}
-          <TabsTrigger value="tiers"><Crown data-icon="inline-start" /> Premium plans</TabsTrigger>
-          <TabsTrigger value="loyalty"><Gift data-icon="inline-start" /> Stamp thresholds</TabsTrigger>
-          <TabsTrigger value="scoring"><Sparkles data-icon="inline-start" /> Service scoring</TabsTrigger>
-          <TabsTrigger value="assign">Assign members</TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onValueChange={setShellTab}>
+        <OpsTabList tabs={visibleTabs} aria-label="Membership sections" />
 
         {superAdmin ? (
           <TabsContent value="program" className="mt-6">
@@ -738,6 +767,6 @@ export default function MembershipsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </section>
+    </OpsPageShell>
   )
 }

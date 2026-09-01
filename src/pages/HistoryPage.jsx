@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import OpsPageShell from '@/components/ops/OpsPageShell'
 import { cn } from '@/lib/utils'
 
 const KIND_FILTERS = [
@@ -86,10 +87,6 @@ export default function HistoryPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [selected, setSelected] = useState(null)
-
-  if (!canAccessHistory(profile)) {
-    return <Navigate to="/operations/access-denied" replace />
-  }
 
   const allBranches = canSeeAllBranches(profile) || profile?.role === 'marketing' || profile?.role === 'assistant_super_admin'
   const platePreview = normalizeHistoryPlate(q) || normalizeHistoryPhone(q) || '—'
@@ -171,20 +168,22 @@ export default function HistoryPage() {
     result?.identity?.names?.[0] ||
     'Customer'
 
-  return (
-    <section className="history-ledger flex flex-col gap-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
-      <header className="border-b border-border pb-4">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Operations</p>
-        <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-          <History className="size-6 shrink-0 text-primary" aria-hidden />
-          History
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Look up a plate or mobile number — full visit ledger with services, packages, bookings, POS, and paint maintenance.
-          {!allBranches ? ' Showing your branch only.' : ''}
-        </p>
-      </header>
+  if (!canAccessHistory(profile)) {
+    return <Navigate to="/operations/access-denied" replace />
+  }
 
+  return (
+    <OpsPageShell
+      className="hakum-history history-ledger"
+      eyebrow="Operations"
+      title="History"
+      icon={History}
+      description={
+        `Look up a plate or mobile number — full visit ledger with services, packages, bookings, POS, and paint maintenance.${
+          !allBranches ? ' Showing your branch only.' : ''
+        }`
+      }
+    >
       {/* Signature: plate-bay search */}
       <form
         onSubmit={search}
@@ -594,6 +593,6 @@ export default function HistoryPage() {
           </p>
         </div>
       ) : null}
-    </section>
+    </OpsPageShell>
   )
 }

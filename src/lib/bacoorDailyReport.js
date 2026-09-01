@@ -67,16 +67,20 @@ export function emptyBacoorDailyReport(meta = {}) {
  * cashAdvances: { status, amount_minor, employee_name, notes }
  */
 export function classifySaleBucket(row) {
+  const line = row?.sale_line_items?.[0]
   return posBucketToBacoor(
     classifyPosSaleBucket({
-      serviceSlug: row?.service_slug || row?.services?.slug,
+      serviceSlug: row?.service_slug || row?.services?.slug || line?.service_slug || line?.services?.slug,
       payCategory:
-        row?.pay_category || row?.services?.pay_category || row?.bookings?.services?.pay_category,
-      itemType: row?.item_type,
-      serviceName: row?.service_name || row?.bucket || row?.name,
-      productTags: row?.product_tags || row?.products?.tags,
-      productCategory: row?.product_category || row?.category,
-      productName: row?.product_name,
+        row?.pay_category ||
+        row?.services?.pay_category ||
+        row?.bookings?.services?.pay_category ||
+        line?.pay_category,
+      itemType: row?.item_type || line?.item_type || line?.catalog_kind,
+      serviceName: row?.service_name || row?.bucket || row?.name || line?.name,
+      productTags: row?.product_tags || row?.products?.tags || line?.product_tags,
+      productCategory: row?.product_category || row?.category || line?.product_category,
+      productName: row?.product_name || line?.product_name,
     }),
   )
 }

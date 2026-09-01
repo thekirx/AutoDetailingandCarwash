@@ -53,7 +53,6 @@ export default function ContentBlockRenderer({
                   />
                 </div>
               ) : embed?.kind === 'file' ? (
-                // eslint-disable-next-line jsx-a11y/media-has-caption
                 <video src={embed.src} controls playsInline preload="metadata" />
               ) : (
                 <a className="hakum-block-link" href={block.url} target="_blank" rel="noreferrer">

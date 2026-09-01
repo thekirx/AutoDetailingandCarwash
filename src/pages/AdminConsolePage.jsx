@@ -10,12 +10,14 @@ import { useAuth } from '@/auth/AuthProvider'
 import { isAdmin, canSeeAllBranches, getBranchScopeList } from '@/auth/permissions'
 import { fetchAdminConsoleSnapshot, formatPeso } from '@/lib/adminApi'
 import { getBranchScope } from '@/queue/queueLogic'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 
 function MetricCard({ label, value, detail, icon: Icon, tone = 'default' }) {
   const toneClass =
@@ -84,37 +86,35 @@ export default function AdminConsolePage() {
     : (snap?.branches || []).filter((b) => (scopeList || []).includes(b.slug))
 
   return (
-    <section className="flex flex-col gap-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Command</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Operations console</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            {canSeeAllBranches(profile)
-              ? 'Live revenue, cost, profit, stock, and floor queue — all branches or one site.'
-              : 'Live revenue, cost, profit, stock, and floor queue for your assigned branches.'}
+    <OpsPageShell
+      className="hakum-console"
+      eyebrow="Command"
+      title="Operations console"
+      description={
+        canSeeAllBranches(profile)
+          ? 'Live revenue, cost, profit, stock, and floor queue — all branches or one site.'
+          : 'Live revenue, cost, profit, stock, and floor queue for your assigned branches.'
+      }
+      meta={
+        canPickBranch ? (
+          <Select value={branch} onValueChange={setBranch}>
+            <SelectTrigger className="min-h-11 w-full sm:w-56" aria-label="Branch filter">
+              <SelectValue placeholder="Branch" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{canSeeAllBranches(profile) ? 'All branches' : 'All my branches'}</SelectItem>
+              {pickerBranches.map((b) => (
+                <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <p className="text-sm">
+            Branch · {Array.isArray(scopeList) && scopeList[0] ? scopeList[0] : 'No branch assigned'}
           </p>
-        </div>
-        <div className="w-full sm:w-56">
-          {canPickBranch ? (
-            <Select value={branch} onValueChange={setBranch}>
-              <SelectTrigger aria-label="Branch filter">
-                <SelectValue placeholder="Branch" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{canSeeAllBranches(profile) ? 'All branches' : 'All my branches'}</SelectItem>
-                {pickerBranches.map((b) => (
-                  <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-              Branch · {Array.isArray(scopeList) && scopeList[0] ? scopeList[0] : 'No branch assigned'}
-            </p>
-          )}
-        </div>
-      </div>
+        )
+      }
+    >
 
       {error ? <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p> : null}
       {snap?.errors?.length ? (
@@ -129,7 +129,7 @@ export default function AdminConsolePage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             <MetricCard
               label="Today revenue"
               value={formatPeso(snap?.todayRevenueMinor)}
@@ -137,26 +137,52 @@ export default function AdminConsolePage() {
               icon={CircleDollarSign}
               tone="good"
             />
+            <MetricCard
+              label="Sample revenue"
+              value={formatPeso(snap?.revenueMinor)}
+              detail="Recent daily sales rows (not calendar month)"
+              icon={CircleDollarSign}
+              tone="good"
+            />
+            <MetricCard
+              label="Sample expenses"
+              value={formatPeso(snap?.approvedExpenseMinor)}
+              detail={
+                snap?.pendingExpenseMinor
+                  ? `${formatPeso(snap.pendingExpenseMinor)} draft/pending/approved`
+                  : 'Paid + posted (pulse sample)'
+              }
+              icon={CircleDollarSign}
+              tone={snap?.approvedExpenseMinor ? 'warn' : 'default'}
+            />
+            <MetricCard
+              label={(snap?.profitMinor ?? 0) >= 0 ? 'Sample profit' : 'Sample loss'}
+              value={formatPeso(snap?.profitMinor)}
+              detail={`${formatPeso(snap?.revenueMinor)} − ${formatPeso(snap?.approvedExpenseMinor)}`}
+              icon={CircleDollarSign}
+              tone={(snap?.profitMinor ?? 0) >= 0 ? 'good' : 'bad'}
+            />
             <MetricCard label="Active queue" value={String(snap?.queueRows?.length || 0)} detail="Waiting → payment" icon={ClipboardList} />
             <MetricCard label="Low stock SKUs" value={String(snap?.lowStock?.length || 0)} detail="≤ 10 units" icon={Boxes} tone={snap?.lowStock?.length ? 'warn' : 'good'} />
-            <MetricCard label="Active staff" value={String(staffCounts.total)} detail={`${staffCounts.leads} TL · ${staffCounts.crew} crew`} icon={Users} />
-            <MetricCard label="Branches" value={String(snap?.branches?.length || 0)} detail="Active sites" icon={ClipboardList} />
           </div>
           <p className="text-sm text-muted-foreground">
-            Period books (income, expenses, net) live on{' '}
+            Pulse sample is recent sales days + recent expense rows — not the Finance reporting window. Full P&amp;L lives on{' '}
             <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/operations/finance">
               Finance
             </Link>
-            . Console is today&apos;s ops pulse only.
+            . Staff count: {staffCounts.total} ({staffCounts.leads} TL · {staffCounts.crew} crew · {snap?.branches?.length || 0} sites).
           </p>
 
           <Tabs defaultValue="queue">
-            <TabsList>
-              <TabsTrigger value="queue">Queue by branch</TabsTrigger>
-              <TabsTrigger value="stock">Stock</TabsTrigger>
-              <TabsTrigger value="expenses">Expenses</TabsTrigger>
-              <TabsTrigger value="bookings">Recent tickets</TabsTrigger>
-            </TabsList>
+            <OpsTabList
+              aria-label="Console sections"
+              tabs={[
+                { id: 'queue', label: 'Queue', icon: ClipboardList },
+                { id: 'stock', label: 'Stock', icon: Boxes },
+                { id: 'expenses', label: 'Expenses', icon: CircleDollarSign },
+                { id: 'bookings', label: 'Tickets', icon: Users },
+              ]}
+            />
 
             <TabsContent value="queue" className="mt-4">
               <Card>
@@ -300,6 +326,6 @@ export default function AdminConsolePage() {
           </Tabs>
         </>
       )}
-    </section>
+    </OpsPageShell>
   )
 }

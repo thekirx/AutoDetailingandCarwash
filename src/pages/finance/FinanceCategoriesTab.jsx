@@ -71,7 +71,7 @@ export default function FinanceCategoriesTab({ categories, canWrite, onReload })
       </FinanceMetricStrip>
 
       {canWrite ? (
-        <FinancePanel title="Add category" description="Kinds drive P&L grouping. Chemicals route to pre-approval.">
+        <FinancePanel title="Add category" description="Kinds drive P&L grouping. Chemicals route to pre-approval. These categories are the POS daily-expense source (Phase 3).">
           <form onSubmit={save} className="grid gap-3 md:grid-cols-[1fr_180px_auto_auto]">
             <div className="flex flex-col gap-2">
               <Label htmlFor="cat-name">Name</Label>
@@ -121,7 +121,7 @@ export default function FinanceCategoriesTab({ categories, canWrite, onReload })
 
       <FinancePanel
         title="Categories"
-        description={`${metrics.total} categor${metrics.total === 1 ? 'y' : 'ies'} · kinds drive P&L grouping`}
+        description={`${metrics.total} categor${metrics.total === 1 ? 'y' : 'ies'} · POS expense kinds load from this list · kinds drive P&L grouping`}
       >
         {!categories.length ? (
           <FinanceEmpty

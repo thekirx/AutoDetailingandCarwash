@@ -15,6 +15,10 @@ export const POS_SELLABLE_TAGS = [
 const PRODUCT_BUCKETS = new Set(['coffee', 'accessories', 'clothing', 'merch'])
 
 export function productIsPosSellable(product) {
+  const kind = String(product?.usage_kind || '').toLowerCase()
+  if (kind === 'internal') return false
+  if (kind === 'resellable') return true
+
   const tags = Array.isArray(product?.tags) ? product.tags : []
   if (!tags.length) {
     // Legacy rows without tags: treat merch/general category as sellable
@@ -158,13 +162,13 @@ export function paidSalesToBacoorRows(sales = []) {
         booking_id: sale.booking_id,
         bucket: posBucketToBacoor(
           classifySaleBucket({
-            itemType: line.item_type,
-            serviceSlug: line.services?.slug,
-            serviceName: line.services?.name,
-            payCategory: line.services?.pay_category,
-            productTags: line.products?.tags,
-            productCategory: line.products?.category,
-            productName: line.products?.name || line.name,
+            itemType: line.item_type || line.catalog_kind,
+            serviceSlug: line.services?.slug || line.service_slug,
+            serviceName: line.services?.name || line.name,
+            payCategory: line.services?.pay_category || line.pay_category,
+            productTags: line.products?.tags || line.product_tags,
+            productCategory: line.products?.category || line.product_category,
+            productName: line.products?.name || line.product_name || line.name,
           }),
         ),
       })

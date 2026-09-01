@@ -8,7 +8,7 @@
 2. Pool = sum × `wash_pool_pct` (default 35%).
 3. Split across roster for that branch+day with `attendanceWeight` > 0.
 
-**Roster honesty:** Anyone with present/late attendance that day can take a share — including BA if clocked in. There is no hard “crew/TL only” filter in the engine.
+**Roster honesty:** Wash pool is **bay crew only**. `splitWashPool` drops `detailer`, `team_lead`, `admin`, `super_admin`, `investor`, `sales`, `marketing`. Assigned detailing commission uses `forWashPool: false` so the detailer is not dropped.
 
 ## Attendance weights
 

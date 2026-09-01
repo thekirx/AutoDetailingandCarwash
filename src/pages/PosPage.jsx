@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
-import { Cake, Gift, Link2, LogOut, MapPin, Search, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
+import { Cake, Gift, Link2, LogOut, MapPin, Receipt, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { allowRoute, canAccessPos, canAccessSettings, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { buildPosSalePayload, buildVisitHandoffCartLines, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership } from '@/lib/posSale'
+import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canRemovePosCartLine, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership, removePosCartLine } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
@@ -17,6 +17,7 @@ import { approvedCaForCloseDay, formatBacoorReportText } from '@/lib/bacoorDaily
 import { buildShopDaySettlementReport, shopDayShouldClose } from '@/lib/shopDaySettlement'
 import {
   applyCaCollectedToCashLeft,
+  attachSalaryDraftExtras,
   canSubmitShiftClose,
   datetimeLocalToIso,
   moneySnapshotFromReport,
@@ -27,6 +28,8 @@ import {
   SHIFT_CLOSE_MONEY_KEYS,
 } from '@/lib/shiftClose'
 import ShiftCloseWizard from '@/components/ShiftCloseWizard'
+import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -49,8 +52,15 @@ import {
   computeCeramicPay,
   effectiveCeramicToggles,
 } from '@/lib/compensation'
-
-const SHELL_TABS = ['checkout', 'pending', 'expenses', 'dashboard']
+import {
+  POS_SETTINGS_TAB,
+  resolvePosShellTab,
+  summarizePendingHandoffs,
+  summarizeTodayPos,
+  buildPosWashPoolPreview,
+} from '@/lib/posInsights'
+import PosSettingsPanel from '@/pages/pos/PosSettingsPanel'
+import { PosGuideCard, PosPendingEmpty, PosSalaryPreviewCard, PosStatsBoard } from '@/pages/pos/PosPanels'
 
 export default function PosPage() {
   const { profile } = useAuth()
@@ -58,10 +68,8 @@ export default function PosPage() {
   const branchAdmin = isBranchAdmin(profile)
   const canManageCatalog = canManageServices(profile)
   const canOpenFinance = allowRoute(profile, 'finance')
-  const requestedShellTab = SHELL_TABS.includes(searchParams.get('tab'))
-    ? searchParams.get('tab')
-    : 'checkout'
-  const shellTab = requestedShellTab
+  const showSettingsTab = canAccessSettings(profile)
+  const shellTab = resolvePosShellTab(searchParams.get('tab'), { canSettings: showSettingsTab })
   const scopeList = getBranchScopeList(profile)
   const canPickPosBranch = canSeeAllBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
   const branchLocked = !canPickPosBranch
@@ -87,7 +95,13 @@ export default function PosPage() {
   const [customerId, setCustomerId] = useState('')
   const [linkedCustomer, setLinkedCustomer] = useState(null)
   const [guestName, setGuestName] = useState('')
+  const [guestFirstName, setGuestFirstName] = useState('')
+  const [guestLastName, setGuestLastName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
+  const [discountPercent, setDiscountPercent] = useState('')
+  const [discountAmountPesos, setDiscountAmountPesos] = useState('')
+  const [discountReason, setDiscountReason] = useState('')
   const [customerSearch, setCustomerSearch] = useState('')
   const [customerHits, setCustomerHits] = useState([])
   const [searchingCustomer, setSearchingCustomer] = useState(false)
@@ -117,6 +131,7 @@ export default function PosPage() {
   const [shiftSubmitting, setShiftSubmitting] = useState(false)
   const [shiftFieldConfig, setShiftFieldConfig] = useState([])
   const [shiftWizardStep, setShiftWizardStep] = useState(0)
+  const [salaryDraftExtras, setSalaryDraftExtras] = useState([])
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
   const [activeMembership, setActiveMembership] = useState(null)
@@ -162,6 +177,30 @@ export default function PosPage() {
     [categoryTotals],
   )
 
+  const todaySummary = useMemo(
+    () =>
+      summarizeTodayPos({
+        todayStats,
+        handoffs,
+        todayExpenses,
+        expenseFilter: expenseCountsOnDailyClose,
+      }),
+    [todayStats, handoffs, todayExpenses],
+  )
+
+  const pendingSummary = useMemo(() => summarizePendingHandoffs(handoffs), [handoffs])
+
+  const washPreview = useMemo(
+    () =>
+      buildPosWashPoolPreview({
+        carWashMinor: categoryTotals.car_wash,
+        washPoolPct: compRules.wash_pool_pct,
+        attendanceRows: todayAttendance,
+        rules: compRules,
+      }),
+    [categoryTotals.car_wash, compRules, todayAttendance],
+  )
+
   const load = useCallback(async () => {
     if (!branch) return
     const today = getLocalCalendarDate()
@@ -176,7 +215,7 @@ export default function PosPage() {
         .eq('is_archived', false),
       supabase
         .from('products')
-        .select('id, name, price_minor, category, stock_qty, sku, tags')
+        .select('id, name, price_minor, category, stock_qty, sku, tags, usage_kind')
         .eq('is_active', true)
         .eq('is_archived', false),
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
@@ -225,6 +264,20 @@ export default function PosPage() {
       setPaymentOptions(normalized.payment_methods)
       setExpenseKinds(normalized.expense_kinds)
     }
+    // Finance expense_categories is source of truth when present
+    const { data: finCats } = await supabase
+      .from('expense_categories')
+      .select('id, name, kind, is_active')
+      .eq('is_active', true)
+      .order('name')
+    if (finCats?.length) {
+      setExpenseKinds(
+        finCats.map((c) => ({
+          value: String(c.kind || c.name || c.id).toLowerCase().replace(/\s+/g, '_'),
+          label: c.name,
+        })),
+      )
+    }
     setServices(
       (svc.data || []).map((row) => ({
         ...row,
@@ -233,7 +286,24 @@ export default function PosPage() {
       })),
     )
     const productRows = (prod.data || []).filter((p) => (branchAdmin ? productIsPosSellable(p) : true))
-    setProducts(productRows)
+    let stockMap = {}
+    if (branch && productRows.length) {
+      const { data: branchStock, error: stockErr } = await supabase
+        .from('product_branch_stock')
+        .select('product_id, qty')
+        .eq('branch_slug', branch)
+      if (stockErr) toast.error(stockErr.message)
+      else {
+        for (const row of branchStock || []) stockMap[row.product_id] = Number(row.qty) || 0
+      }
+    }
+    setProducts(
+      productRows.map((p) => ({
+        ...p,
+        branch_stock_qty: stockMap[p.id],
+        stock_qty: stockMap[p.id] != null ? stockMap[p.id] : p.stock_qty,
+      })),
+    )
     setTodayStats(stats.data)
     setTodaySales(saleRows)
     setHandoffs(handoffRes.data || [])
@@ -436,7 +506,7 @@ export default function PosPage() {
         id: p.id,
         name: p.name,
         price_minor: p.price_minor,
-        meta: `Stock ${p.stock_qty}${p.sku ? ` · ${p.sku}` : ''}`,
+        meta: `Stock ${p.branch_stock_qty != null ? p.branch_stock_qty : p.stock_qty}${p.sku ? ` · ${p.sku}` : ''}`,
       }))
       .filter((item) => !q || item.name.toLowerCase().includes(q) || (item.meta || '').toLowerCase().includes(q))
   }, [products, query, merchFamilyFilter])
@@ -537,8 +607,37 @@ export default function PosPage() {
   function resetCheckoutExtras() {
     clearCustomerLink()
     setGuestName('')
+    setGuestFirstName('')
+    setGuestLastName('')
+    setGuestEmail('')
     setGuestPhone('')
+    setDiscountPercent('')
+    setDiscountAmountPesos('')
+    setDiscountReason('')
     setPaymentMethod('cash')
+  }
+
+  function applyCartDiscount() {
+    const amountMinor = discountAmountPesos.trim()
+      ? Math.round(Number(discountAmountPesos) * 100)
+      : 0
+    const result = applyAdHocDiscount(cart, {
+      percent: Number(discountPercent) || 0,
+      amountMinor,
+      reason: discountReason,
+    })
+    if (!result.ok) {
+      toast.error(result.error)
+      return
+    }
+    setCart(result.cart)
+    writeAudit({
+      action: 'pos.discount',
+      entityType: 'pos_cart',
+      summary: `Ad-hoc discount: ${result.audit.reason}`,
+      meta: result.audit,
+    })
+    toast.success('Discount applied')
   }
 
   function addToCart(item, { loyaltyAward = false, birthdayAward = false } = {}) {
@@ -696,9 +795,16 @@ export default function PosPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({
-              customer_name: guestName.trim() || 'Walk-in customer',
+              customer_name:
+                [guestFirstName.trim(), guestLastName.trim()].filter(Boolean).join(' ') ||
+                guestName.trim() ||
+                'Walk-in customer',
+              customer_first_name: guestFirstName.trim() || undefined,
+              customer_last_name: guestLastName.trim() || undefined,
+              customer_email: guestEmail.trim() || undefined,
               customer_phone: guestPhone.trim(),
               site_origin: window.location.origin,
+              allow_walk_in_name: true,
             }),
           })
           const body = await res.json().catch(() => ({}))
@@ -715,8 +821,17 @@ export default function PosPage() {
     }
 
     const noteParts = []
-    if (!resolvedCustomerId && (guestName.trim() || guestPhone.trim())) {
-      noteParts.push(`Walk-in: ${[guestName.trim(), guestPhone.trim()].filter(Boolean).join(' · ')}`)
+    const walkInLabel = [
+      [guestFirstName.trim(), guestLastName.trim()].filter(Boolean).join(' ') || guestName.trim(),
+      guestPhone.trim(),
+      guestEmail.trim(),
+    ].filter(Boolean)
+    if (!resolvedCustomerId && walkInLabel.length) {
+      noteParts.push(`Walk-in: ${walkInLabel.join(' · ')}`)
+    }
+    if (cart.some((l) => l.adhoc_discount_applied)) {
+      const reasons = [...new Set(cart.filter((l) => l.adhoc_discount_reason).map((l) => l.adhoc_discount_reason))]
+      noteParts.push(`Discount: ${reasons.join('; ') || 'ad-hoc'}`)
     }
     if (linkedCustomer?.plate) noteParts.push(`Plate ${linkedCustomer.plate}`)
     if (cart.some((l) => l.is_loyalty_award && !l.is_birthday_award)) noteParts.push('Includes loyalty award line')
@@ -904,6 +1019,7 @@ export default function PosPage() {
     setShiftOverrides({})
     setShiftReasons({})
     setShiftFieldErrors({})
+    setSalaryDraftExtras([])
     setShiftEndedError('')
     setShiftWizardStep(0)
     setShiftEndedAtLocal(toDatetimeLocalValue())
@@ -945,6 +1061,15 @@ export default function PosPage() {
       }
     }
     Object.assign(submitted, applyCaCollectedToCashLeft(baseline, submitted))
+    const draftForSubmit = (salaryDraftExtras || []).map((row) => ({
+      staff_id: row.staff_id || null,
+      staff_name: row.staff_name,
+      amount_minor:
+        row.amount_minor != null ? row.amount_minor : parsePesosToMinor(row.amount_pesos) ?? 0,
+      note: row.note,
+      kind: row.kind,
+    }))
+    Object.assign(submitted, attachSalaryDraftExtras(submitted, draftForSubmit))
     const validationBaseline = shiftCloseValidationBaseline(dailyReportData, submitted)
     const check = validateShiftCloseSubmit({
       baseline: validationBaseline,
@@ -984,14 +1109,8 @@ export default function PosPage() {
   }
 
   const checkoutBody = (
-    <div className="mt-6 flex flex-col gap-6">
-      <PosDayHero
-        sales={formatMoney(todayStats?.total_sales_minor || 0)}
-        paid={todayStats?.paid_count ?? 0}
-        queue={handoffs.length}
-        avg={formatMoney(todayStats?.average_ticket_minor || 0)}
-        families={familyTiles}
-      />
+    <div className="flex flex-col gap-6">
+      <PosStatsBoard stats={todaySummary} compact />
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
           Daily sales report
@@ -1004,10 +1123,10 @@ export default function PosPage() {
       </div>
 
       {handoffs.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
           <div>
             <p className="font-medium">
-              {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} waiting for payment
+              {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} waiting · {formatMoney(pendingSummary.totalMinor)}
             </p>
             <p className="text-sm text-muted-foreground">Open Pay queue to settle floor handoffs.</p>
           </div>
@@ -1016,7 +1135,6 @@ export default function PosPage() {
             className="min-h-11"
             onClick={() => {
               setShellTab('pending')
-              setSearchParams({ tab: 'pending' }, { replace: true })
             }}
           >
             Open Pay queue
@@ -1063,19 +1181,7 @@ export default function PosPage() {
 
       {branchAdmin ? (
         <div>
-          <div className="planner-v2-tabs mb-3" role="toolbar" aria-label="Merch family">
-            {MERCH_FAMILIES.map((fam) => (
-              <button
-                key={fam.id}
-                type="button"
-                className={merchFamilyFilter === fam.id ? 'is-on' : ''}
-                aria-pressed={merchFamilyFilter === fam.id}
-                onClick={() => setMerchFamilyFilter(fam.id)}
-              >
-                {fam.label}
-              </button>
-            ))}
-          </div>
+          <MerchFamilyToolbar value={merchFamilyFilter} onChange={setMerchFamilyFilter} />
           <p className="mb-3 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
             Merch / items ({merchItems.length})
           </p>
@@ -1116,19 +1222,7 @@ export default function PosPage() {
             />
           </TabsContent>
           <TabsContent value="merch" className="mt-4">
-            <div className="planner-v2-tabs mb-3" role="toolbar" aria-label="Merch family">
-              {MERCH_FAMILIES.map((fam) => (
-                <button
-                  key={fam.id}
-                  type="button"
-                  className={merchFamilyFilter === fam.id ? 'is-on' : ''}
-                  aria-pressed={merchFamilyFilter === fam.id}
-                  onClick={() => setMerchFamilyFilter(fam.id)}
-                >
-                  {fam.label}
-                </button>
-              ))}
-            </div>
+            <MerchFamilyToolbar value={merchFamilyFilter} onChange={setMerchFamilyFilter} />
             <CatalogGrid
               items={merchItems}
               onAdd={addToCart}
@@ -1142,41 +1236,58 @@ export default function PosPage() {
   )
 
   const pendingBody = (
-    <div className="mt-4 flex flex-col gap-4">
-      {handoffs.length === 0 ? (
-        <div className="planner-empty">
-          <strong>No pending payments</strong>
-          <p>Queue tickets land here when a car is ready to pay.</p>
-        </div>
+    <div className="flex flex-col gap-4">
+      {handoffs.length > 0 ? (
+        <>
+          <Card className="border-primary/15 bg-muted/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Pending payments</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} ·{' '}
+                <span className="font-mono tabular-nums font-medium text-foreground">
+                  {formatMoney(pendingSummary.totalMinor)}
+                </span>{' '}
+                total
+              </p>
+            </CardHeader>
+          </Card>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {handoffs.map((row) => {
+              const booking = row.bookings || {}
+              return (
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => {
+                    loadHandoff(row)
+                    setShellTab('checkout')
+                  }}
+                  className="flex min-h-[88px] flex-col rounded-xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:bg-accent/20 active:scale-[0.99]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium">{booking.customer_name || 'Customer'}</p>
+                    <Badge variant="secondary">
+                      {booking.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{booking.vehicle_plate || 'No plate'}</p>
+                  <p className="mt-auto pt-3 font-mono text-xl font-semibold tabular-nums">
+                    {formatMoney(row.amount_minor || booking.final_price_minor || 0)}
+                  </p>
+                  <p className="mt-1 text-xs text-primary">Tap to open checkout</p>
+                </button>
+              )
+            })}
+          </div>
+        </>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {handoffs.map((row) => {
-            const booking = row.bookings || {}
-            return (
-              <button
-                key={row.id}
-                type="button"
-                onClick={() => { loadHandoff(row); setShellTab('checkout') }}
-                className="planner-ticket min-h-[88px] rounded-xl border border-border bg-background p-4 text-left transition hover:border-primary/50 hover:bg-accent/30"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium">{booking.customer_name || 'Customer'}</p>
-                  <Badge variant="secondary">
-                    {booking.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'}
-                  </Badge>
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{booking.vehicle_plate || '—'}</p>
-                <p className="mt-3 text-xl font-semibold tabular-nums">{formatMoney(row.amount_minor || booking.final_price_minor || 0)}</p>
-              </button>
-            )
-          })}
-        </div>
+        <PosPendingEmpty />
       )}
     </div>
   )
 
   const expensesBody = (
-    <div className="mt-4 flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Submit expense</CardTitle>
@@ -1266,16 +1377,13 @@ export default function PosPage() {
   )
 
   const dashboardBody = (
-    <div className="mt-4 flex flex-col gap-6">
-      <PosDayHero
-        sales={formatMoney(todayStats?.total_sales_minor || 0)}
-        paid={todayStats?.paid_count ?? 0}
-        queue={handoffs.length}
-        avg={formatMoney(todayStats?.average_ticket_minor || 0)}
-        families={[
-          ...familyTiles,
-          { label: 'Today expenses', value: formatMoney(todayExpenses.filter(expenseCountsOnDailyClose).reduce((s, r) => s + Number(r.total_minor || 0), 0)) },
-        ]}
+    <div className="flex flex-col gap-6">
+      <PosStatsBoard stats={todaySummary} categoryRows={familyTiles} />
+      <PosSalaryPreviewCard
+        washPreview={washPreview}
+        compRules={compRules}
+        canPayroll={allowRoute(profile, 'payroll')}
+        canAttendance={allowRoute(profile, 'attendance')}
       />
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
@@ -1287,9 +1395,9 @@ export default function PosPage() {
           </Button>
         )}
         {canOpenFinance ? (
-        <Button type="button" variant="secondary" className="min-h-11" asChild>
-          <Link to="/operations/finance?tab=purchases">Open Finance · expenses</Link>
-        </Button>
+          <Button type="button" variant="secondary" className="min-h-11" asChild>
+            <Link to="/operations/finance?tab=purchases">Open Finance · expenses</Link>
+          </Button>
         ) : null}
         {allowRoute(profile, 'payroll') ? (
           <Button type="button" variant="outline" className="min-h-11" asChild>
@@ -1300,35 +1408,35 @@ export default function PosPage() {
     </div>
   )
 
+  const settingsBody = showSettingsTab ? (
+    <div className="flex flex-col gap-4">
+      <PosSettingsPanel embedded />
+      <Button type="button" variant="link" className="min-h-11 w-fit px-0" asChild>
+        <Link to="/operations/settings/pos">Open full POS settings page</Link>
+      </Button>
+    </div>
+  ) : null
+
   return (
-    <section className={`hakum-pos planner-v2 flex flex-col ${branchAdmin ? 'gap-4' : 'gap-6'}`}>
-      <header className="planner-v2-head hakum-pos-head">
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">
-            {branchAdmin ? 'Counter' : 'Point of sale'}
-          </p>
-          <h1>{branchAdmin ? 'POS' : 'POS'}</h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2">
-            <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
-            <span>
-              {branchAdmin
-                ? `Sell merch, take queue payment, close the day · ${branchLabel}`
-                : `Sell, pay queue tickets, expenses, end of shift · ${branchLabel}`}
-            </span>
-          </p>
-        </div>
-        <div className="hakum-pos-head-actions">
-          {canAccessSettings(profile) ? (
-            <Button type="button" variant="outline" className="min-h-11" asChild>
-              <Link to="/operations/settings/pos">POS settings</Link>
-            </Button>
-          ) : null}
+    <OpsPageShell
+      className="hakum-pos"
+      eyebrow={branchAdmin ? 'Counter' : 'Point of sale'}
+      title="POS"
+      description={
+        branchAdmin
+          ? `Merch, queue payment, expenses, end of shift · ${branchLabel}`
+          : `Sell, pay queue, expenses, crew pay preview · ${branchLabel}`
+      }
+      meta={
+        <>
+          <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+          <span>{branchLabel}</span>
+        </>
+      }
+      actions={
+        <>
           {canSubmitShiftClose(profile) ? (
-            <Button
-              type="button"
-              className="hakum-pos-end-shift min-h-11 gap-2"
-              onClick={openEndOfShift}
-            >
+            <Button type="button" variant="destructive" className="min-h-11 gap-2" onClick={openEndOfShift}>
               <LogOut data-icon="inline-start" aria-hidden />
               End of shift
             </Button>
@@ -1339,20 +1447,39 @@ export default function PosPage() {
               Cart · {cart.length} · {formatMoney(cartTotal)}
             </Button>
           ) : null}
-        </div>
-      </header>
+        </>
+      }
+    >
+      <PosGuideCard defaultOpen={shellTab === 'checkout'} />
 
-      <Tabs value={shellTab} onValueChange={setShellTab} className="w-full">
-        <TabsList variant="line" className="hakum-pos-tabs planner-v2-tabs">
-          <TabsTrigger value="checkout" className="min-h-11">Sell</TabsTrigger>
-          <TabsTrigger value="pending" className="min-h-11">Pay queue{handoffs.length ? ` (${handoffs.length})` : ''}</TabsTrigger>
-          <TabsTrigger value="expenses" className="min-h-11">Expenses</TabsTrigger>
-          <TabsTrigger value="dashboard" className="min-h-11">Today</TabsTrigger>
-        </TabsList>
-        <TabsContent value="checkout">{checkoutBody}</TabsContent>
-        <TabsContent value="pending">{pendingBody}</TabsContent>
-        <TabsContent value="expenses">{expensesBody}</TabsContent>
-        <TabsContent value="dashboard">{dashboardBody}</TabsContent>
+      <Tabs value={shellTab} onValueChange={setShellTab} className="flex w-full flex-col gap-5">
+        <OpsTabList
+          aria-label="POS sections"
+          tabs={[
+            { id: 'checkout', label: 'Sell', icon: ShoppingBag },
+            { id: 'pending', label: 'Pay queue', icon: Receipt, badge: handoffs.length || undefined },
+            { id: 'expenses', label: 'Expenses' },
+            { id: 'dashboard', label: 'Today' },
+            ...(showSettingsTab ? [{ id: POS_SETTINGS_TAB, label: 'Settings', icon: Settings2 }] : []),
+          ]}
+        />
+        <TabsContent value="checkout" className="mt-0 outline-none">
+          {checkoutBody}
+        </TabsContent>
+        <TabsContent value="pending" className="mt-0 outline-none">
+          {pendingBody}
+        </TabsContent>
+        <TabsContent value="expenses" className="mt-0 outline-none">
+          {expensesBody}
+        </TabsContent>
+        <TabsContent value="dashboard" className="mt-0 outline-none">
+          {dashboardBody}
+        </TabsContent>
+        {showSettingsTab ? (
+          <TabsContent value={POS_SETTINGS_TAB} className="mt-0 outline-none">
+            {settingsBody}
+          </TabsContent>
+        ) : null}
       </Tabs>
 
       <Sheet
@@ -1391,6 +1518,12 @@ export default function PosPage() {
                 setShiftReasons={setShiftReasons}
                 shiftFieldErrors={shiftFieldErrors}
                 setShiftFieldErrors={setShiftFieldErrors}
+                salaryDraftExtras={salaryDraftExtras}
+                setSalaryDraftExtras={setSalaryDraftExtras}
+                staffOptions={(todayAttendance || []).map((row) => ({
+                  id: row.staff_id,
+                  full_name: row.staff_profiles?.full_name || row.staff_id,
+                }))}
                 onSubmit={submitEndOfShift}
                 shiftSubmitting={shiftSubmitting || !branch}
               />
@@ -1470,22 +1603,62 @@ export default function PosPage() {
                         formatMoney(line.unit_price_minor)
                       )}{' '}
                       · {line.catalog_kind || line.item_type}
+                      {line.from_handoff ? ' · queue job' : ''}
                       {line.is_loyalty_award ? ' · loyalty' : ''}
                       {line.is_membership_included ? ' · member include' : ''}
                       {line.membership_discount_applied ? ' · member discount' : ''}
+                      {line.adhoc_discount_applied ? ' · discount' : ''}
                     </p>
+                    {line.from_handoff ? (
+                      <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                        Ask Team Lead to change the wash/detailing job.
+                      </p>
+                    ) : null}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="min-h-11 min-w-11"
-                    onClick={() => setCart((c) => c.filter((x) => x.key !== line.key))}
-                    aria-label="Remove"
-                  >
-                    <Trash2 />
-                  </Button>
+                  {canRemovePosCartLine(line) ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="min-h-11 min-w-11"
+                      onClick={() => setCart((c) => removePosCartLine(c, line.key))}
+                      aria-label="Remove"
+                    >
+                      <Trash2 />
+                    </Button>
+                  ) : (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Locked</span>
+                  )}
                 </div>
               ))}
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-dashed border-border bg-muted/20 p-3">
+              <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Ad-hoc discount</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  className="min-h-10"
+                  placeholder="% off"
+                  inputMode="decimal"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                />
+                <Input
+                  className="min-h-10"
+                  placeholder="₱ amount"
+                  inputMode="decimal"
+                  value={discountAmountPesos}
+                  onChange={(e) => setDiscountAmountPesos(e.target.value)}
+                />
+              </div>
+              <Input
+                className="min-h-10"
+                placeholder="Reason (required)"
+                value={discountReason}
+                onChange={(e) => setDiscountReason(e.target.value)}
+              />
+              <Button type="button" variant="secondary" className="min-h-10 w-full" onClick={applyCartDiscount}>
+                Apply discount
+              </Button>
             </div>
 
             <div className="space-y-3 rounded-xl border border-border bg-muted/25 p-4">
@@ -1569,21 +1742,40 @@ export default function PosPage() {
                   )}
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-name" className="text-xs text-muted-foreground">
-                        Name <span className="font-normal">(optional)</span>
+                      <Label htmlFor="pos-guest-first" className="text-xs text-muted-foreground">
+                        First name
                       </Label>
                       <Input
-                        id="pos-guest-name"
+                        id="pos-guest-first"
                         className="min-h-11"
-                        placeholder="Walk-in name"
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        autoComplete="name"
+                        placeholder="First"
+                        value={guestFirstName}
+                        onChange={(e) => {
+                          setGuestFirstName(e.target.value)
+                          setGuestName([e.target.value, guestLastName].filter(Boolean).join(' '))
+                        }}
+                        autoComplete="given-name"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pos-guest-last" className="text-xs text-muted-foreground">
+                        Last name
+                      </Label>
+                      <Input
+                        id="pos-guest-last"
+                        className="min-h-11"
+                        placeholder="Last"
+                        value={guestLastName}
+                        onChange={(e) => {
+                          setGuestLastName(e.target.value)
+                          setGuestName([guestFirstName, e.target.value].filter(Boolean).join(' '))
+                        }}
+                        autoComplete="family-name"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="pos-guest-phone" className="text-xs text-muted-foreground">
-                        Number <span className="font-normal">(optional)</span>
+                        Number
                       </Label>
                       <Input
                         id="pos-guest-phone"
@@ -1593,6 +1785,20 @@ export default function PosPage() {
                         value={guestPhone}
                         onChange={(e) => setGuestPhone(e.target.value)}
                         autoComplete="tel"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pos-guest-email" className="text-xs text-muted-foreground">
+                        Email <span className="font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        id="pos-guest-email"
+                        className="min-h-11"
+                        placeholder="name@…"
+                        type="email"
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        autoComplete="email"
                       />
                     </div>
                   </div>
@@ -1668,7 +1874,26 @@ export default function PosPage() {
           </div>
         </SheetContent>
       </Sheet>
-    </section>
+    </OpsPageShell>
+  )
+}
+
+function MerchFamilyToolbar({ value, onChange }) {
+  return (
+    <div className="mb-3 flex flex-wrap gap-2" role="toolbar" aria-label="Merch family">
+      {MERCH_FAMILIES.map((fam) => (
+        <Button
+          key={fam.id}
+          type="button"
+          variant={value === fam.id ? 'default' : 'outline'}
+          className="min-h-11"
+          aria-pressed={value === fam.id}
+          onClick={() => onChange(fam.id)}
+        >
+          {fam.label}
+        </Button>
+      ))}
+    </div>
   )
 }
 
@@ -1767,40 +1992,5 @@ function CatalogGrid({ items, onAdd, empty, birthdayPerk }) {
         )
       })}
     </div>
-  )
-}
-
-function PosDayHero({ sales, paid, queue, avg, families = [] }) {
-  return (
-    <>
-      <div className="hakum-pos-hero planner-ticket">
-        <p>Sales today</p>
-        <strong>{sales}</strong>
-        <dl>
-          <div>
-            <dt>Paid</dt>
-            <dd>{paid}</dd>
-          </div>
-          <div>
-            <dt>Queue to pay</dt>
-            <dd>{queue}</dd>
-          </div>
-          <div>
-            <dt>Avg ticket</dt>
-            <dd>{avg}</dd>
-          </div>
-        </dl>
-      </div>
-      {families.length ? (
-        <div className="hakum-pos-families" role="list">
-          {families.map((row) => (
-            <div key={row.label} role="listitem">
-              <span>{row.label}</span>
-              <b>{row.value}</b>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </>
   )
 }

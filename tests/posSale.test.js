@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict'
 import {
+  applyAdHocDiscount,
   buildHandoffCartLine,
   buildPosSalePayload,
+  canRemovePosCartLine,
   priceCartForMembership,
+  removePosCartLine,
   resolveMembershipUnitPrice,
   serviceMatchesIncluded,
 } from '../src/lib/posSale.js'
@@ -177,5 +180,30 @@ const memberPayload = buildPosSalePayload({
 })
 assert.equal(memberPayload.lines[0].is_membership_included, true)
 assert.equal(memberPayload.lines[0].unit_price_minor, 0)
+
+const locked = { key: 'h1', from_handoff: true, name: 'Wash' }
+const freeLine = { key: 'm1', from_handoff: false, name: 'Merch' }
+assert.equal(canRemovePosCartLine(locked), false)
+assert.equal(canRemovePosCartLine(freeLine), true)
+assert.equal(removePosCartLine([locked, freeLine], 'h1').length, 2)
+assert.equal(removePosCartLine([locked, freeLine], 'm1').length, 1)
+
+const noReason = applyAdHocDiscount(
+  [{ key: 'a', unit_price_minor: 10000, list_price_minor: 10000, quantity: 1 }],
+  { percent: 10, reason: 'x' },
+)
+assert.equal(noReason.ok, false)
+
+const disc = applyAdHocDiscount(
+  [
+    { key: 'a', unit_price_minor: 10000, list_price_minor: 10000, quantity: 1, from_handoff: false },
+    { key: 'b', unit_price_minor: 20000, list_price_minor: 20000, quantity: 1, from_handoff: true },
+  ],
+  { percent: 10, reason: 'promo walk-in' },
+)
+assert.equal(disc.ok, true)
+assert.equal(disc.cart[0].unit_price_minor, 9000)
+assert.equal(disc.cart[1].unit_price_minor, 20000)
+assert.ok(disc.audit.reason)
 
 console.log('posSale.buildPosSalePayload + handoff cart: ok')

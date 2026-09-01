@@ -1,20 +1,15 @@
 /**
- * Staff × date attendance heatmap (adapted from contribution-calendar pattern).
- * Y-axis = employee names · X-axis = dates · cells clickable for admin override.
+ * Staff × date attendance heatmap.
+ * Y-axis = team · X-axis = dates · cells open override when allowed.
  */
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
 
-const DEFAULT_COLORS = ['#1e293b', '#7f1d1d', '#ca8a04', '#15803d', '#22c55e']
-const LIGHT_COLORS = ['#e2e8f0', '#fecaca', '#fde047', '#86efac', '#22c55e']
-// 0 empty, 1 absent, 2 late, 3 unused, 4 present
-
-function cellColor(count, colors) {
-  if (!count) return colors[0]
-  if (count === 1) return colors[1]
-  if (count === 2) return colors[2]
-  if (count === 3) return colors[3]
-  return colors[4] || colors[colors.length - 1]
+function cellTone(count) {
+  if (!count) return 'bg-muted'
+  if (count === 1) return 'bg-destructive/20 dark:bg-destructive/35'
+  if (count === 2) return 'bg-amber-300/90 dark:bg-amber-600/55'
+  return 'bg-emerald-500 dark:bg-emerald-600'
 }
 
 function shortDate(iso, period) {
@@ -32,28 +27,24 @@ export function AttendanceHeatmap({
   matrix = [],
   dates = [],
   period = 'weekly',
-  colors,
   onCellClick,
   canOverride = false,
   className,
 }) {
-  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
-  const palette = colors || (isDark ? DEFAULT_COLORS : LIGHT_COLORS)
-
   return (
-    <div className={cn('overflow-x-auto rounded-2xl border border-border bg-muted/30 p-4', className)}>
+    <div className={cn('overflow-x-auto rounded-2xl border border-border/80 bg-card p-4 shadow-sm', className)}>
       <div className="inline-block min-w-full">
         <div
-          className="grid gap-1"
+          className="grid gap-1.5"
           style={{
-            gridTemplateColumns: `minmax(7.5rem,9rem) repeat(${Math.max(dates.length, 1)}, minmax(1.65rem, 2rem))`,
+            gridTemplateColumns: `minmax(8rem,10rem) repeat(${Math.max(dates.length, 1)}, minmax(1.75rem, 2.25rem))`,
           }}
         >
-          <div className="sticky left-0 z-10 bg-muted/30 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="sticky left-0 z-10 bg-card py-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
             Team
           </div>
           {dates.map((d) => (
-            <div key={d} className="truncate text-center text-[10px] font-semibold text-muted-foreground" title={d}>
+            <div key={d} className="truncate py-1 text-center text-[10px] font-medium text-muted-foreground" title={d}>
               {shortDate(d, period)}
             </div>
           ))}
@@ -61,13 +52,12 @@ export function AttendanceHeatmap({
           {matrix.map((row) => (
             <div key={row.staffId} className="contents">
               <div
-                className="sticky left-0 z-10 truncate bg-muted/30 py-0.5 pr-2 text-xs font-medium text-foreground"
+                className="sticky left-0 z-10 truncate bg-card py-1 pr-2 text-xs font-medium text-foreground"
                 title={row.role ? `${row.name} · ${row.role}` : row.name}
               >
                 {row.name}
               </div>
               {row.cells.map((cell) => {
-                const color = cellColor(cell.count, palette)
                 const label = cell.status
                   ? `${row.name} · ${cell.date} · ${cell.status}`
                   : `${row.name} · ${cell.date} · no record`
@@ -81,11 +71,11 @@ export function AttendanceHeatmap({
                     aria-label={label}
                     onClick={() => clickable && onCellClick?.({ staffId: row.staffId, name: row.name, cell })}
                     className={cn(
-                      'h-6 w-full rounded-[4px] border border-border/60 transition',
-                      clickable && 'cursor-pointer hover:ring-2 hover:ring-primary/50',
+                      'aspect-square min-h-7 w-full rounded-md border border-border/50 transition active:scale-[0.97]',
+                      cellTone(cell.count),
+                      clickable && 'cursor-pointer hover:ring-2 hover:ring-primary/40 focus-visible:ring-2 focus-visible:ring-ring',
                       !clickable && 'cursor-default',
                     )}
-                    style={{ backgroundColor: color }}
                   />
                 )
               })}
@@ -94,19 +84,15 @@ export function AttendanceHeatmap({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+      <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-border/60 pt-4 text-xs text-muted-foreground">
         {[
           [0, 'Empty'],
           [1, 'Absent'],
           [2, 'Late'],
           [4, 'Present'],
         ].map(([idx, label]) => (
-          <span key={label} className="inline-flex items-center gap-1.5">
-            <span
-              className="inline-block h-3 w-3 rounded-[4px] border border-border/60"
-              style={{ backgroundColor: palette[idx] }}
-              aria-hidden
-            />
+          <span key={label} className="inline-flex items-center gap-2">
+            <span className={cn('inline-block size-3 rounded-md border border-border/50', cellTone(idx))} aria-hidden />
             {label}
           </span>
         ))}
