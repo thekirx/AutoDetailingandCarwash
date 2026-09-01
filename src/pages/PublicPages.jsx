@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CeramicSection } from '../components/public/home/HomeServiceSections'
 
@@ -12,6 +12,8 @@ import {
   marketingKeyForServiceSlug,
 } from '../lib/publicCatalog'
 import { usePageMeta } from '../lib/pageMeta'
+import BdPageHero from '../components/public/bredesign/BdPageHero'
+import useReveal from '../components/public/bredesign/useReveal'
 
 // Photos are looked up by the service's canonical marketing key so a card
 // without artwork simply falls back to the icon.
@@ -44,6 +46,13 @@ export function ServicesPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
+  usePageMeta({
+    title: 'Services',
+    description:
+      'Every service Hakum Auto Care offers, straight from the live catalog — the same menu you see when you book at the bay.',
+    path: '/services',
+  })
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
@@ -66,54 +75,72 @@ export function ServicesPage() {
     }
   }, [])
 
+  useReveal()
+
   return (
-    <PageHero
-      eyebrow="Our services · Live catalog"
-      title={
-        <>
-          Precision in
-          <br />
-          <i>every pass.</i>
-        </>
-      }
-      copy="Service names match Hakum Inventory — the same menu you see when you book or check out at the bay."
-    >
-      <section className="content-section">
-        <p className="public-shell mb-6 text-sm text-slate-500">
-          Names and order come from the live catalog. Marketing descriptions appear when a homepage match exists; otherwise the inventory description is shown.
-        </p>
-        {loadError ? (
-          <p className="public-shell mb-6 text-sm text-destructive">{loadError}</p>
-        ) : null}
-        {loading ? (
-          <p className="public-shell text-sm text-slate-500">Loading services…</p>
-        ) : (
-          <div className="public-shell numbered-grid">
-            {serviceItems.map((item, i) => {
-              const image = photoForService(item.slug)
-              return (
-                <article key={item.id || item.slug} className={image ? 'has-photo' : undefined}>
-                  <span>0{i + 1}</span>
-                  {image ? (
-                    <img src={image} alt={`${item.title} at Hakum Auto Care`} loading="lazy" decoding="async" />
-                  ) : (
-                    <Sparkles />
-                  )}
-                  <h2>{item.title}</h2>
-                  <p>{item.copy}</p>
-                  <Link to="/book" state={{ service: item.title, service_id: item.id }}>
-                    Book this service <ArrowRight />
+    <>
+      <BdPageHero
+        eyebrow="Our services"
+        title={
+          <>
+            Precision in
+            <br />
+            <em>every pass.</em>
+          </>
+        }
+        copy="Every service we run, read straight from the live catalog — the same menu you see when you book, and when you check out at the bay."
+      />
+      <section id="catalog">
+        <div className="bd-shell">
+          <p className="bd-catalog-note">
+            Names and order come from the live catalog. Where a service has a written description it is
+            shown; otherwise the inventory description is used.
+          </p>
+
+          {loadError ? (
+            <p className="bd-state is-error" role="alert">
+              {loadError}
+            </p>
+          ) : null}
+
+          {loading ? (
+            <p className="bd-state">Loading services…</p>
+          ) : (
+            <div className="bd-catalog bd-reveal">
+              {serviceItems.map((item, i) => {
+                const image = photoForService(item.slug)
+                return (
+                  <Link
+                    className={`bd-card${image ? '' : ' is-plain'}`}
+                    key={item.id || item.slug}
+                    to="/book"
+                    state={{ service: item.title, service_id: item.id }}
+                  >
+                    {image ? (
+                      <img src={image} alt={`${item.title} at Hakum Auto Care`} loading="lazy" decoding="async" />
+                    ) : null}
+                    <span className="bd-card-num" aria-hidden="true">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <div className="bd-card-body">
+                      <h2>{item.title}</h2>
+                      <p>{item.copy}</p>
+                      <span className="bd-card-go">
+                        Book this service <ArrowRight size={14} aria-hidden="true" />
+                      </span>
+                    </div>
                   </Link>
-                </article>
-              )
-            })}
-            {!serviceItems.length && !loadError ? (
-              <p className="text-sm text-slate-500">No active services are listed yet.</p>
-            ) : null}
-          </div>
-        )}
+                )
+              })}
+            </div>
+          )}
+
+          {!loading && !serviceItems.length && !loadError ? (
+            <p className="bd-state">No active services are listed yet.</p>
+          ) : null}
+        </div>
       </section>
-    </PageHero>
+    </>
   )
 }
 

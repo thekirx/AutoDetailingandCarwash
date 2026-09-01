@@ -918,3 +918,177 @@
 .bredesign .footer-kicker {
   color: #9aa3b8;
 }
+
+/* ==== Interior page hero ================================================= */
+
+.bredesign .bd-page-hero {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+.bredesign .bd-page-hero-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bredesign .bd-page-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(2, 10, 49, 0.7) 0%,
+    rgba(2, 10, 49, 0.62) 40%,
+    rgba(2, 10, 49, 0.97) 100%
+  );
+}
+.bredesign .bd-page-hero-in {
+  position: relative;
+  z-index: 1;
+  padding: clamp(104px, 12vw, 168px) 0 clamp(44px, 5vw, 76px);
+}
+.bredesign .bd-page-hero h1 {
+  margin-top: 20px;
+  font-size: clamp(2rem, 5.4vw, 4.1rem);
+  line-height: 0.9;
+}
+.bredesign .bd-page-hero h1 em {
+  font-style: italic;
+  color: var(--bd-accent);
+}
+.bredesign .bd-page-hero-copy {
+  margin-top: 22px;
+  max-width: 54ch;
+  color: rgba(241, 241, 237, 0.84);
+  font-size: clamp(15px, 1.4vw, 16.5px);
+  line-height: 1.65;
+}
+
+/* ==== Catalog grid ======================================================= */
+/* Used by /services. The cards are the homepage's service cards at a smaller
+   scale, so the two pages read as the same site. */
+
+.bredesign .bd-catalog-note {
+  margin-bottom: clamp(24px, 3vw, 38px);
+  color: var(--bd-ink-3);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 64ch;
+}
+.bredesign .bd-catalog {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 700px) {
+  .bredesign .bd-catalog {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1060px) {
+  .bredesign .bd-catalog {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.bredesign .bd-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 330px;
+  overflow: hidden;
+  text-decoration: none;
+  background: var(--bd-navy-2);
+  border: 1px solid var(--bd-rule);
+  transition: transform 0.24s, border-color 0.24s;
+}
+.bredesign .bd-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--bd-accent);
+}
+.bredesign .bd-card > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.bredesign .bd-card:hover > img {
+  transform: scale(1.04);
+}
+.bredesign .bd-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(2, 10, 49, 0.96) 0%,
+    rgba(2, 10, 49, 0.82) 36%,
+    rgba(2, 10, 49, 0.16) 72%,
+    rgba(2, 10, 49, 0) 100%
+  );
+}
+/* A service with no artwork gets the ground rather than a broken frame. */
+.bredesign .bd-card.is-plain::after {
+  background: none;
+}
+.bredesign .bd-card-num {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 1;
+  padding: 5px 9px;
+  background: var(--bd-blue);
+  color: #fff;
+  font-family: var(--bd-display);
+  font-style: italic;
+  font-size: 11px;
+}
+.bredesign .bd-card-body {
+  position: relative;
+  z-index: 1;
+  padding: 22px;
+}
+.bredesign .bd-card-body h2,
+.bredesign .bd-card-body h3 {
+  font-size: 1.2rem;
+}
+.bredesign .bd-card-body p {
+  margin-top: 10px;
+  color: rgba(241, 241, 237, 0.84);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.bredesign .bd-card-go {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+
+/* States shared by the data-backed pages */
+.bredesign .bd-state {
+  padding: 26px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  color: var(--bd-ink-2);
+  font-size: 14.5px;
+}
+.bredesign .bd-state.is-error {
+  border-color: #7a2f3a;
+  color: #ffc9d1;
+}
+
+/* The footer blurb ships at 13px; it is prose, so it takes the same minimum as
+   the rest of the body copy on these pages. */
+.bredesign .footer-brand p {
+  font-size: 14px;
+  line-height: 1.65;
+}
