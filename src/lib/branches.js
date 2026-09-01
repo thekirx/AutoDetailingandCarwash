@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 
-const BRANCH_SELECT = 'slug, name, address, code, latitude, longitude, coming_soon, is_active'
+const BRANCH_SELECT = 'slug, name, address, code, latitude, longitude, coming_soon, is_active, is_public'
 
 /* Opening hours live in their own table (one row per weekday per branch), so
    they are fetched separately and attached as `hours`. Fetched best-effort:
@@ -28,6 +28,9 @@ function branchQuery(select, mode) {
     .from('branches')
     .select(select)
     .eq('is_archived', false)
+    // Back-office locations such as HQ are active and unarchived, so nothing
+    // else here excludes them. They are not places a customer brings a car.
+    .eq('is_public', true)
     .order('name')
 
   if (mode === 'bookable') {

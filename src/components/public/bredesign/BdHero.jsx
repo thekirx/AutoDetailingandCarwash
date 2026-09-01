@@ -2,18 +2,31 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { isHeroLogoMoment } from '../../../lib/homeHero'
+import { fetchHomeStats, STAT_BASE, STATIC_STATS, withBase } from '../../../lib/homeStats'
 
 import heroPoster from '../../../assets/hero/bredesign-hero-poster.webp'
 import heroVideo from '../../../assets/hero/bredesign-hero.mp4'
 
-/* Fixed figures, not live counts. They are a claim about the business rather
-   than a reading of the booking table, so they belong in content. */
-const STATS = [
-  { value: 10, suffix: '+', label: 'Years combined experience' },
-  { value: 3000, suffix: '+', label: 'Satisfied clients' },
-  { value: 15000, suffix: '+', label: 'Vehicles cared for yearly' },
-  { value: 26, suffix: '', label: 'Team members' },
-]
+/* Two of these count, two do not.
+   - Years and team size are claims about the business; no table holds them.
+   - Clients and vehicles are a base figure for the decade before this system
+     existed, plus everything the database has recorded since. */
+function buildStats(live) {
+  return [
+    { value: STATIC_STATS.years, suffix: '+', label: 'Years combined experience' },
+    {
+      value: withBase(STAT_BASE.clients, live.returningClients),
+      suffix: '+',
+      label: 'Satisfied clients',
+    },
+    {
+      value: withBase(STAT_BASE.services, live.servicesDone),
+      suffix: '+',
+      label: 'Vehicles cared for',
+    },
+    { value: STATIC_STATS.team, suffix: '', label: 'Team members' },
+  ]
+}
 
 function CountUp({ value, suffix }) {
   const [display, setDisplay] = useState(value)
@@ -65,11 +78,22 @@ function CountUp({ value, suffix }) {
 
 export default function BdHero({ locationLine }) {
   const [videoFailed, setVideoFailed] = useState(false)
+  const [live, setLive] = useState({ servicesDone: null, returningClients: null })
   /* The clip opens and closes on the Hakum mark. The overlay copy clears while
      the mark is on screen so the two never share the frame, and comes back a
      beat after it goes — the same treatment the shipping hero uses. */
   const [logoMoment, setLogoMoment] = useState(true)
   const videoRef = useRef(null)
+
+  useEffect(() => {
+    let active = true
+    fetchHomeStats().then((next) => {
+      if (active) setLive(next)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     const node = videoRef.current
@@ -141,7 +165,7 @@ export default function BdHero({ locationLine }) {
 
       <div className="bd-stats">
         <div className="bd-shell bd-stats-in">
-          {STATS.map((stat) => (
+          {buildStats(live).map((stat) => (
             <div className="bd-stat" key={stat.label}>
               <CountUp value={stat.value} suffix={stat.suffix} />
               <span className="bd-stat-label">{stat.label}</span>
