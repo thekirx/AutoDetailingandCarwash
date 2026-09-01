@@ -25,7 +25,7 @@ const navItems = [
 // dark ground — applied to a page still built for paper, it renders white
 // headings on a paper section and they vanish. The remaining marketing routes
 // keep the shipping look until Phase 4 rebuilds them.
-const BREDESIGN_ROUTES = ['/home', '/services', '/branches']
+const BREDESIGN_ROUTES = ['/home', '/services', '/branches', '/partnerships']
 
 function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
   return (

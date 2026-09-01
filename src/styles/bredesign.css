@@ -1169,3 +1169,33 @@
 .bredesign .bd-site-map:hover {
   text-decoration: underline;
 }
+
+/* ==== Partnerships ======================================================
+   The page's own design holds up, so this is a readability pass rather than a
+   rebuild — rewriting a working inquiry form would buy nothing. Sizes only;
+   no colour, layout or behaviour is touched. */
+
+.bredesign .partnership-quiet,
+.bredesign .partnership-intro p,
+.bredesign .partnership-card-head p,
+.bredesign .partnership-closing p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+/* 10px is below the point where a hint is worth printing at all. */
+.bredesign .partnership-hint,
+.bredesign .partnership-submit-note {
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+/* The closing line ran to ~87 characters, past the point where the eye starts
+   losing its place returning to the next line. */
+.bredesign .partnership-closing p {
+  max-width: 62ch;
+}
+
+/* The card intro was capped at 320px, which at 14px is a 36-character column —
+   narrow enough that the eye returns more often than it reads. */
+.bredesign .partnership-card-head p {
+  max-width: 46ch;
+}
