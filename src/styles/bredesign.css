@@ -1654,3 +1654,97 @@
 .bredesign .bd-hero {
   cursor: default;
 }
+
+/* ==== Product wall ======================================================
+   Mock B's "what goes on your car", between the tint section and the close. */
+
+.bredesign .bd-products {
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-brand-wall {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(2, 1fr);
+  background: var(--bd-rule);
+  border: 1px solid var(--bd-rule);
+}
+@media (min-width: 860px) {
+  .bredesign .bd-brand-wall {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.bredesign .bd-brand {
+  background: var(--bd-navy);
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  transition: background 0.2s;
+}
+.bredesign .bd-brand:hover {
+  background: var(--bd-navy-3);
+}
+/* The tiles already carry their own ground and padding, so the cell only has
+   to hold one at a consistent width. */
+.bredesign .bd-brand img {
+  display: block;
+  width: 100%;
+  max-width: 190px;
+  height: auto;
+  border-radius: 2px;
+}
+.bredesign .bd-brand span {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--bd-ink-3);
+}
+.bredesign .bd-brand-note {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  /* The note is prose, so it takes the same floor as the rest of the body copy
+     and the same cap on line length — it ran to 147 characters at full width. */
+  font-size: 14px;
+  max-width: 74ch;
+  color: var(--bd-ink-3);
+  line-height: 1.6;
+}
+.bredesign .bd-brand-note em {
+  font-style: normal;
+  padding: 3px 9px;
+  border: 1px dashed var(--bd-ink-4);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+/* ==== Live queue on the branch cards ==================================== */
+
+.bredesign .bd-branch-queue {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-top: 4px;
+}
+.bredesign .bd-queue-num {
+  font-family: var(--bd-display);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--bd-paper);
+  font-variant-numeric: tabular-nums;
+}
+.bredesign .bd-queue-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bd-ink-3);
+}
