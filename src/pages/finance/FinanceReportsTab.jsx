@@ -176,10 +176,11 @@ export default function FinanceReportsTab({
   const salesByDayRows = useMemo(() => salesByDay(salesRows), [salesRows])
   const salesByBranchRows = useMemo(() => salesByBranch(salesRows), [salesRows])
   const pl = useMemo(() => rollupPl(plRows), [plRows])
+  // Match finance_daily_pl / Floor Board / Admin Console: paid + posted only (not approved-unpaid).
   const expenseRowTotal = useMemo(
     () =>
       (expenses || [])
-        .filter((r) => ['paid', 'approved', 'posted'].includes(String(r.status || '')))
+        .filter((r) => ['paid', 'posted'].includes(String(r.status || '')))
         .reduce((s, r) => s + Number(r.total_minor || 0), 0),
     [expenses],
   )

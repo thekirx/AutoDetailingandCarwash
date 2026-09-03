@@ -154,7 +154,8 @@ export default function SmsPage({ embedded = false }) {
           </p>
           <p className="text-sm leading-relaxed text-muted-foreground">
             When on, customers get BusyBee SMS on booking received, queue status, payment ready, and
-            completed. Keep this off until BrandTxt whitelists the live egress IP.
+            completed. BrandTxt has whitelisted office egress <code>180.190.249.189</code> —
+            keep this on for local/status SMS; Vercel production still needs its own static IPs.
           </p>
           <p className="text-sm">
             Shop gate:{' '}

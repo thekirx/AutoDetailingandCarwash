@@ -177,8 +177,8 @@ This audit found **0 GAP** items against the brief after P0–P7. Residuals are 
 |---|-----------|--------|----------|
 | FB1 | Owner view all branches | **LIVE** | `SuperAdminFloorBoard` |
 | FB2 | KPI: car size per sale, best package/service | **LIVE** | floor charts / best sellers |
-| FB3 | Chemical usage + cost by branch | **PARTIAL** | Charts from Sunday recon; empty stub until recons approved |
-| FB4 | Financial reporting on floor | **PARTIAL** | Ops money tiles on floor; full P&L lives in Finance app (by design) |
+| FB3 | Chemical usage + cost by branch | **PARTIAL** | Charts from Sunday recon; empty stub until recons approved (honest empty copy on Floor Board) |
+| FB4 | Financial reporting on floor | **LIVE (hybrid)** | Queue/counter sales + **posted expenses + net** tiles (`expense_minor` / `net_minor`); full category P&L stays on Finance |
 
 ---
 
@@ -212,7 +212,7 @@ This audit found **0 GAP** items against the brief after P0–P7. Residuals are 
 
 ## Ops cutover checklist (before owner demo)
 
-- [ ] Set `OWNER_SMS_PHONE` (or BossMich phone) and BusyBee keys; accept one test close; confirm SMS body matches Bacoor report buckets — **report shape verified** via `e2e-ops-cutover`; live SMS needs accept in Finance UI
+- [x] Set BusyBee keys + BrandTxt whitelist office IP `180.190.249.189` — **2026-09-03**: balance `ErrorCode:0`, live SMS to `09625294043` sent; shop gate ON. Still set `OWNER_SMS_PHONE` (or BossMich phone) and accept one Finance close for owner daily report SMS; Vercel static IPs still need BrandTxt whitelist
 - [x] Seed `product_branch_stock` for resellable SKUs per branch (POS fail-closed if missing) — **2026-08-28**: 100 qty × 8 SKUs × all branches via Supabase SQL
 - [ ] Run one Sunday recon BA → SA approve; confirm floor chemical chart leaves stub — **0 approved recons** in DB; manual walkthrough still needed
 - [ ] BA EoS with `salary_draft_extras` → Finance accept → SA pending floor shows drafts → confirm pay (BA still blocked from Payroll confirm) — **BA `run_payroll` blocked** verified; draft extras need live EoS
@@ -227,11 +227,13 @@ This audit found **0 GAP** items against the brief after P0–P7. Residuals are 
 | Bucket | Count |
 |--------|-------|
 | LIVE / LIVE (mapped) / LIVE (hybrid) | **~95** owner lines |
-| PARTIAL (ops residual) | **4** (P6 creator ACL nuance, owner SMS env, chemical stub until recon, floor≠full Finance) |
+| PARTIAL (ops residual) | **3** (P6 creator ACL nuance, owner SMS env, chemical stub until recon) |
 | DECLINED | **1** (weather) |
 | GAP | **0** |
 
 **Verdict:** Against `NewRevisions.md` and the principal plan, the product brief is **complete** for engineering DoD (shipped + mapped + hybrid + declined). Remaining work is **ops configuration and E2E smoke**, not missing feature slices.
+
+**2026-09-03 principal note:** Floor Board expense/net tiles + Console sample P&L + Finance Reports fallback aligned to `finance_daily_pl` (`paid`/`posted`). See [`docs/audits/2026-08-31/OWNER-REVISIONS.md`](../audits/2026-08-31/OWNER-REVISIONS.md).
 
 ---
 

@@ -28,15 +28,17 @@ todos:
     status: completed
   - id: phase-8-screenshots
     content: "Phase 8: Puppeteer screenshot harness — capture all 39+ ops and public pages at desktop + mobile"
-    status: in_progress
+    status: completed
   - id: phase-9-report
     content: "Phase 9: Compile audit report, owner revisions tracker, and screenshot gallery in docs/audits/"
-    status: pending
+    status: completed
 isProject: false
 ---
 
 # Full System Audit and Test Plan
 
+> **Status (2026-09-03):** Phases 0–9 complete. Follow-up closed FIN-REPORTS-APPROVED + SEED-SCHEMA. Ops E2E/SMS env remain open (not product gaps). Tracker: `docs/audits/2026-08-31/OWNER-REVISIONS.md`.
+>
 > **Skills active:** writing-plans, finish-goal, fullstack-developer, verify, tdd, frontend-design
 
 **Goal:** Prove the entire Hakum daily-operations flow works end-to-end across multiple branches, with realistic data, then screenshot every page for visual review and save a permanent audit folder.

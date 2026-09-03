@@ -111,19 +111,8 @@ export async function busybeeSendSms({ phone, message }) {
   if (!mobile) return { ok: false, status: 'failed', providerResponse: 'Invalid phone' }
   if (!message?.trim()) return { ok: false, status: 'failed', providerResponse: 'Empty message' }
 
+  // Prefer v2 first — live DLR showed DELIVRD on v2; several v3 accepts stayed Report Not Found.
   const bodies = [
-    {
-      path: '/api/v3/SendSMS',
-      body: {
-        apiKey,
-        clientId,
-        senderId,
-        message: message.trim(),
-        mobileNumbers: mobile,
-        is_Unicode: false,
-        is_Flash: false,
-      },
-    },
     {
       path: '/api/v2/SendSMS',
       body: {
@@ -134,6 +123,22 @@ export async function busybeeSendSms({ phone, message }) {
         MobileNumbers: mobile,
         Is_Unicode: false,
         Is_Flash: false,
+        IsRegisteredForDelivery: true,
+        SchedTime: '',
+        GroupId: '',
+      },
+    },
+    {
+      path: '/api/v3/SendSMS',
+      body: {
+        apiKey,
+        clientId,
+        senderId,
+        message: message.trim(),
+        mobileNumbers: mobile,
+        is_Unicode: false,
+        is_Flash: false,
+        isRegisteredForDelivery: true,
       },
     },
   ]

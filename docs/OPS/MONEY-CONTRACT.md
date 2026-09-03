@@ -80,7 +80,7 @@ Paid POS (services / packages / detailing / merch)
 | ID | Choice | Why |
 |----|--------|-----|
 | F1 | Accept = attestation + unlock pending + notify. Not rewrite sales. Not auto-pay. | Trust boundary stays on RPCs; SA must confirm pay. |
-| F2 | P&L income = **paid POS sales only**. | Overrides on close are drawer stories, not inventing revenue. |
+| F2 | P&L income = **paid POS sales only**. Expenses on books = **paid / posted** bills (`finance_daily_pl`). | Overrides on close are drawer stories, not inventing revenue. `approved` unpaid bills are pending, not P&L. |
 | F3 | Drafts allowed on close; Finance marks paid later. | Matches A5 and BA speed. |
 | F4 | Column = **Floor coverage** (posted / pending / awaiting review). | Stops “close ₱ was paid” misread. |
 | G1 | BA = merch + Pay queue + expenses + EoS. | Less wrong tickets; SA/ASA for walk-in bay/detailing. |
