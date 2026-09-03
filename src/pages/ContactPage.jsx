@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Facebook, Instagram, Mail, MapPin, MessageSquareWarning, Phone } from 'lucide-react'
 import { usePublicBranches } from '@/lib/branches'
+import BdPageHero from '../components/public/bredesign/BdPageHero'
 
 const channels = [
   {
@@ -50,15 +51,19 @@ export default function ContactPage() {
   const { branches } = usePublicBranches({ mode: 'visible' })
 
   return (
-    <section className="contact-page">
-      <div className="public-shell contact-intro">
-        <p className="eyebrow">Talk to Hakum</p>
-        <h1 className="section-title">Contact us</h1>
-        <p className="contact-lede">
-          Questions about services, bookings, or branches — call, message, or email us directly and
-          the team will pick it up.
-        </p>
-      </div>
+    <>
+      <BdPageHero
+        eyebrow="Talk to Hakum"
+        title={
+          <>
+            Contact
+            <br />
+            <em>us.</em>
+          </>
+        }
+        copy="Questions about services, bookings, or branches — call, message, or email us directly and the team will pick it up."
+      />
+      <section className="contact-page">
 
       <div className="public-shell contact-channels">
         {channels.map(({ key, icon: Icon, label, value, hint, href }) => (
@@ -135,5 +140,6 @@ export default function ContactPage() {
         </div>
       </div>
     </section>
+    </>
   )
 }

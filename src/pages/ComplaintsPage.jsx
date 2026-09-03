@@ -4,6 +4,7 @@ import { usePublicBranches } from '@/lib/branches'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 import { submitPublicInquiry } from '../lib/publicInquiryApi'
 import FormLegalNotice from '@/components/FormLegalNotice'
+import BdPageHero from '../components/public/bredesign/BdPageHero'
 
 export default function ComplaintsPage() {
   const { branches, loading: branchesLoading } = usePublicBranches()
@@ -68,13 +69,20 @@ export default function ComplaintsPage() {
   const update = (key) => (e) => setForm({ ...form, [key]: e.target.value })
 
   return (
-    <section className="booking-page">
-      <div className="public-shell booking-grid">
-        <div>
-          <p className="eyebrow">Feedback</p>
-          <h1 className="section-title">Submit a complaint</h1>
-          <p>Tell us what went wrong so we can make it right — branch teams review every submission.</p>
-        </div>
+    <>
+      <BdPageHero
+        eyebrow="Feedback"
+        title={
+          <>
+            Submit a
+            <br />
+            <em>complaint.</em>
+          </>
+        }
+        copy="Tell us what went wrong so we can make it right — branch teams review every submission."
+      />
+      <section className="booking-page">
+      <div className="public-shell booking-grid is-single">
         <form onSubmit={submit} className="booking-form">
           <label>Customer name<input required value={form.customer_name} onChange={update('customer_name')} /></label>
           <label>Branch
@@ -108,5 +116,6 @@ export default function ComplaintsPage() {
         </form>
       </div>
     </section>
+    </>
   )
 }

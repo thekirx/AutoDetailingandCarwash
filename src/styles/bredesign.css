@@ -1437,3 +1437,204 @@
 .bredesign .legal-note {
   max-width: 74ch;
 }
+
+/* ==== Paper pages, moved onto B's ground ================================
+   /contact, /complaints and the legal pages were paper sections sitting inside
+   a navy site — recoloured, not redesigned, and the clearest break from mock B.
+   They move onto the cinematic ground with B's own vocabulary. The rules that
+   treated them as light sections are overridden below, in the same file, so
+   the earlier list stays accurate for the sections that are genuinely paper. */
+
+.bredesign .contact-page,
+.bredesign .booking-page,
+.bredesign .legal-page {
+  background: var(--bd-navy);
+  color: var(--bd-ink-2);
+  padding-top: 0;
+}
+.bredesign .contact-page h1,
+.bredesign .contact-page h2,
+.bredesign .contact-page h3,
+.bredesign .booking-page h1,
+.bredesign .booking-page h2,
+.bredesign .booking-page h3,
+.bredesign .legal-page h1,
+.bredesign .legal-page h2,
+.bredesign .legal-page h3 {
+  color: var(--bd-paper);
+}
+.bredesign .contact-page a,
+.bredesign .booking-page a,
+.bredesign .legal-page a {
+  color: var(--bd-accent);
+}
+.bredesign .contact-page label,
+.bredesign .booking-page label,
+.bredesign .contact-page strong,
+.bredesign .booking-page strong {
+  color: var(--bd-paper);
+}
+.bredesign .contact-card-hint,
+.bredesign .contact-branch-copy small,
+.bredesign .contact-branch-copy span,
+.bredesign .booking-grid > div > p:last-child,
+.bredesign .contact-lede {
+  color: var(--bd-ink-2);
+}
+
+/* Contact channel cards become B's panels: a lit top edge, hairline rule, and
+   the accent on hover — the same treatment the branch cards carry. */
+.bredesign .contact-card {
+  background: var(--bd-navy-2);
+  border: 1px solid var(--bd-rule);
+  box-shadow: var(--bd-lit);
+  transition: transform 0.2s, border-color 0.2s;
+}
+.bredesign .contact-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--bd-accent);
+}
+.bredesign .contact-card-label {
+  color: var(--bd-ink-3);
+}
+.bredesign .contact-card-icon {
+  background: rgba(157, 180, 255, 0.12);
+  color: var(--bd-accent);
+}
+.bredesign .contact-branch,
+.bredesign .contact-block,
+.bredesign .booking-card,
+.bredesign .legal-body {
+  background: var(--bd-navy-2);
+  border-color: var(--bd-rule);
+}
+.bredesign .contact-branch:hover {
+  border-color: var(--bd-accent);
+}
+
+/* ==== Dark form vocabulary ==============================================
+   Inputs designed for navy rather than inherited from a paper page: a fill one
+   step off the panel so the field reads as a field, a hairline that brightens
+   on focus, and a focus ring that is visible without being the only signal. */
+
+/* Matched by exclusion rather than by listing types: an <input> with no type
+   attribute is a text field, and an attribute selector never matches it. That
+   is why one field on /complaints stayed white. */
+.bredesign input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='submit']):not([type='button']),
+.bredesign select,
+.bredesign textarea {
+  background: rgba(2, 10, 49, 0.6);
+  border: 1px solid var(--bd-rule);
+  color: var(--bd-paper);
+  border-radius: 2px;
+}
+.bredesign input::placeholder,
+.bredesign textarea::placeholder {
+  color: var(--bd-ink-4);
+}
+.bredesign input:hover,
+.bredesign select:hover,
+.bredesign textarea:hover {
+  border-color: var(--bd-blue-mid);
+}
+.bredesign input:focus,
+.bredesign select:focus,
+.bredesign textarea:focus {
+  border-color: var(--bd-accent);
+  outline: 2px solid rgba(157, 180, 255, 0.32);
+  outline-offset: 1px;
+}
+.bredesign input:disabled,
+.bredesign select:disabled,
+.bredesign textarea:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* Errors carry a word as well as a colour. */
+.bredesign .form-error,
+.bredesign .field-error {
+  color: #ffb3bd;
+}
+
+/* ==== Legal long-form ==================================================== */
+
+.bredesign .legal-body p,
+.bredesign .legal-body li {
+  color: var(--bd-ink-2);
+  max-width: 74ch;
+}
+.bredesign .legal-body h2 {
+  margin-top: 2.2em;
+}
+.bredesign .legal-note {
+  background: rgba(5, 38, 153, 0.28);
+  border-left-color: var(--bd-accent);
+  color: var(--bd-paper);
+  max-width: 74ch;
+}
+
+/* The social cards kept a light fill, so their labels were near-invisible on
+   the new ground. */
+.bredesign .contact-social {
+  background: var(--bd-navy-3);
+  border: 1px solid var(--bd-rule);
+  color: var(--bd-paper);
+}
+.bredesign .contact-social:hover {
+  border-color: var(--bd-accent);
+}
+.bredesign .contact-social-icon {
+  background: rgba(157, 180, 255, 0.12);
+  color: var(--bd-accent);
+}
+.bredesign .contact-social strong,
+.bredesign .contact-social span {
+  color: var(--bd-paper);
+}
+.bredesign .contact-social small {
+  color: var(--bd-ink-3);
+}
+
+/* The complaints grid is two columns with the copy on the left; that copy is
+   now the page hero, so the form takes the full width on its own. */
+.bredesign .booking-grid.is-single {
+  grid-template-columns: minmax(0, 720px);
+  justify-content: center;
+}
+.bredesign .legal-page {
+  padding-top: clamp(48px, 5vw, 76px);
+}
+
+/* The complaints form card kept a light fill, which left its labels and field
+   borders invisible once the page moved onto navy. */
+.bredesign .booking-form {
+  background: var(--bd-navy-2);
+  border: 1px solid var(--bd-rule);
+  box-shadow: var(--bd-lit);
+  color: var(--bd-paper);
+}
+.bredesign .booking-form label {
+  color: var(--bd-ink-3);
+}
+.bredesign .booking-form a {
+  color: var(--bd-accent);
+}
+.bredesign .booking-form button[type='submit'] {
+  background: var(--bd-blue);
+  color: #fff;
+  border-color: var(--bd-blue);
+  border-radius: 999px;
+}
+.bredesign .booking-form button[type='submit']:hover {
+  background: var(--bd-blue-hover);
+}
+
+/* The separators between the legal footer links inherit the old ink. They are
+   decorative, but they sit in the same line as the links and read as text. */
+.bredesign .legal-back,
+.bredesign .legal-back span {
+  color: var(--bd-ink-3);
+}
+.bredesign .legal-updated {
+  color: var(--bd-ink-3);
+}
