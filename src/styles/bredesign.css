@@ -1638,3 +1638,18 @@
 .bredesign .legal-updated {
   color: var(--bd-ink-3);
 }
+
+/* Safari paints its own play affordance over a video it did not autoplay, and
+   on a decorative backdrop that reads as a broken player. The element is
+   aria-hidden and has no controls, so removing the shim costs nothing. */
+.bredesign .bd-hero-media::-webkit-media-controls,
+.bredesign .bd-hero-media::-webkit-media-controls-start-playback-button,
+.bredesign .bd-hero-media::-webkit-media-controls-panel,
+.bredesign .bd-hero-media::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.bredesign .bd-hero {
+  cursor: default;
+}

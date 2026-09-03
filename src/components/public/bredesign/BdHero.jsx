@@ -134,7 +134,16 @@ export default function BdHero({ locationLine }) {
      the mark is on screen so the two never share the frame, and comes back a
      beat after it goes — the same treatment the shipping hero uses. */
   const [logoMoment, setLogoMoment] = useState(true)
+  /* The mark logic only makes sense while the clip is running. A video that is
+     paused sits at 0, which is inside the opening mark window, so keying the
+     copy on the mark alone hides the headline permanently the moment autoplay
+     is refused — which Safari does by default on many machines. */
+  const [playing, setPlaying] = useState(false)
+  /* Tapping the hero brings the copy back even mid-mark. It is cleared when the
+     next mark window opens, so the mark still gets the frame to itself. */
+  const [revealed, setRevealed] = useState(false)
   const videoRef = useRef(null)
+  const wasMark = useRef(true)
 
   useEffect(() => {
     let active = true
@@ -152,22 +161,60 @@ export default function BdHero({ locationLine }) {
 
     // Recomputed from the current time on every tick, so a loop restart needs
     // no special case — the new time simply reads as inside the opening window.
-    const sync = () => setLogoMoment(isHeroLogoMoment(markVariant, node.currentTime))
+    const sync = () => {
+      const mark = isHeroLogoMoment(markVariant, node.currentTime)
+      // A fresh mark window takes the frame back from a manual reveal.
+      if (mark && !wasMark.current) setRevealed(false)
+      wasMark.current = mark
+      setLogoMoment(mark)
+    }
+    const onPlay = () => setPlaying(true)
+    const onStop = () => setPlaying(false)
 
     node.addEventListener('timeupdate', sync)
     node.addEventListener('seeked', sync)
+    node.addEventListener('playing', onPlay)
+    node.addEventListener('pause', onStop)
+    node.addEventListener('ended', onStop)
     sync()
+
+    // Autoplay can be refused — Safari's per-site setting, Low Power Mode, a
+    // reduced-motion preference. Asking explicitly and ignoring the rejection
+    // means the copy falls back to visible rather than the page looking empty.
+    const attempt = node.play()
+    if (attempt && typeof attempt.catch === 'function') attempt.catch(() => setPlaying(false))
+
     return () => {
       node.removeEventListener('timeupdate', sync)
       node.removeEventListener('seeked', sync)
+      node.removeEventListener('playing', onPlay)
+      node.removeEventListener('pause', onStop)
+      node.removeEventListener('ended', onStop)
     }
   }, [videoFailed, markVariant])
 
-  // With no video there is no mark to avoid, so the copy simply shows.
-  const copyHidden = !videoFailed && logoMoment
+  /* Hidden only while the clip is actually running and on the mark, and only
+     when the reader has not asked for it back. Anything else shows the copy. */
+  const copyHidden = !videoFailed && playing && logoMoment && !revealed
+
+  const revealCopy = () => {
+    setRevealed(true)
+    const node = videoRef.current
+    if (node && node.paused) {
+      const attempt = node.play()
+      if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {})
+    }
+  }
 
   return (
-    <section className="bd-hero" id="top">
+    <section
+      className="bd-hero"
+      id="top"
+      /* Tap or click anywhere on the hero brings the copy back. Not a button:
+         the whole backdrop is the target, and the copy underneath keeps its own
+         focusable links, so nothing here is reachable only by pointer. */
+      onPointerDown={revealCopy}
+    >
       {videoFailed ? (
         <img className="bd-hero-media" src={poster} alt="" />
       ) : (
