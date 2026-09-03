@@ -40,11 +40,13 @@ node scripts/set-sms-shop-gate.mjs on
 | Check | Result |
 |-------|--------|
 | Egress IP | `180.190.249.189` (matches whitelist notice) |
-| `POST /api/v2/Balance` | `ErrorCode: 0`, credits present |
-| Direct smoke send → `09625294043` | `sent` via `/api/v3/SendSMS` |
-| Shop-gated lifecycle send → same phone | `sent` after gate ON |
+| Balance | `ErrorCode: 0` |
+| SenderId `HAKUM` | `IsApproved: 1`, `IsActive: true` |
+| Submit to `639625294043` | API Success; at least one MessageId later **`Status: DELIVRD`** (`11ae48f5-6a23-4788-b78d-5af984065a97`) |
+| Submit with raw `09625294043` (no 63 normalize) | MessageId `ee1d9443-…` → **`Status: FAILED`** — always normalize to `63…` |
+| Owner handset | Owner reported **no visible SMS** despite DELIVRD — check Spam/Promotions, Dual SIM, blocked senders; escalate to BrandTxt with MessageIds if still empty |
 
-Production (Vercel) still needs **static egress IPs** whitelisted separately — serverless shared IPs are not this office address.
+Production (Vercel) still needs **static egress IPs** whitelisted separately.
 
 ## Local verification
 

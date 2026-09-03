@@ -16,7 +16,8 @@ Status values: `open` · `resolved` · `wontfix` · `partial`
 | S1–S5 | Salary / CA | BA draft ≠ BA confirm; CA ≠ sales | resolved | money contract hybrid |
 | E1–E3 | Attendance / My Pay | Geo clock, late weight, My Pay | resolved | attendance Geo + compensation |
 | ATT-LATE | Attendance / Payroll | Late pay must use Manila wall clock + per-branch hours | resolved | `c23cb0f` + this audit |
-| SMS-OFF | CRM SMS | Shop gate was off pending BrandTxt IP whitelist | resolved | 2026-09-03 — whitelist `180.190.249.189`; gate **ON**; live sends to `09625294043` verified |
+| SMS-OFF | CRM SMS | Shop gate was off pending BrandTxt IP whitelist | resolved | 2026-09-03 — whitelist + gate ON; API accept+credit debit verified |
+| SMS-HANDSET | BrandTxt → `09625294043` | BrandTxt DLR shows **DELIVRD** for `63…` sends (e.g. `11ae48f5…`, `791ca329…`); raw `09…` → **FAILED**. Owner still reports no visible SMS | open | Check Spam/Dual-SIM/blocked; BrandTxt ticket with DELIVRD MessageIds if still empty |
 | FIN-OWNER | Finance Overview | Owner needs clear P&L + expenses + branch sales + export | resolved | Overview charts + export strip |
 | UX-SHOTS | All pages | Take pictures for judging / revising | resolved | 80 PNGs re-captured after auth fix (`1d5d992`) |
 | SEED-LIVE | Data | Full live insert of 60+ sales | partial | Dry-run fixture authoritative. Live mode: operating hours upsert + tagged expenses (schema fixed 2026-09-03). Sales/attendance/shift closes **not** live-inserted — intentional YAGNI until ops asks |
