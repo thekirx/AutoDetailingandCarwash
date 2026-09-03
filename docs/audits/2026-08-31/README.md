@@ -89,7 +89,7 @@ Clock → TL wash / Sales detailing → POS paid → EoS → Finance accept → 
 ## Known residuals
 
 1. **SEED-LIVE (partial):** Dry-run fixture is authoritative for seam tests. Live script upserts `branch_operating_hours` and inserts tagged `expenses` (schema-correct as of 2026-09-03). Full sales/attendance/shift-close live insert is **not built** until ops asks.
-2. Shop SMS remains **off** until BusyBee IP whitelist is intentionally re-enabled.
+2. Shop SMS is **ON** for office egress `180.190.249.189` (BrandTxt whitelist + live send verified 2026-09-03). Vercel production still needs its own static IPs whitelisted.
 3. Visual pass closed — re-run harness after UI changes (see command above).
 4. P6 counter-sale creator ACL is **wontfix** (single-BA lounge). KPI trend charts stay on Finance Overview only.
 5. Ops cutover E2E + `OWNER_SMS_PHONE` — see NEW-REVISIONS checklist (open checkboxes).

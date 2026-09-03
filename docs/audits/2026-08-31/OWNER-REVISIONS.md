@@ -16,7 +16,7 @@ Status values: `open` · `resolved` · `wontfix` · `partial`
 | S1–S5 | Salary / CA | BA draft ≠ BA confirm; CA ≠ sales | resolved | money contract hybrid |
 | E1–E3 | Attendance / My Pay | Geo clock, late weight, My Pay | resolved | attendance Geo + compensation |
 | ATT-LATE | Attendance / Payroll | Late pay must use Manila wall clock + per-branch hours | resolved | `c23cb0f` + this audit |
-| SMS-OFF | CRM SMS | Keep shop SMS off until whitelist intentional | resolved | shop gate off |
+| SMS-OFF | CRM SMS | Shop gate was off pending BrandTxt IP whitelist | resolved | 2026-09-03 — whitelist `180.190.249.189`; gate **ON**; live sends to `09625294043` verified |
 | FIN-OWNER | Finance Overview | Owner needs clear P&L + expenses + branch sales + export | resolved | Overview charts + export strip |
 | UX-SHOTS | All pages | Take pictures for judging / revising | resolved | 80 PNGs re-captured after auth fix (`1d5d992`) |
 | SEED-LIVE | Data | Full live insert of 60+ sales | partial | Dry-run fixture authoritative. Live mode: operating hours upsert + tagged expenses (schema fixed 2026-09-03). Sales/attendance/shift closes **not** live-inserted — intentional YAGNI until ops asks |
@@ -48,8 +48,9 @@ Status values: `open` · `resolved` · `wontfix` · `partial`
 | ID | Item | Why open |
 |----|------|----------|
 | OPS-E2E | Browser smoke TL → POS → EoS → Finance accept → owner SMS → SA payroll | Named in NEW-REVISIONS; needs live env |
-| OWNER-SMS-ENV | `OWNER_SMS_PHONE` + BusyBee whitelist | Code LIVE; env not guaranteed |
+| OWNER-SMS-ENV | `OWNER_SMS_PHONE` set for daily close SMS | Code LIVE; confirm env on Vercel |
 | CHEM-RECON | Sunday recon BA → SA approve | Floor chemical bars need real recon rows |
+| VERCEL-SMS-IP | BrandTxt whitelist for Vercel static egress | Office IP works; production SMS needs Pro static IPs |
 
 ## How to mark a revision done
 

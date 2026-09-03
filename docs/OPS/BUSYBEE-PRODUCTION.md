@@ -28,12 +28,23 @@ Never use `VITE_*` for BusyBee keys.
 
 Shop-wide gate: `app_settings.sms_notifications.enabled` must be `true`.
 
-**Current ops posture (2026-08-31):** shop SMS is **OFF** until BrandTxt whitelists the live egress IP (office was `27.49.15.199`; prior whitelist `180.190.249.189` still returns `ErrorCode 11`). Toggle via CRM → SMS or:
+**Current ops posture (2026-09-03):** BrandTxt confirmed whitelist for egress **`180.190.249.189`**. Local balance probe returns `ErrorCode: 0` with credits. Shop SMS gate turned **ON** after live send success. Toggle via CRM → SMS or:
 
 ```bash
 node scripts/set-sms-shop-gate.mjs off
 node scripts/set-sms-shop-gate.mjs on
 ```
+
+**Verified live (2026-09-03 Asia/Manila):**
+
+| Check | Result |
+|-------|--------|
+| Egress IP | `180.190.249.189` (matches whitelist notice) |
+| `POST /api/v2/Balance` | `ErrorCode: 0`, credits present |
+| Direct smoke send → `09625294043` | `sent` via `/api/v3/SendSMS` |
+| Shop-gated lifecycle send → same phone | `sent` after gate ON |
+
+Production (Vercel) still needs **static egress IPs** whitelisted separately — serverless shared IPs are not this office address.
 
 ## Local verification
 
