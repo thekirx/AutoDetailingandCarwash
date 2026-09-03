@@ -88,14 +88,22 @@ async function upsertOperatingHours() {
 }
 
 async function seedTaggedExpenses() {
-  // ponytail: only insert expenses tagged for audit replay; skip if table rejects shape
-  const rows = fixture.expenses.map((e) => ({
-    branch: e.branch,
-    amount_minor: e.amount_minor,
-    notes: `[audit-seed] ${e.category || e.expense_kind} ${AUDIT_DAY}`,
-    expense_date: e.expense_date || AUDIT_DAY,
-    status: e.status || 'posted',
-  }))
+  // Map fixture amount_minor → expenses.total_minor (schema has no amount_minor / expense_date).
+  // ponytail: hours + tagged expenses only; sales/attendance live seed stays dry-run fixture.
+  const rows = fixture.expenses.map((e) => {
+    const total = Number(e.amount_minor) || 0
+    const label = e.category || e.expense_kind || 'Operating'
+    return {
+      branch: e.branch,
+      title: `[audit-seed] ${label} ${AUDIT_DAY}`,
+      description: `audit-seed ${e.id || label}`,
+      quantity: 1,
+      unit_cost_minor: total,
+      total_minor: total,
+      status: e.status || 'posted',
+      expense_kind: e.expense_kind || 'daily',
+    }
+  })
   const { data, error } = await db.from('expenses').insert(rows).select('id')
   if (error) {
     console.warn(JSON.stringify({ warn: 'expenses_insert_skipped', message: error.message }))
@@ -112,7 +120,7 @@ try {
       branch_operating_hours_upserted: hoursN,
       expenses_inserted: expenseN,
       branches: [BACOOR, IMUS],
-      note: 'Staff/sales/attendance live seed is optional — fixture JSON is authoritative for seam tests. Use dry-run for CI.',
+      note: 'Staff/sales/attendance live seed is NOT implemented — fixture JSON + dry-run are authoritative for seam tests. Live mode only upserts operating hours + inserts tagged expenses (total_minor schema).',
     },
   })
   console.log(JSON.stringify(summary, null, 2))

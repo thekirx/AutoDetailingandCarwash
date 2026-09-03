@@ -20,8 +20,9 @@ mkdirSync(outDir, { recursive: true })
 
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:5173'
 const publicOnly = process.argv.includes('--public-only')
-const email = process.env.AUDIT_EMAIL || process.env.VITE_AUDIT_EMAIL || ''
-const password = process.env.AUDIT_PASSWORD || process.env.VITE_AUDIT_PASSWORD || ''
+// Node-only env — never VITE_* (those can ship into the client bundle).
+const email = process.env.AUDIT_EMAIL || ''
+const password = process.env.AUDIT_PASSWORD || ''
 
 const VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 900 },
@@ -115,13 +116,16 @@ async function tryLogin(page) {
   await passSel.type(password, { delay: 10 })
   await Promise.all([
     page.click('button[type="submit"]'),
-    page.waitForFunction(
-      () => {
-        const p = location.pathname
-        return p.startsWith('/operations') && !p.includes('/login')
-      },
-      { timeout: 45000 },
-    ).catch(() => null),
+    page
+      .waitForFunction(
+        () => {
+          const p = location.pathname
+          if (!p.startsWith('/operations')) return false
+          return p !== '/operations/login' && !p.startsWith('/operations/login/')
+        },
+        { timeout: 45000 },
+      )
+      .catch(() => null),
   ])
   await new Promise((r) => setTimeout(r, 500))
   return isOpsAuthedUrl(page.url())

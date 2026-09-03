@@ -85,4 +85,10 @@ describe('finance audit', () => {
     assert.match(src, /FinancePLTab/)
     assert.match(src, /FinanceReportsTab/)
   })
+
+  it('8 Reports expense fallback matches finance_daily_pl (paid+posted only)', () => {
+    const src = readFileSync(join(root, 'src/pages/finance/FinanceReportsTab.jsx'), 'utf8')
+    assert.match(src, /\['paid', 'posted'\]/)
+    assert.doesNotMatch(src, /\['paid', 'approved', 'posted'\]/)
+  })
 })

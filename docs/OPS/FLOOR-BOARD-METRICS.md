@@ -7,6 +7,8 @@ Source: Super Admin Floor Board (`SuperAdminFloorBoard.jsx` + `fetchSuperAdminFl
 | Queue app sales | Paid sales classified as carwash (queue-linked services/packages) |
 | Counter / POS sales | Paid sales classified as detailing + coffee + merch |
 | Paid sales | Count of paid sale **rows** in the timeline (not pesos) |
+| Posted expenses | Sum of `expenses.total_minor` where status is **paid** or **posted** and `created_at` is in timeline (same filter as `finance_daily_pl`) |
+| Net profit / loss | `total_sales_minor − expense_minor` for the same timeline — not full category P&L |
 | Cancel loss | Sum of `final_price_minor` on cancelled jobs in the timeline |
 | Avg waiting time | Mean of `waiting_at → in_progress_at`; hint shows stamp sample count (`wait_sample_n`) |
 | Avg time per service | Mean of `in_progress_at → for_payment_at \|\| completed_at \|\| final_checking_at`; sample deduped by `booking_id`; hint shows `cycle_sample_n` |

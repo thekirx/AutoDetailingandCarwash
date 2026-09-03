@@ -1,6 +1,7 @@
-﻿audit+seam tests: 61/61 pass (node --test …Audit + adminConsoleProfit + floorBoardPlPulse + screenshotAuth + busybeeHealth)
-npm run build: exit 0
-screenshot-audit: captured 80 failed 0 authed true (auth gate rejects /operations/login)
-VIS-REVIEW: closed — SHOT-AUTH, AC-PULSE, TAB-MOBILE fixed this session
-SEED-LIVE: still open (optional)
-P6: wontfix
+﻿principal pass 2026-09-03
+command: node --test (seed/attendance/pos/shift/payroll/finance/reports/frontend + adminConsoleProfit + floorBoardPlPulse + screenshotAuth + busybeeHealth)
+result: 63/63 pass · exit 0
+npm run build: exit 0 · built in ~30s
+P0 closed: FIN-REPORTS-APPROVED, SEED-SCHEMA, SHOT-VITE-ENV
+SEED-LIVE: partial (dry-run authoritative; live = hours + tagged expenses only)
+OPS-E2E / OWNER-SMS-ENV / CHEM-RECON: still open (ops, not product gaps)

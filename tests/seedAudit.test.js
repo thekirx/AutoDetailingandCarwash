@@ -45,6 +45,15 @@ describe('seed audit fixtures', () => {
     assert.match(src, /buildAuditFixture/)
   })
 
+  it('live expense insert maps to expenses schema (total_minor + title, not amount_minor column)', () => {
+    const src = readFileSync(join(root, 'scripts/seed-audit-data.mjs'), 'utf8')
+    assert.match(src, /total_minor:\s*total/)
+    assert.match(src, /unit_cost_minor:\s*total/)
+    assert.match(src, /title:\s*`\[audit-seed]/)
+    assert.doesNotMatch(src, /amount_minor:\s*e\.amount_minor/)
+    assert.doesNotMatch(src, /expense_date:/)
+  })
+
   it('dry-run summary file is written when script was run (optional)', () => {
     const path = join(root, 'docs/audits/2026-08-31/seed-fixture-summary.json')
     if (!existsSync(path)) return
