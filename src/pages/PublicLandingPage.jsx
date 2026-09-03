@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 
 import BdHero from '../components/public/bredesign/BdHero'
-import { PpfInformationSection } from '../components/public/home/HomeServiceSections'
 import { BdBranches, BdEvents } from '../components/public/bredesign/BdEventsBranches'
 import {
   BdBook,
@@ -53,13 +52,7 @@ export default function PublicLandingPage() {
       <BdHero locationLine={locationLine} />
       <BdOrigin />
       <BdServices />
-      {/* The film story is the installation itself, scrubbed by scroll — a
-          pinned 181-frame sequence with chapters that activate as it plays.
-          It replaces the static PPF panel rather than sitting beside it. */}
-      <div id="ppf">
-        <PpfInformationSection />
-      </div>
-      <BdWhySections exclude={['ppf']} />
+      <BdWhySections />
       <BdPhotos />
       <BdEvents state={content.event} />
       <BdBranches branches={visibleBranches} />

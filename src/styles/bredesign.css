@@ -265,11 +265,12 @@
   margin-top: 30px;
 }
 
-/* Stats sit inside the hero, on the darkest part of the grade. */
+/* Stats sit inside the hero, on the darkest part of the grade. No rule above
+   them: mock B has none, and a hairline drawn across the footage reads as a
+   seam in the picture rather than as a divider. */
 .bredesign .bd-stats {
   position: relative;
   z-index: 1;
-  border-top: 1px solid var(--bd-rule);
 }
 .bredesign .bd-stats-in {
   display: grid;
