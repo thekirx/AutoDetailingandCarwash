@@ -10,14 +10,18 @@
    literal here would ship the source path and every image would 404. */
 export const IMAGES = {
   ppf: new URL('../../../assets/services/paint-protection-film.webp', import.meta.url).href,
-  ceramic: new URL('../../../assets/services/ceramic-coating.webp', import.meta.url).href,
-  ceramicGallery: new URL('../../../assets/services/ceramic-coating-gallery.webp', import.meta.url).href,
+  /* Two different polish frames: this one leads the service, the North Wolf
+     shot carries the photo wall. Both sit on the homepage, so they must not be
+     the same picture. */
+  ceramic: new URL('../../../assets/services/ceramic.webp', import.meta.url).href,
+  ceramicPolish: new URL('../../../assets/services/ceramic-coating-gallery.webp', import.meta.url).href,
   tint: new URL('../../../assets/services/ceramic-tint.webp', import.meta.url).href,
   detailing: new URL('../../../assets/services/detailing.webp', import.meta.url).href,
   interior: new URL('../../../assets/services/interior-detailing.webp', import.meta.url).href,
   glass: new URL('../../../assets/services/glass-detailing.webp', import.meta.url).href,
   carwash: new URL('../../../assets/services/carwash.webp', import.meta.url).href,
   about: new URL('../../../assets/about/about-hkm-21.webp', import.meta.url).href,
+  shopfront: new URL('../../../assets/about/hakum-shopfront-dusk.webp', import.meta.url).href,
   event: '/content/events-stay-tuned.webp',
 }
 
@@ -32,8 +36,8 @@ export const ORIGIN = {
   ],
   tagTitle: 'Est. 2024',
   tagLine: 'Cavite — three branches, one standard',
-  image: IMAGES.detailing,
-  imageAlt: 'Paint correction under inspection lighting at Hakum Auto Care',
+  image: IMAGES.shopfront,
+  imageAlt: 'Hakum Auto Care branch at dusk with illuminated signage and cars waiting outside',
 }
 
 export const SERVICES = [
@@ -53,7 +57,7 @@ export const SERVICES = [
     cta: 'Why ceramic',
     to: '/services/ceramic',
     image: IMAGES.ceramic,
-    alt: 'Ceramic coating applied at Hakum Auto Care',
+    alt: 'A technician machine-polishing a masked panel at Hakum Auto Care',
   },
   {
     number: '03',
@@ -64,12 +68,16 @@ export const SERVICES = [
     image: IMAGES.tint,
     alt: 'Nano ceramic tint being fitted at Hakum Auto Care',
   },
+  /* Wash and detailing is walk-in work, so this card goes to the live queue
+     rather than the booking form. The other three are appointment services —
+     film, coating and tint all need a slot booked — but for a wash the useful
+     question is which branch is busy right now, not which date is free. */
   {
     number: '04',
     title: 'Premium Wash & Detailing',
     copy: 'Deep interior and exterior care that resets the finish — and the groundwork everything else is bonded onto.',
-    cta: 'Book detailing',
-    to: '/book',
+    cta: 'See live queue',
+    to: '/queue',
     image: IMAGES.interior,
     alt: 'Interior detailing in progress at Hakum Auto Care',
   },
@@ -112,8 +120,8 @@ export const WHY_SECTIONS = [
       ['UV & chemical resistance', 'Blocks oxidation and UV fade, while repelling bird droppings, tree sap, and acid rain that etch bare paint.'],
     ],
     cta: { label: 'Get a ceramic coating quote', to: '/book' },
-    image: IMAGES.ceramicGallery,
-    alt: 'A finished vehicle after ceramic coating at Hakum Auto Care',
+    image: IMAGES.ceramic,
+    alt: 'A technician machine-polishing a masked panel at Hakum Auto Care',
     flip: true,
   },
   {
@@ -140,7 +148,7 @@ export const WHY_SECTIONS = [
 
 export const PHOTOS = [
   { src: IMAGES.detailing, alt: 'Paint correction under inspection lighting', caption: 'Correction', span: 'tall' },
-  { src: IMAGES.ceramicGallery, alt: 'A finished car after ceramic coating', caption: 'Coated and cured', span: 'wide' },
+  { src: IMAGES.ceramicPolish, alt: 'Machine polishing a panel before ceramic coating', caption: 'Coated and cured', span: 'wide' },
   { src: IMAGES.interior, alt: 'Interior detailing in progress', caption: 'Interior' },
   { src: IMAGES.glass, alt: 'Glass decontaminated before tinting', caption: 'Glass prep' },
   { src: IMAGES.ppf, alt: 'A vehicle with paint protection film installed', caption: 'Film, finished' },

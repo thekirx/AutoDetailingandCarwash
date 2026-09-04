@@ -30,7 +30,7 @@ const SERVICE_PHOTOS = {
   carwash: 'carwash.webp',
   'interior-detailing': 'interior-detailing.webp',
   'paint-correction': 'paint-correction.webp',
-  'ceramic-coating': ['ceramic-coating.webp', 'ceramic.webp'],
+  'ceramic-coating': 'ceramic.webp',
   'ceramic-tint': 'ceramic-tint.webp',
   'paint-protection-film': 'paint-protection-film.webp',
   detailing: 'detailing.webp',

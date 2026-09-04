@@ -19,7 +19,7 @@ describe('Public branding assets and scope', () => {
       'src/assets/services/carwash.webp',
       'src/assets/services/interior-detailing.webp',
       'src/assets/services/ceramic-tint.webp',
-      'src/assets/services/ceramic-coating.webp',
+      'src/assets/services/ceramic.webp',
       'src/assets/services/glass-detailing.webp',
       'src/assets/services/engine-wash.webp',
       'src/assets/services/paint-protection-film.webp',

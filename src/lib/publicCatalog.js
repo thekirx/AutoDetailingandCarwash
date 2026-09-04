@@ -62,6 +62,27 @@ export function enrichPublicCatalogService(row) {
   }
 }
 
+/* Services the catalog carries for booking and the bay, but that the public
+   /services list does not show: paint maintenance, and the three counter
+   packages. They stay active in the catalog, stay bookable, and still price
+   and ring up normally — this hides them from the marketing overview only,
+   so nothing here touches operations. */
+const HIDDEN_FROM_PUBLIC_OVERVIEW = new Set([
+  'paint-maintenance',
+  'express-wash-package',
+  'full-care-package',
+  'hakum-custom-package',
+])
+
+/* Matched on slug and on name: the live catalog owns its own slugs, so a
+   package renamed in Inventory should still drop out of the public list. */
+function isHiddenFromPublicOverview(row) {
+  return (
+    HIDDEN_FROM_PUBLIC_OVERVIEW.has(marketingKeyForServiceSlug(row?.slug)) ||
+    HIDDEN_FROM_PUBLIC_OVERVIEW.has(titleToSlug(row?.name))
+  )
+}
+
 export function buildPublicServiceOverview(rows) {
   const source = rows?.length
     ? rows
@@ -75,7 +96,7 @@ export function buildPublicServiceOverview(rows) {
           display_order: index + 1,
         }))
 
-  return source.map(enrichPublicCatalogService)
+  return source.filter((row) => !isHiddenFromPublicOverview(row)).map(enrichPublicCatalogService)
 }
 
 export function publicServiceDestination(item = {}) {

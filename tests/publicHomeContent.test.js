@@ -44,7 +44,7 @@ describe('Public homepage content assets', () => {
   it('maps the approved featured and ceramic WebP assets', async () => {
     assert.deepEqual(featuredServices.map(({ title, image }) => [title, new URL(image).pathname.split('/').at(-1)]), [
       ['PAINT PROTECTION FILM', 'paint-protection-film.webp'],
-      ['CERAMIC COATING', 'ceramic-coating.webp'],
+      ['CERAMIC COATING', 'ceramic.webp'],
       ['DETAILING', 'detailing.webp'],
     ])
     assert.deepEqual(ceramicPackages.map(({ title, bgImage }) => [title, new URL(bgImage).pathname.split('/').at(-1)]), [

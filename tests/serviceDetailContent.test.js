@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { SERVICE_DETAIL_CONTENT } from '../src/data/serviceDetailContent.js'
-import { WHY_SECTIONS } from '../src/components/public/bredesign/content.js'
+import { ORIGIN, WHY_SECTIONS } from '../src/components/public/bredesign/content.js'
 import { publicServiceDestination } from '../src/lib/publicCatalog.js'
 
 test('public service destinations keep editorial pages, queue, and booking flows distinct', () => {
@@ -61,4 +61,9 @@ test('ceramic package benefit is owned by both packages without invented conditi
 test('the Tint detail-page CTA books Tint instead of looping back to the services catalog', () => {
   const tint = WHY_SECTIONS.find((section) => section.id === 'tint')
   assert.deepEqual(tint.cta, { label: 'Book nano ceramic tint', to: '/book' })
+})
+
+test('the Hakum story uses the shopfront-at-dusk photograph and matching alternative text', () => {
+  assert.equal(new URL(ORIGIN.image).pathname.split('/').at(-1), 'hakum-shopfront-dusk.webp')
+  assert.equal(ORIGIN.imageAlt, 'Hakum Auto Care branch at dusk with illuminated signage and cars waiting outside')
 })
