@@ -1625,9 +1625,19 @@
    putting a panel behind the supporting copy. */
 .bredesign .ppf-information-pin .ppf-information-heading > p {
   color: #79a6ff;
+  font-family: var(--bd-display);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.025em;
+  line-height: 0.92;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95), 0 8px 24px rgba(0, 0, 0, 0.72);
 }
 .bredesign .ppf-information-pin .ppf-information-heading > h2 {
+  font-family: var(--bd-display);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.025em;
+  line-height: 0.92;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.96), 0 10px 32px rgba(0, 0, 0, 0.82);
 }
 
@@ -1639,9 +1649,15 @@
     color-scheme: dark !important;
   }
 
+  .bredesign .ppf-information-pin .ppf-information-heading {
+    justify-content: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 88px) 20px
+      calc(env(safe-area-inset-bottom, 0px) + 24px);
+  }
+
   .bredesign .ppf-information-pin .ppf-information-heading > h2 {
-    line-height: 1;
-    letter-spacing: -0.01em;
+    line-height: 0.92;
+    letter-spacing: -0.025em;
   }
 }
 

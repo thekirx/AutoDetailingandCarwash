@@ -19,21 +19,32 @@ async function withPage(path, run, viewport = { width: 1280, height: 900, device
   }
 }
 
-test('Mobile PPF hero keeps dark viewport chrome and strengthens only its two title lines', async () => {
+test('Mobile PPF hero centers its intro and matches the animated chapter typography', async () => {
   await withPage('/services/ppf', async (page) => {
     const result = await page.evaluate(() => {
       const hero = document.querySelector('.ppf-information-stage')
       const eyebrow = document.querySelector('.ppf-information-heading > p')
       const headline = document.querySelector('.ppf-information-heading > h2')
       const supportingCopy = document.querySelector('.ppf-information-heading > span')
+      const chapterHeadline = document.querySelector('.ppf-information-chapter h3')
+      const eyebrowStyle = getComputedStyle(eyebrow)
+      const headlineStyle = getComputedStyle(headline)
+      const chapterStyle = getComputedStyle(chapterHeadline)
+      const eyebrowBox = eyebrow.getBoundingClientRect()
+      const copyBox = supportingCopy.getBoundingClientRect()
 
       return {
         colorScheme: getComputedStyle(document.documentElement).colorScheme,
         heroWidth: hero.getBoundingClientRect().width,
         viewportWidth: document.documentElement.clientWidth,
-        eyebrowShadow: getComputedStyle(eyebrow).textShadow,
-        headlineShadow: getComputedStyle(headline).textShadow,
+        eyebrowShadow: eyebrowStyle.textShadow,
+        headlineShadow: headlineStyle.textShadow,
         supportingCopyShadow: getComputedStyle(supportingCopy).textShadow,
+        introCenter: (eyebrowBox.top + copyBox.bottom) / 2,
+        viewportCenter: window.innerHeight / 2,
+        eyebrowFont: [eyebrowStyle.fontFamily, eyebrowStyle.fontWeight, eyebrowStyle.fontStyle],
+        headlineFont: [headlineStyle.fontFamily, headlineStyle.fontWeight, headlineStyle.fontStyle],
+        chapterFont: [chapterStyle.fontFamily, chapterStyle.fontWeight, chapterStyle.fontStyle],
       }
     })
 
@@ -42,6 +53,9 @@ test('Mobile PPF hero keeps dark viewport chrome and strengthens only its two ti
     assert.notEqual(result.eyebrowShadow, 'none')
     assert.notEqual(result.headlineShadow, 'none')
     assert.equal(result.supportingCopyShadow, 'none')
+    assert.ok(Math.abs(result.introCenter - result.viewportCenter) < 60)
+    assert.deepEqual(result.eyebrowFont, result.chapterFont)
+    assert.deepEqual(result.headlineFont, result.chapterFont)
   }, { width: 393, height: 852, deviceScaleFactor: 2 })
 })
 
