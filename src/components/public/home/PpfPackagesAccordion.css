@@ -9,7 +9,7 @@
   --ppfa-brand-lo: #122e96;
   --ppfa-panel: #0a1838;
   --ppfa-ice: #9fb6ee;
-  --ppfa-ice-dim: #54689c;
+  --ppfa-ice-dim: #7d93c8;
   --ppfa-platinum: #d7e1f7;
   --ppfa-line: rgba(159, 182, 238, 0.16);
   --ppfa-ease: cubic-bezier(0.24, 0.86, 0.22, 1);
@@ -19,7 +19,7 @@
 .ppf-packages-section .ppfa-lane {
   display: flex;
   gap: 6px;
-  height: 620px;
+  height: 560px;
 }
 
 .ppf-packages-section .ppfa-panelcard {
@@ -41,6 +41,10 @@
   flex: 4.4 1 0;
   border-color: rgba(159, 182, 238, 0.34);
 }
+/* The ladder reads in the panel tone too: each tier one step lighter. */
+.ppf-packages-section .ppfa-panelcard.is-basic { background: #081330; }
+.ppf-packages-section .ppfa-panelcard.is-premium { background: #0b1c44; }
+.ppf-packages-section .ppfa-panelcard.is-platinum { background: #0f2455; }
 .ppf-packages-section .ppfa-panelcard.is-platinum.is-open {
   border-color: rgba(215, 225, 247, 0.42);
 }
@@ -52,24 +56,9 @@
 .ppf-packages-section .ppfa-media {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(118deg, transparent 34%, rgba(159, 182, 238, 0.1) 47%, transparent 58%),
-    radial-gradient(120% 80% at 28% 0%, rgba(27, 63, 196, 0.44), transparent 62%),
-    linear-gradient(180deg, #0d1d44, #060f2a);
-  transition: transform 900ms var(--ppfa-ease);
+  /* Empty on purpose until real Hakum PPF stills exist. */
 }
-.ppf-packages-section .ppfa-panelcard.is-open .ppfa-media { transform: scale(1.06); }
 
-.ppf-packages-section .ppfa-scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(3, 9, 24, 0.18) 0%,
-    rgba(3, 9, 24, 0.58) 55%,
-    rgba(3, 9, 24, 0.95) 100%
-  );
-}
 
 /* ---------- collapsed spine ---------- */
 .ppf-packages-section .ppfa-spine {
@@ -105,57 +94,12 @@
   pointer-events: none;
 }
 
-/* ---------- coverage diagram ---------- */
-.ppf-packages-section .ppfa-cover {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: 44%;
-  display: grid;
-  place-items: center;
-  opacity: 0;
-  transition: opacity 0.6s var(--ppfa-ease) 0.2s;
-}
-.ppf-packages-section .ppfa-panelcard.is-open .ppfa-cover { opacity: 1; }
-.ppf-packages-section .ppfa-car { height: 66%; width: auto; max-width: 84%; }
-.ppf-packages-section .ppfa-panel {
-  fill: #0e1d3e;
-  stroke: rgba(159, 182, 238, 0.16);
-  stroke-width: 1;
-  transition: fill 0.5s var(--ppfa-ease);
-}
-.ppf-packages-section .ppfa-panel.is-on { fill: var(--ppfa-brand); }
-.ppf-packages-section .is-platinum .ppfa-panel.is-on { fill: #3e63e8; }
-.ppf-packages-section .ppfa-glass {
-  fill: #08122a;
-  stroke: rgba(159, 182, 238, 0.12);
-  stroke-width: 1;
-}
-.ppf-packages-section .ppfa-tyre { fill: #04091c; }
-.ppf-packages-section .ppfa-cover-cap {
-  position: absolute;
-  bottom: 2rem;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 0.625rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ppfa-ice-dim);
-}
-.ppf-packages-section .ppfa-cover-cap b {
-  font-size: 0.95rem;
-  color: #fff;
-  letter-spacing: 0;
-}
-
 /* ---------- open content ---------- */
 .ppf-packages-section .ppfa-body {
   position: absolute;
   left: 0;
   bottom: 0;
-  width: 60%;
+  width: 78%;
   padding: 2rem 2.25rem;
   opacity: 0;
   transform: translateY(16px);
@@ -255,50 +199,6 @@
   gap: 0.8rem;
 }
 
-/* ---------- comparison strip ---------- */
-.ppf-packages-section .ppfa-compare {
-  margin-top: 6px;
-  display: grid;
-  grid-template-columns: 170px repeat(3, 1fr);
-  border: 1px solid var(--ppfa-line);
-}
-.ppf-packages-section .ppfa-compare-row { display: contents; }
-.ppf-packages-section .ppfa-compare > *,
-.ppf-packages-section .ppfa-compare-row > * {
-  padding: 0.85rem 1.125rem;
-  border-left: 1px solid var(--ppfa-line);
-  font-size: 0.85rem;
-}
-.ppf-packages-section .ppfa-rowlabel {
-  border-left: 0;
-  font-size: 0.59rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ppfa-ice-dim);
-}
-.ppf-packages-section .ppfa-cell {
-  color: #dce6fb;
-  transition: background 0.4s, color 0.4s;
-}
-.ppf-packages-section .ppfa-cell em {
-  font-style: normal;
-  display: block;
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  color: var(--ppfa-ice-dim);
-  margin-top: 2px;
-}
-.ppf-packages-section .ppfa-cell.is-hot {
-  background: rgba(27, 63, 196, 0.16);
-  color: #fff;
-}
-.ppf-packages-section .ppfa-headcell {
-  font-weight: 800;
-  font-size: 0.875rem;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-}
-
 /* ---------- responsive ---------- */
 @media (max-width: 1000px) {
   .ppf-packages-section .ppfa-lane {
@@ -332,13 +232,6 @@
     margin: 0;
   }
   .ppf-packages-section .ppfa-spine b { font-size: 1.25rem; }
-  .ppf-packages-section .ppfa-cover {
-    position: relative;
-    width: 100%;
-    height: 240px;
-    padding-top: 1.75rem;
-  }
-  .ppf-packages-section .ppfa-cover-cap { bottom: 0; }
   .ppf-packages-section .ppfa-body {
     position: relative;
     width: 100%;
@@ -346,19 +239,171 @@
   }
   .ppf-packages-section .ppfa-headline,
   .ppf-packages-section .ppfa-included { max-width: none; }
-  .ppf-packages-section .ppfa-compare {
-    grid-template-columns: 1fr;
-    margin-top: 1.25rem;
-  }
-  .ppf-packages-section .ppfa-compare > *,
-  .ppf-packages-section .ppfa-compare-row > * {
-    border-left: 0;
-    border-top: 1px solid var(--ppfa-line);
-  }
-  .ppf-packages-section .ppfa-rowlabel { background: rgba(159, 182, 238, 0.05); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ppf-packages-section .ppfa-lane *,
-  .ppf-packages-section .ppfa-compare * { transition: none !important; }
+  .ppf-packages-section .ppfa-lane * { transition: none !important; }
+}
+
+
+/* ---------- coverage figure ---------- */
+/* Sits in the space the diagram used to take. Only shown on the open panel;
+   the collapsed spine already carries the same number at small size. */
+.ppf-packages-section .ppfa-figure {
+  position: absolute;
+  top: 2rem;
+  right: 2.25rem;
+  display: grid;
+  justify-items: end;
+  text-align: right;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s var(--ppfa-ease) 0.22s, transform 0.6s var(--ppfa-ease) 0.22s;
+}
+.ppf-packages-section .ppfa-panelcard.is-open .ppfa-figure {
+  opacity: 1;
+  transform: none;
+}
+.ppf-packages-section .ppfa-figure b {
+  font-size: clamp(3.5rem, 7vw, 6.5rem);
+  font-weight: 800;
+  font-style: italic;
+  line-height: 0.82;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ppfa-platinum);
+}
+.ppf-packages-section .ppfa-figure s {
+  margin-top: 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ppfa-ice);
+}
+.ppf-packages-section .ppfa-figure em {
+  margin-top: 0.7rem;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid rgba(159, 182, 238, 0.34);
+  font-size: 0.59rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ppfa-platinum);
+}
+
+@media (max-width: 1000px) {
+  .ppf-packages-section .ppfa-figure {
+    position: relative;
+    top: 0;
+    right: 0;
+    justify-items: start;
+    text-align: left;
+    padding: 1.5rem 1.5rem 0;
+  }
+  .ppf-packages-section .ppfa-figure b { font-size: 3.25rem; }
+}
+
+
+/* ---------- specs, inside the panel ---------- */
+/* Film thickness and warranty used to live in a table under the lane, which
+   meant the numbers that justify a tier sat a scroll away from the tier. */
+.ppf-packages-section .ppfa-specs {
+  display: flex;
+  gap: 2.25rem;
+  margin: 0 0 1.25rem;
+}
+.ppf-packages-section .ppfa-specs > span {
+  display: grid;
+  gap: 0.2rem;
+}
+.ppf-packages-section .ppfa-specs s {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ppfa-ice-dim);
+}
+.ppf-packages-section .ppfa-specs b {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ppfa-platinum);
+}
+.ppf-packages-section .ppfa-specs em {
+  font-size: 0.58rem;
+  font-style: normal;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ppfa-ice);
+}
+
+@media (max-width: 1000px) {
+  .ppf-packages-section .ppfa-specs { gap: 1.5rem; }
+  .ppf-packages-section .ppfa-specs b { font-size: 1.15rem; }
+}
+
+
+/* ---------- mobile ---------- */
+@media (max-width: 1000px) {
+  /* A collapsed panel is a 104px bar. The figure must not reserve space in it,
+     or the bar grows and the tap targets drift apart. */
+  .ppf-packages-section .ppfa-figure { display: none; }
+  .ppf-packages-section .ppfa-panelcard.is-open .ppfa-figure { display: grid; }
+
+  /* Height was fixed at 560px for a diagram that no longer exists. Let the
+     content decide, so a short tier is not padded out with empty panel. */
+  .ppf-packages-section .ppfa-panelcard.is-open {
+    min-height: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  /* Two specs side by side get cramped under 380px; let them wrap. */
+  .ppf-packages-section .ppfa-specs {
+    flex-wrap: wrap;
+    gap: 1.25rem 2rem;
+  }
+
+  /* Touch has no hover, so the whole bar is the control. Make it feel like one. */
+  .ppf-packages-section .ppfa-panelcard { -webkit-tap-highlight-color: transparent; }
+  .ppf-packages-section .ppfa-panelcard:active { border-color: rgba(159, 182, 238, 0.5); }
+
+  .ppf-packages-section .ppfa-go {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .ppf-packages-section .ppfa-figure b { font-size: 2.75rem; }
+  .ppf-packages-section .ppfa-figure { padding: 1.25rem 1.25rem 0; }
+  .ppf-packages-section .ppfa-body { padding: 0.5rem 1.25rem 1.5rem; }
+  .ppf-packages-section .ppfa-spine { padding-left: 1.25rem; }
+}
+
+/* ---------- open panel: flow, not overlay ---------- */
+/* The figure and the body were both absolutely positioned, one pinned top-right
+   and one pinned bottom-left. That holds only while the body is short; once the
+   specs moved in, a long tier name ran straight under the count and its badge.
+   Laying the open panel out as a column makes the collision impossible instead
+   of tuning widths until it stops happening at one viewport. */
+.ppf-packages-section .ppfa-panelcard.is-open {
+  display: flex;
+  flex-direction: column;
+}
+.ppf-packages-section .ppfa-panelcard.is-open .ppfa-figure {
+  position: static;
+  align-self: flex-end;
+  padding: 2rem 2.25rem 0;
+}
+.ppf-packages-section .ppfa-panelcard.is-open .ppfa-body {
+  position: static;
+  width: 100%;
+  max-width: 44rem;
+  margin-top: auto;
 }
