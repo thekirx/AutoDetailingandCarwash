@@ -66,6 +66,23 @@ export function buildPublicServiceOverview(rows) {
   return (rows || []).map(enrichPublicCatalogService)
 }
 
+export function publicServiceDestination(item = {}) {
+  const key = marketingKeyForServiceSlug(item.slug)
+  const editorialRoutes = {
+    'paint-protection-film': '/services/ppf',
+    'ceramic-coating': '/services/ceramic',
+    'ceramic-tint': '/services/tint',
+  }
+
+  if (editorialRoutes[key]) return { to: editorialRoutes[key] }
+  if (key === 'carwash') return { to: '/queue' }
+
+  return {
+    to: '/book',
+    state: { service: item.title, service_id: item.id },
+  }
+}
+
 export function publicPackageOverview() {
   return {
     ceramic: ceramicPackages.map((item) => item.title),
