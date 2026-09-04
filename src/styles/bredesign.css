@@ -1256,6 +1256,22 @@
   font-size: clamp(15px, 1.4vw, 16.5px);
   line-height: 1.65;
 }
+.bredesign .bd-page-hero.is-scroll-animated .bd-page-hero-media {
+  transform: translate3d(0, var(--bd-page-hero-media-y, 0), 0) scale(1.08);
+  will-change: transform;
+}
+.bredesign .bd-page-hero.is-scroll-animated .bd-page-hero-in {
+  transform: translate3d(0, var(--bd-page-hero-copy-y, 0), 0);
+  opacity: var(--bd-page-hero-copy-opacity, 1);
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bredesign .bd-page-hero.is-scroll-animated .bd-page-hero-media,
+  .bredesign .bd-page-hero.is-scroll-animated .bd-page-hero-in {
+    transform: none;
+    opacity: 1;
+  }
+}
 
 /* ==== Catalog grid ======================================================= */
 /* Used by /services. The cards are the homepage's service cards at a smaller

@@ -42,6 +42,7 @@ export default function ServiceDetailPage() {
     <>
       <BdPageHero
         eyebrow={section.eyebrow}
+        scrollAnimated={slug === 'ppf'}
         title={
           <>
             {section.headline.slice(0, -1).map((line) => (
