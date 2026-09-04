@@ -34,6 +34,8 @@ export const SERVICE_DETAIL_CONTENT = {
       copy: 'Real PPF work from our team, showing the preparation, fit, and finished surface.',
       sourceName: 'ppf 01.mp4',
       label: 'Hakum Paint Protection Film installation proof',
+      video: new URL('../assets/service-proof/ppf-proof.mp4', import.meta.url).href,
+      poster: new URL('../assets/service-proof/ppf-proof-poster.webp', import.meta.url).href,
     },
   },
   ceramic: {
@@ -75,6 +77,8 @@ export const SERVICE_DETAIL_CONTENT = {
       copy: 'A real Ceramic Coating result from our team, captured across the bodywork as light travels over the finish.',
       sourceName: 'CR-V CERAMIC 30 SEC.mp4',
       label: 'Hakum Ceramic Coating video proof',
+      video: new URL('../assets/service-proof/ceramic-proof.mp4', import.meta.url).href,
+      poster: new URL('../assets/service-proof/ceramic-proof-poster.webp', import.meta.url).href,
     },
   },
   tint: {

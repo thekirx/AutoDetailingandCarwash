@@ -2083,3 +2083,157 @@
   margin-top: 0;
   max-width: 54ch;
 }
+
+.bredesign .bd-clearpro-card {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 20px;
+  align-items: center;
+  padding: clamp(24px, 3vw, 42px);
+  background: linear-gradient(135deg, rgba(45, 89, 211, 0.22), rgba(255, 255, 255, 0.035));
+  border-left: 3px solid var(--bd-accent);
+}
+.bredesign .bd-clearpro-card div { display: grid; gap: 4px; }
+.bredesign .bd-clearpro-card div span,
+.bredesign .bd-clearpro-card a {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.bredesign .bd-clearpro-card div span { color: var(--bd-accent); }
+.bredesign .bd-clearpro-card div strong {
+  font-family: var(--bd-display);
+  font-size: clamp(2.2rem, 5vw, 4.8rem);
+  font-style: italic;
+  line-height: .9;
+  color: var(--bd-paper);
+}
+.bredesign .bd-clearpro-card p {
+  max-width: 68ch;
+  color: var(--bd-ink-2);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.bredesign .bd-clearpro-card a { color: var(--bd-paper); }
+@media (min-width: 820px) {
+  .bredesign .bd-clearpro-card { grid-template-columns: .65fr 1.35fr auto; }
+}
+
+.bredesign .bd-service-proof,
+.bredesign .bd-service-faq,
+.bredesign .bd-service-bottom-cta {
+  position: relative;
+  padding: clamp(72px, 9vw, 132px) 0;
+}
+.bredesign .bd-service-proof { background: var(--bd-navy-2); }
+.bredesign .bd-service-proof-layout {
+  display: grid;
+  gap: clamp(34px, 6vw, 88px);
+  align-items: center;
+}
+.bredesign .bd-service-proof header h2,
+.bredesign .bd-service-faq header h2,
+.bredesign .bd-service-bottom-cta h2 {
+  margin-top: 16px;
+  font-size: clamp(2.2rem, 5.3vw, 5rem);
+  line-height: .92;
+}
+.bredesign .bd-service-faq header h2 em,
+.bredesign .bd-service-bottom-cta h2 em { color: var(--bd-accent); }
+.bredesign .bd-service-proof header > p:last-child,
+.bredesign .bd-service-faq header > p:last-child,
+.bredesign .bd-service-bottom-cta .bd-shell > p:nth-child(3) {
+  margin-top: 20px;
+  max-width: 54ch;
+  color: var(--bd-ink-2);
+  line-height: 1.7;
+}
+.bredesign .bd-service-proof figure { margin: 0; }
+.bredesign .bd-service-proof video {
+  display: block;
+  width: min(100%, 540px);
+  max-height: min(76vh, 760px);
+  margin-inline: auto;
+  background: #020719;
+  object-fit: contain;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .42);
+}
+.bredesign .bd-service-proof figcaption {
+  margin-top: 12px;
+  color: var(--bd-ink-3);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+@media (min-width: 900px) {
+  .bredesign .bd-service-proof-layout { grid-template-columns: .8fr 1.2fr; }
+}
+
+.bredesign .bd-service-faq { background: var(--bd-navy); }
+.bredesign .bd-service-faq-layout {
+  display: grid;
+  gap: clamp(36px, 7vw, 110px);
+  align-items: start;
+}
+.bredesign .bd-service-faq-list { border-top: 1px solid var(--bd-rule); }
+.bredesign .bd-service-faq-list article { border-bottom: 1px solid var(--bd-rule); }
+.bredesign .bd-service-faq-list h3 { margin: 0; }
+.bredesign .bd-service-faq-list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 0;
+  border: 0;
+  background: transparent;
+  color: var(--bd-paper);
+  font: inherit;
+  font-size: clamp(15px, 1.5vw, 18px);
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+.bredesign .bd-service-faq-list button svg {
+  flex: none;
+  color: var(--bd-accent);
+  transition: transform 180ms ease;
+}
+.bredesign .bd-service-faq-list article[data-open='true'] button svg { transform: rotate(180deg); }
+.bredesign .bd-service-faq-list article > div p {
+  max-width: 64ch;
+  padding: 0 42px 24px 0;
+  color: var(--bd-ink-2);
+  font-size: 14px;
+  line-height: 1.72;
+}
+@media (min-width: 900px) {
+  .bredesign .bd-service-faq-layout { grid-template-columns: .72fr 1.28fr; }
+  .bredesign .bd-service-faq header { position: sticky; top: 120px; }
+}
+
+.bredesign .bd-service-bottom-cta {
+  overflow: hidden;
+  background:
+    radial-gradient(75% 150% at 100% 20%, rgba(45, 89, 211, .32), transparent 60%),
+    var(--bd-navy-2);
+  text-align: center;
+}
+.bredesign .bd-service-bottom-cta .bd-shell { display: grid; justify-items: center; }
+.bredesign .bd-service-bottom-cta .bd-btn { margin-top: 30px; }
+
+.bredesign .ceramic-package-unlimited {
+  align-self: flex-start;
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 7px 10px;
+  background: var(--bd-accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}

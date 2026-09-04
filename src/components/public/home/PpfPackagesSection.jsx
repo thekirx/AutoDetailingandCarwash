@@ -94,7 +94,7 @@ export default function PpfPackagesSection() {
   const [active, setActive] = useState(1)
 
   return (
-    <section id="ppf-packages" className="ppf-packages-section" data-motion-section="ppf-packages">
+    <section id="ppf-packages" className="ppf-packages-section" data-motion-section="ppf-packages" data-service-packages="ppf">
       <div className="public-shell ppf-package-ladder-layout">
         <header className="ppf-package-ladder-intro" data-motion="heading">
           <div>

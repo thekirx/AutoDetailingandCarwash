@@ -3,6 +3,7 @@ import { ArrowRight, Check, Plus, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { ceramicPackages, ceramicSection, mediaGallery, nanoCeramicTint, ppfInformation } from '../../../data/publicHomeContent'
+import { SERVICE_DETAIL_CONTENT } from '../../../data/serviceDetailContent'
 import PpfInstallSequence from './PpfInstallSequence'
 import { buildCeramicPackageCards } from '../../../lib/homepageContent'
 import { getPpfCaptionKey } from '../../../lib/ppfScrollStory'
@@ -17,7 +18,7 @@ export function CeramicSection() {
   const [openPackage, setOpenPackage] = useState(null)
 
   return (
-    <section id="ceramic" className="coating-section" data-motion-section="ceramic">
+    <section id="ceramic" className="coating-section" data-motion-section="ceramic" data-service-packages="ceramic">
       <div className="public-shell ceramic-layout">
         <div className="ceramic-intro" data-motion="heading">
           <p>{ceramicSection.eyebrow}</p>
@@ -39,6 +40,9 @@ export function CeramicSection() {
                 <div className="ceramic-package-body">
                   <h3 className="ceramic-package-name">{item.title}</h3>
                   <div className="ceramic-package-content">
+                    <strong className="ceramic-package-unlimited">
+                      {SERVICE_DETAIL_CONTENT.ceramic.packageHighlights[item.id]}
+                    </strong>
                     <div className="ceramic-package-warranty">
                       <Check size={16} strokeWidth={3} aria-hidden="true" />
                       <strong>{item.warrantyYears}</strong>

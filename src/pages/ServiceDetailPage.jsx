@@ -1,9 +1,14 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
 
 import BdPageHero from '../components/public/bredesign/BdPageHero'
+import ServiceBottomCta from '../components/public/bredesign/ServiceBottomCta'
+import ServiceFaqSection from '../components/public/bredesign/ServiceFaqSection'
+import ServiceProofSection from '../components/public/bredesign/ServiceProofSection'
 import useReveal from '../components/public/bredesign/useReveal'
 import { WHY_SECTIONS } from '../components/public/bredesign/content'
-import { PpfInformationSection } from '../components/public/home/HomeServiceSections'
+import { CeramicSection, PpfInformationSection } from '../components/public/home/HomeServiceSections'
+import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
+import { SERVICE_DETAIL_CONTENT } from '../data/serviceDetailContent'
 import { usePageMeta } from '../lib/pageMeta'
 
 /* One page per service, reached from the cards in "Our services".
@@ -26,6 +31,7 @@ const TITLES = {
 export default function ServiceDetailPage() {
   const { slug } = useParams()
   const section = WHY_SECTIONS.find((s) => s.id === slug)
+  const detail = SERVICE_DETAIL_CONTENT[slug]
 
   usePageMeta({
     title: TITLES[slug] || 'Services',
@@ -83,10 +89,36 @@ export default function ServiceDetailPage() {
               </li>
             ))}
           </ul>
+
+          {slug === 'ppf' ? (
+            <aside className="bd-clearpro-card bd-reveal" data-service-brand="clearpro">
+              <div>
+                <span>Film partner</span>
+                <strong>ClearPro</strong>
+              </div>
+              <p>
+                ClearPro’s optical TPU film combines a self-healing top coat, hydrophobic performance,
+                high clarity, and resistance to yellowing. Its current UltraClear technical sheet lists a
+                nominal 7.5 mil construction.
+              </p>
+              <a href="https://www.clearpro.com/paint-protection-film/" target="_blank" rel="noreferrer noopener">
+                Explore ClearPro technology <span aria-hidden="true">↗</span>
+              </a>
+            </aside>
+          ) : null}
         </div>
       </section>
 
       {HAS_SEQUENCE.has(slug) ? <PpfInformationSection /> : null}
+      {slug === 'ppf' ? <PpfPackagesSection /> : null}
+      {slug === 'ceramic' ? <CeramicSection /> : null}
+      {detail.proof ? <ServiceProofSection serviceId={slug} proof={detail.proof} /> : null}
+      <ServiceFaqSection serviceId={slug} serviceName={detail.serviceName} faqs={detail.faqs} />
+      <ServiceBottomCta
+        serviceId={slug}
+        serviceName={detail.serviceName}
+        bookState={detail.bookState}
+      />
     </>
   )
 }
