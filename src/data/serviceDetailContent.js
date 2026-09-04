@@ -1,3 +1,14 @@
+const proofClip = (service, id, label, caption) => ({
+  id,
+  label,
+  caption,
+  poster: `/video/service-proof/${service}/${id}-poster.webp`,
+  sources: {
+    av1: `/video/service-proof/${service}/${id}.av1.mp4`,
+    h264: `/video/service-proof/${service}/${id}.h264.mp4`,
+  },
+})
+
 export const SERVICE_DETAIL_CONTENT = {
   ppf: {
     serviceName: 'Paint Protection Film',
@@ -31,11 +42,15 @@ export const SERVICE_DETAIL_CONTENT = {
     proof: {
       eyebrow: 'Hakum installation proof',
       title: 'Protection, installed—not simulated.',
-      copy: 'Real PPF work from our team, showing the preparation, fit, and finished surface.',
-      sourceName: 'ppf 01.mp4',
-      label: 'Hakum Paint Protection Film installation proof',
-      video: new URL('../assets/service-proof/ppf-proof.mp4', import.meta.url).href,
-      poster: new URL('../assets/service-proof/ppf-proof-poster.webp', import.meta.url).href,
+      copy: 'Real PPF work from our team, showing preparation, installation, owner feedback, and finished vehicles.',
+      clips: [
+        proofClip('ppf', 'fortuner', 'Hakum full-body PPF installation on a Toyota Fortuner', 'Toyota Fortuner · Full-body PPF installation'),
+        proofClip('ppf', 'hilux', 'Hakum full-body PPF installation on a Toyota Hilux', 'Toyota Hilux · Full-body PPF installation'),
+        proofClip('ppf', 'sorento', 'Hakum full-body PPF installation on a Kia Sorento', 'Kia Sorento · Full-body PPF installation'),
+        proofClip('ppf', 'full-body-install', 'Hakum full-body Paint Protection Film preparation and installation', 'Full-body PPF · Preparation and installation'),
+        proofClip('ppf', 'panel-install', 'Hakum technician applying Paint Protection Film to a vehicle panel', 'PPF installation · Hands-on application'),
+        proofClip('ppf', 'civic-feedback', 'Civic Type R owner feedback after Hakum Paint Protection Film service', 'Civic Type R · Owner feedback'),
+      ],
     },
   },
   ceramic: {
@@ -74,11 +89,15 @@ export const SERVICE_DETAIL_CONTENT = {
     proof: {
       eyebrow: 'Hakum coating proof',
       title: 'Gloss you can see move.',
-      copy: 'A real Ceramic Coating result from our team, captured across the bodywork as light travels over the finish.',
-      sourceName: 'CR-V CERAMIC 30 SEC.mp4',
-      label: 'Hakum Ceramic Coating video proof',
-      video: new URL('../assets/service-proof/ceramic-proof.mp4', import.meta.url).href,
-      poster: new URL('../assets/service-proof/ceramic-proof-poster.webp', import.meta.url).href,
+      copy: 'Real Ceramic Coating work across different finishes, captured during preparation, application, and final inspection.',
+      clips: [
+        proofClip('ceramic', 'honda-city', 'Hakum Ceramic Coating preparation and finish on a Honda City', 'Honda City · Coating preparation and finish'),
+        proofClip('ceramic', 'byd-emax6', 'Hakum Ceramic Coating application on a BYD eMAX 6', 'BYD eMAX 6 · Coating application'),
+        proofClip('ceramic', 'crv', 'Hakum Ceramic Coating preparation and finish on a Honda CR-V', 'Honda CR-V · Coating preparation and finish'),
+        proofClip('ceramic', 'veloz', 'Hakum Ceramic Coating application and finish on a Toyota Veloz', 'Toyota Veloz · Application and finish'),
+        proofClip('ceramic', 'vios', 'Hakum Ceramic Coating application and finish on a Toyota Vios', 'Toyota Vios · Application and finish'),
+        proofClip('ceramic', 'nissan', 'Hakum Ceramic Coating application and gloss finish on a Nissan', 'Nissan · Application and gloss finish'),
+      ],
     },
   },
   tint: {
@@ -110,5 +129,15 @@ export const SERVICE_DETAIL_CONTENT = {
         answer: 'We balance cabin comfort, outward visibility, vehicle glass, and current road requirements. The team can show the available shades before installation so you can choose confidently.',
       },
     ],
+    proof: {
+      eyebrow: 'Hakum tint proof',
+      title: 'Installed for the road ahead.',
+      copy: 'Real Nano Ceramic Tint installations from preparation through the finished glass.',
+      clips: [
+        proofClip('tint', 'naval', 'Hakum Nano Ceramic Tint installation on a white SUV', 'White SUV · Nano Ceramic Tint installation'),
+        proofClip('tint', 'wigo', 'Hakum Nano Ceramic Tint installation on a Toyota Wigo', 'Toyota Wigo · Nano Ceramic Tint installation'),
+        proofClip('tint', 'toyota86', 'Hakum Nano Ceramic Tint installation on a Toyota 86', 'Toyota 86 · Nano Ceramic Tint installation'),
+      ],
+    },
   },
 }
