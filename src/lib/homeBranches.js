@@ -12,8 +12,13 @@ const COMING_SOON_BRANCH = {
   status: 'Coming Soon',
 }
 
-function displayName(branch) {
-  return String(branch.name || branch.slug || '').replace('Hakum Auto Care ', '')
+export function publicBranchName(branch) {
+  const name = String(branch.name || branch.slug || '')
+    .replace(/^Hakum Auto Care\s*/i, '')
+    .replace(/\s*Branch$/i, '')
+    .trim()
+  if (branch.slug === 'dasmarinas' || /^dasmari(?:n|ñ)as$/i.test(name)) return 'Dasmariñas'
+  return name
 }
 
 function isComingSoonRow(row) {
@@ -23,7 +28,7 @@ function isComingSoonRow(row) {
 function activeCard(branch) {
   return {
     slug: branch.slug,
-    name: displayName(branch),
+    name: publicBranchName(branch),
     address: branch.address || branch.slug,
     href: branch.href || `/queue/${branch.slug}`,
     isComingSoon: false,
@@ -34,7 +39,7 @@ function activeCard(branch) {
 function comingSoonCard(branch) {
   return {
     slug: branch.slug,
-    name: displayName(branch),
+    name: publicBranchName(branch),
     address: branch.address || branch.slug,
     href: null,
     isComingSoon: true,

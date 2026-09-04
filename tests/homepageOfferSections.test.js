@@ -92,7 +92,7 @@ describe('PPF package value ladder', () => {
     assert.match(section, /ppf-install-proof/)
   })
 
-  it('states the shared inclusions once and keeps the specifics on demand', async () => {
+  it('states shared inclusions once and keeps tier specifics in the active accordion panel', async () => {
     const section = await read('src/components/public/home/PpfPackagesSection.jsx')
 
     assert.match(section, /ppf-package-included/)
@@ -100,9 +100,14 @@ describe('PPF package value ladder', () => {
     /* Self-healing, hydrophobic and seamless are on all three tiers — printing
        them per row is what made the packages look interchangeable. */
     assert.doesNotMatch(section, /ppf-ladder-highlights|highlights\.map/)
-    assert.match(section, /ppf-ladder-figures/)
-    assert.match(section, /aria-controls=\{card\.detailsId\}/)
-    assert.match(section, /className="ppf-ladder-details" id=\{card\.detailsId\} hidden=\{!open\}/)
+    assert.match(section, /className="ppfa-lane"/)
+    assert.match(section, /className=\{`ppfa-panelcard/)
+    assert.match(section, /aria-expanded=\{isOpen\}/)
+    assert.match(section, /onMouseEnter=\{\(\) => setActive\(i\)\}/)
+    assert.match(section, /onFocus=\{\(\) => setActive\(i\)\}/)
+    assert.match(section, /onClick=\{\(\) => setActive\(i\)\}/)
+    assert.match(section, /className="ppfa-figure"/)
+    assert.match(section, /className="ppfa-specs"/)
     /* Three repeated disclaimers collapse into one. */
     assert.equal((section.match(/Warranties cover manufacturer defects/g) || []).length, 1)
   })

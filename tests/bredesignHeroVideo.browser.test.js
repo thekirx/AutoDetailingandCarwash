@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import puppeteer from 'puppeteer'
 
-const PREVIEW_URL = process.env.PREVIEW_URL || 'http://127.0.0.1:4173/home'
+const PREVIEW_ORIGIN = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:4173'
+const PREVIEW_URL = process.env.PREVIEW_URL || new URL('/home', PREVIEW_ORIGIN).href
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 
 describe('BreDESIGN hero video fallback', () => {

@@ -3,8 +3,9 @@ import { ArrowRight, ArrowUpRight, Facebook, Instagram, Mail, MapPin, Menu, Phon
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import PublicPageMeta from '@/components/PublicPageMeta'
 import NotificationBell from '@/components/NotificationBell'
+import { CookiePreferencesButton } from '@/components/CookieConsent'
 import { useAuth } from '@/auth/AuthProvider'
-import { usePublicBranches } from '@/lib/branches'
+import { branchCityName, usePublicBranches } from '@/lib/branches'
 import { CustomerInstallPopup } from '@/components/InstallGuide'
 import TikTokIcon from '@/components/public/TikTokIcon'
 import { PUBLIC_NAV_ITEMS } from '@/data/publicNavigation'
@@ -116,7 +117,7 @@ export default function PublicLayout() {
 
   useEffect(() => setOpen(false), [pathname])
 
-  const footerCities = visibleBranches.map((b) => b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name).join(' · ') || 'Philippines'
+  const footerCities = visibleBranches.map(branchCityName).join(' · ') || 'Philippines'
 
   if (accountRoute) {
     return (
@@ -196,7 +197,7 @@ export default function PublicLayout() {
             {visibleBranches.length ? visibleBranches.map((b, i) => (
               <Link key={b.slug} to={b.coming_soon ? '/branches' : `/queue/${b.slug}`}>
                 <span>{String(i + 1).padStart(2, '0')}</span>
-                <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name}</strong>
+                <strong>{branchCityName(b)}</strong>
                 <small>{b.coming_soon ? 'Coming soon' : (b.address || 'Open daily')}</small>
                 <ArrowUpRight />
               </Link>
@@ -233,6 +234,18 @@ export default function PublicLayout() {
               <MapPin />
               {footerCities}
             </span>
+          </div>
+        </div>
+
+        <div className="public-shell footer-navigation">
+          <nav aria-label="Legal and privacy">
+            <Link to="/terms">Terms</Link>
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/cookies">Cookies</Link>
+            <CookiePreferencesButton />
+          </nav>
+          <div>
+            <span>© {new Date().getFullYear()} Hakum Auto Care</span>
           </div>
         </div>
 

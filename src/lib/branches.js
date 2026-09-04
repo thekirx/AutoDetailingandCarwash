@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
+import { publicBranchName } from './homeBranches.js'
 
 const BRANCH_SELECT = 'slug, name, address, code, latitude, longitude, coming_soon, is_active, is_public'
 
@@ -104,9 +105,7 @@ export function usePublicBranches({ mode = 'bookable' } = {}) {
  * "Dasmarinas Branch") reading consistently in lists and the hero location line.
  */
 export function branchCityName(row) {
-  const name = row?.name || ''
-  const short = name.replace(/^Hakum Auto Care\s*/i, '').replace(/\s*Branch$/i, '').trim()
-  return short || name
+  return publicBranchName(row)
 }
 
 export function branchLabel(count) {
@@ -129,4 +128,3 @@ export function branchNameMap(rows = []) {
 }
 
 export { requireBranchSlug, branchSlugsForOwnPay } from './branchScope.js'
-

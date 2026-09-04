@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { usePublicBranches, branchLabel, fetchPublicBranchHours } from '../lib/branches'
+import { usePublicBranches, branchCityName, branchLabel, fetchPublicBranchHours } from '../lib/branches'
 import { buildHomeBranchCards } from '../lib/homeBranches'
 import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
 import {
@@ -252,7 +252,7 @@ function BranchSiteCard({ branch, hours = [] }) {
   return (
     <article className="bd-site">
       <div className="bd-site-top">
-        <h2>{branch.name.replace(/^Hakum Auto Care\s*/i, '') || branch.name}</h2>
+        <h2>{branchCityName(branch)}</h2>
         <span className={`bd-status bd-status-${tone}`}>
           <i aria-hidden="true" />
           {badge}

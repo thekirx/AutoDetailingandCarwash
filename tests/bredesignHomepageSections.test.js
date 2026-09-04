@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import puppeteer from 'puppeteer'
 
-const PREVIEW_URL = process.env.PREVIEW_URL || 'http://127.0.0.1:4173/home'
+const PREVIEW_ORIGIN = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:4173'
+const PREVIEW_URL = process.env.PREVIEW_URL || new URL('/home', PREVIEW_ORIGIN).href
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 
 describe('BreDESIGN homepage fallback sections', () => {
@@ -40,10 +41,12 @@ describe('BreDESIGN homepage fallback sections', () => {
     assert.deepEqual(sections.branchCards, ['Bacoor', 'Batangas', 'Dasmariñas'])
   })
 
-  it('shows membership rewards and points in the customer app preview', async () => {
+  it('shows the real stamp-card rewards model instead of obsolete membership points', async () => {
     const appCopy = await page.$eval('#app-preview', (section) => section.textContent.replace(/\s+/g, ' ').trim())
-    assert.match(appCopy, /Membership rewards/i)
-    assert.match(appCopy, /points/i)
+    assert.match(appCopy, /Hakum rewards/i)
+    assert.match(appCopy, /4 stamps from a free wash/i)
+    assert.match(appCopy, /Stamp rewards/i)
+    assert.doesNotMatch(appCopy, /points/i)
   })
 
   it('keeps section spacing compact and exposes the TikTok channel', async () => {
