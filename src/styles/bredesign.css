@@ -2260,3 +2260,191 @@
   letter-spacing: .12em;
   text-transform: uppercase;
 }
+
+/* ==== App preview: blocks the real app actually leads with ==============
+   Replaces the ticket / quick-grid / next-visit set, which showed a state most
+   customers never see and omitted the stamp card entirely. */
+
+/* `.bd-app-topbar div` sets grid on every div in the header, which caught this
+   row and stacked the three controls vertically. Same specificity, so it needs
+   to win on order — and it is declared later in the file. */
+.bredesign .bd-app-topbar .bd-app-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bredesign .bd-app-controls i {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(157, 180, 255, 0.14);
+  color: var(--bd-paper);
+}
+/* The unread count is the detail that makes the header read as a live app
+   rather than a static screenshot. */
+.bredesign .bd-app-controls .has-badge b {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 99px;
+  background: #d63b31;   /* #e0463c gave white 4.11:1 at this size */
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 13px;
+  text-align: center;
+}
+
+.bredesign .bd-app-branch {
+  margin-top: 22px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(2, 10, 49, 0.62);
+  border: 1px solid rgba(157, 180, 255, 0.16);
+}
+.bredesign .bd-app-branch-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bredesign .bd-app-branch-head span {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+.bredesign .bd-app-branch-head strong {
+  font-family: var(--bd-display);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--bd-paper);
+}
+.bredesign .bd-app-queue {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  text-align: center;
+}
+.bredesign .bd-app-queue b {
+  display: block;
+  font-family: var(--bd-display);
+  font-style: italic;
+  font-size: 19px;
+  line-height: 1;
+  color: var(--bd-paper);
+  font-variant-numeric: tabular-nums;
+}
+.bredesign .bd-app-queue span {
+  display: block;
+  margin-top: 4px;
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bd-ink-3);
+}
+
+.bredesign .bd-app-rewards {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: linear-gradient(150deg, rgba(45, 89, 211, 0.34), rgba(2, 10, 49, 0.6));
+  border: 1px solid rgba(157, 180, 255, 0.2);
+}
+.bredesign .bd-app-rewards-kicker {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+.bredesign .bd-app-rewards strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--bd-paper);
+}
+/* Ten stamps in one row: the card is the point, and wrapping it into a grid at
+   this size turns it into confetti. */
+.bredesign .bd-app-stamps {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+}
+.bredesign .bd-app-stamps span {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(157, 180, 255, 0.28);
+  font-size: 7px;
+  font-weight: 800;
+  color: var(--bd-ink-3);
+}
+.bredesign .bd-app-stamps .is-filled {
+  background: var(--bd-paper);
+  border-color: var(--bd-paper);
+  color: var(--bd-navy);
+}
+.bredesign .bd-app-rewards small {
+  display: block;
+  margin-top: 9px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--bd-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The tab bar is what makes the frame read as an app. It is pinned to the
+   bottom of the screen the way the real one is. */
+.bredesign .bd-app-tabs {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 9px 4px 4px;
+  border-top: 1px solid rgba(157, 180, 255, 0.16);
+}
+.bredesign .bd-app-tabs span {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--bd-ink-3);
+}
+.bredesign .bd-app-tabs .is-active {
+  color: var(--bd-paper);
+}
+
+.bredesign .bd-app-note {
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--bd-ink-4);
+}
+
+/* The screen is a column so the tab bar sits on the bottom edge rather than
+   directly under the last card, leaving a dead band beneath it. */
+.bredesign .bd-app-screen {
+  display: flex;
+  flex-direction: column;
+}
