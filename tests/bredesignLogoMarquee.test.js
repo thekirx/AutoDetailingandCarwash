@@ -23,7 +23,7 @@ const hoverVisibleBrand = async (page) => {
   await page.mouse.move(point.x, point.y)
 }
 
-describe('BreDESIGN supplier logo marquee', () => {
+describe('BreDESIGN brand logo marquee', () => {
   let browser
   let page
 
@@ -46,27 +46,25 @@ describe('BreDESIGN supplier logo marquee', () => {
     await browser?.close()
   })
 
-  it('presents supplier marks as a borderless navy rail that brightens on hover', async () => {
+  it('presents brand logos as a borderless navy rail that brightens on hover', async () => {
     const resting = await page.$eval('.bd-brand', (brand) => {
       const tile = getComputedStyle(brand)
       const logo = getComputedStyle(brand.querySelector('img'))
       const marquee = getComputedStyle(brand.closest('.bd-marquee'))
       const section = getComputedStyle(brand.closest('.bd-products'))
-      const noteLabel = getComputedStyle(document.querySelector('.bd-brand-note em'))
       return {
         borderTopWidth: tile.borderTopWidth,
         backgroundColor: tile.backgroundColor,
         filter: logo.filter,
         marqueeBackground: marquee.backgroundColor,
         sectionBackground: section.backgroundColor,
-        noteBorderWidth: noteLabel.borderTopWidth,
       }
     })
 
     assert.equal(resting.borderTopWidth, '0px')
     assert.equal(resting.backgroundColor, 'rgba(0, 0, 0, 0)')
     assert.equal(resting.marqueeBackground, resting.sectionBackground)
-    assert.equal(resting.noteBorderWidth, '0px')
+    assert.equal(await page.$('.bd-brand-note'), null)
     assert.match(resting.filter, /grayscale\(1\)/)
 
     await page.$eval('.bd-marquee', (marquee) => marquee.scrollIntoView({ block: 'center' }))

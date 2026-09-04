@@ -117,7 +117,7 @@ function CountUp({ value, suffix }) {
   )
 }
 
-export default function BdHero({ locationLine }) {
+export default function BdHero() {
   const [videoFailed, setVideoFailed] = useState(false)
   const [live, setLive] = useState({ servicesDone: null, returningClients: null })
   /* Sized to the pixels this screen can actually draw, then held. Re-picking on
@@ -240,7 +240,6 @@ export default function BdHero({ locationLine }) {
         className={`bd-shell bd-hero-in${copyHidden ? ' is-logo-moment' : ''}`}
         aria-hidden={copyHidden || undefined}
       >
-        <p className="bd-eyebrow">{locationLine}</p>
         <h1>
           Give your car
           <br />

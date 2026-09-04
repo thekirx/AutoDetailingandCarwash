@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 
 const TABS = [
-  { key: 'partnership', label: 'Partnership', table: 'partnership_inquiries' },
+  { key: 'partnership', label: 'Brand Collabs', table: 'partnership_inquiries' },
   { key: 'contact', label: 'Contact', table: 'contact_inquiries' },
   { key: 'complaints', label: 'Complaints', table: 'complaints' },
 ]

@@ -578,6 +578,264 @@
   margin-top: 26px;
 }
 
+/* ==== Customer app preview ============================================== */
+
+.bredesign .bd-app-preview {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(70% 90% at 84% 50%, rgba(45, 89, 211, 0.3), transparent 68%),
+    var(--bd-navy);
+}
+.bredesign .bd-app-preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, rgba(157, 180, 255, 0.045) 1px, transparent 1px);
+  background-size: calc(100% / 8) 100%;
+  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+}
+.bredesign .bd-app-preview-in {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-items: center;
+  gap: clamp(44px, 7vw, 110px);
+}
+.bredesign .bd-app-copy h2 {
+  margin-top: 18px;
+  font-size: clamp(2.35rem, 5vw, 4.7rem);
+}
+.bredesign .bd-app-copy h2 em {
+  color: var(--bd-accent);
+}
+.bredesign .bd-app-copy > p:last-of-type {
+  margin-top: 24px;
+  max-width: 52ch;
+  color: var(--bd-ink-2);
+  font-size: 15.5px;
+  line-height: 1.75;
+}
+.bredesign .bd-app-actions {
+  margin-top: 30px;
+}
+.bredesign .bd-app-device-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+}
+.bredesign .bd-app-device-wrap > p {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bd-ink-3);
+}
+.bredesign .bd-app-device {
+  position: relative;
+  width: min(100%, 342px);
+  padding: 11px;
+  border: 1px solid rgba(157, 180, 255, 0.34);
+  border-radius: 42px;
+  background: #03091f;
+  box-shadow: 0 45px 90px rgba(0, 0, 0, 0.42), 0 0 70px rgba(45, 89, 211, 0.2);
+}
+.bredesign .bd-app-speaker {
+  position: absolute;
+  z-index: 2;
+  top: 19px;
+  left: 50%;
+  width: 76px;
+  height: 20px;
+  transform: translateX(-50%);
+  border-radius: 99px;
+  background: #03091f;
+}
+.bredesign .bd-app-screen {
+  min-height: 580px;
+  padding: 46px 18px 20px;
+  overflow: hidden;
+  border-radius: 32px;
+  background: linear-gradient(160deg, #0d1b52 0%, #08133f 48%, #050d2c 100%);
+}
+.bredesign .bd-app-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  color: var(--bd-paper);
+}
+.bredesign .bd-app-topbar div {
+  display: grid;
+  gap: 4px;
+}
+.bredesign .bd-app-topbar span,
+.bredesign .bd-app-next > span {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+.bredesign .bd-app-topbar strong {
+  font-size: 20px;
+  color: var(--bd-paper);
+}
+.bredesign .bd-app-ticket {
+  margin-top: 26px;
+  padding: 20px;
+  background: linear-gradient(145deg, rgba(45, 89, 211, 0.58), rgba(8, 19, 63, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.bredesign .bd-app-ticket-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.bredesign .bd-app-ticket-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #b9f5d0;
+}
+.bredesign .bd-app-ticket-head i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #5bd48f;
+  box-shadow: 0 0 0 4px rgba(91, 212, 143, 0.13);
+}
+.bredesign .bd-app-ticket-head strong {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--bd-paper);
+}
+.bredesign .bd-app-ticket h3 {
+  margin-top: 22px;
+  font-size: 25px;
+}
+.bredesign .bd-app-ticket > p {
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--bd-ink-2);
+}
+.bredesign .bd-app-progress {
+  height: 3px;
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.bredesign .bd-app-progress span {
+  display: block;
+  width: 68%;
+  height: 100%;
+  background: var(--bd-accent);
+}
+.bredesign .bd-app-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  color: var(--bd-accent);
+}
+.bredesign .bd-app-status span {
+  display: grid;
+  gap: 2px;
+  font-size: 9px;
+  color: var(--bd-ink-3);
+}
+.bredesign .bd-app-status b {
+  font-size: 10px;
+  color: var(--bd-paper);
+}
+.bredesign .bd-app-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.bredesign .bd-app-quick-grid > div,
+.bredesign .bd-app-next {
+  padding: 15px;
+  background: rgba(157, 180, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(157, 180, 255, 0.12);
+}
+.bredesign .bd-app-quick-grid svg {
+  color: var(--bd-accent);
+}
+.bredesign .bd-app-quick-grid b,
+.bredesign .bd-app-quick-grid span {
+  display: block;
+}
+.bredesign .bd-app-quick-grid b {
+  margin-top: 14px;
+  font-size: 23px;
+  color: var(--bd-paper);
+}
+.bredesign .bd-app-quick-grid span {
+  margin-top: 3px;
+  font-size: 8px;
+  color: var(--bd-ink-3);
+}
+.bredesign .bd-app-next {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+.bredesign .bd-app-next strong {
+  font-size: 12px;
+  color: var(--bd-paper);
+}
+.bredesign .bd-app-next small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--bd-ink-3);
+}
+.bredesign .bd-app-book {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: var(--bd-blue);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+}
+@media (min-width: 820px) {
+  .bredesign .bd-app-preview-in {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.75fr);
+  }
+}
+@media (max-width: 819px) {
+  .bredesign .bd-app-copy {
+    text-align: center;
+  }
+  .bredesign .bd-app-copy .bd-eyebrow,
+  .bredesign .bd-app-actions {
+    justify-content: center;
+  }
+  .bredesign .bd-app-copy > p:last-of-type {
+    margin-inline: auto;
+  }
+}
+@media (max-width: 430px) {
+  .bredesign .bd-app-device {
+    width: min(100%, 318px);
+  }
+  .bredesign .bd-app-screen {
+    min-height: 548px;
+  }
+}
+
 /* ==== Photos ============================================================= */
 
 .bredesign .bd-photos {
@@ -706,6 +964,35 @@
   font-size: 14px;
   line-height: 1.65;
   max-width: 46ch;
+}
+.bredesign .bd-section-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: clamp(24px, 3vw, 38px);
+  background: var(--bd-navy-3);
+  border: 1px solid var(--bd-rule);
+  box-shadow: var(--bd-lit);
+}
+.bredesign .bd-section-fallback strong {
+  display: block;
+  color: var(--bd-paper);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.bredesign .bd-section-fallback p {
+  margin-top: 8px;
+  color: var(--bd-ink-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+@media (max-width: 620px) {
+  .bredesign .bd-section-fallback {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 .bredesign .bd-all-link {
   display: inline-flex;
@@ -1739,30 +2026,6 @@
   white-space: nowrap;
   border: 0;
 }
-.bredesign .bd-brand-note {
-  margin-top: 18px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  /* The note is prose, so it takes the same floor as the rest of the body copy
-     and the same cap on line length — it ran to 147 characters at full width. */
-  font-size: 14px;
-  max-width: 74ch;
-  color: var(--bd-ink-3);
-  line-height: 1.6;
-}
-.bredesign .bd-brand-note em {
-  font-style: normal;
-  padding: 0;
-  border: 0;
-  color: var(--bd-accent-soft);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
 /* ==== Live queue on the branch cards ==================================== */
 
 .bredesign .bd-branch-queue {

@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict'
+import { after, before, describe, it } from 'node:test'
+import puppeteer from 'puppeteer'
+
+const PREVIEW_URL = process.env.PREVIEW_URL || 'http://127.0.0.1:4173/home'
+const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+
+describe('BreDESIGN homepage fallback sections', () => {
+  let browser
+  let page
+
+  before(async () => {
+    browser = await puppeteer.launch({
+      executablePath: CHROME_PATH,
+      headless: true,
+      args: ['--no-sandbox'],
+    })
+    page = await browser.newPage()
+    await page.setViewport({ width: 1440, height: 900 })
+    await page.goto(PREVIEW_URL, { waitUntil: 'networkidle0' })
+  })
+
+  after(async () => {
+    await browser?.close()
+  })
+
+  it('keeps Events & Meets and Live Queue visible without live backend rows', async () => {
+    const sections = await page.evaluate(() => ({
+      events: document.querySelector('#events h2')?.textContent.replace(/\s+/g, ' ').trim(),
+      queue: document.querySelector('#branches h2')?.textContent.replace(/\s+/g, ' ').trim(),
+      queueSubtext: document.querySelector('#branches .bd-head > p')?.textContent.replace(/\s+/g, ' ').trim(),
+    }))
+
+    assert.equal(sections.events, 'Events & meets.')
+    assert.equal(sections.queue, 'Live queue.')
+    assert.equal(sections.queueSubtext, 'Know the queue before you go.')
+  })
+
+  it('shows membership rewards and points in the customer app preview', async () => {
+    const appCopy = await page.$eval('#app-preview', (section) => section.textContent.replace(/\s+/g, ' ').trim())
+    assert.match(appCopy, /Membership rewards/i)
+    assert.match(appCopy, /points/i)
+  })
+})

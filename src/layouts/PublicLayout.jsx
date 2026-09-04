@@ -3,7 +3,6 @@ import { ArrowRight, ArrowUpRight, Facebook, Instagram, Mail, MapPin, Menu, Phon
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import PublicPageMeta from '@/components/PublicPageMeta'
 import NotificationBell from '@/components/NotificationBell'
-import { CookiePreferencesButton } from '@/components/CookieConsent'
 import { useAuth } from '@/auth/AuthProvider'
 import { usePublicBranches } from '@/lib/branches'
 import { CustomerInstallPopup } from '@/components/InstallGuide'
@@ -13,7 +12,7 @@ const navItems = [
   ['Services', '/services'],
   ['Packages', '/packages'],
   ['Branch', '/branches'],
-  ['Partnerships', '/partnerships'],
+  ['Brand Collabs', '/partnerships'],
   ['Events', '/events'],
   ['Blog', '/blog'],
   ['Live Queue', '/queue'],
@@ -239,24 +238,6 @@ export default function PublicLayout() {
           </div>
         </div>
 
-        <div className="public-shell footer-navigation">
-          <nav aria-label="Footer navigation">
-            {navItems.map(([label, to]) => (
-              <Link key={to} to={to}>
-                {label}
-              </Link>
-            ))}
-            <Link to="/book">Book a Service</Link>
-            <Link to="/signin">Sign in</Link>
-            <Link to="/terms">Terms</Link>
-            <Link to="/privacy">Privacy</Link>
-            <Link to="/cookies">Cookies</Link>
-            <CookiePreferencesButton />
-          </nav>
-          <div>
-            <span>© {new Date().getFullYear()} Hakum Auto Care</span>
-          </div>
-        </div>
       </footer>
       <CustomerInstallPopup enabled={isCustomer} />
     </div>

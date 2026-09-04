@@ -2,6 +2,7 @@ import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { branchCityName } from '../../../lib/branches'
+import { branchQueueTotal } from '../../../lib/liveQueuePath'
 import { usePublicQueueCounts } from '../../../lib/usePublicQueueCounts'
 import { IMAGES } from './content'
 
@@ -11,7 +12,6 @@ import { IMAGES } from './content'
    site already follows. */
 export function BdEvents({ state }) {
   const item = state?.item
-  if (!item) return null
 
   return (
     <section className="bd-events" id="events">
@@ -25,12 +25,14 @@ export function BdEvents({ state }) {
         </div>
         <article className="bd-event bd-reveal">
           <div className="bd-event-media">
-            <img src={item.mediaUrl || IMAGES.about} alt="" loading="lazy" />
+            <img src={item?.mediaUrl || IMAGES.about} alt="" loading="lazy" />
           </div>
           <div className="bd-event-body">
-            {item.dateLabel ? <p className="bd-event-date">{item.dateLabel}</p> : null}
-            <h3>{item.title}</h3>
-            {item.summary ? <p className="bd-event-summary">{item.summary}</p> : null}
+            {item?.dateLabel ? <p className="bd-event-date">{item.dateLabel}</p> : null}
+            <h3>{item?.title || 'See what is happening at Hakum.'}</h3>
+            <p className="bd-event-summary">
+              {item?.summary || 'Car meets, community events, launches, and the next reasons to pull up.'}
+            </p>
             <Link className="bd-all-link" to="/events">
               View all events <ArrowUpRight size={15} aria-hidden="true" />
             </Link>
@@ -53,10 +55,8 @@ export function BdBranches({ branches = [] }) {
   const { rows, error: queueError, loading: queueLoading } = usePublicQueueCounts()
   const queueBySlug = Object.create(null)
   rows.forEach((row) => {
-    queueBySlug[row.branch] = Number(row.waiting_count || 0)
+    queueBySlug[row.branch] = branchQueueTotal(row)
   })
-
-  if (!branches.length) return null
 
   return (
     <section className="bd-branches" id="branches">
@@ -67,25 +67,19 @@ export function BdBranches({ branches = [] }) {
             {/* The heading does not name a count: the branch list is live, and it
                 currently returns four entries including the HQ/office. A
                 hard-coded "three" would go wrong the moment a branch opens. */}
-            <h2 className="bd-skew">
-              Know the queue
-              <br />
-              before you go.
-            </h2>
+            <h2 className="bd-skew">Live queue.</h2>
           </div>
-          <p>
-            What is waiting at each branch right now, updated live. Walk in for a wash or a detail;
-            film and coating are worth booking ahead.
-          </p>
+          <p>Know the queue before you go.</p>
         </div>
-        <div className="bd-branch-grid bd-reveal">
-          {branches.map((branch) => {
+        {branches.length ? (
+          <div className="bd-branch-grid bd-reveal">
+            {branches.map((branch) => {
             const status = branchStatus(branch)
             /* The view groups by branch over active bookings, so a branch with
                an empty queue has no row at all. Absent means zero; only a
                failed or unfinished fetch is unknown. */
             const known = !queueLoading && !queueError
-            const waiting = known ? queueBySlug[branch.slug] ?? 0 : undefined
+            const total = known ? queueBySlug[branch.slug] ?? 0 : undefined
             return (
               <Link
                 className="bd-branch"
@@ -106,9 +100,9 @@ export function BdBranches({ branches = [] }) {
                     unreached count says so rather than showing a confident 0. */}
                 {branch.coming_soon ? null : (
                   <p className="bd-branch-queue">
-                    <span className="bd-queue-num">{waiting === undefined ? '—' : waiting}</span>
+                    <span className="bd-queue-num">{total === undefined ? '—' : total}</span>
                     <span className="bd-queue-label">
-                      {waiting === 1 ? 'vehicle waiting now' : 'vehicles waiting now'}
+                      {total === 1 ? 'active vehicle now' : 'active vehicles now'}
                     </span>
                   </p>
                 )}
@@ -119,8 +113,19 @@ export function BdBranches({ branches = [] }) {
                 </span>
               </Link>
             )
-          })}
-        </div>
+            })}
+          </div>
+        ) : (
+          <div className="bd-section-fallback bd-reveal">
+            <div>
+              <strong>Live branch counts</strong>
+              <p>Open the queue board to see every active vehicle across Hakum.</p>
+            </div>
+            <Link className="bd-all-link" to="/queue">
+              View live queue <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   )

@@ -24,7 +24,7 @@ describe('partnership inquiry frontend boundary', () => {
      itself — submissions go through the service-role API. */
   it('submits through the public inquiry API, never straight to the table', () => {
     assert.match(src, /submitPublicInquiry\('partnership'/)
-    assert.match(src, /from '\.\/publicInquiryApi'/)
+    assert.match(src, /from '\.\/publicInquiryApi(?:\.js)?'/)
     assert.doesNotMatch(src, /from\('partnership_inquiries'\)/)
     assert.doesNotMatch(src, /from '\.\/supabase'/)
   })

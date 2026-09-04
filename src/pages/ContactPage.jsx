@@ -25,7 +25,7 @@ const channels = [
     icon: Mail,
     label: 'Admin and billing',
     value: 'admin@hakumautocare.com',
-    hint: 'Invoices, records, and partnerships',
+    hint: 'Invoices, records, and brand collaborations',
     href: 'mailto:admin@hakumautocare.com',
   },
 ]

@@ -8,8 +8,6 @@ import useMarquee from './useMarquee'
  * sizes, paddings and grounds; without that pass the row reads as a sticker
  * sheet rather than a wall.
  *
- * Display rights still need confirming with each distributor before launch,
- * which the note under the wall says on the page rather than only here.
  */
 
 const BRANDS = [
@@ -102,14 +100,6 @@ export default function BdProducts() {
         Products we use: {BRANDS.map((b) => `${b.name} for ${b.use.toLowerCase()}`).join(', ')}.
       </p>
 
-      <div className="bd-shell">
-
-        <p className="bd-brand-note">
-          <em>Supplier marks</em>
-          Logo artwork as supplied by each distributor. Confirm display rights with each brand before
-          launch.
-        </p>
-      </div>
     </section>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+import BdAppPreview from '../components/public/bredesign/BdAppPreview'
 import BdHero from '../components/public/bredesign/BdHero'
 import BdProducts from '../components/public/bredesign/BdProducts'
 import { BdBranches, BdEvents } from '../components/public/bredesign/BdEventsBranches'
@@ -10,7 +11,7 @@ import {
   BdServices,
 } from '../components/public/bredesign/BdSections'
 import useReveal from '../components/public/bredesign/useReveal'
-import { usePublicBranches, branchCityName } from '../lib/branches'
+import { usePublicBranches } from '../lib/branches'
 import { loadHomepageContent } from '../lib/homepageContent'
 import { supabase } from '../lib/supabase'
 
@@ -25,10 +26,6 @@ export default function PublicLandingPage() {
      knows it is coming rather than concluding we are not there. */
   const { branches: visibleBranches } = usePublicBranches({ mode: 'visible' })
   const [content, setContent] = useState(INITIAL_CONTENT)
-  const locationLine = visibleBranches.length
-    ? visibleBranches.map((branch) => branchCityName(branch)).join(' / ')
-    : 'Dasmariñas / Bacoor / Batangas'
-
   useEffect(() => {
     let active = true
     loadHomepageContent(supabase)
@@ -49,9 +46,10 @@ export default function PublicLandingPage() {
 
   return (
     <>
-      <BdHero locationLine={locationLine} />
+      <BdHero />
       <BdOrigin />
       <BdServices />
+      <BdAppPreview />
       <BdPhotos />
       <BdEvents state={content.event} />
       <BdBranches branches={visibleBranches} />
