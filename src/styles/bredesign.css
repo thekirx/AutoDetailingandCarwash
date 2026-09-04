@@ -2018,12 +2018,15 @@
 .bredesign .bd-marquee.is-grabbing {
   cursor: grabbing;
 }
+/* Full colour, no grey wash. These marks are supplier artwork drawn for light
+   grounds — Kisho and Meguiar's are near-black, Menzerna is dark red — so each
+   tile carries the ground it was designed on rather than being cut out and
+   dropped onto navy, where the dark ones would simply vanish. */
 .bredesign .bd-marquee img {
   -webkit-user-drag: none;
   pointer-events: none;
-  filter: grayscale(1);
-  opacity: 0.56;
-  transition: filter 220ms ease, opacity 220ms ease, transform 220ms ease;
+  border-radius: 3px;
+  transition: transform 220ms ease, box-shadow 220ms ease;
 }
 .bredesign .bd-marquee-run {
   display: flex;
@@ -2046,9 +2049,8 @@
   height: auto;
 }
 .bredesign .bd-brand:hover img {
-  filter: grayscale(0) drop-shadow(0 0 16px rgba(112, 137, 255, 0.48));
-  opacity: 1;
-  transform: scale(1.035);
+  transform: scale(1.04);
+  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(157, 180, 255, 0.5);
 }
 /* Reduced motion stops the drift in the hook itself; the strip stays draggable,
    so nothing becomes unreachable. */

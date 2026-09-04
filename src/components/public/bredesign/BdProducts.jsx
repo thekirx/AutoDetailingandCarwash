@@ -14,42 +14,42 @@ const BRANDS = [
   {
     name: 'ClearPro',
     use: 'Paint protection film',
-    src: new URL('../../../assets/brands/clearpro.png', import.meta.url).href,
+    src: new URL('../../../assets/brands/color/clearpro.png', import.meta.url).href,
   },
   {
     name: 'F1 Auto Films',
     use: 'Window film',
-    src: new URL('../../../assets/brands/f1-auto-films.png', import.meta.url).href,
+    src: new URL('../../../assets/brands/color/f1-auto-films.png', import.meta.url).href,
   },
   {
     name: 'Kisho',
     use: 'Ceramic coating',
-    src: new URL('../../../assets/brands/kisho.png', import.meta.url).href,
+    src: new URL('../../../assets/brands/color/kisho.png', import.meta.url).href,
   },
   {
     name: 'Menzerna',
     use: 'Polishing compounds',
-    src: new URL('../../../assets/brands/menzerna.png', import.meta.url).href,
+    src: new URL('../../../assets/brands/color/menzerna.png', import.meta.url).href,
   },
   {
     name: 'Rupes',
     use: 'Polishing systems',
-    src: new URL('../../../assets/brands/rupes.png', import.meta.url).href,
+    src: new URL('../../../assets/brands/color/rupes.png', import.meta.url).href,
   },
   {
     name: 'Sonax',
     use: 'Detailing chemistry',
-    src: new URL('../../../assets/brands/sonax.png', import.meta.url).href,
+    src: new URL('../../../assets/brands/color/sonax.png', import.meta.url).href,
   },
   {
     name: "Meguiar's",
     use: 'Surface care',
-    src: new URL('../../../assets/brands/meguiars.png', import.meta.url).href,
+    src: new URL('../../../assets/brands/color/meguiars.png', import.meta.url).href,
   },
   {
     name: 'Microtex',
     use: 'Towels & applicators',
-    src: new URL('../../../assets/brands/microtex.png', import.meta.url).href,
+    src: new URL('../../../assets/brands/color/microtex.png', import.meta.url).href,
   },
 ]
 

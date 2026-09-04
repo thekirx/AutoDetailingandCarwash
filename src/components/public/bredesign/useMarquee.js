@@ -17,11 +17,16 @@ import { useEffect, useRef } from 'react'
  * most expensive way to do the cheapest thing.
  */
 
-const BASE_VELOCITY = 34 // px/sec of resting drift
-const MAX_VELOCITY = 2600 // a hard flick should not become a blur
-const DECAY_TAU = 0.85 // seconds to settle back toward the drift
+/* Tuned down from a first pass that read as fast: a logo wall should look like
+   it is barely moving, and the reader should notice the marks rather than the
+   motion. Measured at the section, the old values reached ~1100 px/s simply
+   from scrolling it into view — the scroll impulse, not the drift, was the
+   problem, so the ceiling and the boost come down hardest. */
+const BASE_VELOCITY = 20 // px/sec of resting drift
+const MAX_VELOCITY = 820 // a hard flick should not become a blur
+const DECAY_TAU = 0.7 // seconds to settle back toward the drift
 const DIRECTION = 1 // 1 moves the logos left-to-right; -1 reverses it
-const SCROLL_BOOST = 2.4 // page-scroll pixels translated into a short velocity impulse
+const SCROLL_BOOST = 0.55 // page-scroll pixels translated into a short velocity impulse
 
 export default function useMarquee() {
   const viewportRef = useRef(null)
