@@ -19,6 +19,7 @@ const STATUS_BADGE_MAP = {
   notified: { label: 'Notified', className: 'border-transparent bg-[var(--status-paid-soft)] text-[var(--status-paid)]' },
   scheduled: { label: 'Scheduled', className: 'border-transparent bg-[var(--status-washing-soft)] text-[var(--status-washing)]' },
   overdue: { label: 'Overdue', className: 'border-transparent bg-[var(--status-late-soft)] text-[var(--status-late)]' },
+  present: { label: 'Present', className: 'border-transparent bg-[var(--status-ready-soft)] text-[var(--status-ready)]' },
 }
 
 export default function StatusBadge({ status, label, className }) {

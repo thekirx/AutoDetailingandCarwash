@@ -47,3 +47,9 @@ test('Phase 4: status token pairs + floor/capp touch targets', () => {
   assert.match(capp, /\.capp-dock/)
   assert.doesNotMatch(css, /@fontsource-variable\/geist/)
 })
+
+test('ops CSS has no html:not(.dark) light-rewrite layer', () => {
+  const css = read('src/styles.css')
+  assert.doesNotMatch(css, /html:not\(\.dark\)/)
+  assert.match(css, /\.floor-control\s*\{[^}]*background:\s*#ffffff/s)
+})

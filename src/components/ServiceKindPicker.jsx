@@ -62,7 +62,7 @@ export default function ServiceKindPicker({
 
   return (
     <fieldset className="sm:col-span-2 space-y-3" disabled={disabled}>
-      <legend className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+      <legend className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
         Services for this visit
       </legend>
 
@@ -90,13 +90,13 @@ export default function ServiceKindPicker({
         })}
       </div>
 
-      <p className="text-xs text-slate-400">{kindMeta.hint}</p>
+      <p className="text-xs text-muted-foreground">{kindMeta.hint}</p>
 
       <div className="relative">
         <label className="sr-only" htmlFor="service-kind-search">
           Search {kindMeta.label}
         </label>
-        <div className="pointer-events-none absolute inset-y-0 left-3 z-[1] flex items-center text-slate-500">
+        <div className="pointer-events-none absolute inset-y-0 left-3 z-[1] flex items-center text-muted-foreground">
           <Search size={16} aria-hidden />
         </div>
         <input
@@ -117,7 +117,7 @@ export default function ServiceKindPicker({
           aria-expanded={open}
           aria-controls="service-kind-listbox"
           onClick={() => setOpen((v) => !v)}
-          className="absolute inset-y-0 right-0 z-[1] grid min-w-12 place-items-center rounded-r-xl text-slate-500 hover:text-slate-700"
+          className="absolute inset-y-0 right-0 z-[1] grid min-w-12 place-items-center rounded-r-xl text-muted-foreground hover:text-foreground"
         >
           <ChevronsUpDown size={18} aria-hidden />
           <span className="sr-only">{open ? 'Close list' : 'Open list'}</span>
