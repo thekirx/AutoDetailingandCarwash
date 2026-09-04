@@ -1,6 +1,12 @@
 import { Bell, CalendarDays, Home, LogOut, Newspaper, Radio, Settings, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+/* Device frame from the "iPhone 15 / 15 Pro Device Frames" Figma Community
+   file, exported at 1x with the screen subtracted. It is an overlay: the app
+   content below is live DOM showing through the cut-out, not a screenshot
+   pasted into a picture of a phone. */
+const DEVICE_FRAME = new URL('../../../assets/device/iphone-15-pro-white-titanium.svg', import.meta.url).href
+
 /**
  * A miniature of the real customer app, not an idealised one.
  *
@@ -60,7 +66,6 @@ export default function BdAppPreview() {
               tech and summarised in one line below, rather than walking a reader
               through decorative controls that do nothing. */}
           <div className="bd-app-device" aria-hidden="true">
-            <div className="bd-app-speaker" />
             <div className="bd-app-screen">
               <div className="bd-app-topbar">
                 <div>
@@ -125,6 +130,7 @@ export default function BdAppPreview() {
                 </span>
               </div>
             </div>
+            <img className="bd-app-frame" src={DEVICE_FRAME} alt="" draggable="false" />
           </div>
           <p>Live branch status · Stamp rewards · Booking history</p>
           <p className="bd-app-note">Illustrative figures</p>

@@ -2089,12 +2089,27 @@
   width: clamp(148px, 15vw, 196px);
   height: auto;
 }
-.bredesign .bd-brand:hover img {
-  transform: scale(1.04);
-  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(157, 180, 255, 0.5);
+/* Matches the deployed bredesign build exactly: the marks sit greyscale and
+   knocked back so the strip reads as one wall, and hover lifts a single mark
+   with a blue glow rather than restoring supplier colour. Colour was tried and
+   dropped — Kisho and Microtex are black-ink marks and vanished against the
+   navy. The artwork is the white cut-out set, so nothing sits in a box. */
+.bredesign .bd-marquee img {
+  filter: grayscale(1);
+  opacity: 0.56;
+  transition: filter 0.22s, opacity 0.22s, transform 0.22s;
 }
-/* Reduced motion stops the drift in the hook itself; the strip stays draggable,
-   so nothing becomes unreachable. */
+.bredesign .bd-brand:hover img,
+.bredesign .bd-brand:focus-within img {
+  filter: grayscale(0) drop-shadow(0 0 16px rgba(112, 137, 255, 0.48));
+  opacity: 1;
+  transform: scale(1.035);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bredesign .bd-marquee img { transition: none; }
+  .bredesign .bd-brand:hover img { transform: none; }
+}
+
 .bredesign .bd-sr-only {
   position: absolute;
   width: 1px;
@@ -2504,4 +2519,58 @@
 .bredesign .bd-app-screen {
   display: flex;
   flex-direction: column;
+}
+
+/* ==== Phone frame ======================================================== */
+/* The frame is the Figma Community "iPhone 15 / 15 Pro Device Frames" export
+   with the screen subtracted, laid over the live app markup. The screen is
+   real DOM behind a cut-out, so the text stays selectable-sharp at any density
+   rather than being a flattened screenshot.
+   Every number below is the Figma geometry divided by the artboard: the device
+   is 1294x2656 and the screen sits at 57,50 measuring 1179x2556. */
+.bredesign .bd-app-device {
+  position: relative;
+  width: min(100%, 342px);
+  aspect-ratio: 1294 / 2656;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: drop-shadow(0 45px 90px rgba(0, 0, 0, 0.5));
+}
+
+.bredesign .bd-app-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.bredesign .bd-app-screen {
+  position: absolute;
+  left: 4.4049%;   /* 57 / 1294  */
+  top: 1.8825%;    /* 50 / 2656  */
+  width: 91.1128%; /* 1179 / 1294 */
+  height: 96.2349%;/* 2556 / 2656 */
+  min-height: 0;
+  z-index: 1;
+  overflow: hidden;
+  /* Deliberately tighter than the cut-out: the bezel then covers the screen
+     corners, so no page background can show in the curve. */
+  border-radius: 38px;
+  padding: 46px 16px 18px;
+}
+
+@media (max-width: 720px) {
+  .bredesign .bd-app-device {
+    width: min(100%, 318px);
+  }
+  .bredesign .bd-app-screen {
+    border-radius: 34px;
+    padding: 42px 14px 16px;
+  }
 }
