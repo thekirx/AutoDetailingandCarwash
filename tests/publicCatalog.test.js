@@ -53,6 +53,20 @@ describe('public catalog uses inventory names', () => {
     assert.equal(rows[1].title, 'Premium Car Wash')
   })
 
+  it('keeps the public service catalog usable when the live catalog is unavailable', () => {
+    const rows = buildPublicServiceOverview([])
+
+    assert.deepEqual(rows.map((item) => item.title), [
+      'Carwash',
+      'Interior Detailing',
+      'Ceramic Tint',
+      'Ceramic Coating',
+      'Glass Detailing',
+      'Engine Wash',
+      'Paint Protection Film',
+    ])
+  })
+
   it('maps Glass / Engine / Mobile homepage SKUs to marketing copy', () => {
     assert.match(marketingCopyForServiceSlug('glass-detailing'), /glass/i)
     assert.match(marketingCopyForServiceSlug('engine-wash'), /engine/i)

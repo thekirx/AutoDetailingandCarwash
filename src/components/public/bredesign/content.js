@@ -18,6 +18,7 @@ export const IMAGES = {
   glass: new URL('../../../assets/services/glass-detailing.webp', import.meta.url).href,
   carwash: new URL('../../../assets/services/carwash.webp', import.meta.url).href,
   about: new URL('../../../assets/about/about-hkm-21.webp', import.meta.url).href,
+  event: '/content/events-stay-tuned.webp',
 }
 
 export const ORIGIN = {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { usePublicBranches, branchLabel, fetchPublicBranchHours } from '../lib/branches'
+import { buildHomeBranchCards } from '../lib/homeBranches'
 import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
 import {
   buildPublicServiceOverview,
@@ -39,8 +40,14 @@ const SERVICE_PHOTOS = {
 
 const photoForService = (slug) => serviceImage(SERVICE_PHOTOS[marketingKeyForServiceSlug(slug)] || [])
 
+const FALLBACK_VISIBLE_BRANCHES = buildHomeBranchCards([]).map((branch) => ({
+  ...branch,
+  coming_soon: branch.isComingSoon,
+  is_active: !branch.isComingSoon,
+}))
+
 export function ServicesPage() {
-  const [serviceItems, setServiceItems] = useState([])
+  const [serviceItems, setServiceItems] = useState(() => buildPublicServiceOverview([]))
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -60,10 +67,12 @@ export function ServicesPage() {
         if (cancelled) return
         setServiceItems(buildPublicServiceOverview(rows))
       })
-      .catch((err) => {
+      .catch(() => {
         if (cancelled) return
-        setLoadError(err?.message || 'Could not load services.')
-        setServiceItems([])
+        // Marketing pages keep their approved catalog when the live inventory
+        // is temporarily unreachable. Booking still validates against live data.
+        setLoadError('')
+        setServiceItems(buildPublicServiceOverview([]))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -101,7 +110,7 @@ export function ServicesPage() {
             </p>
           ) : null}
 
-          {loading ? (
+          {loading && !serviceItems.length ? (
             <p className="bd-state">Loading services…</p>
           ) : (
             <div className="bd-catalog bd-reveal">
@@ -152,6 +161,7 @@ export function ServicesPage() {
 export function BranchesPage() {
   const { branches, loading, error } = usePublicBranches({ mode: 'visible' })
   const [hoursBySlug, setHoursBySlug] = useState({})
+  const visibleBranches = branches.length ? branches : FALLBACK_VISIBLE_BRANCHES
 
   usePageMeta({
     title: 'Branches',
@@ -191,7 +201,7 @@ export function BranchesPage() {
             <em>One standard.</em>
           </>
         }
-        copy={`Premium care across ${branchLabel(branches.length)}. Comfortable spaces, and teams who take pride in the details.`}
+        copy={`Premium care across ${branchLabel(visibleBranches.length)}. Comfortable spaces, and teams who take pride in the details.`}
       >
         <nav className="bd-cta-row bd-page-hero-links" aria-label="Quick links">
           <Link className="bd-btn bd-btn-primary" to="/book">
@@ -205,20 +215,20 @@ export function BranchesPage() {
 
       <section id="locations">
         <div className="bd-shell">
-          {error ? (
+          {error && !visibleBranches.length ? (
             <p className="bd-state is-error" role="alert">
               {error}
             </p>
           ) : null}
-          {loading ? <p className="bd-state">Loading branches…</p> : null}
+          {loading && branches.length ? <p className="bd-state">Loading branches…</p> : null}
 
           <div className="bd-site-grid bd-reveal">
-            {branches.map((b) => (
+            {visibleBranches.map((b) => (
               <BranchSiteCard key={b.slug} branch={b} hours={hoursBySlug[b.slug] || []} />
             ))}
           </div>
 
-          {!loading && !branches.length && !error ? (
+          {!loading && !visibleBranches.length && !error ? (
             <p className="bd-state">No branches listed yet.</p>
           ) : null}
         </div>

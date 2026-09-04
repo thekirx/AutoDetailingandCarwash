@@ -63,7 +63,19 @@ export function enrichPublicCatalogService(row) {
 }
 
 export function buildPublicServiceOverview(rows) {
-  return (rows || []).map(enrichPublicCatalogService)
+  const source = rows?.length
+    ? rows
+    : homepageServices
+        .filter((item) => item.available !== false)
+        .map((item, index) => ({
+          id: `marketing-${titleToSlug(item.title)}`,
+          name: item.title,
+          slug: titleToSlug(item.title),
+          description: item.copy,
+          display_order: index + 1,
+        }))
+
+  return source.map(enrichPublicCatalogService)
 }
 
 export function publicServiceDestination(item = {}) {

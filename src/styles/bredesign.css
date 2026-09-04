@@ -39,7 +39,7 @@
 
   /* ---- Metrics --------------------------------------------------------- */
   --bd-shell: min(100% - clamp(24px, 5vw, 96px), 1560px);
-  --bd-section: clamp(70px, 8vw, 124px);
+  --bd-section: clamp(36px, 4vw, 60px);
   --bd-lit: inset 0 1px 0 rgba(157, 180, 255, 0.14);
 
   background: var(--bd-navy);

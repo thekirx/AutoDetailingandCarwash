@@ -29,16 +29,34 @@ describe('BreDESIGN homepage fallback sections', () => {
       events: document.querySelector('#events h2')?.textContent.replace(/\s+/g, ' ').trim(),
       queue: document.querySelector('#branches h2')?.textContent.replace(/\s+/g, ' ').trim(),
       queueSubtext: document.querySelector('#branches .bd-head > p')?.textContent.replace(/\s+/g, ' ').trim(),
+      eventImage: document.querySelector('#events img')?.getAttribute('src'),
+      branchCards: [...document.querySelectorAll('#branches .bd-branch h3')].map((item) => item.textContent.trim()),
     }))
 
     assert.equal(sections.events, 'Events & meets.')
-    assert.equal(sections.queue, 'Live queue.')
-    assert.equal(sections.queueSubtext, 'Know the queue before you go.')
+    assert.equal(sections.queue, 'Know the queue before you go.')
+    assert.match(sections.queueSubtext, /live total/i)
+    assert.match(sections.eventImage, /events-stay-tuned\.webp/)
+    assert.deepEqual(sections.branchCards, ['Bacoor', 'Batangas', 'Dasmariñas'])
   })
 
   it('shows membership rewards and points in the customer app preview', async () => {
     const appCopy = await page.$eval('#app-preview', (section) => section.textContent.replace(/\s+/g, ' ').trim())
     assert.match(appCopy, /Membership rewards/i)
     assert.match(appCopy, /points/i)
+  })
+
+  it('keeps section spacing compact and exposes the TikTok channel', async () => {
+    const result = await page.evaluate(() => ({
+      sectionPadding: [...document.querySelectorAll('main > section')].map((section) => ({
+        id: section.id,
+        top: Number.parseFloat(getComputedStyle(section).paddingTop),
+        bottom: Number.parseFloat(getComputedStyle(section).paddingBottom),
+      })),
+      tiktokHref: document.querySelector('footer a[aria-label="Hakum on TikTok"]')?.href,
+    }))
+
+    assert.ok(result.sectionPadding.every(({ top, bottom }) => top <= 72 && bottom <= 72))
+    assert.equal(result.tiktokHref, 'https://www.tiktok.com/@hakum_autocare')
   })
 })

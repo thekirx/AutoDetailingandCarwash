@@ -2,14 +2,11 @@ import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { branchCityName } from '../../../lib/branches'
+import { buildHomeBranchCards } from '../../../lib/homeBranches'
 import { branchQueueTotal } from '../../../lib/liveQueuePath'
 import { usePublicQueueCounts } from '../../../lib/usePublicQueueCounts'
 import { IMAGES } from './content'
 
-/* A homepage section reading "nothing here yet" is worse than no section: it
-   tells a first-time visitor the business is quiet. With no published event the
-   block is dropped and /events keeps the nav entry — the same rule the shipping
-   site already follows. */
 export function BdEvents({ state }) {
   const item = state?.item
 
@@ -25,7 +22,7 @@ export function BdEvents({ state }) {
         </div>
         <article className="bd-event bd-reveal">
           <div className="bd-event-media">
-            <img src={item?.mediaUrl || IMAGES.about} alt="" loading="lazy" />
+            <img src={IMAGES.event} alt="Red Honda Civic at a Hakum Auto Care community meet" loading="lazy" />
           </div>
           <div className="bd-event-body">
             {item?.dateLabel ? <p className="bd-event-date">{item.dateLabel}</p> : null}
@@ -44,7 +41,7 @@ export function BdEvents({ state }) {
 }
 
 function branchStatus(branch) {
-  if (branch.coming_soon) return { label: 'Coming soon', tone: 'soon' }
+  if (branch.coming_soon || branch.isComingSoon) return { label: 'Coming soon', tone: 'soon' }
   if (branch.is_active === false) return { label: 'Closed', tone: 'shut' }
   return { label: 'Open', tone: 'open' }
 }
@@ -57,6 +54,7 @@ export function BdBranches({ branches = [] }) {
   rows.forEach((row) => {
     queueBySlug[row.branch] = branchQueueTotal(row)
   })
+  const visibleBranches = branches.length ? branches : buildHomeBranchCards([])
 
   return (
     <section className="bd-branches" id="branches">
@@ -64,17 +62,15 @@ export function BdBranches({ branches = [] }) {
         <div className="bd-head bd-reveal">
           <div>
             <p className="bd-eyebrow">Live branch status</p>
-            {/* The heading does not name a count: the branch list is live, and it
-                currently returns four entries including the HQ/office. A
-                hard-coded "three" would go wrong the moment a branch opens. */}
-            <h2 className="bd-skew">Live queue.</h2>
+            <h2 className="bd-skew">Know the queue before you go.</h2>
           </div>
-          <p>Know the queue before you go.</p>
+          <p>See the live total at every Hakum branch before you make the drive.</p>
         </div>
-        {branches.length ? (
+        {visibleBranches.length ? (
           <div className="bd-branch-grid bd-reveal">
-            {branches.map((branch) => {
+            {visibleBranches.map((branch) => {
             const status = branchStatus(branch)
+            const comingSoon = Boolean(branch.coming_soon || branch.isComingSoon)
             /* The view groups by branch over active bookings, so a branch with
                an empty queue has no row at all. Absent means zero; only a
                failed or unfinished fetch is unknown. */
@@ -83,7 +79,7 @@ export function BdBranches({ branches = [] }) {
             return (
               <Link
                 className="bd-branch"
-                to={branch.coming_soon ? '/branches' : `/queue/${branch.slug}`}
+                to={comingSoon ? '/branches' : `/queue/${branch.slug}`}
                 key={branch.slug}
               >
                 <div className="bd-branch-top">
@@ -98,7 +94,7 @@ export function BdBranches({ branches = [] }) {
 
                 {/* A branch that has not opened has no queue to report, and an
                     unreached count says so rather than showing a confident 0. */}
-                {branch.coming_soon ? null : (
+                {comingSoon ? null : (
                   <p className="bd-branch-queue">
                     <span className="bd-queue-num">{total === undefined ? '—' : total}</span>
                     <span className="bd-queue-label">
@@ -108,7 +104,7 @@ export function BdBranches({ branches = [] }) {
                 )}
 
                 <span className="bd-branch-go">
-                  {branch.coming_soon ? 'Join the waitlist' : 'See the live queue'}{' '}
+                  {comingSoon ? 'Join the waitlist' : 'See the live queue'}{' '}
                   <ArrowRight size={13} aria-hidden="true" />
                 </span>
               </Link>

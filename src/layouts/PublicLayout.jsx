@@ -6,7 +6,9 @@ import NotificationBell from '@/components/NotificationBell'
 import { useAuth } from '@/auth/AuthProvider'
 import { usePublicBranches } from '@/lib/branches'
 import { CustomerInstallPopup } from '@/components/InstallGuide'
+import TikTokIcon from '@/components/public/TikTokIcon'
 import { PUBLIC_NAV_ITEMS } from '@/data/publicNavigation'
+import { buildHomeBranchCards } from '@/lib/homeBranches'
 
 // Routes actually rebuilt in BreDESIGN. A page only joins this list once its
 // own sections exist, because the scope repaints headings and body text for a
@@ -96,6 +98,10 @@ export default function PublicLayout() {
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
   const { branches } = usePublicBranches({ mode: 'visible' })
+  const visibleBranches = branches.length ? branches : buildHomeBranchCards([]).map((branch) => ({
+    ...branch,
+    coming_soon: branch.isComingSoon,
+  }))
   const { user, profile, loading } = useAuth()
   // Trust DB profile only — metadata.role is client-writable
   const isCustomer = !loading && Boolean(user) && profile?.role === 'customer'
@@ -110,7 +116,7 @@ export default function PublicLayout() {
 
   useEffect(() => setOpen(false), [pathname])
 
-  const footerCities = branches.map((b) => b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name).join(' · ') || 'Philippines'
+  const footerCities = visibleBranches.map((b) => b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name).join(' · ') || 'Philippines'
 
   if (accountRoute) {
     return (
@@ -179,12 +185,15 @@ export default function PublicLayout() {
               <a href="https://www.instagram.com/_hakumautocare" aria-label="Hakum on Instagram">
                 <Instagram />
               </a>
+              <a href="https://www.tiktok.com/@hakum_autocare" aria-label="Hakum on TikTok" target="_blank" rel="noreferrer noopener">
+                <TikTokIcon />
+              </a>
             </div>
           </div>
 
           <div className="footer-branches">
             <h3>Our branches</h3>
-            {branches.length ? branches.map((b, i) => (
+            {visibleBranches.length ? visibleBranches.map((b, i) => (
               <Link key={b.slug} to={b.coming_soon ? '/branches' : `/queue/${b.slug}`}>
                 <span>{String(i + 1).padStart(2, '0')}</span>
                 <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name}</strong>

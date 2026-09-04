@@ -1,6 +1,6 @@
 const FALLBACK_BRANCHES = [
-  { slug: 'bacoor', name: 'Bacoor', address: 'RFC Mall, Cavite', href: '/branches' },
-  { slug: 'batangas', name: 'Batangas', address: 'Batangas City', href: '/branches' },
+  { slug: 'bacoor', name: 'Bacoor', address: 'RFC Molino', href: '/branches' },
+  { slug: 'batangas', name: 'Batangas', address: 'PNP Batangas', href: '/branches' },
 ]
 
 const COMING_SOON_BRANCH = {
