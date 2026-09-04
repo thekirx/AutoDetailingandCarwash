@@ -24,6 +24,11 @@ import NotificationBell from '@/components/NotificationBell'
 import CustomerBookingModal from '@/components/CustomerBookingModal'
 import CustomerSettingsModal from '@/components/CustomerSettingsModal'
 import { buildCompletedVisitReview, VISIT_REVIEW_AXES } from '@/lib/serviceReviews'
+import { toast } from 'sonner'
+
+function latestCompletedVisit(history = []) {
+  return (history || []).find((row) => row?.status === 'completed') || null
+}
 
 async function fetchPortal() {
   const token = await getAccessTokenFresh()
@@ -104,8 +109,8 @@ export default function CustomerAccountPage() {
       setPortalProfile(data.profile || null)
       setLoyalty(data.loyalty || null)
       setBirthday(data.birthday || null)
-      const latest = (data.history || [])[0]
-      if (latest?.id && latest.status === 'completed') {
+      const latest = latestCompletedVisit(data.history)
+      if (latest?.id) {
         const { data: existing } = await supabase
           .from('service_reviews')
           .select('id')
@@ -235,7 +240,16 @@ export default function CustomerAccountPage() {
       <div className="capp">
         <div className="capp-stage">
           <div className="capp-hero">
-            <p className="capp-kicker">Hakum</p>
+            <div className="capp-brand">
+              <img
+                className="capp-brand-logo"
+                src="/branding/hakum-lw-ow.png"
+                alt="Hakum Auto Care"
+                width="148"
+                height="40"
+                decoding="async"
+              />
+            </div>
             <h1>My account</h1>
           </div>
           <div className="capp-scroll">
@@ -254,6 +268,7 @@ export default function CustomerAccountPage() {
   const heroLine = activeVisit
     ? `${activeVisit.vehicle_plate || 'Your car'} is ${String(activeVisit.visit?.label || activeVisit.status || 'on the floor').toLowerCase()}`
     : 'Book, track the bay, and open your history.'
+  const reviewVisit = latestCompletedVisit(history)
 
   if (settingsOpen) {
     return (
@@ -293,7 +308,16 @@ export default function CustomerAccountPage() {
           <header className="capp-hero">
             <div className="capp-hero-bar">
               <div className="min-w-0">
-                <p className="capp-kicker">Hakum Auto Care</p>
+                <div className="capp-brand">
+                  <img
+                    className="capp-brand-logo"
+                    src="/branding/hakum-lw-ow.png"
+                    alt="Hakum Auto Care"
+                    width="148"
+                    height="40"
+                    decoding="async"
+                  />
+                </div>
                 <h1>Hi{firstName ? `, ${firstName}` : ''}</h1>
                 <p className="capp-hero-sub">{heroLine}</p>
               </div>
@@ -381,11 +405,11 @@ export default function CustomerAccountPage() {
           </div>
         )}
 
-        {!loading && !ratingDone && history.length > 0 && history[0]?.status === 'completed' && (
+        {!loading && !ratingDone && reviewVisit && (
           <div className="capp-ticket capp-ticket-rate">
             <p className="capp-label">Rate your last visit</p>
             <p className="capp-meta" style={{ marginBottom: '0.5rem' }}>
-              {history[0].vehicle_plate || 'Visit'} · {branchLabel(branches, history[0].branch)}. Rate overall, the app,
+              {reviewVisit.vehicle_plate || 'Visit'} · {branchLabel(branches, reviewVisit.branch)}. Rate overall, the app,
               services / packages, and detailing.
             </p>
             {VISIT_REVIEW_AXES.map((axis) => (
@@ -424,28 +448,36 @@ export default function CustomerAccountPage() {
               disabled={!buildCompletedVisitReview(ratingScores, ratingComment) || ratingSaving}
               onClick={async () => {
                 const scores = buildCompletedVisitReview(ratingScores, ratingComment)
-                if (!scores) return
+                if (!scores || !reviewVisit?.id) return
                 setRatingSaving(true)
-                const { error } = await supabase.from('service_reviews').insert({
-                  booking_id: history[0].id,
-                  customer_id: user.id,
-                  customer_name: portalProfile?.full_name || authProfile?.full_name || 'Customer',
-                  branch: history[0].branch || '',
-                  ...scores,
-                })
-                setRatingSaving(false)
-                if (error) {
-                  if (error.code === '23505') setRatingDone(true)
-                  return
+                try {
+                  const token = await getAccessTokenFresh()
+                  if (!token) throw new Error('Sign in required.')
+                  const res = await fetch('/api/customer-portal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({
+                      action: 'submit-review',
+                      booking_id: reviewVisit.id,
+                      ...scores,
+                    }),
+                  })
+                  const body = await res.json().catch(() => ({}))
+                  if (!res.ok) throw new Error(body.error || 'Could not submit review')
+                  setRatingDone(true)
+                  toast.success(body.already ? 'Already rated this visit' : 'Thanks for the review')
+                } catch (err) {
+                  toast.error(err.message || 'Could not submit review')
+                } finally {
+                  setRatingSaving(false)
                 }
-                setRatingDone(true)
               }}
             >
               {ratingSaving ? 'Sending…' : 'Submit review'}
             </button>
           </div>
         )}
-        {ratingDone && history[0]?.status === 'completed' && (
+        {ratingDone && reviewVisit && (
           <div className="capp-note">
             <strong>You rated this visit.</strong>
           </div>

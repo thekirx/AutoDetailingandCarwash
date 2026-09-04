@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { createCoalescedReload } from '@/lib/coalesceReload'
+import { subscribeUserNotificationRealtime } from '@/lib/userNotificationsRealtime'
 
 export function useUserNotifications() {
   const [rows, setRows] = useState([])
@@ -35,22 +36,16 @@ export function useUserNotifications() {
 
   useEffect(() => {
     let alive = true
-    let channel
+    let unsubscribe = () => {}
     load()
     void supabase.auth.getUser().then(({ data }) => {
       if (!alive || !data.user) return
-      channel = supabase.channel(`user-notifications-bell:${data.user.id}`)
-      channel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${data.user.id}` },
-        scheduleReload,
-      )
-      channel.subscribe()
+      unsubscribe = subscribeUserNotificationRealtime(data.user.id, scheduleReload, supabase)
     })
     return () => {
       alive = false
       scheduleReload.cancel()
-      if (channel) void supabase.removeChannel(channel)
+      unsubscribe()
     }
   }, [load, scheduleReload])
 

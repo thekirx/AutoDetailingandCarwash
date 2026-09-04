@@ -1,6 +1,6 @@
 # Responsive Validation Report
 
-**Date:** 2026-09-04T11:03:58.461Z
+**Date:** 2026-09-04T13:57:13.310Z
 **Pages:** home, book, queue, pos, account
 **Viewports:** 9
 **Overall verdict:** CONDITIONAL

@@ -48,8 +48,11 @@ describe('customer app frame', () => {
     assert.match(home, /Past visits/)
     assert.match(home, /CustomerSettingsModal/)
     assert.match(home, /Alert settings/)
+    assert.match(home, /submit-review/)
+    assert.match(home, /latestCompletedVisit/)
     assert.match(read('src/components/CustomerSettingsModal.jsx'), /Send test text/)
     assert.match(read('src/components/CustomerSettingsModal.jsx'), /layout="panel"/)
+    assert.match(read('server/customerPortal.mjs'), /action === 'submit-review'/)
   })
 
   it('account routes keep app shell on phones and landing header on desktop web', () => {
@@ -72,9 +75,23 @@ describe('customer app frame', () => {
     assert.match(css, /account-web-header/)
     assert.match(css, /orientation: landscape/)
     assert.match(css, /max-height: 520px/)
+    assert.match(css, /max-width: 900px/)
+    assert.match(css, /grid-template-columns:\s*minmax\(0,\s*1fr\)/)
+    assert.match(css, /repeat\(5,\s*minmax\(0,\s*1fr\)\)/)
     assert.match(css, /prefers-reduced-motion/)
     assert.match(css, /safe-area-inset-top/)
     assert.match(css, /safe-area-inset-bottom/)
+  })
+
+  it('uses the approved OW lockup in the account hero (not text kickers)', () => {
+    const home = read('src/pages/CustomerAccountPage.jsx')
+    const css = read('src/styles-customer-app.css')
+    assert.equal((home.match(/src="\/branding\/hakum-lw-ow\.png"/g) || []).length, 2)
+    assert.match(home, /className="capp-brand"/)
+    assert.match(home, /alt="Hakum Auto Care"/)
+    assert.doesNotMatch(home, /capp-kicker">Hakum Auto Care</)
+    assert.doesNotMatch(home, /capp-kicker">Hakum</)
+    assert.match(css, /\.capp-brand-logo/)
   })
 
   it('hides mobile hero icon actions on desktop web; keeps settings and sign-out on web', () => {

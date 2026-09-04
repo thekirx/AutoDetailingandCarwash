@@ -182,7 +182,7 @@
         "clientWidth": 393,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 20,
+        "smallTargets": 23,
         "bodyFont": 16
       },
       "shot": "book--mobile-393.png",
@@ -250,7 +250,7 @@
         "clientWidth": 1280,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 28,
+        "smallTargets": 31,
         "bodyFont": 16
       },
       "shot": "book--laptop-1280.png",
@@ -284,7 +284,7 @@
         "clientWidth": 1920,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 28,
+        "smallTargets": 31,
         "bodyFont": 16
       },
       "shot": "book--wide-1920.png",
@@ -301,7 +301,7 @@
         "clientWidth": 667,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 20,
+        "smallTargets": 23,
         "bodyFont": 16
       },
       "shot": "book--landscape-667x375.png",
