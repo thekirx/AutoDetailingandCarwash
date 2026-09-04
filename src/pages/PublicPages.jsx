@@ -282,5 +282,3 @@ function BranchSiteCard({ branch, hours = [] }) {
     </article>
   )
 }
-
-function PageHero({eyebrow,title,copy,children}){return <><section className="inner-hero"><div className="public-shell"><p className="eyebrow eyebrow-light">{eyebrow}</p><h1 className="display-title">{title}</h1><p className="inner-hero-copy">{copy}</p></div></section>{children}</>}

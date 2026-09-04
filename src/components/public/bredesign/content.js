@@ -130,7 +130,7 @@ export const WHY_SECTIONS = [
       ['Signal-safe', 'Unlike metallic film, nano ceramic does not interfere with GPS, radio, or mobile signal.'],
       ['Interior preserved', 'UV is what cracks a dashboard and fades seats. Blocking it protects the part you actually sit in.'],
     ],
-    cta: { label: 'Read the full tint story', to: '/services' },
+    cta: { label: 'Book nano ceramic tint', to: '/book' },
     image: IMAGES.tint,
     alt: 'Nano ceramic tint being fitted at Hakum Auto Care',
     flip: false,

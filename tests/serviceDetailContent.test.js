@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { SERVICE_DETAIL_CONTENT } from '../src/data/serviceDetailContent.js'
+import { WHY_SECTIONS } from '../src/components/public/bredesign/content.js'
 import { publicServiceDestination } from '../src/lib/publicCatalog.js'
 
 test('public service destinations keep editorial pages, queue, and booking flows distinct', () => {
@@ -55,4 +56,9 @@ test('ceramic package benefit is owned by both packages without invented conditi
     premium: 'Unlimited Recoating',
     platinum: 'Unlimited Recoating',
   })
+})
+
+test('the Tint detail-page CTA books Tint instead of looping back to the services catalog', () => {
+  const tint = WHY_SECTIONS.find((section) => section.id === 'tint')
+  assert.deepEqual(tint.cta, { label: 'Book nano ceramic tint', to: '/book' })
 })
