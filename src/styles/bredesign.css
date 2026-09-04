@@ -1670,6 +1670,9 @@
 .bredesign .bd-marquee {
   margin-top: clamp(24px, 3vw, 40px);
   overflow: hidden;
+  padding-block: clamp(18px, 2.4vw, 30px);
+  background: var(--bd-navy-2);
+  isolation: isolate;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
@@ -1694,26 +1697,34 @@
 .bredesign .bd-marquee img {
   -webkit-user-drag: none;
   pointer-events: none;
+  filter: grayscale(1);
+  opacity: 0.56;
+  transition: filter 220ms ease, opacity 220ms ease, transform 220ms ease;
 }
 .bredesign .bd-marquee-run {
   display: flex;
-  gap: clamp(14px, 2vw, 28px);
-  padding-right: clamp(14px, 2vw, 28px);
+  align-items: center;
+  gap: clamp(34px, 5vw, 76px);
+  padding-right: clamp(34px, 5vw, 76px);
 }
 
 .bredesign .bd-brand {
   flex: none;
-  background: var(--bd-navy);
-  border: 1px solid var(--bd-rule);
-  padding: 14px 16px;
+  background: transparent;
+  border: 0;
+  padding: 0;
   display: grid;
   place-items: center;
 }
 .bredesign .bd-brand img {
   display: block;
-  width: clamp(120px, 14vw, 170px);
+  width: clamp(148px, 15vw, 196px);
   height: auto;
-  border-radius: 2px;
+}
+.bredesign .bd-brand:hover img {
+  filter: grayscale(0) drop-shadow(0 0 16px rgba(112, 137, 255, 0.48));
+  opacity: 1;
+  transform: scale(1.035);
 }
 /* Reduced motion stops the drift in the hook itself; the strip stays draggable,
    so nothing becomes unreachable. */
@@ -1743,8 +1754,9 @@
 }
 .bredesign .bd-brand-note em {
   font-style: normal;
-  padding: 3px 9px;
-  border: 1px dashed var(--bd-ink-4);
+  padding: 0;
+  border: 0;
+  color: var(--bd-accent-soft);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.13em;

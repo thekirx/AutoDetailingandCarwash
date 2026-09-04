@@ -5,12 +5,10 @@
  * floating in a field of padding. Dropped into a row as-is they read as a
  * sticker sheet — eight different sizes, paddings and grounds.
  *
- * So each file is trimmed to its actual mark, then re-centred on a tile of one
- * size with the ground the mark was drawn for: white behind dark marks, the
- * brand's own ground behind marks drawn to sit on colour (RUPES white-on-red,
- * F1 chrome-on-black). Optical sizing, not bounding-box sizing — a long
- * wordmark and a compact badge look the same weight only if the wordmark is
- * allowed to run wider.
+ * So each file is trimmed to its actual mark, keyed away from its corner
+ * colour, then re-centred on a transparent canvas. Optical sizing, not
+ * bounding-box sizing — a long wordmark and a compact badge look the same
+ * weight only if the wordmark is allowed to run wider.
  *
  * node design-mocks/logos/normalize.js
  */
@@ -19,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = path.join(__dirname, 'src');
-const OUT = path.join(__dirname, 'build');
+const OUT = path.join(__dirname, '..', '..', 'src', 'assets', 'brands');
 
 // width is the share of the tile the mark is allowed to fill. Wordmarks take
 // more, badges and square marks take less, so they balance by eye.
@@ -28,12 +26,11 @@ const BRANDS = [
   { slug: 'f1-auto-films', fill: 0.60 },
   { slug: 'kisho',         fill: 0.74 },
   { slug: 'menzerna',      fill: 0.84 },
-  // RUPES only exists here as a white wordmark reversed out of red. Left as
-  // supplied it is the one red block in a wall of white cards, so it is flipped
-  // back to the red-on-white lockup the brand also uses.
-  { slug: 'rupes',         fill: 0.70, flatten: true },
+  { slug: 'rupes',         fill: 0.70 },
   { slug: 'sonax',         fill: 0.78 },
-  { slug: 'meguiars',      fill: 0.62 },
+  // The supplied Meguiar's badge has transparency around an opaque black
+  // shield. Knock that internal ground out so the lettering remains a mark.
+  { slug: 'meguiars',      fill: 0.62, knockout: true },
   { slug: 'microtex',      fill: 0.74 },
 ];
 
@@ -42,7 +39,7 @@ import sys, os
 from PIL import Image
 
 src, out, fill = sys.argv[1], sys.argv[2], float(sys.argv[3])
-flatten = len(sys.argv) > 4 and sys.argv[4] == 'flatten'
+knockout = len(sys.argv) > 4 and sys.argv[4] == 'knockout'
 TW, TH, PAD = 720, 400, 26          # tile at 2x; 360x200 css px
 
 im = Image.open(src).convert('RGBA')
@@ -66,33 +63,32 @@ alpha = im.getchannel('A')
 has_alpha = alpha.getextrema()[0] < 250
 
 if has_alpha:
-    ground = (255, 255, 255)
+    if knockout:
+        rgb = im.convert('RGB')
+        original_alpha = list(alpha.getdata())
+        mask = Image.new('L', im.size, 0)
+        mask.putdata([
+            round(a * max(0, min(1, (max(p) - 20) / 80)))
+            for p, a in zip(rgb.getdata(), original_alpha)
+        ])
+        im.putalpha(mask)
+        alpha = mask
     bbox = alpha.getbbox()
 else:
     bg = corner_bg(im) or (255, 255, 255)
-    ground = bg
-    # Trim the avatar's padding: keep pixels that differ from the ground.
+    # Turn distance from the corner ground into a soft alpha edge. This keeps
+    # anti-aliasing while removing JPEG noise and the rectangular background.
     rgb = im.convert('RGB')
-    diff = Image.new('L', im.size, 0)
-    diff.putdata([255 if max(abs(p[i]-bg[i]) for i in range(3)) > 24 else 0
-                  for p in rgb.getdata()])
-    bbox = diff.getbbox()
+    mask = Image.new('L', im.size, 0)
+    mask.putdata([
+        max(0, min(255, round((max(abs(p[i]-bg[i]) for i in range(3)) - 8) * 255 / 42)))
+        for p in rgb.getdata()
+    ])
+    im.putalpha(mask)
+    bbox = mask.getbbox()
 
 if bbox:
     im = im.crop(bbox)
-
-if flatten and not has_alpha:
-    # Reversed-out mark: key the ground to transparent, then repaint the mark
-    # in the ground's own colour so it reads on white.
-    bg = ground
-    px = []
-    for r, g, b, a in im.convert('RGBA').getdata():
-        near = max(abs(r-bg[0]), abs(g-bg[1]), abs(b-bg[2])) < 60
-        px.append((bg[0], bg[1], bg[2], 0 if near else 255))
-    flat = Image.new('RGBA', im.size)
-    flat.putdata(px)
-    im = flat
-    ground = (255, 255, 255)
 
 # Fit the trimmed mark into its share of the tile.
 avail_w, avail_h = (TW - PAD*2) * fill, TH - PAD*2
@@ -100,13 +96,16 @@ scale = min(avail_w / im.width, avail_h / im.height)
 im = im.resize((max(1, round(im.width*scale)), max(1, round(im.height*scale))),
                Image.LANCZOS)
 
-tile = Image.new('RGBA', (TW, TH), ground + (255,))
+# Keep the exact extracted alpha silhouette while unifying the visible colour.
+mark = Image.new('RGBA', im.size, (255, 255, 255, 0))
+mark.putalpha(im.getchannel('A'))
+im = mark
+tile = Image.new('RGBA', (TW, TH), (0, 0, 0, 0))
 tile.alpha_composite(im, ((TW-im.width)//2, (TH-im.height)//2))
-tile.convert('RGB').save(out, 'PNG', optimize=True)
-print(f"{os.path.basename(out)}  ground=rgb{ground}  mark={im.width}x{im.height}")
+tile.save(out, 'PNG', optimize=True)
+print(f"{os.path.basename(out)}  transparent  mark={im.width}x{im.height}")
 `;
 
-fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 
 let made = 0;
@@ -118,8 +117,8 @@ for (const { slug, fill } of BRANDS) {
   const out = path.join(OUT, slug + '.png');
   process.stdout.write(slug.padEnd(15));
   const args = ['-c', PY, src, out, String(fill)];
-  if (BRANDS.find(b => b.slug === slug).flatten) args.push('flatten');
+  if (BRANDS.find(b => b.slug === slug).knockout) args.push('knockout');
   process.stdout.write(execFileSync('python3', args));
   made++;
 }
-console.log(`\n${made}/${BRANDS.length} logos normalised into logos/build/`);
+console.log(`\n${made}/${BRANDS.length} transparent logos normalised into src/assets/brands/`);

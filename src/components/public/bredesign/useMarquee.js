@@ -21,6 +21,7 @@ const BASE_VELOCITY = 34 // px/sec of resting drift
 const MAX_VELOCITY = 2600 // a hard flick should not become a blur
 const DECAY_TAU = 0.85 // seconds to settle back toward the drift
 const DIRECTION = 1 // 1 moves the logos left-to-right; -1 reverses it
+const SCROLL_BOOST = 2.4 // page-scroll pixels translated into a short velocity impulse
 
 export default function useMarquee() {
   const viewportRef = useRef(null)
@@ -42,9 +43,11 @@ export default function useMarquee() {
     let velocity = base
     let half = track.scrollWidth / 2
     let dragging = false
+    let hovering = false
     let pointerId = null
     let lastX = 0
     let lastAt = 0
+    let lastScrollY = window.scrollY
     let frame = 0
     let previous = performance.now()
 
@@ -59,7 +62,7 @@ export default function useMarquee() {
       const dt = Math.min((now - previous) / 1000, 0.05) // a backgrounded tab
       previous = now // must not jump the strip on return
 
-      if (!dragging) {
+      if (!dragging && !hovering) {
         offset += velocity * dt
         // Exponential approach rather than a linear ramp, so a flick bleeds off
         // quickly at first and then settles, the way a spun object does.
@@ -109,11 +112,34 @@ export default function useMarquee() {
       viewport.classList.remove('is-grabbing')
     }
 
+    const onMouseEnter = () => {
+      hovering = true
+    }
+
+    const onMouseLeave = () => {
+      hovering = false
+    }
+
+    const onScroll = () => {
+      const nextScrollY = window.scrollY
+      const delta = nextScrollY - lastScrollY
+      lastScrollY = nextScrollY
+      if (dragging || hovering || reduced.matches || delta === 0) return
+
+      velocity = Math.max(
+        -MAX_VELOCITY,
+        Math.min(MAX_VELOCITY, velocity + delta * SCROLL_BOOST),
+      )
+    }
+
     viewport.addEventListener('pointerdown', onDown)
     viewport.addEventListener('pointermove', onMove)
     viewport.addEventListener('pointerup', onUp)
     viewport.addEventListener('pointercancel', onUp)
     viewport.addEventListener('pointerleave', onUp)
+    viewport.addEventListener('mouseenter', onMouseEnter)
+    viewport.addEventListener('mouseleave', onMouseLeave)
+    window.addEventListener('scroll', onScroll, { passive: true })
 
     return () => {
       cancelAnimationFrame(frame)
@@ -124,6 +150,9 @@ export default function useMarquee() {
       viewport.removeEventListener('pointerup', onUp)
       viewport.removeEventListener('pointercancel', onUp)
       viewport.removeEventListener('pointerleave', onUp)
+      viewport.removeEventListener('mouseenter', onMouseEnter)
+      viewport.removeEventListener('mouseleave', onMouseLeave)
+      window.removeEventListener('scroll', onScroll)
     }
   }, [])
 
