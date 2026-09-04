@@ -436,6 +436,59 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     return { ok: true, phone }
   }
 
+  if (action === 'submit-review') {
+    const bookingId = String(body.booking_id || '').trim()
+    if (!bookingId) throw Object.assign(new Error('booking_id required.'), { status: 400 })
+
+    const overall = Number(body.overall_rating)
+    const app = Number(body.app_rating)
+    const service = Number(body.service_rating)
+    const detailing = Number(body.detailing_rating)
+    const scoreOk = [overall, app, service, detailing].every((n) => Number.isInteger(n) && n >= 1 && n <= 5)
+    if (!scoreOk) throw Object.assign(new Error('Rate overall, app, services, and detailing (1-5).'), { status: 400 })
+
+    const { data: booking, error: bookingErr } = await admin
+      .from('bookings')
+      .select('id, branch, status, customer_id, customer_name')
+      .eq('id', bookingId)
+      .eq('customer_id', userId)
+      .eq('status', 'completed')
+      .maybeSingle()
+    if (bookingErr) throw Object.assign(new Error(bookingErr.message), { status: 400 })
+    if (!booking) {
+      throw Object.assign(new Error('Only your completed visits can be reviewed.'), { status: 403 })
+    }
+
+    const { data: existing } = await admin
+      .from('service_reviews')
+      .select('id')
+      .eq('booking_id', bookingId)
+      .maybeSingle()
+    if (existing?.id) return { ok: true, already: true, id: existing.id }
+
+    const { data: profile } = await admin.from('customers').select('full_name').eq('id', userId).maybeSingle()
+    const { data, error } = await admin
+      .from('service_reviews')
+      .insert({
+        booking_id: bookingId,
+        customer_id: userId,
+        customer_name: profile?.full_name || booking.customer_name || 'Customer',
+        branch: booking.branch || '',
+        overall_rating: overall,
+        app_rating: app,
+        service_rating: service,
+        detailing_rating: detailing,
+        comment: String(body.comment || '').trim() || null,
+      })
+      .select('id')
+      .single()
+    if (error) {
+      if (error.code === '23505') return { ok: true, already: true }
+      throw Object.assign(new Error(error.message), { status: 400 })
+    }
+    return { ok: true, id: data?.id }
+  }
+
   throw Object.assign(new Error('Unknown action.'), { status: 400 })
 }
 

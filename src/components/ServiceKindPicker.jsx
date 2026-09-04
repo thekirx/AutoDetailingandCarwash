@@ -11,7 +11,7 @@ import {
 
 /**
  * Tablet-first multi-select for TL "add car": kind tabs + search + dropdown list.
- * Theme-safe via .floor-* classes (light mode rewrites .text-white → navy).
+ * Theme-safe via .floor-* classes (light overrides under .floor-shell and .command-shell).
  */
 export default function ServiceKindPicker({
   services = [],
@@ -62,7 +62,7 @@ export default function ServiceKindPicker({
 
   return (
     <fieldset className="sm:col-span-2 space-y-3" disabled={disabled}>
-      <legend className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+      <legend className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
         Services for this visit
       </legend>
 
@@ -90,13 +90,13 @@ export default function ServiceKindPicker({
         })}
       </div>
 
-      <p className="text-xs text-slate-400">{kindMeta.hint}</p>
+      <p className="text-xs text-muted-foreground">{kindMeta.hint}</p>
 
       <div className="relative">
         <label className="sr-only" htmlFor="service-kind-search">
           Search {kindMeta.label}
         </label>
-        <div className="pointer-events-none absolute inset-y-0 left-3 z-[1] flex items-center text-slate-500">
+        <div className="pointer-events-none absolute inset-y-0 left-3 z-[1] flex items-center text-muted-foreground">
           <Search size={16} aria-hidden />
         </div>
         <input
@@ -117,7 +117,7 @@ export default function ServiceKindPicker({
           aria-expanded={open}
           aria-controls="service-kind-listbox"
           onClick={() => setOpen((v) => !v)}
-          className="absolute inset-y-0 right-0 z-[1] grid min-w-12 place-items-center rounded-r-xl text-slate-500 hover:text-slate-800 dark:hover:text-white"
+          className="absolute inset-y-0 right-0 z-[1] grid min-w-12 place-items-center rounded-r-xl text-muted-foreground hover:text-foreground"
         >
           <ChevronsUpDown size={18} aria-hidden />
           <span className="sr-only">{open ? 'Close list' : 'Open list'}</span>
@@ -132,7 +132,7 @@ export default function ServiceKindPicker({
           className="floor-picker-list"
         >
           {!filtered.length ? (
-            <li className="px-4 py-4 text-sm text-slate-500">
+            <li className="floor-picker-empty">
               No {kindMeta.label.toLowerCase()} match. Ask Super Admin to add one under Catalog.
             </li>
           ) : (
@@ -144,25 +144,15 @@ export default function ServiceKindPicker({
                   <button
                     type="button"
                     onClick={() => toggle(service.id)}
-                    className={`flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                      checked
-                        ? 'bg-blue-500/15 text-slate-900 dark:text-white'
-                        : 'text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/5'
-                    }`}
+                    className={`floor-picker-item${checked ? ' floor-picker-item-checked' : ''}`}
                   >
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{service.name}</span>
-                      <span className="block text-[11px] capitalize text-slate-500">
+                      <span className="floor-picker-item-meta">
                         {serviceKindFromPayCategory(service.pay_category)} · {formatMoney(sized)}
                       </span>
                     </span>
-                    <span
-                      className={`grid size-6 shrink-0 place-items-center rounded-md border ${
-                        checked
-                          ? 'border-blue-500 bg-blue-600 text-white'
-                          : 'border-slate-300 text-transparent dark:border-white/20'
-                      }`}
-                    >
+                    <span className="floor-picker-item-check">
                       <Check size={14} aria-hidden />
                     </span>
                   </button>

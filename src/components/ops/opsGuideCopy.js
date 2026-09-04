@@ -143,6 +143,11 @@ export const BOOKING_WORKFLOW_STEPS = Object.freeze([
     title: 'POS handoff',
     body: 'Payment and completion happen at POS after release. Until then, the job stays visible here for sales and floor coordination.',
   },
+  {
+    id: 'maintenance',
+    title: 'Maintenance schedules',
+    body: 'Use the Maintenance tab to set Ceramic/PPF/Paint Maintenance reminder intervals, adjust due dates per plate, and notify clients when maintenance is due. Stage moves already SMS the customer.',
+  },
 ])
 
 export const CRM_WORKFLOW_STEPS = Object.freeze([

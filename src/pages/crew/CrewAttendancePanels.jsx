@@ -14,6 +14,8 @@ import {
 import { toast } from 'sonner'
 import { AttendanceHeatmap } from '@/components/ui/attendance-heatmap'
 import { Badge } from '@/components/ui/badge'
+import StatusBadge from '@/components/ops/StatusBadge'
+import OpsStatTile from '@/components/ops/OpsStatTile'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -101,24 +103,12 @@ function fmtTime(iso) {
 }
 
 function AttendanceStatusBadge({ status }) {
-  if (!status) return <Badge variant="outline">No record</Badge>
-  if (status === 'present') return <Badge className="bg-emerald-600/90 hover:bg-emerald-600/90">Present</Badge>
-  if (status === 'late') return <Badge className="bg-amber-500/90 text-amber-950 hover:bg-amber-500/90">Late</Badge>
-  if (status === 'absent') return <Badge variant="destructive">Absent</Badge>
-  return <Badge variant="secondary">{status}</Badge>
+  if (!status) return <StatusBadge status="void" label="No record" />
+  return <StatusBadge status={status} />
 }
 
-function StatTile({ label, value, detail, icon: Icon }) {
-  return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">{label}</p>
-        {Icon ? <Icon className="size-4 text-primary" aria-hidden /> : null}
-      </div>
-      <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-      {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
-    </div>
-  )
+function StatTile({ label, value, detail, icon }) {
+  return <OpsStatTile label={label} value={value} hint={detail} icon={icon} mono />
 }
 
 function RegisterSkeleton() {

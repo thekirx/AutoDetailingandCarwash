@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Hakum readiness</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 2rem; background: #0b1220; color: #e8eefc; }
+    h1 { font-weight: 650; }
+    .ok { color: #5dde9a; } .bad { color: #ff7b7b; } .skip { color: #9aa7c0; }
+    table { border-collapse: collapse; width: 100%; max-width: 920px; }
+    th, td { border-bottom: 1px solid #24304a; padding: 0.55rem 0.4rem; text-align: left; }
+    .meta { color: #9aa7c0; margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Hakum ultimate readiness</h1>
+  <p class="meta">2026-09-03T13:52:11.567Z · overall <strong class="ok">PASS</strong>
+  · 14 passed · 0 failed · 1 skipped</p>
+  <table>
+    <thead><tr><th>ID</th><th>Step</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>U</td><td>npm test (unit)</td><td class="ok">PASS</td></tr>
+<tr><td>L1</td><td>e2e-attendance</td><td class="ok">PASS</td></tr>
+<tr><td>L2</td><td>e2e-payroll</td><td class="ok">PASS</td></tr>
+<tr><td>L3</td><td>e2e-readiness</td><td class="ok">PASS</td></tr>
+<tr><td>L4</td><td>e2e-queue-part3</td><td class="ok">PASS</td></tr>
+<tr><td>L5</td><td>e2e-pos-part2</td><td class="ok">PASS</td></tr>
+<tr><td>L6</td><td>smoke-busybee (balance only)</td><td class="ok">PASS</td></tr>
+<tr><td>L7</td><td>e2e-real-customer-status-sms</td><td class="skip">SKIP</td></tr>
+<tr><td>L8</td><td>e2e-ops-cutover</td><td class="ok">PASS</td></tr>
+<tr><td>L9</td><td>e2e-shift-close-money (BUG-007 RPC)</td><td class="ok">PASS</td></tr>
+<tr><td>B</td><td>npm run build</td><td class="ok">PASS</td></tr>
+<tr><td>UI</td><td>e2e-ui-p0</td><td class="ok">PASS</td></tr>
+<tr><td>UI2</td><td>e2e-ui-money (BUG-007)</td><td class="ok">PASS</td></tr>
+<tr><td>R</td><td>responsive-validation</td><td class="ok">PASS</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

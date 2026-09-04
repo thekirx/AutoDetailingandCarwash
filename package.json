@@ -11,16 +11,21 @@
     "generate:owner-stories": "node scripts/export-user-stories-pdf.mjs",
     "verify:owner-stories": "node scripts/verify-owner-stories.mjs",
     "lint": "eslint .",
+    "test": "node scripts/run-unit-tests.mjs",
+    "test:readiness": "node scripts/e2e-ultimate-readiness.mjs",
     "preview": "vite preview",
     "e2e:newrequest": "node scripts/e2e-newrequest.mjs",
     "e2e:integrity": "node scripts/e2e-data-integrity.mjs",
     "e2e:payroll": "node scripts/e2e-payroll.mjs",
     "e2e:request": "node scripts/e2e-request-brief.mjs",
-    "e2e:cutover": "node scripts/e2e-ops-cutover.mjs"
+    "e2e:cutover": "node scripts/e2e-ops-cutover.mjs",
+    "e2e:shift-close-money": "node scripts/e2e-shift-close-money.mjs",
+    "e2e:ui-p0": "node scripts/e2e-ui-p0.mjs",
+    "e2e:ui-money": "node scripts/e2e-ui-money.mjs",
+    "e2e:responsive": "node scripts/responsive-validation.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@fontsource-variable/geist": "^5.3.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@supabase/supabase-js": "^2.50.0",

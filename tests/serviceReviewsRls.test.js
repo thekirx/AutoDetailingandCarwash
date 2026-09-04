@@ -30,4 +30,14 @@ describe('service_reviews RLS contract', () => {
       /create policy service_reviews_select_ops[\s\S]*using\s*\(\s*true\s*\)/i,
     )
   })
+
+  it('allows rating archived completed visits', async () => {
+    const sql = await readFile(
+      join(root, 'supabase/migrations/20260904120000_service_reviews_allow_archived_completed.sql'),
+      'utf8',
+    )
+    assert.match(sql, /service_reviews_insert_own/)
+    assert.match(sql, /status\s*=\s*'completed'/)
+    assert.doesNotMatch(sql, /is_archived/)
+  })
 })

@@ -23,10 +23,10 @@ export default function CustomerAccountDock() {
             to={tab.to}
             end={Boolean(tab.end)}
             className={({ isActive }) =>
-              `account-dock-item${isActive ? ' account-dock-item-primary' : ''}`
+              `account-dock-item capp-dock-item${isActive ? ' account-dock-item-primary capp-dock-item-primary' : ''}`
             }
           >
-            <Icon className="account-dock-icon" strokeWidth={1.75} aria-hidden />
+            <Icon className="account-dock-icon capp-dock-icon" strokeWidth={1.75} aria-hidden />
             <span>{tab.label}</span>
           </NavLink>
         )

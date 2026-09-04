@@ -14,9 +14,9 @@ describe('floor board owner feedback cuts', () => {
     assert.doesNotMatch(src, /Total waiting time/i)
   })
 
-  it('uses avg waiting + paid sales labels', () => {
+  it('uses avg waiting and drops paid-sales count tile', () => {
     assert.match(src, /Avg waiting time/)
-    assert.match(src, /Paid sales/)
+    assert.doesNotMatch(src, /label=["']Paid sales["']/)
     assert.match(api, /avg_wait_minutes/)
     assert.match(api, /averageWaitMinutes/)
   })
@@ -27,19 +27,20 @@ describe('floor board owner feedback cuts', () => {
     assert.doesNotMatch(src, /QueueTicketEditModal/)
   })
 
-  it('keeps sales feed and drops detailing-ops cancelled tile', () => {
-    assert.match(src, /Sales feed/)
-    assert.match(src, /recentSales/)
+  it('drops sales feed and detailing-ops cancelled tile', () => {
+    assert.doesNotMatch(src, /Sales feed/)
+    assert.doesNotMatch(src, /title=["']Chemical usage["']/)
+    assert.doesNotMatch(src, /Absent \/ not checked in/)
+    assert.doesNotMatch(src, /No free crew on site/)
     assert.doesNotMatch(
       src,
       /label=["']Cancelled["'][\s\S]{0,200}openHistory\(['"]cancelled['"]\)/,
     )
   })
 
-  it('documents insights and chemical logic for the owner', () => {
+  it('documents car-size insights for the owner', () => {
     assert.match(src, /each paid sale in the timeline counts once by booking vehicle size/)
     assert.match(src, /ranks sale line items/)
-    assert.match(src, /Usage = previous/)
     assert.match(src, /formatCarSizeLabel/)
     assert.match(src, /wait_sample_n|No wait stamps in timeline/)
   })
@@ -49,5 +50,18 @@ describe('floor board owner feedback cuts', () => {
     assert.match(api, /cycle_sample_n/)
     assert.match(api, /saleLinesFromBookingServices/)
     assert.match(api, /uniqueBookingsById/)
+  })
+
+  it('StatTile hover preview + click opens breakdown dialog', () => {
+    assert.match(src, /function StatTile/)
+    assert.match(src, /createPortal/)
+    assert.match(src, /Click for full breakdown/)
+    assert.match(src, /DialogContent/)
+    assert.match(src, /aria-haspopup=["']dialog["']/)
+    assert.match(src, /onMouseEnter=\{placeTip\}/)
+    assert.match(src, /label=["']Avg waiting time["'][\s\S]*?breakdown=/)
+    assert.match(src, /label=["']Failed QA["'][\s\S]*?breakdown=/)
+    assert.match(src, /label=["']Cash["'][\s\S]*?breakdown=/)
+    assert.match(src, /Open related view/)
   })
 })

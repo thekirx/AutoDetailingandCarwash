@@ -92,20 +92,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
+import StatusBadge from '@/components/ops/StatusBadge'
 import { QUEUE_WORKFLOW_STEPS, MY_TASKS_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { toast } from 'sonner'
 import { plateKindLabel, plateValidationError, PLATE_FIELD_HINT } from '../lib/customerAuth'
 import { applyPlateSuggestion, plateSuggestPrefix, rankPlateSuggestions } from '../lib/plateSuggest'
-
-const statusTone = {
-  confirmed: 'queue-status-pill queue-status-waiting',
-  waiting: 'queue-status-pill queue-status-waiting',
-  in_progress: 'queue-status-pill queue-status-progress',
-  final_checking: 'queue-status-pill queue-status-check',
-  for_payment: 'queue-status-pill queue-status-pay',
-  redo: 'queue-status-pill queue-status-redo',
-  completed: 'queue-status-pill queue-status-done',
-}
 
 const QUEUE_SHELL_TABS = Object.freeze([
   { id: 'board', label: 'Board' },
@@ -865,7 +856,7 @@ function OperationsQueueBoardPage() {
           <div className="queue-board-controls flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <OpsTabList tabs={QUEUE_SHELL_TABS} aria-label="Queue layout" />
             <RefreshButton loading={loading} onClick={reload} />
-          </div>
+            </div>
         </Tabs>
         <div className="flex flex-wrap items-end gap-3">
           {(seeAll || branchOptions.length > 1) ? (
@@ -902,9 +893,9 @@ function OperationsQueueBoardPage() {
               >
                 Shop TV
               </Link>
-        </div>
+            </div>
           ) : null}
-      </div>
+        </div>
         <div
           className="floor-status-chips flex w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
           role="toolbar"
@@ -999,9 +990,7 @@ function OperationsQueueBoardPage() {
                     <TableCell className="text-foreground">{bookingVehicleText(ticket)}</TableCell>
                     <TableCell className="q-col-service font-medium text-primary">{ticket.service_name || '—'}</TableCell>
                     <TableCell>
-                      <span className={statusTone[ticket.status] || statusTone.completed}>
-                        {statusShortLabel(ticket.status)}
-                      </span>
+                      <StatusBadge status={ticket.status} label={statusShortLabel(ticket.status)} />
                     </TableCell>
                     <TableCell className="q-col-queue tabular-nums font-semibold text-foreground">
                       {formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}
@@ -1159,7 +1148,7 @@ function OperationsQueueBoardPage() {
                 label={statusShortLabel(status)}
                 onPage={(page) => setLanePage((cur) => ({ ...cur, [status]: page }))}
               />
-            </section>
+    </section>
           )
         })}
         </div>
@@ -1418,7 +1407,7 @@ export function NewQueueTicketPage() {
       <div>
         <Panel title="Ticket Form" icon={Plus}>
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase suggest-field">
+            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase suggest-field">
               Plate / sticker *
               <input
                 value={form.vehicle_plate}
@@ -1455,13 +1444,13 @@ export function NewQueueTicketPage() {
                 </ul>
               ) : null}
             </label>
-            <p className="sm:col-span-2 text-xs text-slate-400">{PLATE_FIELD_HINT}. Matches appear after 3 characters.</p>
+            <p className="sm:col-span-2 text-xs text-muted-foreground">{PLATE_FIELD_HINT}. Matches appear after 3 characters.</p>
             {form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate) && !plateSuggestions.length ? (
               <p className="sm:col-span-2 floor-alert floor-alert-error" role="alert">
                 {plateValidationError(form.vehicle_plate)}
               </p>
             ) : plateKindLabel(form.vehicle_plate) ? (
-              <p className="sm:col-span-2 text-xs font-semibold text-slate-500">{plateKindLabel(form.vehicle_plate)}</p>
+              <p className="sm:col-span-2 text-xs font-semibold text-muted-foreground">{plateKindLabel(form.vehicle_plate)}</p>
             ) : null}
             {plateLookupState === 'found' || plateLookupState === 'not_found' ? (
               <p className={`sm:col-span-2 floor-alert ${plateLookupState === 'found' ? 'floor-alert-ok' : 'floor-alert-warn'}`}>
@@ -1479,7 +1468,7 @@ export function NewQueueTicketPage() {
             <FormField label="Email (optional)" value={form.customer_email} onChange={update('customer_email')} type="email" />
             <FormField label="First name (optional)" value={form.customer_first_name} onChange={update('customer_first_name')} />
             <FormField label="Last name (optional)" value={form.customer_last_name} onChange={update('customer_last_name')} />
-            <p className="sm:col-span-2 text-xs text-slate-400">No name yet? Ticket shows as Walk-in · plate. CRM can fill the name later.</p>
+            <p className="sm:col-span-2 text-xs text-muted-foreground">No name yet? Ticket shows as Walk-in · plate. CRM can fill the name later.</p>
             <VehicleMakeModelFields
               make={form.vehicle_make}
               model={form.vehicle_model}
@@ -1489,7 +1478,7 @@ export function NewQueueTicketPage() {
             />
             <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
             <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
-            <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Car size (pricing)<select value={form.vehicle_type} onChange={updateVehicleType} className="floor-control">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Car size (pricing)<select value={form.vehicle_type} onChange={updateVehicleType} className="floor-control">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <ServiceKindPicker
               services={services}
               selectedIds={form.service_ids}
@@ -1498,11 +1487,11 @@ export function NewQueueTicketPage() {
               disabled={submitting}
               kinds={['service', 'package']}
             />
-            {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="floor-control">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
+            {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="floor-control">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
             <FormField label="Final Price in Pesos" value={form.final_price} onChange={update('final_price')} type="number" min="0" step="0.01" required />
             {showFormLowPriceWarning && <p className="floor-alert floor-alert-warn">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
-            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">Notes<textarea value={form.notes} onChange={update('notes')} className="floor-control floor-control-area" /></label>
-            <button disabled={submitting} className="floor-touch-btn sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-[#052699] px-5 py-3.5 text-base font-semibold text-white shadow-[0_8px_20px_rgba(5,38,153,0.28)] transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} aria-hidden /> : <Plus size={18} aria-hidden />}Create Queue Ticket</button>
+            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Notes<textarea value={form.notes} onChange={update('notes')} className="floor-control floor-control-area" /></label>
+            <button disabled={submitting} className="floor-touch-btn sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-base font-semibold text-primary-foreground shadow-[0_8px_20px_rgba(5,38,153,0.28)] transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-primary/90 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} aria-hidden /> : <Plus size={18} aria-hidden />}Create Queue Ticket</button>
           </form>
         </Panel>
       </div>
@@ -1997,7 +1986,7 @@ export function MyTasksPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {row.status === 'todo' && (
-                      <button type="button" disabled={saving === row.id} onClick={() => updatePlanTask(row, 'in_progress')} className="min-h-11 rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white disabled:opacity-40">Start</button>
+                      <button type="button" disabled={saving === row.id} onClick={() => updatePlanTask(row, 'in_progress')} className="min-h-11 rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-40">Start</button>
                     )}
                     {row.status === 'in_progress' && (
                       <ProofSubmit row={row} saving={saving} userId={user.id} onSubmit={(proofFields) => updatePlanTask(row, 'for_review', proofFields)} onSkip={() => updatePlanTask(row, 'done')} />
@@ -2055,7 +2044,7 @@ export function MyTasksPage() {
                         {saving === row.id ? 'Saving…' : 'Mark done'}
                       </button>
                     )}
-                  </div>
+            </div>
             </div>
             {row.task_notes && <p className="mt-4 text-sm text-muted-foreground">{row.task_notes}</p>}
           </article>
@@ -2294,7 +2283,7 @@ function EmptyLine({ text }) {
 }
 
 function ErrorState({ error, onRetry }) {
-  return <section className="rounded-3xl border border-red-300/20 bg-red-500/10 p-8 text-red-100"><p>{error}</p><button onClick={onRetry} className="mt-4 font-semibold text-white">Try again</button></section>
+  return <section className="rounded-3xl border border-red-300/20 bg-red-500/10 p-8 text-destructive"><p>{error}</p><button onClick={onRetry} className="mt-4 font-semibold text-foreground">Try again</button></section>
 }
 
 function LoadingPanel() {
@@ -2307,7 +2296,7 @@ function BranchSetupError() {
       <div className="max-w-md rounded-3xl border border-amber-300/20 bg-amber-400/10 p-8 text-center">
         <ShieldAlert className="mx-auto text-amber-200" size={42} />
         <h1 className="mt-5 text-3xl font-semibold">Branch setup required</h1>
-        <p className="mt-3 text-slate-300">Your Team Lead account has no assigned branch. Please contact an admin.</p>
+        <p className="mt-3 text-muted-foreground">Your Team Lead account has no assigned branch. Please contact an admin.</p>
       </div>
     </section>
   )
@@ -2328,7 +2317,7 @@ function RefreshButton({ loading, onClick }) {
 
 function FormField({ label, value, onChange, type = 'text', required = false, min, step }) {
   return (
-    <label className="text-xs font-bold tracking-[0.14em] text-slate-500 uppercase">
+    <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
       {label}
       <input
         type={type}

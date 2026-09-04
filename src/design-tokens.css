@@ -66,13 +66,19 @@
   --content-max-width: 77.5rem;
   --content-gutter: clamp(1rem, 4vw, 3rem);
 
-  /* Shape, borders, and depth */
-  --radius-none: 0;
-  --radius-sm: 0.25rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1.25rem;
-  --radius-xl: 2rem;
-  --radius-pill: 999px;
+  /* Shape lock — --shape-* avoids collision with shadcn @theme --radius-* */
+  --shape-none: 0;
+  --shape-sm: 0.25rem;
+  --shape-md: 0.75rem;
+  --shape-lg: 1.25rem;
+  --shape-xl: 2rem;
+  --shape-pill: 999px;
+  --shape-interactive: 0.625rem; /* 10px buttons/inputs */
+  --shape-card: 0.875rem; /* 14px panels */
+  --shape-sheet: 1.125rem; /* 18px sheets/dialogs */
+  /* Legacy aliases (public CSS / marketing) */
+  --radius-none: var(--shape-none);
+  --radius-pill: var(--shape-pill);
   --border-subtle: 1px solid var(--color-border-light);
   --shadow-card: 0 1rem 3rem rgba(5, 20, 65, 0.1);
   --shadow-card-hover: 0 1.5rem 4rem rgba(5, 38, 153, 0.18);
@@ -80,12 +86,39 @@
   --transition-fast: 160ms ease;
   --transition-base: 260ms ease;
 
+  /* Status (ops workflows) */
+  --status-queued: #6366f1;
+  --status-queued-soft: #eef2ff;
+  --status-washing: #0284c7;
+  --status-washing-soft: #e0f2fe;
+  --status-detailing: #7c3aed;
+  --status-detailing-soft: #f5f3ff;
+  --status-ready: #15803d;
+  --status-ready-soft: #f0fdf4;
+  --status-paid: #052699;
+  --status-paid-soft: #e8edff;
+  --status-void: #dc2626;
+  --status-void-soft: #fef2f2;
+  --status-late: #d97706;
+  --status-late-soft: #fffbeb;
+  --status-absent: #64748b;
+  --status-absent-soft: #f1f5f9;
+
+  /* Customer PWA aliases (fold --capp-* into brand) */
+  --capp-ink: var(--color-surface-cinematic);
+  --capp-navy: var(--color-brand-primary);
+  --capp-foam: var(--color-surface-page);
+  --capp-porcelain: #fbfcff;
+  --capp-steel: #5c6578;
+  --capp-line: color-mix(in srgb, var(--color-brand-primary) 12%, transparent);
+  --capp-ease: cubic-bezier(0.32, 0.72, 0, 1);
+
   /* Component primitives */
   --button-height: 3.25rem;
   --button-padding-x: 1.5rem;
-  --button-radius: var(--radius-pill);
+  --button-radius: var(--shape-pill);
   --card-padding: clamp(1.5rem, 3vw, 3.125rem);
-  --card-radius: var(--radius-none);
+  --card-radius: var(--shape-none);
 }
 
 /* Self-hosted public brand fonts */

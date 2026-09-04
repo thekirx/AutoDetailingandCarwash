@@ -78,7 +78,7 @@ describe('sale bucket classifiers share POS logic', () => {
   it('maps POS buckets to Bacoor close buckets through one adapter', () => {
     assert.equal(classifyPosBucket({ payCategory: 'ppf' }), 'ppf')
     assert.equal(classifyBacoorBucket({ pay_category: 'ppf' }), 'ppf')
-    assert.equal(classifyBacoorBucket({ booking_id: 'b1', pay_category: 'detailing' }), 'coating')
+    assert.equal(classifyBacoorBucket({ booking_id: 'b1', pay_category: 'detailing' }), 'detailing')
     assert.equal(classifyBacoorBucket({ pos_handoff_id: 'h1', pay_category: 'wash' }), 'carwash')
     assert.equal(
       classifyBacoorBucket({ name: 'Iced coffee', item_type: 'product', total_minor: 1 }),

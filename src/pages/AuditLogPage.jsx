@@ -5,10 +5,9 @@ import { canAccessAudit } from '@/auth/permissions'
 import { listAuditLogs } from '@/lib/audit'
 import { formatAuditDetail } from '@/lib/auditDetail'
 import OpsPageShell from '@/components/ops/OpsPageShell'
-import { Badge } from '@/components/ui/badge'
+import FilterBar from '@/components/ops/FilterBar'
+import DataTable from '@/components/ops/DataTable'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 
 function formatWhen(iso) {
@@ -23,6 +22,7 @@ export default function AuditLogPage() {
   const { profile } = useAuth()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
+  const [q, setQ] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -42,11 +42,39 @@ export default function AuditLogPage() {
 
   if (!canAccessAudit(profile)) return <Navigate to="/operations/access-denied" replace />
 
+  const columns = [
+    { id: 'when', header: 'When', accessorKey: 'created_at', sortable: true, cell: (row) => formatWhen(row.created_at), className: 'whitespace-nowrap text-xs text-muted-foreground' },
+    { id: 'actor', header: 'Actor', accessorKey: 'actor_role', sortable: true },
+    { id: 'action', header: 'Action', accessorKey: 'action', sortable: true, className: 'font-medium' },
+    {
+      id: 'entity',
+      header: 'Entity',
+      accessorKey: 'entity_type',
+      cell: (row) => (
+        <div>
+          <div>{row.entity_type}</div>
+          <div className="text-xs text-muted-foreground">{row.entity_id || '—'}</div>
+        </div>
+      ),
+    },
+    { id: 'summary', header: 'Summary', cell: (row) => formatAuditDetail(row), className: 'max-w-md text-sm', hideOnMobile: false },
+  ]
+
+  const filtered = q.trim()
+    ? rows.filter((r) =>
+        [r.action, r.actor_role, r.entity_type, r.entity_id, formatAuditDetail(r)]
+          .join(' ')
+          .toLowerCase()
+          .includes(q.trim().toLowerCase()),
+      )
+    : rows
+
   return (
     <OpsPageShell
       className="hakum-audit"
       eyebrow="Governance"
       title="Audit log"
+      breadcrumbs={[{ label: 'Ops', to: '/operations/console' }, { label: 'Audit' }]}
       description="Super Admin and Admin actions on people, branches, services, and related ops mutations."
       actions={
         <Button variant="outline" className="min-h-11" onClick={load} disabled={loading}>
@@ -54,46 +82,15 @@ export default function AuditLogPage() {
         </Button>
       }
     >
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent events</CardTitle>
-          <CardDescription>{rows.length} latest entries</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!rows.length && !loading ? (
-            <p className="text-sm text-muted-foreground">No audit events yet — create or edit a branch, person, or service to start the trail.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>When</TableHead>
-                  <TableHead>Actor</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Entity</TableHead>
-                  <TableHead>Summary</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatWhen(row.created_at)}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{row.actor_role || '—'}</Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">{row.action}</TableCell>
-                    <TableCell>
-                      <div>{row.entity_type}</div>
-                      <div className="text-xs text-muted-foreground">{row.entity_id || '—'}</div>
-                    </TableCell>
-                    <TableCell className="max-w-md text-sm">{formatAuditDetail(row)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <FilterBar search={q} onSearchChange={setQ} searchPlaceholder="Search actions, actors, entities…" onClear={() => setQ('')} />
+      <DataTable
+        columns={columns}
+        data={filtered}
+        searchKeys={false}
+        emptyTitle="No audit events"
+        emptyDescription="Create or edit a branch, person, or service to start the trail."
+        getRowId={(row) => row.id}
+      />
     </OpsPageShell>
   )
 }

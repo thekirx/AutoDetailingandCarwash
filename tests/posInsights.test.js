@@ -71,7 +71,8 @@ describe('POS redesign seams', () => {
     assert.match(pos, /PosSettingsPanel/)
     assert.match(pos, /PosSalaryPreviewCard/)
     assert.match(pos, /POS_SETTINGS_TAB/)
-    assert.match(pos, /max-w-7xl/)
+    assert.match(pos, /OpsPageShell/)
+    assert.match(pos, /hakum-pos/)
     assert.match(pos, /settings\/pos/)
   })
 

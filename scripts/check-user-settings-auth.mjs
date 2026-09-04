@@ -36,9 +36,7 @@ assert.match(settingsModal, /saveSmsOptIn/)
 
 const ops = read('src/layouts/OperationsLayout.jsx')
 assert.match(ops, /UserSettingsModal/)
-
-const admin = read('src/layouts/AdminLayout.jsx')
-assert.match(admin, /UserSettingsModal/)
+assert.doesNotMatch(ops, /AdminLayout/)
 
 const login = read('src/pages/LoginPage.jsx')
 assert.match(login, /resetPasswordForEmail/)

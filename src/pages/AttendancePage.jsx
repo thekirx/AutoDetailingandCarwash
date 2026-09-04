@@ -54,6 +54,7 @@ export default function AttendancePage() {
       className="hakum-attendance"
       eyebrow="Operations"
       title="Attendance"
+      breadcrumbs={[{ label: 'Ops', to: '/operations/attendance' }, { label: 'Attendance' }]}
       description={
         showClock
           ? 'Time in inside the branch geofence. Present or late crew can be assigned to floor jobs. Late arrivals still earn — at a lower wash-pool share set in Settings.'

@@ -43,6 +43,7 @@ export default function SettingsHubPage() {
       className="hakum-settings-hub"
       eyebrow={SETTINGS_HUB_COPY.eyebrow}
       title={SETTINGS_HUB_COPY.title}
+      breadcrumbs={[{ label: 'Ops', to: '/operations/settings' }, { label: 'Settings' }]}
       description={SETTINGS_HUB_COPY.description}
     >
       <div className="grid gap-4 sm:grid-cols-2">

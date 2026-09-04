@@ -24,11 +24,14 @@ describe('Concurrent ops: coalesce + stable realtime + hot indexes', () => {
     assert.ok(!src.includes('attendance-table:${branchSlug}:${crypto.randomUUID'))
   })
 
-  it('notification bell and vehicle catalog share one channel per client, not a UUID each mount', () => {
+  it('notification bell shares one realtime channel via fan-out (no per-mount UUID)', () => {
     const bell = read('src/components/NotificationBell.jsx')
+    const shared = read('src/lib/userNotificationsRealtime.js')
     assert.match(bell, /createCoalescedReload/)
-    assert.match(bell, /user-notifications-bell:/)
-    assert.doesNotMatch(bell, /randomUUID/)
+    assert.match(bell, /subscribeUserNotificationRealtime/)
+    assert.match(shared, /user-notifications-bell:/)
+    assert.match(shared, /bellListeners/)
+    assert.doesNotMatch(shared, /randomUUID/)
     const catalog = read('src/components/VehicleMakeModelFields.jsx')
     assert.ok(catalog.includes("channel('vehicle-catalog')"))
     assert.ok(!catalog.includes('vehicle-catalog-picker:${crypto.randomUUID'))

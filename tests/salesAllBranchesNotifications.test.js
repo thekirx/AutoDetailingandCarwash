@@ -99,10 +99,13 @@ describe('maintenance reminder seed on completion', () => {
 
   it('reminder cron sends once per due cycle (scheduled only)', async () => {
     const mjs = await readProject('scripts/notify-maintenance-due.mjs')
-    assert.match(mjs, /sendWebPushToUsers/)
-    assert.match(mjs, /busybeeSendSms/)
+    const notify = await readProject('server/paintMaintenanceNotify.mjs')
+    assert.match(mjs, /sendPaintMaintenanceReminder/)
     assert.match(mjs, /notification_settings/)
     assert.match(mjs, /\.eq\('status', 'scheduled'\)/)
+    assert.match(notify, /sendWebPushToUsers/)
+    assert.match(notify, /busybeeSendSms/)
+    assert.match(notify, /status: 'notified'/)
   })
 })
 

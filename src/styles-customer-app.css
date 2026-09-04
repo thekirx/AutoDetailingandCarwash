@@ -1,14 +1,12 @@
 /* Customer app — mobile/PWA feels like a native app; desktop connects to the landing site. */
 
 .capp {
-  --capp-ink: #020a31;
-  --capp-navy: #052699;
-  --capp-foam: #f2f4f8;
-  --capp-porcelain: #fbfcff;
-  --capp-steel: #5c6578;
-  --capp-line: rgba(5, 38, 153, 0.12);
-  --capp-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Tokens inherited from design-tokens.css (--capp-* aliases) */
   min-height: 100dvh;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+  box-sizing: border-box;
   background: var(--capp-foam);
   color: var(--capp-ink);
   overscroll-behavior: contain;
@@ -18,9 +16,12 @@
 .capp-stage {
   position: relative;
   min-height: 100dvh;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 .capp-hero {
@@ -48,7 +49,24 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.85rem;
+}
+
+/* Official lockup (logo + wordmark, OW) on navy hero — same asset as public header */
+.capp-brand {
+  margin: 0 0 0.65rem;
+  display: flex;
+  align-items: center;
+  min-height: 1.85rem;
+}
+
+.capp-brand-logo {
+  display: block;
+  height: 1.85rem;
+  width: auto;
+  max-width: min(11.75rem, 58vw);
+  object-fit: contain;
+  object-position: left center;
 }
 
 .capp-kicker {
@@ -67,14 +85,16 @@
   font-weight: 800;
   font-style: italic;
   letter-spacing: -0.035em;
-  line-height: 1.05;
+  line-height: 1.12;
+  padding-bottom: 0.1rem;
+  text-wrap: balance;
 }
 
 .capp-hero-sub {
-  margin: 0.4rem 0 0;
+  margin: 0.45rem 0 0;
   max-width: 28ch;
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.45;
   color: rgba(248, 250, 252, 0.76);
 }
 
@@ -191,8 +211,19 @@
 .capp-scroll {
   flex: 1;
   display: grid;
-  gap: 0.85rem;
-  padding: 1rem 1.15rem 0.25rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1.1rem 1.2rem 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Stamp card stays a 5-wide grid even when the stage is narrow */
+.capp .loyalty-card-hakum ol[aria-label] {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
 .capp-ticket {
@@ -357,6 +388,14 @@
   color: #fff;
 }
 
+.capp-btn-fill:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--capp-navy) 88%, #000);
+}
+
+.capp-btn-fill:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 .capp-btn-ghost {
   border: 1.5px solid rgba(5, 38, 153, 0.22);
   background: #fff;
@@ -380,6 +419,8 @@
   display: flex;
   gap: 0.55rem;
   overflow-x: auto;
+  max-width: 100%;
+  min-width: 0;
   padding-bottom: 0.15rem;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
@@ -731,10 +772,12 @@
 }
 
 .capp-cover {
-  width: calc(100% + 2.3rem);
+  width: 100%;
+  max-width: 100%;
   max-height: 220px;
-  margin: -0.25rem -1.15rem 0;
+  margin: -0.25rem 0 0;
   object-fit: cover;
+  border-radius: 1rem;
 }
 
 .capp-article {
@@ -799,6 +842,15 @@
   display: none !important;
 }
 
+.account-route,
+.account-route .app-shell,
+.account-route .app-shell-main,
+.account-route .capp,
+.account-route .capp-stage {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 /* Desktop / laptop: landing header + wide account (no phone frame) */
 @media (min-width: 860px) {
   .account-route .account-web-header {
@@ -832,6 +884,16 @@
     margin-bottom: 0.5rem;
     padding: 1.65rem 1.75rem 1.55rem;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .capp-brand {
+    margin-bottom: 0.75rem;
+    min-height: 2.15rem;
+  }
+
+  .capp-brand-logo {
+    height: 2.15rem;
+    max-width: 13.5rem;
   }
 
   .capp-hero h1 {
@@ -892,8 +954,8 @@
   }
 }
 
-/* Landscape phone: compact hero + side dock */
-@media (orientation: landscape) and (max-height: 520px) {
+/* Phone landscape only — do not flip desktop/laptop short windows into a 2-col phone layout */
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 900px) {
   .capp-stage {
     padding-bottom: 0.75rem;
     padding-right: calc(4.6rem + env(safe-area-inset-right, 0px));
@@ -911,12 +973,14 @@
   }
 
   .capp-scroll {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-content: start;
     padding-top: 0.65rem;
   }
 
-  .capp-scroll > .capp-ticket-rate {
+  .capp-scroll > .capp-ticket-rate,
+  .capp-scroll > .loyalty-card-hakum,
+  .capp-scroll > .capp-section {
     grid-column: 1 / -1;
   }
 

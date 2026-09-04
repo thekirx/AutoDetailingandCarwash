@@ -36,7 +36,7 @@ const PAYMENT_FILTERS = [
 ]
 
 const trendConfig = {
-  sales: { label: 'Sales', color: '#052699' },
+  sales: { label: 'Sales', color: 'var(--color-brand-primary)' },
 }
 
 export default function FinanceSalesTab({ salesRows, branchOptions, range, loading }) {

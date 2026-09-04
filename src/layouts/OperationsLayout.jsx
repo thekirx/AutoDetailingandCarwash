@@ -31,9 +31,9 @@ import {
   Users,
   Wallet,
   Banknote,
-  X,
   Newspaper,
   Star,
+  Search,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -64,6 +64,8 @@ import { resolvePostLoginPath } from '../auth/authRedirect'
 import NotificationBell from '@/components/NotificationBell'
 import UserSettingsModal from '@/components/UserSettingsModal'
 import { OpsInstallPopup } from '@/components/InstallGuide'
+import CommandMenu from '@/components/ops/CommandMenu'
+import ResponsiveSheet from '@/components/ops/ResponsiveSheet'
 import {
   Sidebar,
   SidebarContent,
@@ -82,6 +84,15 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const iconMap = {
   Gauge,
@@ -155,8 +166,7 @@ function BrandMark({ size = 28 }) {
 }
 
 /**
- * FloorAppShell — mobile-app-first (TL, crew, sales, marketing, video, detailer).
- * Desktop: phone stage on bay.
+ * FloorAppShell — phone dock; tablet+ left rail + content (no stretched phone frame).
  */
 function FloorAppShell({
   profile,
@@ -173,56 +183,121 @@ function FloorAppShell({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const branch = formatScope(profile)
 
+  const railNav = (
+    <nav className="floor-rail-nav" aria-label="Primary navigation">
+      <ul className="floor-rail-list">
+        {dock.map(({ label, to, icon, primary, end }) => {
+          const Icon = iconMap[icon] || ClipboardList
+          const pathOnly = to.split('?')[0]
+          return (
+            <li key={to}>
+              <NavLink
+                to={to}
+                end={Boolean(end)}
+                className={({ isActive }) => {
+                  const onQueueBoard = pathOnly === '/operations/queue' && location.pathname === '/operations/queue'
+                  const active = primary
+                    ? location.pathname === pathOnly || location.pathname.startsWith(`${pathOnly}/`)
+                    : end
+                      ? onQueueBoard
+                      : isActive || location.pathname.startsWith(pathOnly)
+                  return `floor-rail-item ${primary ? 'floor-rail-item-primary' : ''} ${active ? 'is-active' : ''}`
+                }}
+              >
+                <Icon size={22} aria-hidden />
+                <span>{label}</span>
+              </NavLink>
+            </li>
+          )
+        })}
+      </ul>
+    </nav>
+  )
+
   return (
     <div className={`floor-app-stage ${shellClass}`.trim()}>
-      <div className="floor-shell floor-app-frame flex h-svh max-h-svh w-full flex-col overflow-hidden bg-background text-foreground">
-        <header className="floor-topbar z-30 flex shrink-0 items-center gap-2 border-b border-border bg-background/95 backdrop-blur-xl sm:gap-3">
-          <div
-            className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-[var(--color-brand-primary)]"
-            aria-hidden
-          >
-            {brand.icon}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black tracking-[0.06em] sm:tracking-[0.14em]">{brand.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {profile?.full_name || brand.fallbackName} ·{' '}
-              <span className="font-semibold tracking-wide text-primary uppercase">{branch}</span>
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <NotificationBell light homeUrl={homeUrl} homeLabel={homeLabel} />
-            <button
-              type="button"
-              className="floor-icon-btn"
-              aria-label="Settings"
-              onClick={() => setSettingsOpen(true)}
+      <div className="floor-shell floor-app-frame flex h-svh max-h-svh w-full flex-col overflow-hidden bg-background text-foreground md:flex-row">
+        <div className="floor-rail-aside hidden md:flex">{railNav}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <header className="floor-topbar z-30 flex shrink-0 items-center gap-2 border-b border-border bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl sm:gap-3">
+            <div
+              className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary"
+              aria-hidden
             >
-              <Settings size={18} />
-            </button>
-          </div>
-          <button
-            type="button"
-            className="floor-icon-btn"
-            aria-expanded={moreOpen}
-            aria-controls="floor-more-panel"
-            aria-label={moreOpen ? 'Close more menu' : 'Open more menu'}
-            onClick={() => setMoreOpen((v) => !v)}
-          >
-            {moreOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-          <button type="button" className="floor-icon-btn" onClick={signOut} aria-label="Sign out">
-            <LogOut size={18} />
-          </button>
-        </header>
+              {brand.icon}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black tracking-[0.06em] sm:tracking-[0.14em]">{brand.title}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {profile?.full_name || brand.fallbackName} ·{' '}
+                <span className="font-semibold tracking-wide text-primary uppercase">{branch}</span>
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <NotificationBell light homeUrl={homeUrl} homeLabel={homeLabel} />
+              <button type="button" className="floor-icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
+                <Settings size={18} />
+              </button>
+              {more?.length ? (
+                <button
+                  type="button"
+                  className="floor-icon-btn"
+                  aria-expanded={moreOpen}
+                  aria-label="Open more menu"
+                  onClick={() => setMoreOpen(true)}
+                >
+                  <Menu size={20} />
+                </button>
+              ) : null}
+              <button type="button" className="floor-icon-btn" onClick={signOut} aria-label="Sign out">
+                <LogOut size={18} />
+              </button>
+            </div>
+          </header>
 
-        {moreOpen && (
-          <div
-            id="floor-more-panel"
-            className="floor-more-panel z-20 flex shrink-0 flex-wrap gap-2 border-b border-border bg-muted/40 py-3"
-            role="navigation"
-            aria-label="More tools"
+          <main className="floor-main ops-page-chrome min-h-0 flex-1 overflow-y-auto overscroll-y-contain py-3 sm:py-4 md:max-w-5xl md:self-stretch md:px-4">
+            <Outlet />
+          </main>
+
+          <nav
+            className="floor-dock z-30 shrink-0 border-t border-border bg-background/98 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+            aria-label="Primary navigation"
           >
+            <ul
+              className="mx-auto grid max-w-3xl gap-1 px-1 py-1.5 sm:gap-2 sm:px-2"
+              style={{ gridTemplateColumns: `repeat(${Math.max(dock.length, 1)}, minmax(0, 1fr))` }}
+            >
+              {dock.map(({ label, to, icon, primary, end }) => {
+                const Icon = iconMap[icon] || ClipboardList
+                const pathOnly = to.split('?')[0]
+                return (
+                  <li key={to} className="flex justify-center">
+                    <NavLink
+                      to={to}
+                      end={Boolean(end)}
+                      className={({ isActive }) => {
+                        const onQueueBoard = pathOnly === '/operations/queue' && location.pathname === '/operations/queue'
+                        const active = primary
+                          ? location.pathname === pathOnly || location.pathname.startsWith(`${pathOnly}/`)
+                          : end
+                            ? onQueueBoard
+                            : isActive || location.pathname.startsWith(pathOnly)
+                        if (primary) return `floor-dock-fab ${active ? 'floor-dock-fab-active' : ''}`
+                        return `floor-dock-item ${active ? 'floor-dock-item-active' : ''}`
+                      }}
+                    >
+                      <Icon size={primary ? 22 : 20} aria-hidden />
+                      <span>{label}</span>
+                    </NavLink>
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
+        </div>
+
+        <ResponsiveSheet open={moreOpen} onOpenChange={setMoreOpen} title="More tools" description={`Scope · ${branch}`}>
+          <div className="grid gap-2" role="navigation" aria-label="More tools">
             {more.map(({ label, to, icon }) => {
               const Icon = iconMap[icon] || ClipboardList
               return (
@@ -231,7 +306,7 @@ function FloorAppShell({
                   to={to}
                   onClick={() => setMoreOpen(false)}
                   className={({ isActive }) =>
-                    `floor-chip ${isActive || location.pathname.startsWith(to.split('?')[0]) ? 'floor-chip-active' : ''}`
+                    `floor-chip min-h-11 ${isActive || location.pathname.startsWith(to.split('?')[0]) ? 'floor-chip-active' : ''}`
                   }
                 >
                   <Icon size={16} aria-hidden />
@@ -239,56 +314,11 @@ function FloorAppShell({
                 </NavLink>
               )
             })}
-            <span className="ml-auto self-center text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
-              Scope · {branch}
-            </span>
           </div>
-        )}
-
-        <main className="floor-main ops-page-chrome min-h-0 flex-1 overflow-y-auto overscroll-y-contain py-3 sm:py-4">
-          <Outlet />
-        </main>
+        </ResponsiveSheet>
 
         <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
         <OpsInstallPopup />
-
-        <nav
-          className="floor-dock z-30 shrink-0 border-t border-border bg-background/98 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"
-          aria-label="Primary navigation"
-        >
-          <ul
-            className="mx-auto grid max-w-3xl gap-1 px-1 py-1.5 sm:gap-2 sm:px-2"
-            style={{ gridTemplateColumns: `repeat(${Math.max(dock.length, 1)}, minmax(0, 1fr))` }}
-          >
-            {dock.map(({ label, to, icon, primary, end }) => {
-              const Icon = iconMap[icon] || ClipboardList
-              const pathOnly = to.split('?')[0]
-              return (
-                <li key={to} className="flex justify-center">
-                  <NavLink
-                    to={to}
-                    end={Boolean(end)}
-                    className={({ isActive }) => {
-                      const onQueueBoard = pathOnly === '/operations/queue' && location.pathname === '/operations/queue'
-                      const active = primary
-                        ? location.pathname === pathOnly || location.pathname.startsWith(`${pathOnly}/`)
-                        : end
-                          ? onQueueBoard
-                          : isActive || location.pathname.startsWith(pathOnly)
-                      if (primary) {
-                        return `floor-dock-fab ${active ? 'floor-dock-fab-active' : ''}`
-                      }
-                      return `floor-dock-item ${active ? 'floor-dock-item-active' : ''}`
-                    }}
-                  >
-                    <Icon size={primary ? 22 : 20} aria-hidden />
-                    <span>{label}</span>
-                  </NavLink>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
       </div>
     </div>
   )
@@ -439,7 +469,9 @@ function CommandNavList({ items }) {
 
 /** CommandShell — web-first sidebar for SA / ASA / Branch Admin / Investor. */
 function CommandShell({ profile, user, signOut, navigation, adminShell }) {
+  const location = useLocation()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [cmdOpen, setCmdOpen] = useState(false)
   const label =
     profile?.role === ROLES.INVESTOR
       ? 'Investor'
@@ -449,100 +481,137 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           ? 'Admin console'
           : 'Command'
 
+  const crumb = useMemo(() => {
+    const match = navigation.find((item) => commandNavIsActive(location.pathname, item.to))
+    return match?.label || label
+  }, [navigation, location.pathname, label])
+
   return (
     <SidebarProvider
       className="command-shell min-w-0 overflow-x-hidden bg-background text-foreground"
       style={{ '--sidebar-width': '15rem' }}
     >
-        <Sidebar collapsible="icon" variant="inset" className="command-rail">
-          <SidebarHeader className="command-rail-header">
-            <div className="flex items-center gap-3 px-2 py-1">
-              {/* Collapsed rail: mark only. Expanded: LW wordmark — never both (double H). */}
-              <div className="hidden size-9 place-items-center overflow-hidden rounded-xl bg-primary text-primary-foreground group-data-[collapsible=icon]:grid">
-                <img
-                  src="/branding/hakum-mark-ow.png"
-                  alt=""
-                  width={22}
-                  height={22}
-                  className="size-[22px] object-contain"
-                  decoding="async"
-                />
-              </div>
-              <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-                <img
-                  src="/branding/hakum-lw-blue.png"
-                  alt="Hakum"
-                  className="h-6 w-auto object-contain object-left"
-                  decoding="async"
-                />
-                <p className="command-rail-kicker">{label}</p>
-              </div>
+      <Sidebar collapsible="icon" variant="inset" className="command-rail">
+        <SidebarHeader className="command-rail-header">
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="hidden size-9 place-items-center overflow-hidden rounded-xl bg-primary text-primary-foreground group-data-[collapsible=icon]:grid">
+              <img
+                src="/branding/hakum-mark-ow.png"
+                alt=""
+                width={22}
+                height={22}
+                className="size-[22px] object-contain"
+                decoding="async"
+              />
             </div>
-          </SidebarHeader>
-          <SidebarSeparator className="command-rail-rule" />
-          <SidebarContent className="command-rail-body">
-            <CommandNavList items={navigation} />
-          </SidebarContent>
-          <SidebarFooter className="command-rail-footer">
-            <div className="command-rail-who group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-sm font-semibold">{profile?.full_name || 'Operations'}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {formatRole(profile?.role)} · {formatScope(profile)}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">{profile?.email || user?.email}</p>
+            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+              <img
+                src="/branding/hakum-lw-blue.png"
+                alt="Hakum"
+                className="h-6 w-auto object-contain object-left"
+                decoding="async"
+              />
+              <p className="command-rail-kicker">{label}</p>
             </div>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton className="command-nav-btn" tooltip="Account" onClick={() => setSettingsOpen(true)}>
-                  <Settings />
-                  <span>Account</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton className="command-nav-btn" tooltip="Sign out" onClick={signOut}>
-                  <LogOut />
-                  <span>Sign out</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
+          </div>
+        </SidebarHeader>
+        <SidebarSeparator className="command-rail-rule" />
+        <SidebarContent className="command-rail-body">
+          <CommandNavList items={navigation} />
+        </SidebarContent>
+        <SidebarFooter className="command-rail-footer">
+          <div className="command-rail-who group-data-[collapsible=icon]:hidden">
+            <p className="truncate text-sm font-semibold">{profile?.full_name || 'Operations'}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {formatRole(profile?.role)} · {formatScope(profile)}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{profile?.email || user?.email}</p>
+          </div>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton className="command-nav-btn" tooltip="Account" onClick={() => setSettingsOpen(true)}>
+                <Settings />
+                <span>Account</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton className="command-nav-btn" tooltip="Sign out" onClick={signOut}>
+                <LogOut />
+                <span>Sign out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
 
-        <SidebarInset className="min-w-0 overflow-x-hidden">
-          <header className="ops-inset-topbar sticky top-0 z-20 flex min-w-0 items-center gap-3 border-b border-border bg-background/90 backdrop-blur-xl">
-            <SidebarTrigger className="min-h-11 min-w-11" />
-            <Separator orientation="vertical" className="h-5" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold tracking-[0.18em] text-primary uppercase">Hakum Auto Care</p>
-              <p className="truncate text-sm text-muted-foreground">
-                {isBranchAdmin(profile)
-                  ? `Branch · ${formatScope(profile)}`
-                  : adminShell
-                    ? 'Operations · cost · profit · stock'
-                    : `Scope · ${formatScope(profile)}`}
-              </p>
-            </div>
-            <NotificationBell
-              homeUrl={
-                isBranchAdmin(profile)
-                  ? '/operations/pos'
-                  : resolvePostLoginPath(profile, null)
-              }
-              homeLabel={isBranchAdmin(profile) ? 'Open POS' : 'Home'}
-            />
-            <button
-              type="button"
-              className="inline-flex size-11 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
-              aria-label="Account"
-              onClick={() => setSettingsOpen(true)}
+      <SidebarInset className="min-w-0 overflow-x-hidden">
+        <header className="ops-inset-topbar sticky top-0 z-20 flex min-w-0 items-center gap-2 border-b border-border bg-background/90 backdrop-blur-xl sm:gap-3">
+          <SidebarTrigger className="min-h-11 min-w-11" />
+          <Separator orientation="vertical" className="hidden h-5 sm:block" />
+          <div className="min-w-0 flex-1">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span>Ops</span>
+              <span aria-hidden>/</span>
+              <span className="truncate font-medium text-foreground">{crumb}</span>
+            </nav>
+            <p className="truncate text-sm text-muted-foreground">
+              {isBranchAdmin(profile)
+                ? `Branch · ${formatScope(profile)}`
+                : adminShell
+                  ? 'Operations · cost · profit · stock'
+                  : `Scope · ${formatScope(profile)}`}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="hidden min-h-11 gap-2 md:inline-flex"
+            onClick={() => setCmdOpen(true)}
+            aria-label="Open command menu"
+          >
+            <Search className="size-4" aria-hidden />
+            <span className="text-muted-foreground">Search</span>
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="min-h-11 min-w-11 md:hidden"
+            onClick={() => setCmdOpen(true)}
+            aria-label="Open command menu"
+          >
+            <Search className="size-4" />
+          </Button>
+          <NotificationBell
+            homeUrl={isBranchAdmin(profile) ? '/operations/pos' : resolvePostLoginPath(profile, null)}
+            homeLabel={isBranchAdmin(profile) ? 'Open POS' : 'Home'}
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--shape-interactive)] border border-border bg-background text-muted-foreground hover:bg-muted"
+              aria-label="Account menu"
             >
               <Settings size={16} />
-            </button>
-          </header>
-          <main className="ops-page-chrome min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
-            <Outlet />
-          </main>
-        </SidebarInset>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-48">
+              <DropdownMenuLabel>
+                <div className="flex flex-col gap-0.5">
+                  <span>{profile?.full_name || 'Account'}</span>
+                  <span className="font-normal text-muted-foreground">{formatRole(profile?.role)}</span>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSettingsOpen(true)}>Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={signOut}>Sign out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
+        <main className="ops-page-chrome mx-auto min-w-0 w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
+          <Outlet />
+        </main>
+      </SidebarInset>
+      <CommandMenu open={cmdOpen} onOpenChange={setCmdOpen} />
       <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
       <OpsInstallPopup />
     </SidebarProvider>

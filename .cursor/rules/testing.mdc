@@ -1,0 +1,38 @@
+# Testing Conventions
+
+## Framework
+
+- Use Node's built-in test runner: `node:test` + `node:assert/strict`
+- Do **not** add Jest, Vitest, Mocha, or React Testing Library
+- Live / API checks are plain `scripts/*.mjs` (custom assert or ✔/✖), not `node:test`
+- Browser UI E2E uses **Puppeteer** (already a dependency). Prefer extending it over adding Playwright unless Puppeteer cannot cover the case
+- Never call real BusyBee SendSMS in default CI/unit runs. Live DLR requires `SEND_LIVE_SMS=1`
+
+## Structure
+
+- Unit / seam: `tests/<name>.test.js` — one concern per file
+- Live e2e: `scripts/e2e-*.mjs`, `scripts/check-*.mjs`, `scripts/smoke-*.mjs`, `scripts/qa-*.mjs`
+- Evidence: `e2e-evidence/` for UI/responsive screenshots
+- Bug register: `docs/qa/BUGS.md`
+
+## Patterns
+
+- Prefer pure helpers over mocking internals
+- When HTTP is needed in-unit, use local fakes (see `tests/httpCors.test.js`)
+- Static source contracts use `readFileSync` + `assert.match` (see `tests/frontendAudit.test.js`)
+- Ops UI auth false-green: reject `/operations/login` via `scripts/screenshotAuth.mjs`
+
+## Examples to follow
+
+- `tests/queueLogic.test.js` — pure domain unit
+- `tests/httpCors.test.js` — in-process mock response
+- `tests/principalQaMatrix.test.js` — RBAC lock
+- `tests/screenshotAuth.test.js` — auth URL guard
+- `scripts/e2e-readiness.mjs` — live Supabase smoke style
+- `scripts/e2e-ui-p0.mjs` — Puppeteer P0 flows
+
+## Commands
+
+- `npm test` — all `tests/` via `node --test`
+- `npm run test:readiness` — ultimate orchestrator (unit + live slices + UI + responsive)
+- `npm run e2e:newrequest` — Parts 1–9 master suite

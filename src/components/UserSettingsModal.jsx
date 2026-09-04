@@ -266,7 +266,7 @@ export default function UserSettingsModal({
                 <p className="text-sm text-muted-foreground">
                   Visit and floor updates on this device when allowed.
                 </p>
-                <div className={`rounded-xl border border-border p-3 ${isCustomer ? 'border-[#052699]/12 bg-[#f4f6fb]' : 'bg-muted/40'}`}>
+                <div className={`rounded-xl border border-border p-3 ${isCustomer ? 'border-primary/12 bg-primary/[0.06]' : 'bg-muted/40'}`}>
                   <PushToggle audience={audience === 'ops' ? 'ops' : 'customer'} surface="light" />
                 </div>
               </div>

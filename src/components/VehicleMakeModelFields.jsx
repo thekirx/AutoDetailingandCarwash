@@ -110,7 +110,7 @@ export default function VehicleMakeModelFields({
 
   const labelClass =
     variant === 'floor'
-      ? 'text-xs font-bold tracking-[0.14em] text-slate-500 uppercase'
+      ? 'text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase'
       : variant === 'crm'
         ? 'flex flex-col gap-2 text-sm font-medium'
         : ''
