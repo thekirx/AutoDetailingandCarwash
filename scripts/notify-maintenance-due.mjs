@@ -8,10 +8,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { busybeeSendSms } from '../server/busybee.mjs'
-import { sendWebPushToUsers } from '../server/webPush.mjs'
-import { renderNotificationMessage } from '../src/lib/notificationCopy.js'
-import { PAINT_MAINTENANCE_SLUG } from '../src/lib/paintMaintenance.js'
+import { sendPaintMaintenanceReminder } from '../server/paintMaintenanceNotify.mjs'
 
 const envPath = resolve(process.cwd(), '.env')
 if (existsSync(envPath)) {
@@ -58,94 +55,30 @@ const { data: settings } = await admin
   .eq('enabled', true)
 
 const { data: services } = await admin.from('services').select('id, slug, name')
-const serviceBySlug = new Map((services || []).map((s) => [String(s.slug || '').toLowerCase(), s]))
-
-/**
- * Most specific matching rule wins:
- * per_service_branch > per_service > per_branch > whole
- * Paint program prefers paint-maintenance rules, then the install slug on the row.
- */
-function settingFor(serviceSlug, branchSlug, programKey) {
-  const lookupSlugs = []
-  if (programKey === 'paint_maintenance' || String(serviceSlug).includes('ceramic') || String(serviceSlug).includes('paint-protection')) {
-    lookupSlugs.push(PAINT_MAINTENANCE_SLUG)
-  }
-  lookupSlugs.push(String(serviceSlug || '').toLowerCase())
-
-  const rows = settings || []
-  for (const slug of lookupSlugs) {
-    const svc = serviceBySlug.get(slug)
-    const svcId = svc?.id || null
-    if (!svcId && slug !== String(serviceSlug || '').toLowerCase()) continue
-    const match =
-      rows.find((s) => s.scope === 'per_service_branch' && s.service_id === svcId && s.branch_slug === branchSlug) ||
-      rows.find((s) => s.scope === 'per_service' && s.service_id === svcId)
-    if (match) return match
-  }
-  return (
-    rows.find((s) => s.scope === 'per_branch' && s.branch_slug === branchSlug) ||
-    rows.find((s) => s.scope === 'whole') ||
-    { channel: 'push', title: null, message: null }
-  )
-}
+const servicesBySlug = new Map((services || []).map((s) => [String(s.slug || '').toLowerCase(), s]))
 
 let sentCount = 0
 let failedCount = 0
 
 for (const row of data || []) {
-  const setting = settingFor(row.service_slug, row.branch_slug, row.program_key)
-  const channel = setting.channel || 'push'
-  const svc =
-    serviceBySlug.get(PAINT_MAINTENANCE_SLUG) ||
-    serviceBySlug.get(String(row.service_slug || '').toLowerCase())
-  const title =
-    String(setting.title || '').trim() || 'Hakum Auto Care: Time for paint maintenance'
-  const message = renderNotificationMessage(setting.message, {
-    plate: row.plate_number,
-    service: svc?.name || 'Paint Maintenance',
-    name: row.customer_name,
-    branch: row.branch_slug,
+  const result = await sendPaintMaintenanceReminder({
+    db: admin,
+    row,
+    settings: settings || [],
+    servicesBySlug,
+    force: false,
+    markNotified: true,
   })
-
-  if (channel === 'push' || channel === 'both') {
-    if (row.customer_id) {
-      try {
-        const result = await sendWebPushToUsers({
-          userIds: [row.customer_id],
-          title,
-          body: message,
-          url: '/book',
-          tag: `maintenance-${row.id}-${row.next_due_at}`,
-          kind: 'maintenance_reminder',
-        })
-        sentCount += result?.sent || 0
-        failedCount += result?.failed || 0
-      } catch (err) {
-        console.error('[maintenance] push failed', row.id, err?.message || err)
-        failedCount += 1
-      }
-    }
+  if (!result.ok) {
+    failedCount += 1
+    console.error(row.id, result.error)
+    continue
   }
-
-  if (channel === 'sms' || channel === 'both') {
-    if (row.customer_phone) {
-      try {
-        await busybeeSendSms({ phone: row.customer_phone, message: `${title}\n${message}`.slice(0, 160) })
-        sentCount += 1
-      } catch (err) {
-        console.error('[maintenance] sms failed', row.id, err?.message || err)
-        failedCount += 1
-      }
-    }
-  }
-
-  const { error: upErr } = await admin
-    .from('vehicle_maintenance_schedules')
-    .update({ status: 'notified', last_notified_at: new Date().toISOString() })
-    .eq('id', row.id)
-    .eq('status', 'scheduled')
-  if (upErr) console.error(row.id, upErr.message)
-  else console.log('notified', row.plate_number, row.next_due_at, row.customer_phone || '(no phone)')
+  if (result.push?.sent) sentCount += result.push.sent
+  if (result.sms?.ok) sentCount += 1
+  if (result.push?.failed) failedCount += result.push.failed
+  if (result.sms?.ok === false) failedCount += 1
+  console.log('notified', row.plate_number, row.next_due_at, row.customer_phone || '(no phone)')
 }
 
 console.log(`Done. sent=${sentCount} failed=${failedCount}`)

@@ -63,6 +63,7 @@ import CancellationReasonDialog from '@/components/CancellationReasonDialog'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
+import DetailingMaintenancePanel from '@/components/DetailingMaintenancePanel'
 import { BOOKING_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -77,14 +78,15 @@ import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { cn } from '@/lib/utils'
-import { ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ClipboardList, Send, Sparkles } from 'lucide-react'
+import { ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ClipboardList, Send, Sparkles, Wrench } from 'lucide-react'
 
-const BOOKING_TABS = ['board', 'list', 'table', 'calendar']
+const BOOKING_TABS = ['board', 'list', 'table', 'calendar', 'maintenance']
 const BOOKING_SHELL_TABS = Object.freeze([
   { id: 'board', label: 'Board' },
   { id: 'list', label: 'List' },
   { id: 'table', label: 'Table' },
   { id: 'calendar', label: 'Calendar' },
+  { id: 'maintenance', label: 'Maintenance' },
 ])
 const COLUMNS = [
   ...DETAILING_BOARD_STATUSES.map((s) => ({
@@ -983,6 +985,7 @@ export default function BookingBoardPage() {
           'open-until-done': CalendarDays,
           advance: ClipboardList,
           'pos-handoff': Send,
+          maintenance: Wrench,
         }}
       />
 
@@ -1283,6 +1286,10 @@ export default function BookingBoardPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="maintenance" className="mt-4 min-w-0">
+          <DetailingMaintenancePanel branchFilter={branchFilter} />
+        </TabsContent>
       </Tabs>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
@@ -1567,6 +1574,10 @@ export default function BookingBoardPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
+            <p className="rounded-xl border border-primary/20 bg-primary/[0.05] px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+              Client update: moving this stage sends SMS and push using the service-status templates (when the customer has
+              opted in). Ceramic/PPF completion also enrolls paint-maintenance reminders.
+            </p>
             {statusDialog?.status === 'completed' ? (
               <div className="grid gap-2">
                 <Label htmlFor="bk-outcome">Completion outcome</Label>

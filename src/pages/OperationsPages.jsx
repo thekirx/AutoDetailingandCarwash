@@ -865,7 +865,7 @@ function OperationsQueueBoardPage() {
           <div className="queue-board-controls flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <OpsTabList tabs={QUEUE_SHELL_TABS} aria-label="Queue layout" />
             <RefreshButton loading={loading} onClick={reload} />
-          </div>
+            </div>
         </Tabs>
         <div className="flex flex-wrap items-end gap-3">
           {(seeAll || branchOptions.length > 1) ? (
@@ -902,9 +902,9 @@ function OperationsQueueBoardPage() {
               >
                 Shop TV
               </Link>
-        </div>
+            </div>
           ) : null}
-      </div>
+        </div>
         <div
           className="floor-status-chips flex w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
           role="toolbar"
@@ -1159,7 +1159,7 @@ function OperationsQueueBoardPage() {
                 label={statusShortLabel(status)}
                 onPage={(page) => setLanePage((cur) => ({ ...cur, [status]: page }))}
               />
-            </section>
+    </section>
           )
         })}
         </div>
@@ -2055,7 +2055,7 @@ export function MyTasksPage() {
                         {saving === row.id ? 'Saving…' : 'Mark done'}
                       </button>
                     )}
-                  </div>
+            </div>
             </div>
             {row.task_notes && <p className="mt-4 text-sm text-muted-foreground">{row.task_notes}</p>}
           </article>

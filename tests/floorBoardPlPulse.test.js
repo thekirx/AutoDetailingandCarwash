@@ -17,11 +17,11 @@ describe('floor board P&L pulse', () => {
     assert.match(api, /net_minor/)
   })
 
-  it('SuperAdminFloorBoard renders expense and net tiles', () => {
+  it('SuperAdminFloorBoard renders expense tile without paid-count or net tiles', () => {
     const src = readFileSync(join(root, 'src/pages/SuperAdminFloorBoard.jsx'), 'utf8')
     assert.match(src, /financials\.expense_minor/)
-    assert.match(src, /financials\.net_minor/)
     assert.match(src, /Posted expenses|Expenses/)
-    assert.match(src, /Net profit|Net loss/)
+    assert.doesNotMatch(src, /label=["']Paid sales["']/)
+    assert.doesNotMatch(src, /Net profit|Net loss/)
   })
 })

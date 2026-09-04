@@ -41,8 +41,19 @@ describe('request.md floor + people', () => {
   it('renames wash roster and lists admin tiles with hover names', () => {
     const floor = read('src/pages/SuperAdminFloorBoard.jsx')
     assert.match(floor, /Carwash crew on shift/)
-    assert.match(floor, /Detailing operations summary/)
-    assert.match(floor, /group-hover:block/)
+    assert.match(floor, /title="Detailing operations"/)
+    assert.doesNotMatch(floor, /Detailing operations summary/)
+    assert.doesNotMatch(
+      floor,
+      /Absent \/ not checked in[\s\S]*attendance_status/,
+      'absent list must not repeat status under the card header',
+    )
+    assert.match(floor, /createPortal/)
+    assert.match(floor, /Click for full breakdown/)
+    assert.match(floor, /DialogContent/)
+    assert.match(floor, /onNavigate/)
+    assert.match(floor, /Open related view/)
+    assert.match(floor, /role=["']tooltip["']/)
     assert.deepEqual(
       ADMIN_ROSTER_GROUPS.map((g) => g.label),
       ['Marketing', 'Video editor', 'Branch Admin', 'ASA', 'Team Lead'],

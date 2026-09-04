@@ -129,7 +129,7 @@ export default function AdminConsolePage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <MetricCard
               label="Today revenue"
               value={formatPeso(snap?.todayRevenueMinor)}
@@ -137,36 +137,11 @@ export default function AdminConsolePage() {
               icon={CircleDollarSign}
               tone="good"
             />
-            <MetricCard
-              label="Sample revenue"
-              value={formatPeso(snap?.revenueMinor)}
-              detail="Recent daily sales rows (not calendar month)"
-              icon={CircleDollarSign}
-              tone="good"
-            />
-            <MetricCard
-              label="Sample expenses"
-              value={formatPeso(snap?.approvedExpenseMinor)}
-              detail={
-                snap?.pendingExpenseMinor
-                  ? `${formatPeso(snap.pendingExpenseMinor)} draft/pending/approved`
-                  : 'Paid + posted (pulse sample)'
-              }
-              icon={CircleDollarSign}
-              tone={snap?.approvedExpenseMinor ? 'warn' : 'default'}
-            />
-            <MetricCard
-              label={(snap?.profitMinor ?? 0) >= 0 ? 'Sample profit' : 'Sample loss'}
-              value={formatPeso(snap?.profitMinor)}
-              detail={`${formatPeso(snap?.revenueMinor)} − ${formatPeso(snap?.approvedExpenseMinor)}`}
-              icon={CircleDollarSign}
-              tone={(snap?.profitMinor ?? 0) >= 0 ? 'good' : 'bad'}
-            />
             <MetricCard label="Active queue" value={String(snap?.queueRows?.length || 0)} detail="Waiting → payment" icon={ClipboardList} />
             <MetricCard label="Low stock SKUs" value={String(snap?.lowStock?.length || 0)} detail="≤ 10 units" icon={Boxes} tone={snap?.lowStock?.length ? 'warn' : 'good'} />
           </div>
           <p className="text-sm text-muted-foreground">
-            Pulse sample is recent sales days + recent expense rows — not the Finance reporting window. Full P&amp;L lives on{' '}
+            Full P&amp;L lives on{' '}
             <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/operations/finance">
               Finance
             </Link>

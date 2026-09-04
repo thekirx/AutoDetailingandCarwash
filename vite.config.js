@@ -10,6 +10,7 @@ import { handleCustomerPortalRequest } from './server/customerPortal.mjs'
 import { handlePublicBookRequest } from './server/publicBook.mjs'
 import { handlePublicInquiryRequest } from './server/publicInquiry.mjs'
 import { handleBookingStatusRequest } from './server/bookingStatus.mjs'
+import { handleMaintenanceSchedulesRequest } from './server/maintenanceSchedulesApi.mjs'
 import { handlePushSubscribeRequest, handleSendPushRequest } from './server/pushApi.mjs'
 import { handleBusybeeRequest } from './server/busybeeApi.mjs'
 
@@ -85,6 +86,7 @@ function provisionApiPlugin() {
         return handlePublicPlateLookup(req, res)
       })
       mount('/api/booking-status', (req, res) => handleBookingStatusRequest(req, res))
+      mount('/api/maintenance-schedules', (req, res) => handleMaintenanceSchedulesRequest(req, res))
       mount('/api/push-subscribe', (req, res) => handlePushSubscribeRequest(req, res))
       mount('/api/send-push', (req, res) => handleSendPushRequest(req, res))
       mount('/api/notify-booking', async (req, res) => {

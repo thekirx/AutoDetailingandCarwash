@@ -7,6 +7,7 @@ const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url
 
 const expected = {
   '/api/booking-status': '/api/bookings?operation=booking-status',
+  '/api/maintenance-schedules': '/api/bookings?operation=maintenance-schedules',
   '/api/busybee': '/api/notifications?operation=busybee',
   '/api/customer-auth-lookup': '/api/customer?operation=customer-auth-lookup',
   '/api/customer-history': '/api/customer?operation=customer-history',
