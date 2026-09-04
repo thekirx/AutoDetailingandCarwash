@@ -13,6 +13,11 @@ describe('isOpsAuthedUrl', () => {
     assert.equal(isOpsAuthedUrl('http://127.0.0.1:4173/operations/finance?tab=pl'), true)
   })
 
+  it('rejects denial pages', () => {
+    assert.equal(isOpsAuthedUrl('http://127.0.0.1:4173/operations/access-denied'), false)
+    assert.equal(isOpsAuthedUrl('http://127.0.0.1:4173/operations/forbidden'), false)
+  })
+
   it('rejects non-ops paths', () => {
     assert.equal(isOpsAuthedUrl('http://127.0.0.1:4173/home'), false)
     assert.equal(isOpsAuthedUrl('http://127.0.0.1:4173/login'), false)

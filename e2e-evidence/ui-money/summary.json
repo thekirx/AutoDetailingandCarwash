@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "passed": 5,
+  "total": 5,
+  "failed": [],
+  "evidence": "e2e-evidence/ui-money",
+  "at": "2026-09-03T13:50:39.679Z",
+  "note": "Non-destructive: does not submit shift_close or complete_pos_sale"
+}

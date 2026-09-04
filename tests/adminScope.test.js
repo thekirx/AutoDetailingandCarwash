@@ -43,6 +43,7 @@ describe('Admin capability matrix', () => {
     assert.equal(canEditAttendanceRoles(p), false)
     assert.equal(canWriteFinance(p), true)
     assert.equal(allowRoute(p, 'queue-new'), false)
+    assert.equal(allowRoute(p, 'inventory'), true)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
@@ -50,6 +51,7 @@ describe('Admin capability matrix', () => {
         '/operations/queue',
         '/operations/attendance',
         '/operations/pos',
+        '/operations/inventory',
         '/operations/reviews',
         '/operations/planning',
         '/operations/roadmap',

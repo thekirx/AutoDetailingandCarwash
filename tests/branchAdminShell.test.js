@@ -24,8 +24,8 @@ describe('Branch Admin simplified shell', () => {
     assert.equal(redirectForRole(ROLES.SUPER_ADMIN), '/operations/console')
   })
 
-  it('Command nav: Floor, Queue, attendance, POS, reviews, planner, Ops Lab, history, audit — no Inventory (checkout-only)', () => {
-    assert.equal(allowRoute(p, 'inventory'), false)
+  it('Command nav: Floor, Queue, attendance, POS, Inventory restock, reviews, planner, Ops Lab, history, audit', () => {
+    assert.equal(allowRoute(p, 'inventory'), true)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
@@ -33,6 +33,7 @@ describe('Branch Admin simplified shell', () => {
         '/operations/queue',
         '/operations/attendance',
         '/operations/pos',
+        '/operations/inventory',
         '/operations/reviews',
         '/operations/planning',
         '/operations/roadmap',
@@ -72,7 +73,7 @@ describe('Branch Admin POS UI is checkout-only', () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), '..')
     const src = await readFile(join(root, 'src/pages/PosPage.jsx'), 'utf8')
     assert.match(src, /canManageCatalog/)
-    assert.match(src, /Sell merch, take queue payment/)
+    assert.match(src, /Merch, queue payment, expenses, end of shift/)
     assert.match(src, /branchAdmin \? \(/)
     assert.match(src, /ShiftCloseWizard/)
     assert.doesNotMatch(src, /canManageServices\(profile\) && <TabsTrigger value="services">Manage services/)

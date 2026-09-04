@@ -42,7 +42,7 @@ results.push('matrix.pos_shell: ok')
 assert(QUEUE_PROVISION_ROLES.has('BossMich'))
 assert(QUEUE_PROVISION_ROLES.has('admin'))
 assert(QUEUE_PROVISION_ROLES.has('assistant_super_admin'))
-assert(!QUEUE_PROVISION_ROLES.has('team_lead'))
+assert(QUEUE_PROVISION_ROLES.has('team_lead'))
 assert(!QUEUE_PROVISION_ROLES.has('sales'))
 results.push('provision.roles: ok')
 
@@ -54,7 +54,7 @@ const loyalty = buildPosSalePayload({
   activeHandoff: null,
 })
 assert(loyalty.lines[0].unit_price_minor === 0, 'loyalty line must be free')
-assert(normalizeVehicleType('custom-size') === 'custom-size', 'custom vehicle slug')
+assert(normalizeVehicleType('custom-size') === 'custom_size', 'custom vehicle slug')
 results.push('payload.loyalty_and_vehicle: ok')
 
 const admin = createClient(url, service, { auth: { autoRefreshToken: false, persistSession: false } })

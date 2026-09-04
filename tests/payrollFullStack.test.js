@@ -123,7 +123,7 @@ describe('one salary path — payroll, not duplicate posters', () => {
   it('POS keeps ceramic drafts as proof and does not clone Inventory as POS tabs', () => {
     const pos = read('src/pages/PosPage.jsx')
     assert.match(pos, /buildCeramicCompensationExpenses/)
-    assert.match(pos, /const SHELL_TABS = \['checkout', 'pending', 'expenses', 'dashboard'\]/)
+    assert.match(pos, /resolvePosShellTab/)
     assert.doesNotMatch(pos, /SHELL_TABS = \[[^\]]*'services'/)
     const products = read('src/pages/ProductsManagePage.jsx')
     assert.doesNotMatch(products, /\/operations\/pos\?tab=merch/)

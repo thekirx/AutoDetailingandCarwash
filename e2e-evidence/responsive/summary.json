@@ -1,0 +1,770 @@
+{
+  "overall": "CONDITIONAL",
+  "cells": [
+    {
+      "page": "home",
+      "viewport": "mobile-375",
+      "url": "http://127.0.0.1:5290/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 10,
+        "bodyFont": 16
+      },
+      "shot": "home--mobile-375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "mobile-393",
+      "url": "http://127.0.0.1:5290/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 393,
+        "clientWidth": 393,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 14,
+        "bodyFont": 16
+      },
+      "shot": "home--mobile-393.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "mobile-430",
+      "url": "http://127.0.0.1:5290/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 14,
+        "bodyFont": 16
+      },
+      "shot": "home--mobile-430.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "tablet-768",
+      "url": "http://127.0.0.1:5290/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 15,
+        "bodyFont": 16
+      },
+      "shot": "home--tablet-768.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "tablet-1024",
+      "url": "http://127.0.0.1:5290/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 15,
+        "bodyFont": 16
+      },
+      "shot": "home--tablet-1024.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "laptop-1280",
+      "url": "http://127.0.0.1:5290/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 23,
+        "bodyFont": 16
+      },
+      "shot": "home--laptop-1280.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "desktop-1440",
+      "url": "http://127.0.0.1:5290/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 23,
+        "bodyFont": 16
+      },
+      "shot": "home--desktop-1440.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "wide-1920",
+      "url": "http://127.0.0.1:5290/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 23,
+        "bodyFont": 16
+      },
+      "shot": "home--wide-1920.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "landscape-667x375",
+      "url": "http://127.0.0.1:5290/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 667,
+        "clientWidth": 667,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 15,
+        "bodyFont": 16
+      },
+      "shot": "home--landscape-667x375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "book",
+      "viewport": "mobile-375",
+      "url": "http://127.0.0.1:5290/book",
+      "issues": [],
+      "touchWarn": true,
+      "metrics": {
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 20,
+        "bodyFont": 16
+      },
+      "shot": "book--mobile-375.png",
+      "verdict": "CONDITIONAL"
+    },
+    {
+      "page": "book",
+      "viewport": "mobile-393",
+      "url": "http://127.0.0.1:5290/book",
+      "issues": [],
+      "touchWarn": true,
+      "metrics": {
+        "scrollWidth": 393,
+        "clientWidth": 393,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 20,
+        "bodyFont": 16
+      },
+      "shot": "book--mobile-393.png",
+      "verdict": "CONDITIONAL"
+    },
+    {
+      "page": "book",
+      "viewport": "mobile-430",
+      "url": "http://127.0.0.1:5290/book",
+      "issues": [],
+      "touchWarn": true,
+      "metrics": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 20,
+        "bodyFont": 16
+      },
+      "shot": "book--mobile-430.png",
+      "verdict": "CONDITIONAL"
+    },
+    {
+      "page": "book",
+      "viewport": "tablet-768",
+      "url": "http://127.0.0.1:5290/book",
+      "issues": [],
+      "touchWarn": true,
+      "metrics": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 20,
+        "bodyFont": 16
+      },
+      "shot": "book--tablet-768.png",
+      "verdict": "CONDITIONAL"
+    },
+    {
+      "page": "book",
+      "viewport": "tablet-1024",
+      "url": "http://127.0.0.1:5290/book",
+      "issues": [],
+      "touchWarn": true,
+      "metrics": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 20,
+        "bodyFont": 16
+      },
+      "shot": "book--tablet-1024.png",
+      "verdict": "CONDITIONAL"
+    },
+    {
+      "page": "book",
+      "viewport": "laptop-1280",
+      "url": "http://127.0.0.1:5290/book",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 28,
+        "bodyFont": 16
+      },
+      "shot": "book--laptop-1280.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "book",
+      "viewport": "desktop-1440",
+      "url": "http://127.0.0.1:5290/book",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 28,
+        "bodyFont": 16
+      },
+      "shot": "book--desktop-1440.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "book",
+      "viewport": "wide-1920",
+      "url": "http://127.0.0.1:5290/book",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 28,
+        "bodyFont": 16
+      },
+      "shot": "book--wide-1920.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "book",
+      "viewport": "landscape-667x375",
+      "url": "http://127.0.0.1:5290/book",
+      "issues": [],
+      "touchWarn": true,
+      "metrics": {
+        "scrollWidth": 667,
+        "clientWidth": 667,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 20,
+        "bodyFont": 16
+      },
+      "shot": "book--landscape-667x375.png",
+      "verdict": "CONDITIONAL"
+    },
+    {
+      "page": "queue",
+      "viewport": "mobile-375",
+      "url": "http://127.0.0.1:5290/operations/queue",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "queue--mobile-375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "queue",
+      "viewport": "mobile-393",
+      "url": "http://127.0.0.1:5290/operations/queue",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 393,
+        "clientWidth": 393,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "queue--mobile-393.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "queue",
+      "viewport": "mobile-430",
+      "url": "http://127.0.0.1:5290/operations/queue",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "queue--mobile-430.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "queue",
+      "viewport": "tablet-768",
+      "url": "http://127.0.0.1:5290/operations/queue",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "queue--tablet-768.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "queue",
+      "viewport": "tablet-1024",
+      "url": "http://127.0.0.1:5290/operations/queue",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "queue--tablet-1024.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "queue",
+      "viewport": "laptop-1280",
+      "url": "http://127.0.0.1:5290/operations/queue",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "queue--laptop-1280.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "queue",
+      "viewport": "desktop-1440",
+      "url": "http://127.0.0.1:5290/operations/queue",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "queue--desktop-1440.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "queue",
+      "viewport": "wide-1920",
+      "url": "http://127.0.0.1:5290/operations/queue",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "queue--wide-1920.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "queue",
+      "viewport": "landscape-667x375",
+      "url": "http://127.0.0.1:5290/operations/queue",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 667,
+        "clientWidth": 667,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "queue--landscape-667x375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "pos",
+      "viewport": "mobile-375",
+      "url": "http://127.0.0.1:5290/operations/pos",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 6,
+        "bodyFont": 16
+      },
+      "shot": "pos--mobile-375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "pos",
+      "viewport": "mobile-393",
+      "url": "http://127.0.0.1:5290/operations/pos",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 393,
+        "clientWidth": 393,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 6,
+        "bodyFont": 16
+      },
+      "shot": "pos--mobile-393.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "pos",
+      "viewport": "mobile-430",
+      "url": "http://127.0.0.1:5290/operations/pos",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 6,
+        "bodyFont": 16
+      },
+      "shot": "pos--mobile-430.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "pos",
+      "viewport": "tablet-768",
+      "url": "http://127.0.0.1:5290/operations/pos",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 6,
+        "bodyFont": 16
+      },
+      "shot": "pos--tablet-768.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "pos",
+      "viewport": "tablet-1024",
+      "url": "http://127.0.0.1:5290/operations/pos",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 6,
+        "bodyFont": 16
+      },
+      "shot": "pos--tablet-1024.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "pos",
+      "viewport": "laptop-1280",
+      "url": "http://127.0.0.1:5290/operations/pos",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 6,
+        "bodyFont": 16
+      },
+      "shot": "pos--laptop-1280.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "pos",
+      "viewport": "desktop-1440",
+      "url": "http://127.0.0.1:5290/operations/pos",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 6,
+        "bodyFont": 16
+      },
+      "shot": "pos--desktop-1440.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "pos",
+      "viewport": "wide-1920",
+      "url": "http://127.0.0.1:5290/operations/pos",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 6,
+        "bodyFont": 16
+      },
+      "shot": "pos--wide-1920.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "pos",
+      "viewport": "landscape-667x375",
+      "url": "http://127.0.0.1:5290/operations/pos",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 667,
+        "clientWidth": 667,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 6,
+        "bodyFont": 16
+      },
+      "shot": "pos--landscape-667x375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "mobile-375",
+      "url": "http://127.0.0.1:5290/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "account--mobile-375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "mobile-393",
+      "url": "http://127.0.0.1:5290/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 393,
+        "clientWidth": 393,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "account--mobile-393.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "mobile-430",
+      "url": "http://127.0.0.1:5290/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "account--mobile-430.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "tablet-768",
+      "url": "http://127.0.0.1:5290/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "account--tablet-768.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "tablet-1024",
+      "url": "http://127.0.0.1:5290/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 2,
+        "bodyFont": 16
+      },
+      "shot": "account--tablet-1024.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "laptop-1280",
+      "url": "http://127.0.0.1:5290/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 11,
+        "bodyFont": 16
+      },
+      "shot": "account--laptop-1280.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "desktop-1440",
+      "url": "http://127.0.0.1:5290/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 11,
+        "bodyFont": 16
+      },
+      "shot": "account--desktop-1440.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "wide-1920",
+      "url": "http://127.0.0.1:5290/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 11,
+        "bodyFont": 16
+      },
+      "shot": "account--wide-1920.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "landscape-667x375",
+      "url": "http://127.0.0.1:5290/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 667,
+        "clientWidth": 667,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "account--landscape-667x375.png",
+      "verdict": "PASS"
+    }
+  ]
+}

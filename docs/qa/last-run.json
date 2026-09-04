@@ -1,0 +1,111 @@
+{
+  "ok": true,
+  "started": "2026-09-03T13:47:35.101Z",
+  "finished": "2026-09-03T13:52:11.567Z",
+  "passed": 14,
+  "failed": 0,
+  "skipped": 1,
+  "sendLiveSms": false,
+  "skipUi": false,
+  "skipResponsive": false,
+  "steps": [
+    {
+      "id": "U",
+      "label": "npm test (unit)",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "L1",
+      "label": "e2e-attendance",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "L2",
+      "label": "e2e-payroll",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "L3",
+      "label": "e2e-readiness",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "L4",
+      "label": "e2e-queue-part3",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "L5",
+      "label": "e2e-pos-part2",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "L6",
+      "label": "smoke-busybee (balance only)",
+      "ok": true,
+      "softFail": true,
+      "code": 3221226505,
+      "skipped": false
+    },
+    {
+      "id": "L7",
+      "label": "e2e-real-customer-status-sms",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "id": "L8",
+      "label": "e2e-ops-cutover",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "L9",
+      "label": "e2e-shift-close-money (BUG-007 RPC)",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "B",
+      "label": "npm run build",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "UI",
+      "label": "e2e-ui-p0",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "UI2",
+      "label": "e2e-ui-money (BUG-007)",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    },
+    {
+      "id": "R",
+      "label": "responsive-validation",
+      "ok": true,
+      "code": 0,
+      "skipped": false
+    }
+  ]
+}

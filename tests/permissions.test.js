@@ -133,6 +133,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/queue',
         '/operations/attendance',
         '/operations/pos',
+        '/operations/inventory',
         '/operations/reviews',
         '/operations/planning',
         '/operations/roadmap',
