@@ -20,7 +20,6 @@ import { usePageMeta } from '../lib/pageMeta'
  * The scrubbed installation belongs to film alone. It is a 181-frame sequence,
  * so putting it anywhere a reader has not asked about film is a lot of loading
  * for a page that is about something else. */
-const HAS_SEQUENCE = new Set(['ppf'])
 
 const TITLES = {
   ppf: 'Paint Protection Film',
@@ -46,22 +45,25 @@ export default function ServiceDetailPage() {
 
   return (
     <>
-      <BdPageHero
-        eyebrow={section.eyebrow}
-        scrollAnimated={slug === 'ppf'}
-        title={
-          <>
-            {section.headline.slice(0, -1).map((line) => (
-              <span key={line}>
-                {line}
-                <br />
-              </span>
-            ))}
-            <em>{section.headline[section.headline.length - 1]}</em>
-          </>
-        }
-        image={section.image}
-      />
+      {slug === 'ppf' ? (
+        <PpfInformationSection />
+      ) : (
+        <BdPageHero
+          eyebrow={section.eyebrow}
+          title={
+            <>
+              {section.headline.slice(0, -1).map((line) => (
+                <span key={line}>
+                  {line}
+                  <br />
+                </span>
+              ))}
+              <em>{section.headline[section.headline.length - 1]}</em>
+            </>
+          }
+          image={section.image}
+        />
+      )}
 
       <section className="bd-detail" id="detail">
         <div className="bd-shell bd-detail-in">
@@ -109,7 +111,6 @@ export default function ServiceDetailPage() {
         </div>
       </section>
 
-      {HAS_SEQUENCE.has(slug) ? <PpfInformationSection /> : null}
       {slug === 'ppf' ? <PpfPackagesSection /> : null}
       {slug === 'ceramic' ? <CeramicSection /> : null}
       {detail.proof ? <ServiceProofSection serviceId={slug} proof={detail.proof} /> : null}

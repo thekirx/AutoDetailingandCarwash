@@ -1614,6 +1614,12 @@
   line-height: 1.6;
 }
 
+/* On the PPF detail route this sequence is the hero, so it starts directly
+   below the site header instead of inheriting the generic section gutter. */
+.bredesign .ppf-information-stage {
+  padding: 0;
+}
+
 /* ==== Events list ======================================================== */
 
 .bredesign .bd-event-stack {

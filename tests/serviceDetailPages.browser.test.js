@@ -21,6 +21,11 @@ async function withPage(path, run) {
 
 test('PPF page contains ClearPro, packages, proof, focused FAQs, and bottom booking', async () => {
   await withPage('/services/ppf', async (page) => {
+    const firstSection = await page.$eval('main > section', (node) => node.id)
+
+    assert.equal(firstSection, 'ppf-information')
+    assert.equal(await count(page, 'main > #ppf-information .ppf-sequence canvas'), 1)
+    assert.equal(await count(page, 'main > .bd-page-hero'), 0)
     assert.equal(await count(page, '[data-service-brand="clearpro"]'), 1)
     assert.equal(await count(page, '[data-service-packages="ppf"]'), 1)
     assert.equal(await count(page, '[data-service-proof="ppf"] video'), 1)
