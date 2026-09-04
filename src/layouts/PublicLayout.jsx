@@ -6,25 +6,14 @@ import NotificationBell from '@/components/NotificationBell'
 import { useAuth } from '@/auth/AuthProvider'
 import { usePublicBranches } from '@/lib/branches'
 import { CustomerInstallPopup } from '@/components/InstallGuide'
-
-const navItems = [
-  ['Main', '/home'],
-  ['Services', '/services'],
-  ['Packages', '/packages'],
-  ['Branch', '/branches'],
-  ['Brand Collabs', '/partnerships'],
-  ['Events', '/events'],
-  ['Blog', '/blog'],
-  ['Live Queue', '/queue'],
-  ['Contact', '/contact'],
-]
+import { PUBLIC_NAV_ITEMS } from '@/data/publicNavigation'
 
 // Routes actually rebuilt in BreDESIGN. A page only joins this list once its
 // own sections exist, because the scope repaints headings and body text for a
 // dark ground — applied to a page still built for paper, it renders white
 // headings on a paper section and they vanish. The remaining marketing routes
 // keep the shipping look until Phase 4 rebuilds them.
-const BREDESIGN_ROUTES = ['/home', '/services', '/branches', '/partnerships', '/packages', '/events', '/blog', '/contact', '/complaints', '/terms', '/privacy', '/cookies']
+const BREDESIGN_ROUTES = ['/home', '/services', '/branches', '/partnerships', '/events', '/blog', '/contact', '/complaints', '/terms', '/privacy', '/cookies']
 
 function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
   return (
@@ -40,7 +29,7 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
           />
         </Link>
         <nav className="desktop-nav" aria-label="Primary navigation">
-          {navItems.map(([label, to]) => (
+          {PUBLIC_NAV_ITEMS.map(([label, to]) => (
             <NavLink key={to} to={to} end={to === '/home'}>
               {label}
             </NavLink>
@@ -81,7 +70,7 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
       </div>
       {open && (
         <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">
-          {navItems.map(([label, to]) => (
+          {PUBLIC_NAV_ITEMS.map(([label, to]) => (
             <NavLink key={to} to={to} end={to === '/home'}>
               {label}
             </NavLink>

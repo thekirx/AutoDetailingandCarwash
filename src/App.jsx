@@ -72,9 +72,6 @@ const QueuePage = lazy(() =>
 const ServicesPage = lazy(() =>
   import('./pages/PublicPages').then((m) => ({ default: m.ServicesPage })),
 )
-const PackagesPage = lazy(() =>
-  import('./pages/PublicPages').then((m) => ({ default: m.PackagesPage })),
-)
 const BranchesPage = lazy(() =>
   import('./pages/PublicPages').then((m) => ({ default: m.BranchesPage })),
 )
@@ -133,7 +130,7 @@ export default function App() {
           <Route path="/home" element={<PublicLandingPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/services/:slug" element={<ServiceDetailPage />} />
-          <Route path="/packages" element={<PackagesPage />} />
+          <Route path="/packages" element={<Navigate to="/services" replace />} />
           <Route path="/book" element={<BookingPage />} />
           <Route path="/booking" element={<Navigate to="/book" replace />} />
           <Route path="/queue" element={<QueuePage />} />

@@ -1,15 +1,13 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { CeramicSection } from '../components/public/home/HomeServiceSections'
-
-const PPFVisualizer = lazy(() => import('../components/PPFVisualizer'))
 import { usePublicBranches, branchLabel, fetchPublicBranchHours } from '../lib/branches'
 import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
 import {
   buildPublicServiceOverview,
   fetchPublicCatalogServices,
   marketingKeyForServiceSlug,
+  publicServiceDestination,
 } from '../lib/publicCatalog'
 import { usePageMeta } from '../lib/pageMeta'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
@@ -109,12 +107,18 @@ export function ServicesPage() {
             <div className="bd-catalog bd-reveal">
               {serviceItems.map((item, i) => {
                 const image = photoForService(item.slug)
+                const destination = publicServiceDestination(item)
+                const actionLabel = destination.to === '/queue'
+                  ? 'View live queue'
+                  : destination.to.startsWith('/services/')
+                    ? 'Explore this service'
+                    : 'Book this service'
                 return (
                   <Link
                     className={`bd-card${image ? '' : ' is-plain'}`}
                     key={item.id || item.slug}
-                    to="/book"
-                    state={{ service: item.title, service_id: item.id }}
+                    to={destination.to}
+                    state={destination.state}
                   >
                     {image ? (
                       <img src={image} alt={`${item.title} at Hakum Auto Care`} loading="lazy" decoding="async" />
@@ -126,7 +130,7 @@ export function ServicesPage() {
                       <h2>{item.title}</h2>
                       <p>{item.copy}</p>
                       <span className="bd-card-go">
-                        Book this service <ArrowRight size={14} aria-hidden="true" />
+                        {actionLabel} <ArrowRight size={14} aria-hidden="true" />
                       </span>
                     </div>
                   </Link>
@@ -141,28 +145,6 @@ export function ServicesPage() {
         </div>
       </section>
 
-    </>
-  )
-}
-
-export function PackagesPage() {
-  return (
-    <>
-      <PageHero
-        eyebrow="Protection packages"
-        title={
-          <>
-            Shield beyond
-            <br />
-            <i>compare.</i>
-          </>
-        }
-        copy="Long-term ceramic gloss and precision-fit PPF, built around how much protection your vehicle needs. Package titles match booking prefill."
-      />
-      <CeramicSection />
-      <Suspense fallback={null}>
-        <PPFVisualizer />
-      </Suspense>
     </>
   )
 }

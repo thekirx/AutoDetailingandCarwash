@@ -241,7 +241,6 @@ describe('Public catalog names match homepage', () => {
     const page = read('src/pages/PublicPages.jsx')
     assert.match(page, /fetchPublicCatalogServices/)
     assert.match(page, /buildPublicServiceOverview/)
-    assert.match(page, /CeramicSection|PPFVisualizer/)
     assert.doesNotMatch(page, /Premium car wash/)
     assert.doesNotMatch(page, /Essential gloss/)
     const catalog = read('src/lib/publicCatalog.js')
