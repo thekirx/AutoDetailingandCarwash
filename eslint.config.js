@@ -39,7 +39,17 @@ export default [
     rules: { 'react/no-unknown-property': 'off' },
   },
   {
-    files: ['scripts/export-flowcharts-pdf.mjs', 'scripts/export-user-stories-pdf.mjs', 'scripts/verify-owner-pdf-charts.mjs'],
+    // Puppeteer page.evaluate / screenshot helpers embed browser globals in Node files.
+    files: [
+      'scripts/export-flowcharts-pdf.mjs',
+      'scripts/export-user-stories-pdf.mjs',
+      'scripts/verify-owner-pdf-charts.mjs',
+      'scripts/responsive-validation.mjs',
+      'scripts/screenshot-audit.mjs',
+      'scripts/e2e-ui-money.mjs',
+      'scripts/e2e-ui-p0.mjs',
+      'scripts/_diag-bleed.mjs',
+    ],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {

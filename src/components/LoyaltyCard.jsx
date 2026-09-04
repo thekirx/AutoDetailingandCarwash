@@ -18,7 +18,7 @@ export default function LoyaltyCard({
     <section
       className={
         hakum
-          ? 'loyalty-card-hakum relative overflow-hidden rounded-[1.25rem] border border-[rgba(5,38,153,0.1)] bg-white p-5 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_12px_32px_rgba(5,20,65,0.055)] sm:p-6'
+          ? 'loyalty-card-hakum relative overflow-hidden rounded-[1.25rem] border border-primary/10 bg-white p-5 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_12px_32px_rgba(5,20,65,0.055)] sm:p-6'
           : 'relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d1316] p-6 shadow-2xl sm:p-10'
       }
     >
@@ -33,7 +33,7 @@ export default function LoyaltyCard({
           <div>
             <div
               className={`mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-[0.22em] uppercase ${
-                hakum ? 'text-[#052699]' : 'text-lime-400'
+                hakum ? 'text-primary' : 'text-lime-400'
               }`}
             >
               <Sparkles size={14} /> Hakum rewards
@@ -41,7 +41,7 @@ export default function LoyaltyCard({
             <h3
               className={
                 hakum
-                  ? 'max-w-xl text-xl font-black tracking-tight text-[#020a31] sm:text-2xl'
+                  ? 'max-w-xl text-xl font-black tracking-tight text-foreground sm:text-2xl'
                   : 'max-w-xl text-3xl font-black uppercase leading-tight sm:text-4xl'
               }
             >
@@ -52,7 +52,7 @@ export default function LoyaltyCard({
             </p>
           </div>
           <div className={`flex shrink-0 items-baseline gap-1 ${hakum ? '' : 'sm:block sm:text-right'}`}>
-            <span className={`text-4xl font-black tabular-nums ${hakum ? 'text-[#052699]' : 'text-lime-400'}`}>
+            <span className={`text-4xl font-black tabular-nums ${hakum ? 'text-primary' : 'text-lime-400'}`}>
               {stampedCount}
             </span>
             <span className={`text-xs font-bold tracking-widest uppercase ${hakum ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -62,7 +62,7 @@ export default function LoyaltyCard({
         </div>
 
         <div
-          className={`mb-6 h-1.5 overflow-hidden rounded-full ${hakum ? 'bg-[#052699]/10' : 'bg-white/5'}`}
+          className={`mb-6 h-1.5 overflow-hidden rounded-full ${hakum ? 'bg-primary/10' : 'bg-white/5'}`}
           aria-label={`${progress}% loyalty progress`}
           role="progressbar"
           aria-valuemin={0}
@@ -71,7 +71,7 @@ export default function LoyaltyCard({
         >
           <div
             className={`h-full rounded-full transition-all duration-700 ${
-              hakum ? 'bg-[#052699]' : 'bg-lime-400 shadow-[0_0_16px_rgba(163,230,53,.65)]'
+              hakum ? 'bg-primary' : 'bg-lime-400 shadow-[0_0_16px_rgba(163,230,53,.65)]'
             }`}
             style={{ width: `${progress}%` }}
           />
@@ -95,10 +95,10 @@ export default function LoyaltyCard({
                   className={`stamp-slot relative grid aspect-square w-full max-w-[72px] place-items-center rounded-full border ${
                     stamped
                       ? hakum
-                        ? 'border-[#052699] bg-[#052699]'
+                        ? 'border-primary bg-primary'
                         : 'stamp-slot-complete'
                       : hakum
-                        ? 'border-[#052699]/15 bg-[#f4f6fb]'
+                        ? 'border-primary/15 bg-[#f4f6fb]'
                         : 'border-white/10 bg-black/20'
                   } ${isMilestoneSlot && !hakum ? `stamp-milestone stamp-milestone-${number}` : ''}`}
                 >
@@ -106,16 +106,16 @@ export default function LoyaltyCard({
                     <span
                       className={`grid h-[68%] w-[68%] -rotate-6 place-items-center rounded-full border-2 text-lg font-black shadow-md sm:text-xl ${
                         hakum
-                          ? 'border-white/30 bg-white text-[#052699]'
+                          ? 'border-white/30 bg-white text-primary'
                           : 'border-[#080c11] bg-lime-400 text-[#080c11]'
                       }`}
                     >
                       H
                     </span>
                   ) : isMilestoneSlot ? (
-                    <Gift size={18} className={hakum ? 'text-[#052699]/70' : 'text-lime-400/75'} />
+                    <Gift size={18} className={hakum ? 'text-primary/70' : 'text-lime-400/75'} />
                   ) : (
-                    <span className={`text-[10px] font-bold ${hakum ? 'text-[#052699]/35' : 'text-white/20'}`}>
+                    <span className={`text-[10px] font-bold ${hakum ? 'text-primary/35' : 'text-white/20'}`}>
                       {String(number).padStart(2, '0')}
                     </span>
                   )}
@@ -124,7 +124,7 @@ export default function LoyaltyCard({
                   className={`text-center text-[8px] font-extrabold tracking-[0.12em] uppercase sm:text-[9px] ${
                     isMilestoneSlot
                       ? hakum
-                        ? 'text-[#052699]'
+                        ? 'text-primary'
                         : 'text-lime-400'
                       : hakum
                         ? 'text-slate-400'
@@ -141,7 +141,7 @@ export default function LoyaltyCard({
         {milestones.length > 0 && (
           <div
             className={`mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-[10px] font-bold tracking-[0.16em] uppercase ${
-              hakum ? 'border-[#052699]/10 text-slate-400' : 'border-white/10 text-slate-500'
+              hakum ? 'border-primary/10 text-slate-400' : 'border-white/10 text-slate-500'
             }`}
           >
             {milestones.map((m) => (
@@ -150,7 +150,7 @@ export default function LoyaltyCard({
                 className={
                   stampedCount >= Number(m.threshold_points)
                     ? hakum
-                      ? 'text-[#052699]'
+                      ? 'text-primary'
                       : 'text-lime-400'
                     : ''
                 }

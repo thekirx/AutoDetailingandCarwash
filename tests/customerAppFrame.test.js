@@ -62,8 +62,10 @@ describe('customer app frame', () => {
 
   it('ships mobile app chrome, desktop web layout (no phone stage), landscape dock', () => {
     const css = read('src/styles-customer-app.css')
-    assert.match(css, /--capp-navy: #052699/)
-    assert.match(css, /--capp-ink: #020a31/)
+    const tokens = read('src/design-tokens.css')
+    assert.match(tokens, /--capp-navy:\s*var\(--color-brand-primary\)/)
+    assert.match(tokens, /--capp-ink:\s*var\(--color-surface-cinematic\)/)
+    assert.match(css, /var\(--capp-foam\)|var\(--capp-ink\)/)
     assert.match(css, /min-width: 860px/)
     assert.doesNotMatch(css, /width: min\(430px/)
     assert.match(css, /\.capp \.account-dock[\s\S]*display:\s*none/)

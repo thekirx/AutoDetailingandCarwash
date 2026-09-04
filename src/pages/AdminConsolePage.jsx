@@ -11,30 +11,14 @@ import { isAdmin, canSeeAllBranches, getBranchScopeList } from '@/auth/permissio
 import { fetchAdminConsoleSnapshot, formatPeso } from '@/lib/adminApi'
 import { getBranchScope } from '@/queue/queueLogic'
 import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsStatTile from '@/components/ops/OpsStatTile'
 import OpsTabList from '@/components/ops/OpsTabBar'
+import OpsSkeleton from '@/components/ops/OpsSkeleton'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
-
-function MetricCard({ label, value, detail, icon: Icon, tone = 'default' }) {
-  const toneClass =
-    tone === 'good' ? 'text-emerald-400' : tone === 'bad' ? 'text-red-400' : tone === 'warn' ? 'text-amber-400' : 'text-primary'
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
-        <CardDescription className="text-xs font-semibold tracking-[0.16em] uppercase">{label}</CardDescription>
-        <Icon className={toneClass} size={18} />
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-semibold tracking-tight">{value}</p>
-        {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
-      </CardContent>
-    </Card>
-  )
-}
 
 export default function AdminConsolePage() {
   const { profile } = useAuth()
@@ -90,6 +74,7 @@ export default function AdminConsolePage() {
       className="hakum-console"
       eyebrow="Command"
       title="Operations console"
+      breadcrumbs={[{ label: 'Ops', to: '/operations/console' }, { label: 'Console' }]}
       description={
         canSeeAllBranches(profile)
           ? 'Live revenue, cost, profit, stock, and floor queue — all branches or one site.'
@@ -124,21 +109,33 @@ export default function AdminConsolePage() {
       ) : null}
 
       {loading && !snap ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
-        </div>
+        <OpsSkeleton rows={3} />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <MetricCard
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <OpsStatTile
               label="Today revenue"
               value={formatPeso(snap?.todayRevenueMinor)}
-              detail={snap?.today}
+              hint={snap?.today}
               icon={CircleDollarSign}
-              tone="good"
+              mono
+              highlight
             />
-            <MetricCard label="Active queue" value={String(snap?.queueRows?.length || 0)} detail="Waiting → payment" icon={ClipboardList} />
-            <MetricCard label="Low stock SKUs" value={String(snap?.lowStock?.length || 0)} detail="≤ 10 units" icon={Boxes} tone={snap?.lowStock?.length ? 'warn' : 'good'} />
+            <OpsStatTile
+              label="Active queue"
+              value={String(snap?.queueRows?.length || 0)}
+              hint="Waiting → payment"
+              icon={ClipboardList}
+              mono
+            />
+            <OpsStatTile
+              label="Low stock SKUs"
+              value={String(snap?.lowStock?.length || 0)}
+              hint="≤ 10 units"
+              icon={Boxes}
+              mono
+              highlight={Boolean(snap?.lowStock?.length)}
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             Full P&amp;L lives on{' '}

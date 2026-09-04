@@ -175,7 +175,6 @@ async function measurePage(page, base, route, vp) {
   const metrics = await page.evaluate(() => {
     const doc = document.documentElement
     const body = document.body
-    const vw = window.innerWidth
     const scrollWidth = Math.max(doc.scrollWidth, body?.scrollWidth || 0)
     const clientWidth = doc.clientWidth
     const before = window.scrollX

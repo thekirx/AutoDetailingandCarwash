@@ -59,17 +59,17 @@ const shortDate = (ymd) => {
 }
 
 const cashflowConfig = {
-  income: { label: 'Income', color: '#052699' },
+  income: { label: 'Income', color: 'var(--color-brand-primary)' },
   expenses: { label: 'Expenses', color: '#64748b' },
   net: { label: 'Net', color: '#0f766e' },
 }
 
 const branchConfig = {
-  sales: { label: 'Sales', color: '#052699' },
+  sales: { label: 'Sales', color: 'var(--color-brand-primary)' },
 }
 
 const paymentConfig = {
-  cash: { label: 'Cash', color: '#020a31' },
+  cash: { label: 'Cash', color: 'var(--color-surface-cinematic)' },
   gcash: { label: 'GCash', color: '#0ea5e9' },
   card: { label: 'Card', color: '#94a3b8' },
 }

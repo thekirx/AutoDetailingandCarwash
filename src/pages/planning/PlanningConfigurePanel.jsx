@@ -62,10 +62,10 @@ export default function PlanningConfigurePanel({
   const [editingListId, setEditingListId] = useState(null)
   const [editListTitle, setEditListTitle] = useState('')
   const [catName, setCatName] = useState('')
-  const [catColor, setCatColor] = useState('#052699')
+  const [catColor, setCatColor] = useState('var(--color-brand-primary)')
   const [editingCatId, setEditingCatId] = useState(null)
   const [editCatName, setEditCatName] = useState('')
-  const [editCatColor, setEditCatColor] = useState('#052699')
+  const [editCatColor, setEditCatColor] = useState('var(--color-brand-primary)')
   const [tmplName, setTmplName] = useState('')
   const [tmplItems, setTmplItems] = useState('')
   const [editingTmplId, setEditingTmplId] = useState(null)
@@ -194,7 +194,7 @@ export default function PlanningConfigurePanel({
     if (error) return toast.error(error.message)
     toast.success('Category added')
     setCatName('')
-    setCatColor('#052699')
+    setCatColor('var(--color-brand-primary)')
     onChanged()
   }
 
@@ -366,7 +366,7 @@ export default function PlanningConfigurePanel({
                     {c.name}
                   </span>
                   <div className="flex gap-1">
-                    <Button type="button" size="sm" variant="ghost" className="min-h-11" onClick={() => { setEditingCatId(c.id); setEditCatName(c.name); setEditCatColor(c.color || '#052699') }}>Edit</Button>
+                    <Button type="button" size="sm" variant="ghost" className="min-h-11" onClick={() => { setEditingCatId(c.id); setEditCatName(c.name); setEditCatColor(c.color || 'var(--color-brand-primary)') }}>Edit</Button>
                     <Button type="button" size="sm" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeCategory(c.id)}>Delete</Button>
                   </div>
                 </div>

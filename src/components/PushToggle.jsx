@@ -250,15 +250,15 @@ function PushModal({ open, onOpenChange, busy, status, reason, onEnable, onDismi
         </div>
         <div className="push-modal-body space-y-3">
           <div className="push-modal-point">
-            <ShieldCheck className="size-4 text-[#052699]" aria-hidden />
+            <ShieldCheck className="size-4 text-primary" aria-hidden />
             <span>Live visit status from the floor</span>
           </div>
           <div className="push-modal-point">
-            <Bell className="size-4 text-[#052699]" aria-hidden />
+            <Bell className="size-4 text-primary" aria-hidden />
             <span>Ready for payment and service complete</span>
           </div>
           <div className="push-modal-point">
-            <Smartphone className="size-4 text-[#052699]" aria-hidden />
+            <Smartphone className="size-4 text-primary" aria-hidden />
             <span>Best from the installed Hakum home-screen app</span>
           </div>
           {reason === 'ios-install' ? (

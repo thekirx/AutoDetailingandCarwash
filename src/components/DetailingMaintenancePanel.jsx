@@ -8,7 +8,7 @@ import {
   maintenanceUrgency,
   resolveFrequencyMonthsFromSettings,
 } from '@/lib/paintMaintenance'
-import { Badge } from '@/components/ui/badge'
+import StatusBadge from '@/components/ops/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -328,17 +328,11 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
                         {row.status}
                       </p>
                     </div>
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        'shrink-0',
-                        urgency === 'overdue' && 'bg-destructive/15 text-destructive',
-                        urgency === 'due_soon' && 'bg-amber-500/15 text-amber-900 dark:text-amber-100',
-                      )}
-                    >
-                      {URGENCY_LABEL[urgency]}
-                      {days != null ? ` · ${days < 0 ? `${Math.abs(days)}d late` : `${days}d`}` : ''}
-                    </Badge>
+                    <StatusBadge
+                      status={urgency === 'due_soon' ? 'late' : urgency === 'overdue' ? 'overdue' : urgency === 'upcoming' ? 'scheduled' : 'queued'}
+                      label={`${URGENCY_LABEL[urgency]}${days != null ? ` · ${days < 0 ? `${Math.abs(days)}d late` : `${days}d`}` : ''}`}
+                      className="shrink-0"
+                    />
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-end gap-3">

@@ -4,7 +4,7 @@
     {
       "page": "home",
       "viewport": "mobile-375",
-      "url": "http://127.0.0.1:5290/home",
+      "url": "http://127.0.0.1:5174/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -12,7 +12,7 @@
         "clientWidth": 375,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 10,
+        "smallTargets": 0,
         "bodyFont": 16
       },
       "shot": "home--mobile-375.png",
@@ -21,7 +21,7 @@
     {
       "page": "home",
       "viewport": "mobile-393",
-      "url": "http://127.0.0.1:5290/home",
+      "url": "http://127.0.0.1:5174/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -38,7 +38,7 @@
     {
       "page": "home",
       "viewport": "mobile-430",
-      "url": "http://127.0.0.1:5290/home",
+      "url": "http://127.0.0.1:5174/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -55,7 +55,7 @@
     {
       "page": "home",
       "viewport": "tablet-768",
-      "url": "http://127.0.0.1:5290/home",
+      "url": "http://127.0.0.1:5174/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -72,7 +72,7 @@
     {
       "page": "home",
       "viewport": "tablet-1024",
-      "url": "http://127.0.0.1:5290/home",
+      "url": "http://127.0.0.1:5174/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -89,7 +89,7 @@
     {
       "page": "home",
       "viewport": "laptop-1280",
-      "url": "http://127.0.0.1:5290/home",
+      "url": "http://127.0.0.1:5174/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -106,7 +106,7 @@
     {
       "page": "home",
       "viewport": "desktop-1440",
-      "url": "http://127.0.0.1:5290/home",
+      "url": "http://127.0.0.1:5174/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -123,7 +123,7 @@
     {
       "page": "home",
       "viewport": "wide-1920",
-      "url": "http://127.0.0.1:5290/home",
+      "url": "http://127.0.0.1:5174/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -140,7 +140,7 @@
     {
       "page": "home",
       "viewport": "landscape-667x375",
-      "url": "http://127.0.0.1:5290/home",
+      "url": "http://127.0.0.1:5174/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -157,7 +157,7 @@
     {
       "page": "book",
       "viewport": "mobile-375",
-      "url": "http://127.0.0.1:5290/book",
+      "url": "http://127.0.0.1:5174/book",
       "issues": [],
       "touchWarn": true,
       "metrics": {
@@ -174,7 +174,7 @@
     {
       "page": "book",
       "viewport": "mobile-393",
-      "url": "http://127.0.0.1:5290/book",
+      "url": "http://127.0.0.1:5174/book",
       "issues": [],
       "touchWarn": true,
       "metrics": {
@@ -191,7 +191,7 @@
     {
       "page": "book",
       "viewport": "mobile-430",
-      "url": "http://127.0.0.1:5290/book",
+      "url": "http://127.0.0.1:5174/book",
       "issues": [],
       "touchWarn": true,
       "metrics": {
@@ -208,7 +208,7 @@
     {
       "page": "book",
       "viewport": "tablet-768",
-      "url": "http://127.0.0.1:5290/book",
+      "url": "http://127.0.0.1:5174/book",
       "issues": [],
       "touchWarn": true,
       "metrics": {
@@ -225,7 +225,7 @@
     {
       "page": "book",
       "viewport": "tablet-1024",
-      "url": "http://127.0.0.1:5290/book",
+      "url": "http://127.0.0.1:5174/book",
       "issues": [],
       "touchWarn": true,
       "metrics": {
@@ -242,7 +242,7 @@
     {
       "page": "book",
       "viewport": "laptop-1280",
-      "url": "http://127.0.0.1:5290/book",
+      "url": "http://127.0.0.1:5174/book",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -259,7 +259,7 @@
     {
       "page": "book",
       "viewport": "desktop-1440",
-      "url": "http://127.0.0.1:5290/book",
+      "url": "http://127.0.0.1:5174/book",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -276,7 +276,7 @@
     {
       "page": "book",
       "viewport": "wide-1920",
-      "url": "http://127.0.0.1:5290/book",
+      "url": "http://127.0.0.1:5174/book",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -293,7 +293,7 @@
     {
       "page": "book",
       "viewport": "landscape-667x375",
-      "url": "http://127.0.0.1:5290/book",
+      "url": "http://127.0.0.1:5174/book",
       "issues": [],
       "touchWarn": true,
       "metrics": {
@@ -310,7 +310,7 @@
     {
       "page": "queue",
       "viewport": "mobile-375",
-      "url": "http://127.0.0.1:5290/operations/queue",
+      "url": "http://127.0.0.1:5174/operations/queue",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -327,7 +327,7 @@
     {
       "page": "queue",
       "viewport": "mobile-393",
-      "url": "http://127.0.0.1:5290/operations/queue",
+      "url": "http://127.0.0.1:5174/operations/queue",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -344,7 +344,7 @@
     {
       "page": "queue",
       "viewport": "mobile-430",
-      "url": "http://127.0.0.1:5290/operations/queue",
+      "url": "http://127.0.0.1:5174/operations/queue",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -361,7 +361,7 @@
     {
       "page": "queue",
       "viewport": "tablet-768",
-      "url": "http://127.0.0.1:5290/operations/queue",
+      "url": "http://127.0.0.1:5174/operations/queue",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -378,7 +378,7 @@
     {
       "page": "queue",
       "viewport": "tablet-1024",
-      "url": "http://127.0.0.1:5290/operations/queue",
+      "url": "http://127.0.0.1:5174/operations/queue",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -395,7 +395,7 @@
     {
       "page": "queue",
       "viewport": "laptop-1280",
-      "url": "http://127.0.0.1:5290/operations/queue",
+      "url": "http://127.0.0.1:5174/operations/queue",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -412,7 +412,7 @@
     {
       "page": "queue",
       "viewport": "desktop-1440",
-      "url": "http://127.0.0.1:5290/operations/queue",
+      "url": "http://127.0.0.1:5174/operations/queue",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -429,7 +429,7 @@
     {
       "page": "queue",
       "viewport": "wide-1920",
-      "url": "http://127.0.0.1:5290/operations/queue",
+      "url": "http://127.0.0.1:5174/operations/queue",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -446,7 +446,7 @@
     {
       "page": "queue",
       "viewport": "landscape-667x375",
-      "url": "http://127.0.0.1:5290/operations/queue",
+      "url": "http://127.0.0.1:5174/operations/queue",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -463,7 +463,7 @@
     {
       "page": "pos",
       "viewport": "mobile-375",
-      "url": "http://127.0.0.1:5290/operations/pos",
+      "url": "http://127.0.0.1:5174/operations/pos",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -480,7 +480,7 @@
     {
       "page": "pos",
       "viewport": "mobile-393",
-      "url": "http://127.0.0.1:5290/operations/pos",
+      "url": "http://127.0.0.1:5174/operations/pos",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -497,7 +497,7 @@
     {
       "page": "pos",
       "viewport": "mobile-430",
-      "url": "http://127.0.0.1:5290/operations/pos",
+      "url": "http://127.0.0.1:5174/operations/pos",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -514,7 +514,7 @@
     {
       "page": "pos",
       "viewport": "tablet-768",
-      "url": "http://127.0.0.1:5290/operations/pos",
+      "url": "http://127.0.0.1:5174/operations/pos",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -531,7 +531,7 @@
     {
       "page": "pos",
       "viewport": "tablet-1024",
-      "url": "http://127.0.0.1:5290/operations/pos",
+      "url": "http://127.0.0.1:5174/operations/pos",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -548,7 +548,7 @@
     {
       "page": "pos",
       "viewport": "laptop-1280",
-      "url": "http://127.0.0.1:5290/operations/pos",
+      "url": "http://127.0.0.1:5174/operations/pos",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -565,7 +565,7 @@
     {
       "page": "pos",
       "viewport": "desktop-1440",
-      "url": "http://127.0.0.1:5290/operations/pos",
+      "url": "http://127.0.0.1:5174/operations/pos",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -582,7 +582,7 @@
     {
       "page": "pos",
       "viewport": "wide-1920",
-      "url": "http://127.0.0.1:5290/operations/pos",
+      "url": "http://127.0.0.1:5174/operations/pos",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -599,7 +599,7 @@
     {
       "page": "pos",
       "viewport": "landscape-667x375",
-      "url": "http://127.0.0.1:5290/operations/pos",
+      "url": "http://127.0.0.1:5174/operations/pos",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -616,7 +616,7 @@
     {
       "page": "account",
       "viewport": "mobile-375",
-      "url": "http://127.0.0.1:5290/account",
+      "url": "http://127.0.0.1:5174/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -633,7 +633,7 @@
     {
       "page": "account",
       "viewport": "mobile-393",
-      "url": "http://127.0.0.1:5290/account",
+      "url": "http://127.0.0.1:5174/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -650,7 +650,7 @@
     {
       "page": "account",
       "viewport": "mobile-430",
-      "url": "http://127.0.0.1:5290/account",
+      "url": "http://127.0.0.1:5174/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -667,7 +667,7 @@
     {
       "page": "account",
       "viewport": "tablet-768",
-      "url": "http://127.0.0.1:5290/account",
+      "url": "http://127.0.0.1:5174/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -684,7 +684,7 @@
     {
       "page": "account",
       "viewport": "tablet-1024",
-      "url": "http://127.0.0.1:5290/account",
+      "url": "http://127.0.0.1:5174/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -701,7 +701,7 @@
     {
       "page": "account",
       "viewport": "laptop-1280",
-      "url": "http://127.0.0.1:5290/account",
+      "url": "http://127.0.0.1:5174/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -718,7 +718,7 @@
     {
       "page": "account",
       "viewport": "desktop-1440",
-      "url": "http://127.0.0.1:5290/account",
+      "url": "http://127.0.0.1:5174/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -735,7 +735,7 @@
     {
       "page": "account",
       "viewport": "wide-1920",
-      "url": "http://127.0.0.1:5290/account",
+      "url": "http://127.0.0.1:5174/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -752,7 +752,7 @@
     {
       "page": "account",
       "viewport": "landscape-667x375",
-      "url": "http://127.0.0.1:5290/account",
+      "url": "http://127.0.0.1:5174/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {

@@ -1,13 +1,7 @@
 /* Customer app — mobile/PWA feels like a native app; desktop connects to the landing site. */
 
 .capp {
-  --capp-ink: #020a31;
-  --capp-navy: #052699;
-  --capp-foam: #f2f4f8;
-  --capp-porcelain: #fbfcff;
-  --capp-steel: #5c6578;
-  --capp-line: rgba(5, 38, 153, 0.12);
-  --capp-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Tokens inherited from design-tokens.css (--capp-* aliases) */
   min-height: 100dvh;
   max-width: 100%;
   min-width: 0;
