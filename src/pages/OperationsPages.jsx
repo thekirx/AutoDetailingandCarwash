@@ -92,20 +92,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
+import StatusBadge from '@/components/ops/StatusBadge'
 import { QUEUE_WORKFLOW_STEPS, MY_TASKS_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { toast } from 'sonner'
 import { plateKindLabel, plateValidationError, PLATE_FIELD_HINT } from '../lib/customerAuth'
 import { applyPlateSuggestion, plateSuggestPrefix, rankPlateSuggestions } from '../lib/plateSuggest'
-
-const statusTone = {
-  confirmed: 'queue-status-pill queue-status-waiting',
-  waiting: 'queue-status-pill queue-status-waiting',
-  in_progress: 'queue-status-pill queue-status-progress',
-  final_checking: 'queue-status-pill queue-status-check',
-  for_payment: 'queue-status-pill queue-status-pay',
-  redo: 'queue-status-pill queue-status-redo',
-  completed: 'queue-status-pill queue-status-done',
-}
 
 const QUEUE_SHELL_TABS = Object.freeze([
   { id: 'board', label: 'Board' },
@@ -999,9 +990,7 @@ function OperationsQueueBoardPage() {
                     <TableCell className="text-foreground">{bookingVehicleText(ticket)}</TableCell>
                     <TableCell className="q-col-service font-medium text-primary">{ticket.service_name || '—'}</TableCell>
                     <TableCell>
-                      <span className={statusTone[ticket.status] || statusTone.completed}>
-                        {statusShortLabel(ticket.status)}
-                      </span>
+                      <StatusBadge status={ticket.status} label={statusShortLabel(ticket.status)} />
                     </TableCell>
                     <TableCell className="q-col-queue tabular-nums font-semibold text-foreground">
                       {formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}

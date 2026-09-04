@@ -1,17 +1,23 @@
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 
-/** Status key → brand token soft fill. */
+/** Status key → brand token soft fill (queue, attendance, booking). */
 const STATUS_BADGE_MAP = {
   queued: { label: 'Queued', className: 'border-transparent bg-[var(--status-queued-soft)] text-[var(--status-queued)]' },
   waiting: { label: 'Waiting', className: 'border-transparent bg-[var(--status-queued-soft)] text-[var(--status-queued)]' },
+  confirmed: { label: 'Confirmed', className: 'border-transparent bg-[var(--status-queued-soft)] text-[var(--status-queued)]' },
   washing: { label: 'Washing', className: 'border-transparent bg-[var(--status-washing-soft)] text-[var(--status-washing)]' },
   wash: { label: 'Wash', className: 'border-transparent bg-[var(--status-washing-soft)] text-[var(--status-washing)]' },
+  in_progress: { label: 'In progress', className: 'border-transparent bg-[var(--status-washing-soft)] text-[var(--status-washing)]' },
   detailing: { label: 'Detailing', className: 'border-transparent bg-[var(--status-detailing-soft)] text-[var(--status-detailing)]' },
   detail: { label: 'Detail', className: 'border-transparent bg-[var(--status-detailing-soft)] text-[var(--status-detailing)]' },
+  final_checking: { label: 'Final check', className: 'border-transparent bg-[var(--status-detailing-soft)] text-[var(--status-detailing)]' },
+  for_releasing: { label: 'Releasing', className: 'border-transparent bg-[var(--status-detailing-soft)] text-[var(--status-detailing)]' },
   ready: { label: 'Ready', className: 'border-transparent bg-[var(--status-ready-soft)] text-[var(--status-ready)]' },
   completed: { label: 'Completed', className: 'border-transparent bg-[var(--status-ready-soft)] text-[var(--status-ready)]' },
+  for_payment: { label: 'For payment', className: 'border-transparent bg-[var(--status-paid-soft)] text-[var(--status-paid)]' },
   paid: { label: 'Paid', className: 'border-transparent bg-[var(--status-paid-soft)] text-[var(--status-paid)]' },
+  redo: { label: 'Redo', className: 'border-transparent bg-[var(--status-late-soft)] text-[var(--status-late)]' },
   void: { label: 'Void', className: 'border-transparent bg-[var(--status-void-soft)] text-[var(--status-void)]' },
   cancelled: { label: 'Cancelled', className: 'border-transparent bg-[var(--status-void-soft)] text-[var(--status-void)]' },
   late: { label: 'Late', className: 'border-transparent bg-[var(--status-late-soft)] text-[var(--status-late)]' },
@@ -27,7 +33,7 @@ export default function StatusBadge({ status, label, className }) {
     .toLowerCase()
     .replace(/[\s-]+/g, '_')
   const mapped = STATUS_BADGE_MAP[key] || STATUS_BADGE_MAP[key.replace(/_/g, '')] || null
-  const text = label || mapped?.label || status || '—'
+  const text = label || mapped?.label || status || '-'
   return (
     <Badge
       variant="outline"

@@ -19,7 +19,7 @@ Use `OpsTabList` / shadcn Tabs. Horizontal scroll on mobile. Active tab: brand u
 ## Badge / StatusBadge
 
 `Badge` for counts and neutral tags.  
-`StatusBadge` for workflow status only — maps status keys to `--status-*` tokens (queued, washing, detailing, ready, paid, void, late, absent).
+`StatusBadge` for workflow status only — maps status keys to `--status-*` tokens (queued/waiting/confirmed, washing/in_progress, detailing/final_checking, ready/completed, for_payment/paid, redo, void, late, absent, present).
 
 ## Card
 

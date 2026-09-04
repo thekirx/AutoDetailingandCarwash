@@ -53,3 +53,19 @@ test('ops CSS has no html:not(.dark) light-rewrite layer', () => {
   assert.doesNotMatch(css, /html:not\(\.dark\)/)
   assert.match(css, /\.floor-control\s*\{[^}]*background:\s*#ffffff/s)
 })
+
+test('queue table uses StatusBadge; ASA grants use matrix editor', () => {
+  const queue = read('src/pages/OperationsPages.jsx')
+  assert.match(queue, /StatusBadge/)
+  assert.doesNotMatch(queue, /statusTone|queue-status-pill/)
+  const badge = read('src/components/ops/StatusBadge.jsx')
+  for (const key of ['confirmed', 'in_progress', 'final_checking', 'for_payment', 'redo']) {
+    assert.match(badge, new RegExp(`${key}:`))
+  }
+  const grants = read('src/components/AssistantGrantsEditor.jsx')
+  assert.match(grants, /grants-matrix/)
+  assert.match(grants, /ASSISTANT_GRANT_GROUPS/)
+  const loading = read('src/components/LoadingScreen.jsx')
+  assert.match(loading, /--color-surface-cinematic/)
+  assert.doesNotMatch(loading, /#090d12/)
+})

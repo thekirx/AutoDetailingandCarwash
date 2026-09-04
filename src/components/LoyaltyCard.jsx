@@ -19,7 +19,7 @@ export default function LoyaltyCard({
       className={
         hakum
           ? 'loyalty-card-hakum relative overflow-hidden rounded-[1.25rem] border border-primary/10 bg-white p-5 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_12px_32px_rgba(5,20,65,0.055)] sm:p-6'
-          : 'relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d1316] p-6 shadow-2xl sm:p-10'
+          : 'relative overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--color-surface-cinematic)] p-6 shadow-2xl sm:p-10'
       }
     >
       {!hakum && (
@@ -98,7 +98,7 @@ export default function LoyaltyCard({
                         ? 'border-primary bg-primary'
                         : 'stamp-slot-complete'
                       : hakum
-                        ? 'border-primary/15 bg-[#f4f6fb]'
+                        ? 'border-primary/15 bg-primary/[0.06]'
                         : 'border-white/10 bg-black/20'
                   } ${isMilestoneSlot && !hakum ? `stamp-milestone stamp-milestone-${number}` : ''}`}
                 >
@@ -107,7 +107,7 @@ export default function LoyaltyCard({
                       className={`grid h-[68%] w-[68%] -rotate-6 place-items-center rounded-full border-2 text-lg font-black shadow-md sm:text-xl ${
                         hakum
                           ? 'border-white/30 bg-white text-primary'
-                          : 'border-[#080c11] bg-lime-400 text-[#080c11]'
+                          : 'border-[var(--color-surface-cinematic)] bg-lime-400 text-[var(--color-surface-cinematic)]'
                       }`}
                     >
                       H

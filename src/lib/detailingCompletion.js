@@ -91,21 +91,21 @@ export function bookingCalendarStyle(booking = {}) {
     .toLowerCase()
 
   if (slug.includes('ppf') || slug.includes('paint-protection') || cat === 'ppf') {
-    return { backgroundColor: '#7c3aed', borderColor: '#6d28d9', color: '#fff' }
+    return { backgroundColor: 'var(--status-detailing)', borderColor: 'var(--status-detailing)', color: '#fff' }
   }
   if (slug.includes('tint') || slug.includes('nano')) {
-    return { backgroundColor: '#0ea5e9', borderColor: '#0284c7', color: '#fff' }
+    return { backgroundColor: 'var(--status-washing)', borderColor: 'var(--status-washing)', color: '#fff' }
   }
   if (slug.includes('paint-maint') || slug.includes('maintenance')) {
-    return { backgroundColor: '#059669', borderColor: '#047857', color: '#fff' }
+    return { backgroundColor: 'var(--status-ready)', borderColor: 'var(--status-ready)', color: '#fff' }
   }
   if (slug.includes('ceramic') || cat === 'detailing') {
-    return { backgroundColor: '#052699', borderColor: '#020a31', color: '#fff' }
+    return { backgroundColor: 'var(--color-brand-primary)', borderColor: 'var(--color-surface-cinematic)', color: '#fff' }
   }
   if (cat === 'wash' || cat === 'general') {
-    return { backgroundColor: '#334155', borderColor: '#1e293b', color: '#fff' }
+    return { backgroundColor: 'var(--color-text-primary)', borderColor: 'var(--color-surface-dark)', color: '#fff' }
   }
-  return { backgroundColor: '#64748b', borderColor: '#475569', color: '#fff' }
+  return { backgroundColor: 'var(--status-absent)', borderColor: 'var(--status-absent)', color: '#fff' }
 }
 
 export function bookingCalendarEventPropGetter(event) {
