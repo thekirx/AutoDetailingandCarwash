@@ -117,6 +117,7 @@ export default function CustomerSetPasswordPage() {
 
   return (
     <HakumAuthShell
+      variant="customer"
       title="Secure your account."
       subtitle="Choose a password to sign in and continue in your Hakum portal."
       footerLinks={

@@ -310,7 +310,7 @@ describe('request.md reviews + garage', () => {
     assert.equal(safeVehiclePhotoUrl('https://cdn.example.com/car.jpg'), 'https://cdn.example.com/car.jpg')
     assert.equal(safeVehiclePhotoUrl('javascript:alert(1)'), null)
     const portal = read('server/customerPortal.mjs')
-    const garage = read('src/components/CustomerSettingsModal.jsx')
+    const garage = read('src/pages/CustomerMorePage.jsx')
     const tl = read('src/pages/OperationsPages.jsx')
     const identity = read('src/lib/queueCustomerName.js')
     const book = read('server/publicBook.mjs')

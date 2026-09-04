@@ -14,6 +14,18 @@ test('CommandShell mounts CommandMenu and breadcrumbs', () => {
   assert.match(layout, /⌘K|Open command menu/)
 })
 
+test('CommandShell sidebar uses approved blue lockup + OW mark', () => {
+  const layout = read('src/layouts/OperationsLayout.jsx')
+  const css = read('src/styles.css')
+  assert.match(layout, /CommandRailBrand/)
+  assert.match(layout, /hakum-lw-blue\.png/)
+  assert.match(layout, /hakum-mark-ow\.png/)
+  assert.match(layout, /aria-label="Hakum Auto Care home"/)
+  assert.match(css, /\.command-rail-logo/)
+  assert.match(css, /transform:\s*scale\(1\.55\)/)
+  assert.match(css, /\.command-rail-who-name/)
+})
+
 test('FloorAppShell uses tablet rail + ResponsiveSheet more menu (no phone-on-bay)', () => {
   const layout = read('src/layouts/OperationsLayout.jsx')
   const css = read('src/styles.css')

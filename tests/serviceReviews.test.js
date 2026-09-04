@@ -30,7 +30,7 @@ describe('completed visit review payload', () => {
     const reviews = read('src/pages/ReviewsPage.jsx')
     const css = read('src/styles-customer-app.css')
     const portal = read('server/customerPortal.mjs')
-    const garage = read('src/components/CustomerSettingsModal.jsx')
+    const garage = read('src/pages/CustomerMorePage.jsx')
     assert.match(home, /buildCompletedVisitReview/)
     assert.match(home, /VISIT_REVIEW_AXES/)
     assert.match(reviews, /VISIT_REVIEW_AXES/)

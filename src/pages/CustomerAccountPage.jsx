@@ -1,130 +1,79 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import {
-  Cake,
-  CalendarDays,
-  CalendarPlus,
-  LogOut,
-  Radio,
-  Receipt,
-  Settings,
-  Star,
-} from 'lucide-react'
+import { Cake, CalendarDays, CalendarPlus, Car, Gift, Plus, Receipt, Star } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { getAccessTokenFresh } from '@/lib/authToken'
 import { nearestBranchSlug } from '@/lib/branchGeo'
 import { formatMoney } from '@/queue/queueApi'
 import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
 import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
 import { supabase } from '@/lib/supabase'
-import { Badge } from '@/components/ui/badge'
-import CustomerAppFrame from '@/components/CustomerAppFrame'
-import LoyaltyCard from '@/components/LoyaltyCard'
-import NotificationBell from '@/components/NotificationBell'
-import CustomerBookingModal from '@/components/CustomerBookingModal'
-import CustomerSettingsModal from '@/components/CustomerSettingsModal'
+import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH } from '@/lib/customerAccountNav'
+import { branchLabel, fetchPortal, greeting, initials, portalAction } from '@/lib/customerPortalClient'
 import { buildCompletedVisitReview, VISIT_REVIEW_AXES } from '@/lib/serviceReviews'
+import CustomerAppFrame from '@/components/CustomerAppFrame'
+import NotificationBell from '@/components/NotificationBell'
+import ActiveVisitCard from '@/components/customer/ActiveVisitCard'
+import { Badge, Pills, QueueStats, Row, SectionHead, Skeleton, Tile } from '@/components/customer/CustomerUi'
 import { toast } from 'sonner'
 
 function latestCompletedVisit(history = []) {
   return (history || []).find((row) => row?.status === 'completed') || null
 }
 
-async function fetchPortal() {
-  const token = await getAccessTokenFresh()
-  if (!token) throw new Error('Sign in required.')
-  const res = await fetch('/api/customer-portal', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  const body = await res.json().catch(() => ({}))
-  if (res.status === 401) throw new Error('Session expired. Sign in again.')
-  if (!res.ok) throw new Error(body.error || 'Unable to load account.')
-  return body
-}
-
 function formatWhen(iso) {
   if (!iso) return '-'
   try {
-    return new Date(iso).toLocaleString('en-PH', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    })
+    return new Date(iso).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
   } catch {
     return '-'
   }
 }
 
-function branchLabel(branches, slug) {
-  if (!slug) return ''
-  const row = branches.find((b) => b.slug === slug)
-  return row?.name?.replace(/^Hakum Auto Care\s*/i, '') || row?.name || slug
-}
+const ACTIVITY_TABS = [
+  { id: 'history', label: 'Past visits' },
+  { id: 'purchases', label: 'Purchases' },
+]
 
 export default function CustomerAccountPage() {
-  const { profile: authProfile, user, session, signOut, loading: authLoading } = useAuth()
-  const [branches, setBranches] = useState([])
+  const { profile: authProfile, user, session, loading: authLoading } = useAuth()
+  const [data, setData] = useState(null)
   const [selectedBranch, setSelectedBranch] = useState('')
-  const [history, setHistory] = useState([])
-  const [purchases, setPurchases] = useState([])
-  const [bookings, setBookings] = useState([])
-  const [vehicles, setVehicles] = useState([])
-  const [portalProfile, setPortalProfile] = useState(null)
-  const [loyalty, setLoyalty] = useState(null)
-  const [birthday, setBirthday] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [geoNote, setGeoNote] = useState('')
   const [error, setError] = useState('')
   const [tab, setTab] = useState('history')
-  const [bookOpen, setBookOpen] = useState(false)
-  const [bookVehicle, setBookVehicle] = useState(null)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [settingsTab, setSettingsTab] = useState('alerts')
-  const [editVehicle, setEditVehicle] = useState(null)
   const [ratingScores, setRatingScores] = useState({ overall: 0, app: 0, service: 0, detailing: 0 })
   const [ratingComment, setRatingComment] = useState('')
   const [ratingSaving, setRatingSaving] = useState(false)
   const [ratingDone, setRatingDone] = useState(false)
   const { countsBySlug } = usePublicQueueCounts()
 
-  function openSettings(next = 'alerts', vehicle = null) {
-    setSettingsTab(next)
-    setEditVehicle(vehicle)
-    setSettingsOpen(true)
-  }
+  const branches = data?.branches || []
+  const bookings = data?.bookings || []
+  const history = data?.history || []
+  const purchases = data?.purchases || []
+  const vehicles = data?.vehicles || []
+  const loyalty = data?.loyalty
+  const birthday = data?.birthday
 
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const data = await fetchPortal()
-      const nextBranches = data.branches || []
-      const nextBookings = data.bookings || []
-      setBranches(nextBranches)
-      setHistory(data.history || [])
-      setPurchases(data.purchases || [])
-      setBookings(nextBookings)
-      setVehicles(data.vehicles || [])
-      setPortalProfile(data.profile || null)
-      setLoyalty(data.loyalty || null)
-      setBirthday(data.birthday || null)
-      const latest = latestCompletedVisit(data.history)
+      const next = await fetchPortal()
+      setData(next)
+      const latest = latestCompletedVisit(next.history)
       if (latest?.id) {
-        const { data: existing } = await supabase
-          .from('service_reviews')
-          .select('id')
-          .eq('booking_id', latest.id)
-          .maybeSingle()
+        const { data: existing } = await supabase.from('service_reviews').select('id').eq('booking_id', latest.id).maybeSingle()
         setRatingDone(Boolean(existing))
       } else {
         setRatingDone(false)
       }
       setSelectedBranch((current) => {
-        if (current && nextBranches.some((b) => b.slug === current)) return current
-        const fromVisit = nextBookings[0]?.branch
-        if (fromVisit && nextBranches.some((b) => b.slug === fromVisit)) return fromVisit
-        return nextBranches[0]?.slug || ''
+        const list = next.branches || []
+        if (current && list.some((b) => b.slug === current)) return current
+        const fromVisit = next.bookings?.[0]?.branch
+        if (fromVisit && list.some((b) => b.slug === fromVisit)) return fromVisit
+        return list[0]?.slug || ''
       })
     } catch (err) {
       setError(err.message)
@@ -134,127 +83,46 @@ export default function CustomerAccountPage() {
   }, [])
 
   useEffect(() => {
-    if (authLoading) return
-    if (!session?.access_token) return
+    if (authLoading || !session?.access_token) return
     if (authProfile?.role === 'customer') load()
   }, [load, authProfile, session?.access_token, authLoading])
 
+  // Nearest branch for the live-queue tile when the customer has no car on the floor.
   useEffect(() => {
-    if (!branches.length || !navigator.geolocation) return
-    if (bookings[0]?.branch) return
+    const list = data?.branches || []
+    if (!list.length || data?.bookings?.[0]?.branch || !navigator.geolocation) return
     let cancelled = false
-    const run = () => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (cancelled) return
-          const nearest = nearestBranchSlug(
-            { lat: pos.coords.latitude, lng: pos.coords.longitude },
-            branches,
-          )
-          if (nearest) {
-            setSelectedBranch(nearest.slug)
-            setGeoNote(`Nearest · ${branchLabel(branches, nearest.slug)}`)
-          }
-        },
-        () => {
-          if (!cancelled) setGeoNote('Choose a branch')
-        },
-        { enableHighAccuracy: false, timeout: 8000 },
-      )
-    }
-    if (navigator.permissions?.query) {
-      navigator.permissions
-        .query({ name: 'geolocation' })
-        .then((status) => {
-          if (cancelled) return
-          if (status.state === 'denied') {
-            setGeoNote('Choose a branch')
-            return
-          }
-          run()
-        })
-        .catch(run)
-    } else {
-      run()
-    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return
+        const nearest = nearestBranchSlug({ lat: pos.coords.latitude, lng: pos.coords.longitude }, list)
+        if (nearest) setSelectedBranch(nearest.slug)
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 8000 },
+    )
     return () => {
       cancelled = true
     }
-  }, [branches, bookings])
+  }, [data])
 
   const selectedCounts = countsBySlug[selectedBranch] || queueCountsFromRow(null)
-
   const queueHref = customerQueuePath(selectedBranch)
-  const firstName = (portalProfile?.full_name || authProfile?.full_name || '').split(' ')[0] || ''
-  const carsHere = useMemo(
-    () => bookings.filter((b) => !selectedBranch || b.branch === selectedBranch),
-    [bookings, selectedBranch],
-  )
-  const settingsProfile = portalProfile || {
-    full_name: authProfile?.full_name,
-    phone: authProfile?.phone,
-    email: user?.email,
-  }
+  const fullName = data?.profile?.full_name || authProfile?.full_name || ''
+  const firstName = fullName.split(' ')[0] || ''
   const activeVisit = bookings[0]
-
-  function pickNearest() {
-    if (!navigator.geolocation) {
-      setGeoNote('Location unavailable. Pick a branch.')
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const nearest = nearestBranchSlug(
-          { lat: pos.coords.latitude, lng: pos.coords.longitude },
-          branches,
-        )
-        if (nearest) {
-          setSelectedBranch(nearest.slug)
-          setGeoNote(`Nearest · ${branchLabel(branches, nearest.slug)}`)
-        }
-      },
-      () => setGeoNote('Location blocked. Pick a branch.'),
-      { enableHighAccuracy: false, timeout: 8000 },
-    )
-  }
-
-  async function removeVehicle(v) {
-    if (!window.confirm(`Remove ${v.plate_number} from your garage?`)) return
-    try {
-      const token = await getAccessTokenFresh()
-      const res = await fetch('/api/customer-portal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: 'archive-vehicle', vehicle_id: v.id }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Unable to remove car')
-      setVehicles((prev) => prev.filter((x) => x.id !== v.id))
-    } catch (err) {
-      setError(err.message)
-    }
-  }
+  const reviewVisit = latestCompletedVisit(history)
+  const stampsLine = useMemo(() => {
+    if (!loyalty || loyalty.stampsEnabled === false) return 'Rewards and perks'
+    return `${loyalty.completed ?? 0}/${loyalty.cardSlots ?? 10} stamps`
+  }, [loyalty])
 
   if (authLoading) {
     return (
       <div className="capp">
         <div className="capp-stage">
-          <div className="capp-hero">
-            <div className="capp-brand">
-              <img
-                className="capp-brand-logo"
-                src="/branding/hakum-lw-ow.png"
-                alt="Hakum Auto Care"
-                width="148"
-                height="40"
-                decoding="async"
-              />
-            </div>
-            <h1>My account</h1>
-          </div>
           <div className="capp-scroll">
-            <div className="capp-skel" aria-hidden />
-            <div className="capp-skel" aria-hidden />
+            <Skeleton n={3} />
           </div>
         </div>
       </div>
@@ -265,497 +133,227 @@ export default function CustomerAccountPage() {
     return <Navigate to="/signin" replace />
   }
 
-  const heroLine = activeVisit
-    ? `${activeVisit.vehicle_plate || 'Your car'} is ${String(activeVisit.visit?.label || activeVisit.status || 'on the floor').toLowerCase()}`
-    : 'Book, track the bay, and open your history.'
-  const reviewVisit = latestCompletedVisit(history)
-
-  if (settingsOpen) {
-    return (
-      <>
-        <CustomerSettingsModal
-          open
-          onOpenChange={(open) => {
-            setSettingsOpen(open)
-            if (!open) setEditVehicle(null)
-          }}
-          profile={settingsProfile}
-          onUpdated={load}
-          initialTab={settingsTab}
-          vehicles={vehicles}
-          initialVehicle={editVehicle}
-        />
-        <CustomerBookingModal
-          open={bookOpen}
-          onOpenChange={(next) => {
-            setBookOpen(next)
-            if (!next) setBookVehicle(null)
-          }}
-          profile={settingsProfile}
-          branches={branches}
-          vehicles={vehicles}
-          initialVehicle={bookVehicle}
-          onBooked={load}
-        />
-      </>
-    )
+  async function submitReview() {
+    const scores = buildCompletedVisitReview(ratingScores, ratingComment)
+    if (!scores || !reviewVisit?.id) return
+    setRatingSaving(true)
+    try {
+      const body = await portalAction('submit-review', { booking_id: reviewVisit.id, ...scores })
+      setRatingDone(true)
+      toast.success(body.already ? 'Already rated this visit' : 'Thanks for the review')
+    } catch (err) {
+      toast.error(err.message || 'Could not submit review')
+    } finally {
+      setRatingSaving(false)
+    }
   }
 
   return (
-    <>
-      <CustomerAppFrame
-        hero={
-          <header className="capp-hero">
-            <div className="capp-hero-bar">
-              <div className="min-w-0">
-                <div className="capp-brand">
-                  <img
-                    className="capp-brand-logo"
-                    src="/branding/hakum-lw-ow.png"
-                    alt="Hakum Auto Care"
-                    width="148"
-                    height="40"
-                    decoding="async"
-                  />
-                </div>
-                <h1>Hi{firstName ? `, ${firstName}` : ''}</h1>
-                <p className="capp-hero-sub">{heroLine}</p>
+    <CustomerAppFrame
+      cols
+      hero={
+        <header className="capp-hero">
+          <div className="capp-hero-bar">
+            <div className="min-w-0">
+              <div className="capp-brand">
+                <img
+                  className="capp-brand-logo capp-brand-logo--light"
+                  src="/branding/hakum-lw-blue.png"
+                  alt="Hakum Auto Care"
+                  width="148"
+                  height="40"
+                  decoding="async"
+                />
+                <img
+                  className="capp-brand-logo capp-brand-logo--dark"
+                  src="/branding/hakum-lw-ow.png"
+                  alt=""
+                  width="148"
+                  height="40"
+                  decoding="async"
+                  aria-hidden
+                />
               </div>
-              {/* Mobile/PWA app chrome — hidden on desktop (landing header owns bell + account) */}
-              <div className="capp-icon-row account-mobile-only">
-                <button type="button" className="capp-icon-btn" onClick={() => openSettings('alerts')} aria-label="Settings">
-                  <Settings size={18} strokeWidth={1.75} />
-                </button>
-                <NotificationBell variant="capp" homeUrl="/account" homeLabel="Home" />
-                <button type="button" className="capp-icon-btn" onClick={() => signOut()} aria-label="Sign out">
-                  <LogOut size={18} strokeWidth={1.75} />
-                </button>
-              </div>
-              {/* Desktop web — quiet utilities; no second bell */}
-              <div className="capp-web-actions account-desktop-only">
-                <button type="button" className="capp-web-link" onClick={() => openSettings('account')}>
-                  Settings
-                </button>
-                <button type="button" className="capp-web-link" onClick={() => signOut()}>
-                  Sign out
-                </button>
-              </div>
+              <p className="capp-greet">{greeting()},</p>
+              <h1>{firstName || 'there'}</h1>
+              <p className="capp-hero-sub">
+                {activeVisit
+                  ? `${activeVisit.vehicle_plate || 'Your car'} is ${String(activeVisit.visit?.label || activeVisit.status).toLowerCase()}.`
+                  : 'Your car deserves a great day too.'}
+              </p>
             </div>
-          </header>
-        }
-      >
-        {error ? (
-          <div className="capp-empty" role="alert">
-            <strong>{error}</strong>
-            <button type="button" className="capp-btn capp-btn-fill" onClick={load}>
-              Retry
-            </button>
+            <div className="capp-icon-row account-mobile-only">
+              <NotificationBell variant="capp" homeUrl="/account" homeLabel="Home" />
+              <Link className="capp-avatar" to={CUSTOMER_MORE_PATH} aria-label="Settings">
+                {initials(fullName) || <Car size={18} strokeWidth={1.75} aria-hidden />}
+              </Link>
+            </div>
           </div>
-        ) : null}
+        </header>
+      }
+    >
+      {error ? (
+        <div className="capp-empty capp-span" role="alert">
+          <strong>{error}</strong>
+          <button type="button" className="capp-btn capp-btn-fill" onClick={load}>
+            Retry
+          </button>
+        </div>
+      ) : null}
 
-        {loading ? (
-          <div className="capp-skel" aria-hidden />
-        ) : activeVisit ? (
-          <article className="capp-ticket">
-            <div className="capp-ticket-row">
-              <div className="min-w-0">
-                <p className="capp-plate">{activeVisit.vehicle_plate || '-'}</p>
-                <p className="capp-meta">
-                  {[activeVisit.vehicle_make, activeVisit.vehicle_model].filter(Boolean).join(' ') ||
-                    activeVisit.service_name ||
-                    'Service visit'}
-                </p>
-                <span className="capp-pill">{activeVisit.visit?.label || activeVisit.status}</span>
-              </div>
-              <div>
-                <p className="capp-q">
-                  {activeVisit.queue_label || '--'}
-                  <span>{branchLabel(branches, activeVisit.branch) || 'Queue'}</span>
-                </p>
-              </div>
-            </div>
-            {activeVisit.visit?.steps?.length ? (
-              <ol className="account-flow" aria-label="Visit progress">
-                {activeVisit.visit.steps.map((step, idx) => {
-                  const done = activeVisit.visit.isComplete || idx < activeVisit.visit.currentIndex
-                  const current = !activeVisit.visit.isComplete && idx === activeVisit.visit.currentIndex
-                  return (
-                    <li key={step.key} className={`account-flow-step ${done ? 'is-done' : ''} ${current ? 'is-current' : ''}`}>
-                      <span className="account-flow-dot" aria-hidden />
-                      <span className="account-flow-label">{step.label}</span>
-                    </li>
-                  )
-                })}
-              </ol>
-            ) : null}
-            {activeVisit.update_photos?.length ? (
-              <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Progress photos">
-                {activeVisit.update_photos.map((photo) => (
-                  <a key={photo.path || photo.url} href={photo.url} target="_blank" rel="noreferrer">
-                    <img src={photo.url} alt="" className="size-16 rounded-lg object-cover" />
-                  </a>
+      {loading ? (
+        <div className="capp-span">
+          <Skeleton />
+        </div>
+      ) : activeVisit ? (
+        <ActiveVisitCard visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
+      ) : (
+        <div className="capp-empty capp-span">
+          <strong>No active visit</strong>
+          Book a service to track your car on the floor.
+          <div className="capp-empty-actions">
+            <Link className="capp-btn capp-btn-fill" to={CUSTOMER_BOOK_PATH}>
+              <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />
+              Book a service
+            </Link>
+            <Link className="capp-btn capp-btn-ghost" to={`${CUSTOMER_MORE_PATH}?tab=garage&add=1`}>
+              <Plus size={16} strokeWidth={1.75} aria-hidden />
+              Add a car
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <div className="capp-tiles capp-span">
+        <Tile icon={CalendarPlus} title="Book a service" sub="Schedule your visit" to={CUSTOMER_BOOK_PATH} />
+        <Tile
+          icon={vehicles.length ? Car : Plus}
+          title={vehicles.length ? 'My cars' : 'Add a car'}
+          sub={vehicles.length ? `${vehicles.length} saved` : 'Save a plate'}
+          to={vehicles.length ? `${CUSTOMER_MORE_PATH}?tab=garage` : `${CUSTOMER_MORE_PATH}?tab=garage&add=1`}
+        />
+        <Tile icon={Gift} title="Loyalty program" sub={stampsLine} to={CUSTOMER_LOYALTY_PATH} />
+        <Tile icon={CalendarDays} title="Events" sub="Meets and promos" to="/account/events" />
+      </div>
+
+      <section className="capp-section" aria-label="Live queue">
+        <SectionHead title="Live queue" note={branchLabel(branches, selectedBranch)} to={queueHref} />
+        <QueueStats counts={selectedCounts} />
+      </section>
+
+      {birthday?.perk ? (
+        <div className="capp-note">
+          <strong>
+            <Cake className="mr-1 inline size-4" aria-hidden /> Birthday treat: one free service
+          </strong>
+          <p>
+            Show this at any Hakum branch. Valid until{' '}
+            {birthday.perk.expires_at
+              ? new Date(birthday.perk.expires_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+              : 'this month'}
+            .
+          </p>
+        </div>
+      ) : !loading && birthday && !birthday.date_of_birth ? (
+        <Row
+          icon={Cake}
+          title="Add your birthday"
+          sub="Free carwash on your day."
+          chevron
+          to={`${CUSTOMER_MORE_PATH}?tab=account`}
+        />
+      ) : null}
+
+      {!loading && !ratingDone && reviewVisit ? (
+        <section className="capp-card capp-span" aria-label="Rate your last visit">
+          <div>
+            <h2 className="capp-title">Rate your last visit</h2>
+            <p className="capp-meta">
+              {reviewVisit.vehicle_plate || 'Visit'} · {branchLabel(branches, reviewVisit.branch)}
+            </p>
+          </div>
+          {VISIT_REVIEW_AXES.map((axis) => (
+            <div key={axis.id} className="capp-rate">
+              <p className="capp-rate-label">{axis.label}</p>
+              <div className="capp-rate-stars" role="group" aria-label={axis.label}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={n <= (ratingScores[axis.id] || 0) ? 'is-on' : ''}
+                    aria-label={`${axis.label} ${n} of 5`}
+                    aria-pressed={n === ratingScores[axis.id]}
+                    onClick={() => setRatingScores((s) => ({ ...s, [axis.id]: n }))}
+                  >
+                    <Star size={22} fill={n <= (ratingScores[axis.id] || 0) ? 'currentColor' : 'none'} />
+                  </button>
                 ))}
               </div>
-            ) : null}
-          </article>
-        ) : (
-          <div className="capp-empty">
-            <strong>No active visit</strong>
-            Book a service to track your car on the floor.
-          </div>
-        )}
-
-        {!loading && !ratingDone && reviewVisit && (
-          <div className="capp-ticket capp-ticket-rate">
-            <p className="capp-label">Rate your last visit</p>
-            <p className="capp-meta" style={{ marginBottom: '0.5rem' }}>
-              {reviewVisit.vehicle_plate || 'Visit'} · {branchLabel(branches, reviewVisit.branch)}. Rate overall, the app,
-              services / packages, and detailing.
-            </p>
-            {VISIT_REVIEW_AXES.map((axis) => (
-              <div key={axis.id} className="capp-rate">
-                <p className="capp-rate-label">{axis.label}</p>
-                <div className="capp-rate-stars" role="group" aria-label={axis.label}>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={n <= (ratingScores[axis.id] || 0) ? 'is-on' : ''}
-                      aria-label={`${axis.label} ${n} of 5`}
-                      aria-pressed={n === ratingScores[axis.id]}
-                      onClick={() => setRatingScores((s) => ({ ...s, [axis.id]: n }))}
-                    >
-                      <Star
-                        size={22}
-                        className={n <= (ratingScores[axis.id] || 0) ? 'fill-amber-400 text-amber-400' : 'text-[color:var(--capp-steel)]'}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <textarea
-              className="account-field"
-              rows={2}
-              placeholder="Optional comment…"
-              value={ratingComment}
-              onChange={(e) => setRatingComment(e.target.value)}
-              style={{ margin: '0.6rem 0 0.5rem' }}
-            />
-            <button
-              type="button"
-              className="capp-btn capp-btn-fill"
-              disabled={!buildCompletedVisitReview(ratingScores, ratingComment) || ratingSaving}
-              onClick={async () => {
-                const scores = buildCompletedVisitReview(ratingScores, ratingComment)
-                if (!scores || !reviewVisit?.id) return
-                setRatingSaving(true)
-                try {
-                  const token = await getAccessTokenFresh()
-                  if (!token) throw new Error('Sign in required.')
-                  const res = await fetch('/api/customer-portal', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({
-                      action: 'submit-review',
-                      booking_id: reviewVisit.id,
-                      ...scores,
-                    }),
-                  })
-                  const body = await res.json().catch(() => ({}))
-                  if (!res.ok) throw new Error(body.error || 'Could not submit review')
-                  setRatingDone(true)
-                  toast.success(body.already ? 'Already rated this visit' : 'Thanks for the review')
-                } catch (err) {
-                  toast.error(err.message || 'Could not submit review')
-                } finally {
-                  setRatingSaving(false)
-                }
-              }}
-            >
-              {ratingSaving ? 'Sending…' : 'Submit review'}
-            </button>
-          </div>
-        )}
-        {ratingDone && reviewVisit && (
-          <div className="capp-note">
-            <strong>You rated this visit.</strong>
-          </div>
-        )}
-
-        <div className="capp-actions">
+            </div>
+          ))}
+          <label className="capp-field">
+            <span>Comment (optional)</span>
+            <textarea rows={2} value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} />
+          </label>
           <button
             type="button"
             className="capp-btn capp-btn-fill"
-            onClick={() => {
-              setBookVehicle(null)
-              setBookOpen(true)
-            }}
+            disabled={!buildCompletedVisitReview(ratingScores, ratingComment) || ratingSaving}
+            onClick={submitReview}
           >
-            <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />
-            Book
+            {ratingSaving ? 'Sending…' : 'Submit review'}
           </button>
-          <Link className="capp-btn capp-btn-ghost" to={queueHref}>
-            <Radio size={16} strokeWidth={1.75} aria-hidden />
-            Live queue
-          </Link>
-        </div>
+        </section>
+      ) : null}
 
-        <section className="capp-section" aria-label="Garage">
-          <div className="capp-ticket-row" style={{ marginBottom: '0.45rem' }}>
-            <p className="capp-label" style={{ margin: 0 }}>Garage</p>
-            <button type="button" className="account-link-btn" onClick={() => openSettings('car')}>
-              Manage
-            </button>
-          </div>
-          {vehicles.length ? (
-            <div className="capp-chips">
-              {vehicles.map((v) => (
-                <div key={v.id} className="capp-chip">
-                  {v.photo_url ? (
-                    <img className="capp-chip-photo" src={v.photo_url} alt="" />
-                  ) : null}
-                  <strong>{v.plate_number}</strong>
-                  <em>{[v.vehicle_make, v.vehicle_model, v.color].filter(Boolean).join(' · ') || 'Saved vehicle'}</em>
-                  <div className="capp-actions" style={{ marginTop: '0.65rem' }}>
-                    <button type="button" className="capp-btn capp-btn-fill" onClick={() => { setBookVehicle(v); setBookOpen(true) }}>
-                      Book
-                    </button>
-                    <button type="button" className="capp-btn capp-btn-ghost" onClick={() => openSettings('car', v)}>
-                      Change plate
-                    </button>
-                    <button type="button" className="capp-btn capp-btn-ghost" onClick={() => removeVehicle(v)}>
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
+      <section className="capp-section capp-span" aria-labelledby="activity-heading">
+        <SectionHead title={<span id="activity-heading">Recent activity</span>} />
+        <Pills items={ACTIVITY_TABS} value={tab} onChange={setTab} label="Activity" />
+        <div className="capp-list">
+          {loading ? (
+            <Skeleton n={2} />
+          ) : tab === 'history' ? (
+            history.length === 0 ? (
+              <div className="capp-empty">
+                <strong>No past visits yet</strong>
+                Completed services show up here.
+              </div>
+            ) : (
+              history.slice(0, 8).map((row) => (
+                <Row
+                  key={row.id}
+                  as="article"
+                  icon={CalendarDays}
+                  title={row.vehicle_plate || 'Visit'}
+                  sub={`${formatWhen(row.created_at || row.scheduled_start)} · ${branchLabel(branches, row.branch) || row.branch}`}
+                  end={
+                    <>
+                      <b>{formatMoney(row.final_price_minor)}</b>
+                      <Badge status={row.status} label={row.status} />
+                    </>
+                  }
+                />
+              ))
+            )
+          ) : purchases.length === 0 ? (
+            <div className="capp-empty">
+              <strong>No store purchases linked</strong>
+              Ask the shop to search your name or plate at checkout.
             </div>
           ) : (
-            <div className="capp-empty">
-              <strong>No cars on file yet</strong>
-              <button type="button" className="account-link-btn" onClick={() => openSettings('car')}>
-                Save a plate
-              </button>
-            </div>
+            purchases.slice(0, 8).map((row) => (
+              <Row
+                key={row.id}
+                as="article"
+                icon={Receipt}
+                title="Store purchase"
+                sub={`${formatWhen(row.occurred_at)} · ${row.payment_method || 'paid'}`}
+                end={<b>{formatMoney(row.total_minor)}</b>}
+              />
+            ))
           )}
-        </section>
-
-        <section className="capp-ticket" aria-label="Live queue">
-          <p className="capp-label">This branch</p>
-          <label className="grid gap-1.5 text-xs font-semibold text-[color:var(--capp-steel)]">
-            {geoNote || 'Choose a branch'}
-            <select
-              className="account-field"
-              value={selectedBranch}
-              onChange={(e) => {
-                const slug = e.target.value
-                setSelectedBranch(slug)
-                setGeoNote(branchLabel(branches, slug) ? `Branch · ${branchLabel(branches, slug)}` : '')
-              }}
-            >
-              <option value="">Choose branch</option>
-              {branches.map((b) => (
-                <option key={b.slug} value={b.slug}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="capp-actions" style={{ marginTop: '0.7rem' }}>
-            <button type="button" className="capp-btn capp-btn-ghost" onClick={pickNearest}>
-              Use nearest
-            </button>
-            <Link className="capp-btn capp-btn-fill" to={queueHref}>
-              Open queue
-            </Link>
-          </div>
-          {!loading ? (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {[
-                ['Waiting', selectedCounts.waiting],
-                ['In wash', selectedCounts.in_progress],
-                ['Checking', selectedCounts.final_checking],
-                ['On floor', selectedCounts.total],
-              ].map(([label, value]) => (
-                <div key={label} className="account-stat">
-                  <p className="account-stat-value">{value}</p>
-                  <p className="account-stat-label">{label}</p>
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {carsHere.length > 0 && selectedBranch ? (
-            <p className="capp-meta" style={{ marginTop: '0.7rem' }}>
-              Your car is on this floor · {carsHere.map((c) => c.vehicle_plate || 'visit').join(', ')}
-            </p>
-          ) : null}
-        </section>
-
-        {birthday?.perk ? (
-          <div className="capp-note">
-            <p className="capp-kicker" style={{ color: 'rgba(255,255,255,0.7)' }}>
-              <Cake className="mr-1 inline size-3.5" aria-hidden /> Birthday treat
-            </p>
-            <strong>One free service is waiting.</strong>
-            <p>
-              Show this at any Hakum branch. Valid until{' '}
-              {birthday.perk.expires_at
-                ? new Date(birthday.perk.expires_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
-                : 'this month'}
-              .
-            </p>
-          </div>
-        ) : !birthday?.date_of_birth ? (
-          <button type="button" className="capp-row" onClick={() => openSettings('account')}>
-            <Cake className="capp-thumb" style={{ width: '2.5rem', height: '2.5rem', padding: '0.55rem' }} />
-            <span>
-              <strong>Add your birthday</strong>
-              <em>Free carwash on your day.</em>
-            </span>
-          </button>
-        ) : null}
-
-        {loyalty?.membershipsEnabled && loyalty.membership?.tier_name ? (
-          <div className="capp-ticket">
-            <p className="capp-label">Membership</p>
-            <p className="capp-plate" style={{ fontSize: '1.15rem', letterSpacing: 0 }}>{loyalty.membership.tier_name}</p>
-            <p className="capp-meta">
-              {loyalty.membership.discount_percent != null
-                ? `${loyalty.membership.discount_percent}% member discount`
-                : 'Active member'}
-              {loyalty.membership.ends_at ? ` · ends ${loyalty.membership.ends_at}` : ''}
-            </p>
-          </div>
-        ) : null}
-
-        {loyalty?.pointsEnabled ? (
-          <div className="capp-ticket">
-            <p className="capp-label">Spend points</p>
-            <p className="capp-q" style={{ textAlign: 'left' }}>{loyalty.loyaltyPoints ?? 0}</p>
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className="capp-skel" aria-hidden />
-        ) : loyalty?.stampsEnabled !== false && loyalty ? (
-          <LoyaltyCard
-            variant="hakum"
-            completed={loyalty.completed}
-            cardSlots={loyalty.cardSlots}
-            milestones={loyalty.milestones}
-            encouragement={loyalty.encouragement}
-          />
-        ) : (
-          <div className="capp-empty">Loyalty stamps appear after your first completed visit.</div>
-        )}
-
-        <section className="capp-section" aria-labelledby="history-heading">
-          <h2 id="history-heading" className="capp-label">Activity</h2>
-          <div className="account-seg account-seg-2" role="tablist" aria-label="History">
-            {[
-              ['history', 'Past visits'],
-              ['purchases', 'Purchases'],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={tab === id}
-                className={`account-seg-btn ${tab === id ? 'is-active' : ''}`}
-                onClick={() => setTab(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 grid gap-2">
-            {tab === 'history' &&
-              (loading ? (
-                <div className="capp-skel" aria-hidden />
-              ) : history.length === 0 ? (
-                <div className="capp-empty">
-                  <strong>No past visits yet</strong>
-                  Completed services show up here.
-                </div>
-              ) : (
-                history.map((row) => (
-                  <article key={row.id} className="capp-row" style={{ cursor: 'default', flexWrap: 'wrap' }}>
-                    <span className="capp-thumb" style={{ display: 'grid', placeItems: 'center', width: '2.6rem', height: '2.6rem' }}>
-                      <CalendarDays className="size-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <strong>{row.vehicle_plate || 'Visit'}</strong>
-                      <em>
-                        {formatWhen(row.created_at || row.scheduled_start)} · {branchLabel(branches, row.branch) || row.branch}
-                      </em>
-                      {row.update_photos?.length ? (
-                        <span className="mt-2 flex flex-wrap gap-1.5">
-                          {row.update_photos.map((photo) => (
-                            <a key={photo.path || photo.url} href={photo.url} target="_blank" rel="noreferrer">
-                              <img
-                                src={photo.url}
-                                alt=""
-                                className="size-14 rounded-lg object-cover"
-                              />
-                            </a>
-                          ))}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="shrink-0 text-sm font-bold tabular-nums text-[color:var(--capp-navy)]">
-                      {formatMoney(row.final_price_minor)}
-                    </span>
-                    <Badge variant="outline" className="text-[10px]">{row.status}</Badge>
-                  </article>
-                ))
-              ))}
-            {tab === 'purchases' &&
-              (loading ? (
-                <div className="capp-skel" aria-hidden />
-              ) : purchases.length === 0 ? (
-                <div className="capp-empty">
-                  <strong>No store purchases linked</strong>
-                  Ask the shop to search your name or plate at checkout.
-                </div>
-              ) : (
-                purchases.map((row) => (
-                  <article key={row.id} className="capp-row" style={{ cursor: 'default' }}>
-                    <span className="capp-thumb" style={{ display: 'grid', placeItems: 'center', width: '2.6rem', height: '2.6rem' }}>
-                      <Receipt className="size-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <strong>Store purchase</strong>
-                      <em>
-                        {formatWhen(row.occurred_at)} · {row.payment_method || 'paid'}
-                      </em>
-                    </span>
-                    <span className="shrink-0 text-sm font-bold tabular-nums text-[color:var(--capp-navy)]">
-                      {formatMoney(row.total_minor)}
-                    </span>
-                  </article>
-                ))
-              ))}
-          </div>
-        </section>
-
-        <button type="button" className="capp-btn capp-btn-ghost" onClick={() => openSettings('alerts')}>
-          Alert settings
-        </button>
-      </CustomerAppFrame>
-
-      <CustomerBookingModal
-        open={bookOpen}
-        onOpenChange={(open) => {
-          setBookOpen(open)
-          if (!open) setBookVehicle(null)
-        }}
-        profile={settingsProfile}
-        branches={branches}
-        vehicles={vehicles}
-        initialVehicle={bookVehicle}
-        onBooked={load}
-      />
-    </>
+        </div>
+      </section>
+    </CustomerAppFrame>
   )
 }

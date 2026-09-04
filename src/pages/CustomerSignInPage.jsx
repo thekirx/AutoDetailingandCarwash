@@ -253,8 +253,9 @@ export default function CustomerSignInPage() {
 
   return (
     <HakumAuthShell
-      title="Your car. Your account."
-      subtitle="Sign in with your phone and password to track visits, live queue, and bookings."
+      variant="customer"
+      title="Give your car the pampering it deserves."
+      subtitle="Expert detailing, precision car care, and the shine that turns heads."
       bullets={CUSTOMER_AUTH_BULLETS}
       footerLinks={
         <>

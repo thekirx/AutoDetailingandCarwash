@@ -165,6 +165,37 @@ function BrandMark({ size = 28 }) {
   )
 }
 
+/** Light-rail lockup: square assets need a crop box + scale (same trick as public wordmark). */
+function CommandRailBrand({ homeTo, caption }) {
+  return (
+    <div className="command-rail-brand">
+      <NavLink to={homeTo} className="command-rail-brand-link" aria-label="Hakum Auto Care home">
+        <span className="command-rail-logo group-data-[collapsible=icon]:hidden" aria-hidden>
+          <img
+            src="/branding/hakum-lw-blue.png"
+            alt=""
+            width={120}
+            height={68}
+            className="command-rail-logo-img"
+            decoding="async"
+          />
+        </span>
+        <span className="command-rail-mark hidden size-9 place-items-center overflow-hidden rounded-xl bg-primary group-data-[collapsible=icon]:grid">
+          <img
+            src="/branding/hakum-mark-ow.png"
+            alt=""
+            width={22}
+            height={22}
+            className="size-[22px] object-contain"
+            decoding="async"
+          />
+        </span>
+      </NavLink>
+      {caption ? <p className="command-rail-kicker group-data-[collapsible=icon]:hidden">{caption}</p> : null}
+    </div>
+  )
+}
+
 /**
  * FloorAppShell — phone dock; tablet+ left rail + content (no stretched phone frame).
  */
@@ -493,27 +524,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
     >
       <Sidebar collapsible="icon" variant="inset" className="command-rail">
         <SidebarHeader className="command-rail-header">
-          <div className="flex items-center gap-3 px-2 py-1">
-            <div className="hidden size-9 place-items-center overflow-hidden rounded-xl bg-primary text-primary-foreground group-data-[collapsible=icon]:grid">
-              <img
-                src="/branding/hakum-mark-ow.png"
-                alt=""
-                width={22}
-                height={22}
-                className="size-[22px] object-contain"
-                decoding="async"
-              />
-            </div>
-            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <img
-                src="/branding/hakum-lw-blue.png"
-                alt="Hakum"
-                className="h-6 w-auto object-contain object-left"
-                decoding="async"
-              />
-              <p className="command-rail-kicker">{label}</p>
-            </div>
-          </div>
+          <CommandRailBrand homeTo={resolvePostLoginPath(profile, null) || '/operations'} caption={label} />
         </SidebarHeader>
         <SidebarSeparator className="command-rail-rule" />
         <SidebarContent className="command-rail-body">
@@ -521,11 +532,11 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
         </SidebarContent>
         <SidebarFooter className="command-rail-footer">
           <div className="command-rail-who group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-semibold">{profile?.full_name || 'Operations'}</p>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="command-rail-who-name truncate">{profile?.full_name || 'Operations'}</p>
+            <p className="command-rail-who-meta truncate">
               {formatRole(profile?.role)} · {formatScope(profile)}
             </p>
-            <p className="truncate text-xs text-muted-foreground">{profile?.email || user?.email}</p>
+            <p className="command-rail-who-meta truncate">{profile?.email || user?.email}</p>
           </div>
           <SidebarMenu>
             <SidebarMenuItem>

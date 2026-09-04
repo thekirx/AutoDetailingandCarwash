@@ -1,8 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Newspaper } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
+import { Skeleton } from '@/components/customer/CustomerUi'
 import { supabase } from '@/lib/supabase'
+
+/** Read time from the block text; falls back to the excerpt so every card shows one. */
+function readMinutes(post) {
+  const text = [post.excerpt, ...(post.content_blocks || []).map((b) => b?.text || b?.content || '')].join(' ')
+  const words = text.trim().split(/\s+/).filter(Boolean).length
+  return Math.max(1, Math.round(words / 200))
+}
+
+function formatDate(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 export default function CustomerBlogPage() {
   const [posts, setPosts] = useState([])
@@ -26,37 +39,40 @@ export default function CustomerBlogPage() {
 
   if (active) {
     return (
-      <CustomerAppFrame title={active.title} onBack={() => setActive(null)}>
+      <CustomerAppFrame title={active.title} subtitle={[active.author_label, formatDate(active.published_at)].filter(Boolean).join(' · ')} onBack={() => setActive(null)}>
         {active.cover_url ? <img className="capp-cover" src={active.cover_url} alt="" /> : null}
-        <div className="capp-article capp-ticket">
+        <article className="capp-article capp-card">
           <ContentBlockRenderer mobile blocks={active.content_blocks} />
-        </div>
+        </article>
       </CustomerAppFrame>
     )
   }
 
   return (
-    <CustomerAppFrame title="Blog" subtitle="Care tips and bay stories from Hakum." backTo="/account">
+    <CustomerAppFrame title="Blog" subtitle="Tips, stories, and everything automotive." backTo="/account" cols>
       {loading && !error ? (
-        <>
-          <div className="capp-skel" aria-hidden />
-          <div className="capp-skel" aria-hidden />
-        </>
+        <div className="capp-span">
+          <Skeleton n={2} />
+        </div>
       ) : null}
-      {error ? <p className="capp-empty" role="alert">{error}</p> : null}
-      {!loading && !posts.length && !error ? (
-        <div className="capp-empty">No posts yet. Check back after the next bay story.</div>
+      {error ? (
+        <p className="capp-empty capp-span" role="alert">
+          {error}
+        </p>
       ) : null}
+      {!loading && !posts.length && !error ? <div className="capp-empty capp-span">No posts yet. Check back after the next bay story.</div> : null}
       {posts.map((post) => (
-        <button key={post.id} type="button" className="capp-row" onClick={() => setActive(post)}>
-          {post.cover_url ? (
-            <img className="capp-thumb" src={post.cover_url} alt="" />
-          ) : (
-            <Newspaper className="capp-thumb" style={{ padding: '0.9rem' }} />
-          )}
-          <span>
-            <strong>{post.title}</strong>
-            <em>{post.excerpt || post.author_label}</em>
+        <button key={post.id} type="button" className="capp-post" onClick={() => setActive(post)}>
+          {post.cover_url ? <img className="capp-post-cover" src={post.cover_url} alt="" loading="lazy" /> : null}
+          <span className="capp-post-body">
+            <h3>{post.title}</h3>
+            {post.excerpt ? <p>{post.excerpt}</p> : null}
+            <span className="capp-post-meta">
+              <span>
+                {formatDate(post.published_at)} · {readMinutes(post)} min read
+              </span>
+              <ArrowRight size={16} strokeWidth={2} aria-hidden />
+            </span>
           </span>
         </button>
       ))}

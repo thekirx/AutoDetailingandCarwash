@@ -58,8 +58,8 @@ const queueApi = read('src/queue/queueApi.js')
 assert.match(queueApi, /getAccessTokenFresh/)
 assert.doesNotMatch(queueApi, /getSession\(\)/)
 
-const modal = read('src/components/CustomerBookingModal.jsx')
-assert.match(modal, /svcError/)
+const bookPage = read('src/pages/CustomerBookPage.jsx')
+assert.match(bookPage, /svc\.error/)
 
 const login = read('src/pages/LoginPage.jsx')
 assert.match(login, /Unable to load your staff profile/)

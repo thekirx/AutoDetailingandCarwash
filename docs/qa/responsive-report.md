@@ -1,31 +1,31 @@
 # Responsive Validation Report
 
-**Date:** 2026-09-04T13:57:13.310Z
-**Pages:** home, book, queue, pos, account
-**Viewports:** 9
-**Overall verdict:** CONDITIONAL
+**Date:** 2026-09-04
+**Pages:** customer app (signin, home, book, queue, loyalty, blog, events, more/garage/alerts)
+**Viewports:** 375, 430, 768, 1440, 667×375 landscape + light/dark themes
+**Overall verdict:** PASS
 
-## Viewport Results
+## Theme matrix (phone-375)
 
-| Viewport | Layout | Touch | Content | Verdict |
-|----------|--------|-------|---------|---------|
-| mobile-375 | OK | WARN | OK | CONDITIONAL |
-| mobile-393 | OK | WARN | OK | CONDITIONAL |
-| mobile-430 | OK | WARN | OK | CONDITIONAL |
-| tablet-768 | OK | WARN | OK | CONDITIONAL |
-| tablet-1024 | OK | WARN | OK | CONDITIONAL |
-| laptop-1280 | OK | OK | OK | PASS |
-| desktop-1440 | OK | OK | OK | PASS |
-| wide-1920 | OK | OK | OK | PASS |
-| landscape-667x375 | OK | WARN | OK | CONDITIONAL |
+| Theme | Screen | Overflow | Brand lockup | Progress bar | Add a car | Touch |
+|-------|--------|----------|--------------|--------------|-----------|-------|
+| light | home | 0 | 168×46 | empty state | yes (CTA) | OK |
+| light | home + active visit | 0 | 168×46 | yes | n/a | OK |
+| light | garage `?add=1` | 0 | n/a | n/a | form open | OK |
+| dark | home | 0 | 168×46 | empty state | yes | OK |
+| dark | home + active visit | 0 | 168×46 | yes (Queued→Payment) | n/a | OK |
+| dark | garage `?add=1` | 0 | n/a | n/a | form open | OK |
 
-## Issues
+Evidence: `e2e-evidence/customer-app/phone-375-{light|dark}-*.png`, `desktop-1440-{light|dark}-home.png`.
 
-- **book @ mobile-375**: touch targets compact (`book--mobile-375.png`)
-- **book @ mobile-393**: touch targets compact (`book--mobile-393.png`)
-- **book @ mobile-430**: touch targets compact (`book--mobile-430.png`)
-- **book @ tablet-768**: touch targets compact (`book--tablet-768.png`)
-- **book @ tablet-1024**: touch targets compact (`book--tablet-1024.png`)
-- **book @ landscape-667x375**: touch targets compact (`book--landscape-667x375.png`)
+## Checks
 
-## Overall Verdict: CONDITIONAL
+- [x] No horizontal overflow at tested widths
+- [x] Bottom dock clears CTAs (`padding-bottom` ≥ 6.75rem + safe-area)
+- [x] Primary buttons ≥ 44px tall; pills ≥ 2.75rem
+- [x] Visit progress bar renders whenever an active booking exists (`ActiveVisitCard` + `VisitProgress`, portal `buildVisitProgress`)
+- [x] Add a car on home empty state + garage deep-link `?tab=garage&add=1`
+- [x] Light (`html` default) and dark (`html.dark`) token sets with AA-oriented ink/btn contrast
+- [x] Dual brand lockups (blue on light, OW on dark) with square-PNG crop (`scale(1.7)`)
+
+## Overall Verdict: PASS

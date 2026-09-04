@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Car, ClipboardList, Gauge, MapPin, Sparkles, Users } from 'lucide-react'
 
-/** Split auth shell — Hakum cinematic blue + light form (Kado-style layout, Hakum brand). */
+/**
+ * Split auth shell: Hakum cinematic blue + light form (ops login).
+ * `variant="customer"` switches to the dark customer-app sheet (styles-customer-app.css `.hakum-auth--app`).
+ */
 export default function HakumAuthShell({
   kicker = 'Hakum Auto Care — Customer account',
   title,
@@ -9,9 +12,10 @@ export default function HakumAuthShell({
   bullets = [],
   children,
   footerLinks,
+  variant = 'default',
 }) {
   return (
-    <div className="hakum-auth">
+    <div className={`hakum-auth${variant === 'customer' ? ' hakum-auth--app' : ''}`}>
       <aside className="hakum-auth-brand">
         <Link className="hakum-auth-wordmark" to="/home" aria-label="Hakum Auto Care home">
           <img src="/branding/hakum-lw-ow.png" alt="" width="92" height="52" />

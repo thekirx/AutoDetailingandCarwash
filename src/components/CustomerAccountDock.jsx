@@ -1,15 +1,16 @@
-import { CalendarDays, Home, Newspaper, Radio } from 'lucide-react'
+import { CalendarPlus, Home, MoreHorizontal, Newspaper, Radio } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { getCustomerAccountTabs } from '@/lib/customerAccountNav'
 
 const ICONS = {
   home: Home,
-  blog: Newspaper,
-  events: CalendarDays,
+  book: CalendarPlus,
   queue: Radio,
+  blog: Newspaper,
+  more: MoreHorizontal,
 }
 
-/** Floating island dock. Same four tabs on every customer app screen. */
+/** Floating island dock on phones, inline tab row on desktop. Same five tabs everywhere. */
 export default function CustomerAccountDock() {
   const tabs = getCustomerAccountTabs()
 
@@ -22,11 +23,9 @@ export default function CustomerAccountDock() {
             key={tab.id}
             to={tab.to}
             end={Boolean(tab.end)}
-            className={({ isActive }) =>
-              `account-dock-item capp-dock-item${isActive ? ' account-dock-item-primary capp-dock-item-primary' : ''}`
-            }
+            className={({ isActive }) => `capp-dock-item${isActive ? ' capp-dock-item-primary' : ''}`}
           >
-            <Icon className="account-dock-icon capp-dock-icon" strokeWidth={1.75} aria-hidden />
+            <Icon className="capp-dock-icon" strokeWidth={1.75} aria-hidden />
             <span>{tab.label}</span>
           </NavLink>
         )

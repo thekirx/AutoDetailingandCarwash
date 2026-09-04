@@ -173,6 +173,7 @@ export default function CustomerSignUpPage() {
 
   return (
     <HakumAuthShell
+      variant="customer"
       title={titles[stepDef.id] || 'Join the Hakum circle.'}
       subtitle="A short setup. Name, plate, birthday, then a password. Sign in later with your phone."
       bullets={CUSTOMER_AUTH_BULLETS}
