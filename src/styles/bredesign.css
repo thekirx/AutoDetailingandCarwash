@@ -227,6 +227,21 @@
   height: 100%;
   object-fit: cover;
 }
+.bredesign .bd-hero-video {
+  pointer-events: none;
+}
+/* A real image sits above the native video until playback has actually begun.
+   Browsers that reject autoplay can draw their own play affordance on a video
+   poster even without controls; keeping that player covered makes the fallback
+   look like the intended cinematic hero rather than an embedded media player. */
+.bredesign .bd-hero-poster {
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.bredesign .bd-hero-poster.is-hidden {
+  opacity: 0;
+}
 /* Graded rather than flatly dimmed: the top of the frame stays a photograph,
    and the type sits on ground dark enough to read against. */
 .bredesign .bd-hero::after {

@@ -215,16 +215,17 @@ export default function BdHero() {
          focusable links, so nothing here is reachable only by pointer. */
       onPointerDown={revealCopy}
     >
-      {videoFailed ? (
-        <img className="bd-hero-media" src={poster} alt="" />
-      ) : (
+      {!videoFailed ? (
         <video
           ref={videoRef}
-          className="bd-hero-media"
+          className="bd-hero-media bd-hero-video"
           autoPlay
           muted
           loop
           playsInline
+          controls={false}
+          disablePictureInPicture
+          disableRemotePlayback
           poster={poster}
           preload="metadata"
           aria-hidden="true"
@@ -234,7 +235,13 @@ export default function BdHero() {
           <source src={av1Src} type={AV1_TYPE} />
           <source src={h264Src} type="video/mp4" />
         </video>
-      )}
+      ) : null}
+      <img
+        className={`bd-hero-media bd-hero-poster${playing && !videoFailed ? ' is-hidden' : ''}`}
+        src={poster}
+        alt=""
+        aria-hidden="true"
+      />
 
       <div
         className={`bd-shell bd-hero-in${copyHidden ? ' is-logo-moment' : ''}`}
