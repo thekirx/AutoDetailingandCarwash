@@ -6,11 +6,11 @@ const BASE_URL = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:4173'
 
 const count = (page, selector) => page.$$eval(selector, (nodes) => nodes.length)
 
-async function withPage(path, run) {
+async function withPage(path, run, viewport = { width: 1280, height: 900, deviceScaleFactor: 1 }) {
   const browser = await puppeteer.launch({ headless: true })
   try {
     const page = await browser.newPage()
-    await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 })
+    await page.setViewport(viewport)
     await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' })
     await page.waitForSelector('main')
     await run(page)
@@ -18,6 +18,32 @@ async function withPage(path, run) {
     await browser.close()
   }
 }
+
+test('Mobile PPF hero keeps dark viewport chrome and strengthens only its two title lines', async () => {
+  await withPage('/services/ppf', async (page) => {
+    const result = await page.evaluate(() => {
+      const hero = document.querySelector('.ppf-information-stage')
+      const eyebrow = document.querySelector('.ppf-information-heading > p')
+      const headline = document.querySelector('.ppf-information-heading > h2')
+      const supportingCopy = document.querySelector('.ppf-information-heading > span')
+
+      return {
+        colorScheme: getComputedStyle(document.documentElement).colorScheme,
+        heroWidth: hero.getBoundingClientRect().width,
+        viewportWidth: document.documentElement.clientWidth,
+        eyebrowShadow: getComputedStyle(eyebrow).textShadow,
+        headlineShadow: getComputedStyle(headline).textShadow,
+        supportingCopyShadow: getComputedStyle(supportingCopy).textShadow,
+      }
+    })
+
+    assert.match(result.colorScheme, /dark/)
+    assert.equal(result.heroWidth, result.viewportWidth)
+    assert.notEqual(result.eyebrowShadow, 'none')
+    assert.notEqual(result.headlineShadow, 'none')
+    assert.equal(result.supportingCopyShadow, 'none')
+  }, { width: 393, height: 852, deviceScaleFactor: 2 })
+})
 
 test('PPF page contains ClearPro, packages, proof, focused FAQs, and bottom booking', async () => {
   await withPage('/services/ppf', async (page) => {
