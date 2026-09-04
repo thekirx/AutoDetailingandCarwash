@@ -35,8 +35,6 @@ export function BdOrigin() {
               {copy}
             </p>
           ))}
-          {/* Drafted from existing positioning, not supplied copy. */}
-          <p className="bd-draft-note">Draft copy — pending sign-off</p>
           <div className="bd-cta-row bd-origin-cta">
             <Link className="bd-btn bd-btn-quiet" to="/services">
               What we do

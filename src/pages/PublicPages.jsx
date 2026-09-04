@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { CeramicSection, PpfInformationSection } from '../components/public/home/HomeServiceSections'
+import { CeramicSection } from '../components/public/home/HomeServiceSections'
 
 const PPFVisualizer = lazy(() => import('../components/PPFVisualizer'))
 import { usePublicBranches, branchLabel, fetchPublicBranchHours } from '../lib/branches'
@@ -141,13 +141,6 @@ export function ServicesPage() {
         </div>
       </section>
 
-      {/* The film install, scrubbed by scroll. It belongs on the services page
-          rather than the homepage: it answers "what does the work look like"
-          for someone already reading the menu, and mock B's homepage has no
-          scrubbed sequence in it. */}
-      <div id="install">
-        <PpfInformationSection />
-      </div>
     </>
   )
 }

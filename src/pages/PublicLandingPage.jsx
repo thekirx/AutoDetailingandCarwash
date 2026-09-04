@@ -8,7 +8,6 @@ import {
   BdOrigin,
   BdPhotos,
   BdServices,
-  BdWhySections,
 } from '../components/public/bredesign/BdSections'
 import useReveal from '../components/public/bredesign/useReveal'
 import { usePublicBranches, branchCityName } from '../lib/branches'
@@ -53,7 +52,6 @@ export default function PublicLandingPage() {
       <BdHero locationLine={locationLine} />
       <BdOrigin />
       <BdServices />
-      <BdWhySections />
       <BdPhotos />
       <BdEvents state={content.event} />
       <BdBranches branches={visibleBranches} />

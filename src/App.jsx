@@ -10,6 +10,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import OpsIndexRedirect from './pages/OpsIndexRedirect'
 
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'))
+const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'))
 const RootEntry = lazy(() => import('./pages/RootEntry'))
 const AppShellGate = lazy(() => import('./pages/AppShellGate'))
 const PublicQueuePage = lazy(() => import('./pages/PublicQueuePage'))
@@ -131,6 +132,7 @@ export default function App() {
         <Route element={<PublicLayout />}>
           <Route path="/home" element={<PublicLandingPage />} />
           <Route path="/services" element={<ServicesPage />} />
+          <Route path="/services/:slug" element={<ServiceDetailPage />} />
           <Route path="/packages" element={<PackagesPage />} />
           <Route path="/book" element={<BookingPage />} />
           <Route path="/booking" element={<Navigate to="/book" replace />} />

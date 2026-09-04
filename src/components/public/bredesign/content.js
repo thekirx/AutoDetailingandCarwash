@@ -1,10 +1,8 @@
 /* Copy for the BreDESIGN homepage, taken from the approved design mock B.
  *
- * Two things here are drafted rather than supplied, and are marked as such in
- * the UI so nobody mistakes them for signed-off text:
- *   - the origin story, written from existing positioning
- *   - the customer reviews, which are written examples
- * Replace both before launch.
+ * The origin story is the business's own About Us text, supplied by the owner.
+ * The headline is drawn from it — the name's meaning is the actual story, and
+ * far stronger than the one that stood here before it arrived.
  */
 
 /* Each URL is written out in full rather than built by a helper: Vite only
@@ -24,15 +22,15 @@ export const IMAGES = {
 
 export const ORIGIN = {
   eyebrow: 'The Hakum story',
-  headline: ['It began', 'with cars', 'that came', 'back'],
-  headlineAccent: 'worse.',
+  headline: ['It began', 'with a word', 'for'],
+  headlineAccent: 'love.',
   paragraphs: [
-    'Clean on the surface, damaged underneath — swirl marks polished in, film lifting at the corners, coatings that stopped beading after a month.',
-    'We opened Hakum to do it the slow way. Decontaminate before you protect. Wrap the edge if the panel will allow it. Write down the warranty and honour it. Nothing here is rushed, because everything here is permanent.',
-    'Today that standard runs across three branches and a team of twenty-six, on roughly fifteen thousand vehicles a year — and it has not moved once.',
+    'Founded in 2024, Hakum Auto Care was established on the principle that exceptional service begins with genuine care and pride in every job we undertake.',
+    'We specialize in fast, high-quality auto detailing, treating every vehicle with the same attention and respect we give our own. The name “Hakum” originates from a heartfelt expression my son used as a child to say “I love you.” It serves as a constant reminder that our work should always come from a place of sincerity and dedication.',
+    'Whether it’s a quick wash or comprehensive detailing, our customers can expect expert craftsmanship, premium products, and a team that truly treats every car as if it were their own.',
   ],
-  tagTitle: 'Est. Cavite',
-  tagLine: 'Three branches, one standard',
+  tagTitle: 'Est. 2024',
+  tagLine: 'Cavite — three branches, one standard',
   image: IMAGES.detailing,
   imageAlt: 'Paint correction under inspection lighting at Hakum Auto Care',
 }
@@ -43,7 +41,7 @@ export const SERVICES = [
     title: 'Paint Protection Film',
     copy: 'A clear, self-healing layer that takes the stone chips and scratches your paint would otherwise keep forever.',
     cta: 'Why PPF',
-    href: '#ppf',
+    to: '/services/ppf',
     image: IMAGES.ppf,
     alt: 'Paint protection film installed on a vehicle at Hakum Auto Care',
   },
@@ -52,7 +50,7 @@ export const SERVICES = [
     title: 'Ceramic Coating',
     copy: 'A glass-like layer bonded into the paint itself. Deeper gloss, water that sheets straight off, far easier upkeep.',
     cta: 'Why ceramic',
-    href: '#ceramic',
+    to: '/services/ceramic',
     image: IMAGES.ceramic,
     alt: 'Ceramic coating applied at Hakum Auto Care',
   },
@@ -61,7 +59,7 @@ export const SERVICES = [
     title: 'Nano Ceramic Tint',
     copy: 'Rejects heat and UV at the glass instead of just darkening it — a cooler cabin without losing your view out.',
     cta: 'Why upgrade',
-    href: '#tint',
+    to: '/services/tint',
     image: IMAGES.tint,
     alt: 'Nano ceramic tint being fitted at Hakum Auto Care',
   },

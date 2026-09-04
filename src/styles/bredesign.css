@@ -38,7 +38,7 @@
   --bd-body: var(--font-body);
 
   /* ---- Metrics --------------------------------------------------------- */
-  --bd-shell: min(100% - 36px, 1180px);
+  --bd-shell: min(100% - clamp(24px, 5vw, 96px), 1560px);
   --bd-section: clamp(70px, 8vw, 124px);
   --bd-lit: inset 0 1px 0 rgba(157, 180, 255, 0.14);
 
@@ -181,7 +181,7 @@
 }
 .bredesign .bd-head h2 {
   margin-top: 14px;
-  font-size: clamp(2rem, 4.6vw, 3.4rem);
+  font-size: clamp(2rem, 4.8vw, 4rem);
 }
 .bredesign .bd-head > p {
   color: var(--bd-ink-2);
@@ -247,8 +247,11 @@
 }
 .bredesign .bd-hero h1 {
   margin-top: 22px;
-  font-size: clamp(2.1rem, 6.4vw, 5rem);
-  line-height: 0.88;
+  /* Sized off the viewport so it fills the screen it is on, and capped only
+     where a line would otherwise outrun the eye — which is ultra-wide, not
+     desktop. */
+  font-size: clamp(2.1rem, 7.4vw, 7.4rem);
+  line-height: 0.86;
 }
 .bredesign .bd-hero h1 em {
   font-style: italic;
@@ -256,9 +259,9 @@
 }
 .bredesign .bd-hero-lede {
   margin-top: 24px;
-  max-width: 46ch;
+  max-width: 58ch;
   color: rgba(241, 241, 237, 0.84);
-  font-size: clamp(15px, 1.4vw, 17px);
+  font-size: clamp(15px, 1.5vw, 19px);
   line-height: 1.6;
 }
 .bredesign .bd-hero-cta {
@@ -313,12 +316,12 @@
 }
 @media (min-width: 940px) {
   .bredesign .bd-origin-in {
-    grid-template-columns: 1fr 0.92fr;
+    grid-template-columns: 1.08fr 1fr;
   }
 }
 .bredesign .bd-origin h2 {
   margin-top: 20px;
-  font-size: clamp(1.9rem, 4.2vw, 3.1rem);
+  font-size: clamp(1.9rem, 4.6vw, 4rem);
 }
 .bredesign .bd-origin h2 em {
   font-style: italic;
@@ -327,16 +330,16 @@
 .bredesign .bd-origin-lead {
   margin-top: 24px;
   color: var(--bd-paper);
-  font-size: 15.5px;
-  line-height: 1.65;
-  max-width: 46ch;
+  font-size: clamp(15.5px, 1.35vw, 19px);
+  line-height: 1.6;
+  max-width: 54ch;
 }
 .bredesign .bd-origin-body {
-  margin-top: 14px;
+  margin-top: 16px;
   color: var(--bd-ink-2);
-  font-size: 14px;
+  font-size: clamp(14px, 1.15vw, 16.5px);
   line-height: 1.7;
-  max-width: 48ch;
+  max-width: 60ch;
 }
 .bredesign .bd-origin-cta {
   margin-top: 26px;
@@ -1661,45 +1664,69 @@
 .bredesign .bd-products {
   background: var(--bd-navy-2);
 }
-.bredesign .bd-brand-wall {
-  display: grid;
-  gap: 1px;
-  grid-template-columns: repeat(2, 1fr);
-  background: var(--bd-rule);
-  border: 1px solid var(--bd-rule);
+/* The marquee runs the full width of the viewport, not the shell — a strip that
+   stops short of the edges reads as a carousel that has run out, rather than as
+   something continuous. */
+.bredesign .bd-marquee {
+  margin-top: clamp(24px, 3vw, 40px);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
-@media (min-width: 860px) {
-  .bredesign .bd-brand-wall {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-.bredesign .bd-brand {
-  background: var(--bd-navy);
-  padding: 22px 20px;
+/* Position is driven per frame by useMarquee, not by a keyframe: a CSS
+   animation cannot be grabbed, scrubbed, or handed the speed of a flick.
+   pan-y keeps vertical page scrolling with the browser while horizontal
+   gestures come to the strip. */
+.bredesign .bd-marquee-track {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  transition: background 0.2s;
+  width: max-content;
+  will-change: transform;
 }
-.bredesign .bd-brand:hover {
-  background: var(--bd-navy-3);
+.bredesign .bd-marquee {
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
-/* The tiles already carry their own ground and padding, so the cell only has
-   to hold one at a consistent width. */
+.bredesign .bd-marquee.is-grabbing {
+  cursor: grabbing;
+}
+.bredesign .bd-marquee img {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+.bredesign .bd-marquee-run {
+  display: flex;
+  gap: clamp(14px, 2vw, 28px);
+  padding-right: clamp(14px, 2vw, 28px);
+}
+
+.bredesign .bd-brand {
+  flex: none;
+  background: var(--bd-navy);
+  border: 1px solid var(--bd-rule);
+  padding: 14px 16px;
+  display: grid;
+  place-items: center;
+}
 .bredesign .bd-brand img {
   display: block;
-  width: 100%;
-  max-width: 190px;
+  width: clamp(120px, 14vw, 170px);
   height: auto;
   border-radius: 2px;
 }
-.bredesign .bd-brand span {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: var(--bd-ink-3);
+/* Reduced motion stops the drift in the hook itself; the strip stays draggable,
+   so nothing becomes unreachable. */
+.bredesign .bd-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 .bredesign .bd-brand-note {
   margin-top: 18px;
@@ -1747,4 +1774,21 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--bd-ink-3);
+}
+
+/* ==== Service detail ===================================================== */
+
+.bredesign .bd-detail-in {
+  display: grid;
+  gap: clamp(28px, 3.4vw, 56px);
+  align-items: start;
+}
+@media (min-width: 940px) {
+  .bredesign .bd-detail-in {
+    grid-template-columns: 1fr 1.05fr;
+  }
+}
+.bredesign .bd-detail .bd-why-lede {
+  margin-top: 0;
+  max-width: 54ch;
 }

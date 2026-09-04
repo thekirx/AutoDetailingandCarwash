@@ -1,3 +1,5 @@
+import useMarquee from './useMarquee'
+
 /* "What goes on your car" — mock B's product wall, between the tint section and
    the closing CTA.
  *
@@ -54,6 +56,8 @@ const BRANDS = [
 ]
 
 export default function BdProducts() {
+  const { viewportRef, trackRef } = useMarquee()
+
   return (
     <section className="bd-products" id="products">
       <div className="bd-shell">
@@ -72,14 +76,33 @@ export default function BdProducts() {
           </p>
         </div>
 
-        <div className="bd-brand-wall bd-reveal">
-          {BRANDS.map((brand) => (
-            <div className="bd-brand" key={brand.name}>
-              <img src={brand.src} alt={brand.name} width="720" height="400" />
-              <span>{brand.use}</span>
+      </div>
+
+      {/* A marquee, not a grid. The strip is rendered twice and translated by
+          exactly half its width, so the second copy is under the cursor at the
+          moment the first finishes — that is what makes the loop seamless
+          rather than snapping back. The whole track is aria-hidden and the
+          names are listed once for a screen reader below, because a reader
+          should not have to sit through eight logos twice. */}
+      <div className="bd-marquee" ref={viewportRef} aria-hidden="true">
+        <div className="bd-marquee-track" ref={trackRef}>
+          {[0, 1].map((copy) => (
+            <div className="bd-marquee-run" key={copy}>
+              {BRANDS.map((brand) => (
+                <div className="bd-brand" key={`${copy}-${brand.name}`}>
+                  <img src={brand.src} alt="" width="720" height="400" draggable="false" />
+                </div>
+              ))}
             </div>
           ))}
         </div>
+      </div>
+
+      <p className="bd-sr-only">
+        Products we use: {BRANDS.map((b) => `${b.name} for ${b.use.toLowerCase()}`).join(', ')}.
+      </p>
+
+      <div className="bd-shell">
 
         <p className="bd-brand-note">
           <em>Supplier marks</em>
