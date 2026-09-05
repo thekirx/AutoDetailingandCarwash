@@ -1632,7 +1632,7 @@
   line-height: 0.92;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95), 0 8px 24px rgba(0, 0, 0, 0.72);
 }
-.bredesign .ppf-information-pin .ppf-information-heading > h2 {
+.bredesign .ppf-information-pin .ppf-information-heading > h1 {
   font-family: var(--bd-display);
   font-weight: 800;
   font-style: italic;
@@ -1655,7 +1655,7 @@
       calc(env(safe-area-inset-bottom, 0px) + 24px);
   }
 
-  .bredesign .ppf-information-pin .ppf-information-heading > h2 {
+  .bredesign .ppf-information-pin .ppf-information-heading > h1 {
     line-height: 0.92;
     letter-spacing: -0.025em;
   }
