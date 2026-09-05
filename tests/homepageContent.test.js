@@ -42,15 +42,24 @@ describe('homepage production content adapters', () => {
     ])
     assert.deepEqual(Object.keys(cards[0]).sort(), [
       'bookingState',
+      'coverageAreas',
+      'coverageCount',
       'coverageType',
       'ctaLabel',
       'description',
+      'detailsId',
+      'enhancements',
+      'figures',
+      'headline',
       'id',
+      'isHighlighted',
       'number',
       'recommendedLabel',
+      'subtitle',
       'thickness',
       'title',
       'warrantySummary',
+      'warrantyYears',
     ].sort())
     assert.equal(cards[0].warrantySummary, '5-year PPF warranty for manufacturer defects only')
     assert.equal(cards[1].recommendedLabel, 'Most Popular')

@@ -1,4 +1,4 @@
-const FREE_ADD_ONS = [
+export const PPF_FREE_ADD_ONS = [
   'FREE Ceramic Coating across all painted areas and black trims',
   'FREE Glass Ceramic Coating treatment',
   'FREE Mag Wheels Ceramic Coating treatment',
@@ -28,6 +28,7 @@ export const PPF_FILM_BRAND = {
 export const PPF_PACKAGES = [
   {
     id: 'basic', title: 'Basic Protection', subtitle: 'Partial PPF + Ceramic Coating',
+    headline: 'The panels that take the hits.',
     shortDescription: 'Focused protection for the panels and lighting surfaces most exposed to daily wear.',
     coverageType: 'Partial PPF',
     coverageAreas: ['Hood', 'Headlights', 'Taillights', 'All four doors'],
@@ -35,12 +36,13 @@ export const PPF_PACKAGES = [
     keyEnhancements: ['Full exterior detailing', 'Paint decontamination', 'Seamless film installation', '2-layer ceramic coating on the rest of the vehicle exterior'],
     filmBenefits: ['Self-healing technology', 'Advanced hydrophobic effect'],
     warranty: ['5-year PPF warranty for manufacturer defects only'],
-    replacementClause: [], freeAddOns: FREE_ADD_ONS, coveredDefects: COVERED_DEFECTS,
+    replacementClause: [], freeAddOns: PPF_FREE_ADD_ONS, coveredDefects: COVERED_DEFECTS,
     exclusions: EXCLUSIONS, operationalDisclaimers: OPERATIONAL_DISCLAIMERS,
     recommendedLabel: null, ctaLabel: 'Book Basic Protection',
   },
   {
     id: 'premium', title: 'Premium Protection', subtitle: 'Full Body PPF',
+    headline: 'Every painted panel, covered.',
     shortDescription: 'Complete, virtually invisible protection across the exterior and trims.',
     coverageType: 'Full Body PPF',
     coverageAreas: ['Full exterior', 'Trims', 'Hood', 'Front bumper', 'Rear bumper', 'Headlights', 'Taillights', 'Side mirrors', 'Fenders', 'All four doors', 'Roof', 'Trunk', 'Quarter panels'],
@@ -49,12 +51,13 @@ export const PPF_PACKAGES = [
     filmBenefits: ['Self-healing technology', 'Advanced hydrophobic properties', 'Seamless installation finish'],
     warranty: ['5-year manufacturer defect warranty'],
     replacementClause: ['2-panel replacement for damaged film only', 'No-questions-asked coverage applies to damaged film only'],
-    freeAddOns: FREE_ADD_ONS, coveredDefects: COVERED_DEFECTS, exclusions: EXCLUSIONS,
-    operationalDisclaimers: OPERATIONAL_DISCLAIMERS, recommendedLabel: 'Most Popular',
+    freeAddOns: PPF_FREE_ADD_ONS, coveredDefects: COVERED_DEFECTS, exclusions: EXCLUSIONS,
+    operationalDisclaimers: OPERATIONAL_DISCLAIMERS, recommendedLabel: 'Most Popular', isHighlighted: true,
     ctaLabel: 'Book Premium Protection',
   },
   {
     id: 'platinum', title: 'Platinum Protection', subtitle: 'Full Body PPF with Heavier Defense',
+    headline: 'Nothing left exposed.',
     shortDescription: 'Maximum full-body coverage with thicker film for stronger high-impact defense.',
     coverageType: 'Full Body PPF',
     coverageAreas: ['Full exterior', 'Trims', 'Hood', 'Front bumper', 'Rear bumper', 'Headlights', 'Taillights', 'Side mirrors', 'Fenders', 'All four doors', 'Roof', 'Trunk', 'Quarter panels', 'Rocker panels', 'Additional high-impact areas where applicable'],
@@ -62,7 +65,7 @@ export const PPF_PACKAGES = [
     keyEnhancements: ['Full exterior detailing', 'Paint decontamination', 'Heavier defense across high-impact areas'],
     filmBenefits: ['Self-healing technology', 'High-tier hydrophobic effect', 'Seamless application'],
     warranty: ['8-year manufacturer defect warranty'],
-    replacementClause: ['4-panel replacement for damaged film'], freeAddOns: FREE_ADD_ONS,
+    replacementClause: ['4-panel replacement for damaged film'], freeAddOns: PPF_FREE_ADD_ONS,
     coveredDefects: COVERED_DEFECTS, exclusions: EXCLUSIONS,
     operationalDisclaimers: OPERATIONAL_DISCLAIMERS, recommendedLabel: 'Maximum Defense',
     ctaLabel: 'Book Platinum Protection',

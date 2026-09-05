@@ -10,6 +10,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import OpsIndexRedirect from './pages/OpsIndexRedirect'
 
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'))
+const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'))
 const RootEntry = lazy(() => import('./pages/RootEntry'))
 const AppShellGate = lazy(() => import('./pages/AppShellGate'))
 const PublicQueuePage = lazy(() => import('./pages/PublicQueuePage'))
@@ -17,6 +18,7 @@ const PublicQueueTvPage = lazy(() =>
   import('./pages/PublicQueuePage').then((m) => ({ default: m.PublicQueueTvPage })),
 )
 const ContactPage = lazy(() => import('./pages/ContactPage'))
+const PartnershipsPage = lazy(() => import('./pages/PartnershipsPage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
 const EventSharePage = lazy(() => import('./pages/EventSharePage'))
@@ -72,9 +74,6 @@ const QueuePage = lazy(() =>
 )
 const ServicesPage = lazy(() =>
   import('./pages/PublicPages').then((m) => ({ default: m.ServicesPage })),
-)
-const PackagesPage = lazy(() =>
-  import('./pages/PublicPages').then((m) => ({ default: m.PackagesPage })),
 )
 const BranchesPage = lazy(() =>
   import('./pages/PublicPages').then((m) => ({ default: m.BranchesPage })),
@@ -133,11 +132,13 @@ export default function App() {
         <Route element={<PublicLayout />}>
           <Route path="/home" element={<PublicLandingPage />} />
           <Route path="/services" element={<ServicesPage />} />
-          <Route path="/packages" element={<PackagesPage />} />
+          <Route path="/services/:slug" element={<ServiceDetailPage />} />
+          <Route path="/packages" element={<Navigate to="/services" replace />} />
           <Route path="/book" element={<BookingPage />} />
           <Route path="/booking" element={<Navigate to="/book" replace />} />
           <Route path="/queue" element={<QueuePage />} />
           <Route path="/branches" element={<BranchesPage />} />
+          <Route path="/partnerships" element={<PartnershipsPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/complaints" element={<ComplaintsPage />} />
           <Route path="/events" element={<EventsPage />} />

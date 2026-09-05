@@ -16,3 +16,4 @@ supabase/.temp
 # Local-only backups, never committed
 local-backups/
 .claude/
+.env*

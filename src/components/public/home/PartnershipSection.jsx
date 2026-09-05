@@ -4,18 +4,18 @@ import { Link } from 'react-router-dom'
 
 import { createPublicFormGuard, validatePublicFormGuard } from '../../../lib/publicFormGuard'
 import {
-  SITE_TYPES,
-  normalizePartnershipInquiry,
-  submitPartnershipInquiry,
-  validatePartnershipInquiry,
+  BRAND_COLLAB_TYPES,
+  submitBrandCollaborationInquiry,
+  validateBrandCollaborationInquiry,
 } from '../../../lib/partnershipInquiry'
 
 const EMPTY_FORM = {
-  siteType: SITE_TYPES[0].value,
-  name: '',
+  collaborationType: BRAND_COLLAB_TYPES[0].value,
+  contactName: '',
+  brandName: '',
   email: '',
   contactNumber: '',
-  city: '',
+  website: '',
   message: '',
 }
 
@@ -40,7 +40,7 @@ export default function PartnershipSection() {
 
   const submit = async (event) => {
     event.preventDefault()
-    const nextErrors = validatePartnershipInquiry(form)
+    const nextErrors = validateBrandCollaborationInquiry(form)
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors)
       setStatus('validating')
@@ -55,7 +55,7 @@ export default function PartnershipSection() {
     }
 
     setStatus('submitting')
-    const result = await submitPartnershipInquiry(normalizePartnershipInquiry(form), guard)
+    const result = await submitBrandCollaborationInquiry(form, guard)
     setStatus(result.ok ? 'submitted' : result.code)
     setNotice(result.message || '')
     if (result.ok) {
@@ -72,36 +72,35 @@ export default function PartnershipSection() {
         <div className="partnership-intro" data-motion="heading">
           <p className="eyebrow eyebrow-light">
             <i aria-hidden="true" />
-            Hakum site partnerships
+            Brand collaborations
           </p>
           <h2 className="section-title light">
-            Your space.
+            Better together.
             <br />
-            <em>Our standard.</em>
+            <em>Built to matter.</em>
           </h2>
           <p className="partnership-lede">
-            If you hold a property with the right traffic and the right room, we will bring the crew,
-            the equipment, and the Hakum operation to it — and run it to the same standard as every
-            other branch.
+            We work with brands that care about craft, performance, and the people behind every car.
+            Bring us a product, campaign, event, or distribution idea worth building together.
           </p>
 
           <div className="partnership-quiet">
             <p>
-              We keep the specifics off the website. Terms and how the arrangement actually works are
-              discussed privately, once we know the site is a fit for both sides.
+              Every collaboration starts with fit. We review the idea, audience, and value for both
+              sides before discussing scope, deliverables, and commercial terms.
             </p>
           </div>
 
           <ul className="partnership-marks">
-            {SITE_TYPES.map((type) => <li key={type.value}>{type.label}</li>)}
+            {BRAND_COLLAB_TYPES.map((type) => <li key={type.value}>{type.label}</li>)}
           </ul>
         </div>
 
         <div className="partnership-card" data-motion="form">
           <div className="partnership-card-head">
             <div>
-              <h3>Tell us about your site</h3>
-              <p>A few details is all we need. If the location works, we will reach out to arrange a visit.</p>
+              <h3>Pitch a collaboration</h3>
+              <p>Tell us who you are and what you want to make together. A focused first note is enough.</p>
             </div>
             <span className="partnership-reply-badge">
               <i aria-hidden="true" />
@@ -111,15 +110,15 @@ export default function PartnershipSection() {
 
           <form className="partnership-form" onSubmit={submit} noValidate>
             <fieldset className="partnership-types">
-              <legend>What kind of site?</legend>
+              <legend>What kind of collaboration?</legend>
               <div className="partnership-type-grid">
-                {SITE_TYPES.map((type) => (
+                {BRAND_COLLAB_TYPES.map((type) => (
                   <label className="partnership-type" key={type.value}>
                     <input
                       type="radio"
-                      name="siteType"
+                      name="collaborationType"
                       value={type.value}
-                      checked={form.siteType === type.value}
+                      checked={form.collaborationType === type.value}
                       onChange={update}
                     />
                     <span><b>{type.label}</b></span>
@@ -140,36 +139,41 @@ export default function PartnershipSection() {
 
             <div className="partnership-field-row">
               <label>
-                <span>Name</span>
-                <input name="name" value={form.name} onChange={update} autoComplete="name" aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'partnership-name-error' : undefined} />
-                <FieldError id="partnership-name-error">{errors.name}</FieldError>
+                <span>Contact name</span>
+                <input name="contactName" value={form.contactName} onChange={update} autoComplete="name" aria-invalid={Boolean(errors.contactName)} aria-describedby={errors.contactName ? 'partnership-name-error' : undefined} />
+                <FieldError id="partnership-name-error">{errors.contactName}</FieldError>
               </label>
               <label>
-                <span>Email</span>
-                <input type="email" name="email" value={form.email} onChange={update} autoComplete="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? 'partnership-email-error' : undefined} />
-                <FieldError id="partnership-email-error">{errors.email}</FieldError>
+                <span>Brand or company</span>
+                <input name="brandName" value={form.brandName} onChange={update} autoComplete="organization" aria-invalid={Boolean(errors.brandName)} aria-describedby={errors.brandName ? 'partnership-brand-error' : undefined} />
+                <FieldError id="partnership-brand-error">{errors.brandName}</FieldError>
               </label>
             </div>
 
             <div className="partnership-field-row">
               <label>
+                <span>Email</span>
+                <input type="email" name="email" value={form.email} onChange={update} autoComplete="email" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? 'partnership-email-error' : undefined} />
+                <FieldError id="partnership-email-error">{errors.email}</FieldError>
+              </label>
+              <label>
                 <span>Contact number</span>
                 <input type="tel" name="contactNumber" value={form.contactNumber} onChange={update} autoComplete="tel" aria-invalid={Boolean(errors.contactNumber)} aria-describedby={errors.contactNumber ? 'partnership-contact-error' : undefined} />
                 <FieldError id="partnership-contact-error">{errors.contactNumber}</FieldError>
               </label>
-              <label>
-                <span>Site location</span>
-                <input name="city" value={form.city} onChange={update} autoComplete="address-level2" placeholder="City or area of the property" aria-invalid={Boolean(errors.city)} aria-describedby={errors.city ? 'partnership-city-error' : undefined} />
-                <FieldError id="partnership-city-error">{errors.city}</FieldError>
-              </label>
             </div>
 
             <label>
-              <span>Message</span>
-              <textarea name="message" rows="5" value={form.message} onChange={update} placeholder="Roughly how much space, and what is around it?" aria-invalid={Boolean(errors.message)} aria-describedby={errors.message ? 'partnership-message-error' : undefined} />
+              <span>Website or social page (optional)</span>
+              <input name="website" value={form.website} onChange={update} placeholder="https://" inputMode="url" />
+            </label>
+
+            <label>
+              <span>Collaboration idea</span>
+              <textarea name="message" rows="5" value={form.message} onChange={update} placeholder="What do you want to build, who is it for, and what would each side bring?" aria-invalid={Boolean(errors.message)} aria-describedby={errors.message ? 'partnership-message-error' : undefined} />
               <FieldError id="partnership-message-error">{errors.message}</FieldError>
               <small className="partnership-hint">
-                Whatever you are comfortable sharing. We will ask the rest in person.
+                Share the useful details. We can work through the rest together.
               </small>
             </label>
 
@@ -194,7 +198,7 @@ export default function PartnershipSection() {
       </div>
 
       <div className="public-shell partnership-closing">
-        <p>Every inquiry gets a real reply from our team — whether or not the site turns out to be a fit.</p>
+        <p>Every serious collaboration idea gets a real review from the Hakum team.</p>
         <Link to="/contact">Or contact us directly</Link>
       </div>
     </section>

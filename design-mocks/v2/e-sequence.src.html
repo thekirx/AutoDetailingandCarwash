@@ -1,0 +1,673 @@
+<title>Between Your Paint</title>
+<style>
+@font-face{font-family:'Benzin';src:url(__A_fontDisplay__) format('woff2');font-weight:800;font-display:swap}
+@font-face{font-family:'Benzin';src:url(__A_fontDisplayMed__) format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBody__) format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyMed__) format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyBold__) format('woff2');font-weight:700;font-display:swap}
+
+/* -- Tokens - Hakum's ramp, cinematic end ---------------------------------- */
+:root{
+  /* ---- Hakum design tokens. Identical in every mock. ----
+     Values below are the ones in src/design-tokens.css; the --hk-* names are
+     the shared vocabulary, and each mock aliases its local names onto them. */
+  --hk-paper:#F1F1ED;        /* --color-surface-page */
+  --hk-paper-2:#E7E7E1;
+  --hk-white:#FFFFFF;        /* --color-white */
+  --hk-navy:#020A31;         /* --color-surface-cinematic */
+  --hk-navy-2:#08133F;
+  --hk-navy-3:#0D1B52;
+  --hk-rule-dark:#16255C;
+  --hk-blue:#052699;         /* --color-brand-primary */
+  --hk-blue-hover:#0A32B8;   /* --color-brand-primary-hover */
+  --hk-blue-active:#031D78;  /* --color-brand-primary-active */
+  --hk-blue-soft:#E8EDFF;    /* --color-brand-primary-soft */
+  --hk-blue-mid:#2D59D3;
+  --hk-accent:#9DB4FF;       /* brand blue lifted to read on dark grounds */
+  --hk-ink:#333333;          /* --color-text-primary */
+  --hk-ink-2:#5A5A5A;
+  --hk-ink-3:#84847E;
+  --hk-rule:#DCDCD5;
+  --hk-on-navy:#7E8AB8;
+  --hk-on-navy-dim:#6E79A8;
+  /* Type: the real brand pairing, no third family anywhere. */
+  --hk-display:'Benzin','Arial Black',sans-serif;
+  --hk-body:'Gilmer',Arial,sans-serif;
+  --navy:var(--hk-navy);
+  --navy-2:var(--hk-navy-2);
+  --navy-3:var(--hk-navy-3);
+  --line:var(--hk-rule-dark);
+  --blue:var(--hk-blue);
+  --blue-hover:var(--hk-blue-hover);
+  --lift:var(--hk-accent);
+  --soft:var(--hk-blue-soft);
+  --paper:var(--hk-paper);
+  --grey:var(--hk-on-navy);
+  --grey-dim:var(--hk-on-navy-dim);
+  --display:var(--hk-display);
+  --body:var(--hk-body);
+  --shell:min(100% - 36px,1180px);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--navy);color:var(--paper);font-family:var(--body);line-height:1.62;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+a{color:inherit}
+p{margin:0}
+h1,h2,h3{margin:0;font-family:var(--display);font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-.025em;line-height:.9;text-wrap:balance}
+:focus-visible{outline:3px solid var(--lift);outline-offset:3px}
+.shell{width:var(--shell);margin-inline:auto}
+section{padding:clamp(70px,8vw,118px) 0;scroll-margin-top:64px}
+.skew{transform:skewX(-7deg);transform-origin:left bottom}
+.eyebrow{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--lift)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:11px;min-height:50px;padding:0 26px;border:1px solid transparent;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:transform .2s,background .2s,color .2s,border-color .2s}
+.btn-lift{background:var(--paper);color:var(--blue);border-color:var(--paper)}
+.btn-lift:hover{background:#fff;transform:translateY(-2px)}
+.btn-quiet{background:transparent;color:var(--paper);border-color:var(--line)}
+.btn-quiet:hover{border-color:var(--lift);color:var(--lift)}
+.cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+
+.topbar{position:sticky;top:0;z-index:50;background:rgba(2,10,49,.84);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar-in{width:var(--shell);margin-inline:auto;height:64px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.topbar img{height:18px}
+.topnav{display:none;gap:26px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+@media(min-width:940px){.topnav{display:flex}}
+.topnav a{color:var(--grey);text-decoration:none}
+.topnav a:hover{color:var(--paper)}
+
+/* -- Hero ------------------------------------------------------------------ */
+.hero{position:relative;padding:clamp(80px,10vw,130px) 0 clamp(48px,5vw,74px);overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 70% 0%,rgba(45,89,211,.28),transparent 62%)}
+.hero-in{position:relative}
+.hero h1{margin-top:22px;font-size:clamp(1.75rem,7.4vw,6.4rem);line-height:.86}
+.hero h1 em{font-style:italic;color:var(--lift)}
+.hero-sub{margin-top:26px;max-width:54ch;color:rgba(241,241,237,.78);font-size:clamp(15px,1.4vw,17.5px)}
+.scroll-cue{margin-top:clamp(40px,4.6vw,64px);display:flex;align-items:center;gap:12px;font-size:10px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--grey)}
+.scroll-cue span.bar{position:relative;display:block;width:70px;height:1px;background:var(--line);overflow:hidden}
+.scroll-cue span.bar::after{content:"";position:absolute;inset:0;width:26px;background:var(--lift);animation:slide 2.4s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-26px)}100%{transform:translateX(70px)}}
+
+/* -- The sequence: pinned canvas, scroll-scrubbed -------------------------- */
+.seq{position:relative;padding:0}
+.seq-track{position:relative}
+.seq-pin{position:sticky;top:0;height:100vh;overflow:hidden;display:grid;place-items:center;background:var(--navy)}
+#seqCanvas{width:100%;height:100%;object-fit:cover;display:block}
+.seq-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(2,10,49,.72) 0%,rgba(2,10,49,.12) 34%,rgba(2,10,49,.86) 100%);pointer-events:none}
+.seq-copy{position:absolute;inset:0;pointer-events:none}
+.chapter{position:absolute;left:0;right:0;bottom:clamp(52px,8vh,110px);opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.chapter.on{opacity:1;transform:none}
+.chapter-in{width:var(--shell);margin-inline:auto;max-width:var(--shell)}
+.chapter b{display:inline-flex;align-items:center;gap:10px;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--lift)}
+.chapter b::before{content:"";width:24px;height:1px;background:var(--lift)}
+.chapter h2{margin-top:16px;font-size:clamp(1.9rem,4.6vw,3.6rem)}
+.chapter p{margin-top:14px;max-width:44ch;color:rgba(241,241,237,.84);font-size:clamp(14px,1.3vw,16px)}
+/* Progress rail: which of the four stages you are in */
+.seq-rail{position:absolute;top:50%;right:clamp(14px,2.4vw,34px);translate:0 -50%;display:none;flex-direction:column;gap:12px;pointer-events:none}
+@media(min-width:860px){.seq-rail{display:flex}}
+.seq-rail i{position:relative;display:block;width:2px;height:44px;background:var(--line);overflow:hidden}
+.seq-rail i::after{content:"";position:absolute;inset:0;height:0;background:var(--lift);transition:height .18s linear}
+.seq-rail i.fill::after{height:100%}
+.seq-load{position:absolute;left:50%;top:50%;translate:-50% -50%;text-align:center;font-size:10px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--grey)}
+.seq-load .track{margin-top:12px;width:180px;height:2px;background:var(--line)}
+.seq-load .track i{display:block;height:100%;width:0;background:var(--lift);transition:width .2s}
+/* Reduced motion / no-JS: the sequence reads as a filmstrip instead */
+.seq-static{display:none;gap:1px;background:var(--line);border-block:1px solid var(--line)}
+.seq-static figure{margin:0;position:relative;background:var(--navy)}
+.seq-static img{width:100%;aspect-ratio:16/10;object-fit:cover}
+.seq-static figcaption{position:absolute;left:0;right:0;bottom:0;padding:14px;background:linear-gradient(transparent,rgba(2,10,49,.94))}
+.seq-static b{display:block;font-family:var(--display);font-style:italic;font-size:13px;color:var(--lift)}
+.seq-static strong{display:block;margin-top:5px;font-size:14px}
+.seq-static p{margin-top:5px;font-size:13px;color:rgba(241,241,237,.72)}
+@media(min-width:760px){.seq-static{grid-template-columns:repeat(4,1fr)}}
+html:not(.js) .seq-track{display:none}
+html:not(.js) .seq-static{display:grid}
+@media(prefers-reduced-motion:reduce){.seq-track{display:none}.seq-static{display:grid}}
+
+/* -- Threats --------------------------------------------------------------- */
+.head{display:grid;gap:20px;margin-bottom:clamp(34px,4vw,54px)}
+@media(min-width:920px){.head{grid-template-columns:1.1fr .9fr;align-items:end;gap:52px}}
+.head h2{margin-top:16px;font-size:clamp(2.2rem,4.8vw,3.8rem)}
+.head>p{color:rgba(241,241,237,.74);max-width:56ch}
+.threats{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:640px){.threats{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1000px){.threats{grid-template-columns:repeat(4,1fr)}}
+.threat{background:var(--navy-3);padding:26px 22px;display:flex;flex-direction:column;gap:11px}
+.threat svg{width:26px;height:26px;color:var(--lift)}
+.threat h3{font-family:var(--body);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-style:normal}
+.threat p{color:rgba(241,241,237,.72);font-size:13.5px;line-height:1.55}
+
+/* -- Tiers ----------------------------------------------------------------- */
+.tiers{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:900px){.tiers{grid-template-columns:repeat(3,1fr)}}
+/* A cast shadow is invisible on this ground, so the tiers are separated from
+   the section by a lit top edge instead. */
+.tier{background:var(--navy-3);padding:clamp(24px,2.6vw,34px);display:flex;flex-direction:column;box-shadow:inset 0 1px 0 rgba(157,180,255,.15)}
+.tier.pop{background:var(--blue)}
+.tier-flag{align-self:flex-start;margin-bottom:14px;padding:5px 11px;background:var(--lift);color:var(--navy);font-size:9px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+.tier h3{font-size:1.6rem}
+.tier .sub{margin-top:7px;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--lift)}
+.tier.pop .sub{color:var(--soft)}
+.tier .mil{margin-top:20px;font-family:var(--display);font-style:italic;font-size:2.1rem}
+.tier .mil small{font-size:.44em;color:var(--grey)}
+.tier.pop .mil small{color:rgba(255,255,255,.72)}
+.tier>p{margin-top:12px;color:rgba(241,241,237,.76);font-size:13.5px}
+.tier ul{margin:18px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.tier li{padding-left:20px;position:relative;font-size:13px;color:rgba(241,241,237,.82)}
+.tier li::before{content:"+";position:absolute;left:0;color:var(--lift);font-weight:800}
+.tier.pop li::before{color:#fff}
+.tier .cta-row{margin-top:auto;padding-top:24px}
+.free{margin-top:clamp(28px,3.2vw,44px);border-left:3px solid var(--lift);padding:20px 24px;background:var(--navy-3)}
+.free strong{display:block;font-family:var(--display);font-style:italic;font-size:1.1rem;text-transform:uppercase;color:var(--lift)}
+.free ul{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:7px}
+.free li{padding-left:20px;position:relative;font-size:13.5px;color:rgba(241,241,237,.84)}
+.free li::before{content:"+";position:absolute;left:0;color:var(--lift);font-weight:800}
+
+.close{background:radial-gradient(circle at 74% 22%,var(--hk-blue-mid),var(--blue) 46%,var(--navy))}
+.close h2{font-size:clamp(2.4rem,5.8vw,4.6rem)}
+.close p{margin-top:18px;color:rgba(255,255,255,.84);max-width:52ch}
+footer{border-top:1px solid var(--line);padding:30px 0}
+.foot-in{width:var(--shell);margin-inline:auto;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--grey-dim)}
+
+/* -- Detail view ----------------------------------------------------------- */
+.view[hidden]{display:none}
+.d-top{padding:clamp(52px,6.4vw,92px) 0 clamp(36px,4.2vw,60px)}
+.back{display:inline-flex;align-items:center;gap:9px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--grey);text-decoration:none}
+.back:hover{color:var(--lift)}
+.d-top h1{margin-top:22px;font-size:clamp(2.4rem,5.6vw,4.4rem)}
+.d-top .lede{margin-top:22px;max-width:58ch;color:rgba(241,241,237,.78);font-size:clamp(15px,1.4vw,17px)}
+.brands{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:520px){.brands{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:900px){.brands{grid-template-columns:repeat(4,1fr)}}
+.brand{background:var(--navy-3);padding:24px 20px;min-height:110px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.brand strong{font-family:var(--display);font-style:italic;font-size:16.5px;text-transform:uppercase}
+.brand span{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--grey-dim)}
+
+/* Product marks. Supplier artwork arrives at eight different sizes and
+   grounds, so logos/normalize.js trims each to its mark and re-centres it on
+   one tile; the cell only has to hold that tile at a consistent width. */
+.hk-brand .mark,.brand .mark{display:block;width:100%;max-width:196px;height:auto;border-radius:2px}
+.hk-brand,.brand{align-items:flex-start}
+.revs{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:860px){.revs{grid-template-columns:repeat(3,1fr)}}
+.rev{background:var(--navy-3);padding:clamp(22px,2.4vw,30px);display:flex;flex-direction:column;gap:13px}
+.rev .stars{color:var(--lift);font-size:13px;letter-spacing:.14em}
+.rev blockquote{margin:0;font-size:15px;line-height:1.6}
+.rev cite{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--grey-dim)}
+.notes{margin:0;padding:22px 0 0;list-style:none;display:grid;gap:10px;border-top:1px solid var(--line)}
+.notes li{display:grid;grid-template-columns:30px 1fr;gap:12px;font-size:12.5px;color:var(--grey-dim);line-height:1.6}
+.notes b{color:var(--lift);font-weight:800;font-size:11px}
+.flag{display:inline-block;margin-bottom:12px;padding:4px 9px;border:1px dashed var(--grey-dim);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--grey-dim)}
+
+.js .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
+.js .reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.js .reveal{opacity:1;transform:none}}
+
+/* ---- Products strip: identical in every mock ---------------------------- */
+.hk-products{background:var(--hk-navy);color:var(--hk-paper);padding:clamp(44px,5vw,72px) 0}
+.hk-products-in{width:var(--shell);margin-inline:auto}
+.hk-products-head{display:grid;gap:14px;margin-bottom:clamp(26px,3vw,38px)}
+@media(min-width:860px){.hk-products-head{grid-template-columns:1fr .9fr;align-items:end;gap:44px}}
+.hk-products-head p.k{margin:0;font-family:var(--hk-body);font-size:10px;font-weight:800;letter-spacing:.19em;text-transform:uppercase;color:var(--hk-accent)}
+.hk-products-head h2{margin:8px 0 0;font-family:var(--hk-display);font-style:italic;font-weight:800;text-transform:uppercase;letter-spacing:-.025em;line-height:.94;font-size:clamp(1.8rem,3.6vw,2.8rem);color:var(--hk-paper);transform:skewX(-7deg);transform-origin:left bottom}
+.hk-products-head p.c{margin:0;font-family:var(--hk-body);color:rgba(241,241,237,.74);font-size:14px;max-width:52ch;line-height:1.6}
+.hk-brands{display:grid;gap:1px;background:var(--hk-rule-dark);border:1px solid var(--hk-rule-dark)}
+@media(min-width:520px){.hk-brands{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:860px){.hk-brands{grid-template-columns:repeat(4,1fr)}}
+.hk-brand{background:var(--hk-navy-2);padding:22px 20px;min-height:104px;display:flex;flex-direction:column;justify-content:center;gap:6px;transition:background .2s}
+.hk-brand:hover{background:var(--hk-navy-3)}
+.hk-brand strong{font-family:var(--hk-display);font-style:italic;font-weight:800;font-size:16.5px;letter-spacing:-.02em;text-transform:uppercase;color:var(--hk-paper)}
+.hk-brand span{font-family:var(--hk-body);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--hk-on-navy)}
+.hk-products-note{margin-top:16px;font-family:var(--hk-body);font-size:11.5px;color:var(--hk-on-navy-dim);line-height:1.6}
+.hk-products-note em{font-style:normal;display:inline-block;padding:3px 8px;border:1px dashed var(--hk-on-navy-dim);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+
+/* ==== The eight shared sections =========================================
+   Same eight sections as D and F, ordered for this mock's argument: the
+   installation runs first and the photographs follow it, because the whole
+   point here is showing the work before describing it. ======================*/
+
+/* Hero: the clip plays behind the type instead of the flat gradient. */
+.hero{position:relative;padding:0;overflow:hidden;min-height:min(88vh,780px);display:flex;align-items:flex-end}
+.hero video,.hero>img.plate{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(2,10,49,.55) 0%,rgba(2,10,49,.34) 44%,rgba(2,10,49,.96) 100%)}
+.hero-in{position:relative;z-index:2;width:var(--shell);margin-inline:auto;padding:clamp(100px,13vw,150px) 0 clamp(40px,4.4vw,64px)}
+
+/* Service sections: full-bleed picture with the specification laid over it,
+   the way the live site handles its service panels. */
+.svc-sec{position:relative;padding:clamp(70px,8vw,124px) 0;overflow:hidden}
+.svc-sec>img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.svc-sec::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(2,10,49,.96) 0%,rgba(2,10,49,.86) 46%,rgba(2,10,49,.42) 100%)}
+.svc-sec.flip::after{background:linear-gradient(270deg,rgba(2,10,49,.96) 0%,rgba(2,10,49,.86) 46%,rgba(2,10,49,.42) 100%)}
+.svc-in{position:relative;z-index:1;width:var(--shell);margin-inline:auto;max-width:none}
+.svc-copy{max-width:44ch}
+.svc-sec.flip .svc-copy{margin-left:auto}
+.svc-sec h2{margin-top:14px;font-size:clamp(2rem,4.6vw,3.4rem)}
+.svc-sec .lede{margin-top:18px;color:rgba(241,241,237,.82)}
+.spec-list{margin:26px 0 0;padding:0;list-style:none;display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+.spec-list li{background:rgba(2,10,49,.72);padding:13px 16px;display:flex;justify-content:space-between;gap:16px;font-size:13.5px}
+.spec-list span{color:var(--grey)}
+.spec-list b{font-weight:700;color:var(--paper);font-variant-numeric:tabular-nums}
+/* Each brand is credited on the service it belongs to. */
+.credit{margin-top:22px;display:inline-flex;align-items:center;gap:12px;text-decoration:none}
+.credit img{width:96px;height:auto;display:block;border:1px solid var(--line)}
+.credit span{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--grey)}
+.svc-sec .cta-row{margin-top:26px}
+
+/* Photos */
+.photos{padding:clamp(70px,8vw,124px) 0;background:var(--navy-2)}
+.mosaic{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:860px){.mosaic{grid-template-columns:repeat(4,1fr);grid-auto-rows:200px}}
+.mosaic figure{margin:0;position:relative;overflow:hidden;background:var(--navy-3)}
+.mosaic img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s cubic-bezier(.2,.7,.3,1)}
+.mosaic figure:hover img{transform:scale(1.05)}
+@media(min-width:860px){.mosaic .tall{grid-row:span 2}.mosaic .wide{grid-column:span 2}}
+.mosaic figcaption{position:absolute;left:0;bottom:0;padding:8px 12px;background:rgba(2,10,49,.86);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--paper)}
+
+/* Events */
+.events{padding:clamp(70px,8vw,124px) 0}
+.event-card{display:grid;border:1px solid var(--line);background:var(--navy-2);overflow:hidden;box-shadow:inset 0 1px 0 rgba(157,180,255,.14)}
+@media(min-width:820px){.event-card{grid-template-columns:1.1fr 1fr}}
+.event-card img{width:100%;height:100%;aspect-ratio:4/3;max-height:420px;object-fit:cover;display:block}
+.event-body{padding:clamp(24px,3vw,40px);display:flex;flex-direction:column;justify-content:center;gap:14px}
+.event-meta{display:flex;flex-wrap:wrap;gap:8px}
+.event-meta i{font-style:normal;padding:4px 10px;background:rgba(157,180,255,.14);color:var(--lift);font-size:9.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.event-body h3{font-size:clamp(1.4rem,2.6vw,2rem);font-style:italic;color:var(--paper)}
+.event-body p{color:rgba(241,241,237,.76);font-size:14px;max-width:46ch}
+.all-link{margin-top:6px;display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--lift);text-decoration:none}
+.all-link:hover{text-decoration:underline}
+
+/* Branches, with the booking close folded in */
+.branches-sec{padding:clamp(70px,8vw,124px) 0;background:var(--navy-2)}
+.branch-grid{display:grid;gap:14px}
+@media(min-width:780px){.branch-grid{grid-template-columns:repeat(3,1fr)}}
+.branch-card{background:var(--navy-3);border:1px solid var(--line);padding:24px;display:flex;flex-direction:column;gap:14px;text-decoration:none;box-shadow:inset 0 1px 0 rgba(157,180,255,.15);transition:border-color .2s,transform .2s}
+.branch-card:hover{transform:translateY(-3px);border-color:var(--lift)}
+.branch-card h3{font-size:1.35rem;font-style:italic;color:var(--paper)}
+.branch-card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:13px}
+.branch-card dt{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);align-self:center}
+.branch-card dd{margin:0;color:var(--paper);font-variant-numeric:tabular-nums}
+.branch-card .go{margin-top:auto;font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--lift)}
+.branch-close{margin-top:clamp(34px,4vw,56px);display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;padding-top:clamp(30px,3.4vw,44px);border-top:1px solid var(--line)}
+.branch-close h3{font-size:clamp(1.6rem,3.2vw,2.4rem);color:var(--paper)}
+.branch-close p{margin-top:10px;color:rgba(241,241,237,.76);max-width:44ch;font-size:14px}
+</style>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a href="#top" data-home><img src="__A_logoOw__" alt="Hakum Auto Care"></a>
+    <nav class="topnav">
+      <a href="#ppf" data-home>The install</a>
+      <a href="#photos" data-home>Photos</a>
+      <a href="#ceramic" data-home>Ceramic</a>
+      <a href="#tint" data-home>Tint</a>
+      <a href="#events" data-home>Events</a>
+      <a href="#branches" data-home>Branches</a>
+    </nav>
+    <a class="btn btn-lift" href="#branches" data-home>Book a service</a>
+  </div>
+</header>
+
+<!-- === HOME =============================================================== -->
+<main class="view" id="view-home">
+
+<section class="hero" id="top">
+  <video autoplay muted loop playsinline poster="__A_heroPoster__" aria-label="Detailing work at Hakum Auto Care">
+    <source src="__A_heroVideo__" type="video/mp4">
+  </video>
+  <div class="hero-in">
+    <p class="eyebrow">Dasmari&ntilde;as / Bacoor / Batangas</p>
+    <h1>Between your paint<br>and <em>everything out there.</em></h1>
+    <p class="hero-sub">One Ford Ranger Raptor. One hundred and eighty-one frames. Scroll through the whole installation, exactly as it happened in our Dasmari&ntilde;as bay.</p>
+    <div class="cta-row">
+      <a class="btn btn-lift" href="#ppf">Watch the install</a>
+      <a class="btn btn-quiet" href="#tiers">See coverage levels</a>
+    </div>
+    <p class="scroll-cue"><span class="bar"></span> Scroll to run the sequence</p>
+  </div>
+</section>
+
+<!-- The scroll-scrubbed sequence -->
+<section class="seq" id="ppf" aria-label="Paint protection film installation, scrubbed by scrolling">
+  <div class="seq-track" id="seqTrack">
+    <div class="seq-pin">
+      <canvas id="seqCanvas" width="880" height="495" role="img"
+        aria-label="A Ford Ranger Raptor being wrapped in paint protection film, from alignment through to the finished vehicle"></canvas>
+      <div class="seq-veil"></div>
+      <div class="seq-copy" id="seqCopy">
+        <article class="chapter" data-ch="0"><div class="chapter-in"><b>01 &mdash; Align</b><h2 class="skew">It starts with precision.</h2><p>Every panel is carefully positioned for accurate coverage.</p></div></article>
+        <article class="chapter" data-ch="1"><div class="chapter-in"><b>02 &mdash; Form</b><h2 class="skew">Shaped to every curve.</h2><p>The film conforms to every contour and body line.</p></div></article>
+        <article class="chapter" data-ch="2"><div class="chapter-in"><b>03 &mdash; Seal</b><h2 class="skew">Locked edge to edge.</h2><p>Edges are carefully finished for a clean, secure fit.</p></div></article>
+        <article class="chapter" data-ch="3"><div class="chapter-in"><b>04 &mdash; Protected</b><h2 class="skew">Now you see the paint.<br>Not the protection.</h2><p>Stone chips, scratches, and road debris meet the film first.</p></div></article>
+      </div>
+      <div class="seq-rail" aria-hidden="true"><i data-r="0"></i><i data-r="1"></i><i data-r="2"></i><i data-r="3"></i></div>
+      <div class="seq-load" id="seqLoad">Loading the sequence<span class="track"><i id="seqBar"></i></span></div>
+    </div>
+  </div>
+
+  <!-- Static equivalent for reduced motion and no-JS -->
+  <div class="seq-static">
+    <figure><img src="__A_ppf1__" alt="Panel alignment at the start of the installation"><figcaption><b>01</b><strong>Align</strong><p>Every panel is carefully positioned for accurate coverage.</p></figcaption></figure>
+    <figure><img src="__A_ppf2__" alt="Film being formed to the body contour"><figcaption><b>02</b><strong>Form</strong><p>The film conforms to every contour and body line.</p></figcaption></figure>
+    <figure><img src="__A_ppf4__" alt="Edges being sealed on the installed film"><figcaption><b>03</b><strong>Seal</strong><p>Edges are carefully finished for a clean, secure fit.</p></figcaption></figure>
+    <figure><img src="__A_ppf5__" alt="The finished vehicle with film installed"><figcaption><b>04</b><strong>Protected</strong><p>Stone chips, scratches, and road debris meet the film first.</p></figcaption></figure>
+  </div>
+</section>
+
+<section id="threats">
+  <div class="shell">
+    <div class="head reveal">
+      <div><p class="eyebrow">What it stops</p><h2 class="skew">The damage you<br>cannot polish out.</h2></div>
+      <p>Swirls come out with a machine and a compound. These four do not &mdash; which is the entire argument for film.</p>
+    </div>
+    <div class="threats reveal">
+      <div class="threat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 17l5-9 3 5 2-3 6 7z"/><circle cx="8" cy="6" r="2"/></svg><h3>Stone chips</h3><p>A chip goes through the clear coat to the primer. Nothing polishes that back &mdash; it is filled or it is repainted.</p></div>
+      <div class="threat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2 2M17.8 17.8l2 2M2 12h3M19 12h3"/></svg><h3>UV fade</h3><p>Sun oxidises pigment. Reds go pink, blacks go grey, and the damage is in the paint, not on it.</p></div>
+      <div class="threat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3s6 6.5 6 10a6 6 0 01-12 0c0-3.5 6-10 6-10z"/></svg><h3>Chemical etching</h3><p>Bird droppings and tree sap are acidic. Left on hot paint they etch a mark you can feel.</p></div>
+      <div class="threat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg><h3>Lost resale</h3><p>Original paint is worth money at trade-in. Once a panel is resprayed, it is disclosed forever.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="tiers" style="padding-top:0">
+  <div class="shell">
+    <div class="head reveal">
+      <div><p class="eyebrow">Coverage</p><h2 class="skew">How much<br>of the car.</h2></div>
+      <p>The only real difference between the three is how many panels are wrapped and how thick the film is. Prep, free coatings, and the seven-day inspection are identical.</p>
+    </div>
+    <div class="tiers reveal">
+      <article class="tier">
+        <h3>Basic</h3><p class="sub">Partial PPF + ceramic</p><p class="mil">7.5<small> mil</small></p>
+        <p>Focused protection for the panels most exposed to daily wear.</p>
+        <ul><li>Hood, headlights, taillights</li><li>All four doors</li><li>2-layer ceramic elsewhere</li><li>5-year defect warranty</li></ul>
+        <div class="cta-row"><a class="btn btn-quiet" href="#branches">Book Basic</a></div>
+      </article>
+      <article class="tier pop">
+        <span class="tier-flag">Most popular</span>
+        <h3>Premium</h3><p class="sub">Full body PPF</p><p class="mil">7.5<small> mil</small></p>
+        <p>Complete, virtually invisible protection across the exterior and trims.</p>
+        <ul><li>Full exterior and trims</li><li>Roof, trunk, quarter panels</li><li>5-year defect warranty</li><li>2-panel replacement</li></ul>
+        <div class="cta-row"><a class="btn btn-lift" href="#branches">Book Premium</a></div>
+      </article>
+      <article class="tier">
+        <h3>Platinum</h3><p class="sub">Full body, heavier defense</p><p class="mil">8.5<small> mil</small></p>
+        <p>Maximum coverage with thicker film for high-impact defense.</p>
+        <ul><li>Everything in Premium</li><li>Rocker panels</li><li>8-year defect warranty</li><li>4-panel replacement</li></ul>
+        <div class="cta-row"><a class="btn btn-quiet" href="#branches">Book Platinum</a></div>
+      </article>
+    </div>
+    <div class="free reveal">
+      <strong>Free with every tier</strong>
+      <ul><li>Ceramic coating on all painted areas and black trims</li><li>Glass ceramic coating treatment</li><li>Mag wheels ceramic coating treatment</li></ul>
+    </div>
+    <div class="cta-row reveal"><a class="btn btn-quiet" href="#/ppf" data-view="ppf">Full specification and fine print</a></div>
+  </div>
+</section>
+
+
+<!-- Photos -->
+<section class="photos" id="photos">
+  <div class="shell">
+    <div class="head reveal">
+      <div>
+        <p class="eyebrow">Inside Hakum</p>
+        <h2 class="skew">Photos.</h2>
+      </div>
+      <p>Every frame on this page came out of our own bays. The sequence above is one real installation, start to finish.</p>
+    </div>
+    <div class="mosaic reveal">
+      <figure class="tall"><img src="__A_ppf1__" alt="Panel alignment at the start of an installation"><figcaption>Align</figcaption></figure>
+      <figure class="wide"><img src="__A_ppf5__" alt="The finished vehicle with film installed"><figcaption>Protected</figcaption></figure>
+      <figure><img src="__A_detailing__" alt="Paint correction under inspection lighting"><figcaption>Correction</figcaption></figure>
+      <figure><img src="__A_glass__" alt="Glass decontaminated before tinting"><figcaption>Glass prep</figcaption></figure>
+      <figure><img src="__A_ceramicGallery__" alt="A finished car after ceramic coating"><figcaption>Coated</figcaption></figure>
+      <figure><img src="__A_interior__" alt="Interior detailing in progress"><figcaption>Interior</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- Ceramic -->
+<section class="svc-sec" id="ceramic">
+  <img class="bg" src="__A_ceramic__" alt="">
+  <div class="svc-in">
+    <div class="svc-copy reveal">
+      <p class="eyebrow">Ceramic coating</p>
+      <h2 class="skew">The layer<br>under the shine.</h2>
+      <p class="lede">Film takes the impacts. Coating takes the water, the dust and the wash marks. Every tier of film above ships with coating on the painted areas, the glass and the wheels &mdash; it is not an upsell, it is part of the job.</p>
+      <ul class="spec-list">
+        <li><span>Tiers</span><b>Premium or Platinum</b></li>
+        <li><span>Warranty</span><b>5 or 8 years</b></li>
+        <li><span>Correction</span><b>Always before coating</b></li>
+        <li><span>Bay time</span><b>1&ndash;2 days</b></li>
+      </ul>
+      <a class="credit" href="#ceramic"><img src="__A_logoKisho__" alt="Kisho" width="720" height="400"><span>Coating by Kisho</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- Tint -->
+<section class="svc-sec flip" id="tint">
+  <img class="bg" src="__A_tint__" alt="">
+  <div class="svc-in">
+    <div class="svc-copy reveal">
+      <p class="eyebrow">Nano ceramic tint</p>
+      <h2 class="skew">Heat stopped<br>at the glass.</h2>
+      <p class="lede">Neither film nor coating touches the windows. Nano ceramic tint rejects infrared where it enters the cabin, so the dashboard stops cooking without the car going dark from the inside.</p>
+      <ul class="spec-list">
+        <li><span>Rejects</span><b>Infrared and UV</b></li>
+        <li><span>Night visibility</span><b>Unchanged</b></li>
+        <li><span>Warranty</span><b>Manufacturer defect</b></li>
+        <li><span>Bay time</span><b>Half a day</b></li>
+      </ul>
+      <a class="credit" href="#tint"><img src="__A_logoF1__" alt="F1 Auto Films" width="720" height="400"><span>Film by F1 Auto Films</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- Events -->
+<section class="events" id="events">
+  <div class="shell">
+    <div class="head reveal">
+      <div>
+        <p class="eyebrow">Community</p>
+        <h2 class="skew">Events &amp; meets.</h2>
+      </div>
+      <p>Promotions, branch events, and car meets from Hakum Auto Care.</p>
+    </div>
+    <article class="event-card reveal">
+      <img src="__A_about__" alt="Cars gathered at a Hakum Auto Care meet">
+      <div class="event-body">
+        <div class="event-meta"><i>Sample listing</i><i>Dasmari&ntilde;as</i></div>
+        <h3>Watch a full install</h3>
+        <p>An open bay day at Dasmari&ntilde;as &mdash; stand in on a complete film installation, the same one the sequence above was shot from.</p>
+        <a class="all-link" href="#events">View all events <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- Branches -->
+<section class="branches-sec" id="branches">
+  <div class="shell">
+    <div class="head reveal">
+      <div>
+        <p class="eyebrow">Where we are</p>
+        <h2 class="skew">Three branches,<br>one standard.</h2>
+      </div>
+      <p>Film work runs out of Dasmari&ntilde;as. Wash, detailing and coating run at all three.</p>
+    </div>
+    <div class="branch-grid reveal">
+      <a class="branch-card" href="#branches">
+        <h3>Bacoor</h3>
+        <dl><dt>Hours</dt><dd>8:00 &ndash; 18:00</dd><dt>Bays</dt><dd>Wash, detail, coating</dd></dl>
+        <span class="go">Book this branch &rarr;</span>
+      </a>
+      <a class="branch-card" href="#branches">
+        <h3>Batangas</h3>
+        <dl><dt>Hours</dt><dd>8:00 &ndash; 18:00</dd><dt>Bays</dt><dd>Wash, detail, tint</dd></dl>
+        <span class="go">Book this branch &rarr;</span>
+      </a>
+      <a class="branch-card" href="#branches">
+        <h3>Dasmari&ntilde;as</h3>
+        <dl><dt>Opening</dt><dd>Announced soon</dd><dt>Bays</dt><dd>Flagship &amp; PPF</dd></dl>
+        <span class="go">Join the waitlist &rarr;</span>
+      </a>
+    </div>
+    <div class="branch-close reveal">
+      <div>
+        <h3 class="skew">Bring the car in.</h3>
+        <p>We map the coverage with you before a single panel is touched.</p>
+      </div>
+      <div class="cta-row">
+        <a class="btn btn-lift" href="#branches">Book a service</a>
+        <a class="btn btn-quiet" href="#ppf">Watch it again</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- === PPF DETAIL ========================================================= -->
+<main class="view" id="view-ppf" hidden>
+<section class="d-top">
+  <div class="shell">
+    <a class="back" href="#tiers" data-home><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Back to coverage</a>
+    <p class="eyebrow" style="margin-top:22px">Paint protection film</p>
+    <h1 class="skew">The full<br>specification.</h1>
+    <p class="lede">What goes on the car, who made it, what our customers said, and every exclusion in the warranty &mdash; nothing buried.</p>
+  </div>
+</section>
+
+<section style="padding-top:clamp(30px,3.6vw,50px)">
+  <div class="shell">
+    <div class="head reveal"><div><p class="eyebrow">Products used</p><h2 class="skew">What we use.</h2></div><p>We name our materials because the finish is only ever as good as they are.</p></div>
+    <div class="brands reveal">
+      <div class="brand"><img class="mark" src="__A_logoClearpro__" alt="ClearPro" width="720" height="400"><span>Paint protection film</span></div>
+      <div class="brand"><img class="mark" src="__A_logoF1__" alt="F1 Auto Films" width="720" height="400"><span>Window film</span></div>
+      <div class="brand"><img class="mark" src="__A_logoKisho__" alt="Kisho" width="720" height="400"><span>Ceramic coating</span></div>
+      <div class="brand"><img class="mark" src="__A_logoMenzerna__" alt="Menzerna" width="720" height="400"><span>Polishing compounds</span></div>
+      <div class="brand"><img class="mark" src="__A_logoRupes__" alt="Rupes" width="720" height="400"><span>Polishing systems</span></div>
+      <div class="brand"><img class="mark" src="__A_logoSonax__" alt="Sonax" width="720" height="400"><span>Detailing chemistry</span></div>
+      <div class="brand"><img class="mark" src="__A_logoMeguiars__" alt="Meguiar&#39;s" width="720" height="400"><span>Surface care</span></div>
+      <div class="brand"><img class="mark" src="__A_logoMicrotex__" alt="Microtex" width="720" height="400"><span>Towels &amp; applicators</span></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="shell">
+    <div class="head reveal"><div><p class="eyebrow">Reviews</p><h2 class="skew">In their words.</h2></div><p><span class="flag">Placeholder copy &mdash; send real reviews</span><br>Layout is final; swap in genuine customer reviews before this goes live.</p></div>
+    <div class="revs reveal">
+      <div class="rev"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><blockquote>"They mapped the coverage with me on the car before starting. No surprises at pickup."</blockquote><cite>Placeholder &mdash; Dasmari&ntilde;as</cite></div>
+      <div class="rev"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><blockquote>"Went back at seven days for the inspection. They found a lifted edge and redid it without argument."</blockquote><cite>Placeholder &mdash; Bacoor</cite></div>
+      <div class="rev"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><blockquote>"Two years of highway driving and the hood is still perfect underneath."</blockquote><cite>Placeholder &mdash; Batangas</cite></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="shell">
+    <p class="eyebrow" style="margin-bottom:20px">Foot notes</p>
+    <ul class="notes reveal">
+      <li><b>01</b>PPF is not recommended for repainted bodywork. Repainted areas must be disclosed before application.</li>
+      <li><b>02</b>Complex curves and bumpers may still have minor visible seams or stretch marks.</li>
+      <li><b>03</b>Panel disassembly and edge wrapping are done only where technically feasible.</li>
+      <li><b>04</b>Warranty covers manufacturer defects: adhesive failure, bubbling, cracking, delamination, extreme yellowing. Minor yellowing is normal aging.</li>
+      <li><b>05</b>Film peeling caused by high-pressure washers is not covered. External road event damage is not covered.</li>
+      <li><b>06</b>Free ceramic coatings are maintenance coatings, not additional PPF layers.</li>
+      <li><b>07</b>Final installation inspection happens after 7 days. Pricing may change for oversized or heavily modified vehicles.</li>
+    </ul>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="foot-in">
+    <span>Hakum Auto Care &mdash; Dasmari&ntilde;as / Bacoor / Batangas</span>
+    <span>Design mock E &mdash; the sequence</span>
+  </div>
+</footer>
+
+<script>
+document.documentElement.classList.add('js');
+(function(){
+  var views={home:document.getElementById('view-home'),ppf:document.getElementById('view-ppf')};
+  function show(n){Object.keys(views).forEach(function(k){views[k].hidden=k!==n;});window.scrollTo(0,0);}
+  function route(){ if(location.hash==='#/ppf'){show('ppf');} else if(views.home.hidden){show('home');} }
+  window.addEventListener('hashchange',route);
+  document.addEventListener('click',function(e){var a=e.target.closest('a[data-home]');if(a&&views.home.hidden){show('home');}});
+  route();
+
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}});
+  },{rootMargin:'0px 0px -12% 0px'});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+
+  /* -- Scroll-scrubbed frame sequence ------------------------------------
+     Frames are decoded once up front, then drawn on rAF against scroll
+     position. Chapter boundaries are the real ones from ppfInformation. */
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SRC = __A_FRAMES_JSON__;
+  var track=document.getElementById('seqTrack');
+  var canvas=document.getElementById('seqCanvas');
+  if(!reduce && track && canvas && SRC.length){
+    var ctx=canvas.getContext('2d',{alpha:false});
+    var loadEl=document.getElementById('seqLoad'), bar=document.getElementById('seqBar');
+    var chapters=[].slice.call(document.querySelectorAll('.chapter'));
+    var rails=[].slice.call(document.querySelectorAll('.seq-rail i'));
+    // Real chapter boundaries: intro runs to .12, then four stages to 1.
+    var BOUNDS=[[0.12,0.32],[0.32,0.55],[0.55,0.78],[0.78,1.001]];
+    var imgs=new Array(SRC.length), loaded=0, ready=false, cur=-1;
+
+    // Give the pinned canvas enough scroll length to play through.
+    track.style.height=(SRC.length*46+800)+'px';
+
+    function draw(i){
+      var im=imgs[i];
+      if(!im||!im.complete) return;
+      if(canvas.width!==im.naturalWidth){canvas.width=im.naturalWidth;canvas.height=im.naturalHeight;}
+      ctx.drawImage(im,0,0,canvas.width,canvas.height);
+    }
+    function progress(){
+      var r=track.getBoundingClientRect();
+      var total=r.height-window.innerHeight;
+      if(total<=0) return 0;
+      return Math.min(1,Math.max(0,(-r.top)/total));
+    }
+    var queued=false;
+    function onScroll(){
+      if(queued) return; queued=true;
+      requestAnimationFrame(function(){
+        queued=false;
+        if(!ready) return;
+        var p=progress();
+        var i=Math.min(SRC.length-1,Math.max(0,Math.round(p*(SRC.length-1))));
+        if(i!==cur){cur=i;draw(i);}
+        var active=-1;
+        for(var c=0;c<BOUNDS.length;c++){ if(p>=BOUNDS[c][0]&&p<BOUNDS[c][1]){active=c;break;} }
+        chapters.forEach(function(el,n){el.classList.toggle('on',n===active);});
+        rails.forEach(function(el,n){el.classList.toggle('fill',n<=active);});
+      });
+    }
+    SRC.forEach(function(src,i){
+      var im=new Image();
+      im.decoding='async';
+      im.onload=im.onerror=function(){
+        loaded++;
+        bar.style.width=Math.round(loaded/SRC.length*100)+'%';
+        if(loaded===SRC.length){
+          ready=true;
+          loadEl.style.display='none';
+          draw(0); onScroll();
+        }
+      };
+      im.src=src; imgs[i]=im;
+    });
+    window.addEventListener('scroll',onScroll,{passive:true});
+    window.addEventListener('resize',onScroll);
+  } else if(track){
+    track.style.display='none';
+    document.querySelector('.seq-static').style.display='grid';
+  }
+})();
+</script>

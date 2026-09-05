@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Facebook, Instagram, Mail, MapPin, MessageSquareWarning, Phone } from 'lucide-react'
 import { usePublicBranches } from '@/lib/branches'
+import { buildHomeBranchCards } from '@/lib/homeBranches'
+import TikTokIcon from '@/components/public/TikTokIcon'
+import BdPageHero from '../components/public/bredesign/BdPageHero'
 
 const channels = [
   {
@@ -24,7 +27,7 @@ const channels = [
     icon: Mail,
     label: 'Admin and billing',
     value: 'admin@hakumautocare.com',
-    hint: 'Invoices, records, and partnerships',
+    hint: 'Invoices, records, and brand collaborations',
     href: 'mailto:admin@hakumautocare.com',
   },
 ]
@@ -44,21 +47,36 @@ const socials = [
     handle: '@_hakumautocare',
     href: 'https://www.instagram.com/_hakumautocare',
   },
+  {
+    key: 'tiktok',
+    icon: TikTokIcon,
+    label: 'TikTok',
+    handle: '@hakum_autocare',
+    href: 'https://www.tiktok.com/@hakum_autocare',
+  },
 ]
 
 export default function ContactPage() {
   const { branches } = usePublicBranches({ mode: 'visible' })
+  const visibleBranches = branches.length ? branches : buildHomeBranchCards([]).map((branch) => ({
+    ...branch,
+    coming_soon: branch.isComingSoon,
+  }))
 
   return (
-    <section className="contact-page">
-      <div className="public-shell contact-intro">
-        <p className="eyebrow">Talk to Hakum</p>
-        <h1 className="section-title">Contact us</h1>
-        <p className="contact-lede">
-          Questions about services, bookings, or branches — call, message, or email us directly and
-          the team will pick it up.
-        </p>
-      </div>
+    <>
+      <BdPageHero
+        eyebrow="Talk to Hakum"
+        title={
+          <>
+            Contact
+            <br />
+            <em>us.</em>
+          </>
+        }
+        copy="Questions about services, bookings, or branches — call, message, or email us directly and the team will pick it up."
+      />
+      <section className="contact-page">
 
       <div className="public-shell contact-channels">
         {channels.map(({ key, icon: Icon, label, value, hint, href }) => (
@@ -85,7 +103,7 @@ export default function ContactPage() {
         <div className="contact-block">
           <h2 className="contact-block-title">Visit a branch</h2>
           <div className="contact-branches">
-            {branches.map((b) => (
+            {visibleBranches.map((b) => (
               <Link
                 className="contact-branch"
                 key={b.slug}
@@ -101,7 +119,7 @@ export default function ContactPage() {
                 <ArrowUpRight aria-hidden />
               </Link>
             ))}
-            {!branches.length ? (
+            {!visibleBranches.length ? (
               <Link className="contact-branch" to="/branches">
                 <span className="contact-branch-icon" aria-hidden>
                   <MapPin />
@@ -120,7 +138,7 @@ export default function ContactPage() {
           <h2 className="contact-block-title">Follow the work</h2>
           <div className="contact-socials">
             {socials.map(({ key, icon: Icon, label, handle, href }) => (
-              <a className="contact-social" key={key} href={href} target="_blank" rel="noreferrer">
+              <a className="contact-social" key={key} href={href} target="_blank" rel="noreferrer" aria-label={`Hakum on ${label}`}>
                 <span className="contact-social-icon" aria-hidden>
                   <Icon />
                 </span>
@@ -135,5 +153,6 @@ export default function ContactPage() {
         </div>
       </div>
     </section>
+    </>
   )
 }

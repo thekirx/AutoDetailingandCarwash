@@ -44,7 +44,7 @@ describe('Public homepage content assets', () => {
   it('maps the approved featured and ceramic WebP assets', async () => {
     assert.deepEqual(featuredServices.map(({ title, image }) => [title, new URL(image).pathname.split('/').at(-1)]), [
       ['PAINT PROTECTION FILM', 'paint-protection-film.webp'],
-      ['CERAMIC COATING', 'ceramic-coating.webp'],
+      ['CERAMIC COATING', 'ceramic.webp'],
       ['DETAILING', 'detailing.webp'],
     ])
     assert.deepEqual(ceramicPackages.map(({ title, bgImage }) => [title, new URL(bgImage).pathname.split('/').at(-1)]), [
@@ -85,12 +85,11 @@ describe('Public homepage content assets', () => {
       'media-gallery',
       'latest-post',
       'events',
-      /* Partnership is a B2B ask, so it sits after the booking path rather than
-         interrupting the visitor between the gallery and the queue/branch CTAs. */
-      'queue',
       'branches',
-      'partnership',
     ])
+    /* Partnership moved to its own page at /partnerships — a B2B ask with its
+       own audience, kept out of the path of a visitor who came to book a wash.
+       publicHomeContent.test.mjs guards its absence. */
     assert.equal(ppfInformation.eyebrow, 'Paint Protection Film')
     assert.deepEqual(ppfInformation.title.split('\n'), [
       'Between your paint',

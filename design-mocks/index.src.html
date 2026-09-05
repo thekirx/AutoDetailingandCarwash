@@ -1,0 +1,261 @@
+<title>Six Ways To Build The Site</title>
+<style>
+@font-face{font-family:'Benzin';src:url(__A_fontDisplay__) format('woff2');font-weight:800;font-display:swap}
+@font-face{font-family:'Benzin';src:url(__A_fontDisplayMed__) format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBody__) format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyMed__) format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Gilmer';src:url(__A_fontBodyBold__) format('woff2');font-weight:700;font-display:swap}
+
+/* -- Tokens - the same --hk-* block the six mocks declare ------------------ */
+:root{
+  --hk-paper:#F1F1ED;
+  --hk-navy:#020A31;         /* --color-surface-cinematic */
+  --hk-navy-2:#08133F;
+  --hk-navy-3:#0D1B52;
+  --hk-rule-dark:#16255C;
+  --hk-blue:#052699;         /* --color-brand-primary */
+  --hk-accent:#9DB4FF;       /* brand blue lifted to read on dark grounds */
+  --hk-on-navy:#7E8AB8;
+  --hk-on-navy-dim:#6E79A8;
+  --hk-display:'Benzin','Arial Black',sans-serif;
+  --hk-body:'Gilmer',Arial,sans-serif;
+}
+
+/* This page commits to the cinematic navy ground the mocks were shot against,
+   in both host themes - it is a viewing room, not a document. */
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--hk-navy);color:var(--hk-on-navy);
+  font-family:var(--hk-body);font-size:16px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:940px;margin:0 auto;padding:0 24px 96px}
+
+h1,h2,h3{
+  margin:0;font-family:var(--hk-display);font-weight:800;font-style:italic;
+  text-transform:uppercase;letter-spacing:-.025em;line-height:.92;
+  color:var(--hk-paper);text-wrap:balance;
+}
+p{margin:0}
+.eyebrow{
+  font-family:var(--hk-body);font-weight:700;font-size:11px;
+  text-transform:uppercase;letter-spacing:.16em;color:var(--hk-accent);
+}
+
+/* -- Masthead ------------------------------------------------------------- */
+.top{padding:88px 0 40px;display:flex;flex-direction:column;gap:22px}
+.top h1{font-size:clamp(2.4rem,6.4vw,4.4rem)}
+.lede{max-width:60ch;font-size:clamp(1rem,1.5vw,1.125rem);color:var(--hk-on-navy)}
+.lede b{color:var(--hk-paper);font-weight:500}
+
+.howto{
+  display:grid;gap:8px;padding:18px 0 0;
+  border-top:1px solid var(--hk-rule-dark);font-size:14px;
+}
+.howto span{color:var(--hk-on-navy-dim)}
+.howto b{color:var(--hk-paper);font-weight:500}
+
+/* -- Groups --------------------------------------------------------------- */
+/* The two groups are the real split in the work: v1 explores how the site
+   should look, v2 each pick a conversion problem to solve. */
+.group{margin-top:72px;display:flex;flex-direction:column;gap:0}
+.group-head{display:flex;flex-direction:column;gap:8px;padding-bottom:26px}
+.group-head h2{font-size:clamp(1.35rem,2.6vw,1.9rem)}
+.group-head p{max-width:56ch;font-size:15px}
+.group-head p+p{margin-top:10px}
+.group-head b{color:var(--hk-paper);font-weight:500}
+
+/* -- One mock ------------------------------------------------------------- */
+.mock{
+  display:grid;grid-template-columns:64px 1fr auto;gap:8px 26px;align-items:start;
+  padding:30px 0;border-top:1px solid var(--hk-rule-dark);
+}
+.letter{
+  grid-row:1 / span 3;
+  font-family:var(--hk-display);font-style:italic;font-weight:800;
+  font-size:52px;line-height:.8;color:#1D2C6E;
+  transform:skewX(-7deg);transform-origin:left bottom;
+  -webkit-text-stroke:1px #33459B;
+}
+.mock h3{font-size:clamp(1.25rem,2.4vw,1.65rem)}
+.idea{margin-top:10px;max-width:52ch;color:var(--hk-on-navy)}
+
+.spec{
+  grid-column:2;margin-top:16px;display:flex;flex-wrap:wrap;gap:6px 10px;
+  font-size:12px;
+}
+.spec i{
+  font-style:normal;padding:4px 10px;background:var(--hk-navy-2);
+  border:1px solid var(--hk-rule-dark);color:var(--hk-on-navy-dim);
+}
+.spec i b{color:var(--hk-paper);font-weight:500}
+
+.open{
+  grid-column:3;grid-row:1 / span 2;align-self:center;
+  display:inline-flex;align-items:center;gap:9px;white-space:nowrap;
+  padding:13px 22px;background:var(--hk-accent);color:var(--hk-navy);
+  font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.09em;
+  text-decoration:none;transition:background .16s ease,transform .16s ease;
+}
+.open:hover{background:var(--hk-paper);transform:translateX(3px)}
+.open:focus-visible{outline:2px solid var(--hk-paper);outline-offset:3px}
+.open span{font-size:15px;line-height:1}
+
+/* -- Closing note --------------------------------------------------------- */
+.note{
+  margin-top:76px;padding:30px;background:var(--hk-navy-2);
+  border-left:3px solid var(--hk-blue);
+}
+.note h2{font-size:1.15rem}
+.note ul{margin:16px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:9px}
+.note li{font-size:14.5px}
+.note b{color:var(--hk-paper);font-weight:500}
+
+@media (max-width:720px){
+  .mock{grid-template-columns:44px 1fr;gap:6px 18px}
+  .letter{font-size:38px}
+  .open{grid-column:2;grid-row:auto;margin-top:18px;justify-self:start}
+  .spec{grid-column:2}
+}
+@media (prefers-reduced-motion:reduce){
+  .open{transition:none}
+  .open:hover{transform:none}
+}
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">Hakum Auto Care &mdash; public site, for review</p>
+    <h1>Six ways to build the site</h1>
+    <p class="lede">Six working prototypes of the public site. Each one is a real
+      homepage plus one service page, using <b>our own photography, our own fonts,
+      and footage from our own bays</b> &mdash; no stock, no borrowed cars. They are
+      not six drafts of one design. They are six different answers to the question
+      of what the site is <b>for</b>.</p>
+    <div class="howto">
+      <span><b>Open each in a new tab.</b> Scroll the whole page.</span>
+      <span><b>Try them on your phone too</b> &mdash; all six are built for it.</span>
+      <span>Then tell us which one you want built.</span>
+    </div>
+  </header>
+
+  <section class="group">
+    <div class="group-head">
+      <p class="eyebrow">Set one &mdash; how the site should look</p>
+      <h2>Three visual directions</h2>
+      <p>Same content, three different levels of departure from where the brand
+        sits today. Judge these on feel.</p>
+    </div>
+
+    <article class="mock">
+      <div class="letter" aria-hidden="true">A</div>
+      <h3>The Measured Finish</h3>
+      <p class="idea">Sells on specification. Film thickness, coverage percentage,
+        warranty years &mdash; the numbers stay on screen while you read, so the
+        customer is always comparing like for like.</p>
+      <div class="spec">
+        <i>Ground <b>Graphite</b></i><i>Service page <b>PPF</b></i>
+        <i>Signature <b>Measurement rail that tracks your position</b></i>
+      </div>
+      <a class="open" href="https://claude.ai/code/artifact/abab33d9-3e24-4664-bba2-5ca80c357465" target="_blank" rel="noopener">Open A <span>&rarr;</span></a>
+    </article>
+
+    <article class="mock">
+      <div class="letter" aria-hidden="true">B</div>
+      <h3>Pamper It, Protect It</h3>
+      <p class="idea">Your sketch, followed box for box. Nothing added, nothing
+        moved &mdash; this is what the layout you drew looks like fully built,
+        with real photography in every slot.</p>
+      <div class="spec">
+        <i>Ground <b>Navy</b></i><i>Service page <b>Nano tint</b></i>
+        <i>Signature <b>The reference-card treatment</b></i>
+      </div>
+      <a class="open" href="https://claude.ai/code/artifact/cfed0ded-35ae-420c-959f-11d39edbeda0" target="_blank" rel="noopener">Open B <span>&rarr;</span></a>
+    </article>
+
+    <article class="mock">
+      <div class="letter" aria-hidden="true">C</div>
+      <h3>Hakum Amplified</h3>
+      <p class="idea">The identity we already have, kept intact and pushed harder.
+        The safest of the three to approve, and the closest to what customers
+        recognise today.</p>
+      <div class="spec">
+        <i>Ground <b>Paper</b></i><i>Service page <b>Ceramic coating</b></i>
+        <i>Signature <b>Drag-to-compare on a real before and after</b></i>
+      </div>
+      <a class="open" href="https://claude.ai/code/artifact/eca9ee24-2dc4-423d-b108-d312f83fb089" target="_blank" rel="noopener">Open C <span>&rarr;</span></a>
+    </article>
+  </section>
+
+  <section class="group">
+    <div class="group-head">
+      <p class="eyebrow">Set two &mdash; what the site should do</p>
+      <h2>Three bets on winning the booking</h2>
+      <p>Each of these picks one reason a customer leaves without booking, and
+        builds the whole site around fixing it. Judge these on whether the problem
+        is the real one.</p>
+      <p><b>All three now carry the same eight sections</b> &mdash; hero, PPF,
+        ceramic, tint, photos, events, branches, footer &mdash; so the only things
+        that differ are the order they run in and how each one is treated. Each
+        mock's own idea lives inside one of those sections rather than beside them.</p>
+    </div>
+
+    <article class="mock">
+      <div class="letter" aria-hidden="true">D</div>
+      <h3>What Does My Car Need</h3>
+      <p class="idea">For the customer who knows their car needs something but not
+        what to ask for. Three questions &mdash; age, where it parks, how long they
+        are keeping it &mdash; and the site recommends, in order, and says what to skip.</p>
+      <div class="spec">
+        <i>Ground <b>Paper</b></i><i>Service page <b>PPF tiers</b></i>
+        <i>Order <b>Straight through: PPF, ceramic, tint</b></i><i>Signature <b>Advisor built into the hero</b></i>
+      </div>
+      <a class="open" href="https://claude.ai/code/artifact/ed6c519f-c813-4b5b-a0fa-5332c4ffee09" target="_blank" rel="noopener">Open D <span>&rarr;</span></a>
+    </article>
+
+    <article class="mock">
+      <div class="letter" aria-hidden="true">E</div>
+      <h3>Between Your Paint</h3>
+      <p class="idea">Stops describing the work and shows it. A real PPF install on
+        a Ranger Raptor in our Dasmari&ntilde;as bay plays out frame by frame as
+        you scroll &mdash; align, form, seal, protected.</p>
+      <div class="spec">
+        <i>Ground <b>Navy</b></i><i>Service page <b>PPF</b></i>
+        <i>Order <b>Install first, photos second</b></i><i>Signature <b>The PPF section is the install, scrubbed</b></i>
+      </div>
+      <a class="open" href="https://claude.ai/code/artifact/0d743e14-c6a3-4b5f-ad50-3f570ab68986" target="_blank" rel="noopener">Open E <span>&rarr;</span></a>
+    </article>
+
+    <article class="mock">
+      <div class="letter" aria-hidden="true">F</div>
+      <h3>Know Before You Go</h3>
+      <p class="idea">Treats the site as a tool rather than a brochure. Which branch
+        is open, how busy it is right now, which bay times are free &mdash; answered
+        on the phone, before the customer drives over.</p>
+      <div class="spec">
+        <i>Ground <b>Navy</b></i><i>Service page <b>Nano tint</b></i>
+        <i>Order <b>Branches second, sorted by bay time</b></i><i>Signature <b>Branches carry live queue status</b></i>
+      </div>
+      <a class="open" href="https://claude.ai/code/artifact/e808d700-e0b9-4bbc-b135-78760f275d3b" target="_blank" rel="noopener">Open F <span>&rarr;</span></a>
+    </article>
+  </section>
+
+  <aside class="note">
+    <h2>What is still placeholder</h2>
+    <ul>
+      <li><b>Customer reviews</b> in all six are written-in examples, flagged on the
+        pages themselves. Real ones replace them before launch.</li>
+      <li><b>The origin story in B</b> is drafted from our existing positioning, not
+        copy anyone supplied. It needs your words.</li>
+      <li><b>Queue and slot times in F</b> are sample figures, flagged on the page.
+        A real build reads the live queue the system already tracks.</li>
+      <li><b>Product brand names</b> are set in type, not logo artwork &mdash; we
+        need the approved logo files and confirmation we are licensed to show them.</li>
+      <li>Whichever one wins gets <b>rebuilt properly</b> against the live service
+        catalogue and booking system. These are prototypes for choosing, not the
+        finished site.</li>
+    </ul>
+  </aside>
+
+</div>

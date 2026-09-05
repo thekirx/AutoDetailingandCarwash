@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
+import { publicBranchName } from './homeBranches.js'
 
-const BRANCH_SELECT = 'slug, name, address, code, latitude, longitude, coming_soon, is_active'
+const BRANCH_SELECT = 'slug, name, address, code, latitude, longitude, coming_soon, is_active, is_public'
 
 /* Opening hours live in their own table (one row per weekday per branch), so
    they are fetched separately and attached as `hours`. Fetched best-effort:
@@ -28,6 +29,9 @@ function branchQuery(select, mode) {
     .from('branches')
     .select(select)
     .eq('is_archived', false)
+    // Back-office locations such as HQ are active and unarchived, so nothing
+    // else here excludes them. They are not places a customer brings a car.
+    .eq('is_public', true)
     .order('name')
 
   if (mode === 'bookable') {
@@ -101,9 +105,7 @@ export function usePublicBranches({ mode = 'bookable' } = {}) {
  * "Dasmarinas Branch") reading consistently in lists and the hero location line.
  */
 export function branchCityName(row) {
-  const name = row?.name || ''
-  const short = name.replace(/^Hakum Auto Care\s*/i, '').replace(/\s*Branch$/i, '').trim()
-  return short || name
+  return publicBranchName(row)
 }
 
 export function branchLabel(count) {
@@ -126,4 +128,3 @@ export function branchNameMap(rows = []) {
 }
 
 export { requireBranchSlug, branchSlugsForOwnPay } from './branchScope.js'
-

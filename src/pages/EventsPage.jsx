@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 import FormLegalNotice from '@/components/FormLegalNotice'
+import BdPageHero from '../components/public/bredesign/BdPageHero'
+import useReveal from '../components/public/bredesign/useReveal'
 
 export default function EventsPage() {
   const [events, setEvents] = useState([])
@@ -50,51 +52,67 @@ export default function EventsPage() {
     setGuard(createPublicFormGuard())
   }
 
+  useReveal()
+
   return (
     <>
-      <section className="inner-hero">
-        <div className="public-shell">
-          <p className="eyebrow eyebrow-light">Community</p>
-          <h1 className="display-title">Events &amp; meets.</h1>
-          <p className="inner-hero-copy">Promotions, branch days, and car meets from Hakum Auto Care.</p>
-        </div>
-      </section>
-      <section className="content-section">
-        <div className="public-shell hakum-event-stack">
-          {error && <p className="form-error">{error}</p>}
-          {status === 'success' && <p>Registration confirmed.</p>}
-          {!events.length && !error && <p>No published events yet. Check back soon.</p>}
+      <BdPageHero
+        eyebrow="Community"
+        title={
+          <>
+            Events
+            <br />
+            <em>&amp; meets.</em>
+          </>
+        }
+        copy="Promotions, branch days, and car meets from Hakum Auto Care."
+      />
+      <section id="events-list">
+        <div className="bd-shell bd-event-stack">
+          {error ? (
+            <p className="bd-state is-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {status === 'success' ? (
+            <p className="bd-state" role="status">
+              Registration confirmed.
+            </p>
+          ) : null}
+          {!events.length && !error ? (
+            <p className="bd-state">No published events yet. Check back soon.</p>
+          ) : null}
           {events.map((item) => {
             const attached = item.ops_forms
             const formOpen = attached?.slug && attached.public_enabled && attached.status === 'published'
             return (
-              <article key={item.id} className="hakum-event-card">
+              <article key={item.id} className="bd-event-row bd-reveal">
                 {item.banner_url ? (
-                  <Link to={`/events/${item.slug}`} className="hakum-event-card-media">
+                  <Link to={`/events/${item.slug}`} className="bd-event-media">
                     <img src={item.banner_url} alt="" loading="lazy" />
                   </Link>
                 ) : null}
-                <div className="hakum-event-card-body">
-                  <p className="hakum-blog-meta">
+                <div className="bd-event-row-body">
+                  <p className="bd-event-date">
                     {item.branch ? `${item.branch} · ` : ''}
                     {item.is_date_tba ? 'To be announced' : new Date(item.starts_at).toLocaleString()}
                   </p>
                   <h2>
                     <Link to={`/events/${item.slug}`}>{item.title}</Link>
                   </h2>
-                  {item.description ? <p>{item.description}</p> : null}
-                  <div className="hakum-event-actions">
-                    {item.slug && (
-                      <Link className="button button-blue" to={`/events/${item.slug}`}>
+                  {item.description ? <p className="bd-event-summary">{item.description}</p> : null}
+                  <div className="bd-cta-row">
+                    {item.slug ? (
+                      <Link className="bd-btn bd-btn-primary" to={`/events/${item.slug}`}>
                         Details
                       </Link>
-                    )}
+                    ) : null}
                     {formOpen ? (
-                      <Link className="button button-blue" to={`/f/${attached.slug}`}>
+                      <Link className="bd-btn bd-btn-quiet" to={`/f/${attached.slug}`}>
                         {attached.name}
                       </Link>
                     ) : (
-                      <button type="button" className="button button-blue" onClick={() => setRegisterFor(item.id)}>
+                      <button type="button" className="bd-btn bd-btn-quiet" onClick={() => setRegisterFor(item.id)}>
                         Register
                       </button>
                     )}

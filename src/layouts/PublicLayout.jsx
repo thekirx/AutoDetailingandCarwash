@@ -5,19 +5,18 @@ import PublicPageMeta from '@/components/PublicPageMeta'
 import NotificationBell from '@/components/NotificationBell'
 import { CookiePreferencesButton } from '@/components/CookieConsent'
 import { useAuth } from '@/auth/AuthProvider'
-import { usePublicBranches } from '@/lib/branches'
+import { branchCityName, usePublicBranches } from '@/lib/branches'
 import { CustomerInstallPopup } from '@/components/InstallGuide'
+import TikTokIcon from '@/components/public/TikTokIcon'
+import { PUBLIC_NAV_ITEMS } from '@/data/publicNavigation'
+import { buildHomeBranchCards } from '@/lib/homeBranches'
 
-const navItems = [
-  ['Main', '/home'],
-  ['Services', '/services'],
-  ['Packages', '/packages'],
-  ['Branch', '/branches'],
-  ['Events', '/events'],
-  ['Blog', '/blog'],
-  ['Live Queue', '/queue'],
-  ['Contact', '/contact'],
-]
+// Routes actually rebuilt in BreDESIGN. A page only joins this list once its
+// own sections exist, because the scope repaints headings and body text for a
+// dark ground — applied to a page still built for paper, it renders white
+// headings on a paper section and they vanish. The remaining marketing routes
+// keep the shipping look until Phase 4 rebuilds them.
+const BREDESIGN_ROUTES = ['/home', '/services', '/branches', '/partnerships', '/events', '/blog', '/contact', '/complaints', '/terms', '/privacy', '/cookies']
 
 function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
   return (
@@ -33,7 +32,7 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
           />
         </Link>
         <nav className="desktop-nav" aria-label="Primary navigation">
-          {navItems.map(([label, to]) => (
+          {PUBLIC_NAV_ITEMS.map(([label, to]) => (
             <NavLink key={to} to={to} end={to === '/home'}>
               {label}
             </NavLink>
@@ -74,7 +73,7 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
       </div>
       {open && (
         <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">
-          {navItems.map(([label, to]) => (
+          {PUBLIC_NAV_ITEMS.map(([label, to]) => (
             <NavLink key={to} to={to} end={to === '/home'}>
               {label}
             </NavLink>
@@ -100,15 +99,25 @@ export default function PublicLayout() {
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
   const { branches } = usePublicBranches({ mode: 'visible' })
+  const visibleBranches = branches.length ? branches : buildHomeBranchCards([]).map((branch) => ({
+    ...branch,
+    coming_soon: branch.isComingSoon,
+  }))
   const { user, profile, loading } = useAuth()
   // Trust DB profile only — metadata.role is client-writable
   const isCustomer = !loading && Boolean(user) && profile?.role === 'customer'
   // /account: phone app chrome on mobile; landing header + wide layout on desktop.
   const accountRoute = pathname.startsWith('/account')
+  // BreDESIGN covers the marketing site only. /book, /queue and the auth pages
+  // stay on the shipping styles, so the class that scopes the new stylesheet is
+  // applied by route rather than to the whole public layout.
+  const bredesignRoute = BREDESIGN_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  )
 
   useEffect(() => setOpen(false), [pathname])
 
-  const footerCities = branches.map((b) => b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name).join(' · ') || 'Philippines'
+  const footerCities = visibleBranches.map(branchCityName).join(' · ') || 'Philippines'
 
   if (accountRoute) {
     return (
@@ -128,8 +137,14 @@ export default function PublicLayout() {
     )
   }
 
+  const homeRoute = pathname === '/home' || pathname === '/'
+
   return (
-    <div className="public-site">
+    <div
+      className={`public-site${bredesignRoute ? ' bredesign' : ''}${
+        bredesignRoute && homeRoute ? ' bd-home' : ''
+      }`}
+    >
       <PublicPageMeta />
       <PublicSiteHeader open={open} setOpen={setOpen} isCustomer={isCustomer} />
 
@@ -171,15 +186,18 @@ export default function PublicLayout() {
               <a href="https://www.instagram.com/_hakumautocare" aria-label="Hakum on Instagram">
                 <Instagram />
               </a>
+              <a href="https://www.tiktok.com/@hakum_autocare" aria-label="Hakum on TikTok" target="_blank" rel="noreferrer noopener">
+                <TikTokIcon />
+              </a>
             </div>
           </div>
 
           <div className="footer-branches">
             <h3>Our branches</h3>
-            {branches.length ? branches.map((b, i) => (
+            {visibleBranches.length ? visibleBranches.map((b, i) => (
               <Link key={b.slug} to={b.coming_soon ? '/branches' : `/queue/${b.slug}`}>
                 <span>{String(i + 1).padStart(2, '0')}</span>
-                <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '') || b.name}</strong>
+                <strong>{branchCityName(b)}</strong>
                 <small>{b.coming_soon ? 'Coming soon' : (b.address || 'Open daily')}</small>
                 <ArrowUpRight />
               </Link>
@@ -220,14 +238,7 @@ export default function PublicLayout() {
         </div>
 
         <div className="public-shell footer-navigation">
-          <nav aria-label="Footer navigation">
-            {navItems.map(([label, to]) => (
-              <Link key={to} to={to}>
-                {label}
-              </Link>
-            ))}
-            <Link to="/book">Book a Service</Link>
-            <Link to="/signin">Sign in</Link>
+          <nav aria-label="Legal and privacy">
             <Link to="/terms">Terms</Link>
             <Link to="/privacy">Privacy</Link>
             <Link to="/cookies">Cookies</Link>
@@ -237,6 +248,7 @@ export default function PublicLayout() {
             <span>© {new Date().getFullYear()} Hakum Auto Care</span>
           </div>
         </div>
+
       </footer>
       <CustomerInstallPopup enabled={isCustomer} />
     </div>

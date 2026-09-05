@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { usePageMeta } from '@/lib/pageMeta'
 import { openCookieConsentPrompt } from '@/lib/cookieConsent'
+import BdPageHero from '../components/public/bredesign/BdPageHero'
 
 function LegalShell({ eyebrow, title, updated, path, description, children }) {
   usePageMeta({ title, description, path })
@@ -12,11 +13,10 @@ function LegalShell({ eyebrow, title, updated, path, description, children }) {
   ].filter((p) => p.to !== path)
 
   return (
-    <section className="legal-page">
+    <>
+      <BdPageHero eyebrow={eyebrow} title={title} copy={`Last updated ${updated}`} />
+      <section className="legal-page">
       <div className="public-shell legal-inner">
-        <p className="eyebrow">{eyebrow}</p>
-        <h1 className="section-title">{title}</h1>
-        <p className="legal-updated">Last updated {updated}</p>
         <div className="legal-body">{children}</div>
         <p className="legal-back">
           <Link to="/">Back to home</Link>
@@ -31,6 +31,7 @@ function LegalShell({ eyebrow, title, updated, path, description, children }) {
         </p>
       </div>
     </section>
+    </>
   )
 }
 

@@ -28,9 +28,14 @@ const MARKETING_COPY_BY_KEY = Object.fromEntries(
   homepageServices.map((item) => [titleToSlug(item.title), item.copy]),
 )
 
+/** Inventory slug → the canonical marketing key used for copy and artwork lookups. */
+export function marketingKeyForServiceSlug(slug) {
+  const raw = String(slug || '').toLowerCase()
+  return MARKETING_SLUG_ALIASES[raw] || raw
+}
+
 export function marketingCopyForServiceSlug(slug) {
-  const key = MARKETING_SLUG_ALIASES[String(slug || '').toLowerCase()] || String(slug || '').toLowerCase()
-  return MARKETING_COPY_BY_KEY[key] || ''
+  return MARKETING_COPY_BY_KEY[marketingKeyForServiceSlug(slug)] || ''
 }
 
 export async function fetchPublicCatalogServices() {
@@ -57,8 +62,58 @@ export function enrichPublicCatalogService(row) {
   }
 }
 
+/* Services the catalog carries for booking and the bay, but that the public
+   /services list does not show: paint maintenance, and the three counter
+   packages. They stay active in the catalog, stay bookable, and still price
+   and ring up normally — this hides them from the marketing overview only,
+   so nothing here touches operations. */
+const HIDDEN_FROM_PUBLIC_OVERVIEW = new Set([
+  'paint-maintenance',
+  'express-wash-package',
+  'full-care-package',
+  'hakum-custom-package',
+])
+
+/* Matched on slug and on name: the live catalog owns its own slugs, so a
+   package renamed in Inventory should still drop out of the public list. */
+function isHiddenFromPublicOverview(row) {
+  return (
+    HIDDEN_FROM_PUBLIC_OVERVIEW.has(marketingKeyForServiceSlug(row?.slug)) ||
+    HIDDEN_FROM_PUBLIC_OVERVIEW.has(titleToSlug(row?.name))
+  )
+}
+
 export function buildPublicServiceOverview(rows) {
-  return (rows || []).map(enrichPublicCatalogService)
+  const source = rows?.length
+    ? rows
+    : homepageServices
+        .filter((item) => item.available !== false)
+        .map((item, index) => ({
+          id: `marketing-${titleToSlug(item.title)}`,
+          name: item.title,
+          slug: titleToSlug(item.title),
+          description: item.copy,
+          display_order: index + 1,
+        }))
+
+  return source.filter((row) => !isHiddenFromPublicOverview(row)).map(enrichPublicCatalogService)
+}
+
+export function publicServiceDestination(item = {}) {
+  const key = marketingKeyForServiceSlug(item.slug)
+  const editorialRoutes = {
+    'paint-protection-film': '/services/ppf',
+    'ceramic-coating': '/services/ceramic',
+    'ceramic-tint': '/services/tint',
+  }
+
+  if (editorialRoutes[key]) return { to: editorialRoutes[key] }
+  if (key === 'carwash') return { to: '/queue' }
+
+  return {
+    to: '/book',
+    state: { service: item.title, service_id: item.id },
+  }
 }
 
 export function publicPackageOverview() {

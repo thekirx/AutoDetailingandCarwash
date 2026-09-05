@@ -4,6 +4,14 @@ import { describe, it } from 'node:test'
 import { buildHomeBranchCards, comingSoonHomeCopy, countActiveHomeBranches } from '../src/lib/homeBranches.js'
 
 describe('homepage branch cards', () => {
+  it('renders the approved Dasmariñas spelling from an ASCII live branch record', () => {
+    const cards = buildHomeBranchCards([
+      { slug: 'dasmarinas', name: 'Hakum Auto Care Dasmarinas Branch', coming_soon: true },
+    ])
+
+    assert.equal(cards[0].name, 'Dasmariñas')
+  })
+
   it('uses coming_soon rows from the branch table instead of inventing a city', () => {
     const cards = buildHomeBranchCards([
       { slug: 'bacoor', name: 'Hakum Auto Care Bacoor', address: 'RFC Mall' },

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import {
   CUSTOMER_QUEUE_PATH,
   PUBLIC_QUEUE_POLL_MS,
+  branchQueueTotal,
   customerQueuePath,
   liveQueuePath,
   queueCountsFromRow,
@@ -39,5 +40,18 @@ describe('live queue paths', () => {
       { waiting: 2, in_progress: 1, final_checking: 0, total: 3 },
     )
     assert.equal(PUBLIC_QUEUE_POLL_MS, 8000)
+  })
+
+  it('uses every active vehicle for the homepage branch total', () => {
+    assert.equal(
+      branchQueueTotal({
+        waiting_count: 2,
+        in_progress_count: 3,
+        final_checking_count: 1,
+        total_active_count: 7,
+      }),
+      7,
+    )
+    assert.equal(branchQueueTotal(null), 0)
   })
 })

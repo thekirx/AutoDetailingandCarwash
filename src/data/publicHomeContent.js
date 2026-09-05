@@ -10,9 +10,7 @@ export const HOME_SECTION_IDS = [
   'media-gallery',
   'latest-post',
   'events',
-  'queue',
   'branches',
-  'partnership',
 ]
 
 export const ppfInformation = {
@@ -69,7 +67,7 @@ export const services = [
   { number: '01', title: 'Carwash', copy: 'A careful exterior clean that brings back a crisp, spotless finish.', image: new URL('../assets/services/carwash.webp', import.meta.url).href, imageAlt: 'Carwash service at Hakum Auto Care', available: true },
   { number: '02', title: 'Interior Detailing', copy: 'Deep cabin care for cleaner surfaces, fresher air, and renewed comfort.', image: new URL('../assets/services/interior-detailing.webp', import.meta.url).href, imageAlt: 'Interior Detailing service at Hakum Auto Care', available: true },
   { number: '03', title: 'Ceramic Tint', copy: 'Heat-rejecting tint with lasting clarity, comfort, and UV protection.', image: new URL('../assets/services/ceramic-tint.webp', import.meta.url).href, imageAlt: 'Ceramic Tint service at Hakum Auto Care', available: true },
-  { number: '04', title: 'Ceramic Coating', copy: 'Long-term gloss and hydrophobic protection for everyday driving.', image: new URL('../assets/services/ceramic-coating.webp', import.meta.url).href, imageAlt: 'Ceramic Coating service at Hakum Auto Care', available: true },
+  { number: '04', title: 'Ceramic Coating', copy: 'Long-term gloss and hydrophobic protection for everyday driving.', image: new URL('../assets/services/ceramic.webp', import.meta.url).href, imageAlt: 'Ceramic Coating service at Hakum Auto Care', available: true },
   { number: '05', title: 'Glass Detailing', copy: 'Polished, decontaminated glass for sharper vision in every condition.', image: new URL('../assets/services/glass-detailing.webp', import.meta.url).href, imageAlt: 'Glass Detailing service at Hakum Auto Care', available: true },
   { number: '06', title: 'Engine Wash', copy: 'A precise, component-safe clean for a neater engine bay.', image: new URL('../assets/services/engine-wash.webp', import.meta.url).href, imageAlt: 'Engine Wash service at Hakum Auto Care', available: true },
   { number: '07', title: 'Paint Protection Film', copy: 'Virtually invisible impact protection for the paint that matters most.', image: new URL('../assets/services/paint-protection-film.webp', import.meta.url).href, imageAlt: 'Paint Protection Film service at Hakum Auto Care', available: true },
@@ -86,7 +84,7 @@ export const featuredServices = [
   {
     title: 'CERAMIC COATING',
     copy: 'Long-lasting gloss and hydrophobic protection that keeps your vehicle cleaner, shinier, and easier to maintain.',
-    image: new URL('../assets/services/ceramic-coating.webp', import.meta.url).href,
+    image: new URL('../assets/services/ceramic.webp', import.meta.url).href,
     imageAlt: 'Ceramic Coating service at Hakum Auto Care',
   },
   {
@@ -105,8 +103,10 @@ export const ceramicSection = {
 
 export const ceramicPackages = [
   {
+    id: 'premium',
     title: 'PREMIUM',
     warrantyYears: 5,
+    pitch: 'Deeper gloss and stronger water repellency, covered for five years.',
     bgImage: new URL('../assets/services/ceramic-premium.webp', import.meta.url).href,
     copy: 'Enhanced protection with deeper gloss and stronger hydrophobic performance for drivers who want more lasting results.',
     includes: [
@@ -117,8 +117,10 @@ export const ceramicPackages = [
     ],
   },
   {
+    id: 'platinum',
     title: 'PLATINUM',
     warrantyYears: 8,
+    pitch: 'Our highest gloss and longest paint preservation, covered for eight years.',
     bgImage: new URL('../assets/services/ceramic-platinum.webp', import.meta.url).href,
     copy: 'Our highest level of ceramic protection, created for maximum gloss, durability, and long-term paint preservation.',
     includes: [
@@ -165,6 +167,23 @@ export const mediaGallery = [
     image: new URL('../assets/services/ceramic-coating-gallery.webp', import.meta.url).href,
   },
 ]
+
+/**
+ * Close-ups of Hakum's own PPF installs, shown beside the packages.
+ *
+ * Deliberately empty. The section renders no proof strip until real Hakum work
+ * is added here — a rendered product frame or a stock install shot would be
+ * exactly the generic evidence a six-figure buyer discounts on sight.
+ *
+ * What earns a slot: tight shots that show the work, not the car — a wrapped
+ * edge at a panel gap, film following a bumper curve, a door handle recess, a
+ * finished seam. Shoot them under shop lighting on cars you actually did.
+ *
+ *   { image: new URL('../assets/ppf-install/raptor-fender-edge.webp', import.meta.url).href,
+ *     alt: 'Film wrapped into the fender edge on a Ranger Raptor',
+ *     caption: 'Fender edge, wrapped' }
+ */
+export const ppfInstallProof = []
 
 /**
  * Draggable before/after pairs.

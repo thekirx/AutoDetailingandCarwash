@@ -23,3 +23,8 @@ export function queueCountsFromRow(row) {
     total: Number(row?.total_active_count || 0),
   }
 }
+
+/** Homepage cards show every vehicle currently in the active service flow. */
+export function branchQueueTotal(row) {
+  return queueCountsFromRow(row).total
+}

@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
 
-import BeforeAfterSection from '../components/public/home/BeforeAfterSection'
-import EventsPreviewSection from '../components/public/home/EventsPreviewSection'
-import HomeEndingSections from '../components/public/home/HomeEndingSections'
-import HomeHeroSection from '../components/public/home/HomeHeroSection'
+import BdAppPreview from '../components/public/bredesign/BdAppPreview'
+import BdHero from '../components/public/bredesign/BdHero'
+import BdProducts from '../components/public/bredesign/BdProducts'
+import { BdBranches, BdEvents } from '../components/public/bredesign/BdEventsBranches'
 import {
-  CeramicSection,
-  MediaGallerySection,
-  NanoCeramicTintSection,
-  PpfInformationSection,
-} from '../components/public/home/HomeServiceSections'
-import LatestPostSection from '../components/public/home/LatestPostSection'
-import PartnershipSection from '../components/public/home/PartnershipSection'
-import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
-import { usePublicBranches, branchCityName } from '../lib/branches'
+  BdBook,
+  BdOrigin,
+  BdPhotos,
+  BdServices,
+} from '../components/public/bredesign/BdSections'
+import useReveal from '../components/public/bredesign/useReveal'
+import { usePublicBranches } from '../lib/branches'
 import { loadHomepageContent } from '../lib/homepageContent'
 import { supabase } from '../lib/supabase'
 
@@ -23,17 +21,11 @@ const INITIAL_CONTENT = {
 }
 
 export default function PublicLandingPage() {
-  const { branches } = usePublicBranches()
-  /* The hero location line names every branch we want people to know about, so it
-     reads the visible list (active + coming soon). `branches` stays bookable-only —
-     the live queue and hero status cards below have nothing to show for a branch
-     that has not opened yet. */
+  /* Visible = active plus coming soon. The branches section deliberately shows
+     a branch that has not opened yet, badged as such, so a customer in that city
+     knows it is coming rather than concluding we are not there. */
   const { branches: visibleBranches } = usePublicBranches({ mode: 'visible' })
   const [content, setContent] = useState(INITIAL_CONTENT)
-  const locationLine = visibleBranches.length
-    ? visibleBranches.map((branch) => branchCityName(branch)).join(' / ')
-    : 'Dasmariñas / Bacoor / Batangas'
-
   useEffect(() => {
     let active = true
     loadHomepageContent(supabase)
@@ -50,22 +42,19 @@ export default function PublicLandingPage() {
     return () => { active = false }
   }, [])
 
+  useReveal()
+
   return (
     <>
-      <HomeHeroSection locationLine={locationLine} />
-      <CeramicSection />
-      <PpfInformationSection />
-      <PpfPackagesSection />
-      <NanoCeramicTintSection />
-      <BeforeAfterSection />
-      <MediaGallerySection />
-      <LatestPostSection state={content.post} />
-      <EventsPreviewSection state={content.event} />
-      {/* Site partnerships are a B2B ask. Kept on the page, but after the
-          booking path — it was sitting between the gallery and the queue /
-          branch CTAs, interrupting the visitor who came to book a wash. */}
-      <HomeEndingSections branches={branches} />
-      <PartnershipSection />
+      <BdHero />
+      <BdOrigin />
+      <BdServices />
+      <BdAppPreview />
+      <BdPhotos />
+      <BdEvents state={content.event} />
+      <BdBranches branches={visibleBranches} />
+      <BdProducts />
+      <BdBook />
     </>
   )
 }
