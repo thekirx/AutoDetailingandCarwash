@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import authHeroPoster from '../assets/hero/bredesign-hero-poster.webp'
 import { Car, ClipboardList, Gauge, MapPin, Sparkles, Users } from 'lucide-react'
 
 /**
@@ -15,7 +16,10 @@ export default function HakumAuthShell({
   variant = 'default',
 }) {
   return (
-    <div className={`hakum-auth${variant === 'customer' ? ' hakum-auth--app' : ''}`}>
+    <div
+      className={`hakum-auth${variant === 'customer' ? ' hakum-auth--app' : ''}`}
+      style={{ '--hakum-auth-img': `url(${authHeroPoster})` }}
+    >
       <aside className="hakum-auth-brand">
         <Link className="hakum-auth-wordmark" to="/home" aria-label="Hakum Auto Care home">
           <img src="/branding/hakum-lw-ow.png" alt="" width="92" height="52" />

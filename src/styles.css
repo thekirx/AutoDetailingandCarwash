@@ -673,8 +673,12 @@ button { cursor: pointer; }
   justify-content: space-between;
   padding: clamp(28px, 4vw, 48px);
   color: #f8fafc;
+  overflow: hidden;
+  /* Same hero still every interior marketing page opens on, under the brand
+     gradient — the rail stops being a flat blue panel. */
   background:
-    radial-gradient(ellipse 90% 60% at 20% 0%, rgba(255, 255, 255, 0.14), transparent 55%),
+    linear-gradient(160deg, rgba(2, 10, 49, 0.62) 0%, rgba(2, 10, 49, 0.9) 68%, #020a31 100%),
+    var(--hakum-auth-img, none) center / cover no-repeat,
     linear-gradient(145deg, #01071f 0%, #052699 48%, #0a3ab5 100%);
 }
 .hakum-auth-wordmark { display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none; width:fit-content; }
@@ -1173,14 +1177,35 @@ button { cursor: pointer; }
    rest of the palette. Cards keep their soft corners and translucency; their
    borders carry a little more weight now that there is no gradient behind
    them doing the separating. */
-.lq-picker-bg,
+/* The picker now carries the hero still under the brand gradient; the board
+   keeps the flat brand blue it was given for the floor display. */
+.lq-picker-media {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.3;
+}
+.lq-picker::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    150deg,
+    rgba(2, 10, 49, 0.62) 0%,
+    rgba(2, 10, 49, 0.88) 60%,
+    rgba(5, 38, 153, 0.72) 100%
+  );
+}
 .lq-board-bg {
   position: absolute;
   inset: 0;
   z-index: -2;
   background: var(--lq-navy);
 }
-.lq-picker-noise,
 .lq-board-noise {
   position: fixed;
   inset: 0;
@@ -1190,14 +1215,24 @@ button { cursor: pointer; }
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 .lq-picker {
+  position: relative;
+  overflow: hidden;
   min-height: min(100dvh, 980px);
   padding: clamp(7rem, 14vw, 9.5rem) 0 clamp(4rem, 9vw, 6.5rem);
 }
 .lq-picker-inner {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  gap: clamp(2rem, 6vw, 5rem);
+  gap: clamp(2rem, 5vw, 4.5rem);
   align-items: center;
+}
+@media (min-width: 60rem) {
+  .lq-picker-inner { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); }
+  /* Cards lead on the left, copy sits right. The markup keeps copy first so a
+     stacked phone still gets the orientation before the branch buttons. */
+  .lq-picker-lanes { order: 1; }
+  .lq-picker-copy { order: 2; }
 }
 .lq-picker-wm {
   display: block;
@@ -8165,4 +8200,162 @@ button.bk-ticket-compact {
   justify-content: space-between;
   gap: 0.5rem;
   min-height: 2.75rem;
+}
+
+/* ---- Booking: navy hero, grouped fields, lifted form ------------------- */
+.booking-page { padding: 0; background: var(--color-surface-page); }
+.booking-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(6.5rem, 11vw, 9rem) 0 clamp(2.25rem, 4vw, 3.5rem);
+  color: var(--color-text-inverse);
+}
+.booking-hero-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.3;
+}
+.booking-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    168deg,
+    rgba(2, 10, 49, 0.58) 0%,
+    rgba(2, 10, 49, 0.9) 68%,
+    var(--color-surface-cinematic) 100%
+  );
+}
+.booking-hero-in { position: relative; z-index: 1; }
+.booking-hero .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #9db4ff;
+}
+.booking-hero .eyebrow::before {
+  content: '';
+  width: 1.35rem;
+  height: 1px;
+  background: currentColor;
+  flex: none;
+}
+.booking-hero-title {
+  margin: 1.15rem 0 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+  line-height: 0.9;
+  font-size: clamp(2rem, 5.4vw, 4.1rem);
+}
+.booking-hero-title i { font-style: italic; color: #9db4ff; }
+.booking-hero-lede {
+  margin: 1.35rem 0 0;
+  max-width: 54ch;
+  color: rgba(241, 241, 237, 0.86);
+  font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+  line-height: 1.65;
+}
+.booking-page .booking-grid {
+  grid-template-columns: 20rem minmax(0, 1fr);
+  gap: clamp(1.25rem, 2.5vw, 1.9rem);
+  padding: clamp(1.75rem, 3vw, 2.75rem) 0 clamp(3.5rem, 7vw, 5.5rem);
+  align-items: start;
+}
+@media (max-width: 60rem) {
+  .booking-page .booking-grid { grid-template-columns: 1fr; }
+}
+.booking-rail { display: grid; gap: 0.875rem; }
+.booking-rail-card {
+  padding: 1.4rem;
+  border-radius: 1rem;
+  background: var(--color-white);
+  box-shadow: var(--shadow-card);
+}
+.booking-rail-card .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--color-brand-primary);
+}
+.booking-rail-card .eyebrow::before {
+  content: '';
+  width: 1rem;
+  height: 1px;
+  background: currentColor;
+  flex: none;
+}
+.booking-rail-card p:not(.eyebrow) {
+  margin: 0.85rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+.booking-rail-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.875rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(5, 38, 153, 0.42);
+  border-radius: var(--radius-pill);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--color-brand-primary);
+  transition: background 160ms ease;
+}
+.booking-rail-cta:hover { background: rgba(5, 38, 153, 0.06); }
+.booking-page .booking-form {
+  border-radius: 1rem;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  box-shadow: var(--shadow-card);
+}
+/* Each group re-declares the grid so the two-column rhythm survives the
+   fieldsets. Legends are set apart by weight and a rule so they do not read
+   as another field label. */
+.booking-group {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+@media (min-width: 40rem) {
+  .booking-group { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.booking-group + .booking-group { padding-top: 1.6rem; }
+.booking-legend {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 0.15rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-surface-cinematic);
+}
+.booking-legend::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-light);
 }

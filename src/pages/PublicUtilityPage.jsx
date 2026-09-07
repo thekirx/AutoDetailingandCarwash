@@ -1,4 +1,5 @@
 import { Sparkles } from 'lucide-react'
+import queueHeroPoster from '../assets/hero/bredesign-hero-poster.webp'
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
@@ -33,8 +34,9 @@ export function QueuePage() {
 
   return (
     <section className="lq-picker">
-      <div className="lq-picker-bg" aria-hidden />
-      <div className="lq-picker-noise" aria-hidden />
+      {/* The hero still under the brand gradient, the same shape the interior
+          marketing pages open on — so arriving from the site keeps one language. */}
+      <img className="lq-picker-media" src={queueHeroPoster} alt="" />
       <div className="public-shell lq-picker-inner">
         <div className="lq-picker-copy">
           <img src="/branding/hakum-wm-ow.png" alt="Hakum" className="lq-picker-wm" width={180} height={44} />
@@ -234,20 +236,42 @@ export function BookingPage() {
 
   return (
     <section className="booking-page">
-      <div className="public-shell booking-grid">
-        <div>
+      {/* Navy hero over the working surface — the same shape /queue and the
+          interior marketing pages use, so the seam from the site is gone. */}
+      <header className="booking-hero">
+        <img className="booking-hero-media" src={queueHeroPoster} alt="" />
+        <div className="public-shell booking-hero-in">
           <p className="eyebrow">Book a service</p>
-          <h1 className="section-title">Your car’s next<br />chapter starts here.</h1>
-          <p>Tell us what you drive and when you’d like to visit. Works with or without an account — we’ll SMS you updates.</p>
-          {packageNote ? <p className="field-hint" style={{ marginTop: 12 }}>Selected: {packageNote}</p> : null}
-          <p style={{ marginTop: 12 }}>
-            Have an account? <Link to="/signin">Sign in</Link> so this visit appears under My account.
-          </p>
+          <h1 className="booking-hero-title">Your car’s next<br /><i>chapter</i> starts here.</h1>
+          <p className="booking-hero-lede">Tell us what you drive and when you’d like to visit. Works with or without an account — we’ll SMS you updates.</p>
         </div>
+      </header>
+      <div className="public-shell booking-grid">
+        <aside className="booking-rail">
+          <div className="booking-rail-card">
+            <p className="eyebrow">Have an account?</p>
+            <p>Sign in first and this visit appears under My account, with history kept against your plate.</p>
+            <Link to="/signin" className="booking-rail-cta">Sign in</Link>
+          </div>
+          {packageNote ? (
+            <div className="booking-rail-card">
+              <p className="eyebrow">Selected</p>
+              <p>{packageNote}</p>
+            </div>
+          ) : null}
+        </aside>
         <form onSubmit={submit} className="booking-form">
+          {/* Ten fields in one flat list is the real usability problem here,
+              so they are grouped. Presentation only — same fields, same handlers. */}
+          <fieldset className="booking-group">
+            <legend className="booking-legend">01 — You</legend>
           <label>First name<input required value={form.customer_first_name} placeholder="Juan" onChange={update('customer_first_name')} /></label>
           <label>Last name<input required value={form.customer_last_name} placeholder="Dela Cruz" onChange={update('customer_last_name')} /></label>
           <label>Mobile number<input required value={form.customer_phone} placeholder="09XX XXX XXXX" onChange={update('customer_phone')} /></label>
+          </fieldset>
+
+          <fieldset className="booking-group">
+            <legend className="booking-legend">02 — Your car</legend>
           <label>
             Plate / sticker
             <input required value={form.vehicle_plate} placeholder="ABC 1234 or CS 123456" onChange={update('vehicle_plate')} autoComplete="off" autoCapitalize="characters" />
@@ -272,6 +296,10 @@ export function BookingPage() {
               ))}
             </select>
           </label>
+          </fieldset>
+
+          <fieldset className="booking-group">
+            <legend className="booking-legend">03 — Your visit</legend>
           <label className="booking-span-2">Preferred date & time<input required type="datetime-local" value={form.scheduled_start} onChange={update('scheduled_start')} /></label>
           <label className="booking-span-2">
             Service
@@ -297,6 +325,8 @@ export function BookingPage() {
               {branches.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
             </select>
           </label>
+          </fieldset>
+
           <FormLegalNotice id="book-legal" className="form-legal-notice booking-span-2" />
           {(error || branchesError) && <p className="form-error">{error || branchesError}</p>}
           <button disabled={status === 'loading' || branchesLoading || !form.branch} className="button button-blue">
