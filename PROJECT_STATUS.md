@@ -1,44 +1,53 @@
 # Project Status
 
-**Last Updated:** 2026-09-03T13:52:16Z  
+**Last Updated:** 2026-09-07 (Asia/Manila)  
 **Current Branch:** main  
-**Current Commit:** `2855dac`
+**Current Commit:** `27fd7f4` (pulled) + **local fixes uncommitted** (Windows BreDESIGN browser harness)
 
 ## Executive Summary
 
-The **Ultimate QA readiness gate** is now **fully green** for **unit + live API slices + UI P0 + responsive matrix** via `npm run test:readiness` (exit code **0**).  
-Remaining work is **production ops** verification (BrandTxt SMS egress allow-list, `OWNER_SMS_PHONE`/owner SMS DLR, Auth SMTP) plus any optional end-to-end **browser money→payroll** proof.
+Pulled **BreDESIGN public rebuild** (`27fd7f4`, PR #8). Production **build PASS**. Full suite **1194/1194 PASS** with preview on `:4173` after fixing Mac-only Chrome paths and OS `prefers-reduced-motion` pollution in browser tests.
+
+Customer PWA redesign remains on `main` (prior `8bad996`). Remaining product polish/doc/theme/ops cutover items from the prior PO audit still apply.
 
 ## Tech Stack
 
-- **Frontend:** Vite + React
-- **Backend/Data:** Supabase (Postgres RPC) + auth/RLS
-- **Testing:** Node `node:test` + Puppeteer (UI), scripted e2e orchestration
+- **Frontend:** Vite + React  
+- **Backend/Data:** Supabase + Vercel API  
+- **Testing:** Node `node:test` + Puppeteer (unit runner includes `*.browser.test.js` — needs `vite preview` on `:4173`)
 
-## Testing
+## Testing (this session — 2026-09-07)
 
-- `npm test` via readiness orchestrator: **PASS**
-- `npm run test:readiness` (Ultimate gate): **PASS** (13–14 passes depending on run, last run below)
-- UI P0: **PASS**
-- Responsive matrix: **PASS** or **CONDITIONAL** (cosmetic-only)
+| Claim | Command | Result |
+|---|---|---|
+| Pull | `git pull --ff-only origin main` | **PASS** · `8bad996` → `27fd7f4` |
+| Production build | `npm run build` | **PASS** · exit 0 |
+| Unit + browser suite | `npm test` (preview `:4173`) | **PASS** · **1194/1194** · exit 0 |
+| Full readiness orch | `npm run test:readiness` | **NOT RE-RUN** this session |
 
-## Feature Status
+## Local fixes after pull (uncommitted)
 
-| Feature | Tests | Status |
-|---|---:|---|
-| Auth / session / RBAC | Passing | VERIFIED (via unit + orchestrator slices) |
-| Queue → POS → attendance/payroll slices | Passing | VERIFIED |
-| UI P0 (Puppeteer) | Passing | VERIFIED |
-| Responsive matrix | Passing (cosmetic gates) | VERIFIED (CONDITIONAL only) |
-| Money path surfaces (TL deny, admin EoS wizard open, boss finance tab) | Passing | VERIFIED (non-destructive) |
-| Money submit+accept (RPC) | Passing | VERIFIED (QA sandbox) |
-| Full browser money→payroll end-to-end | Not proven in this campaign | NEEDS VERIFICATION (ops/UX pack) |
+1. `tests/puppeteerLaunch.js` — cross-platform Chrome + emulate `prefers-reduced-motion: no-preference`
+2. BreDESIGN / service-detail browser tests use that helper (was hardcoding macOS Chrome path)
+3. Mobile PPF hero CSS: `justify-content:center` (aligned with BreDESIGN intent; reduced-motion was the real centering failure on this host)
 
-## Known Bugs / Residual Risks
+## Feature Status (unchanged high-level)
 
-- **BUG-002:** BrandTxt production SMS egress IP allow-list (ops)
-- **BUG-003:** `OWNER_SMS_PHONE` on Vercel (ops env)
-- **BUG-004:** CHEM-RECON production recon approval workflow (ops/manual)
-- **BUG-007:** Full browser money→payroll end-to-end still not proven (RPC submit+accept proven; payroll link still needs end-to-end confirmation)
-- **BUG-005:** Pending sms_events rows after DELIVRD (open; needs tracing if you want full SMS DLR automation)
+| Feature | Status |
+|---|---|
+| Ops NewRevisions | COMPLETE (ops cutover residuals remain) |
+| Customer portal redesign | COMPLETE (doc/theme policy drift remains) |
+| Public BreDESIGN marketing | LIVE on `main` (`27fd7f4`) |
+| BUG-007 money→payroll browser E2E | NEEDS VERIFICATION |
+| Production SMS / OWNER_SMS / chem recon | PARTIAL (ops) |
 
+## Recommended Next Action
+
+**Commit + push** the Windows browser-harness fixes, then either (A) lock customer theme + reconcile docs, or (C) ops cutover / BUG-007 proof.
+
+## Git State
+
+```text
+Branch: main @ 27fd7f4 + local test/CSS fixes
+Untracked noise: Brand Assets/, skill md, tmp-* — do not commit without intent
+```

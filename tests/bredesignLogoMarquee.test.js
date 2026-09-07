@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict'
 import { after, before, beforeEach, describe, it } from 'node:test'
-import puppeteer from 'puppeteer'
+import { launchPuppeteer, newPreparedPage } from './puppeteerLaunch.js'
 
 const PREVIEW_ORIGIN = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:4173'
 const PREVIEW_URL = process.env.PREVIEW_URL || new URL('/home', PREVIEW_ORIGIN).href
-const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 
 const hoverVisibleBrand = async (page) => {
   const marqueePoint = await page.$eval('.bd-marquee', (marquee) => {
@@ -29,13 +28,8 @@ describe('BreDESIGN brand logo marquee', () => {
   let page
 
   before(async () => {
-    browser = await puppeteer.launch({
-      executablePath: CHROME_PATH,
-      headless: true,
-      args: ['--no-sandbox'],
-    })
-    page = await browser.newPage()
-    await page.setViewport({ width: 1440, height: 900 })
+    browser = await launchPuppeteer()
+    page = await newPreparedPage(browser, { width: 1440, height: 900 })
   })
 
   beforeEach(async () => {

@@ -1,22 +1,16 @@
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
-import puppeteer from 'puppeteer'
+import { launchPuppeteer, newPreparedPage } from './puppeteerLaunch.js'
 
 const PREVIEW_ORIGIN = process.env.PUBLIC_TEST_URL || process.env.PREVIEW_ORIGIN || 'http://127.0.0.1:4173'
-const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 
 describe('BreDESIGN public page fallbacks', () => {
   let browser
   let page
 
   before(async () => {
-    browser = await puppeteer.launch({
-      executablePath: CHROME_PATH,
-      headless: true,
-      args: ['--no-sandbox'],
-    })
-    page = await browser.newPage()
-    await page.setViewport({ width: 1440, height: 900 })
+    browser = await launchPuppeteer()
+    page = await newPreparedPage(browser, { width: 1440, height: 900 })
   })
 
   after(async () => {

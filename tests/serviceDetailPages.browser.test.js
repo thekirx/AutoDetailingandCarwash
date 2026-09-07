@@ -1,16 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import puppeteer from 'puppeteer'
+import { launchPuppeteer, prepareBrowserPage } from './puppeteerLaunch.js'
 
 const BASE_URL = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:4173'
 
 const count = (page, selector) => page.$$eval(selector, (nodes) => nodes.length)
 
 async function withPage(path, run, viewport = { width: 1280, height: 900, deviceScaleFactor: 1 }) {
-  const browser = await puppeteer.launch({ headless: true })
+  const browser = await launchPuppeteer()
   try {
     const page = await browser.newPage()
-    await page.setViewport(viewport)
+    await prepareBrowserPage(page, viewport)
     await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' })
     await page.waitForSelector('main')
     await run(page)

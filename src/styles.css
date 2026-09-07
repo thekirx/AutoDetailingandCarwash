@@ -6119,8 +6119,9 @@ a.home-branch-card:hover { background:#052699; }
     background:linear-gradient(180deg,rgba(5,5,5,.6) 0,rgba(5,5,5,.2) 30%,rgba(5,5,5,.35) 70%,rgba(5,5,5,.85) 100%);
   }
   .ppf-information-pin .ppf-information-heading {
-    padding:calc(env(safe-area-inset-top,0px) + 78px) 20px calc(env(safe-area-inset-bottom,0px) + 20px);
-    justify-content:flex-start;
+    /* Match BreDESIGN service hero: center intro in the pin, not under the header. */
+    padding:calc(env(safe-area-inset-top,0px) + 88px) 20px calc(env(safe-area-inset-bottom,0px) + 24px);
+    justify-content:center;
   }
   .ppf-information-pin .ppf-information-heading>p { margin-bottom:16px; font-size:clamp(13px,3.8vw,17px); letter-spacing:.22em; }
   .ppf-information-pin .ppf-information-heading h2 {
