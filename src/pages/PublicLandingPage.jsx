@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+import BdAppPreview from '../components/public/bredesign/BdAppPreview'
 import BdHero from '../components/public/bredesign/BdHero'
 import BdProducts from '../components/public/bredesign/BdProducts'
 import { BdBranches, BdEvents } from '../components/public/bredesign/BdEventsBranches'
@@ -52,6 +53,7 @@ export default function PublicLandingPage() {
       <BdHero locationLine={locationLine} />
       <BdOrigin />
       <BdServices />
+      <BdAppPreview />
       <BdPhotos />
       <BdEvents state={content.event} />
       <BdBranches branches={visibleBranches} />

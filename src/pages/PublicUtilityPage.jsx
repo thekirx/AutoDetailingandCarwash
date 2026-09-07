@@ -1,4 +1,5 @@
 import { Sparkles } from 'lucide-react'
+import queueHeroPoster from '../assets/hero/bredesign-hero-poster.webp'
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
@@ -33,11 +34,45 @@ export function QueuePage() {
 
   return (
     <section className="lq-picker">
-      <div className="lq-picker-bg" aria-hidden />
-      <div className="lq-picker-noise" aria-hidden />
-      <div className="public-shell lq-picker-inner">
+      {/* One field: the hero still under the brand gradient, with the branch
+          cards and the copy sharing it rather than stacking. */}
+      <img className="lq-picker-media" src={queueHeroPoster} alt="" />
+      <div className="public-shell lq-picker-split">
+        <div className="lq-picker-lanes" aria-label="Branches">
+          {error ? <p className="lq-picker-error">{error}</p> : null}
+          {loading ? (
+            <>
+              <div className="lq-skeleton lq-skeleton-lane-card" />
+              <div className="lq-skeleton lq-skeleton-lane-card" />
+            </>
+          ) : null}
+          {branches.map((b, index) => (
+            <article key={b.slug} className="lq-lane-card" style={{ '--i': index }}>
+              <div className="lq-lane-id">
+                <img src="/branding/hakum-mark-ow.png" alt="" className="lq-lane-card-mark" width={38} height={38} />
+                <div className="lq-lane-copy">
+                  <strong>{b.name}</strong>
+                  <span>{b.address || b.slug}</span>
+                </div>
+              </div>
+              <div className="lq-lane-actions">
+                <Link to={`/queue/${b.slug}`} className="lq-lane-cta lq-lane-cta-primary">
+                  Customer
+                </Link>
+                <Link to={`/queue/${b.slug}/tv`} className="lq-lane-cta">
+                  Shop TV
+                </Link>
+              </div>
+            </article>
+          ))}
+          {!loading && !branches.length ? (
+            <p className="lq-picker-empty">No active branches yet.</p>
+          ) : null}
+        </div>
+
         <div className="lq-picker-copy">
           <img src="/branding/hakum-wm-ow.png" alt="Hakum" className="lq-picker-wm" width={180} height={44} />
+          {/* With no counts on the card, the pulse is what says this is live. */}
           <p className="lq-kicker">
             <span className="lq-pulse">
               <span className="lq-pulse-dot" aria-hidden />
@@ -52,40 +87,6 @@ export function QueuePage() {
           <p className="lq-picker-lede">
             Customer view shows counts only. Shop TV shows plate and service for the floor display.
           </p>
-        </div>
-
-        <div className="lq-picker-lanes" aria-label="Branches">
-          {error ? <p className="lq-picker-error">{error}</p> : null}
-          {loading ? (
-            <>
-              <div className="lq-skeleton lq-skeleton-lane-card" />
-              <div className="lq-skeleton lq-skeleton-lane-card" />
-            </>
-          ) : null}
-          {branches.map((b, index) => (
-            <article key={b.slug} className="lq-lane-card lq-lane-card-split" style={{ '--i': index }}>
-              <span className="lq-lane-card-shell">
-                <span className="lq-lane-card-core">
-                  <img src="/branding/hakum-mark-ow.png" alt="" className="lq-lane-card-mark" width={40} height={40} />
-                  <span className="lq-lane-card-copy">
-                    <strong>{b.name}</strong>
-                    <span>{b.address || b.slug}</span>
-                  </span>
-                </span>
-                <span className="lq-lane-card-actions">
-                  <Link to={`/queue/${b.slug}`} className="lq-lane-card-cta">
-                    Customer
-                  </Link>
-                  <Link to={`/queue/${b.slug}/tv`} className="lq-lane-card-cta lq-lane-card-cta-tv">
-                    Shop TV
-                  </Link>
-                </span>
-              </span>
-            </article>
-          ))}
-          {!loading && !branches.length ? (
-            <p className="lq-picker-empty">No active branches yet.</p>
-          ) : null}
         </div>
       </div>
     </section>
@@ -234,69 +235,97 @@ export function BookingPage() {
 
   return (
     <section className="booking-page">
-      <div className="public-shell booking-grid">
-        <div>
+      {/* Navy hero over the paper working surface — the same shape /queue and
+          the interior marketing pages use, so the seam from the site is gone. */}
+      <header className="booking-hero">
+        <img className="booking-hero-media" src={queueHeroPoster} alt="" />
+        <div className="public-shell booking-hero-in">
           <p className="eyebrow">Book a service</p>
-          <h1 className="section-title">Your car’s next<br />chapter starts here.</h1>
-          <p>Tell us what you drive and when you’d like to visit. Works with or without an account — we’ll SMS you updates.</p>
-          {packageNote ? <p className="field-hint" style={{ marginTop: 12 }}>Selected: {packageNote}</p> : null}
-          <p style={{ marginTop: 12 }}>
-            Have an account? <Link to="/signin">Sign in</Link> so this visit appears under My account.
-          </p>
+          <h1 className="booking-hero-title">Your car’s next<br /><i>chapter</i> starts here.</h1>
+          <p className="booking-hero-lede">Tell us what you drive and when you’d like to visit. Works with or without an account — we’ll SMS you updates.</p>
         </div>
+      </header>
+      <div className="public-shell booking-grid">
+        <aside className="booking-rail">
+          <div className="booking-rail-card">
+            <p className="eyebrow">Have an account?</p>
+            <p>Sign in first and this visit appears under My account, with history kept against your plate.</p>
+            <Link to="/signin" className="booking-rail-cta">Sign in</Link>
+          </div>
+          {packageNote ? (
+            <div className="booking-rail-card">
+              <p className="eyebrow">Selected</p>
+              <p>{packageNote}</p>
+            </div>
+          ) : null}
+        </aside>
         <form onSubmit={submit} className="booking-form">
-          <label>First name<input required value={form.customer_first_name} placeholder="Juan" onChange={update('customer_first_name')} /></label>
-          <label>Last name<input required value={form.customer_last_name} placeholder="Dela Cruz" onChange={update('customer_last_name')} /></label>
-          <label>Mobile number<input required value={form.customer_phone} placeholder="09XX XXX XXXX" onChange={update('customer_phone')} /></label>
-          <label>
-            Plate / sticker
-            <input required value={form.vehicle_plate} placeholder="ABC 1234 or CS 123456" onChange={update('vehicle_plate')} autoComplete="off" autoCapitalize="characters" />
-            <span className="field-hint">{plateHint || PLATE_FIELD_HINT}</span>
-          </label>
-          <VehicleMakeModelFields
-            make={form.vehicle_make}
-            model={form.vehicle_model}
-            onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
-            onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
-            variant="public"
-            makeLabel="Vehicle brand"
-            modelLabel="Vehicle model"
-          />
-          <label className="booking-span-2">
-            Car size
-            <select required value={form.vehicle_type} onChange={update('vehicle_type')}>
-              {PRICING_SIZES.map((sz) => (
-                <option key={sz.slug} value={sz.slug}>
-                  {sz.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="booking-span-2">Preferred date & time<input required type="datetime-local" value={form.scheduled_start} onChange={update('scheduled_start')} /></label>
-          <label className="booking-span-2">
-            Service
-            <select required value={form.service_id} onChange={update('service_id')}>
-              <option value="">Select service</option>
-              {services.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} · {formatSizePriceRange(s, formatPeso)}
-                </option>
-              ))}
-            </select>
-            {form.service_id ? (
-              <span className="field-hint">
-                {PRICING_SIZES.find((s) => s.slug === form.vehicle_type)?.label}:{' '}
-                {formatPeso(resolveServicePriceMinor(services.find((s) => s.id === form.service_id), form.vehicle_type))}
-              </span>
-            ) : null}
-          </label>
-          <label className="booking-span-2">
-            Branch
-            <select required value={form.branch} onChange={update('branch')} disabled={branchesLoading}>
-              <option value="">Select branch</option>
-              {branches.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
-            </select>
-          </label>
+          {/* Ten fields in one flat list is the real usability problem here, so
+              they are grouped. Presentation only — same fields, same handlers. */}
+          <fieldset className="booking-group">
+            <legend className="booking-legend">01 — You</legend>
+            <label>First name<input required value={form.customer_first_name} placeholder="Juan" onChange={update('customer_first_name')} /></label>
+            <label>Last name<input required value={form.customer_last_name} placeholder="Dela Cruz" onChange={update('customer_last_name')} /></label>
+            <label>Mobile number<input required value={form.customer_phone} placeholder="09XX XXX XXXX" onChange={update('customer_phone')} /></label>
+          </fieldset>
+
+          <fieldset className="booking-group">
+            <legend className="booking-legend">02 — Your car</legend>
+            <label>
+              Plate / sticker
+              <input required value={form.vehicle_plate} placeholder="ABC 1234 or CS 123456" onChange={update('vehicle_plate')} autoComplete="off" autoCapitalize="characters" />
+              <span className="field-hint">{plateHint || PLATE_FIELD_HINT}</span>
+            </label>
+            <VehicleMakeModelFields
+              make={form.vehicle_make}
+              model={form.vehicle_model}
+              onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
+              onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
+              variant="public"
+              makeLabel="Vehicle brand"
+              modelLabel="Vehicle model"
+            />
+            <label className="booking-span-2">
+              Car size
+              <select required value={form.vehicle_type} onChange={update('vehicle_type')}>
+                {PRICING_SIZES.map((sz) => (
+                  <option key={sz.slug} value={sz.slug}>
+                    {sz.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
+
+          <fieldset className="booking-group">
+            <legend className="booking-legend">03 — Your visit</legend>
+            <label className="booking-span-2">
+              Service
+              <select required value={form.service_id} onChange={update('service_id')}>
+                <option value="">Select service</option>
+                {services.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} · {formatSizePriceRange(s, formatPeso)}
+                  </option>
+                ))}
+              </select>
+              {form.service_id ? (
+                <span className="field-hint field-hint-price">
+                  {PRICING_SIZES.find((s) => s.slug === form.vehicle_type)?.label}:{' '}
+                  {formatPeso(resolveServicePriceMinor(services.find((s) => s.id === form.service_id), form.vehicle_type))}
+                </span>
+              ) : null}
+            </label>
+            <label className="booking-span-2">Preferred date &amp; time<input required type="datetime-local" value={form.scheduled_start} onChange={update('scheduled_start')} /></label>
+            <label className="booking-span-2">
+              Branch
+              <select required value={form.branch} onChange={update('branch')} disabled={branchesLoading}>
+                <option value="">Select branch</option>
+                {branches.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
+              </select>
+            </label>
+          </fieldset>
+
           <FormLegalNotice id="book-legal" className="form-legal-notice booking-span-2" />
           {(error || branchesError) && <p className="form-error">{error || branchesError}</p>}
           <button disabled={status === 'loading' || branchesLoading || !form.branch} className="button button-blue">

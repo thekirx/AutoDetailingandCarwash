@@ -4,3 +4,8 @@ assets.json
 mock-*.html
 site/
 logos/build/
+
+# Self-contained review mocks for the webapp surfaces. Same reason as above:
+# every font and image is inlined as base64 so they open without a dev server,
+# which makes them megabytes each. They are review artefacts, not sources.
+webapp/

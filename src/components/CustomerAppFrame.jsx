@@ -1,6 +1,8 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import CustomerAccountDock from '@/components/CustomerAccountDock'
+import heroPoster from '@/assets/hero/bredesign-hero-poster.webp'
+import { useAppTheme } from '@/lib/useAppTheme'
 
 /**
  * Customer account chrome.
@@ -18,8 +20,14 @@ export default function CustomerAppFrame({
 }) {
   const showTop = Boolean(title || backTo || onBack || actions)
 
+  const { theme } = useAppTheme()
+
   return (
-    <div className="capp">
+    <div
+      className="capp"
+      data-theme={theme}
+      style={{ '--capp-hero-img': `url(${heroPoster})` }}
+    >
       <div className="capp-stage">
         {hero || null}
         {showTop ? (

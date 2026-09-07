@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Car, ClipboardList, Gauge, MapPin, Sparkles, Users } from 'lucide-react'
+import authHeroPoster from '../assets/hero/bredesign-hero-poster.webp'
 
 /** Split auth shell — Hakum cinematic blue + light form (Kado-style layout, Hakum brand). */
 export default function HakumAuthShell({
@@ -11,7 +12,7 @@ export default function HakumAuthShell({
   footerLinks,
 }) {
   return (
-    <div className="hakum-auth">
+    <div className="hakum-auth" style={{ '--hakum-auth-img': `url(${authHeroPoster})` }}>
       <aside className="hakum-auth-brand">
         <Link className="hakum-auth-wordmark" to="/home" aria-label="Hakum Auto Care home">
           <img src="/branding/hakum-lw-ow.png" alt="" width="92" height="52" />

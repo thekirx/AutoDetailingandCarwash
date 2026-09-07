@@ -5,10 +5,12 @@ import {
   CalendarDays,
   CalendarPlus,
   LogOut,
+  Moon,
   Radio,
   Receipt,
   Settings,
   Star,
+  Sun,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { getAccessTokenFresh } from '@/lib/authToken'
@@ -19,6 +21,7 @@ import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
+import { useAppTheme } from '@/lib/useAppTheme'
 import LoyaltyCard from '@/components/LoyaltyCard'
 import NotificationBell from '@/components/NotificationBell'
 import CustomerBookingModal from '@/components/CustomerBookingModal'
@@ -58,6 +61,7 @@ function branchLabel(branches, slug) {
 }
 
 export default function CustomerAccountPage() {
+  const { theme, toggleTheme } = useAppTheme()
   const { profile: authProfile, user, session, signOut, loading: authLoading } = useAuth()
   const [branches, setBranches] = useState([])
   const [selectedBranch, setSelectedBranch] = useState('')
@@ -299,6 +303,15 @@ export default function CustomerAccountPage() {
               </div>
               {/* Mobile/PWA app chrome — hidden on desktop (landing header owns bell + account) */}
               <div className="capp-icon-row account-mobile-only">
+                <button
+                  type="button"
+                  className="capp-icon-btn"
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  aria-pressed={theme === 'dark'}
+                >
+                  {theme === 'dark' ? <Sun size={18} strokeWidth={1.75} /> : <Moon size={18} strokeWidth={1.75} />}
+                </button>
                 <button type="button" className="capp-icon-btn" onClick={() => openSettings('alerts')} aria-label="Settings">
                   <Settings size={18} strokeWidth={1.75} />
                 </button>
@@ -309,6 +322,9 @@ export default function CustomerAccountPage() {
               </div>
               {/* Desktop web — quiet utilities; no second bell */}
               <div className="capp-web-actions account-desktop-only">
+                <button type="button" className="capp-web-link" onClick={toggleTheme}>
+                  {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                </button>
                 <button type="button" className="capp-web-link" onClick={() => openSettings('account')}>
                   Settings
                 </button>
