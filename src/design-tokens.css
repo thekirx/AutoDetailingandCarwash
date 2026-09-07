@@ -108,7 +108,7 @@
   --capp-ink: var(--color-surface-cinematic);
   --capp-navy: var(--color-brand-primary);
   --capp-foam: var(--color-surface-page);
-  --capp-porcelain: #fbfcff;
+  --capp-porcelain: var(--color-white);
   --capp-steel: #5c6578;
   --capp-line: color-mix(in srgb, var(--color-brand-primary) 12%, transparent);
   --capp-ease: cubic-bezier(0.32, 0.72, 0, 1);
