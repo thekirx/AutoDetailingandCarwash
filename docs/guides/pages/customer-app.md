@@ -1,21 +1,29 @@
 ﻿# Customer app
 
-**Routes:** `/account`, `/account/queue`, `/account/blog`, `/account/events`, `/signin`, `/signup`  
-**Shell:** capp + HakumAuthShell
+**Routes:** `/account`, `/account/book`, `/account/queue`, `/account/blog`, `/account/loyalty`, `/account/more`, `/account/events`, `/signin`, `/signup`  
+**Shell:** `.capp` + HakumAuthShell (auth)
 
 ## Purpose
-Loyalty home, garage, live queue, content, auth.
+Loyalty home, book, garage, live queue, visit progress, content, auth.
 
 ## Layout
 ```
 [Safe-area top]
-[Hero status / loyalty]
+[Brand + greeting / active visit]
 [Sections]
-[Island dock]
+[Island dock — 5 tabs]
 ```
 
+## Nav (dock)
+
+Home · Book · Queue · Blog · More  
+Secondary: Events, Loyalty (tiles / More).
+
 ## Components
-CustomerAppFrame, CustomerAccountDock, sheets, StatusBadge for queue.
+CustomerAppFrame, CustomerAccountDock, ActiveVisitCard, VisitProgress, CustomerUi primitives.
+
+## Theme
+Light default + dark via `html.dark` (More → Light/Dark). Dual brand lockups.
 
 ## Responsive
-Mobile-first; desktop phone stage. Respect Dynamic Island insets.
+Mobile-first app shell; ≥860px landing header + wide stage (not phone-on-bay). Landscape side dock. Evidence: `docs/qa/responsive-report.md`.

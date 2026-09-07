@@ -133,7 +133,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
           const { data: sessionData } = await supabase.auth.getSession()
           const token = sessionData?.session?.access_token
           if (token) {
-            await fetch('/api/notify-shift-close', {
+            const notifyRes = await fetch('/api/notify-shift-close', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -145,6 +145,18 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                 close_id: selected.id,
               }),
             })
+            const notifyBody = await notifyRes.json().catch(() => null)
+            // ponytail: distinct severity so Finance hears notify outcome (a11y: not silent)
+            const ownerSms = notifyBody?.notify?.ownerSms
+            if (ownerSms?.skipped === 'no_owner_phone') {
+              toast.warning('Owner SMS skipped — set OWNER_SMS_PHONE or BossMich phone')
+            } else if (ownerSms?.error) {
+              toast.warning(`Owner SMS failed — ${String(ownerSms.error).slice(0, 120)}`)
+            } else if (Number(ownerSms?.sent) > 0) {
+              toast.success(`Owner SMS sent (${ownerSms.sent})`)
+            } else if (!notifyRes.ok) {
+              toast.warning('Owner SMS notify request failed')
+            }
           }
         } catch {
           /* inbox already written by RPC; push is best-effort */

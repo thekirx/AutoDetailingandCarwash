@@ -653,6 +653,12 @@ export default function BookingBoardPage() {
         ? 'Booking cancelled'
         : `Moved to ${label}${body.notify?.sms?.ok ? ' · SMS sent' : ''}`,
     )
+    // ponytail: Experience card create is best-effort — surface failure so ops don't hunt Planning
+    if (body.experienceCard?.error) {
+      toast.warning(`Experience ticket not created — ${String(body.experienceCard.error).slice(0, 120)}`)
+    } else if (body.experienceCard?.id) {
+      toast.message('Experience ticket opened on Planning → Experience')
+    }
     load()
     return true
   }

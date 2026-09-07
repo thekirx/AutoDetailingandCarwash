@@ -9,7 +9,7 @@
 | Desktop | ≥ 1280 | Command sidebar; Floor max-w-5xl rail layout |
 | Wide | ≥ 1440 | Same, more table columns |
 
-Customer capp: desktop keeps phone-on-bay (~430px) stage.
+Customer capp: phone-first; ≥860px landing header + wide content stage (phone-on-bay retired).
 
 ## CommandShell
 
@@ -35,8 +35,9 @@ Roles: Team Lead, Staff, Sales, Marketing, Detailer, Video Editor.
 ## Customer capp
 
 - Classes: `.capp` / `.capp-stage` / `.capp-dock` only (no parallel `.account-*` chrome)
-- Dock: Home / Blog / Events / Queue (≤4)
+- Dock: Home / Book / Queue / Blog / More (5)
 - Safe areas: `padding-top: max(1.1rem, env(safe-area-inset-top))`, bottom dock clears inset
+- Desktop ≥860px: dock becomes inline tab row; content `min(1120px, 100% - 3rem)`
 - Dynamic Island / notch: never put primary CTA under status bar
 - Sheets for settings and secondary actions
 - Desktop: phone stage on cinematic bay

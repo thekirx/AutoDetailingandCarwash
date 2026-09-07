@@ -1,6 +1,9 @@
 # 00 — Strict Payroll verdict
 
-**Date:** 2026-08-22  
+**Date:** 2026-08-22 (historical) · **Amended:** 2026-09-07  
+
+> **Amendment:** `pending_floor_optional` hard gate is **Closed** — see [09-GAPS-AND-RISKS.md](./09-GAPS-AND-RISKS.md) #2 and `floorConfirmBlockedByPendingCloses`. CA auto-deduct remains wizard-only by contract. Prefer 09 + MONEY-CONTRACT over the 08-22 scorecard rows below that still say FAIL for those two.
+
 **Question:** Is Payroll complete, correct, and honest for Hakum dual-track pay (crew/TL floor + fixed packages), pending closes, cash advances, and My Pay?
 
 ## Scorecard (strict)

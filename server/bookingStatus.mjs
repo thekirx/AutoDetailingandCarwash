@@ -31,9 +31,25 @@ function userClient(token) {
 const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'sales', 'team_lead', 'assistant_super_admin', 'operations_lead'])
 
 async function ensureExperienceListId(db) {
-  let { data: board } = await db.from('plan_boards').select('id').order('created_at', { ascending: true }).limit(1).maybeSingle()
+  // Reuse existing Experience list on any board (migration + prior completes).
+  const { data: existingAny } = await db
+    .from('plan_lists')
+    .select('id')
+    .eq('title', EXPERIENCE_LIST_TITLE)
+    .limit(1)
+    .maybeSingle()
+  if (existingAny?.id) return existingAny.id
+
+  const { data: boards } = await db
+    .from('plan_boards')
+    .select('id, name, created_at')
+    .order('created_at', { ascending: true })
+  let board =
+    (boards || []).find((b) => /hakum\s*planner/i.test(b.name) || /^planner$/i.test(String(b.name || '').trim())) ||
+    boards?.[0] ||
+    null
   if (!board?.id) {
-    const { data: created, error } = await db.from('plan_boards').insert({ name: 'Hakum Planning' }).select('id').single()
+    const { data: created, error } = await db.from('plan_boards').insert({ name: 'Hakum Planner' }).select('id').single()
     if (error) throw error
     board = created
   }

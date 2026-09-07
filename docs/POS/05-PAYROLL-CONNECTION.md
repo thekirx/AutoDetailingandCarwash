@@ -31,7 +31,7 @@ Accepted shift_close_reports
 | Coverage | Prefers claimed sale **business dates** on floor runs; else period fallback |
 | ₱ shown | Close attestation sales — **may diverge** from POS proof after overrides |
 
-`pending_floor_optional` exists on `compensation_settings` / Payroll Settings UI but is **not enforced** in `PayrollPage.jsx` today (dead policy flag).
+`pending_floor_optional = false` **hard-blocks** floor confirm in `PayrollPage` via `floorConfirmBlockedByPendingCloses` until closes in the period are accepted/locked (money contract D3). Live seam: `npm run e2e:shift-close-money` → `money.payroll.hard_gate_unlocked`.
 
 ## Fixed salary track
 

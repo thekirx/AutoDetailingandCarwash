@@ -57,7 +57,7 @@
 **Acceptance**
 
 - [x] `resolveAppHome({ role: 'customer' })` → `/account`
-- [x] Account tabs: Home, Blog, Events, Queue
+- [x] Account dock: Home, Book, Queue, Blog, More (+ Events/Loyalty secondary)
 - [x] Ops `/operations/*` denied for customer profile
 
 **Test seam:** `tests/appShell.test.js`, `tests/customerAppFrame.test.js`, `tests/rolePersonaCoverage.test.js`

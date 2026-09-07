@@ -60,7 +60,11 @@ export function pickPlannerBoard(boards, wantedIdOrName) {
   const rows = visiblePlannerBoards(boards)
   if (!rows.length) return null
   const key = String(wantedIdOrName || '')
-  return rows.find((b) => b.id === key || b.name === key) || rows[0]
+  const exact = rows.find((b) => b.id === key || b.name === key)
+  if (exact) return exact
+  // Prefer the ops Planner board (Experience tickets land here) over Cash Advance / Equipment.
+  const preferred = rows.find((b) => /hakum\s*planner/i.test(b.name) || /^planner$/i.test(String(b.name || '').trim()))
+  return preferred || rows[0]
 }
 
 export function nextPlanListPosition(lists) {

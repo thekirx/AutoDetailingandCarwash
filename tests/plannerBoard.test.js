@@ -39,6 +39,17 @@ describe('plannerBoard', () => {
     assert.deepEqual(visiblePlannerBoards(boards).map((b) => b.name), ['Planner', 'Equipment Repairs'])
     assert.equal(pickPlannerBoard(boards, '3').name, 'Equipment Repairs')
     assert.equal(pickPlannerBoard(boards, 'missing').name, 'Planner')
+    assert.equal(
+      pickPlannerBoard(
+        [
+          { id: 'a', name: 'Employee Cash Advance' },
+          { id: 'b', name: 'Equipment Repairs' },
+          { id: 'c', name: 'Planner' },
+        ],
+        null,
+      ).name,
+      'Planner',
+    )
     assert.equal(plannerTabFromSearch('forms'), 'forms')
     assert.equal(plannerTabFromSearch('nope'), 'board')
     assert.equal(plannerTabFromSearch(new URLSearchParams('tab=review')), 'review')

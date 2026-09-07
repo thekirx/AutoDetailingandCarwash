@@ -100,6 +100,13 @@ describe('QA: detailing calendar colors visible', () => {
     assert.doesNotMatch(src, /\[&_\.rbc-event\]:text-primary-foreground/)
     assert.match(src, /eventPropGetter=\{bookingCalendarEventPropGetter\}/)
   })
+
+  it('BookingBoard surfaces Experience ticket create result', () => {
+    const src = read('src/pages/BookingBoardPage.jsx')
+    assert.match(src, /experienceCard\?\.error/)
+    assert.match(src, /experienceCard\?\.id/)
+    assert.match(src, /Experience ticket/)
+  })
 })
 
 describe('QA: temp TL multi-branch branch stamp', () => {

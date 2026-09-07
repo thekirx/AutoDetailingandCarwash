@@ -9,7 +9,7 @@ Mode: redesign-overhaul. Content, routes under `/account`, and the backend contr
 - Language: dark navy app shell, one electric-blue accent, soft 16-20px cards on 1px hairlines, pill filters, status badges, 5-tab dock.
 - Dials: variance 4, motion 4 (150-300ms transforms only), density 5.
 - Fonts: existing Benzin (display) + Gilmer (body). Icons: lucide-react (already a dependency, 1.75 stroke).
-- Theme lock: the whole customer app is dark. The customer-only light/dark toggle is removed.
+- Theme: light-first with dark via `html.dark` (More → Light/Dark). Dark navy tokens remain the cinematic dark set; light tokens are first-class (responsive matrix PASS 2026-09-04).
 
 ## Tokens (scoped to `.capp`, `src/styles-customer-app.css`)
 

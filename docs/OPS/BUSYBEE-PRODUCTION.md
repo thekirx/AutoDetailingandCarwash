@@ -28,7 +28,7 @@ Never use `VITE_*` for BusyBee keys.
 
 Shop-wide gate: `app_settings.sms_notifications.enabled` must be `true`.
 
-**Current ops posture (2026-09-03):** BrandTxt confirmed whitelist for egress **`180.190.249.189`**. Local balance probe returns `ErrorCode: 0` with credits. Shop SMS gate turned **ON** after live send success. Toggle via CRM → SMS or:
+**Current ops posture (2026-09-07):** BrandTxt whitelist for office egress **`180.190.249.189`**. Shop SMS gate **ON**. **QA owner phone wired for testing:** `OWNER_SMS_PHONE=09625294043` (local `.env`) and live BossMich.phone=`09625294043`. Live accept notify proof: `SEND_LIVE_OWNER_SMS=1 npm run e2e:shift-close-money` → `money.owner_sms.notify_sent sent=1` (normalized to `639625294043`). Default e2e is dry (no SMS spam). **Still open:** set the same env on **Vercel** + whitelist Vercel static egress. Toggle shop gate via CRM → SMS or:
 
 ```bash
 node scripts/set-sms-shop-gate.mjs off
@@ -52,7 +52,8 @@ Production (Vercel) still needs **static egress IPs** whitelisted separately.
 
 ```bash
 node scripts/smoke-busybee.mjs
-SEND_TEST_SMS=1 TEST_SMS_PHONE=09XXXXXXXXX node scripts/smoke-busybee.mjs
+SEND_TEST_SMS=1 TEST_SMS_PHONE=09625294043 node scripts/smoke-busybee.mjs
+SEND_LIVE_OWNER_SMS=1 npm run e2e:shift-close-money
 node scripts/qa-sms-shop-gate.mjs
 ```
 
@@ -64,3 +65,15 @@ BrandTxt requires outbound IP whitelist. Provide:
 2. **Vercel production** — enable [Vercel Static IPs](https://vercel.com/docs/security/static-ip) (Pro+) and send fixed egress IPs, or ask BrandTxt for key-only auth if available
 
 Until Vercel IPs are whitelisted, production SMS will fail even with correct env vars.
+
+## Vercel `OWNER_SMS_PHONE` (ops runbook)
+
+Hakum production (`auto-detailingand-carwash.vercel.app`) is **not** linked under the current CLI context `jcuadys-projects` (account `jcuady`). Set env in the **Hakum** Vercel team/project:
+
+1. Vercel → Project → Settings → Environment Variables  
+2. Add `OWNER_SMS_PHONE` = `09625294043` (or real owner) for **Production** (+ Preview if needed)  
+3. Confirm `BUSYBEE_*` already present (server-only, not `VITE_*`)  
+4. Redeploy so the serverless runtime picks up the var  
+5. BrandTxt: whitelist Vercel **static** egress IPs (Pro+ Static IPs) — office IP alone is not enough  
+
+Local/office already proven: BossMich.phone + `.env` + `SEND_LIVE_OWNER_SMS=1 npm run e2e:shift-close-money` → `sent=1`.

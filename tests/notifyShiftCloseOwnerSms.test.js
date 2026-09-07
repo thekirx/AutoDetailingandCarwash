@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { buildOwnerDailySmsFromClose, buildShiftCloseAcceptCopy } from '../server/notifyShiftClose.mjs'
 
 const copy = buildShiftCloseAcceptCopy({ branch: 'bacoor', businessDate: '2026-08-27', closeId: 'c1' })
@@ -29,5 +32,16 @@ assert.match(sms, /BACOOR SALES REPORT/)
 assert.match(sms, /Car Wash Sales/)
 assert.match(sms, /Tint Sales/)
 assert.match(sms, /Carwash Salary/)
+
+const fin = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), '../src/pages/finance/FinanceShiftCloseTab.jsx'),
+  'utf8',
+)
+assert.match(fin, /\/api\/notify-shift-close/)
+assert.match(fin, /no_owner_phone/)
+assert.match(fin, /OWNER_SMS_PHONE/)
+assert.match(fin, /ownerSms\?\.error/)
+assert.match(fin, /toast\.warning/)
+assert.match(fin, /toast\.success\(`Owner SMS sent/)
 
 console.log('notifyShiftClose owner SMS: ok')

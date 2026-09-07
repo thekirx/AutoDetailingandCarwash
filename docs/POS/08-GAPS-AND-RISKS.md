@@ -5,7 +5,7 @@
 1. **“Fully customizable”** — false; see [06-SETTINGS.md](./06-SETTINGS.md).
 2. **“BA manual POS for services/packages/detailing”** — false; BA merch-only.
 3. **“EoS feeds payroll amounts”** — false; reminder + attestation only.
-4. **`pending_floor_optional`** — stored, not enforced in Payroll UI.
+4. **`pending_floor_optional`** — **enforced** when `false` via `floorConfirmBlockedByPendingCloses` in `PayrollPage` confirm (see PAYROLL/09 — Closed).
 
 ## Technical / operational risks
 

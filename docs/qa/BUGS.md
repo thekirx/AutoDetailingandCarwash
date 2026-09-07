@@ -6,11 +6,12 @@
 |----|----------|------|---------|----------|--------|-----|
 | BUG-001 | Medium | Ops / deploy | Browser Playwright/UI E2E missing historically | `SYSTEM_GAPS.md` #3 | Open → addressed by `scripts/e2e-ui-p0.mjs` | Phase C harness |
 | BUG-002 | High | SMS / prod | Vercel egress IP not on BrandTxt whitelist | `docs/OPS/BUSYBEE-PRODUCTION.md` VERCEL-SMS-IP | Open (ops) | Whitelist static IPs |
-| BUG-003 | Medium | SMS / ops | `OWNER_SMS_PHONE` may be unset on Vercel | OWNER-SMS-ENV | Open (ops) | Set env + verify |
-| BUG-004 | Medium | Inventory | Sunday chemical recon data incomplete | CHEM-RECON | Open | Seed/recon flow |
-| BUG-005 | Low | SMS | `sms_events` rows `post_service_completed` stay `pending` after status SMS DELIVRD | Live query 2026-09-03 on bookings `ed71b044` / `7e76827a` | Open | Trace writer; send or drop dead queue |
+| BUG-003 | Medium | SMS / ops | Owner SMS phone was unset | Local `.env` + BossMich.phone=`09625294043`; live `notify_sent sent=1` 2026-09-07 | Mitigated (local/QA) | Still set on **Vercel** + whitelist Vercel IPs |
+| BUG-004 | Medium | Inventory | Sunday chemical recon data incomplete | CHEM-RECON; QA seeded 1 line 2026-09-07 | Mitigated (QA) | Ops still needs weekly BA→SA recon habit |
+| BUG-005 | Low | SMS | Legacy `post_service_completed` rows stuck `pending` (no writer in current code) | 19 orphans cancelled 2026-09-07; pending count **0** | **Closed** | Marked `cancelled`; live status SMS uses `booking_status` |
 | BUG-006 | Low | CRM | Duplicate active customer rows historically shared phone `09625294043` | Pre-E2E query | Mitigated | Archive dups in `e2e-real-customer-status-sms.mjs` |
-| BUG-007 | High | Ops E2E | Full browser TL→POS→EoS→Finance→payroll not proven | OWNER-REVISIONS OPS-E2E | Partial | `e2e-ui-money` proves TL deny + admin EoS wizard open + boss finance shift-close tab; `e2e-shift-close-money` proves BA submit_shift_close and finance `review_shift_close` accept (QA sandbox). Payroll end-to-end still not proven. |
+| BUG-007 | High | Ops E2E | Full browser TL→POS→EoS→Finance→payroll not proven | OWNER-REVISIONS OPS-E2E | Partial→RPC **MET** | UI: `e2e-ui-money`. RPC: `e2e-shift-close-money` 13/13. |
+| BUG-013 | Medium | Planning UX | Experience tickets easy to miss / silent create failure | oldest-board vs Cash Advance default; no toast | **Mitigated** | Prefer `Planner` board; toast on `experienceCard`; QA seed card on Experience list |
 | BUG-009 | Low | Tests | Stale source contracts: BA nav denied inventory; POS `SHELL_TABS`/`max-w-7xl`/`Sell merch` copy; detailing→coating bucket; PLANNER_TABS only on page | `npm test` 9 fails → 0 after update | Closed | Updated tests to match intentional product (BA restock inventory, `POS_SHELL_TABS` in `posInsights.js`, detailing honesty) |
 | BUG-010 | Medium | Live e2e | `e2e-pos-part2` assumed TL cannot provision queue / wrong `custom-size` normalize | pos-part2 false fail | Closed | TL is in `QUEUE_PROVISION_ROLES`; `normalizeVehicleType('custom-size')` → `custom_size` |
 | BUG-011 | High | UI harness | Authed screenshot treated `/operations/access-denied` as success (TL→POS false-green) | `screenshotAuth.mjs` | Closed | Reject access-denied / forbidden URLs |

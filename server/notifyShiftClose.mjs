@@ -80,6 +80,11 @@ async function resolveOwnerSmsPhones(db) {
   return [...phones].filter(Boolean)
 }
 
+/** Exported for QA / e2e — same resolution used before BusyBee send. */
+export async function listOwnerSmsPhones(db = null) {
+  return resolveOwnerSmsPhones(db || admin())
+}
+
 export async function notifyShiftCloseAccepted(input = {}) {
   const copy = buildShiftCloseAcceptCopy(input)
   const db = admin()
