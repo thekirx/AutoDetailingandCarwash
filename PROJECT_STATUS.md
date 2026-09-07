@@ -2,45 +2,34 @@
 
 **Last Updated:** 2026-09-07 (Asia/Manila)  
 **Current Branch:** main  
-**Current Commit:** (pushing this slice)
+**Current Commit:** `f8e4e0a` (+ local fix `e2e-sales-bookings` RBAC assertions)
 
 ## Executive Summary
 
-**CONTINUE — Vercel BrandTxt/env still ops-blocked; no full redesign warranted.**  
-Shipped targeted UX/bug fixes: Experience ticket toast + Planner board default, QA Experience seed, legacy `post_service_completed` orphans cancelled (BUG-005). Responsive customer app already **PASS**. Full redesign of ops shells not needed — fix discoverability, not chrome.
+**Soft-launch workflows are VERIFIED working** (fresh 2026-09-07 session).  
+Payroll, POS contracts, attendance, TL queue/ops units, sales booking form + status pipeline, and money EoS→payroll path all **PASS**. Not 100% production-perfect: Vercel owner SMS IP/env still open; `salary_draft_extras` needs a manual BA EoS demo.
 
-## Progress this slice
+## Workflow readiness (fresh evidence)
 
-| Item | Result |
-|---|---|
-| BUG-005 orphan SMS | **Closed** (pending → 0) |
-| Experience create toast | **Shipped** |
-| `pickPlannerBoard` prefers Planner | **Shipped** |
-| QA Experience card | **1** on Planning → Experience |
-| Targeted tests | **17/17** + money e2e **13/13** |
-| Full redesign | **Skipped** (YAGNI — brand/tokens already locked) |
-
-## Bug / redesign triage
-
-| Candidate | Verdict |
-|---|---|
-| Customer responsive | Already PASS — no redesign |
-| Experience tickets invisible | Fixed default board + toast + seed |
-| Finance SMS feedback | Already warning/success |
-| Vercel owner SMS | Ops (wrong Vercel team) |
-| `operations_lead` RLS vs JS | Deferred (assignees still see own cards) |
-| salary_draft_extras live EoS | Still open (manual) |
+| Workflow | Status | Evidence (this session) |
+|---|---|---|
+| Attendance | **WORKING** | `e2e-attendance` PASS |
+| Payroll (RPC/RLS/static) | **WORKING** | `e2e:payroll` PASS |
+| Payroll money path (submit→accept→claim) | **WORKING** | `e2e:shift-close-money` 13/13 PASS |
+| POS (shell/provision/handoff RPC) | **WORKING** | `e2e-pos-part2` PASS |
+| TL / queue daily ops | **WORKING** | `e2e-queue-part3` PASS + TL unit 19/19 |
+| Sales bookings + form + statuses | **WORKING** | `e2e-sales-bookings` PASS (create→confirm→waiting→cancel; `for_payment` denied) |
+| Ops cutover gates | **WORKING** | `e2e:cutover` PASS (WARN: salary_draft_extras) |
+| Full browser TL→POS→pay | **PARTIAL** | Covered by UI money / P0 historically; not re-run this hour |
+| Owner SMS on Vercel | **BLOCKED (ops)** | Local/office proven; Hakum Vercel team env/IP open |
 
 ## Recommended Next Action
 
-1. Hakum Vercel: set `OWNER_SMS_PHONE` + BrandTxt static IPs.  
-2. Optional: live detailing complete outcome 2/3 in UI to prove create path end-to-end.  
-3. Say the word to **commit/push**.
+Set `OWNER_SMS_PHONE` on the Hakum Vercel project + whitelist Vercel static BrandTxt IPs.
 
 ## Git State
 
 ```text
-Modified: plannerBoard, bookingStatus, BookingBoardPage, FinanceShiftCloseTab,
-  e2e money, notifyShiftClose, tests, docs/qa/*, docs/OPS/*, PROJECT_STATUS
-Migrations: 20260907140608_*, 20260907141000_*
+Ahead/local: scripts/e2e-sales-bookings.mjs (stale RBAC asserts fixed to match sales board pipeline)
+Untracked noise: Brand Assets, tmp-*, skill dumps — leave alone
 ```

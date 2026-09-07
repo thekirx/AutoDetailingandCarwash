@@ -109,7 +109,7 @@ assert(allowRoute({ role: ROLES.SALES, branch_slug: staff.branch_slug }, 'bookin
 assert(!allowRoute({ role: ROLES.SALES }, 'queue'))
 assert(!allowRoute({ role: ROLES.SALES }, 'pos'))
 assert(!allowRoute({ role: ROLES.SALES }, 'crm'))
-assert(!canCheckInFormBooking({ role: ROLES.SALES }))
+assert(canCheckInFormBooking({ role: ROLES.SALES }), 'sales may check in form bookings')
 results.push('rbac.home+gates: ok')
 
 const { data: branches, error: brErr } = await client.from('branches').select('slug, name').eq('is_active', true)
@@ -176,15 +176,29 @@ assert(confirm.body?.booking?.status === 'confirmed', JSON.stringify(confirm.bod
 results.push('api.confirm: ok')
 
 assert(
-  !canStaffUpdateBookingStatus(
+  canStaffUpdateBookingStatus(
     { role: 'sales', branch_slug: 'bacoor' },
     { branch: 'bacoor', status: 'confirmed' },
     { nextStatus: 'waiting' },
   ),
+  'sales detailing board includes waiting',
 )
 const waiting = await callBookingStatus(token, { booking_id: created.id, status: 'waiting' })
-assert(waiting.statusCode === 403, `waiting API want 403 got ${waiting.statusCode}`)
-results.push('api.waiting_denied: ok')
+assert(waiting.statusCode === 200, `waiting API ${waiting.statusCode} ${JSON.stringify(waiting.body)}`)
+assert(waiting.body?.booking?.status === 'waiting', JSON.stringify(waiting.body))
+results.push('api.waiting: ok')
+
+assert(
+  !canStaffUpdateBookingStatus(
+    { role: 'sales', branch_slug: 'bacoor' },
+    { branch: 'bacoor', status: 'waiting' },
+    { nextStatus: 'for_payment' },
+  ),
+  'sales must not send to payment',
+)
+const pay = await callBookingStatus(token, { booking_id: created.id, status: 'for_payment' })
+assert(pay.statusCode === 403, `for_payment API want 403 got ${pay.statusCode}`)
+results.push('api.for_payment_denied: ok')
 
 const cancel = await callBookingStatus(token, {
   booking_id: created.id,
