@@ -41,6 +41,7 @@ See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./re
 
 | When (UTC) | Command | Exit | Notes |
 |------------|---------|------|-------|
+| 2026-09-07T07:25Z | completion QA suite (att/payroll/pos/queue/money/cutover/sales-bookings/TL units) | 0 | All PASS; sales e2e asserts updated (check-in + waiting allowed; for_payment denied) |
 | 2026-09-07T06:55Z | `npm test` | 0 | **1195/1195** pre-push |
 | 2026-09-07T06:55Z | `npm run build` | 0 | vite + PWA exit 0 |
 | 2026-09-07T06:55Z | `npm run e2e:shift-close-money` | 0 | **13/13** dry pre-push |
