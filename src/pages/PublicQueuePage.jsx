@@ -11,6 +11,24 @@ import {
   buildPublicFloorModel,
 } from '../queue/queueLogic'
 import { createCoalescedReload } from '../lib/coalesceReload'
+import aboutTeam from '../assets/about/about-hkm-21.webp'
+import shopfront from '../assets/about/hakum-shopfront-dusk.webp'
+import hakumHero from '../assets/hakum-hero.webp'
+import heroPoster from '../assets/hero/bredesign-hero-poster.webp'
+import portraitPoster from '../assets/hero/bredesign-hero-portrait-poster.webp'
+import carwash from '../assets/services/carwash.webp'
+import ceramicClassic from '../assets/services/ceramic-classic.webp'
+import ceramicGallery from '../assets/services/ceramic-coating-gallery.webp'
+import ceramicPlatinum from '../assets/services/ceramic-platinum.webp'
+import ceramicPremium from '../assets/services/ceramic-premium.webp'
+import ceramicTint from '../assets/services/ceramic-tint.webp'
+import ceramic from '../assets/services/ceramic.webp'
+import detailing from '../assets/services/detailing.webp'
+import engineWash from '../assets/services/engine-wash.webp'
+import glassDetailing from '../assets/services/glass-detailing.webp'
+import interiorDetailing from '../assets/services/interior-detailing.webp'
+import paintProtectionFilm from '../assets/services/paint-protection-film.webp'
+import ppfGreyTruck from '../assets/services/ppf-information-grey-truck-clean.jpg'
 
 const STAT_META = [
   { key: 'waiting', label: 'Waiting', tone: 'wait' },
@@ -24,6 +42,27 @@ const LANE_META = {
   in_progress: { tone: 'work', hint: 'On the floor' },
   final_checking: { tone: 'check', hint: 'QC pass' },
 }
+
+const QUEUE_PHOTOGRAPHY = [
+  heroPoster,
+  portraitPoster,
+  hakumHero,
+  carwash,
+  detailing,
+  paintProtectionFilm,
+  ceramic,
+  ceramicPremium,
+  ceramicPlatinum,
+  ceramicClassic,
+  ceramicGallery,
+  ceramicTint,
+  interiorDetailing,
+  engineWash,
+  glassDetailing,
+  ppfGreyTruck,
+  aboutTeam,
+  shopfront,
+]
 
 function LivePulse({ label = 'Live' }) {
   return (
@@ -51,6 +90,7 @@ export default function PublicQueuePage({ mode = 'customer' }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [fallbackSlug, setFallbackSlug] = useState(null)
+  const [photoIndex, setPhotoIndex] = useState(0)
 
   usePageMeta({
     title: branchDetails?.name
@@ -128,6 +168,16 @@ export default function PublicQueuePage({ mode = 'customer' }) {
   }, [])
 
   useEffect(() => {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reducedMotion) return undefined
+    const timer = window.setInterval(
+      () => setPhotoIndex((index) => (index + 1) % QUEUE_PHOTOGRAPHY.length),
+      5500,
+    )
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
     if (!branch || branchValid === false) return undefined
     const scheduleReload = createCoalescedReload(() => loadQueue(), 400)
     const timer = window.setInterval(() => scheduleReload(), PUBLIC_QUEUE_POLL_MS)
@@ -181,6 +231,10 @@ export default function PublicQueuePage({ mode = 'customer' }) {
         <header className="lq-board-top">
           <Link to="/" className="lq-brand" aria-label="Hakum Auto Care home">
             <img src="/branding/hakum-lw-ow.png" alt="" className="lq-brand-mark" width={148} height={84} />
+            <span className="lq-brand-copy">
+              <strong>HAKUM</strong>
+              <small>AUTO CARE</small>
+            </span>
           </Link>
 
           <div className="lq-board-meta">
@@ -197,39 +251,52 @@ export default function PublicQueuePage({ mode = 'customer' }) {
           </div>
         </header>
 
-        <div className="lq-board-intro">
-          <p className="lq-kicker">
-            <LivePulse label={isTv ? 'Shop floor display' : 'Live queue'} />
-          </p>
-          <h1 className="lq-board-title">{branchDetails?.name || branch}</h1>
-          <p className="lq-board-address">
-            {isTv
-              ? 'Plate and service on the floor. For in-store TV only.'
-              : branchDetails?.address || 'Counts update every few seconds. No plate numbers shown.'}
-          </p>
-          <nav className="lq-board-nav" aria-label="Queue links">
-            <Link className="lq-text-link" to="/queue">
-              Change branch
-            </Link>
-            {isTv ? (
-              <Link className="lq-text-link" to={`/queue/${branch}`}>
-                Customer view
+        <section className="lq-board-hero" aria-labelledby="lq-board-title">
+          <div className="lq-board-media" aria-hidden="true">
+            {QUEUE_PHOTOGRAPHY.map((photo, index) => (
+              <img
+                key={photo}
+                className={`lq-board-media-slide${index === photoIndex ? ' is-active' : ''}`}
+                src={photo}
+                alt=""
+                loading={index < 2 ? 'eager' : 'lazy'}
+              />
+            ))}
+          </div>
+          <div className="lq-board-intro">
+            <p className="lq-kicker">
+              <LivePulse label={isTv ? 'Shop floor display' : 'Live queue'} />
+            </p>
+            <h1 id="lq-board-title" className="lq-board-title">{branchDetails?.name || branch}</h1>
+            <p className="lq-board-address">
+              {isTv
+                ? 'Plate and service on the floor. For in-store TV only.'
+                : branchDetails?.address || 'Counts update every few seconds. No plate numbers shown.'}
+            </p>
+            <nav className="lq-board-nav" aria-label="Queue links">
+              <Link className="lq-text-link" to="/queue">
+                Change branch
               </Link>
-            ) : (
-              <Link className="lq-text-link" to={`/queue/${branch}/tv`}>
-                Shop TV
+              {isTv ? (
+                <Link className="lq-text-link" to={`/queue/${branch}`}>
+                  Customer view
+                </Link>
+              ) : (
+                <Link className="lq-text-link" to={`/queue/${branch}/tv`}>
+                  Shop TV
+                </Link>
+              )}
+              {!isTv ? (
+                <Link className="lq-text-link" to="/book">
+                  Book a service
+                </Link>
+              ) : null}
+              <Link className="lq-text-link" to="/">
+                Home
               </Link>
-            )}
-            {!isTv ? (
-              <Link className="lq-text-link" to="/book">
-                Book a service
-              </Link>
-            ) : null}
-            <Link className="lq-text-link" to="/">
-              Home
-            </Link>
-          </nav>
-        </div>
+            </nav>
+          </div>
+        </section>
 
         {error ? (
           <div className="lq-error" role="alert">

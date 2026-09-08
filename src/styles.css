@@ -686,7 +686,7 @@ button { cursor: pointer; }
 .hakum-auth-wordmark span { font-weight:900; font-style:italic; letter-spacing:.08em; line-height:.85; }
 .hakum-auth-wordmark small { display:block; margin-top:6px; font-size:7px; letter-spacing:.27em; font-style:normal; font-weight:600; }
 .hakum-auth-brand-body { max-width:28rem; padding:12vh 0 2rem; }
-.hakum-auth-brand-body h1 { margin:0; font-family:var(--font-display); font-size:clamp(2.4rem,4.5vw,3.6rem); font-weight:800; font-style:italic; letter-spacing:-0.02em; line-height:1.02; text-wrap:balance; text-transform:none; }
+.hakum-auth-brand-body h1 { margin:0; font-family:var(--font-public-display); font-size:clamp(2.4rem,4.5vw,3.6rem); font-weight:800; font-style:italic; letter-spacing:-0.025em; line-height:.92; text-wrap:balance; text-transform:uppercase; }
 .hakum-auth-brand-body p { margin:18px 0 0; color:rgba(248,250,252,.78); font-size:1rem; line-height:1.6; font-weight:300; }
 .hakum-auth-bullets { list-style:none; margin:32px 0 0; padding:0; display:flex; flex-direction:column; gap:14px; }
 .hakum-auth-bullets li { display:flex; align-items:flex-start; gap:12px; color:rgba(248,250,252,.88); font-size:0.95rem; line-height:1.4; }
@@ -694,7 +694,7 @@ button { cursor: pointer; }
 .hakum-auth-brand-foot { margin:0; font-size:10px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:rgba(241,241,241,.7); }
 .hakum-auth-panel { display:flex; flex-direction:column; justify-content:center; padding:clamp(28px,5vw,56px); }
 .hakum-auth-panel-inner { width:min(100%,420px); margin:0 auto; }
-.hakum-auth-panel h2 { margin:0; font-size:clamp(1.85rem,3vw,2.35rem); font-weight:800; color:#020a31; letter-spacing:-0.02em; }
+.hakum-auth-panel h2 { margin:0; font-family:var(--font-public-display); font-size:clamp(1.85rem,3vw,2.35rem); font-weight:800; font-style:italic; color:#020a31; letter-spacing:-0.025em; line-height:.92; text-transform:uppercase; }
 .hakum-auth-welcome { margin:8px 0 0; color:#4b5563; font-size:0.95rem; line-height:1.5; }
 .hakum-auth-alert { margin-top:16px; padding:12px 14px; border:1px solid rgba(185,28,28,.22); background:#fef2f2; color:#991b1b; border-radius:12px; font-size:0.9rem; }
 .hakum-auth-info { margin-top:16px; padding:12px 14px; border:1px solid rgba(5,38,153,.18); background:#e8edff; color:#031d78; border-radius:12px; font-size:0.9rem; }
@@ -1204,7 +1204,7 @@ button { cursor: pointer; }
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: var(--lq-navy);
+  background: var(--lq-deep);
 }
 .lq-board-noise {
   position: fixed;
@@ -1404,14 +1404,69 @@ button { cursor: pointer; }
   justify-content: space-between;
   gap: 1rem 1.5rem;
 }
+.lq-board-hero {
+  position: relative;
+  min-height: clamp(22rem, 43vw, 34rem);
+  margin-top: clamp(1.25rem, 2.5vw, 2rem);
+  overflow: hidden;
+  border-block: 1px solid rgba(255, 255, 255, 0.12);
+  background: #020719;
+}
+.lq-board-media {
+  position: absolute;
+  inset: 0;
+}
+.lq-board-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(2, 7, 25, 0.98) 0%, rgba(2, 7, 25, 0.88) 38%, rgba(2, 7, 25, 0.36) 72%, rgba(2, 7, 25, 0.5) 100%),
+    linear-gradient(0deg, rgba(2, 10, 49, 0.58), transparent 48%);
+}
+.lq-board-media-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transform: scale(1.035);
+  transition: opacity 1.1s ease, transform 6.5s ease;
+}
+.lq-board-media-slide.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
 .lq-brand {
   display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
   text-decoration: none;
+  color: #f1f1f1;
 }
 .lq-brand-mark {
   display: block;
-  width: clamp(112px, 28vw, 148px);
+  width: clamp(74px, 10vw, 92px);
   height: auto;
+}
+.lq-brand-copy {
+  display: grid;
+  gap: 0.22rem;
+  font-family: var(--font-public-body);
+  text-transform: uppercase;
+}
+.lq-brand-copy strong {
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+.lq-brand-copy small {
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
 }
 .lq-board-meta {
   display: flex;
@@ -1448,14 +1503,17 @@ button { cursor: pointer; }
   letter-spacing: -0.02em;
 }
 .lq-board-intro {
-  margin-top: clamp(1.75rem, 4vw, 2.75rem);
+  position: relative;
+  z-index: 1;
+  margin-top: 0;
   max-width: 40rem;
+  padding: clamp(3rem, 7vw, 5.75rem) clamp(1.5rem, 5vw, 4.5rem);
 }
 .lq-board-title {
   margin: 0;
   font-family: var(--font-public-display);
-  font-style: normal;
-  font-weight: var(--font-weight-public-display);
+  font-style: italic;
+  font-weight: 800;
   font-size: clamp(2.4rem, 7vw, 4.25rem);
   letter-spacing: var(--tracking-public-display);
   line-height: 0.9;
@@ -1491,34 +1549,22 @@ button { cursor: pointer; }
 .lq-stat-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: 1rem;
   margin-top: clamp(1.75rem, 4vw, 2.5rem);
 }
 .lq-stat {
   position: relative;
   padding: 1.2rem 1.15rem 1.1rem;
-  border-radius: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 1rem 2rem rgba(0, 0, 0, 0.18);
+  border-radius: 0;
+  border: 1px solid rgba(157, 180, 255, 0.18);
+  border-top: 2px solid #9db4ff;
+  background: rgba(2, 7, 25, 0.55);
+  box-shadow: none;
   overflow: hidden;
 }
-.lq-stat::before {
-  content: "";
-  position: absolute;
-  inset: auto -20% -40% auto;
-  width: 8rem;
-  height: 8rem;
-  border-radius: 50%;
-  opacity: 0.35;
-  pointer-events: none;
-}
-.lq-stat-wait::before { background: #9db4ff; }
-.lq-stat-work::before { background: #5bd48f; }
-.lq-stat-check::before { background: #f2b84b; }
-.lq-stat-total::before { background: #e8edff; }
+.lq-stat-work { border-top-color: #5bd48f; }
+.lq-stat-check { border-top-color: #f2b84b; }
+.lq-stat-total { border-top-color: #e8edff; }
 .lq-stat-label {
   margin: 0;
   position: relative;
@@ -1695,9 +1741,9 @@ button { cursor: pointer; }
 .lq-customer-hint {
   margin: 0;
   padding: 1.25rem 1.35rem;
-  border-radius: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  border: 1px solid rgba(157, 180, 255, 0.18);
+  background: rgba(2, 7, 25, 0.55);
   color: rgba(241, 241, 241, 0.78);
   font-family: var(--font-public-body);
   font-size: clamp(1rem, 2.4vw, 1.25rem);
@@ -1820,7 +1866,8 @@ button { cursor: pointer; }
   .lq-skeleton { animation: none; }
   .lq-lane-card-shell,
   .lq-lane-card-arrow,
-  .lq-btn { transition: none; }
+  .lq-btn,
+  .lq-board-media-slide { transition: none; }
 }
 @media (max-width: 960px) {
   .lq-picker-inner {

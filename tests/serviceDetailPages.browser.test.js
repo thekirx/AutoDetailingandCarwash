@@ -118,3 +118,25 @@ test('Starting a service proof video pauses the previously playing clip', async 
     assert.deepEqual(playback, { firstPaused: true, secondPaused: false })
   })
 })
+
+test('Every service proof video exposes an audio track to the browser', async () => {
+  for (const [service, expectedCount] of [['ppf', 6], ['ceramic', 6], ['tint', 3]]) {
+    await withPage(`/services/${service}`, async (page) => {
+      const tracks = await page.$$eval(`[data-service-proof="${service}"] video`, async (videos) => {
+        await Promise.all(videos.map((video) => new Promise((resolve, reject) => {
+          if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+            resolve()
+            return
+          }
+          video.addEventListener('loadedmetadata', resolve, { once: true })
+          video.addEventListener('error', () => reject(video.error || new Error('video metadata failed')), { once: true })
+          video.load()
+        })))
+        return videos.map((video) => video.captureStream().getAudioTracks().length)
+      })
+
+      assert.equal(tracks.length, expectedCount)
+      assert.deepEqual(tracks, Array(expectedCount).fill(1), `${service} contains a silent proof clip`)
+    })
+  }
+})

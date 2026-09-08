@@ -1980,8 +1980,8 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
 
   .hakum-auth--app .hakum-auth-brand-body h1 {
     font-size: clamp(1.85rem, 8vw, 2.3rem);
-    font-style: normal;
-    letter-spacing: -0.03em;
+    font-style: italic;
+    letter-spacing: -0.025em;
   }
 
   .hakum-auth--app .hakum-auth-brand-body p {
@@ -2002,6 +2002,7 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   .hakum-auth--app .hakum-auth-panel h2 {
     color: #f1f4ff;
     font-size: 1.35rem;
+    font-style: italic;
   }
 
   .hakum-auth--app .hakum-auth-welcome,
