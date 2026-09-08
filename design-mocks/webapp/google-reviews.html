@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Google reviews section — mock</title>
+<style>
+/* Tokens copied from src/styles/bredesign.css — no new colours. */
+:root{
+  --hk-navy:#020A31; --hk-navy-2:#08133F; --hk-navy-3:#0D1B52;
+  --hk-rule:#16255C; --hk-blue:#052699; --hk-blue-mid:#2D59D3;
+  --hk-accent:#9DB4FF; --hk-paper:#F1F1ED;
+  --hk-ink-2:rgba(241,241,237,.78); --hk-ink-3:#7E8AB8;
+  --hk-display:"Benzin","Arial Black",sans-serif;
+  --hk-body:"Gilmer",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --g-star:#FBBC04;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#0a0a0a;color:var(--hk-paper);font-family:var(--hk-body)}
+.doc{max-width:1400px;margin:0 auto;padding:40px clamp(16px,3vw,48px) 120px}
+.doc-head{border-bottom:1px solid #262626;padding-bottom:26px}
+.doc-head h1{font-family:var(--hk-display);font-size:clamp(1.5rem,3.2vw,2.3rem);margin:0 0 10px}
+.doc-head p{margin:0 0 10px;color:#9a9a9a;font-size:14px;line-height:1.7;max-width:80ch}
+.doc-head strong{color:#d6d6d6}
+.item{margin-top:56px}
+.item-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.item-head h2{font-family:var(--hk-display);font-size:1.3rem;margin:0}
+.item-head .tag{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#7a7a7a;font-weight:800}
+.why{margin:0 0 20px;color:#9a9a9a;font-size:13.5px;line-height:1.7;max-width:88ch}
+.why strong{color:#d6d6d6}
+.frame{border:1px solid #2a2a2a;border-radius:6px;overflow:hidden;background:var(--hk-navy)}
+.frame>figcaption{display:flex;align-items:center;gap:9px;padding:9px 14px;background:#161616;
+  border-bottom:1px solid #2a2a2a;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:800;color:#7ee2a8}
+.frame>figcaption::before{content:"";width:8px;height:8px;border-radius:50%;background:#3ddc84}
+.ask{margin-top:24px;padding:14px 18px;border:1px dashed #3a3a3a;border-radius:6px;background:#121212;
+  color:#c9c9c9;font-size:13.5px;line-height:1.7;max-width:92ch}
+.ask b{color:#ffd83d}
+
+/* context strip standing in for the gallery this sits under */
+.gallery-hint{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:0 0 2px}
+.gallery-hint i{display:block;height:78px;background:
+  linear-gradient(135deg,var(--hk-navy-3),var(--hk-navy-2));opacity:.55}
+.gallery-label{padding:14px clamp(20px,3vw,44px) 0;font-size:10px;font-weight:800;
+  letter-spacing:.16em;text-transform:uppercase;color:#4d5885}
+
+/* ============================================================
+   THE SECTION
+   ============================================================ */
+.rev{padding:clamp(44px,5.5vw,84px) clamp(20px,3vw,44px)}
+.rev-head{display:grid;gap:18px;margin-bottom:clamp(26px,3vw,40px)}
+@media(min-width:900px){.rev-head{grid-template-columns:1fr auto;align-items:end}}
+.eyebrow{margin:0 0 14px;font-size:11px;font-weight:800;letter-spacing:.19em;text-transform:uppercase;
+  color:var(--hk-accent);display:flex;align-items:center;gap:12px}
+.eyebrow::before{content:"";width:34px;height:1px;background:var(--hk-accent);opacity:.6}
+.rev-head h3{font-family:var(--hk-display);margin:0;font-size:clamp(1.9rem,4.2vw,3rem);
+  line-height:.98;letter-spacing:-.02em;text-transform:uppercase}
+.rev-head h3 em{font-style:italic;color:var(--hk-accent)}
+
+/* the outbound button — the whole point of the section */
+.g-btn{display:inline-flex;align-items:center;gap:11px;padding:14px 22px;border-radius:999px;
+  background:#fff;color:#1f1f1f;text-decoration:none;font-size:11.5px;font-weight:800;
+  letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;
+  transition:transform .18s ease, box-shadow .18s ease}
+.g-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px -14px rgba(255,255,255,.6)}
+.g-btn svg{width:17px;height:17px;flex:none}
+
+.rev-grid{display:grid;gap:16px}
+@media(min-width:820px){.rev-grid{grid-template-columns:1fr 1fr}}
+
+.rc{display:flex;flex-direction:column;gap:14px;padding:clamp(22px,2.6vw,32px);
+  background:var(--hk-navy-2);border:1px solid var(--hk-rule);border-radius:12px;
+  color:inherit;text-decoration:none;transition:border-color .18s ease, transform .18s ease}
+.rc:hover{border-color:rgba(157,180,255,.5);transform:translateY(-2px)}
+.rc-top{display:flex;align-items:center;gap:12px}
+.rc-av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:linear-gradient(140deg,var(--hk-blue-mid),var(--hk-blue));
+  font-family:var(--hk-display);font-size:16px;color:#fff}
+.rc-who{display:grid;gap:3px;min-width:0}
+.rc-name{font-size:14.5px;font-weight:800;line-height:1.2}
+.rc-meta{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--hk-ink-3)}
+.rc-g{margin-left:auto;flex:none;width:20px;height:20px;opacity:.9}
+.stars{display:flex;gap:2px}
+.stars svg{width:16px;height:16px;fill:var(--g-star)}
+.rc-body{margin:0;color:var(--hk-ink-2);font-size:14.5px;line-height:1.72;text-wrap:pretty}
+.rc-go{margin-top:auto;padding-top:4px;font-size:10.5px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--hk-accent)}
+
+/* --- option B: one featured, one supporting --- */
+.b .rev-grid{grid-template-columns:1fr}
+@media(min-width:820px){.b .rev-grid{grid-template-columns:1.35fr 1fr;align-items:start}}
+.b .rc:first-child .rc-body{font-size:clamp(16px,1.9vw,21px);line-height:1.6;color:var(--hk-paper)}
+.b .rc:first-child{background:linear-gradient(150deg,var(--hk-navy-3),var(--hk-navy-2));
+  border-color:rgba(157,180,255,.34)}
+.b .rc:first-child .stars svg{width:20px;height:20px}
+</style>
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Google reviews — proposed section</h1>
+  <p>
+    Sits directly under the photo and video gallery on the homepage. Two reviews only — the two you
+    sent — and <strong>every element in the section links out to Google</strong>: the two cards go to
+    their own review, the button goes to your Google profile. Nothing is typed by us; the words,
+    names and dates below are exactly what Google shows.
+  </p>
+  <p>
+    Both reviews verified as <strong>5 stars</strong> when I opened your links. Two layouts to choose
+    between — same content, different weighting.
+  </p>
+</header>
+
+<!-- =========================================== OPTION A -->
+<section class="item">
+  <div class="item-head">
+    <h2>Option A — equal pair</h2>
+    <span class="tag">both reviews weighted the same</span>
+  </div>
+  <p class="why">
+    Two branches, two voices, side by side. Reads as a sample of many rather than a single
+    testimonial — which is the honest impression when you only show two.
+  </p>
+  <figure class="frame">
+    <figcaption>Proposed</figcaption>
+    <p class="gallery-label">↑ photo &amp; video gallery ends here</p>
+    <div class="gallery-hint"><i></i><i></i><i></i><i></i></div>
+    <div class="rev">
+      <div class="rev-head">
+        <div>
+          <p class="eyebrow">Reviews on Google</p>
+          <h3>What owners<br><em>actually say.</em></h3>
+        </div>
+        <a class="g-btn" href="#a">
+          <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.8-.1-1.4-.2-2H12v3.8h6a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.1-4.7 3.1-7.8Z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.2 1-3.6 1-2.8 0-5.2-1.8-6-4.3H2.3v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC04" d="M6 14.4a6.6 6.6 0 0 1 0-4.2V7.4H2.3a11 11 0 0 0 0 9.8L6 14.4Z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.4L6 10.2c.9-2.5 3.2-4.7 6-4.7Z"/></svg>
+          Read all reviews on Google
+        </a>
+      </div>
+      <div class="rev-grid">
+        <a class="rc" href="#a">
+          <div class="rc-top">
+            <span class="rc-av">P</span>
+            <span class="rc-who">
+              <span class="rc-name">Pauline Macasaet</span>
+              <span class="rc-meta">Bacoor · a year ago</span>
+            </span>
+            <svg class="rc-g" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.8-.1-1.4-.2-2H12v3.8h6a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.1-4.7 3.1-7.8Z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.2 1-3.6 1-2.8 0-5.2-1.8-6-4.3H2.3v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC04" d="M6 14.4a6.6 6.6 0 0 1 0-4.2V7.4H2.3a11 11 0 0 0 0 9.8L6 14.4Z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.4L6 10.2c.9-2.5 3.2-4.7 6-4.7Z"/></svg>
+          </div>
+          <span class="stars">
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+          </span>
+          <p class="rc-body">The area was quite spacious, they can accommodate at least 6 car at a
+            time. The waiting area is very clean and they have decent amount of chairs. It is fully
+            air conditioned and they sell car products, pet products and some beverages. The price is
+            decent and cheap for the service they provide. I highly recommend this place and we’ll
+            probably come back next time.</p>
+          <span class="rc-go">Read on Google ↗</span>
+        </a>
+
+        <a class="rc" href="#a">
+          <div class="rc-top">
+            <span class="rc-av">P</span>
+            <span class="rc-who">
+              <span class="rc-name">Paul Russel Sandoval</span>
+              <span class="rc-meta">Batangas · a month ago</span>
+            </span>
+            <svg class="rc-g" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.8-.1-1.4-.2-2H12v3.8h6a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.1-4.7 3.1-7.8Z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.2 1-3.6 1-2.8 0-5.2-1.8-6-4.3H2.3v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC04" d="M6 14.4a6.6 6.6 0 0 1 0-4.2V7.4H2.3a11 11 0 0 0 0 9.8L6 14.4Z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.4L6 10.2c.9-2.5 3.2-4.7 6-4.7Z"/></svg>
+          </div>
+          <span class="stars">
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+          </span>
+          <p class="rc-body">Hands down one of the best carwash services around Batangas City! Hakum
+            did a fast, thorough, and flawless job. Friendly staff and great value. Highly
+            recommended!</p>
+          <span class="rc-go">Read on Google ↗</span>
+        </a>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<!-- =========================================== OPTION B -->
+<section class="item b">
+  <div class="item-head">
+    <h2>Option B — one featured, one supporting</h2>
+    <span class="tag">the longer review carries the section</span>
+  </div>
+  <p class="why">
+    The Bacoor review is detailed and specific — the kind that actually persuades — so it is set
+    larger and given the lit panel. The Batangas one supports it and proves the standard travels
+    between branches. <strong>Same two reviews, same links.</strong>
+  </p>
+  <figure class="frame">
+    <figcaption>Proposed</figcaption>
+    <p class="gallery-label">↑ photo &amp; video gallery ends here</p>
+    <div class="gallery-hint"><i></i><i></i><i></i><i></i></div>
+    <div class="rev">
+      <div class="rev-head">
+        <div>
+          <p class="eyebrow">Reviews on Google</p>
+          <h3>Three branches.<br><em>One standard.</em></h3>
+        </div>
+        <a class="g-btn" href="#b">
+          <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.8-.1-1.4-.2-2H12v3.8h6a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.1-4.7 3.1-7.8Z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.2 1-3.6 1-2.8 0-5.2-1.8-6-4.3H2.3v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC04" d="M6 14.4a6.6 6.6 0 0 1 0-4.2V7.4H2.3a11 11 0 0 0 0 9.8L6 14.4Z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.4L6 10.2c.9-2.5 3.2-4.7 6-4.7Z"/></svg>
+          Read all reviews on Google
+        </a>
+      </div>
+      <div class="rev-grid">
+        <a class="rc" href="#b">
+          <div class="rc-top">
+            <span class="rc-av">P</span>
+            <span class="rc-who">
+              <span class="rc-name">Pauline Macasaet</span>
+              <span class="rc-meta">Bacoor · a year ago</span>
+            </span>
+            <svg class="rc-g" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.8-.1-1.4-.2-2H12v3.8h6a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.1-4.7 3.1-7.8Z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.2 1-3.6 1-2.8 0-5.2-1.8-6-4.3H2.3v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC04" d="M6 14.4a6.6 6.6 0 0 1 0-4.2V7.4H2.3a11 11 0 0 0 0 9.8L6 14.4Z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.4L6 10.2c.9-2.5 3.2-4.7 6-4.7Z"/></svg>
+          </div>
+          <span class="stars">
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+          </span>
+          <p class="rc-body">The area was quite spacious, they can accommodate at least 6 car at a
+            time. The waiting area is very clean and they have decent amount of chairs. It is fully
+            air conditioned and they sell car products, pet products and some beverages. The price is
+            decent and cheap for the service they provide. I highly recommend this place and we’ll
+            probably come back next time.</p>
+          <span class="rc-go">Read on Google ↗</span>
+        </a>
+
+        <a class="rc" href="#b">
+          <div class="rc-top">
+            <span class="rc-av">P</span>
+            <span class="rc-who">
+              <span class="rc-name">Paul Russel Sandoval</span>
+              <span class="rc-meta">Batangas · a month ago</span>
+            </span>
+            <svg class="rc-g" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.8-.1-1.4-.2-2H12v3.8h6a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.1-4.7 3.1-7.8Z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.2 1-3.6 1-2.8 0-5.2-1.8-6-4.3H2.3v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC04" d="M6 14.4a6.6 6.6 0 0 1 0-4.2V7.4H2.3a11 11 0 0 0 0 9.8L6 14.4Z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.4L6 10.2c.9-2.5 3.2-4.7 6-4.7Z"/></svg>
+          </div>
+          <span class="stars">
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.6 7 .7-5.2 4.8 1.5 7-6.3-3.7L5.7 21l1.5-7L2 9.3l7-.7L12 2Z"/></svg>
+          </span>
+          <p class="rc-body">Hands down one of the best carwash services around Batangas City! Hakum
+            did a fast, thorough, and flawless job. Friendly staff and great value. Highly
+            recommended!</p>
+          <span class="rc-go">Read on Google ↗</span>
+        </a>
+      </div>
+    </div>
+  </figure>
+</section>
+
+<section class="item">
+  <p class="ask">
+    <b>Four things to confirm before this goes in.</b><br>
+    <b>1 · One sentence trimmed.</b> Pauline's review ends “For the full list of their services you
+    can visit their FB page.” I left that line out — it sends people to Facebook from the middle of
+    your own site. Say the word and it goes back in verbatim.<br>
+    <b>2 · Dates will age.</b> “A year ago” is what Google shows today; hard-coded, it will read
+    wrong next year. I would set them as fixed months instead — tell me the actual months and I will
+    use those, or we drop dates entirely.<br>
+    <b>3 · No overall rating shown.</b> I have not printed “4.9 from 200 reviews”, because two
+    reviews is not evidence of an average and I have not verified one. If you want that figure, send
+    it and I will add it.<br>
+    <b>4 · Where the button goes.</b> The two cards link to their own review. The button needs your
+    main Google profile URL — the two links you sent go to individual reviews, not the business
+    page. Send that link.
+  </p>
+</section>
+
+</div>
+</body>
+</html>
