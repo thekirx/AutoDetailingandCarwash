@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { allowedReviewAssigneePatch } from '@/lib/plannerTasks'
@@ -6,9 +6,13 @@ import { toast } from 'sonner'
 
 export default function PlanningReviewPanel({ items = [], canEdit, onChanged }) {
   const [previews, setPreviews] = useState({})
+  const proofKey = useMemo(
+    () => items.map((row) => row.assignee.proof_url).filter(Boolean).join('|'),
+    [items],
+  )
 
   useEffect(() => {
-    const paths = items.map((row) => row.assignee.proof_url).filter(Boolean)
+    const paths = proofKey ? proofKey.split('|') : []
     if (!paths.length) {
       setPreviews({})
       return
@@ -25,7 +29,7 @@ export default function PlanningReviewPanel({ items = [], canEdit, onChanged }) 
     return () => {
       cancelled = true
     }
-  }, [items.map((row) => row.assignee.proof_url).join('|')])
+  }, [proofKey])
 
   async function act(row, action) {
     if (!canEdit) return

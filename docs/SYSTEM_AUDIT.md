@@ -10,7 +10,7 @@
 | Framework | Vite 6 + React 19 SPA · Supabase Auth/RLS/RPC · Vercel `api/*` → `server/*.mjs` |
 | Build status | **PASS** — `npm run build` exit 0 |
 | Unit suite | **PASS** — `npm test` **1193/1193** (browser tests moved to `npm run test:browser`) |
-| Lint | **FAIL** — 61 errors / 3 warnings (mostly pre-existing / scripts `no-undef`; not auto-fixed) |
+| Lint | **PASS** — `npm run lint` exit 0 (design-mocks ignored; e2e-ui-forms browser globals; hooks deps fixed) |
 | Soft-launch product | **READY** with ops SMS blocker |
 | Production-perfect | **NOT COMPLETE** — Wave 1 ops + Wave 4–5 debt remain |
 

@@ -5,7 +5,20 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist', '.vercel', '.worktrees', 'public/push-sw.js', 'dev-dist', 'docs/_assets/**'] },
+  {
+    ignores: [
+      'dist',
+      '.vercel',
+      '.worktrees',
+      'public/push-sw.js',
+      'dev-dist',
+      'docs/_assets/**',
+      'design-mocks/**',
+    ],
+  },
+  {
+    settings: { react: { version: 'detect' } },
+  },
   js.configs.recommended,
   react.configs.flat.recommended,
   react.configs.flat['jsx-runtime'],
@@ -48,6 +61,7 @@ export default [
       'scripts/screenshot-audit.mjs',
       'scripts/e2e-ui-money.mjs',
       'scripts/e2e-ui-p0.mjs',
+      'scripts/e2e-ui-forms.mjs',
       'scripts/_diag-bleed.mjs',
     ],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },

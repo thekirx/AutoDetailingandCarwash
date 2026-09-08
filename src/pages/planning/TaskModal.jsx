@@ -87,7 +87,7 @@ export default function TaskModal({
     setItems([...(card?.plan_checklist_items || [])].sort(sortByPos))
     setAssignees([...(card?.plan_card_assignees || [])])
     setPickedIds((card?.plan_card_assignees || []).map((a) => a.staff_id).filter(Boolean))
-  }, [card?.id, initialListId])
+  }, [card, initialListId, lists])
 
   useEffect(() => {
     setListId((prev) => prev || defaultPlanListId(lists, initialListId))
