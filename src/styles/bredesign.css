@@ -897,6 +897,149 @@
   }
 }
 
+/* ==== Google reviews ====================================================
+   Sits under the gallery. The section ground steps back to base navy so the
+   two panels read as raised against it, the way the gallery's tiles do. */
+
+.bredesign .bd-reviews {
+  background: var(--bd-navy);
+}
+.bredesign .bd-reviews-head {
+  align-items: end;
+}
+.bredesign .bd-reviews-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: clamp(26px, 3vw, 40px);
+}
+@media (min-width: 820px) {
+  .bredesign .bd-reviews-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* The whole card is the link: a reader who wants to check a review should not
+   have to find a small "read more" to do it. */
+.bredesign .bd-review {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: clamp(22px, 2.6vw, 32px);
+  background: var(--bd-navy-2);
+  border: 1px solid var(--bd-rule);
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+.bredesign .bd-review:hover {
+  border-color: rgba(157, 180, 255, 0.5);
+  transform: translateY(-2px);
+}
+.bredesign .bd-review:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 3px;
+}
+
+.bredesign .bd-review-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bredesign .bd-review-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, var(--bd-blue-mid), var(--bd-blue));
+  color: #fff;
+  font-family: var(--bd-display);
+  font-size: 16px;
+}
+.bredesign .bd-review-who {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.bredesign .bd-review-who b {
+  font-size: 14.5px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.bredesign .bd-review-who s {
+  color: var(--bd-ink-3);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.bredesign .bd-review-source {
+  margin-left: auto;
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.bredesign .bd-review-source svg { display: block; width: 100%; height: 100%; }
+
+/* Google's own star yellow rather than a brand colour: these are Google's
+   ratings, and recolouring them to match the site would misrepresent that. */
+.bredesign .bd-review-stars {
+  display: flex;
+  gap: 2px;
+}
+.bredesign .bd-review-stars svg {
+  width: 16px;
+  height: 16px;
+  fill: #fbbc04;
+}
+
+.bredesign .bd-review p {
+  margin: 0;
+  color: var(--bd-ink-2);
+  font-size: 14.5px;
+  line-height: 1.72;
+  text-wrap: pretty;
+}
+.bredesign .bd-review-go {
+  margin-top: auto;
+  padding-top: 4px;
+  color: var(--bd-accent);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* White, because it carries Google's mark — the button belongs to them, and
+   their colours do not survive being set on navy. */
+.bredesign .bd-review-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  align-self: start;
+  padding: 14px 22px;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f1f1f;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+.bredesign .bd-review-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -14px rgba(255, 255, 255, 0.6);
+}
+.bredesign .bd-review-cta svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+}
+
 /* ==== Photos ============================================================= */
 
 .bredesign .bd-photos {
