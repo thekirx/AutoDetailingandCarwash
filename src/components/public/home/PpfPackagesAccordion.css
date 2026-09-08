@@ -142,6 +142,18 @@
   text-transform: uppercase;
   margin: 0.75rem 0 0.5rem;
 }
+/* The price sits directly under the tier name, above the sell line: a buyer
+   scanning the ladder is comparing figures, and burying it under the copy makes
+   them hunt. "From" carries the same weight as the number so the qualifier is
+   not something you have to look for. */
+.ppf-packages-section .ppfa-price {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.05rem, 1.6vw, 1.3rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
 .ppf-packages-section .ppfa-headline {
   margin: 0 0 1.125rem;
   font-size: 0.98rem;

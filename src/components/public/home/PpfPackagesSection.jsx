@@ -10,7 +10,7 @@ import './PpfPackagesAccordion.css'
 const packageCards = buildPpfPackageCards(PPF_PACKAGES)
 
 export default function PpfPackagesSection() {
-  /* One tier open at a time, Premium at rest — it is the tier most buyers land
+  /* One tier open at a time, Ultimate at rest — it is the tier most buyers land
      on, and opening on Basic anchors the section at its floor. */
   const [active, setActive] = useState(1)
 
@@ -32,10 +32,12 @@ export default function PpfPackagesSection() {
           </div>
           {/* Every tier carries these, so repeating them on each row only made the
               three packages look interchangeable. Said once, they read as standard. */}
+          {/* The free wheels coating is no longer on every tier, so this can only
+              claim what all three actually carry. The rest is stated per row. */}
           <p className="ppf-package-included">
             <strong>Every package includes</strong>
-            Self-healing film with a hydrophobic finish, seamless installation, and
-            complimentary ceramic coating on paint, glass, and wheels.
+            Self-healing TPU film with a hydrophobic, non-yellowing finish, seamless
+            installation, and a complimentary glass ceramic coating.
           </p>
         </header>
 
@@ -96,6 +98,9 @@ export default function PpfPackagesSection() {
                     </span>
 
                     <h3>{card.title}</h3>
+                    {card.priceFromLabel ? (
+                      <p className="ppfa-price">{card.priceFromLabel}</p>
+                    ) : null}
                     <p className="ppfa-headline">{card.headline}</p>
 
                     {/* Coverage as a delta, not a re-list. From Premium up, the

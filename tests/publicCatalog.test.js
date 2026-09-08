@@ -40,7 +40,7 @@ describe('public catalog uses inventory names', () => {
 
   it('lists PPF package titles from ppfPackages.js', () => {
     const overview = publicPackageOverview()
-    assert.deepEqual(overview.ppf, ['Basic Protection', 'Premium Protection', 'Platinum Protection'])
+    assert.deepEqual(overview.ppf, ['Basic Protection', 'Ultimate Protection', 'Platinum Protection'])
     assert.deepEqual(overview.ceramic, ['PREMIUM', 'PLATINUM'])
   })
 

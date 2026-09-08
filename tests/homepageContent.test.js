@@ -36,9 +36,9 @@ describe('homepage production content adapters', () => {
     const cards = buildPpfPackageCards(PPF_PACKAGES)
 
     assert.deepEqual(cards.map(({ id, title, thickness }) => ({ id, title, thickness })), [
-      { id: 'basic', title: 'Basic Protection', thickness: '7.5 mil premium-grade PPF' },
-      { id: 'premium', title: 'Premium Protection', thickness: '7.5 mil premium-grade PPF' },
-      { id: 'platinum', title: 'Platinum Protection', thickness: '8.5 mil premium-grade PPF' },
+      { id: 'basic', title: 'Basic Protection', thickness: '7.5 mil TPU PPF material' },
+      { id: 'ultimate', title: 'Ultimate Protection', thickness: '8 mil TPU PPF material' },
+      { id: 'platinum', title: 'Platinum Protection', thickness: '8.5 mil TPU PPF material' },
     ])
     assert.deepEqual(Object.keys(cards[0]).sort(), [
       'bookingState',
@@ -54,6 +54,8 @@ describe('homepage production content adapters', () => {
       'id',
       'isHighlighted',
       'number',
+      'priceFrom',
+      'priceFromLabel',
       'recommendedLabel',
       'subtitle',
       'thickness',
@@ -61,7 +63,7 @@ describe('homepage production content adapters', () => {
       'warrantySummary',
       'warrantyYears',
     ].sort())
-    assert.equal(cards[0].warrantySummary, '5-year PPF warranty for manufacturer defects only')
+    assert.equal(cards[0].warrantySummary, '7-year factory warranty')
     assert.equal(cards[1].recommendedLabel, 'Most Popular')
     assert.equal(cards[2].bookingState.packageId, 'platinum')
     assert.equal(cards[2].ctaLabel, 'Book Platinum Protection')

@@ -58,14 +58,21 @@ describe('PPF package value ladder', () => {
       ['Areas covered', 'Film thickness', 'Warranty'],
     ])
     assert.deepEqual(cards.map((card) => card.figures.map((figure) => figure.value + figure.unit)), [
-      ['4', '7.5mil', '5yr'],
-      ['13', '7.5mil', '5yr'],
-      ['15', '8.5mil', '8yr'],
+      ['4', '7.5mil', '7yr'],
+      ['13', '8mil', '10yr'],
+      ['15', '8.5mil', '12yr'],
     ])
     /* Panel replacement rides on the warranty figure; Basic has none to show. */
-    assert.deepEqual(cards.map((card) => card.figures[2].note), ['', '+ 2 panels', '+ 4 panels'])
+    assert.deepEqual(cards.map((card) => card.figures[2].note), ['', '+ 2 panels', '+ 3 panels'])
     /* Two highlighted rows out of three is the same as none. */
     assert.deepEqual(cards.map((card) => card.isHighlighted), [false, true, false])
+    /* Every tier quotes a floor rather than a flat figure — the operational
+       disclaimers reserve the right to charge more for oversized vehicles. */
+    assert.deepEqual(cards.map((card) => card.priceFromLabel), [
+      'From \u20b175,000',
+      'From \u20b194,000',
+      'From \u20b1130,000',
+    ])
     assert.deepEqual(cards.map((card) => card.headline), [
       'The panels that take the hits.',
       'Every painted panel, covered.',
@@ -80,7 +87,7 @@ describe('PPF package value ladder', () => {
     assert.match(section, /Book now <ArrowRight/)
     assert.match(
       applyPublicBookPrefill({}, cards[1].bookingState)._prefNotes,
-      /^Package: Premium Protection · Full Body PPF · Film: 7\.5 mil/,
+      /^Package: Ultimate Protection · Full Body PPF · Film: 8 mil/,
     )
   })
 

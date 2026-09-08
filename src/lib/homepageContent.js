@@ -3,6 +3,12 @@ function resultState(item, error) {
   return { status: item ? 'ready' : 'empty', item, error: null }
 }
 
+/* 75000 -> "\u20b175,000". Whole pesos: these are six-figure packages and the
+   centavos would be noise. */
+function pesos(amount) {
+  return `\u20b1${Number(amount).toLocaleString('en-PH')}`
+}
+
 /* "5-year PPF warranty for manufacturer defects only" -> 5. The qualifier stays
    on the card as fine print; only the number is pulled out for the value row. */
 export function ppfWarrantyYears(warrantyLine) {
@@ -39,6 +45,11 @@ export function buildPpfPackageCards(packages = []) {
     title: item.title,
     subtitle: item.subtitle,
     description: item.shortDescription,
+    /* Quoted as a floor, not a fixed figure: the operational disclaimers already
+       reserve the right to charge more for oversized or heavily modified
+       vehicles, so a flat number on the card would contradict them. */
+    priceFrom: item.priceFrom ?? null,
+    priceFromLabel: item.priceFrom ? `From ${pesos(item.priceFrom)}` : '',
     coverageType: item.coverageType,
     coverageCount: item.coverageAreas.length,
     thickness: item.filmThickness,

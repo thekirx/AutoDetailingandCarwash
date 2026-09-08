@@ -175,7 +175,7 @@ function Car({ coverage, onInspect }) {
 }
 
 export default function PPFVisualizer() {
-  const [selected,setSelected] = useState('premium')
+  const [selected,setSelected] = useState('ultimate')
   const [inspected,setInspected] = useState(null)
   const data = PPF_PACKAGES.find(item => item.id === selected) ?? PPF_PACKAGES[0]
   const coverage = getCoverageState(data)
