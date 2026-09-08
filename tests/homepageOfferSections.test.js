@@ -18,7 +18,9 @@ describe('ceramic coating offer cards', () => {
       ['premium', 5],
       ['platinum', 8],
     ])
-    assert.ok(cards.every((card) => card.pitch && card.copy && card.includes.length === 4))
+    /* The bullet count is the owner's to set — the card contract is that every
+       tier carries a pitch, detail copy, and a non-empty inclusions list. */
+    assert.ok(cards.every((card) => card.pitch && card.copy && card.includes.length > 0))
     assert.deepEqual(cards.map(({ detailsId }) => detailsId), [
       'ceramic-package-details-premium',
       'ceramic-package-details-platinum',

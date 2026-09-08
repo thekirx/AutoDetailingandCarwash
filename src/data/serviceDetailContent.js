@@ -79,7 +79,8 @@ export const SERVICE_DETAIL_CONTENT = {
       },
       {
         question: 'What does Unlimited Recoating mean for my package?',
-        answer: 'Unlimited Recoating is included with both Premium and Platinum. The team will confirm eligibility and the appropriate maintenance process after inspecting the vehicle and its existing finish.',
+        answer:
+          'Most shops promise protection — but when it comes to how long that protection actually holds up, most fall short of what is advertised. This is true no matter which brand of ceramic coating is used. At Hakum, we promise protection and we deliver on it — with our Unlimited Ceramic Coating Reboost, absolutely free. That means when your coating\u2019s effectiveness starts to degrade, we add an additional layer, absolutely free. The risk is on us, because we trust our products.',
       },
       {
         question: 'Which Ceramic package should I choose?',

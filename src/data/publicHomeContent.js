@@ -110,10 +110,12 @@ export const ceramicPackages = [
     bgImage: new URL('../assets/services/ceramic-premium.webp', import.meta.url).href,
     copy: 'Enhanced protection with deeper gloss and stronger hydrophobic performance for drivers who want more lasting results.',
     includes: [
-      'Enhanced ceramic protection',
-      'Deeper paint gloss',
-      'Improved water repellency',
-      'Longer-lasting protection',
+      'Titanium Catalyst Ceramic Coating — imported from Japan',
+      '2 Layers of Pure Ceramic Coating',
+      '5-Year Unlimited Recoating Warranty',
+      'Engineered for Philippine Weather',
+      'Hydrophobic Finish',
+      'High-Gloss Shine',
     ],
   },
   {
@@ -124,10 +126,12 @@ export const ceramicPackages = [
     bgImage: new URL('../assets/services/ceramic-platinum.webp', import.meta.url).href,
     copy: 'Our highest level of ceramic protection, created for maximum gloss, durability, and long-term paint preservation.',
     includes: [
-      'Premium ceramic protection',
-      'Maximum gloss and depth',
-      'Advanced hydrophobic finish',
-      'Long-term paint protection',
+      'Titanium Catalyst Ceramic Coating — imported from Japan',
+      '3 Layers of Pure Ceramic Coating',
+      '8-Year Unlimited Recoating Warranty',
+      'Engineered for Philippine Weather',
+      'Hydrophobic Finish',
+      'High-Gloss Shine',
     ],
   },
 ]
