@@ -2406,13 +2406,13 @@
 .bredesign .bd-clearpro-mark img {
   display: block;
   width: auto;
-  height: clamp(52px, 6.6vw, 84px);
+  height: clamp(76px, 9vw, 124px);
 }
 .bredesign .bd-clearpro-mark span {
-  padding-left: 14px;
+  padding-left: 18px;
   border-left: 1px solid var(--bd-rule);
   color: var(--bd-accent);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
   line-height: 1.4;
@@ -2424,7 +2424,7 @@
   margin: 0;
   max-width: 68ch;
   color: var(--bd-ink-2);
-  font-size: 14px;
+  font-size: 15.5px;
   line-height: 1.7;
 }
 
@@ -2436,26 +2436,26 @@
   list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 .bredesign .bd-clearpro-figures li {
-  padding: 8px 13px;
+  padding: 15px 20px;
   border: 1px solid var(--bd-rule);
-  border-radius: 7px;
+  border-radius: 9px;
   background: rgba(2, 10, 49, 0.6);
 }
 .bredesign .bd-clearpro-figures b {
   display: block;
   font-family: var(--bd-display);
-  font-size: 16px;
+  font-size: clamp(20px, 1.9vw, 25px);
   line-height: 1;
   color: var(--bd-paper);
 }
 .bredesign .bd-clearpro-figures s {
   display: block;
-  margin-top: 5px;
+  margin-top: 8px;
   color: var(--bd-ink-3);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-decoration: none;
@@ -2464,7 +2464,7 @@
 
 .bredesign .bd-clearpro-card a {
   color: var(--bd-paper);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;

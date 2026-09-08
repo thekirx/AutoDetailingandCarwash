@@ -102,8 +102,13 @@ describe('Ceramic package book CTA', () => {
   it('books Ceramic Coating with the package name, same prefill as PPF', () => {
     const src = read('src/components/public/home/HomeServiceSections.jsx')
     assert.match(src, /to="\/book"/)
-    assert.match(src, /service: 'Ceramic Coating'/)
-    assert.match(src, /package: item\.title/)
+    /* The card used to build this payload inline. It carries the adapter's
+       bookingState now — one booking action per card instead of two — so the
+       guarantee is asserted where the payload is actually assembled. */
+    assert.match(src, /state=\{item\.bookingState\}/)
+    const adapter = read('src/lib/homepageContent.js')
+    assert.match(adapter, /service: 'Ceramic Coating'/)
+    assert.match(adapter, /package: `\$\{item\.title\} Ceramic Coating`/)
   })
 })
 
