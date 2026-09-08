@@ -12,7 +12,7 @@ Wave **2 eng fixes are DONE** (event registration API geofence, waitlist/legal h
 
 | Wave | Status |
 |------|--------|
-| 0 Release hygiene | In progress — commit after verify |
+| 0 Release hygiene | **DONE** — commit `fadd27d` (noise left untracked) |
 | 1 Ops SMS | **BLOCKED** — BrandTxt IP + `OWNER_SMS_PHONE` need Hakum Vercel access |
 | 2 Eng P1/P2 | **DONE** — BUG-015…018 closed |
 | 3 Confidence | **PARTIAL** — units+build PASS; lint dirty; full readiness orchestrator not re-run |
