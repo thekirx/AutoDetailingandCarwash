@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service pages — feedback mock</title>
+<style>
+/* ===================================================================
+   Tokens — copied from src/styles/bredesign.css so the mock cannot
+   drift from the live site. Do not invent colours here.
+   =================================================================== */
+:root{
+  --hk-navy:#020A31; --hk-navy-2:#08133F; --hk-navy-3:#0D1B52;
+  --hk-rule:#16255C; --hk-blue:#052699; --hk-blue-mid:#2D59D3;
+  --hk-accent:#9DB4FF; --hk-paper:#F1F1ED;
+  --hk-ink-2:rgba(241,241,237,.78); --hk-ink-3:#7E8AB8;
+  --hk-display:"Benzin","Arial Black",sans-serif;
+  --hk-body:"Gilmer",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#0a0a0a;color:var(--hk-paper);font-family:var(--hk-body);}
+
+/* ---- page chrome ------------------------------------------------- */
+.doc{max-width:1500px;margin:0 auto;padding:40px clamp(16px,3vw,48px) 120px;}
+.doc-head{border-bottom:1px solid #262626;padding-bottom:28px;margin-bottom:14px}
+.doc-head h1{font-family:var(--hk-display);font-size:clamp(1.6rem,3.4vw,2.5rem);margin:0 0 10px;letter-spacing:-.02em}
+.doc-head p{margin:0;color:#9a9a9a;font-size:14px;line-height:1.65;max-width:78ch}
+.doc-head code{background:#1c1c1c;padding:1px 6px;border-radius:3px;font-size:12.5px;color:#c9c9c9}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 0}
+.toc a{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+  color:#bdbdbd;text-decoration:none;border:1px solid #303030;border-radius:999px;padding:7px 13px}
+.toc a:hover{border-color:var(--hk-accent);color:var(--hk-accent)}
+
+/* ---- one feedback item ------------------------------------------- */
+.item{margin-top:64px;scroll-margin-top:20px}
+.item-head{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+.item-head h2{font-family:var(--hk-display);font-size:clamp(1.1rem,2vw,1.5rem);margin:0;letter-spacing:-.01em}
+.item-head .where{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:#7a7a7a;font-weight:700}
+.note{margin:0 0 20px;padding:12px 16px;border-left:3px solid #E0B500;background:#1a1707;
+  color:#e8dcae;font-size:13.5px;line-height:1.6;max-width:92ch}
+.note b{color:#ffd83d;font-weight:800}
+.why{margin:0 0 22px;color:#9a9a9a;font-size:13.5px;line-height:1.7;max-width:88ch}
+.why strong{color:#d6d6d6;font-weight:700}
+
+/* ---- before / after frames --------------------------------------- */
+.pair{display:grid;gap:18px}
+@media(min-width:1120px){.pair{grid-template-columns:1fr 1fr}}
+/* Items 1 and 3 are ABOUT the two-column layout, so half-width frames would
+   collapse them to one column and hide the very thing being reviewed. These
+   stack full width instead: before above, after below. */
+.pair.stack{grid-template-columns:1fr !important}
+/* Measured off the live page at a 1233px viewport: the why-section shell is
+   1156px, split 543 / 570. The stage is pinned to that so the "before" wraps
+   its text exactly as the site does — a narrower frame would quietly fix the
+   very wrap being complained about. Scrolls sideways on smaller screens. */
+.pair.stack .frame{overflow-x:auto}
+.pair.stack .stage{width:1156px;padding-left:0;padding-right:0;margin:0 auto}
+@media(max-width:1300px){.pair.stack .stage{margin:0 20px}}
+.frame{border:1px solid #2a2a2a;border-radius:6px;overflow:hidden;background:var(--hk-navy);min-width:0}
+.frame > figcaption{display:flex;align-items:center;gap:9px;padding:9px 14px;
+  background:#161616;border-bottom:1px solid #2a2a2a;
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#8a8a8a}
+.frame > figcaption::before{content:"";width:8px;height:8px;border-radius:50%;background:#5a5a5a}
+.frame.is-after > figcaption{color:#7ee2a8}
+.frame.is-after > figcaption::before{background:#3ddc84}
+.frame.is-alt{background:var(--hk-navy-2)}
+.stage{padding:clamp(18px,2.4vw,34px)}
+
+/* ===================================================================
+   LIVE SITE STYLES — "before" columns reproduce the shipping rules
+   verbatim so the comparison is honest.
+   =================================================================== */
+.eyebrow{margin:0;font-size:11px;font-weight:800;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--hk-accent);display:flex;align-items:center;gap:12px}
+.eyebrow::before{content:"";width:34px;height:1px;background:var(--hk-accent);opacity:.6}
+
+.why-in{display:grid;gap:clamp(20px,2.4vw,34px)}
+@media(min-width:760px){.why-in.two{grid-template-columns:1fr 1.05fr;align-items:center}}
+.why-copy h3{font-family:var(--hk-display);margin:14px 0 0;
+  font-size:clamp(1.5rem,3vw,2.1rem);line-height:1.05;letter-spacing:-.02em}
+.why-lede{margin-top:18px;color:var(--hk-ink-2);font-size:15.5px;line-height:1.75;max-width:52ch}
+.why-lede strong{color:var(--hk-paper);font-weight:700}
+.cta-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 22px;border-radius:999px;
+  font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;text-decoration:none}
+.btn-primary{background:var(--hk-blue);color:#fff}
+.btn-quiet{border:1px solid rgba(241,241,237,.34);color:var(--hk-paper)}
+
+/* the shipping 2x2 grid */
+.points{margin:24px 0 0;padding:0;list-style:none;display:grid;gap:1px;
+  background:var(--hk-rule);border:1px solid var(--hk-rule)}
+@media(min-width:560px){.points{grid-template-columns:repeat(2,1fr)}}
+.points li{background:var(--hk-navy);padding:16px 18px}
+.is-alt .points li{background:var(--hk-navy-2)}
+.points strong{display:block;font-size:11px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--hk-paper)}
+.points span{display:block;margin-top:8px;font-size:14px;line-height:1.65;color:var(--hk-ink-2)}
+
+/* ===================================================================
+   PROPOSED STYLES — every "after" rule is prefixed .v2 so the two
+   columns can sit on one page without leaking into each other.
+   =================================================================== */
+
+/* --- 1. the two-column format ------------------------------------- */
+/* The live grid centres both columns, so a short lede floats against a
+   tall card grid and the buttons land in the middle of nowhere. Top
+   alignment puts the lede, the buttons and the first card row on one
+   line, which is what "format is off" is pointing at. */
+.v2 .why-in.two{align-items:start}
+.v2 .why-copy h3{font-size:clamp(1.7rem,3.4vw,2.5rem)}
+/* The measure comes in to 46ch and `text-wrap:pretty` stops the last line
+   falling to a single orphan word — which is what the arrow is pointing at.
+   The bold phrase is also kept off a line break. */
+.v2 .why-lede{max-width:46ch;font-size:16px;line-height:1.72;text-wrap:pretty}
+
+/* --- 2. feature cards with icons ---------------------------------- */
+.v2 .points{gap:12px;background:none;border:0}
+.v2 .points li{background:var(--hk-navy-2);border:1px solid var(--hk-rule);
+  border-radius:10px;padding:20px 20px 22px;position:relative;
+  transition:border-color .18s ease, transform .18s ease}
+.v2 .points li:hover{border-color:rgba(157,180,255,.5);transform:translateY(-2px)}
+.v2.is-alt .points li{background:var(--hk-navy-3)}
+.v2 .points .ico{display:grid;place-items:center;width:38px;height:38px;border-radius:9px;
+  background:rgba(157,180,255,.1);border:1px solid rgba(157,180,255,.24);margin-bottom:14px}
+.v2 .points .ico svg{width:19px;height:19px;stroke:var(--hk-accent);
+  fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+/* 11px/800 uppercase is a label, not a title. 13.5px with looser
+   tracking reads as a heading and stops the four cards blurring. */
+.v2 .points strong{font-size:13.5px;letter-spacing:.055em;line-height:1.3}
+.v2 .points span{margin-top:9px;font-size:14px;line-height:1.68}
+
+/* --- 3. the ClearPro strip ---------------------------------------- */
+.cp-card{grid-column:1/-1;display:grid;gap:20px;align-items:center;
+  padding:clamp(20px,2.6vw,34px);background:var(--hk-navy-2);
+  border-left:3px solid var(--hk-accent)}
+@media(min-width:820px){.cp-card{grid-template-columns:minmax(0,300px) 1fr auto}}
+.cp-label{margin:0 0 6px;font-size:10.5px;font-weight:800;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--hk-accent)}
+.cp-word{font-family:var(--hk-display);font-size:clamp(2.4rem,5.4vw,3.6rem);
+  line-height:.9;letter-spacing:-.03em;margin:0}
+.cp-copy{margin:0;color:var(--hk-ink-2);font-size:14.5px;line-height:1.7}
+.cp-link{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--hk-paper);text-decoration:none;white-space:nowrap}
+
+/* proposed: real mark, a product frame, and the spec as figures */
+.v2 .cp-card{grid-template-columns:1fr;gap:0;padding:0;border-left:0;
+  border:1px solid var(--hk-rule);border-radius:12px;overflow:hidden}
+.v2 .cp-top{display:grid;gap:22px;align-items:center;padding:clamp(20px,2.6vw,32px)}
+@media(min-width:820px){.v2 .cp-top{grid-template-columns:auto 1fr auto}}
+.v2 .cp-mark{display:flex;align-items:center;gap:14px}
+.v2 .cp-mark img{height:44px;width:auto;display:block}
+.v2 .cp-mark .rule{width:1px;height:40px;background:var(--hk-rule)}
+.v2 .cp-mark .cp-label{margin:0}
+.v2 .cp-figures{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.v2 .cp-figures span{border:1px solid var(--hk-rule);border-radius:7px;padding:8px 13px;
+  background:rgba(2,10,49,.6)}
+.v2 .cp-figures b{display:block;font-family:var(--hk-display);font-size:17px;line-height:1}
+.v2 .cp-figures s{display:block;margin-top:5px;text-decoration:none;font-size:9.5px;
+  font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--hk-ink-3)}
+.v2 .cp-shot{margin:0;position:relative;min-height:150px;background:#0B1B4A}
+.v2 .cp-shot img{display:block;width:100%;height:100%;min-height:150px;object-fit:cover}
+.v2 .cp-shot figcaption{position:absolute;left:0;bottom:0;right:0;padding:9px 14px;
+  background:linear-gradient(transparent,rgba(2,10,49,.9));font-size:10.5px;
+  font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--hk-paper)}
+
+/* --- 4. the FAQ question face ------------------------------------- */
+.faq{border-top:1px solid var(--hk-rule)}
+.faq article{border-bottom:1px solid var(--hk-rule)}
+.faq button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:20px;
+  padding:22px 0;border:0;background:transparent;color:var(--hk-paper);text-align:left;cursor:pointer}
+/* live: the display face, at 750, on sentence-length questions */
+.faq button span{font-family:var(--hk-display);font-size:18px;font-weight:750;line-height:1.35}
+.faq svg{flex:none;width:18px;height:18px;stroke:var(--hk-accent);fill:none;stroke-width:2}
+.faq p{max-width:64ch;padding:0 42px 24px 0;margin:0;color:var(--hk-ink-2);font-size:14px;line-height:1.72}
+/* proposed: body face, real weight, more line height */
+.v2 .faq button span{font-family:var(--hk-body);font-size:17.5px;font-weight:700;
+  line-height:1.45;letter-spacing:0}
+.v2 .faq p{font-size:14.5px;line-height:1.75}
+
+/* --- 5. the ceramic page hero ------------------------------------- */
+.hero{position:relative;padding:clamp(30px,5vw,64px) clamp(20px,3vw,40px);
+  background:linear-gradient(115deg,#0B1B4A 0%,#0d1b52 50%,#020a31 100%);overflow:hidden}
+.hero h3{font-family:var(--hk-display);margin:16px 0 0;line-height:.86;letter-spacing:-.035em;
+  font-size:clamp(2.6rem,8vw,5.4rem);text-transform:uppercase}
+.hero h3 em{font-style:normal;color:var(--hk-accent);display:block}
+.hero-eyebrow{font-size:11px}
+/* proposed: the label loses "what is", gains size; a sub-line does the
+   selling the headline was being asked to do on its own */
+.v2 .hero-eyebrow{font-size:14px;letter-spacing:.2em}
+.v2 .hero h3{font-size:clamp(3rem,9.4vw,6.6rem)}
+.v2 .hero-sub{margin:20px 0 0;font-size:clamp(1rem,1.8vw,1.3rem);font-weight:600;
+  line-height:1.4;color:var(--hk-paper);max-width:30ch}
+.v2 .hero-sub b{color:var(--hk-accent);font-weight:800}
+
+/* --- 6. the warranty badge ---------------------------------------- */
+.pkg{position:relative;border-radius:10px;overflow:hidden;min-height:330px;
+  display:flex;align-items:flex-end;padding:22px;
+  background:linear-gradient(160deg,#243056,#0d1b52 60%,#020a31)}
+.pkg-name{position:absolute;left:14px;top:26px;writing-mode:vertical-rl;transform:rotate(180deg);
+  font-family:var(--hk-display);font-size:26px;letter-spacing:.02em;color:#fff;opacity:.95}
+.pkg-in{margin-left:46px}
+.pill{display:inline-block;background:var(--hk-accent);color:var(--hk-navy);
+  font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:6px 11px}
+/* live badge */
+.badge{display:flex;align-items:center;gap:12px;margin-top:12px;
+  border:1px solid rgba(241,241,237,.3);background:rgba(20,32,74,.72);padding:14px 16px}
+.badge b{font-family:var(--hk-display);font-size:34px;line-height:1}
+.badge s{text-decoration:none;font-size:10.5px;font-weight:800;letter-spacing:.09em;
+  text-transform:uppercase;line-height:1.25;display:block}
+.pkg-copy{margin:14px 0 0;font-size:13.5px;line-height:1.6;color:var(--hk-ink-2);max-width:34ch}
+/* proposed badge: the number carries the tier, so it is set as a figure
+   rather than as a line of text with a number in it */
+.v2 .badge{margin-top:14px;padding:16px 20px;border:0;border-radius:10px;
+  background:linear-gradient(135deg,var(--hk-blue-mid),var(--hk-blue));
+  box-shadow:0 10px 30px -12px rgba(45,89,211,.9), inset 0 1px 0 rgba(255,255,255,.22);
+  align-items:baseline;gap:14px}
+.v2 .badge b{font-size:60px;letter-spacing:-.03em;color:#fff;
+  text-shadow:0 2px 18px rgba(0,0,0,.35)}
+.v2 .badge s{font-size:12px;letter-spacing:.1em;color:#fff}
+.v2 .badge .free{margin-left:auto;align-self:center;font-size:9.5px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;color:#fff;
+  border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:5px 10px;white-space:nowrap}
+.v2 .pill{background:#fff;color:var(--hk-blue)}
+
+.pkg-pair{display:grid;gap:14px}
+@media(min-width:620px){.pkg-pair{grid-template-columns:1fr 1fr}}
+
+.ask{margin-top:26px;padding:14px 18px;border:1px dashed #3a3a3a;border-radius:6px;
+  background:#121212;color:#c9c9c9;font-size:13.5px;line-height:1.7;max-width:92ch}
+.ask b{color:#ffd83d}
+</style>
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Service pages — the marked-up feedback, before and after</h1>
+  <p>
+    Every “after” below is a proposal, not shipped code. The “before” columns reproduce the
+    live rules from <code>src/styles/bredesign.css</code> verbatim, so the comparison is honest
+    rather than flattering. Nothing here is in the app until you say which ones to take.
+    Colours are the brand tokens only — no new palette is introduced.
+  </p>
+  <nav class="toc">
+    <a href="#f1">1 · Two-column format</a>
+    <a href="#f2">2 · Icons on the cards</a>
+    <a href="#f3">3 · ClearPro branding</a>
+    <a href="#f4">4 · FAQ font</a>
+    <a href="#f5">5 · Ceramic hero</a>
+    <a href="#f6">6 · Warranty badge</a>
+  </nav>
+</header>
+
+<!-- ============================================================ 1 -->
+<section class="item" id="f1" data-stack>
+  <div class="item-head">
+    <h2>1 · The two-column format</h2>
+    <span class="where">/services/ppf · /services/ceramic</span>
+  </div>
+  <p class="note"><b>Your note:</b> “FORMAT IS OFF” — arrow pointing at the lede column.</p>
+  <p class="why">
+    I first assumed this was vertical alignment — the grid uses
+    <code style="color:#d6d6d6">align-items:center</code> — but I measured it on the live page and
+    that only costs about 22px, which is not what you would have circled.
+    <strong>What your arrow actually lands on is the text wrap.</strong> The lede runs to a 52ch
+    measure, so the bold phrase “Road debris, UV radiation, and environmental fallout” breaks across
+    two lines mid-phrase, and the paragraph ends on a single orphan word — “them.” — sitting alone.
+    That is the ragged, unfinished look. The proposal tightens the measure to 46ch, adds
+    <code style="color:#d6d6d6">text-wrap:pretty</code> so the last line cannot orphan, and top-aligns
+    the columns while it is there.
+  </p>
+  <div class="pair stack">
+    <figure class="frame">
+      <figcaption>Before — live now</figcaption>
+      <div class="stage">
+        <div class="why-in two">
+          <div class="why-copy">
+            <p class="eyebrow">Why paint protection film</p>
+            <h3>From the<br>first mile.</h3>
+            <p class="why-lede">Your car is most vulnerable the moment it leaves the dealership.
+              <strong>Road debris, UV radiation, and environmental fallout</strong> attack your paint
+              every single day — quietly taking resale value and the finish you paid for with them.</p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="#f1">Protect your vehicle today</a>
+              <a class="btn btn-quiet" href="#f1">All services</a>
+            </div>
+          </div>
+          <ul class="points">
+            <li><strong>Self-healing top coat</strong><span>ClearPro’s TPU film is designed so minor swirls and light surface marks can recover with heat or sunlight.</span></li>
+            <li><strong>Impact-ready barrier</strong><span>The film takes the everyday contact from road debris and light scratches before it reaches the original paint.</span></li>
+            <li><strong>Optical clarity</strong><span>ClearPro builds its clear film to preserve the color and gloss underneath rather than masking the factory finish.</span></li>
+            <li><strong>Hydrophobic &amp; anti-yellowing</strong><span>A water-repelling surface and non-yellowing optical TPU help the protected finish stay clearer and easier to maintain.</span></li>
+          </ul>
+        </div>
+      </div>
+    </figure>
+
+    <figure class="frame is-after v2">
+      <figcaption>After — proposed</figcaption>
+      <div class="stage">
+        <div class="why-in two">
+          <div class="why-copy">
+            <p class="eyebrow">Why paint protection film</p>
+            <h3>From the<br>first mile.</h3>
+            <p class="why-lede">Your car is most vulnerable the moment it leaves the dealership.
+              <strong>Road debris, UV radiation, and environmental fallout</strong> attack your paint
+              every single day — quietly taking resale value and the finish you paid for with them.</p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="#f1">Protect your vehicle today</a>
+              <a class="btn btn-quiet" href="#f1">All services</a>
+            </div>
+          </div>
+          <ul class="points">
+            <li>
+              <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+              <strong>Self-healing top coat</strong><span>ClearPro’s TPU film is designed so minor swirls and light surface marks can recover with heat or sunlight.</span>
+            </li>
+            <li>
+              <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5 19 19M19 5l-2.5 2.5M7.5 16.5 5 19"/><circle cx="12" cy="12" r="3.4"/></svg></span>
+              <strong>Impact-ready barrier</strong><span>The film takes the everyday contact from road debris and light scratches before it reaches the original paint.</span>
+            </li>
+            <li>
+              <span class="ico"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+              <strong>Optical clarity</strong><span>ClearPro builds its clear film to preserve the color and gloss underneath rather than masking the factory finish.</span>
+            </li>
+            <li>
+              <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2.7s6 6.4 6 10.4a6 6 0 0 1-12 0c0-4 6-10.4 6-10.4Z"/><path d="M9.4 14.6a2.8 2.8 0 0 0 2.6 2"/></svg></span>
+              <strong>Hydrophobic &amp; anti-yellowing</strong><span>A water-repelling surface and non-yellowing optical TPU help the protected finish stay clearer and easier to maintain.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </figure>
+  </div>
+  <p class="ask">
+    <b>Check me on this one:</b> this is the only annotation I had to interpret. If “format is off”
+    meant something else — the column widths, the button row, the gap between the two halves —
+    say which and I will redraw it. Everything else on this page is a direct reading of your note.
+  </p>
+</section>
+
+<!-- ============================================================ 2 -->
+<section class="item" id="f2">
+  <div class="item-head">
+    <h2>2 · Icons on the feature cards</h2>
+    <span class="where">both why-sections</span>
+  </div>
+  <p class="note"><b>Your note:</b> “ADD ICONS TO BE MORE ENGAGING” — on both the PPF and the ceramic grid.</p>
+  <p class="why">
+    Shown above on PPF and below on ceramic. Beyond the icon itself, the card titles move from
+    <strong>11px / 800 uppercase</strong> — which is a label size, not a heading size — to 13.5px,
+    which is what makes the four cards scannable instead of a grey block. The tiles also gain a
+    gap, a border radius and a hover lift, so they read as four things rather than one table.
+  </p>
+  <div class="pair">
+    <figure class="frame is-alt">
+      <figcaption>Before — live now</figcaption>
+      <div class="stage">
+        <ul class="points">
+          <li><strong>Permanent molecular bond</strong><span>Unlike wax, ceramic chemically bonds to your paint — it cannot be washed or wiped off.</span></li>
+          <li><strong>Extreme gloss &amp; depth</strong><span>Nano-ceramic technology amplifies your paint’s depth and clarity — it reads better than the day you bought it.</span></li>
+          <li><strong>Hydrophobic self-cleaning</strong><span>Water, mud, and road grime bead up and sheet off effortlessly — keeping your car cleaner, longer.</span></li>
+          <li><strong>UV &amp; chemical resistance</strong><span>Blocks oxidation and UV fade, while repelling bird droppings, tree sap, and acid rain that etch bare paint.</span></li>
+        </ul>
+      </div>
+    </figure>
+    <figure class="frame is-after is-alt v2">
+      <figcaption>After — proposed</figcaption>
+      <div class="stage">
+        <ul class="points">
+          <li>
+            <span class="ico"><svg viewBox="0 0 24 24"><path d="M9.5 14.5 7 17a3.5 3.5 0 0 1-5-5l2.5-2.5"/><path d="M14.5 9.5 17 7a3.5 3.5 0 0 1 5 5l-2.5 2.5"/><path d="m9 15 6-6"/></svg></span>
+            <strong>Permanent molecular bond</strong><span>Unlike wax, ceramic chemically bonds to your paint — it cannot be washed or wiped off.</span>
+          </li>
+          <li>
+            <span class="ico"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.5 5.9 5.9 2.5-5.9 2.5L12 19.4l-2.5-5.9L3.6 11l5.9-2.5L12 2.6Z"/></svg></span>
+            <strong>Extreme gloss &amp; depth</strong><span>Nano-ceramic technology amplifies your paint’s depth and clarity — it reads better than the day you bought it.</span>
+          </li>
+          <li>
+            <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2.7s6 6.4 6 10.4a6 6 0 0 1-12 0c0-4 6-10.4 6-10.4Z"/><path d="M9.4 14.6a2.8 2.8 0 0 0 2.6 2"/></svg></span>
+            <strong>Hydrophobic self-cleaning</strong><span>Water, mud, and road grime bead up and sheet off effortlessly — keeping your car cleaner, longer.</span>
+          </li>
+          <li>
+            <span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22M4.9 4.9l1.9 1.9M17.2 17.2l1.9 1.9M19.1 4.9l-1.9 1.9M6.8 17.2l-1.9 1.9"/></svg></span>
+            <strong>UV &amp; chemical resistance</strong><span>Blocks oxidation and UV fade, while repelling bird droppings, tree sap, and acid rain that etch bare paint.</span>
+          </li>
+        </ul>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================================ 3 -->
+<section class="item" id="f3" data-stack>
+  <div class="item-head">
+    <h2>3 · ClearPro branding</h2>
+    <span class="where">/services/ppf — the partner strip</span>
+  </div>
+  <p class="note"><b>Your note:</b> “ADD MORE BRANDING OF CLEARPRO? IMAGE? SOME PICTURES OF THEIR LOGO OR BRANDING?”</p>
+  <p class="why">
+    The strip currently sets the word “ClearPro” in our own display face — so it is our typography
+    wearing their name, which is the opposite of a partner credit. The proposal uses
+    <strong>their actual mark</strong> (already in the repo at <code>src/assets/brands/color/clearpro.png</code>),
+    adds a product frame, and pulls the spec out of the paragraph into figures a buyer can scan.
+  </p>
+  <div class="pair stack">
+    <figure class="frame">
+      <figcaption>Before — live now</figcaption>
+      <div class="stage">
+        <div class="cp-card">
+          <div>
+            <p class="cp-label">Film partner</p>
+            <p class="cp-word">ClearPro</p>
+          </div>
+          <p class="cp-copy">ClearPro’s optical TPU film combines a self-healing top coat, hydrophobic
+            performance, high clarity, and resistance to yellowing. Its current UltraClear technical
+            sheet lists a nominal 7.5 mil construction.</p>
+          <a class="cp-link" href="#f3">Explore ClearPro technology ↗</a>
+        </div>
+      </div>
+    </figure>
+    <figure class="frame is-after v2">
+      <figcaption>After — proposed</figcaption>
+      <div class="stage">
+        <div class="cp-card">
+          <div class="cp-top">
+            <div class="cp-mark">
+              <img src="../../src/assets/brands/color/clearpro.png" alt="ClearPro">
+              <span class="rule"></span>
+              <p class="cp-label">Film<br>partner</p>
+            </div>
+            <div>
+              <p class="cp-copy">ClearPro’s optical TPU film combines a self-healing top coat,
+                hydrophobic performance, high clarity, and resistance to yellowing.</p>
+              <div class="cp-figures">
+                <span><b>7.5–8.5</b><s>mil construction</s></span>
+                <span><b>Aliphatic</b><s>non-yellowing</s></span>
+                <span><b>Invisiglue</b><s>no residue</s></span>
+                <span><b>Polyoptico</b><s>glossy finish</s></span>
+              </div>
+            </div>
+            <a class="cp-link" href="#f3">Explore ClearPro ↗</a>
+          </div>
+          <figure class="cp-shot">
+            <img src="../../src/assets/services/ppf-information-grey-truck-clean.jpg" alt="ClearPro film installed">
+            <figcaption>ClearPro UltraClear — installed at Hakum</figcaption>
+          </figure>
+        </div>
+      </div>
+    </figure>
+  </div>
+  <p class="ask">
+    <b>Needs you:</b> the product frame above is a placeholder pulled from the repo. If ClearPro
+    has supplied brand photography or a media kit, send it and it drops straight in. Also worth
+    checking that using their logo this prominently is within whatever distributor agreement you have.
+  </p>
+</section>
+
+<!-- ============================================================ 4 -->
+<section class="item" id="f4">
+  <div class="item-head">
+    <h2>4 · The FAQ question font</h2>
+    <span class="where">every service page</span>
+  </div>
+  <p class="note"><b>Your note:</b> “FONT IS NOT READABLE — REPLACE FONT?”</p>
+  <p class="why">
+    You are right, and it is measurable. The questions are set in <strong>Benzin at weight 750</strong>
+    — a display face built for three-word headlines, doing eight-word sentences in reverse on navy.
+    Its counters close up at that weight and the whole list turns into one texture. The proposal keeps
+    Benzin for the section heading and moves the questions to <strong>Gilmer 700</strong>, the body face
+    already used everywhere else, at 17.5px with more line height.
+  </p>
+  <div class="pair">
+    <figure class="frame">
+      <figcaption>Before — Benzin 18px / 750</figcaption>
+      <div class="stage">
+        <div class="faq">
+          <article>
+            <button><span>What does Paint Protection Film protect against?</span>
+              <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+            <p>PPF creates a sacrificial barrier against stone chips, light scratches, road debris,
+              bug residue, and other everyday hazards that would otherwise reach the original paint.</p>
+          </article>
+          <article><button><span>Will PPF change the color or gloss of my vehicle?</span>
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></article>
+          <article><button><span>Can light scratches in PPF disappear?</span>
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></article>
+          <article><button><span>Can PPF be installed over repainted panels?</span>
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></article>
+          <article><button><span>How should I care for PPF after installation?</span>
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></article>
+        </div>
+      </div>
+    </figure>
+    <figure class="frame is-after v2">
+      <figcaption>After — Gilmer 17.5px / 700</figcaption>
+      <div class="stage">
+        <div class="faq">
+          <article>
+            <button><span>What does Paint Protection Film protect against?</span>
+              <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+            <p>PPF creates a sacrificial barrier against stone chips, light scratches, road debris,
+              bug residue, and other everyday hazards that would otherwise reach the original paint.</p>
+          </article>
+          <article><button><span>Will PPF change the color or gloss of my vehicle?</span>
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></article>
+          <article><button><span>Can light scratches in PPF disappear?</span>
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></article>
+          <article><button><span>Can PPF be installed over repainted panels?</span>
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></article>
+          <article><button><span>How should I care for PPF after installation?</span>
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></article>
+        </div>
+      </div>
+    </figure>
+  </div>
+  <p class="ask">
+    <b>Note:</b> this page cannot load Benzin or Gilmer from the app, so both columns fall back to a
+    system face here — the sizes and weights are accurate but the letterforms are not. Judge this one
+    on the live site once it is in; the argument is about which face does which job.
+  </p>
+</section>
+
+<!-- ============================================================ 5 -->
+<section class="item" id="f5">
+  <div class="item-head">
+    <h2>5 · The ceramic page hero</h2>
+    <span class="where">/services/ceramic</span>
+  </div>
+  <p class="note">
+    <b>Your notes, three of them:</b> “REMOVE” struck through <i>WHAT IS</i> · “BIGGER FONT” on the
+    eyebrow · “DURABLE THAN YOUR REGULAR WAX” arrowed at <i>A WAX.</i>
+  </p>
+  <p class="why">
+    The first two are unambiguous and done below: the label reads <strong>CERAMIC COATING</strong> and
+    goes from 11px to 14px with wider tracking. The third I have read as a sub-line rather than a
+    change to the headline itself — “BEYOND A WAX.” is the hook, and the durability claim is the
+    thing it is promising. See the question underneath.
+  </p>
+  <div class="pair">
+    <figure class="frame">
+      <figcaption>Before — live now</figcaption>
+      <div class="hero">
+        <p class="eyebrow hero-eyebrow">What is ceramic coating</p>
+        <h3>Beyond<em>a wax.</em></h3>
+      </div>
+    </figure>
+    <figure class="frame is-after v2">
+      <figcaption>After — proposed</figcaption>
+      <div class="hero">
+        <p class="eyebrow hero-eyebrow">Ceramic coating</p>
+        <h3>Beyond<em>a wax.</em></h3>
+        <p class="hero-sub">Far <b>more durable</b> than your regular wax.</p>
+      </div>
+    </figure>
+  </div>
+  <p class="ask">
+    <b>One question:</b> did you mean the durability line as a sub-head under the headline (what I
+    have drawn), or did you want the headline itself rewritten to say it — something like
+    “MORE DURABLE THAN YOUR REGULAR WAX.”? Tell me which and I will redraw. Note the second reading
+    loses the short two-line shape the hero is built around.
+  </p>
+</section>
+
+<!-- ============================================================ 6 -->
+<section class="item" id="f6">
+  <div class="item-head">
+    <h2>6 · The warranty badge</h2>
+    <span class="where">ceramic packages</span>
+  </div>
+  <p class="note"><b>Your note:</b> “MAKE THIS POP OFF MORE!” — circled on both warranty blocks.</p>
+  <p class="why">
+    The badge is currently a translucent panel with a 1px border, sitting on a busy photograph —
+    it is the most important number on the card and the least visible thing on it. The proposal
+    puts it on <strong>solid brand blue with a cast shadow</strong>, takes the numeral from 34px to
+    60px, and moves “unlimited recoating” into the badge as a chip so the whole offer is one object
+    instead of three stacked ones.
+  </p>
+  <div class="pair">
+    <figure class="frame">
+      <figcaption>Before — live now</figcaption>
+      <div class="stage">
+        <div class="pkg-pair">
+          <div class="pkg">
+            <span class="pkg-name">Premium</span>
+            <div class="pkg-in">
+              <span class="pill">Unlimited recoating</span>
+              <div class="badge"><b>5</b><s>Year<br>warranty</s></div>
+              <p class="pkg-copy">Deeper gloss and stronger water repellency, covered for five years.</p>
+            </div>
+          </div>
+          <div class="pkg">
+            <span class="pkg-name">Platinum</span>
+            <div class="pkg-in">
+              <span class="pill">Unlimited recoating</span>
+              <div class="badge"><b>8</b><s>Year<br>warranty</s></div>
+              <p class="pkg-copy">Our highest gloss and longest paint preservation, covered for eight years.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </figure>
+    <figure class="frame is-after v2">
+      <figcaption>After — proposed</figcaption>
+      <div class="stage">
+        <div class="pkg-pair">
+          <div class="pkg">
+            <span class="pkg-name">Premium</span>
+            <div class="pkg-in">
+              <div class="badge"><b>5</b><s>Year<br>warranty</s><span class="free">Unlimited recoating</span></div>
+              <p class="pkg-copy">Deeper gloss and stronger water repellency, covered for five years.</p>
+            </div>
+          </div>
+          <div class="pkg">
+            <span class="pkg-name">Platinum</span>
+            <div class="pkg-in">
+              <div class="badge"><b>8</b><s>Year<br>warranty</s><span class="free">Unlimited recoating</span></div>
+              <p class="pkg-copy">Our highest gloss and longest paint preservation, covered for eight years.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </figure>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
