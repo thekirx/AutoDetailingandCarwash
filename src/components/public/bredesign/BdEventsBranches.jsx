@@ -93,8 +93,12 @@ export function BdBranches({ branches = [] }) {
                 {branch.address ? <p className="bd-branch-address">{branch.address}</p> : null}
 
                 {/* A branch that has not opened has no queue to report, and an
-                    unreached count says so rather than showing a confident 0. */}
-                {comingSoon ? null : (
+                    unreached count says so rather than showing a confident 0.
+                    It says where it actually is instead — "Coming soon" alone
+                    reads as a date nobody has been given. */}
+                {comingSoon ? (
+                  <p className="bd-branch-note">Under development</p>
+                ) : (
                   <p className="bd-branch-queue">
                     <span className="bd-queue-num">{total === undefined ? '—' : total}</span>
                     <span className="bd-queue-label">

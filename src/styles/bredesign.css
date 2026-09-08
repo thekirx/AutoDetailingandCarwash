@@ -2513,6 +2513,18 @@
   text-transform: uppercase;
   color: var(--bd-ink-3);
 }
+/* Stands in the space the queue count occupies on an open branch, so the
+   three cards keep one shape. Set at the label's weight rather than the
+   numeral's: it is a status, not a figure. */
+.bredesign .bd-branch-note {
+  margin: 0;
+  padding-top: 4px;
+  color: var(--bd-ink-3);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 
 /* ==== Service detail ===================================================== */
 
