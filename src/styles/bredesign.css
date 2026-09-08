@@ -2605,6 +2605,14 @@
    frame underneath. "Unlimited recoating" moves inside the badge, so the
    offer reads as one object rather than three stacked ones. */
 .bredesign .ceramic-package-warranty {
+  /* The badge now closes the card, so its spacing flips: it needs air above
+     it, away from the buttons, not below it. */
+  margin: 22px 0 0;
+  /* `width: max-content` upstream lets the badge size to its contents, which
+     now include the recoating chip — enough to push it past a narrow panel.
+     Capped, and the chip wraps to its own line rather than overflowing. */
+  max-width: 100%;
+  flex-wrap: wrap;
   gap: 14px;
   padding: 16px 20px;
   border: 0;
@@ -2628,6 +2636,7 @@
 .bredesign .ceramic-package-unlimited {
   align-self: center;
   font-style: normal;
+  max-width: 100%;
   margin-left: auto;
   padding: 5px 10px;
   border: 1px solid rgba(255, 255, 255, 0.5);

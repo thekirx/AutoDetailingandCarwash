@@ -40,16 +40,6 @@ export function CeramicSection() {
                 <div className="ceramic-package-body">
                   <h3 className="ceramic-package-name">{item.title}</h3>
                   <div className="ceramic-package-content">
-                    {/* The recoating claim sits inside the warranty badge rather
-                        than above it, so the offer reads as one object. */}
-                    <div className="ceramic-package-warranty">
-                      <Check size={16} strokeWidth={3} aria-hidden="true" />
-                      <strong>{item.warrantyYears}</strong>
-                      <span>Year<br />warranty</span>
-                      <em className="ceramic-package-unlimited">
-                        {SERVICE_DETAIL_CONTENT.ceramic.packageHighlights[item.id]}
-                      </em>
-                    </div>
                     <p className="ceramic-package-pitch">{item.pitch}</p>
                     <div className="ceramic-package-actions">
                       <button
@@ -71,14 +61,20 @@ export function CeramicSection() {
                         Book now <ArrowRight size={16} aria-hidden="true" />
                       </Link>
                     </div>
+                    {/* The warranty closes the card rather than opening it: the
+                        pitch makes the case, the buttons act on it, and the
+                        guarantee is the last thing read before deciding. The
+                        recoating claim sits inside the badge so the offer reads
+                        as one object. */}
+                    <div className="ceramic-package-warranty">
+                      <Check size={16} strokeWidth={3} aria-hidden="true" />
+                      <strong>{item.warrantyYears}</strong>
+                      <span>Year<br />warranty</span>
+                      <em className="ceramic-package-unlimited">
+                        {SERVICE_DETAIL_CONTENT.ceramic.packageHighlights[item.id]}
+                      </em>
+                    </div>
                   </div>
-                  <Link
-                    className="ceramic-package-book"
-                    to="/book"
-                    state={{ service: 'Ceramic Coating', package: item.title }}
-                  >
-                    Book {item.title}
-                  </Link>
                 </div>
 
                 <div className="ceramic-package-details" id={item.detailsId} hidden={!open}>
