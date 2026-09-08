@@ -43,13 +43,15 @@ export default function BdAppPreview() {
         <div className="bd-app-copy bd-reveal">
           <p className="bd-eyebrow">Hakum in your pocket</p>
           <h2 className="bd-skew">
-            Your car.
+            HAKUM Customer
             <br />
-            <em>In your hands.</em>
+            <em>Mobile App</em>
           </h2>
+          <p className="bd-app-tagline">Taking care of your car never gets this exciting!</p>
           <p>
-            See which branch is busy before you drive over, follow your car through every stage, and
-            collect a stamp on every visit—all from one place.
+            Your Hakum experience, all in one app. Check live branch queues, track your loyalty
+            points and free services, find locations near you, and get real-time notifications —
+            because your time matters as much as your car.
           </p>
           <div className="bd-cta-row bd-app-actions">
             <Link className="bd-btn bd-btn-primary" to="/app">

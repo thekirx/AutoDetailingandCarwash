@@ -625,6 +625,17 @@
 .bredesign .bd-app-copy h2 em {
   color: var(--bd-accent);
 }
+/* The tagline sits between the heading and the body copy, so it is deliberately
+   larger and lighter than the paragraph beneath it — a bridge, not a second
+   paragraph. `p:last-of-type` below still owns the body copy. */
+.bredesign .bd-app-tagline {
+  margin-top: 18px;
+  max-width: 34ch;
+  color: var(--bd-ink);
+  font-size: clamp(1.05rem, 1.9vw, 1.3rem);
+  line-height: 1.4;
+  font-weight: 600;
+}
 .bredesign .bd-app-copy > p:last-of-type {
   margin-top: 24px;
   max-width: 52ch;
@@ -838,7 +849,8 @@
   .bredesign .bd-app-actions {
     justify-content: center;
   }
-  .bredesign .bd-app-copy > p:last-of-type {
+  .bredesign .bd-app-copy > p:last-of-type,
+  .bredesign .bd-app-tagline {
     margin-inline: auto;
   }
 }

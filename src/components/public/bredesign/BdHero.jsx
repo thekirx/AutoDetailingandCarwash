@@ -252,11 +252,12 @@ export default function BdHero() {
           <br />
           the <em>pampering</em>
           <br />
-          it deserves.
+          it deserves
         </h1>
         <p className="bd-hero-lede">
-          Detailing, protection, and care by a team that treats every panel like it is going back on a
-          showroom floor.
+          From ceramic coating to paint protection film, our team approaches every vehicle the same
+          way: like it matters. That means showroom-level attention to every panel, every time — not
+          just for the cars that look brand new, but for every vehicle that comes through our doors.
         </p>
         <div className="bd-cta-row bd-hero-cta">
           <Link className="bd-btn bd-btn-primary" to="/services">
