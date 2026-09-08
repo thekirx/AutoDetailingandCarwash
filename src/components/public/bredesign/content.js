@@ -93,10 +93,10 @@ export const WHY_SECTIONS = [
       ' attack your paint every single day — quietly taking resale value and the finish you paid for with them.',
     ],
     points: [
-      ['Self-healing top coat', 'ClearPro’s TPU film is designed so minor swirls and light surface marks can recover with heat or sunlight.'],
-      ['Impact-ready barrier', 'The film takes the everyday contact from road debris and light scratches before it reaches the original paint.'],
-      ['Optical clarity', 'ClearPro builds its clear film to preserve the color and gloss underneath rather than masking the factory finish.'],
-      ['Hydrophobic & anti-yellowing', 'A water-repelling surface and non-yellowing optical TPU help the protected finish stay clearer and easier to maintain.'],
+      ['Self-healing top coat', 'ClearPro’s TPU film is designed so minor swirls and light surface marks can recover with heat or sunlight.', 'shield'],
+      ['Impact-ready barrier', 'The film takes the everyday contact from road debris and light scratches before it reaches the original paint.', 'impact'],
+      ['Optical clarity', 'ClearPro builds its clear film to preserve the color and gloss underneath rather than masking the factory finish.', 'clarity'],
+      ['Hydrophobic & anti-yellowing', 'A water-repelling surface and non-yellowing optical TPU help the protected finish stay clearer and easier to maintain.', 'droplet'],
     ],
     cta: { label: 'Protect your vehicle today', to: '/book' },
     image: IMAGES.ppf,
@@ -105,18 +105,21 @@ export const WHY_SECTIONS = [
   },
   {
     id: 'ceramic',
-    eyebrow: 'What is ceramic coating',
-    headline: ['Beyond', 'a wax.'],
+    eyebrow: 'Ceramic coating',
+    /* The old headline ("Beyond a wax.") was a hook that left the claim
+       unstated. The owner asked for the claim itself, so the durability is
+       the headline now and nothing else has to carry it. */
+    headline: ['More durable than', 'your regular', 'wax.'],
     lede: [
       'Traditional waxes wash away in weeks. Ceramic coating is a different beast entirely — a ',
       { strong: 'liquid polymer that bonds permanently at the molecular level' },
       ' to your paint, creating a rigid, glass-like layer that wax and sealants simply cannot replicate.',
     ],
     points: [
-      ['Permanent molecular bond', 'Unlike wax, ceramic chemically bonds to your paint — it cannot be washed or wiped off.'],
-      ['Extreme gloss & depth', "Nano-ceramic technology amplifies your paint's depth and clarity — it reads better than the day you bought it."],
-      ['Hydrophobic self-cleaning', 'Water, mud, and road grime bead up and sheet off effortlessly — keeping your car cleaner, longer.'],
-      ['UV & chemical resistance', 'Blocks oxidation and UV fade, while repelling bird droppings, tree sap, and acid rain that etch bare paint.'],
+      ['Permanent molecular bond', 'Unlike wax, ceramic chemically bonds to your paint — it cannot be washed or wiped off.', 'bond'],
+      ['Extreme gloss & depth', "Nano-ceramic technology amplifies your paint's depth and clarity — it reads better than the day you bought it.", 'gloss'],
+      ['Hydrophobic self-cleaning', 'Water, mud, and road grime bead up and sheet off effortlessly — keeping your car cleaner, longer.', 'droplet'],
+      ['UV & chemical resistance', 'Blocks oxidation and UV fade, while repelling bird droppings, tree sap, and acid rain that etch bare paint.', 'sun'],
     ],
     cta: { label: 'Get a ceramic coating quote', to: '/book' },
     image: IMAGES.ceramic,
@@ -133,10 +136,10 @@ export const WHY_SECTIONS = [
       ' — so the cabin drops several degrees without the view, the night visibility, or your phone signal going with it.',
     ],
     points: [
-      ['Heat, not darkness', 'Infrared is rejected at the glass, so you can run a lighter, legal shade and still feel the drop.'],
-      ['Clarity kept', 'No mirror haze and no purple fade over time. Night visibility stays honest.'],
-      ['Signal-safe', 'Unlike metallic film, nano ceramic does not interfere with GPS, radio, or mobile signal.'],
-      ['Interior preserved', 'UV is what cracks a dashboard and fades seats. Blocking it protects the part you actually sit in.'],
+      ['Heat, not darkness', 'Infrared is rejected at the glass, so you can run a lighter, legal shade and still feel the drop.', 'heat'],
+      ['Clarity kept', 'No mirror haze and no purple fade over time. Night visibility stays honest.', 'clarity'],
+      ['Signal-safe', 'Unlike metallic film, nano ceramic does not interfere with GPS, radio, or mobile signal.', 'signal'],
+      ['Interior preserved', 'UV is what cracks a dashboard and fades seats. Blocking it protects the part you actually sit in.', 'cabin'],
     ],
     cta: { label: 'Book nano ceramic tint', to: '/book' },
     image: IMAGES.tint,

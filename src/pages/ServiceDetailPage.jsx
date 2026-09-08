@@ -4,12 +4,26 @@ import BdPageHero from '../components/public/bredesign/BdPageHero'
 import ServiceBottomCta from '../components/public/bredesign/ServiceBottomCta'
 import ServiceFaqSection from '../components/public/bredesign/ServiceFaqSection'
 import ServiceProofSection from '../components/public/bredesign/ServiceProofSection'
+import WhyIcon from '../components/public/bredesign/WhyIcon'
 import useReveal from '../components/public/bredesign/useReveal'
 import { WHY_SECTIONS } from '../components/public/bredesign/content'
 import { CeramicSection, PpfInformationSection } from '../components/public/home/HomeServiceSections'
 import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
 import { SERVICE_DETAIL_CONTENT } from '../data/serviceDetailContent'
 import { usePageMeta } from '../lib/pageMeta'
+
+/* The colour mark, not the monochrome one used in the logo marquee: this is a
+   partner credit rather than a row in a wall of suppliers. */
+const CLEARPRO_MARK = new URL('../assets/brands/color/clearpro.png', import.meta.url).href
+
+/* Pulled out of the paragraph so the specification can be scanned. The mil
+   range spans the three Hakum tiers rather than quoting one sheet. */
+const CLEARPRO_FIGURES = [
+  ['7.5–8.5', 'mil construction'],
+  ['Aliphatic', 'non-yellowing'],
+  ['Invisiglue', 'no residue'],
+  ['Polyoptico', 'glossy finish'],
+]
 
 /* One page per service, reached from the cards in "Our services".
  *
@@ -84,27 +98,41 @@ export default function ServiceDetailPage() {
           </div>
 
           <ul className="bd-why-points bd-reveal">
-            {section.points.map(([title, copy]) => (
+            {section.points.map(([title, copy, icon]) => (
               <li key={title}>
+                <WhyIcon name={icon} />
                 <strong>{title}</strong>
                 <span>{copy}</span>
               </li>
             ))}
           </ul>
 
+          {/* The partner strip used to set "ClearPro" in our own display face —
+              our typography wearing their name, which is the opposite of a
+              credit. It carries their actual mark now, and the specification
+              moves out of the paragraph into figures a buyer can scan. */}
           {slug === 'ppf' ? (
             <aside className="bd-clearpro-card bd-reveal" data-service-brand="clearpro">
-              <div>
-                <span>Film partner</span>
-                <strong>ClearPro</strong>
+              <div className="bd-clearpro-mark">
+                <img src={CLEARPRO_MARK} alt="ClearPro" loading="lazy" decoding="async" />
+                <span>Film<br />partner</span>
               </div>
-              <p>
-                ClearPro’s optical TPU film combines a self-healing top coat, hydrophobic performance,
-                high clarity, and resistance to yellowing. Its current UltraClear technical sheet lists a
-                nominal 7.5 mil construction.
-              </p>
+              <div className="bd-clearpro-body">
+                <p>
+                  ClearPro’s optical TPU film combines a self-healing top coat, hydrophobic
+                  performance, high clarity, and resistance to yellowing.
+                </p>
+                <ul className="bd-clearpro-figures">
+                  {CLEARPRO_FIGURES.map(([value, label]) => (
+                    <li key={label}>
+                      <b>{value}</b>
+                      <s>{label}</s>
+                    </li>
+                  ))}
+                </ul>
+              </div>
               <a href="https://www.clearpro.com/paint-protection-film/" target="_blank" rel="noreferrer noopener">
-                Explore ClearPro technology <span aria-hidden="true">↗</span>
+                Explore ClearPro <span aria-hidden="true">↗</span>
               </a>
             </aside>
           ) : null}

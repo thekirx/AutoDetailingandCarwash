@@ -40,13 +40,15 @@ export function CeramicSection() {
                 <div className="ceramic-package-body">
                   <h3 className="ceramic-package-name">{item.title}</h3>
                   <div className="ceramic-package-content">
-                    <strong className="ceramic-package-unlimited">
-                      {SERVICE_DETAIL_CONTENT.ceramic.packageHighlights[item.id]}
-                    </strong>
+                    {/* The recoating claim sits inside the warranty badge rather
+                        than above it, so the offer reads as one object. */}
                     <div className="ceramic-package-warranty">
                       <Check size={16} strokeWidth={3} aria-hidden="true" />
                       <strong>{item.warrantyYears}</strong>
                       <span>Year<br />warranty</span>
+                      <em className="ceramic-package-unlimited">
+                        {SERVICE_DETAIL_CONTENT.ceramic.packageHighlights[item.id]}
+                      </em>
                     </div>
                     <p className="ceramic-package-pitch">{item.pitch}</p>
                     <div className="ceramic-package-actions">

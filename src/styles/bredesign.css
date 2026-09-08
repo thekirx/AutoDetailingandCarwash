@@ -511,7 +511,7 @@
 .bredesign .bd-why-in {
   display: grid;
   gap: clamp(28px, 3.4vw, 54px);
-  align-items: center;
+  align-items: start;
 }
 @media (min-width: 940px) {
   .bredesign .bd-why-in {
@@ -542,25 +542,30 @@
   font-style: italic;
   color: var(--bd-accent);
 }
+/* 52ch let the emphasised phrase split across a line break and left the
+   paragraph ending on a single orphan word. A tighter measure plus
+   `text-wrap: pretty` — which reserves room for the last line rather than
+   filling greedily — settles both. */
 .bredesign .bd-why-lede {
   margin-top: 20px;
   color: var(--bd-ink-2);
   font-size: 14.5px;
   line-height: 1.7;
-  max-width: 52ch;
+  max-width: 46ch;
+  text-wrap: pretty;
 }
 .bredesign .bd-why-lede strong {
   color: var(--bd-paper);
   font-weight: 700;
 }
+/* Four hairline-separated cells read as one table. Gapped, bordered tiles
+   read as four things, which is what the grid is for. */
 .bredesign .bd-why-points {
   margin: 26px 0 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 1px;
-  background: var(--bd-rule);
-  border: 1px solid var(--bd-rule);
+  gap: 12px;
 }
 @media (min-width: 620px) {
   .bredesign .bd-why-points {
@@ -568,17 +573,40 @@
   }
 }
 .bredesign .bd-why-points li {
-  background: var(--bd-navy);
-  padding: 16px 18px;
+  background: var(--bd-navy-2);
+  border: 1px solid var(--bd-rule);
+  border-radius: 10px;
+  padding: 20px 20px 22px;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+.bredesign .bd-why-points li:hover {
+  border-color: rgba(157, 180, 255, 0.5);
+  transform: translateY(-2px);
 }
 .bredesign .bd-why.is-flipped .bd-why-points li {
-  background: var(--bd-navy-2);
+  background: var(--bd-navy-3);
+}
+.bredesign .bd-why-ico {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(157, 180, 255, 0.24);
+  border-radius: 9px;
+  background: rgba(157, 180, 255, 0.1);
+  color: var(--bd-accent);
+}
+.bredesign .bd-why-ico svg {
+  width: 19px;
+  height: 19px;
 }
 .bredesign .bd-why-points strong {
   display: block;
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.055em;
+  line-height: 1.3;
   text-transform: uppercase;
   color: var(--bd-paper);
 }
@@ -1433,6 +1461,13 @@
   position: relative;
   z-index: 1;
   padding: clamp(104px, 12vw, 168px) 0 clamp(44px, 5vw, 76px);
+}
+/* The service hero's own label, larger than the 10px eyebrow used inside body
+   sections: at the top of a page, over a photograph, it is naming the page
+   rather than tagging a paragraph. */
+.bredesign .bd-page-hero .bd-eyebrow {
+  font-size: 14px;
+  letter-spacing: 0.2em;
 }
 .bredesign .bd-page-hero h1 {
   margin-top: 20px;
@@ -2337,45 +2372,100 @@
     grid-template-columns: 1fr 1.05fr;
   }
 }
+/* The detail page widened the measure back out to 54ch, which is where the
+   emphasised phrase splits and the paragraph orphans its last word. It follows
+   the section measure now. */
 .bredesign .bd-detail .bd-why-lede {
   margin-top: 0;
-  max-width: 54ch;
+  max-width: 46ch;
 }
 
 .bredesign .bd-clearpro-card {
   grid-column: 1 / -1;
   display: grid;
-  gap: 20px;
+  gap: 22px;
   align-items: center;
   padding: clamp(24px, 3vw, 42px);
   background: linear-gradient(135deg, rgba(45, 89, 211, 0.22), rgba(255, 255, 255, 0.035));
   border-left: 3px solid var(--bd-accent);
 }
-.bredesign .bd-clearpro-card div { display: grid; gap: 4px; }
-.bredesign .bd-clearpro-card div span,
-.bredesign .bd-clearpro-card a {
+
+/* The mark itself, at a size that reads as a credit rather than a footnote.
+   Their logo is the one thing on this card that should not be our typography. */
+.bredesign .bd-clearpro-mark {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.bredesign .bd-clearpro-mark img {
+  display: block;
+  width: auto;
+  height: clamp(34px, 4.4vw, 52px);
+}
+.bredesign .bd-clearpro-mark span {
+  padding-left: 14px;
+  border-left: 1px solid var(--bd-rule);
+  color: var(--bd-accent);
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: .12em;
+  letter-spacing: 0.12em;
+  line-height: 1.4;
   text-transform: uppercase;
 }
-.bredesign .bd-clearpro-card div span { color: var(--bd-accent); }
-.bredesign .bd-clearpro-card div strong {
-  font-family: var(--bd-display);
-  font-size: clamp(2.2rem, 5vw, 4.8rem);
-  font-style: italic;
-  line-height: .9;
-  color: var(--bd-paper);
-}
+
+.bredesign .bd-clearpro-body { display: grid; gap: 14px; }
 .bredesign .bd-clearpro-card p {
+  margin: 0;
   max-width: 68ch;
   color: var(--bd-ink-2);
   font-size: 14px;
   line-height: 1.7;
 }
-.bredesign .bd-clearpro-card a { color: var(--bd-paper); }
+
+/* The specification, out of the sentence and into figures. A buyer comparing
+   film reads these four numbers; they should not have to parse a paragraph. */
+.bredesign .bd-clearpro-figures {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.bredesign .bd-clearpro-figures li {
+  padding: 8px 13px;
+  border: 1px solid var(--bd-rule);
+  border-radius: 7px;
+  background: rgba(2, 10, 49, 0.6);
+}
+.bredesign .bd-clearpro-figures b {
+  display: block;
+  font-family: var(--bd-display);
+  font-size: 16px;
+  line-height: 1;
+  color: var(--bd-paper);
+}
+.bredesign .bd-clearpro-figures s {
+  display: block;
+  margin-top: 5px;
+  color: var(--bd-ink-3);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.bredesign .bd-clearpro-card a {
+  color: var(--bd-paper);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 @media (min-width: 820px) {
-  .bredesign .bd-clearpro-card { grid-template-columns: .65fr 1.35fr auto; }
+  .bredesign .bd-clearpro-card { grid-template-columns: auto 1fr auto; }
 }
 
 .bredesign .bd-service-proof,
@@ -2464,10 +2554,14 @@
   border: 0;
   background: transparent;
   color: var(--bd-paper);
-  font: inherit;
-  font-size: clamp(15px, 1.5vw, 18px);
-  font-weight: 750;
-  line-height: 1.35;
+  /* Benzin is a display face — built for three-word headlines, not for
+     eight-word questions reversed out on navy, where its counters close up
+     and the list becomes one texture. The questions take the body face; the
+     section heading above them keeps Benzin. */
+  font-family: var(--bd-body);
+  font-size: clamp(15px, 1.5vw, 17.5px);
+  font-weight: 700;
+  line-height: 1.45;
   text-align: left;
   cursor: pointer;
 }
@@ -2481,8 +2575,8 @@
   max-width: 64ch;
   padding: 0 42px 24px 0;
   color: var(--bd-ink-2);
-  font-size: 14px;
-  line-height: 1.72;
+  font-size: 14.5px;
+  line-height: 1.75;
 }
 @media (min-width: 900px) {
   .bredesign .bd-service-faq-layout { grid-template-columns: .72fr 1.28fr; }
@@ -2499,17 +2593,46 @@
 .bredesign .bd-service-bottom-cta .bd-shell { display: grid; justify-items: center; }
 .bredesign .bd-service-bottom-cta .bd-btn { margin-top: 30px; }
 
-.bredesign .ceramic-package-unlimited {
-  align-self: flex-start;
-  display: inline-flex;
-  margin-bottom: 12px;
-  padding: 7px 10px;
-  background: var(--bd-accent);
+/* The warranty is the most important number on the card and was the least
+   visible thing on it: a translucent panel behind a 1px border, over a busy
+   photograph. On solid brand blue with a cast shadow it holds against any
+   frame underneath. "Unlimited recoating" moves inside the badge, so the
+   offer reads as one object rather than three stacked ones. */
+.bredesign .ceramic-package-warranty {
+  gap: 14px;
+  padding: 16px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--bd-blue-mid), var(--bd-blue));
+  box-shadow:
+    0 10px 30px -12px rgba(45, 89, 211, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  align-items: baseline;
+}
+.bredesign .ceramic-package-warranty svg { color: #fff; align-self: center; }
+.bredesign .ceramic-package-warranty strong {
+  font-size: clamp(3rem, 4.6vw, 3.75rem);
   color: #fff;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: .12em;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+.bredesign .ceramic-package-warranty > span {
+  font-size: clamp(11px, .84vw, 12px);
+  color: #fff;
+}
+.bredesign .ceramic-package-unlimited {
+  align-self: center;
+  font-style: normal;
+  margin-left: auto;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  line-height: 1.2;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 /* ==== App preview: blocks the real app actually leads with ==============

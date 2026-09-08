@@ -3,6 +3,7 @@ import { ArrowRight, ArrowUpRight, Play, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { SERVICE_DETAIL_CONTENT } from '../../../data/serviceDetailContent'
+import WhyIcon from './WhyIcon'
 import { ORIGIN, PHOTOS, SERVICES, WHY_SECTIONS } from './content'
 
 /* A lede is written as an array so a phrase inside it can be emphasised
@@ -122,8 +123,9 @@ export function BdWhySections({ exclude = [] }) {
               </h2>
               <Lede parts={section.lede} />
               <ul className="bd-why-points">
-                {section.points.map(([title, copy]) => (
+                {section.points.map(([title, copy, icon]) => (
                   <li key={title}>
+                    <WhyIcon name={icon} />
                     <strong>{title}</strong>
                     <span>{copy}</span>
                   </li>
