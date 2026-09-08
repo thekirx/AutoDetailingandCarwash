@@ -143,10 +143,12 @@ describe('command category IA', () => {
   it('planner form kinds cover specialty boards', () => {
     assert.ok(FORM_KINDS.some((k) => k.value === 'equipment_repair'))
     assert.ok(FORM_KINDS.some((k) => k.value === 'cash_advance'))
-    assert.equal(FORM_KINDS.length, 4)
+    assert.ok(FORM_KINDS.some((k) => k.value === 'detailing'))
+    assert.equal(FORM_KINDS.length, 5)
     assert.equal(FORM_KINDS.some((k) => k.value === 'custom'), false)
     assert.ok(templateFields('equipment_repair').some((f) => f.key === 'equipment'))
     assert.ok(templateFields('cash_advance').some((f) => f.key === 'amount'))
+    assert.ok(templateFields('detailing').some((f) => f.key === 'service'))
     const mig = readFileSync(join(root, 'supabase/migrations/20260809220000_planner_specialty_boards.sql'), 'utf8')
     assert.match(mig, /Complaints/)
     assert.match(mig, /Equipment Repairs/)

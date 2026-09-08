@@ -79,7 +79,7 @@ export function BdBranches({ branches = [] }) {
             return (
               <Link
                 className="bd-branch"
-                to={comingSoon ? '/branches' : `/queue/${branch.slug}`}
+                to={comingSoon ? '/contact' : `/queue/${branch.slug}`}
                 key={branch.slug}
               >
                 <div className="bd-branch-top">
@@ -104,7 +104,7 @@ export function BdBranches({ branches = [] }) {
                 )}
 
                 <span className="bd-branch-go">
-                  {comingSoon ? 'Join the waitlist' : 'See the live queue'}{' '}
+                  {comingSoon ? 'Ask about opening' : 'See the live queue'}{' '}
                   <ArrowRight size={13} aria-hidden="true" />
                 </span>
               </Link>

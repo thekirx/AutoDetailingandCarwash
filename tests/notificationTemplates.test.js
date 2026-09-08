@@ -28,6 +28,7 @@ describe('system notification catalog', () => {
       'waiting',
       'in_progress',
       'final_checking',
+      'for_releasing',
       'for_payment',
       'completed',
       'cancelled',
@@ -37,6 +38,7 @@ describe('system notification catalog', () => {
       assert.ok(templateByKey(bookingTemplateKey(status, 'customer')), status)
       assert.ok(templateByKey(bookingTemplateKey(status, 'ops')), `${status} ops`)
     }
+    assert.ok(templateByKey(bookingTemplateKey('photos_ready', 'customer')), 'photos_ready')
     assert.ok(templateByKey('birthday.greeting'))
     assert.ok(templateByKey('lifecycle.welcome_app'))
     assert.equal(new Set(SYSTEM_TEMPLATE_KEYS).size, SYSTEM_TEMPLATES.length)

@@ -39,8 +39,55 @@ See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./re
 
 ## Campaign log
 
+### 2026-09-08 — Audit plan execution (Waves 0–3)
+
+| Claim | Command | Exit | Key output |
+|-------|---------|------|------------|
+| Wave 2 units | `node --test tests/publicInquiry*.test.js tests/publicHonestyCopy.test.js` | 0 | event API + honesty |
+| Full units | `npm test` | 0 | **1193/1193** (browser excluded) |
+| Build | `npm run build` | 0 | Vite + PWA |
+| Lint | `npm run lint` | 1 | 61 errors (pre-existing / scripts) — documented |
+| Migration | `event_registrations_api_geofence` | applied | anon INSERT revoked |
+| Wave 1 | Vercel MCP `list_teams` | — | **no teams** → SMS env BLOCKED |
+
+Closed: BUG-015, 016, 017, 018.
+
+---
+
+### 2026-09-08 — Principal full-system audit
+
+| Claim | Command | Exit | Key output |
+|-------|---------|------|------------|
+| Build | `npm run build` | 0 | Vite + PWA |
+| Full unit (no preview) | `npm test` | 1 | **1182/1198** — 12 browser `ERR_CONNECTION_REFUSED` |
+| Browser units + preview | `node --test tests/*.browser.test.js` | 0 | **10/10** |
+| Core change units | opsForms/notify/planning/shell/… | 0 | **56/56** |
+| npm audit (prod) | `npm audit --omit=dev` | 1 | 14 vulns (10 high) |
+| Supabase security advisors | MCP `get_advisors` | — | DEFINER views (intentional queue); leaked-password off; counters RLS INFO |
+| Deliverable | `docs/SYSTEM_AUDIT.md` + `PROJECT_STATUS.md` | — | Missing + Wave 0–5 plan |
+
+---
+
+### 2026-09-08 — Detailing form builder principal QA
+
+| Claim | Command | Exit | Key output |
+|-------|---------|------|------------|
+| Form units | `node --test tests/opsForms.test.js …` | 0 | **18/18** pass (incl. live branch overlay) |
+| Build | `npm run build` | 0 | Vite build + PWA |
+| Browser forms UI | `node scripts/e2e-ui-forms.mjs` | 0 | **10/10** — planner QR/edit, public fields/options, submit → Thank you |
+| Public RPC submit | `submit_public_ops_form('detailing-inquiry', …)` | OK | row `06a61608-…` |
+| Evidence shots | `e2e-evidence/ui-forms/*.png` | — | planner-forms-detailing, edit, public filled/success |
+
+Postgres: seed `branch` options stay empty by design; `withLiveBranchOptions` + anon `branches` SELECT overlays `bacoor|batangas|hq`. Slug lock after publish verified in edit dialog screenshot.
+
+---
+
 | When (UTC) | Command | Exit | Notes |
 |------------|---------|------|-------|
+| 2026-09-07T11:47Z | `node scripts/e2e-real-customer-status-sms.mjs` | 0 | **28/28** Malcolm Cuady `09625294043`: detailing 8× DELIVRD + package 7× DELIVRD + CRM we_missed/aftercare/thank_you; service names in SMS; kinds expanded |
+| 2026-09-07T09:44Z | completion QA (unit/build/att/payroll/pos/queue/sales/money/cutover/ui-p0/ui-money) | 0 | **All PASS**; unit 1197; money 13/13; ui-p0 9/9; ui-money 5/5; sales create→confirm→waiting→cancel |
+| 2026-09-07T07:45Z | preview `POST /api/customer-auth-lookup` + Puppeteer demo customer | 0 | Root cause: Vite preview lacked `/api` middleware → 404; fixed `configurePreviewServer` + email `signInWithPassword` fallback; lookup **200**, `/auth/v1/user` **200**, land `/account` |
+| 2026-09-07T07:45Z | `node --test` prodShellContract + customerAccountLifecycle | 0 | 29/29 (preview API mount + sign-in fallback source-scan) |
 | 2026-09-07T07:25Z | completion QA suite (att/payroll/pos/queue/money/cutover/sales-bookings/TL units) | 0 | All PASS; sales e2e asserts updated (check-in + waiting allowed; for_payment denied) |
 | 2026-09-07T06:55Z | `npm test` | 0 | **1195/1195** pre-push |
 | 2026-09-07T06:55Z | `npm run build` | 0 | vite + PWA exit 0 |
@@ -77,7 +124,8 @@ See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./re
 
 | Gate | Status |
 |------|--------|
-| Soft-launch code (unit + orch live + UI P0 + money UI + responsive) | **MET** (2026-09-03T13:52:11Z) |
+| Soft-launch code (unit + orch live + UI P0 + money UI + responsive) | **MET** (UI P0 + money re-verified 2026-09-07T09:44Z) |
+| Customer preview sign-in (`vite preview` `/api/customer-auth-lookup`) | **MET** (2026-09-07; was 404 on :4173) |
 | BUG-007 browser surfaces (TL deny / admin EoS wizard / boss finance tab) | **MET** (non-destructive) |
 | BUG-007 RPC submit → Finance accept → pending floor + hard-gate unlock | **MET** (2026-09-07) |
 | BUG-007 full `run_payroll` confirm + sale claim + sandbox cleanup | **MET** (2026-09-07 `e2e:shift-close-money` 13/13) |
@@ -85,6 +133,6 @@ See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./re
 | Owner SMS phone sources (env or BossMich.phone) | **MET** (QA `09625294043` on env + BossMich) |
 | Owner SMS notify after accept (local/office egress) | **MET** (`SEND_LIVE_OWNER_SMS=1` → `sent=1`) |
 | BrandTxt local balance | **MET** (2026-09-07 ErrorCode 0 / 4178 credits) |
-| Production ops (Vercel BrandTxt IP + Vercel `OWNER_SMS_PHONE`) | **NOT MET** |
+| Production ops (Vercel BrandTxt IP + Vercel `OWNER_SMS_PHONE`) | **NOT MET** (outbound send from Vercel; SenderId already OK; no reply path) |
 
-**Not 100%.** **CONTINUE** — set `OWNER_SMS_PHONE` on the **Hakum** Vercel team/project (not `jcuadys-projects`) + whitelist Vercel static egress; confirm handset for today’s QA send.
+**Not 100%.** **CONTINUE** — Vercel must call BrandTxt from a whitelisted egress IP and know which phone receives the daily close SMS (`OWNER_SMS_PHONE` / BossMich). SenderId `HAKUM` is already approved. `salary_draft_extras` is an optional BA payroll-notes demo, not an SMS dependency.

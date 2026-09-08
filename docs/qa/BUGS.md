@@ -16,6 +16,11 @@
 | BUG-010 | Medium | Live e2e | `e2e-pos-part2` assumed TL cannot provision queue / wrong `custom-size` normalize | pos-part2 false fail | Closed | TL is in `QUEUE_PROVISION_ROLES`; `normalizeVehicleType('custom-size')` → `custom_size` |
 | BUG-011 | High | UI harness | Authed screenshot treated `/operations/access-denied` as success (TL→POS false-green) | `screenshotAuth.mjs` | Closed | Reject access-denied / forbidden URLs |
 | BUG-012 | Medium | Customer portal | `/account` horizontal overflow / false FAIL from chip bleed math | `responsive-validation.mjs` | Mitigated | clip + user-scrollX gate; last run CONDITIONAL exit 0 |
+| BUG-014 | High | Customer auth | `vite preview` (:4173) `/api/customer-auth-lookup` **404** → demo email sign-in fail; stale session showed `/auth/v1/user` **403** | Console + UI “Invalid phone or password” | **Closed** | `configurePreviewServer` mounts APIs; email `signInWithPassword` fallback; idMode auto-switch; verified 200 → `/account` |
+| BUG-015 | High | Events / security | Public event registration: anon INSERT + client-only honeypot | SYSTEM_AUDIT 2026-09-08; RLS `WITH CHECK (true)` | **Closed** | API `event_registration` + migration `20260908120000_event_registrations_api_geofence` applied |
+| BUG-016 | Medium | Public UX | “Join the waitlist” on coming-soon branches has no waitlist | `BdEventsBranches.jsx` | **Closed** | CTA → “Ask about opening” + `/contact` |
+| BUG-017 | Medium | DX / CI | `npm test` browser suites fail without vite preview on `:4173` | 12× `ERR_CONNECTION_REFUSED` cold run | **Closed** | Default `npm test` excludes `*.browser.test.js`; use `npm run test:browser` with preview |
+| BUG-018 | Low | Legal copy | Legal pages claim “contact form”; `/contact` is channels-only | `LegalPages.jsx` vs `ContactPage.jsx` | **Closed** | Copy → Contact page links |
 
 ## Severity guide
 

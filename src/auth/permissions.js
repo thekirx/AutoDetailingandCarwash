@@ -548,7 +548,7 @@ export function canSubmitOpsFormKind(profile, kind) {
       ROLES.ASSISTANT_SUPER_ADMIN,
     ])
   }
-  if (kind === 'complaint' || kind === 'event') return canViewPlanning(profile)
+  if (kind === 'complaint' || kind === 'event' || kind === 'detailing') return canViewPlanning(profile)
   return false
 }
 

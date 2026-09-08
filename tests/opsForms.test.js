@@ -5,13 +5,18 @@ import {
   FORM_KINDS,
   extractCalendarAt,
   extractComplaintBranch,
+  formQrDataUrl,
   formQrImageUrl,
+  isDetailingFormKind,
+  isFixedFormKind,
+  isFormSlugLocked,
   normalizeFields,
   shareFormUrl,
   slugifyFormName,
   submissionTitle,
   templateFields,
   validatePayload,
+  withLiveBranchOptions,
 } from '../src/lib/opsForms.js'
 import {
   buildComplaintNotifyCopy,
@@ -19,15 +24,13 @@ import {
 } from '../server/notifyOpsForm.mjs'
 
 describe('opsForms smart builder', () => {
-  it('locks to four fixed kinds', () => {
-    assert.equal(FORM_KINDS.length, 4)
-    assert.deepEqual(FORM_KINDS.map((k) => k.value).sort(), [
-      'cash_advance',
-      'complaint',
-      'equipment_repair',
-      'event',
-    ])
+  it('lists fixed company kinds plus detailing CRUD kind', () => {
+    assert.equal(FORM_KINDS.length, 5)
+    assert.ok(FORM_KINDS.some((k) => k.value === 'detailing'))
     assert.equal(FIXED_FORM_TEMPLATES.length, 4)
+    assert.equal(isFixedFormKind('complaint'), true)
+    assert.equal(isFixedFormKind('detailing'), false)
+    assert.equal(isDetailingFormKind('detailing'), true)
   })
 
   it('normalizes fields and select options', () => {
@@ -57,12 +60,33 @@ describe('opsForms smart builder', () => {
     assert.match(iso, /^2026-07-28/)
   })
 
-  it('builds share URL, QR, and submission titles', () => {
+  it('builds share URL, QR, and submission titles', async () => {
     assert.equal(shareFormUrl('customer-complaints', 'https://hakum.test'), 'https://hakum.test/f/customer-complaints')
+    assert.equal(shareFormUrl('detailing-inquiry', 'https://hakum.test'), 'https://hakum.test/f/detailing-inquiry')
     assert.match(formQrImageUrl('https://hakum.test/f/customer-complaints'), /qrserver\.com/)
+    const dataUrl = await formQrDataUrl('https://hakum.test/f/detailing-inquiry', 128)
+    assert.match(dataUrl, /^data:image\/png;base64,/)
     assert.match(slugifyFormName('My Form!', 'aaaaaaaa-bbbb'), /^my-form-aaaaaaaa$/)
     assert.match(submissionTitle({ kind: 'complaint', name: 'C' }, { customer_name: 'Jo' }), /Complaint: Jo/)
+    assert.match(
+      submissionTitle({ kind: 'detailing', name: 'D' }, { customer_name: 'Jo', service: 'Ceramic Coating' }),
+      /Detailing: Ceramic Coating · Jo/,
+    )
     assert.equal(extractComplaintBranch({ branch: 'Bacoor' }), 'bacoor')
+    assert.equal(isFormSlugLocked({ status: 'published', public_enabled: true, slug: 'x' }), true)
+    assert.equal(isFormSlugLocked({ status: 'draft', public_enabled: true, slug: 'x' }), false)
+    const detailingFields = templateFields('detailing', { branchSlugs: ['bacoor'] })
+    assert.ok(detailingFields.some((f) => f.key === 'service' && f.type === 'select'))
+  })
+
+  it('overlays live branch slugs onto empty branch selects (seed gap)', () => {
+    const seeded = [
+      { key: 'service', type: 'select', label: 'Service', options: ['Ceramic'], required: true },
+      { key: 'branch', type: 'select', label: 'Preferred branch', options: [], required: true },
+    ]
+    const live = withLiveBranchOptions(seeded, ['bacoor', 'batangas'])
+    assert.deepEqual(live.find((f) => f.key === 'branch').options, ['bacoor', 'batangas'])
+    assert.deepEqual(live.find((f) => f.key === 'service').options, ['Ceramic'])
   })
 })
 

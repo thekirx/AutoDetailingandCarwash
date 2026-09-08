@@ -99,4 +99,34 @@ describe('Public inquiry API', () => {
     assert.equal(res.statusCode, 400)
     assert.match(res.body.error, /Unknown inquiry type/)
   })
+
+  it('accepts company_website honeypot from the browser client', async () => {
+    const res = await call({
+      kind: 'complaint',
+      customerName: 'Ana',
+      category: 'Wait',
+      description: 'Long line',
+      company_website: 'http://spam',
+      form_opened_at: Date.now() - 5000,
+    })
+    assert.equal(res.statusCode, 400)
+    assert.match(res.body.error, /Unable to submit/)
+  })
+
+  it('requires event registration fields and rejects invalid email', async () => {
+    const missing = await call({ kind: 'event_registration', name: 'Jo', ...ok })
+    assert.equal(missing.statusCode, 400)
+    assert.match(missing.body.error, /required/i)
+
+    const badEmail = await call({
+      kind: 'event_registration',
+      event_id: '11111111-1111-1111-1111-111111111111',
+      name: 'Jo',
+      phone: '09171234567',
+      email: 'not-an-email',
+      ...ok,
+    })
+    assert.equal(badEmail.statusCode, 400)
+    assert.match(badEmail.body.error, /valid email/i)
+  })
 })

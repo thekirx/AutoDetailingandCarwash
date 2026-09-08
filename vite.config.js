@@ -50,102 +50,111 @@ function apiHelpers(server, req) {
   }
 }
 
+function attachHakumApis(server) {
+  const env = loadEnv(server.config.mode, root, '')
+  for (const [k, v] of Object.entries(env)) {
+    if (!process.env[k]) process.env[k] = v
+  }
+
+  const mount = (pathName, handler) => {
+    server.middlewares.use(pathName, (req, res) => handler(req, res, apiHelpers(server, req)))
+  }
+
+  mount('/api/provision-customer', handleProvisionRequest)
+  mount('/api/provision-staff', handleProvisionStaffRequest)
+  mount('/api/update-staff', handleUpdateStaffRequest)
+  mount('/api/customer-portal', handleCustomerPortalRequest)
+  mount('/api/customer-signup', async (req, res, helpers) => {
+    const { handleCustomerSignupRequest } = await import('./server/customerSignup.mjs')
+    return handleCustomerSignupRequest(req, res, helpers)
+  })
+  mount('/api/customer-auth-lookup', async (req, res, helpers) => {
+    const { handleCustomerAuthLookupRequest } = await import('./server/customerAuthLookup.mjs')
+    return handleCustomerAuthLookupRequest(req, res, helpers)
+  })
+  mount('/api/customer-history', async (req, res) => {
+    const { handleCustomerHistoryRequest } = await import('./server/customerHistoryApi.mjs')
+    return handleCustomerHistoryRequest(req, res)
+  })
+  mount('/api/public-book', (req, res) => handlePublicBookRequest(req, res))
+  mount('/api/public-inquiry', (req, res) => handlePublicInquiryRequest(req, res))
+  mount('/api/plate-lookup', async (req, res) => {
+    const { handlePublicPlateLookup } = await import('./server/publicPlateLookup.mjs')
+    return handlePublicPlateLookup(req, res)
+  })
+  mount('/api/booking-status', (req, res) => handleBookingStatusRequest(req, res))
+  mount('/api/maintenance-schedules', (req, res) => handleMaintenanceSchedulesRequest(req, res))
+  mount('/api/push-subscribe', (req, res) => handlePushSubscribeRequest(req, res))
+  mount('/api/send-push', (req, res) => handleSendPushRequest(req, res))
+  mount('/api/notify-booking', async (req, res) => {
+    const { handleNotifyBookingRequest } = await import('./server/notifyBookingApi.mjs')
+    return handleNotifyBookingRequest(req, res)
+  })
+  mount('/api/notify-ops-form', async (req, res) => {
+    const { handleNotifyOpsFormRequest } = await import('./server/notifyOpsFormApi.mjs')
+    return handleNotifyOpsFormRequest(req, res)
+  })
+  mount('/api/notify-planner', async (req, res) => {
+    const { handleNotifyPlannerRequest } = await import('./server/notifyPlannerApi.mjs')
+    return handleNotifyPlannerRequest(req, res)
+  })
+  mount('/api/notify-pos', async (req, res) => {
+    const { handleNotifyPosRequest } = await import('./server/notifyPosApi.mjs')
+    return handleNotifyPosRequest(req, res)
+  })
+  mount('/api/notify-shift-close', async (req, res) => {
+    const { handleNotifyShiftCloseRequest } = await import('./server/notifyShiftCloseApi.mjs')
+    return handleNotifyShiftCloseRequest(req, res)
+  })
+  mount('/api/notify-ops-lab', async (req, res) => {
+    const { handleNotifyOpsLabRequest } = await import('./server/notifyOpsRoadmapApi.mjs')
+    return handleNotifyOpsLabRequest(req, res)
+  })
+  mount('/api/lifecycle-sms', async (req, res) => {
+    const { handleLifecycleSmsRequest } = await import('./server/lifecycleSmsApi.mjs')
+    return handleLifecycleSmsRequest(req, res)
+  })
+  mount('/api/busybee', (req, res) => handleBusybeeRequest(req, res))
+  mount('/api/notification-settings', async (req, res) => {
+    const { handleNotificationSettingsRequest } = await import('./server/notificationSettingsApi.mjs')
+    return handleNotificationSettingsRequest(req, res)
+  })
+  mount('/api/notification-broadcast', async (req, res) => {
+    const { handleNotificationBroadcastRequest } = await import('./server/notificationBroadcastApi.mjs')
+    return handleNotificationBroadcastRequest(req, res)
+  })
+  mount('/api/notification-broadcast-kinds', async (req, res) => {
+    const { handleNotificationBroadcastKindsRequest } = await import('./server/notificationBroadcastKindsApi.mjs')
+    return handleNotificationBroadcastKindsRequest(req, res)
+  })
+  mount('/api/notification-templates', async (req, res) => {
+    const { handleNotificationTemplatesRequest } = await import('./server/notificationTemplatesApi.mjs')
+    return handleNotificationTemplatesRequest(req, res)
+  })
+  mount('/api/birthday-greetings', async (req, res) => {
+    const { handleBirthdayGreetingsRequest } = await import('./server/birthdayGreetingsApi.mjs')
+    return handleBirthdayGreetingsRequest(req, res)
+  })
+  mount('/api/send-finance-quote', async (req, res, helpers) => {
+    const { handleFinanceQuoteRequest } = await import('./server/sendFinanceQuote.mjs')
+    return handleFinanceQuoteRequest(req, res, helpers)
+  })
+  mount('/api/data-center', async (req, res) => {
+    const { handleDataCenterRequest } = await import('./server/dataCenter.mjs')
+    return handleDataCenterRequest(req, res)
+  })
+}
+
 function provisionApiPlugin() {
   return {
     name: 'hakum-provision-apis',
+    // Dev (`npm run dev`) and preview (`vite preview` / :4173) both need /api/* —
+    // without this, customer-auth-lookup 404s on preview and demo email sign-in fails.
     configureServer(server) {
-      const env = loadEnv(server.config.mode, root, '')
-      for (const [k, v] of Object.entries(env)) {
-        if (!process.env[k]) process.env[k] = v
-      }
-
-      const mount = (pathName, handler) => {
-        server.middlewares.use(pathName, (req, res) => handler(req, res, apiHelpers(server, req)))
-      }
-
-      mount('/api/provision-customer', handleProvisionRequest)
-      mount('/api/provision-staff', handleProvisionStaffRequest)
-      mount('/api/update-staff', handleUpdateStaffRequest)
-      mount('/api/customer-portal', handleCustomerPortalRequest)
-      mount('/api/customer-signup', async (req, res, helpers) => {
-        const { handleCustomerSignupRequest } = await import('./server/customerSignup.mjs')
-        return handleCustomerSignupRequest(req, res, helpers)
-      })
-      mount('/api/customer-auth-lookup', async (req, res, helpers) => {
-        const { handleCustomerAuthLookupRequest } = await import('./server/customerAuthLookup.mjs')
-        return handleCustomerAuthLookupRequest(req, res, helpers)
-      })
-      mount('/api/customer-history', async (req, res) => {
-        const { handleCustomerHistoryRequest } = await import('./server/customerHistoryApi.mjs')
-        return handleCustomerHistoryRequest(req, res)
-      })
-      mount('/api/public-book', (req, res) => handlePublicBookRequest(req, res))
-      mount('/api/public-inquiry', (req, res) => handlePublicInquiryRequest(req, res))
-      mount('/api/plate-lookup', async (req, res) => {
-        const { handlePublicPlateLookup } = await import('./server/publicPlateLookup.mjs')
-        return handlePublicPlateLookup(req, res)
-      })
-      mount('/api/booking-status', (req, res) => handleBookingStatusRequest(req, res))
-      mount('/api/maintenance-schedules', (req, res) => handleMaintenanceSchedulesRequest(req, res))
-      mount('/api/push-subscribe', (req, res) => handlePushSubscribeRequest(req, res))
-      mount('/api/send-push', (req, res) => handleSendPushRequest(req, res))
-      mount('/api/notify-booking', async (req, res) => {
-        const { handleNotifyBookingRequest } = await import('./server/notifyBookingApi.mjs')
-        return handleNotifyBookingRequest(req, res)
-      })
-      mount('/api/notify-ops-form', async (req, res) => {
-        const { handleNotifyOpsFormRequest } = await import('./server/notifyOpsFormApi.mjs')
-        return handleNotifyOpsFormRequest(req, res)
-      })
-      mount('/api/notify-planner', async (req, res) => {
-        const { handleNotifyPlannerRequest } = await import('./server/notifyPlannerApi.mjs')
-        return handleNotifyPlannerRequest(req, res)
-      })
-      mount('/api/notify-pos', async (req, res) => {
-        const { handleNotifyPosRequest } = await import('./server/notifyPosApi.mjs')
-        return handleNotifyPosRequest(req, res)
-      })
-      mount('/api/notify-shift-close', async (req, res) => {
-        const { handleNotifyShiftCloseRequest } = await import('./server/notifyShiftCloseApi.mjs')
-        return handleNotifyShiftCloseRequest(req, res)
-      })
-      mount('/api/notify-ops-lab', async (req, res) => {
-        const { handleNotifyOpsLabRequest } = await import('./server/notifyOpsRoadmapApi.mjs')
-        return handleNotifyOpsLabRequest(req, res)
-      })
-      mount('/api/lifecycle-sms', async (req, res) => {
-        const { handleLifecycleSmsRequest } = await import('./server/lifecycleSmsApi.mjs')
-        return handleLifecycleSmsRequest(req, res)
-      })
-      mount('/api/busybee', (req, res) => handleBusybeeRequest(req, res))
-      mount('/api/notification-settings', async (req, res) => {
-        const { handleNotificationSettingsRequest } = await import('./server/notificationSettingsApi.mjs')
-        return handleNotificationSettingsRequest(req, res)
-      })
-      mount('/api/notification-broadcast', async (req, res) => {
-        const { handleNotificationBroadcastRequest } = await import('./server/notificationBroadcastApi.mjs')
-        return handleNotificationBroadcastRequest(req, res)
-      })
-      mount('/api/notification-broadcast-kinds', async (req, res) => {
-        const { handleNotificationBroadcastKindsRequest } = await import('./server/notificationBroadcastKindsApi.mjs')
-        return handleNotificationBroadcastKindsRequest(req, res)
-      })
-      mount('/api/notification-templates', async (req, res) => {
-        const { handleNotificationTemplatesRequest } = await import('./server/notificationTemplatesApi.mjs')
-        return handleNotificationTemplatesRequest(req, res)
-      })
-      mount('/api/birthday-greetings', async (req, res) => {
-        const { handleBirthdayGreetingsRequest } = await import('./server/birthdayGreetingsApi.mjs')
-        return handleBirthdayGreetingsRequest(req, res)
-      })
-      mount('/api/send-finance-quote', async (req, res, helpers) => {
-        const { handleFinanceQuoteRequest } = await import('./server/sendFinanceQuote.mjs')
-        return handleFinanceQuoteRequest(req, res, helpers)
-      })
-      mount('/api/data-center', async (req, res) => {
-        const { handleDataCenterRequest } = await import('./server/dataCenter.mjs')
-        return handleDataCenterRequest(req, res)
-      })
+      attachHakumApis(server)
+    },
+    configurePreviewServer(server) {
+      attachHakumApis(server)
     },
   }
 }

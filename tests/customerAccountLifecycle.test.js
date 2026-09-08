@@ -170,6 +170,13 @@ describe('QA: pages wire activate, not a dead invite wall', () => {
     assert.doesNotMatch(src, /disabled=\{submitting \|\| setupStatus === 'needs_invite'\}/)
   })
 
+  it('sign-in falls back to email password auth when lookup API is missing', () => {
+    const src = readFileSync(join(root, 'src/pages/CustomerSignInPage.jsx'), 'utf8')
+    assert.match(src, /signInWithPassword/)
+    assert.match(src, /classifyIdentifier\(rawIdentifier\) === 'email'/)
+    assert.match(src, /setIdMode\('other'\)/)
+  })
+
   it('signup does not block needs_invite', () => {
     const src = readFileSync(join(root, 'src/pages/CustomerSignUpPage.jsx'), 'utf8')
     assert.match(src, /resolveCustomerAuthIntent/)

@@ -1,5 +1,13 @@
 # BusyBee (BrandTxt) — production SMS
 
+**Outbound only.** Hakum sends SMS; we do **not** receive replies or run an inbox. BrandTxt is a send API + DLR status.
+
+| Piece | What it is | What it is not |
+|-------|------------|----------------|
+| `BUSYBEE_SENDER_ID` (`HAKUM`) | Approved **From** label on the handset | Not the owner’s phone; not a reply address |
+| `OWNER_SMS_PHONE` | **Destination** handset for the daily close report (after Finance accept). Falls back to active BossMich `phone` | Not the SenderId; not required for queue/customer SMS |
+| BrandTxt **IP whitelist** | Allows our **server** (office / Vercel egress) to call `SendSMS` | Not related to replies; not the SenderId approval |
+
 **API base:** `https://app.brandtxt.io`  
 **Endpoints:** `POST/GET /api/v2/Balance`, `POST /api/v2/SendSMS` (v3 SendSMS also supported)  
 **Swagger:** https://app.brandtxt.io/swagger/index.html
@@ -11,8 +19,8 @@
 | `BUSYBEE_API_BASE_URL` | `https://app.brandtxt.io` |
 | `BUSYBEE_API_KEY` | From BrandTxt portal |
 | `BUSYBEE_CLIENT_ID` | From BrandTxt portal |
-| `BUSYBEE_SENDER_ID` | `HAKUM` |
-| `OWNER_SMS_PHONE` | Owner mobile for daily close SMS (optional; falls back to BossMich staff phone) |
+| `BUSYBEE_SENDER_ID` | `HAKUM` (approved SenderId — already verified IsApproved/IsActive) |
+| `OWNER_SMS_PHONE` | Owner mobile that **receives** the daily close SMS (optional; falls back to BossMich staff phone) |
 
 Never use `VITE_*` for BusyBee keys.
 
@@ -57,14 +65,17 @@ SEND_LIVE_OWNER_SMS=1 npm run e2e:shift-close-money
 node scripts/qa-sms-shop-gate.mjs
 ```
 
-## IP whitelisting
+## IP whitelisting (outbound API calls)
 
-BrandTxt requires outbound IP whitelist. Provide:
+BrandTxt gates **who may call SendSMS**, by source IP of the HTTP request from our app — not SMS replies, not SenderId.
 
-1. **Dev/office IP** — for local `npm run dev` and scripts
-2. **Vercel production** — enable [Vercel Static IPs](https://vercel.com/docs/security/static-ip) (Pro+) and send fixed egress IPs, or ask BrandTxt for key-only auth if available
+Provide:
 
-Until Vercel IPs are whitelisted, production SMS will fail even with correct env vars.
+1. **Dev/office IP** — for local `npm run dev` and scripts (done: `180.190.249.189`)
+2. **Vercel production** — enable [Vercel Static IPs](https://vercel.com/docs/security/static-ip) (Pro+) and send fixed egress IPs to BrandTxt, or ask BrandTxt for key-only auth if they offer it
+
+Until Vercel egress IPs are whitelisted, **production** outbound SMS fails even when SenderId `HAKUM` is approved and env keys are correct. Office/local can still send.
+
 
 ## Vercel `OWNER_SMS_PHONE` (ops runbook)
 

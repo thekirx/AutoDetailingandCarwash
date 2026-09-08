@@ -599,6 +599,13 @@ function BroadcastPanel({ canManageKinds = false }) {
       setKinds([
         { slug: 'promo', label: 'Promo', is_active: true },
         { slug: 'we_missed', label: 'We missed you', is_active: true },
+        { slug: 'aftercare', label: 'Aftercare check-in', is_active: true },
+        { slug: 'package_nudge', label: 'Package upsell', is_active: true },
+        { slug: 'loyalty_nudge', label: 'Loyalty nudge', is_active: true },
+        { slug: 'thank_you', label: 'Thank you', is_active: true },
+        { slug: 'reminder', label: 'Service due', is_active: true },
+        { slug: 'promo', label: 'Promo', is_active: true },
+        { slug: 'custom', label: 'Custom', is_active: true },
         { slug: 'reminder', label: 'Reminder', is_active: true },
         { slug: 'custom', label: 'Custom', is_active: true },
       ])

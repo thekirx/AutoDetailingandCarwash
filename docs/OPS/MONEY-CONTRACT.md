@@ -52,7 +52,7 @@ Paid POS (services / packages / detailing / merch)
 | C1 | Report **carwash salary cell** = wash-pool preview only. Detailing splits (ceramic crew + assigned detailer) stay on payroll lines / detailer salary — not extra carwash salary. |
 | C2 / I2 | **Principal:** One pay path. Floor confirm is official pay. Report salary = **preview** of that path. BA `salary_*` expenses = **drawer cash-out** of that day — do not treat as a second wash-pool. Same night: Finance accept → SA/ASA confirm floor. |
 | C3 | System fills salary lines from preview; BA may still log drawer cash-out expenses. |
-| C4 | **BA salary draft (hybrid):** Branch Admin may edit extra pay / deductions on End of Shift as **draft notes** on `shift_close_reports.submitted` (e.g. `salary_draft_extras`). Those notes **surface on the SA/ASA payroll wizard** — they never post `payroll_runs`. BA **cannot** call `run_payroll`. |
+| C4 | **BA salary draft (hybrid):** Branch Admin may edit extra pay / deductions on End of Shift as **draft notes** on `shift_close_reports.submitted` (e.g. `salary_draft_extras`). Those notes **surface on the SA/ASA payroll wizard** — they never post `payroll_runs`. BA **cannot** call `run_payroll`. **Purpose:** BA captures same-night extras without owning pay; SA still confirms. Unrelated to SMS / BrandTxt. Optional demo until a live BA EoS includes drafts. |
 | C5 | Optional nullable `salary_pct` on catalog services/packages may adjust floor **preview** only. Default remains global wash pool + ceramic splits. Never auto-pay from catalog %. |
 | Detailing | Every detailing job can produce **manual ceramic/detailing expense** output (existing ceramic keys). |
 

@@ -39,9 +39,8 @@ export const SYSTEM_TEMPLATES = [
     description: 'Customer when a booking is submitted',
     kind: 'booking_received',
     title: 'Booking received',
-    body: 'We received your request at {branch}. We will confirm shortly.',
-    sms_body:
-      'Hakum Auto Care: We received your booking for {plate} at {branch}. We will confirm soon.',
+    body: 'We received your {service} request at {branch}. We will confirm shortly.',
+    sms_body: 'Hakum: We got your {service} for {plate} at {branch}. We will confirm soon.',
     display_order: 10,
   }),
   row({
@@ -51,8 +50,8 @@ export const SYSTEM_TEMPLATES = [
     description: 'Customer when the shop confirms the booking',
     kind: 'booking_confirm',
     title: 'Booking confirmed',
-    body: 'You are confirmed at {branch}.',
-    sms_body: 'Hakum Auto Care: Your booking is CONFIRMED ({branch}{when}). See you soon!',
+    body: 'Your {service} is confirmed at {branch}.',
+    sms_body: 'Hakum: {service} CONFIRMED for {plate} at {branch}{when}. See you!',
     display_order: 20,
   }),
   row({
@@ -62,19 +61,19 @@ export const SYSTEM_TEMPLATES = [
     description: 'Customer when the car is waiting on the floor',
     kind: 'booking_status',
     title: 'In the queue',
-    body: 'Waiting at {branch}.',
-    sms_body: 'Hakum Auto Care: {plate} is waiting in the {branch} queue.',
+    body: '{plate} is checked in for {service} at {branch}.',
+    sms_body: 'Hakum: {plate} checked in for {service} at {branch}. You are in queue.',
     display_order: 30,
   }),
   row({
     key: 'booking.in_progress.customer',
     category: 'booking_status',
     label: 'Service in progress',
-    description: 'Customer when detailing starts',
+    description: 'Customer when detailing / wash / package starts',
     kind: 'booking_status',
     title: 'Service in progress',
-    body: '{plate} is being detailed.',
-    sms_body: "Hakum Auto Care: We're working on {plate} now.",
+    body: 'Our team is working on your {service} for {plate}.',
+    sms_body: 'Hakum: Working on your {service} for {plate} now.',
     display_order: 40,
   }),
   row({
@@ -84,9 +83,20 @@ export const SYSTEM_TEMPLATES = [
     description: 'Customer when the car is on final check',
     kind: 'booking_status',
     title: 'Final checking',
-    body: '{plate} is on final checking.',
-    sms_body: 'Hakum Auto Care: {plate} is on final checking.',
+    body: '{plate} ({service}) is on final QC.',
+    sms_body: 'Hakum: {plate} ({service}) is on final QC. Almost ready.',
     display_order: 50,
+  }),
+  row({
+    key: 'booking.for_releasing.customer',
+    category: 'booking_status',
+    label: 'Ready for release',
+    description: 'Customer when detailing is ready for release',
+    kind: 'booking_status',
+    title: 'Ready for release',
+    body: '{plate} ({service}) is ready for release at {branch}.',
+    sms_body: 'Hakum: {plate} ({service}) is ready for release at {branch}.',
+    display_order: 55,
   }),
   row({
     key: 'booking.for_payment.customer',
@@ -95,8 +105,8 @@ export const SYSTEM_TEMPLATES = [
     description: 'Customer when the visit is ready at POS',
     kind: 'booking_status',
     title: 'Ready for payment',
-    body: 'Your visit is ready for payment at the counter.',
-    sms_body: 'Hakum Auto Care: {plate} is ready. Please proceed to payment.',
+    body: 'Your {service} visit is ready for payment at the counter.',
+    sms_body: 'Hakum: {plate} ({service}) is ready — please proceed to payment.',
     display_order: 60,
   }),
   row({
@@ -106,8 +116,8 @@ export const SYSTEM_TEMPLATES = [
     description: 'Customer when the visit is released',
     kind: 'booking_status',
     title: 'Service complete',
-    body: 'Your service is complete. Thank you!',
-    sms_body: 'Hakum Auto Care: {plate} is done. Thank you for choosing Hakum!',
+    body: 'Your {service} is complete. Thank you!',
+    sms_body: 'Hakum: {service} for {plate} is done. Thank you! Book: hakumautocare.com/book',
     display_order: 70,
   }),
   row({
@@ -117,8 +127,8 @@ export const SYSTEM_TEMPLATES = [
     description: 'Customer when a booking is cancelled',
     kind: 'booking_status',
     title: 'Booking cancelled',
-    body: 'Booking at {branch} was cancelled.',
-    sms_body: 'Hakum Auto Care: Your booking at {branch} was cancelled. Message us if you need to rebook.',
+    body: 'Your {service} booking at {branch} was cancelled.',
+    sms_body: 'Hakum: Your {service} at {branch} was cancelled. Rebook anytime.',
     display_order: 80,
   }),
   row({
@@ -128,9 +138,20 @@ export const SYSTEM_TEMPLATES = [
     description: 'Customer when a job is sent back for redo',
     kind: 'booking_status',
     title: 'We are sorry — redoing your service',
-    body: 'We are sorry. {plate} is back on the floor for a redo at {branch}.',
-    sms_body: 'Hakum Auto Care: We are sorry. We are redoing {plate} at {branch}. We will update you shortly.',
+    body: 'We are sorry. We are redoing {service} on {plate} at {branch}.',
+    sms_body: 'Hakum: Sorry — redoing {service} on {plate} at {branch}. We will update you.',
     display_order: 90,
+  }),
+  row({
+    key: 'booking.photos_ready.customer',
+    category: 'booking_status',
+    label: 'Progress photos ready',
+    description: 'Customer when progress photos are available',
+    kind: 'booking_photos',
+    title: 'Progress photos ready',
+    body: 'Progress photos for {plate} ({service}) are ready in the app.',
+    sms_body: 'Hakum: Photos for {plate} ({service}) are ready in the Hakum app.',
+    display_order: 95,
   }),
 
   row({
@@ -188,6 +209,17 @@ export const SYSTEM_TEMPLATES = [
     title: 'Final checking',
     body: '{plate} final check @ {branch}',
     display_order: 150,
+  }),
+  row({
+    key: 'booking.for_releasing.ops',
+    category: 'ops_status',
+    audience: 'ops',
+    channel: 'push',
+    label: 'Ops · For releasing',
+    kind: 'ops_booking_status',
+    title: 'For releasing',
+    body: '{plate} · {service} releasing @ {branch}',
+    display_order: 155,
   }),
   row({
     key: 'booking.for_payment.ops',
@@ -371,10 +403,13 @@ export function bookingNotifyVars(booking = {}) {
       when = ''
     }
   }
+  const serviceRaw = booking.service_name || booking.services?.name || 'service'
+  const service =
+    String(serviceRaw).length > 28 ? `${String(serviceRaw).slice(0, 25)}…` : String(serviceRaw)
   return {
     name: booking.customer_name || 'Customer',
     plate: booking.vehicle_plate || 'your vehicle',
-    service: booking.service_name || booking.services?.name || 'detailing',
+    service,
     branch: booking.branch || 'Hakum',
     when,
   }

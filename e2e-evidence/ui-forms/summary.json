@@ -1,0 +1,57 @@
+{
+  "ok": true,
+  "passed": 10,
+  "failed": 0,
+  "results": [
+    {
+      "ok": true,
+      "name": "ops.login",
+      "detail": "http://127.0.0.1:4173/operations/console"
+    },
+    {
+      "ok": true,
+      "name": "planner.forms.detailing",
+      "detail": "detailing visible"
+    },
+    {
+      "ok": true,
+      "name": "planner.forms.qr",
+      "detail": "QR present"
+    },
+    {
+      "ok": true,
+      "name": "planner.forms.shot",
+      "detail": "planner-forms-detailing.png"
+    },
+    {
+      "ok": true,
+      "name": "public.form.load",
+      "detail": "http://127.0.0.1:4173/f/detailing-inquiry"
+    },
+    {
+      "ok": true,
+      "name": "public.form.fields",
+      "detail": "9 labels, 2 selects"
+    },
+    {
+      "ok": true,
+      "name": "public.form.service_options",
+      "detail": "Ceramic Coating | Nano Ceramic Tint | Paint Protection Film (PPF) | Paint Maintenance | Other detailing"
+    },
+    {
+      "ok": true,
+      "name": "public.form.branch_options",
+      "detail": "bacoor | batangas | hq"
+    },
+    {
+      "ok": true,
+      "name": "public.form.submit",
+      "detail": "success copy shown"
+    },
+    {
+      "ok": true,
+      "name": "planner.forms.edit_dialog",
+      "detail": "edit UI opened"
+    }
+  ]
+}

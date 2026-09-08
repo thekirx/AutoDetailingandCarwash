@@ -166,7 +166,9 @@ async function ensurePreview() {
     return { base: process.env.BASE_URL.replace(/\/$/, ''), stop: async () => {} }
   }
 
-  // Customer portal needs Vite middleware (/api/customer-auth-lookup) — use dev, not preview.
+  // Customer portal needs Vite API middleware (/api/customer-auth-lookup).
+  // Dev and preview both mount it via configureServer + configurePreviewServer.
+
   const isWin = process.platform === 'win32'
   const port = process.env.PREVIEW_PORT || process.env.DEV_PORT || '5173'
   const base = `http://127.0.0.1:${port}`

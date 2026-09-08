@@ -21,12 +21,16 @@ describe('public inquiry API seam', () => {
     assert.match(server, /builders\[/)
   })
 
-  it('complaints and partnership post through shared API client; contact is channels-only', () => {
+  it('complaints, partnership, and event registration post through shared API client; contact is channels-only', () => {
     assert.match(apiClient, /export async function submitPublicInquiry/)
     assert.match(complaints, /submitPublicInquiry/)
     assert.doesNotMatch(complaints, /from\('complaints'\)\.insert/)
     assert.match(partnership, /submitPublicInquiry\('partnership'/)
     assert.doesNotMatch(partnership, /from\('partnership_inquiries'\)/)
+    assert.match(server, /event_registration/)
+    const events = readFileSync(join(root, 'src/pages/EventsPage.jsx'), 'utf8')
+    assert.match(events, /submitPublicInquiry\(\s*'event_registration'/)
+    assert.doesNotMatch(events, /from\('event_registrations'\)\.insert/)
     assert.doesNotMatch(contact, /submitPublicInquiry|postPublicInquiry|from\('contact_inquiries'\)\.insert/)
     assert.match(contact, /Talk to Hakum|Contact us/)
   })
@@ -50,5 +54,14 @@ describe('public inquiry migration', () => {
     assert.match(sql, /revoke insert on public\.partnership_inquiries from anon, authenticated/)
     assert.match(sql, /enforce_staff_attendance_geofence/)
     assert.match(sql, /staff_attendance_geofence/)
+  })
+
+  it('revokes direct event_registrations insert (API geofence)', () => {
+    const sql = readFileSync(
+      join(root, 'supabase/migrations/20260908120000_event_registrations_api_geofence.sql'),
+      'utf8',
+    )
+    assert.match(sql, /drop policy if exists "Anon register events"/)
+    assert.match(sql, /revoke insert on public\.event_registrations from anon, authenticated/)
   })
 })

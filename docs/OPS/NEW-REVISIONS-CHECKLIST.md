@@ -215,7 +215,8 @@ This audit found **0 GAP** items against the brief after P0–P7. Residuals are 
 - [x] Set BusyBee keys + BrandTxt whitelist office IP `180.190.249.189` — **2026-09-07**: local `OWNER_SMS_PHONE` + BossMich.phone=`09625294043`; `SEND_LIVE_OWNER_SMS=1` → `notify_sent sent=1`. **Still open:** Vercel project is not under this CLI account (`jcuadys-projects`) — set `OWNER_SMS_PHONE` in the Hakum Vercel project dashboard + whitelist Vercel static egress on BrandTxt
 - [x] Seed `product_branch_stock` for resellable SKUs per branch (POS fail-closed if missing) — **2026-08-28**: 100 qty × 8 SKUs × all branches via Supabase SQL
 - [x] Approved chem recon + ≥1 line (QA) — **2026-09-07**: approved recon + 1 `inventory_recon_lines` row (seeded). Floor chart still needs a real Sunday BA→SA habit
-- [ ] BA EoS with `salary_draft_extras` → Finance accept → SA pending floor shows drafts → confirm pay (BA still blocked from Payroll confirm) — **BA `run_payroll` blocked** verified; draft extras need live EoS
+- [ ] BA EoS with `salary_draft_extras` → Finance accept → SA pending floor shows drafts → confirm pay (BA still blocked from Payroll confirm) — **optional hybrid payroll-notes demo** (not SMS). BA `run_payroll` blocked already verified; draft extras need a live BA EoS only if you want that UI path exercised
+
 - [x] Detailing complete outcome 2/3 → Experience card — **2026-09-07**: QA seed on Planning → Experience; create path toasts success/error; default board prefers `Planner`
 - [x] Investor login: no HQ/Corporate tab or balances — **`e2e-ops-cutover`**: nav Finance-only, RLS denies `corporate_balances`, branch filter hides HQ
 - [x] Mute customer SMS/push and confirm notify skipped — **`e2e-ops-cutover`**: CRM flags → `notifyBookingStatus` skipped

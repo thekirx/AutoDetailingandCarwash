@@ -64,4 +64,11 @@ describe('Production shell contract (CSP + stale chunks)', () => {
     assert.match(boundary, /Failed to fetch dynamically imported module/)
     assert.match(boundary, /window\.location\.reload/)
   })
+
+  it('mounts Hakum /api middleware on both Vite dev and preview', () => {
+    assert.match(vite, /function attachHakumApis\s*\(/)
+    assert.match(vite, /configureServer\s*\(\s*server\s*\)\s*\{[\s\S]*attachHakumApis\s*\(\s*server\s*\)/)
+    assert.match(vite, /configurePreviewServer\s*\(\s*server\s*\)\s*\{[\s\S]*attachHakumApis\s*\(\s*server\s*\)/)
+    assert.match(vite, /\/api\/customer-auth-lookup/)
+  })
 })

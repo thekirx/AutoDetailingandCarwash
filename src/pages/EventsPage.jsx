@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
+import { submitPublicInquiry } from '@/lib/publicInquiryApi'
 import FormLegalNotice from '@/components/FormLegalNotice'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import useReveal from '../components/public/bredesign/useReveal'
@@ -35,14 +36,18 @@ export default function EventsPage() {
       setStatus('idle')
       return
     }
-    const { error: e } = await supabase.from('event_registrations').insert({
-      event_id: registerFor,
-      name: form.name.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim() || null,
-    })
-    if (e) {
-      setError(e.message)
+    const result = await submitPublicInquiry(
+      'event_registration',
+      {
+        event_id: registerFor,
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim() || '',
+      },
+      guard,
+    )
+    if (!result.ok) {
+      setError(result.error)
       setStatus('idle')
       return
     }

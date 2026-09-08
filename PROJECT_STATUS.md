@@ -1,35 +1,35 @@
 # Project Status
 
-**Last Updated:** 2026-09-07 (Asia/Manila)  
+**Last Updated:** 2026-09-08 (Asia/Manila) — audit plan Waves 0–3 executed  
 **Current Branch:** main  
-**Current Commit:** `f8e4e0a` (+ local fix `e2e-sales-bookings` RBAC assertions)
+**Evidence stamp:** `npm test` **1193/1193** · build exit 0 · event geofence migration applied · see [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md)
 
 ## Executive Summary
 
-**Soft-launch workflows are VERIFIED working** (fresh 2026-09-07 session).  
-Payroll, POS contracts, attendance, TL queue/ops units, sales booking form + status pipeline, and money EoS→payroll path all **PASS**. Not 100% production-perfect: Vercel owner SMS IP/env still open; `salary_draft_extras` needs a manual BA EoS demo.
+Wave **2 eng fixes are DONE** (event registration API geofence, waitlist/legal honesty, broadcast `skipped`, unit harness). Wave **1 production SMS remains BLOCKED (ops)** — this environment has no Vercel team credentials to set env/IPs. Wave **4–5** (POS debt, npm audit, polish) deferred as scheduled follow-ups.
 
-## Workflow readiness (fresh evidence)
+### Progress vs plan
 
-| Workflow | Status | Evidence (this session) |
+| Wave | Status |
+|------|--------|
+| 0 Release hygiene | In progress — commit after verify |
+| 1 Ops SMS | **BLOCKED** — BrandTxt IP + `OWNER_SMS_PHONE` need Hakum Vercel access |
+| 2 Eng P1/P2 | **DONE** — BUG-015…018 closed |
+| 3 Confidence | **PARTIAL** — units+build PASS; lint dirty; full readiness orchestrator not re-run |
+| 4–5 Debt/polish | **DEFERRED** — documented in SYSTEM_AUDIT |
+
+## Workflow readiness
+
+| Workflow | Status | Evidence |
 |---|---|---|
-| Attendance | **WORKING** | `e2e-attendance` PASS |
-| Payroll (RPC/RLS/static) | **WORKING** | `e2e:payroll` PASS |
-| Payroll money path (submit→accept→claim) | **WORKING** | `e2e:shift-close-money` 13/13 PASS |
-| POS (shell/provision/handoff RPC) | **WORKING** | `e2e-pos-part2` PASS |
-| TL / queue daily ops | **WORKING** | `e2e-queue-part3` PASS + TL unit 19/19 |
-| Sales bookings + form + statuses | **WORKING** | `e2e-sales-bookings` PASS (create→confirm→waiting→cancel; `for_payment` denied) |
-| Ops cutover gates | **WORKING** | `e2e:cutover` PASS (WARN: salary_draft_extras) |
-| Full browser TL→POS→pay | **PARTIAL** | Covered by UI money / P0 historically; not re-run this hour |
-| Owner SMS on Vercel | **BLOCKED (ops)** | Local/office proven; Hakum Vercel team env/IP open |
+| Unit suite | **WORKING** | `npm test` 1193/1193 (browser tests: `npm run test:browser` + preview) |
+| Production build | **WORKING** | exit 0 |
+| Event registration | **WORKING** | API + migration; units green |
+| Forms / SMS / CRM / sign-in | **WORKING** *local/QA* | Prior campaign + this tree |
+| Owner SMS on Vercel | **BLOCKED (ops)** | BUG-002 / BUG-003 |
 
 ## Recommended Next Action
 
-Set `OWNER_SMS_PHONE` on the Hakum Vercel project + whitelist Vercel static BrandTxt IPs.
-
-## Git State
-
-```text
-Ahead/local: scripts/e2e-sales-bookings.mjs (stale RBAC asserts fixed to match sales board pipeline)
-Untracked noise: Brand Assets, tmp-*, skill dumps — leave alone
-```
+1. Set BrandTxt whitelist + `OWNER_SMS_PHONE` on Hakum Vercel (Wave 1).  
+2. Before cutover: `npm run test:readiness`.  
+3. Schedule Wave 4 POS/security debt.

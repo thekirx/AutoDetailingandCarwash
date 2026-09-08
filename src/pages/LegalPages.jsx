@@ -123,7 +123,7 @@ export function TermsPage() {
       <p>
         Questions about these Terms: <a href="mailto:admin@hakumautocare.com">admin@hakumautocare.com</a>
         {' '}· phone <a href="tel:+639156296096">0915 629 6096</a>
-        {' '}· <Link to="/contact">contact form</Link>.
+        {' '}· <Link to="/contact">Contact</Link>.
       </p>
       <p className="legal-note">
         This document is provided for operational transparency. For regulated filings or special commercial contracts,
@@ -190,7 +190,7 @@ export function PrivacyPage() {
       <p>
         Subject to law and verification, you may request access, correction, or deletion of personal data, or withdraw consent
         where processing is consent-based. Account deletion may be limited by open visits, unpaid balances, or legal holds.
-        Contact us via email or the <Link to="/contact">contact form</Link>. You may also lodge a complaint with the National Privacy Commission.
+        Contact us via email or our <Link to="/contact">Contact</Link> page. You may also lodge a complaint with the National Privacy Commission.
       </p>
 
       <h2>7. Children</h2>
@@ -267,7 +267,7 @@ export function CookiesPage() {
       <h2>5. Contact</h2>
       <p>
         Questions: <a href="mailto:admin@hakumautocare.com">admin@hakumautocare.com</a>
-        {' '}· <Link to="/contact">contact form</Link>
+        {' '}· <Link to="/contact">Contact</Link>
         {' '}· <Link to="/privacy">Privacy Policy</Link>.
       </p>
     </LegalShell>

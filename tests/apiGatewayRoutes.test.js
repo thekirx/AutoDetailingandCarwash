@@ -44,7 +44,7 @@ const domains = [
   ],
   ['finance', financeGateway, finance, ['send-finance-quote']],
   ['data-center', dataCenterGateway, dataCenter, ['data-center']],
-  ['public-inquiry', publicInquiryGateway, publicInquiry, ['complaints', 'contact', 'partnership']],
+  ['public-inquiry', publicInquiryGateway, publicInquiry, ['complaints', 'event-registration', 'partnership']],
 ]
 
 describe('domain gateway allowlists', () => {

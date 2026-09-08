@@ -29,24 +29,24 @@ if (!existsSync(outHtml)) {
 const puppeteer = (await import('puppeteer')).default
 const browser = await puppeteer.launch({ headless: true })
 try {
-  const page = await browser.newPage()
-  const fileUrl = `file:///${outHtml.replace(/\\/g, '/')}`
+const page = await browser.newPage()
+const fileUrl = `file:///${outHtml.replace(/\\/g, '/')}`
   await page.goto(fileUrl, { waitUntil: 'networkidle0', timeout: 120000 })
-  await page.evaluate(() => {
-    document.querySelectorAll('.tab-panel').forEach((p) => {
-      p.style.display = 'block'
-    })
+await page.evaluate(() => {
+  document.querySelectorAll('.tab-panel').forEach((p) => {
+    p.style.display = 'block'
+  })
     const tabs = document.querySelector('.tabs')
     if (tabs) tabs.style.display = 'none'
-  })
-  await page.pdf({
-    path: outPdf,
-    format: 'A4',
-    printBackground: true,
-    margin: { top: '12mm', bottom: '14mm', left: '11mm', right: '11mm' },
-  })
+})
+await page.pdf({
+  path: outPdf,
+  format: 'A4',
+  printBackground: true,
+  margin: { top: '12mm', bottom: '14mm', left: '11mm', right: '11mm' },
+})
 } finally {
-  await browser.close()
+await browser.close()
 }
 
 if (!existsSync(outPdf) || statSync(outPdf).size < 20_000) {

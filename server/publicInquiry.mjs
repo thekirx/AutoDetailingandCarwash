@@ -10,15 +10,22 @@ function admin() {
 
 const text = (value) => String(value ?? '').trim()
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const SITE_TYPES = ['commercial_lot', 'mall_retail', 'fuel_station', 'village_condo']
 
 /* Mirrors the client guard: a filled honeypot or a form submitted faster than a
    person could type it is dropped. Client-side checks are advice, not a gate —
-   this endpoint is the only way in now, so it re-checks. */
+   this endpoint is the only way in now, so it re-checks. Accepts both the
+   browser field names (company_website / form_opened_at) and test aliases. */
 function guardError(body) {
-  if (text(body.honeypot)) return 'Unable to submit right now.'
+  if (text(body.honeypot || body.company_website)) return 'Unable to submit right now.'
   const elapsed = Number(body.elapsedMs)
-  if (!Number.isFinite(elapsed) || elapsed < 2000) return 'Please wait a moment and try again.'
+  if (Number.isFinite(elapsed)) {
+    if (elapsed < 2000) return 'Please wait a moment and try again.'
+    return null
+  }
+  const opened = Number(body.form_opened_at ?? body.openedAt ?? 0)
+  if (!opened || Date.now() - opened < 2000) return 'Please wait a moment and try again.'
   return null
 }
 
@@ -71,11 +78,32 @@ const builders = {
       },
     }
   },
+
+  event_registration(body) {
+    const eventId = text(body.event_id || body.eventId)
+    const name = text(body.name)
+    const phone = text(body.phone)
+    const emailRaw = text(body.email).toLowerCase()
+    if (!eventId || !name || !phone) {
+      return { error: 'Name, phone, and event are required.' }
+    }
+    if (!UUID_PATTERN.test(eventId)) return { error: 'Invalid event.' }
+    if (emailRaw && !EMAIL_PATTERN.test(emailRaw)) return { error: 'Enter a valid email address.' }
+    return {
+      table: 'event_registrations',
+      row: {
+        event_id: eventId,
+        name,
+        phone,
+        email: emailRaw || null,
+      },
+    }
+  },
 }
 
 /**
- * Public inquiry intake — contact, partnership, and complaint forms.
- * Anon lost direct INSERT on these tables (migration public_inquiry_api_geofence),
+ * Public inquiry intake — partnership, complaint, and event registration.
+ * Anon lost direct INSERT on these tables (API geofence migrations),
  * so submissions come through here and are written with the service role.
  */
 export async function handlePublicInquiryRequest(req, res) {

@@ -5,6 +5,7 @@ export const FORM_KINDS = [
   { value: 'event', label: 'Events RSVP' },
   { value: 'equipment_repair', label: 'Equipment repairs' },
   { value: 'cash_advance', label: 'Cash advance' },
+  { value: 'detailing', label: 'Detailing services' },
 ]
 
 /** Stable public slugs for the four templates (edit-only; never free-create). */
@@ -71,11 +72,22 @@ export const FIELD_TYPES = [
 export const DEFAULT_FORM_LOGO = '/branding/hakum-lw-ow.png'
 
 export function isFixedFormKind(kind) {
-  return FORM_KINDS.some((k) => k.value === kind)
+  return FIXED_FORM_TEMPLATES.some((t) => t.kind === kind)
+}
+
+export function isDetailingFormKind(kind) {
+  return kind === 'detailing'
 }
 
 export function formKindLabel(kind) {
   return FORM_KINDS.find((k) => k.value === kind)?.label || String(kind || 'form').replace(/_/g, ' ')
+}
+
+/** True once published — slug must stay put so printed QR links keep working. */
+export function isFormSlugLocked(form) {
+  if (!form) return false
+  if (form.settings?.slug_locked === true) return true
+  return form.status === 'published' && Boolean(form.public_enabled) && Boolean(form.slug)
 }
 
 export function slugifyFormName(name, id = '') {
@@ -164,6 +176,30 @@ export function templateFields(kind, { branchSlugs } = {}) {
       { key: 'notes', label: 'Notes', type: 'textarea', required: false },
     ])
   }
+  if (kind === 'detailing') {
+    return normalizeFields([
+      { key: 'customer_name', label: 'Full name', type: 'text', required: true },
+      { key: 'phone', label: 'Mobile number', type: 'phone', required: true },
+      { key: 'email', label: 'Email', type: 'email', required: false },
+      { key: 'plate', label: 'Plate / conduction', type: 'text', required: true },
+      {
+        key: 'service',
+        label: 'Detailing service',
+        type: 'select',
+        required: true,
+        options: [
+          'Ceramic Coating',
+          'Nano Ceramic Tint',
+          'Paint Protection Film (PPF)',
+          'Paint Maintenance',
+          'Other detailing',
+        ],
+      },
+      { key: 'branch', label: 'Preferred branch', type: 'select', required: true, options: branches },
+      { key: 'preferred_date', label: 'Preferred date', type: 'date', required: false },
+      { key: 'notes', label: 'Notes', type: 'textarea', required: false },
+    ])
+  }
   // Fixed kinds only — unknown kind falls back to complaint shape
   return templateFields('complaint', { branchSlugs: branches })
 }
@@ -180,10 +216,11 @@ export function withLiveBranchOptions(fields = [], branchSlugs = []) {
 export function defaultFormSettings(kind = 'complaint') {
   return {
     push_to_planning: true,
-    show_on_calendar: kind === 'event',
+    show_on_calendar: kind === 'event' || kind === 'detailing',
     show_logo: true,
     logo_url: DEFAULT_FORM_LOGO,
     header_title: '',
+    slug_locked: false,
   }
 }
 
@@ -196,6 +233,7 @@ export function normalizeFormSettings(settings = {}, kind = 'complaint') {
     show_logo: raw.show_logo !== false,
     logo_url: String(raw.logo_url || base.logo_url).trim() || DEFAULT_FORM_LOGO,
     header_title: String(raw.header_title || '').trim(),
+    slug_locked: Boolean(raw.slug_locked),
   }
 }
 
@@ -239,11 +277,24 @@ export function shareFormUrl(slug, origin = typeof window !== 'undefined' ? wind
   return `${String(origin).replace(/\/$/, '')}/f/${slug}`
 }
 
-/** QR image URL for a share link (no npm dep — CSP allows https: img-src). */
+/** @deprecated Prefer formQrDataUrl — third-party host is not permanent offline. */
 export function formQrImageUrl(url, size = 200) {
   if (!url) return ''
   const n = Math.min(512, Math.max(120, Number(size) || 200))
   return `https://api.qrserver.com/v1/create-qr-code/?size=${n}x${n}&data=${encodeURIComponent(url)}`
+}
+
+/** Client-side QR data URL for permanent /f/:slug links (download + preview). */
+export async function formQrDataUrl(url, size = 200) {
+  if (!url) return ''
+  const n = Math.min(1024, Math.max(120, Number(size) || 200))
+  const QR = await import('qrcode')
+  return QR.toDataURL(String(url), {
+    width: n,
+    margin: 2,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#0b1f3a', light: '#ffffff' },
+  })
 }
 
 export function submissionTitle(form, payload = {}) {
@@ -252,6 +303,9 @@ export function submissionTitle(form, payload = {}) {
   if (form?.kind === 'event') return `RSVP: ${name || 'Guest'}`
   if (form?.kind === 'equipment_repair') return `Equipment: ${payload.equipment || name || 'Report'}`
   if (form?.kind === 'cash_advance') return `Cash advance: ${name || 'Employee'}`
+  if (form?.kind === 'detailing') {
+    return `Detailing: ${payload.service || 'Service'} · ${name || payload.plate || 'Customer'}`
+  }
   return `${form?.name || 'Form'}: ${name || 'Submission'}`
 }
 

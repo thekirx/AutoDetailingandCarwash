@@ -4,6 +4,7 @@ import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import { supabase } from '@/lib/supabase'
 import { shareFormUrl } from '@/lib/opsForms'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
+import { submitPublicInquiry } from '@/lib/publicInquiryApi'
 import FormLegalNotice from '@/components/FormLegalNotice'
 
 export default function EventSharePage() {
@@ -49,14 +50,18 @@ export default function EventSharePage() {
       setStatus('idle')
       return
     }
-    const { error: err } = await supabase.from('event_registrations').insert({
-      event_id: event.id,
-      name: form.name.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim() || null,
-    })
-    if (err) {
-      setError(err.message)
+    const result = await submitPublicInquiry(
+      'event_registration',
+      {
+        event_id: event.id,
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim() || '',
+      },
+      guard,
+    )
+    if (!result.ok) {
+      setError(result.error)
       setStatus('idle')
       return
     }

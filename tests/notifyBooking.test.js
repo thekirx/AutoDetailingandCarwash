@@ -12,6 +12,7 @@ const booking = {
   customer_name: 'Ana',
   branch: 'bacoor',
   vehicle_plate: 'ABC1234',
+  service_name: 'Ceramic Coating',
   scheduled_start: '2026-07-23T10:00:00+08:00',
   status: 'pending',
 }
@@ -19,19 +20,22 @@ const booking = {
 const pending = buildBookingNotifyPayload(booking, 'pending')
 assert.equal(pending.kind, 'booking_received')
 assert.equal(pending.url, '/account')
-assert.match(pending.sms, /Hakum Auto Care/)
+assert.match(pending.sms, /Hakum/)
+assert.match(pending.sms, /Ceramic Coating/)
 
 const guest = buildBookingNotifyPayload({ ...booking, customer_id: null }, 'confirmed')
 assert.equal(guest.url, '/book')
 assert.equal(guest.kind, 'booking_confirm')
+assert.match(guest.sms, /Ceramic Coating/)
 
 const checking = buildBookingNotifyPayload(booking, 'final_checking')
 assert.equal(checking.kind, 'booking_status')
-assert.match(checking.sms, /final checking/i)
+assert.match(checking.sms, /final QC|final checking/i)
 
 const releasing = buildBookingNotifyPayload(booking, 'for_releasing')
 assert.equal(releasing.kind, 'booking_status')
 assert.match(releasing.sms, /releas|ready|pick/i)
+assert.match(releasing.sms, /Ceramic Coating/)
 
 assert.equal(buildBookingNotifyPayload(booking, 'nope'), null)
 

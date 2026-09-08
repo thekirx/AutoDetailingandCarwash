@@ -66,12 +66,14 @@ export default function CustomerSignInPage() {
   useEffect(() => {
     const raw = identifier.trim()
     setError('')
+    const kind = classifyIdentifier(raw)
+    if (kind === 'email' || kind === 'plate') setIdMode('other')
+    else if (kind === 'phone') setIdMode('phone')
     if (raw.length < 3) {
       setSetupStatus(null)
       setLookupEmail(null)
       return undefined
     }
-    const kind = classifyIdentifier(raw)
     if (kind === 'phone' && raw.replace(/\D/g, '').length < 10) {
       setSetupStatus(null)
       setLookupEmail(null)
@@ -122,6 +124,44 @@ export default function CustomerSignInPage() {
     }
     setSubmitting(true)
     try {
+      const finishWithSession = async (sessionData, accessTokenHint) => {
+        if (!sessionData?.user) throw new Error('Could not open your session. Try again.')
+
+        const { data: customer, error: customerError } = await supabase
+          .from('customers')
+          .select('id, role, is_archived')
+          .eq('id', sessionData.user.id)
+          .eq('role', 'customer')
+          .eq('is_archived', false)
+          .maybeSingle()
+
+        if (customerError || !customer) {
+          await supabase.auth.signOut()
+          throw new Error(
+            customerError && /42501|permission|policy|row-level/i.test(customerError.message || '')
+              ? 'Unable to verify your customer profile (permissions). Try again shortly.'
+              : !customer
+                ? 'This sign-in is for customers. Team members use the operations portal.'
+                : customerError.message || 'Unable to verify customer account.',
+          )
+        }
+
+        const accessToken = sessionData.session?.access_token || accessTokenHint
+        if (accessToken) {
+          fetch('/api/lifecycle-sms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({ kind: 'welcome', site_origin: window.location.origin }),
+          }).catch(() => {})
+        }
+
+        if (sessionData.user.user_metadata?.must_set_password) {
+          navigate(activateSignupHref(rawIdentifier), { replace: true })
+          return
+        }
+        navigate('/account', { replace: true })
+      }
+
       const res = await fetch('/api/customer-auth-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -141,6 +181,21 @@ export default function CustomerSignInPage() {
         setSetupStatus('unknown')
         throw new Error(data.error || 'No Hakum account for that number yet. Create one to track visits.')
       }
+
+      // Email can authenticate via Supabase directly when /api/* is missing (stale preview).
+      if ((!res.ok || !data.access_token || !data.refresh_token) && classifyIdentifier(rawIdentifier) === 'email') {
+        const email = resolveLoginEmail(rawIdentifier)
+        const { data: pwData, error: pwError } = await supabase.auth.signInWithPassword({
+          email,
+          password: nextPassword,
+        })
+        if (pwError || !pwData?.session) {
+          throw new Error(data.error || pwError?.message || 'Invalid email or password.')
+        }
+        await finishWithSession(pwData, pwData.session.access_token)
+        return
+      }
+
       if (!res.ok || !data.access_token || !data.refresh_token) {
         throw new Error(data.error || 'Invalid phone or password.')
       }
@@ -152,40 +207,7 @@ export default function CustomerSignInPage() {
       if (sessionError || !sessionData?.user) {
         throw new Error(sessionError?.message || 'Could not open your session. Try again.')
       }
-
-      const { data: customer, error: customerError } = await supabase
-        .from('customers')
-        .select('id, role, is_archived')
-        .eq('id', sessionData.user.id)
-        .eq('role', 'customer')
-        .eq('is_archived', false)
-        .maybeSingle()
-
-      if (customerError || !customer) {
-        await supabase.auth.signOut()
-        throw new Error(
-          customerError && /42501|permission|policy|row-level/i.test(customerError.message || '')
-            ? 'Unable to verify your customer profile (permissions). Try again shortly.'
-            : !customer
-              ? 'This sign-in is for customers. Team members use the operations portal.'
-              : customerError.message || 'Unable to verify customer account.',
-        )
-      }
-
-      const accessToken = sessionData.session?.access_token || data.access_token
-      if (accessToken) {
-        fetch('/api/lifecycle-sms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ kind: 'welcome', site_origin: window.location.origin }),
-        }).catch(() => {})
-      }
-
-      if (sessionData.user.user_metadata?.must_set_password) {
-        navigate(activateSignupHref(rawIdentifier), { replace: true })
-        return
-      }
-      navigate('/account', { replace: true })
+      await finishWithSession(sessionData, data.access_token)
     } catch (err) {
       setError(err.message)
       await signOut().catch(() => {})
@@ -388,6 +410,7 @@ export default function CustomerSignInPage() {
         accounts={demoCustomer ? [demoCustomer] : []}
         disabled={submitting}
         onPick={async (a) => {
+          setIdMode('other')
           setIdentifier(a.email)
           setPassword(a.password)
           setError('')

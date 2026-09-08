@@ -10,7 +10,7 @@ import { spawnSync } from 'node:child_process'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const dir = join(root, 'tests')
 const files = readdirSync(dir)
-  .filter((f) => f.endsWith('.test.js'))
+  .filter((f) => f.endsWith('.test.js') && !f.includes('.browser.test.'))
   .map((f) => join('tests', f))
   .sort()
 

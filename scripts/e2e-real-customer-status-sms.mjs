@@ -1,14 +1,17 @@
 /**
- * Principal QA: real customer + wash service + package status SMS (live BusyBee).
- * Phone: 09625294043
+ * Principal QA: real customer + detailing + package status SMS + CRM retention blast (live BusyBee).
+ * Phone: 09625294043 (Malcolm Cuady)
  *
  * Done when:
- * - One customer row (complete details, notify_sms on) + vehicle
- * - Wash + package bookings linked to that customer
- * - Each status notify accepted by BusyBee AND MessageStatus = DELIVRD
+ * - Real customer row (notify_sms on) + vehicle
+ * - Detailing + package bookings linked to that customer
+ * - Full detailing status chain notify accepted by BusyBee (DELIVRD when polled)
+ * - Package status chain includes service name in SMS
+ * - CRM we_missed + aftercare + thank_you SMS to this phone only
  * - sms_events rows present; shop SMS gate left ON
  *
  * Usage: node scripts/e2e-real-customer-status-sms.mjs
+ * Optional: SKIP_DLR=1 (API accept only), SKIP_CRM=1
  */
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
@@ -16,6 +19,7 @@ import { phoneLoginEmail } from '../src/lib/customerAuth.js'
 import { normalizePlate } from '../src/queue/queueLogic.js'
 import { notifyBookingStatus } from '../server/notifyBooking.mjs'
 import { normalizePhMobile } from '../server/busybee.mjs'
+import { handleNotificationBroadcastRequest } from '../server/notificationBroadcastApi.mjs'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -50,10 +54,32 @@ const VEHICLE = {
   vehicle_year: 2021,
   color: 'Silver Metallic',
 }
-const QUEUE_STATUSES = ['pending', 'waiting', 'in_progress', 'final_checking', 'for_payment', 'completed']
+/** Full detailing board pipeline (statuses customers should hear about). */
+const DETAILING_STATUSES = [
+  'pending',
+  'confirmed',
+  'waiting',
+  'in_progress',
+  'final_checking',
+  'for_releasing',
+  'for_payment',
+  'completed',
+]
+const PACKAGE_STATUSES = [
+  'pending',
+  'confirmed',
+  'waiting',
+  'in_progress',
+  'final_checking',
+  'for_payment',
+  'completed',
+]
 const BRANCH_SLUG = process.env.E2E_BRANCH || 'bacoor'
+const SKIP_DLR = String(process.env.SKIP_DLR || '').trim() === '1'
+const SKIP_CRM = String(process.env.SKIP_CRM || '').trim() === '1'
 
 const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+const anon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 const service = process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!url || !service) {
   console.error('Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY')
@@ -83,16 +109,16 @@ async function messageStatus(messageId) {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(20000),
   })
-  const json = await res.json().catch(() => null)
+  const jsonBody = await res.json().catch(() => null)
   return {
-    errorCode: json?.ErrorCode,
-    status: json?.Data?.Status || null,
-    doneDate: json?.Data?.DoneDate || null,
-    mobile: json?.Data?.MobileNumber || null,
+    errorCode: jsonBody?.ErrorCode,
+    status: jsonBody?.Data?.Status || null,
+    doneDate: jsonBody?.Data?.DoneDate || null,
+    mobile: jsonBody?.Data?.MobileNumber || null,
   }
 }
 
-async function pollDlr(messageId, { maxPolls = 12, gapMs = 5000 } = {}) {
+async function pollDlr(messageId, { maxPolls = 10, gapMs = 4000 } = {}) {
   let last = null
   for (let i = 0; i < maxPolls; i++) {
     last = await messageStatus(messageId)
@@ -132,7 +158,6 @@ async function ensureCustomer() {
     if (authErr) throw authErr
     customerId = authUser.user.id
   } else {
-    // Keep Auth metadata SMS-opted-in for the canonical row
     await admin.auth.admin.updateUserById(customerId, {
       user_metadata: { full_name: CUSTOMER.full_name, sms_opt_in: true, role: 'customer' },
     })
@@ -153,7 +178,6 @@ async function ensureCustomer() {
     .single()
   if (upErr) throw upErr
 
-  // Archive duplicate phone rows so CRM/lookup is unambiguous
   const dupIds = (existing || []).map((r) => r.id).filter((id) => id !== customerId)
   if (dupIds.length) {
     await admin
@@ -224,15 +248,18 @@ async function createBooking({ customer, vehicle, service, label }) {
       notes: `E2E real-customer ${label} ${new Date().toISOString()}`,
       is_archived: false,
     })
-    .select('*')
+    .select('*, services(name, slug, pay_category)')
     .single()
   if (error) throw error
-  return data
+  return {
+    ...data,
+    service_name: data.services?.name || service.name,
+  }
 }
 
-async function runStatusChain(booking, label) {
+async function runStatusChain(booking, label, statuses) {
   const chain = []
-  for (const status of QUEUE_STATUSES) {
+  for (const status of statuses) {
     const { error: updErr } = await admin
       .from('bookings')
       .update({ status, updated_at: new Date().toISOString() })
@@ -247,24 +274,30 @@ async function runStatusChain(booking, label) {
     const sms = notify?.sms || null
     const messageId = sms?.messageId || null
     const apiOk = Boolean(sms?.ok)
-    let dlr = null
 
     if (!apiOk) {
       fail(`${label}.sms.${status}`, JSON.stringify({ sms, smsEnabled: notify?.smsEnabled, reason: notify?.reason }))
       chain.push({ status, apiOk: false, dlr: null, messageId })
-      await sleep(1500)
+      await sleep(1200)
+      continue
+    }
+
+    if (SKIP_DLR) {
+      pass(`${label}.sms.${status}`, `accepted · ${messageId || 'no-id'}`)
+      chain.push({ status, apiOk: true, dlr: 'skipped', messageId })
+      await sleep(1200)
       continue
     }
 
     if (!messageId) {
       fail(`${label}.sms.${status}`, 'accepted but no messageId — cannot prove DLR')
       chain.push({ status, apiOk: true, dlr: null, messageId: null })
-      await sleep(1500)
+      await sleep(1200)
       continue
     }
 
-    await sleep(2500)
-    dlr = await pollDlr(messageId)
+    await sleep(2000)
+    const dlr = await pollDlr(messageId)
     const dlrStatus = String(dlr?.status || '').toUpperCase()
     if (dlrStatus === 'DELIVRD') {
       pass(`${label}.sms.${status}`, `DELIVRD · ${messageId}`)
@@ -273,15 +306,65 @@ async function runStatusChain(booking, label) {
       fail(`${label}.sms.${status}`, `apiOk but dlr=${dlrStatus || 'none'} · ${messageId}`)
       chain.push({ status, apiOk: true, dlr: dlrStatus || null, messageId })
     }
-    await sleep(1500)
+    await sleep(1200)
   }
   return chain
 }
 
+function mockReq(method, body, headers = {}) {
+  return { method, headers: { 'content-type': 'application/json', ...headers }, body }
+}
+function mockRes() {
+  const out = { statusCode: 200, body: null }
+  return {
+    out,
+    get statusCode() {
+      return out.statusCode
+    },
+    set statusCode(v) {
+      out.statusCode = v
+    },
+    setHeader() {},
+    end(payload) {
+      out.body = payload
+    },
+  }
+}
+
+async function sendCrmBlast({ kind, title, body }) {
+  const mkt = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
+  const { data: auth, error } = await mkt.auth.signInWithPassword({
+    email: 'marketing@hakumautocare.com',
+    password: 'HakumMkt2026!',
+  })
+  if (error || !auth.session) throw new Error(`marketing login: ${error?.message}`)
+
+  const req = mockReq(
+    'POST',
+    {
+      kind,
+      channel: 'sms',
+      title,
+      body,
+      target_audience: 'all',
+      phones: [TEST_PHONE],
+      url: '/account',
+    },
+    { authorization: `Bearer ${auth.session.access_token}` },
+  )
+  const res = mockRes()
+  await handleNotificationBroadcastRequest(req, res)
+  const jsonBody = JSON.parse(res.out.body || '{}')
+  if (res.out.statusCode !== 200 || !jsonBody.sent) {
+    throw new Error(`CRM ${kind}: ${res.out.statusCode} ${JSON.stringify(jsonBody)}`)
+  }
+  return jsonBody
+}
+
 try {
-  console.log('=== E2E real customer status SMS ===')
+  console.log('=== E2E real customer detailing + package + CRM SMS ===')
   console.log('normalize', TEST_PHONE, '→', normalizePhMobile(TEST_PHONE))
-  console.log('branch', BRANCH_SLUG)
+  console.log('branch', BRANCH_SLUG, 'SKIP_DLR', SKIP_DLR, 'SKIP_CRM', SKIP_CRM)
 
   await admin.from('app_settings').upsert({
     key: 'sms_notifications',
@@ -307,14 +390,27 @@ try {
   const vehicle = await ensureVehicle(customer.id)
   pass('vehicle.upsert', `${vehicle.plate_number} · ${vehicle.vehicle_make} ${vehicle.vehicle_model}`)
 
-  const { data: wash } = await admin
+  const { data: detailing } = await admin
     .from('services')
     .select('id, name, price_minor, pay_category, slug')
-    .eq('pay_category', 'wash')
+    .eq('pay_category', 'detailing')
     .eq('is_active', true)
     .eq('is_archived', false)
-    .limit(1)
-    .single()
+    .eq('slug', 'ceramic-coating')
+    .maybeSingle()
+  const detailingSvc =
+    detailing ||
+    (
+      await admin
+        .from('services')
+        .select('id, name, price_minor, pay_category, slug')
+        .eq('pay_category', 'detailing')
+        .eq('is_active', true)
+        .eq('is_archived', false)
+        .limit(1)
+        .single()
+    ).data
+
   const { data: pkg } = await admin
     .from('services')
     .select('id, name, price_minor, pay_category, slug')
@@ -336,18 +432,18 @@ try {
         .single()
     ).data
 
-  if (!wash) throw new Error('No active wash service')
+  if (!detailingSvc) throw new Error('No active detailing service')
   if (!packageSvc) throw new Error('No active package service')
-  pass('catalog.wash', `${wash.name} · ${wash.pay_category}`)
+  pass('catalog.detailing', `${detailingSvc.name} · ${detailingSvc.pay_category}`)
   pass('catalog.package', `${packageSvc.name} · ${packageSvc.pay_category}`)
 
-  const washBooking = await createBooking({
+  const detailingBooking = await createBooking({
     customer,
     vehicle,
-    service: wash,
-    label: 'wash',
+    service: detailingSvc,
+    label: 'detailing',
   })
-  pass('booking.wash.create', washBooking.id)
+  pass('booking.detailing.create', `${detailingBooking.id} · ${detailingBooking.service_name}`)
 
   const packageBooking = await createBooking({
     customer,
@@ -355,24 +451,70 @@ try {
     service: packageSvc,
     label: 'package',
   })
-  pass('booking.package.create', packageBooking.id)
+  pass('booking.package.create', `${packageBooking.id} · ${packageBooking.service_name}`)
 
-  console.log('\n--- wash service status chain ---')
-  await runStatusChain(washBooking, 'wash')
+  console.log('\n--- detailing status chain ---')
+  await runStatusChain(detailingBooking, 'detailing', DETAILING_STATUSES)
 
   console.log('\n--- package status chain ---')
-  await runStatusChain(packageBooking, 'package')
+  await runStatusChain(packageBooking, 'package', PACKAGE_STATUSES)
+
+  const { data: recentSms } = await admin
+    .from('sms_events')
+    .select('message, status, event_type, booking_id')
+    .eq('phone', TEST_PHONE)
+    .eq('status', 'sent')
+    .order('created_at', { ascending: false })
+    .limit(40)
+  const withService = (recentSms || []).filter(
+    (e) =>
+      String(e.message || '').includes(detailingSvc.name.slice(0, 12)) ||
+      String(e.message || '').includes(packageSvc.name.slice(0, 12)),
+  )
+  if (withService.length) pass('sms.copy.service_name', `${withService.length} recent bodies name service/package`)
+  else fail('sms.copy.service_name', 'no recent sent SMS mentions detailing/package name')
+
+  if (!SKIP_CRM) {
+    console.log('\n--- CRM retention blasts (this phone only) ---')
+    const kinds = [
+      {
+        kind: 'we_missed',
+        title: 'Hakum misses you',
+        body: 'Hi {name}, we miss caring for {plate}. Your shine is waiting — book: hakumautocare.com/book',
+      },
+      {
+        kind: 'aftercare',
+        title: 'How is the shine?',
+        body: 'Hi {name}, how is {plate} looking after your last visit? Need a touch-up? hakumautocare.com/book',
+      },
+      {
+        kind: 'thank_you',
+        title: 'Thank you',
+        body: 'Hi {name}, thank you for trusting Hakum with {plate}. See you on the next shine.',
+      },
+    ]
+    for (const row of kinds) {
+      try {
+        const out = await sendCrmBlast(row)
+        pass(`crm.${row.kind}`, `sent=${out.sent}`)
+        await sleep(1500)
+      } catch (err) {
+        fail(`crm.${row.kind}`, err.message)
+      }
+    }
+  } else {
+    pass('crm.skipped', 'SKIP_CRM=1')
+  }
 
   const { data: events } = await admin
     .from('sms_events')
-    .select('status, event_type, phone, booking_id, created_at, provider_response')
+    .select('status, event_type, phone, booking_id, created_at')
     .eq('phone', TEST_PHONE)
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(40)
   const sentCount = (events || []).filter((e) => e.status === 'sent').length
   pass('sms.events', `${events?.length || 0} recent · sent=${sentCount}`)
 
-  // Leave gate ON (do not toggle off)
   await admin.from('app_settings').upsert({
     key: 'sms_notifications',
     value: { enabled: true },
@@ -386,7 +528,7 @@ try {
       {
         customerId: customer.id,
         plate: vehicle.plate_number,
-        washBookingId: washBooking.id,
+        detailingBookingId: detailingBooking.id,
         packageBookingId: packageBooking.id,
         phone: TEST_PHONE,
         normalized: normalizePhMobile(TEST_PHONE),

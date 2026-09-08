@@ -8,6 +8,7 @@ import {
   renderNotificationMessage,
   titleMaxForChannel,
 } from '../src/lib/notificationCopy.js'
+import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -17,6 +18,12 @@ function admin() {
 }
 
 const ALLOWED = new Set(['BossMich', 'assistant_super_admin', 'marketing'])
+
+function firstName(fullName) {
+  const raw = String(fullName || '').trim()
+  if (!raw) return 'there'
+  return raw.split(/\s+/)[0]
+}
 
 async function loadStaff(db, token) {
   const { data: userData, error: userErr } = await db.auth.getUser(token)
@@ -32,7 +39,8 @@ async function loadStaff(db, token) {
 
 /**
  * POST /api/notification-broadcast
- * { kind, channel, title, body, url, target_audience, branch_slug }
+ * { kind, channel, title, body, url, target_audience, branch_slug, phones? }
+ * phones: optional allow-list for QA / one-off blasts (normalized digits match).
  * Sends push to matching customers' push_subscriptions and/or SMS to their phones.
  */
 export async function handleNotificationBroadcastRequest(req, res) {
@@ -67,20 +75,28 @@ export async function handleNotificationBroadcastRequest(req, res) {
     })
   }
 
+  if ((channel === 'sms' || channel === 'both') && !(await isSmsNotificationsEnabled(db))) {
+    return json(res, 400, { error: 'Shop SMS is turned off. Enable SMS notifications first.' })
+  }
+
   const targetAudience = ['all', 'detailing', 'wash', 'branch'].includes(body.target_audience)
     ? body.target_audience
     : 'all'
   const branchSlug = body.branch_slug || null
+  const phoneAllow = new Set(
+    (Array.isArray(body.phones) ? body.phones : [])
+      .map((p) => String(p || '').replace(/\D/g, ''))
+      .filter((d) => d.length >= 10),
+  )
 
-  // Build customer filter
   let custQuery = db
     .from('customers')
-    .select('id, phone, full_name')
+    .select('id, phone, full_name, notify_sms, notify_push, is_disabled')
     .eq('role', 'customer')
     .eq('is_archived', false)
+    .eq('is_disabled', false)
 
   if (targetAudience === 'branch' && branchSlug) {
-    // Customers with a booking at this branch
     const { data: bookingCusts } = await db
       .from('bookings')
       .select('customer_id')
@@ -109,11 +125,35 @@ export async function handleNotificationBroadcastRequest(req, res) {
   const { data: customers, error: custErr } = await custQuery.limit(5000)
   if (custErr) return json(res, 400, { error: custErr.message })
 
+  let audience = customers || []
+  if (phoneAllow.size) {
+    audience = audience.filter((c) => phoneAllow.has(String(c.phone || '').replace(/\D/g, '')))
+  }
+
+  const plateByCustomer = new Map()
+  const audienceIds = audience.map((c) => c.id).filter(Boolean)
+  if (audienceIds.length) {
+    const { data: vehicles } = await db
+      .from('vehicles')
+      .select('customer_id, plate_number, updated_at')
+      .in('customer_id', audienceIds)
+      .eq('is_archived', false)
+      .order('updated_at', { ascending: false })
+      .limit(5000)
+    for (const v of vehicles || []) {
+      if (!plateByCustomer.has(v.customer_id) && v.plate_number) {
+        plateByCustomer.set(v.customer_id, v.plate_number)
+      }
+    }
+  }
+
   let sent = 0
   let failed = 0
+  let skipped = 0
 
   if (channel === 'push' || channel === 'both') {
-    const userIds = (customers || []).map((c) => c.id)
+    const userIds = audience.filter((c) => c.notify_push !== false).map((c) => c.id)
+    skipped += audience.filter((c) => c.notify_push === false).length
     if (userIds.length) {
       try {
         const result = await sendWebPushToUsers({
@@ -133,16 +173,24 @@ export async function handleNotificationBroadcastRequest(req, res) {
   }
 
   if (channel === 'sms' || channel === 'both') {
-    // SMS always targets each customer's phone on the customer profile.
-    for (const c of customers || []) {
+    for (const c of audience) {
+      if (c.notify_sms === false) {
+        skipped += 1
+        continue
+      }
       if (!c.phone) {
-        failed += 1
+        skipped += 1
         continue
       }
       try {
-        const personalized = renderNotificationMessage(`${title}\n${message}`, {
-          name: c.full_name || 'there',
-        }, { keepMissing: true })
+        const personalized = renderNotificationMessage(
+          `${title}\n${message}`,
+          {
+            name: firstName(c.full_name),
+            plate: plateByCustomer.get(c.id) || 'your car',
+          },
+          { keepMissing: true },
+        )
         await busybeeSendSms({ phone: c.phone, message: personalized })
         sent += 1
       } catch {
@@ -165,5 +213,5 @@ export async function handleNotificationBroadcastRequest(req, res) {
   })
   if (logErr) console.error('[broadcast] log failed', logErr.message)
 
-  return json(res, 200, { sent, failed })
+  return json(res, 200, { sent, failed, skipped })
 }

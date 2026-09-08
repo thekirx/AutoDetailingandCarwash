@@ -6,10 +6,10 @@ import {
   Link2,
   Pencil,
   Plus,
-  QrCode,
   Trash2,
 } from 'lucide-react'
 import BrandedOpsForm from '@/components/BrandedOpsForm'
+import FormQrCard from '@/components/FormQrCard'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canManageOpsFormTemplates,
@@ -38,11 +38,13 @@ import {
   extractCalendarAt,
   extractComplaintBranch,
   formKindLabel,
-  formQrImageUrl,
   formatFormPayloadDescription,
+  isDetailingFormKind,
+  isFormSlugLocked,
   normalizeFields,
   normalizeFormSettings,
   shareFormUrl,
+  slugifyFormName,
   submissionTitle,
   templateFields,
   validatePayload,
@@ -235,7 +237,8 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
   const [events, setEvents] = useState([])
   const [branchSlugs, setBranchSlugs] = useState([])
   const [submissions, setSubmissions] = useState([])
-  const [kindFilter, setKindFilter] = useState('equipment_repair')
+  const [kindFilter, setKindFilter] = useState('detailing')
+  const [selectedDetailingId, setSelectedDetailingId] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
   const [editor, setEditor] = useState(() => emptyEditorFromForm(null))
   const [resultsFormId, setResultsFormId] = useState('')
@@ -303,7 +306,21 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     return map
   }, [forms])
 
-  const selectedTemplate = templatesByKind.get(kindFilter) || null
+  const detailingForms = useMemo(
+    () => forms.filter((f) => f.kind === 'detailing').sort((a, b) => String(a.name).localeCompare(String(b.name))),
+    [forms],
+  )
+
+  const selectedTemplate = isDetailingFormKind(kindFilter)
+    ? detailingForms.find((f) => f.id === selectedDetailingId) || detailingForms[0] || null
+    : templatesByKind.get(kindFilter) || null
+
+  useEffect(() => {
+    if (!isDetailingFormKind(kindFilter)) return
+    if (selectedTemplate && selectedDetailingId !== selectedTemplate.id) {
+      setSelectedDetailingId(selectedTemplate.id)
+    }
+  }, [kindFilter, selectedTemplate, selectedDetailingId])
   const fillableForms = useMemo(
     () => forms.filter((f) => f.is_active && f.status !== 'archived' && canSubmitOpsFormKind(profile, f.kind)),
     [forms, profile],
@@ -336,15 +353,45 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     setEditorOpen(true)
   }
 
+  function openCreateDetailing() {
+    if (!manageTemplates) return
+    const draft = emptyEditorFromForm(
+      {
+        id: null,
+        kind: 'detailing',
+        name: 'Detailing inquiry',
+        description: 'Request ceramic, tint, PPF, or paint maintenance.',
+        status: 'draft',
+        public_enabled: true,
+        fields: templateFields('detailing', { branchSlugs }),
+        settings: normalizeFormSettings({ slug_locked: false }, 'detailing'),
+        slug: '',
+      },
+      branchSlugs,
+    )
+    setEditor(draft)
+    setEditorOpen(true)
+  }
+
   async function saveForm(e) {
     e.preventDefault()
-    if (!manageTemplates || !editor.id) return
+    if (!manageTemplates) return
     const name = editor.name.trim()
     if (!name) return toast.error('Name is required')
     const fields = normalizeFields(editor.fields)
     if (!fields.length) return toast.error('Add at least one field')
     setSaving(true)
     const settings = normalizeFormSettings(editor.settings, editor.kind)
+    const existing = editor.id ? forms.find((f) => f.id === editor.id) : null
+    const slugLocked = existing ? isFormSlugLocked(existing) : false
+    let slug = String(editor.slug || existing?.slug || '').trim().toLowerCase()
+    if (!slug) slug = slugifyFormName(name, crypto.randomUUID())
+    if (slugLocked) slug = existing.slug
+
+    if (editor.status === 'published' && editor.public_enabled) {
+      settings.slug_locked = true
+    }
+
     const row = {
       name,
       kind: editor.kind,
@@ -355,15 +402,47 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
       fields,
       settings,
       is_active: editor.status !== 'archived',
-      slug: editor.slug || forms.find((f) => f.id === editor.id)?.slug,
+      slug,
       updated_at: new Date().toISOString(),
     }
-    const { error } = await supabase.from('ops_forms').update(row).eq('id', editor.id)
+
+    let error
+    if (editor.id) {
+      ;({ error } = await supabase.from('ops_forms').update(row).eq('id', editor.id))
+    } else {
+      if (!isDetailingFormKind(editor.kind)) {
+        setSaving(false)
+        return toast.error('Only detailing forms can be created here')
+      }
+      const inserted = await supabase.from('ops_forms').insert(row).select('id').single()
+      error = inserted.error
+      if (!error && inserted.data?.id) setSelectedDetailingId(inserted.data.id)
+    }
     setSaving(false)
     if (error) toast.error(error.message)
     else {
-      toast.success('Template saved')
+      toast.success(editor.id ? 'Form saved' : 'Detailing form created')
       setEditorOpen(false)
+      load()
+    }
+  }
+
+  async function archiveDetailingForm(form) {
+    if (!manageTemplates || !form?.id || !isDetailingFormKind(form.kind)) return
+    if (!window.confirm(`Archive “${form.name}”? The public QR link will stop accepting answers.`)) return
+    const { error } = await supabase
+      .from('ops_forms')
+      .update({
+        status: 'archived',
+        is_active: false,
+        public_enabled: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', form.id)
+    if (error) toast.error(error.message)
+    else {
+      toast.success('Form archived')
+      if (selectedDetailingId === form.id) setSelectedDetailingId('')
       load()
     }
   }
@@ -410,7 +489,9 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                 ? [{ name: 'Equipment', color: '#f59e0b' }]
                 : activeForm.kind === 'cash_advance'
                   ? [{ name: 'Cash advance', color: '#22c55e' }]
-                  : [],
+                  : activeForm.kind === 'detailing'
+                    ? [{ name: 'Detailing', color: '#8b5cf6' }]
+                    : [],
         })
         .select('id')
         .single()
@@ -454,14 +535,14 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
   }
 
   const shareUrl = selectedTemplate?.slug ? shareFormUrl(selectedTemplate.slug) : ''
-  const qrUrl = formQrImageUrl(shareUrl, 180)
 
   return (
     <div className="planner-forms flex flex-col gap-6">
       <div>
         <h2 className="text-lg font-semibold text-foreground">Forms</h2>
         <p className="mt-1 max-w-[65ch] text-sm text-muted-foreground">
-          Four company forms. Edit the wording, then share a link or fill one here.
+          Company templates plus detailing service forms. Detailing forms get a permanent{' '}
+          <code className="text-xs">/f/…</code> link and downloadable QR.
         </p>
       </div>
 
@@ -475,6 +556,25 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
         />
       </div>
 
+      {isDetailingFormKind(kindFilter) && manageTemplates ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" className="cursor-pointer" onClick={openCreateDetailing}>
+            <Plus className="size-4" /> New detailing form
+          </Button>
+          {detailingForms.length > 1 ? (
+            <div className="flex min-w-[14rem] flex-1 flex-col gap-1.5 sm:max-w-xs">
+              <Label htmlFor="detailing-form-pick">Select form</Label>
+              <NamedSelect
+                id="detailing-form-pick"
+                value={selectedTemplate?.id || ''}
+                onChange={setSelectedDetailingId}
+                options={detailingForms.map((f) => ({ value: f.id, label: f.name }))}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <Card className="planner-ticket">
         <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -483,8 +583,10 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
               {selectedTemplate
                 ? `${formKindLabel(selectedTemplate.kind)} · ${selectedTemplate.status}${
                     selectedTemplate.public_enabled ? ' · public link on' : ''
-                  }`
-                : 'Template missing - apply the latest Supabase migration'}
+                  }${selectedTemplate.slug ? ` · /f/${selectedTemplate.slug}` : ''}`
+                : isDetailingFormKind(kindFilter)
+                  ? 'No detailing form yet — create one to get a permanent QR'
+                  : 'Template missing - apply the latest Supabase migration'}
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -507,7 +609,17 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                 </Button>
                 {manageTemplates && (
                   <Button size="sm" className="cursor-pointer" onClick={() => openEdit(selectedTemplate)}>
-                    <Pencil className="size-3.5" /> Edit template
+                    <Pencil className="size-3.5" /> Edit
+                  </Button>
+                )}
+                {manageTemplates && isDetailingFormKind(selectedTemplate.kind) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="cursor-pointer text-destructive"
+                    onClick={() => archiveDetailingForm(selectedTemplate)}
+                  >
+                    <Trash2 className="size-3.5" /> Archive
                   </Button>
                 )}
               </>
@@ -519,7 +631,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
             <p className="text-muted-foreground">{selectedTemplate?.description || 'No description yet.'}</p>
             {shareUrl ? (
               <div className="rounded-xl border border-border bg-muted/20 p-3">
-                <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Shareable link</p>
+                <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Permanent share link</p>
                 <p className="break-all font-mono text-xs text-foreground">{shareUrl}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => copyShare(selectedTemplate)}>
@@ -538,18 +650,12 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
               </div>
             ) : null}
             <p className="text-xs text-muted-foreground">
-              Access: Complaint + Events RSVP are shareable when published.
-              Equipment repairs are crew-only.
-              Cash advance is for employees except Super Admin. Approvals happen on Payroll.
+              {isDetailingFormKind(kindFilter)
+                ? 'Detailing forms: create, edit fields, archive. Published public slugs stay locked so printed QR codes keep working.'
+                : 'Access: Complaint + Events RSVP are shareable when published. Equipment repairs are crew-only. Cash advance approvals happen on Payroll.'}
             </p>
           </div>
-          {qrUrl ? (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-3">
-              <QrCode className="size-4 text-muted-foreground" aria-hidden />
-              <img src={qrUrl} alt={`QR code for ${selectedTemplate?.name || 'form'}`} width={180} height={180} className="rounded-lg bg-white p-2" />
-              <p className="text-center text-xs text-muted-foreground">Scan to open the form link</p>
-            </div>
-          ) : null}
+          {shareUrl ? <FormQrCard url={shareUrl} title={selectedTemplate?.name || 'form'} size={180} /> : null}
         </CardContent>
       </Card>
 
@@ -604,7 +710,9 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit template · {formKindLabel(editor.kind)}</DialogTitle>
+            <DialogTitle>
+              {editor.id ? 'Edit' : 'Create'} · {formKindLabel(editor.kind)}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={saveForm} className="grid gap-4">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -621,20 +729,42 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                 <Select value={editor.status} onValueChange={(status) => setEditor({ ...editor, status })}>
                   <SelectTrigger className="cursor-pointer"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {FORM_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    {FORM_STATUSES.filter((s) => s.value !== 'archived' || editor.id).map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="sf-event">Attach to event (optional)</Label>
-                <NamedSelect
-                  id="sf-event"
-                  value={editor.event_id || ''}
-                  onChange={(v) => setEditor({ ...editor, event_id: v })}
-                  emptyLabel="No event"
-                  options={events.map((ev) => ({ value: ev.id, label: ev.title }))}
+                <Label htmlFor="sf-slug">Public slug (permanent QR target)</Label>
+                <Input
+                  id="sf-slug"
+                  value={editor.slug}
+                  disabled={Boolean(editor.id && isFormSlugLocked(forms.find((f) => f.id === editor.id) || editor))}
+                  onChange={(e) => setEditor({
+                    ...editor,
+                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, ''),
+                  })}
+                  placeholder="auto on save"
                 />
+                {editor.id && isFormSlugLocked(forms.find((f) => f.id === editor.id) || editor) ? (
+                  <p className="text-xs text-muted-foreground">Slug locked after publish so printed QR codes stay valid.</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Link will be /f/{editor.slug || 'your-slug'}</p>
+                )}
               </div>
+              {!isDetailingFormKind(editor.kind) ? (
+                <div className="flex flex-col gap-2 sm:col-span-2">
+                  <Label htmlFor="sf-event">Attach to event (optional)</Label>
+                  <NamedSelect
+                    id="sf-event"
+                    value={editor.event_id || ''}
+                    onChange={(v) => setEditor({ ...editor, event_id: v })}
+                    emptyLabel="No event"
+                    options={events.map((ev) => ({ value: ev.id, label: ev.title }))}
+                  />
+                </div>
+              ) : null}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="sf-desc">Description</Label>
@@ -685,22 +815,24 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
               <Link2 className="size-4 text-muted-foreground" />
               Public shareable link (anyone with the URL can answer when Published)
             </label>
-            {editor.slug ? (
+            {editor.slug || editor.id ? (
               <div className="flex flex-wrap items-start gap-4 rounded-xl border border-border bg-muted/20 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Link + QR</p>
-                  <p className="break-all font-mono text-xs">{shareFormUrl(editor.slug)}</p>
-                  <Button type="button" size="sm" variant="outline" className="mt-2 cursor-pointer" onClick={() => copyShare({ ...editor, public_enabled: editor.public_enabled, status: editor.status })}>
+                  <p className="break-all font-mono text-xs">{shareFormUrl(editor.slug || 'pending')}</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 cursor-pointer"
+                    onClick={() => copyShare({ ...editor, public_enabled: editor.public_enabled, status: editor.status })}
+                  >
                     <Copy className="size-3.5" /> Copy link
                   </Button>
                 </div>
-                <img
-                  src={formQrImageUrl(shareFormUrl(editor.slug), 140)}
-                  alt="Form QR"
-                  width={140}
-                  height={140}
-                  className="rounded-lg bg-white p-1"
-                />
+                {editor.slug ? (
+                  <FormQrCard url={shareFormUrl(editor.slug)} title={editor.name || 'form'} size={140} />
+                ) : null}
               </div>
             ) : null}
             <div>
@@ -734,7 +866,9 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
               </Button>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setEditorOpen(false)}>Cancel</Button>
-                <Button type="submit" className="cursor-pointer" disabled={saving || !editor.id}>{saving ? 'Saving…' : 'Save template'}</Button>
+                <Button type="submit" className="cursor-pointer" disabled={saving}>
+                  {saving ? 'Saving…' : editor.id ? 'Save form' : 'Create form'}
+                </Button>
               </div>
             </DialogFooter>
           </form>
