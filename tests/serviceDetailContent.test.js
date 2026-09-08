@@ -58,6 +58,26 @@ test('ceramic package benefit is owned by both packages without invented conditi
   })
 })
 
+test('homepage gallery features one real clip from each proof-backed service', () => {
+  const featured = Object.entries(SERVICE_DETAIL_CONTENT).flatMap(([serviceId, service]) =>
+    service.proof.clips
+      .filter((clip) => clip.homepageFeatured)
+      .map((clip) => ({ serviceId, id: clip.id, poster: clip.poster, sources: clip.sources })),
+  )
+
+  assert.deepEqual(
+    featured.map(({ serviceId, id }) => [serviceId, id]),
+    [
+      ['ppf', 'fortuner'],
+      ['ceramic', 'honda-city'],
+      ['tint', 'naval'],
+    ],
+  )
+  assert.ok(featured.every((clip) => clip.poster.endsWith('-poster.webp')))
+  assert.ok(featured.every((clip) => clip.sources.av1.endsWith('.av1.mp4')))
+  assert.ok(featured.every((clip) => clip.sources.h264.endsWith('.h264.mp4')))
+})
+
 test('the Tint detail-page CTA books Tint instead of looping back to the services catalog', () => {
   const tint = WHY_SECTIONS.find((section) => section.id === 'tint')
   assert.deepEqual(tint.cta, { label: 'Book nano ceramic tint', to: '/book' })

@@ -56,4 +56,91 @@ describe('BreDESIGN homepage fallback sections', () => {
     assert.ok(result.sectionPadding.every(({ top, bottom }) => top <= 72 && bottom <= 72))
     assert.equal(result.tiktokHref, 'https://www.tiktok.com/@hakum_autocare')
   })
+
+  it('presents featured service videos as playable gallery items', async () => {
+    const heading = await page.$eval('#photos h2', (node) => node.textContent.replace(/\s+/g, ' ').trim())
+    const videoTiles = await page.$$('#photos button[data-gallery-video]')
+    const mediaSequence = await page.$$eval('#photos .bd-mosaic > *', (nodes) =>
+      nodes.map((node) => node.tagName),
+    )
+    const galleryLayout = await page.$eval('#photos .bd-mosaic', (grid) => {
+      const ppf = grid.querySelector('[data-gallery-video="ppf"]').getBoundingClientRect()
+      const ceramic = grid.querySelector('[data-gallery-video="ceramic"]').getBoundingClientRect()
+      return {
+        columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        ppfHeight: ppf.height,
+        ceramicHeight: ceramic.height,
+      }
+    })
+
+    assert.equal(heading, 'Photos & Videos.')
+    assert.equal(videoTiles.length, 3)
+    assert.deepEqual(mediaSequence, [
+      'FIGURE',
+      'FIGURE',
+      'BUTTON',
+      'BUTTON',
+      'FIGURE',
+      'FIGURE',
+      'FIGURE',
+      'BUTTON',
+      'FIGURE',
+    ])
+    assert.equal(galleryLayout.columns, 4)
+    assert.ok(galleryLayout.ceramicHeight > galleryLayout.ppfHeight * 1.8)
+
+    await page.click('#photos [data-gallery-video="ppf"]')
+    await page.waitForSelector('[role="dialog"][data-gallery-player]')
+    assert.equal(await page.$eval('[data-gallery-player] video', (node) => node.getAttribute('aria-label')), 'Hakum full-body PPF installation on a Toyota Fortuner')
+
+    await page.click('[data-gallery-close]')
+    await page.waitForSelector('[data-gallery-player]', { hidden: true })
+  })
+
+  it('keeps the mixed gallery usable from small phones through large desktops', async () => {
+    const viewports = [
+      { width: 320, height: 568, columns: 2 },
+      { width: 768, height: 1024, columns: 2 },
+      { width: 860, height: 720, columns: 4 },
+      { width: 1920, height: 1080, columns: 4 },
+    ]
+
+    for (const viewport of viewports) {
+      await page.setViewport({ width: viewport.width, height: viewport.height })
+
+      const layout = await page.$eval('#photos .bd-mosaic', (grid) => ({
+        columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        hasCollapsedTile: [...grid.children].some((tile) => {
+          const rect = tile.getBoundingClientRect()
+          return rect.width <= 0 || rect.height <= 0
+        }),
+      }))
+
+      assert.equal(layout.columns, viewport.columns)
+      assert.equal(layout.hasHorizontalOverflow, false)
+      assert.equal(layout.hasCollapsedTile, false)
+    }
+
+    await page.click('#photos [data-gallery-video="ceramic"]')
+    await page.waitForSelector('[data-gallery-player]')
+
+    const modal = await page.$eval('[data-gallery-player] .bd-gallery-player', (player) => {
+      const rect = player.getBoundingClientRect()
+      return {
+        fitsViewport:
+          rect.left >= 0 &&
+          rect.top >= 0 &&
+          rect.right <= window.innerWidth &&
+          rect.bottom <= window.innerHeight,
+        bodyLocked: getComputedStyle(document.body).overflow === 'hidden',
+      }
+    })
+
+    assert.equal(modal.fitsViewport, true)
+    assert.equal(modal.bodyLocked, true)
+
+    await page.keyboard.press('Escape')
+    await page.waitForSelector('[data-gallery-player]', { hidden: true })
+  })
 })

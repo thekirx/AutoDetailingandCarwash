@@ -44,7 +44,7 @@ export const SERVICE_DETAIL_CONTENT = {
       title: 'Protection, installed—not simulated.',
       copy: 'Real PPF work from our team, showing preparation, installation, owner feedback, and finished vehicles.',
       clips: [
-        proofClip('ppf', 'fortuner', 'Hakum full-body PPF installation on a Toyota Fortuner', 'Toyota Fortuner · Full-body PPF installation'),
+        { ...proofClip('ppf', 'fortuner', 'Hakum full-body PPF installation on a Toyota Fortuner', 'Toyota Fortuner · Full-body PPF installation'), homepageFeatured: true },
         proofClip('ppf', 'hilux', 'Hakum full-body PPF installation on a Toyota Hilux', 'Toyota Hilux · Full-body PPF installation'),
         proofClip('ppf', 'sorento', 'Hakum full-body PPF installation on a Kia Sorento', 'Kia Sorento · Full-body PPF installation'),
         proofClip('ppf', 'full-body-install', 'Hakum full-body Paint Protection Film preparation and installation', 'Full-body PPF · Preparation and installation'),
@@ -91,7 +91,7 @@ export const SERVICE_DETAIL_CONTENT = {
       title: 'Gloss you can see move.',
       copy: 'Real Ceramic Coating work across different finishes, captured during preparation, application, and final inspection.',
       clips: [
-        proofClip('ceramic', 'honda-city', 'Hakum Ceramic Coating preparation and finish on a Honda City', 'Honda City · Coating preparation and finish'),
+        { ...proofClip('ceramic', 'honda-city', 'Hakum Ceramic Coating preparation and finish on a Honda City', 'Honda City · Coating preparation and finish'), homepageFeatured: true },
         proofClip('ceramic', 'byd-emax6', 'Hakum Ceramic Coating application on a BYD eMAX 6', 'BYD eMAX 6 · Coating application'),
         proofClip('ceramic', 'crv', 'Hakum Ceramic Coating preparation and finish on a Honda CR-V', 'Honda CR-V · Coating preparation and finish'),
         proofClip('ceramic', 'veloz', 'Hakum Ceramic Coating application and finish on a Toyota Veloz', 'Toyota Veloz · Application and finish'),
@@ -134,7 +134,7 @@ export const SERVICE_DETAIL_CONTENT = {
       title: 'Installed for the road ahead.',
       copy: 'Real Nano Ceramic Tint installations from preparation through the finished glass.',
       clips: [
-        proofClip('tint', 'naval', 'Hakum Nano Ceramic Tint installation on a white SUV', 'White SUV · Nano Ceramic Tint installation'),
+        { ...proofClip('tint', 'naval', 'Hakum Nano Ceramic Tint installation on a white SUV', 'White SUV · Nano Ceramic Tint installation'), homepageFeatured: true },
         proofClip('tint', 'wigo', 'Hakum Nano Ceramic Tint installation on a Toyota Wigo', 'Toyota Wigo · Nano Ceramic Tint installation'),
         proofClip('tint', 'toyota86', 'Hakum Nano Ceramic Tint installation on a Toyota 86', 'Toyota 86 · Nano Ceramic Tint installation'),
       ],

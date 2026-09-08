@@ -901,6 +901,173 @@
   text-transform: uppercase;
   color: var(--bd-paper);
 }
+.bredesign .bd-gallery-video {
+  position: relative;
+  min-width: 0;
+  min-height: 190px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--bd-navy-3);
+  color: var(--bd-paper);
+  cursor: pointer;
+  text-align: left;
+}
+.bredesign .bd-gallery-video > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.bredesign .bd-gallery-video:hover > img,
+.bredesign .bd-gallery-video:focus-visible > img {
+  transform: scale(1.05);
+}
+.bredesign .bd-gallery-video:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 3px;
+}
+.bredesign .bd-gallery-video-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(2, 10, 49, 0.06) 28%, rgba(2, 10, 49, 0.88) 100%);
+}
+.bredesign .bd-gallery-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 50%;
+  background: rgba(2, 10, 49, 0.72);
+  box-shadow: 0 12px 36px rgba(2, 10, 49, 0.34);
+  color: #fff;
+  transform: translate(-50%, -50%);
+  transition: background 180ms ease, transform 180ms ease;
+}
+.bredesign .bd-gallery-video:hover .bd-gallery-play {
+  background: var(--bd-blue);
+  transform: translate(-50%, -50%) scale(1.06);
+}
+.bredesign .bd-gallery-kind {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: rgba(2, 10, 49, 0.78);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.bredesign .bd-gallery-caption {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  left: 14px;
+  display: grid;
+  gap: 3px;
+}
+.bredesign .bd-gallery-caption strong {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.bredesign .bd-gallery-caption span {
+  overflow: hidden;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.78);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bredesign .bd-gallery-modal {
+  position: fixed;
+  z-index: 300;
+  inset: 0;
+  display: grid;
+  padding: clamp(18px, 4vw, 54px);
+  place-items: center;
+  background: rgba(1, 5, 26, 0.92);
+  backdrop-filter: blur(12px);
+}
+.bredesign .bd-gallery-player {
+  position: relative;
+  width: min(100%, 1120px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #010515;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.52);
+}
+.bredesign .bd-gallery-player video {
+  display: block;
+  width: 100%;
+  max-height: min(72vh, 760px);
+  background: #000;
+  object-fit: contain;
+}
+.bredesign .bd-gallery-close {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 50%;
+  background: rgba(2, 10, 49, 0.8);
+  color: #fff;
+  cursor: pointer;
+}
+.bredesign .bd-gallery-close:hover,
+.bredesign .bd-gallery-close:focus-visible {
+  background: var(--bd-blue);
+}
+.bredesign .bd-gallery-player-copy {
+  display: grid;
+  gap: 5px;
+  padding: 16px 18px 18px;
+}
+.bredesign .bd-gallery-player-copy span {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+.bredesign .bd-gallery-player-copy strong {
+  font-size: 14px;
+  color: #fff;
+}
+@media (max-width: 859px) {
+  .bredesign .bd-mosaic {
+    grid-auto-rows: 190px;
+  }
+  .bredesign .bd-gallery-video {
+    aspect-ratio: 4 / 3;
+  }
+  .bredesign .bd-mosaic .bd-gallery-video.bd-portrait {
+    grid-row: span 2;
+    aspect-ratio: auto;
+  }
+}
+@media (max-width: 620px) {
+  .bredesign .bd-gallery-modal {
+    padding: 12px;
+  }
+  .bredesign .bd-gallery-player-copy {
+    padding-right: 62px;
+  }
+}
 
 /* ==== Book ============================================================== */
 

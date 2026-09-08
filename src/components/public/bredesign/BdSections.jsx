@@ -1,6 +1,8 @@
-import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowRight, ArrowUpRight, Play, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import { SERVICE_DETAIL_CONTENT } from '../../../data/serviceDetailContent'
 import { ORIGIN, PHOTOS, SERVICES, WHY_SECTIONS } from './content'
 
 /* A lede is written as an array so a phrase inside it can be emphasised
@@ -141,28 +143,133 @@ export function BdWhySections({ exclude = [] }) {
 }
 
 export function BdPhotos() {
+  const [activeClip, setActiveClip] = useState(null)
+  const featuredClips = Object.entries(SERVICE_DETAIL_CONTENT).flatMap(([serviceId, service]) =>
+    service.proof.clips
+      .filter((clip) => clip.homepageFeatured)
+      .map((clip) => ({ ...clip, serviceId, serviceName: service.serviceName })),
+  )
+  const galleryItems = [
+    { type: 'photo', ...PHOTOS[0] },
+    { type: 'photo', ...PHOTOS[1] },
+    { type: 'video', clip: featuredClips[1], span: 'tall', portrait: true },
+    { type: 'video', clip: featuredClips[0] },
+    { type: 'photo', ...PHOTOS[2] },
+    { type: 'photo', ...PHOTOS[3] },
+    { type: 'photo', ...PHOTOS[4], span: undefined },
+    { type: 'video', clip: featuredClips[2] },
+    { type: 'photo', ...PHOTOS[5] },
+  ]
+
+  useEffect(() => {
+    if (!activeClip) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setActiveClip(null)
+    }
+
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [activeClip])
+
   return (
     <section className="bd-photos" id="photos">
       <div className="bd-shell">
         <div className="bd-head bd-reveal">
           <div>
             <p className="bd-eyebrow">Inside Hakum</p>
-            <h2 className="bd-skew">Photos.</h2>
+            <h2 className="bd-skew">Photos &amp; Videos.</h2>
           </div>
           <p>
-            Our own bays, our own cars, our own work — see the finish, the process, and the precision
-            behind what our teams deliver every day.
+            Our own bays, our own cars, our own work — watch the process and see the precision behind
+            what our teams deliver every day.
           </p>
         </div>
         <div className="bd-mosaic bd-reveal">
-          {PHOTOS.map((photo) => (
-            <figure className={photo.span ? `bd-${photo.span}` : undefined} key={photo.caption}>
-              <img src={photo.src} alt={photo.alt} loading="lazy" />
-              <figcaption>{photo.caption}</figcaption>
-            </figure>
-          ))}
+          {galleryItems.map((item) => {
+            if (item.type === 'photo') {
+              return (
+                <figure className={item.span ? `bd-${item.span}` : undefined} key={item.caption}>
+                  <img src={item.src} alt={item.alt} loading="lazy" />
+                  <figcaption>{item.caption}</figcaption>
+                </figure>
+              )
+            }
+
+            const { clip } = item
+            const layoutClasses = [
+              item.span ? `bd-${item.span}` : '',
+              item.portrait ? 'bd-portrait' : '',
+            ].filter(Boolean).join(' ')
+            return (
+              <button
+                type="button"
+                className={`bd-gallery-video${layoutClasses ? ` ${layoutClasses}` : ''}`}
+                key={`${clip.serviceId}-${clip.id}`}
+                data-gallery-video={clip.serviceId}
+                aria-label={`Play ${clip.caption}`}
+                onClick={() => setActiveClip(clip)}
+              >
+                <img src={clip.poster} alt="" loading="lazy" />
+                <span className="bd-gallery-video-shade" aria-hidden="true" />
+                <span className="bd-gallery-play" aria-hidden="true">
+                  <Play size={22} fill="currentColor" />
+                </span>
+                <span className="bd-gallery-kind">Video</span>
+                <span className="bd-gallery-caption">
+                  <strong>{clip.serviceName}</strong>
+                  <span>{clip.caption}</span>
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
+      {activeClip ? (
+        <div
+          className="bd-gallery-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${activeClip.serviceName} video`}
+          data-gallery-player
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setActiveClip(null)
+          }}
+        >
+          <div className="bd-gallery-player">
+            <button
+              type="button"
+              className="bd-gallery-close"
+              data-gallery-close
+              aria-label="Close video"
+              onClick={() => setActiveClip(null)}
+              autoFocus
+            >
+              <X size={22} aria-hidden="true" />
+            </button>
+            <video
+              controls
+              autoPlay
+              playsInline
+              preload="metadata"
+              poster={activeClip.poster}
+              aria-label={activeClip.label}
+            >
+              <source src={activeClip.sources.av1} type='video/mp4; codecs="av01.0.08M.08"' />
+              <source src={activeClip.sources.h264} type="video/mp4" />
+            </video>
+            <div className="bd-gallery-player-copy">
+              <span>{activeClip.serviceName}</span>
+              <strong>{activeClip.caption}</strong>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }
