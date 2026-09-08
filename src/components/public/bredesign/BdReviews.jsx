@@ -6,8 +6,8 @@
  * Two reviews, both real, both supplied by the owner from their own Google
  * listings. Nothing here is written by us: the words, names and branches are
  * what Google shows. Everything links back out to Google — each card to its own
- * review, the button to the business listings — so a reader can verify any of
- * it rather than taking a quoted testimonial on trust.
+ * review, and one button per branch profile — so a reader can verify any of it
+ * rather than taking a quoted testimonial on trust.
  *
  * No overall rating or review count is printed. Two reviews are not an average,
  * and a figure nobody has verified is the kind of claim this section exists to
@@ -50,7 +50,13 @@ const REVIEWS = [
   },
 ]
 
-const ALL_REVIEWS_URL = 'https://www.google.com/maps/search/?api=1&query=Hakum+Auto+Care'
+/* One profile per branch rather than a single "all reviews" link: the listings
+   are separate on Google, so a combined link could only ever be a search. Both
+   URLs are the owner's own, and each lands on that branch's reviews. */
+const BRANCH_PROFILES = [
+  { branch: 'Bacoor', href: 'https://share.google/5zOi4a4z1XQ16XrKk' },
+  { branch: 'Batangas', href: 'https://share.google/Uq5rzxW8YgHkyfVNk' },
+]
 
 function Stars({ count, name }) {
   return (
@@ -77,15 +83,20 @@ export default function BdReviews() {
               <em>actually say.</em>
             </h2>
           </div>
-          <a
-            className="bd-review-cta"
-            href={ALL_REVIEWS_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            {GOOGLE_MARK}
-            Read all reviews on Google
-          </a>
+          <div className="bd-review-ctas">
+            {BRANCH_PROFILES.map((profile) => (
+              <a
+                className="bd-review-cta"
+                key={profile.branch}
+                href={profile.href}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                {GOOGLE_MARK}
+                {profile.branch} on Google
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className="bd-reviews-grid bd-reveal">

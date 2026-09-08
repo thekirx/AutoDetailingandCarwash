@@ -1011,6 +1011,11 @@
   text-transform: uppercase;
 }
 
+.bredesign .bd-review-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
 /* White, because it carries Google's mark — the button belongs to them, and
    their colours do not survive being set on navy. */
 .bredesign .bd-review-cta {
