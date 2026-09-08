@@ -16,10 +16,16 @@
 }
 
 /* ---------- lane ---------- */
+/* 560px with overflow:hidden on the cards silently truncated whatever did not
+   fit — the spec row, and once the price line was added, the Book now link
+   entirely. The height stays definite rather than becoming auto: the panels
+   size each other with `flex` and animate that width, and a content-derived
+   height makes those two things circular, which leaves an opened panel stuck
+   at its collapsed width. So this is simply the height the tallest tier needs. */
 .ppf-packages-section .ppfa-lane {
   display: flex;
   gap: 6px;
-  height: 560px;
+  height: 700px;
 }
 
 .ppf-packages-section .ppfa-panelcard {
@@ -43,7 +49,7 @@
 }
 /* The ladder reads in the panel tone too: each tier one step lighter. */
 .ppf-packages-section .ppfa-panelcard.is-basic { background: #081330; }
-.ppf-packages-section .ppfa-panelcard.is-premium { background: #0b1c44; }
+.ppf-packages-section .ppfa-panelcard.is-ultimate { background: #0b1c44; }
 .ppf-packages-section .ppfa-panelcard.is-platinum { background: #0f2455; }
 .ppf-packages-section .ppfa-panelcard.is-platinum.is-open {
   border-color: rgba(215, 225, 247, 0.42);

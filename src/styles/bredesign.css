@@ -586,20 +586,26 @@
 .bredesign .bd-why.is-flipped .bd-why-points li {
   background: var(--bd-navy-3);
 }
-.bredesign .bd-why-ico {
+/* Scoped under .bd-why-points on purpose. The icon is a <span>, and
+   `.bredesign .bd-why-points span` — the body-copy rule below — is the more
+   specific selector, so it was winning and forcing display:block with a
+   margin-top, which knocked the glyph into the corner of its tile. */
+.bredesign .bd-why-points .bd-why-ico {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  margin-bottom: 14px;
+  width: 42px;
+  height: 42px;
+  margin: 0 0 14px;
   border: 1px solid rgba(157, 180, 255, 0.24);
   border-radius: 9px;
   background: rgba(157, 180, 255, 0.1);
   color: var(--bd-accent);
+  font-size: 0;
 }
-.bredesign .bd-why-ico svg {
-  width: 19px;
-  height: 19px;
+.bredesign .bd-why-points .bd-why-ico svg {
+  display: block;
+  width: 21px;
+  height: 21px;
 }
 .bredesign .bd-why-points strong {
   display: block;
@@ -2400,7 +2406,7 @@
 .bredesign .bd-clearpro-mark img {
   display: block;
   width: auto;
-  height: clamp(34px, 4.4vw, 52px);
+  height: clamp(52px, 6.6vw, 84px);
 }
 .bredesign .bd-clearpro-mark span {
   padding-left: 14px;
