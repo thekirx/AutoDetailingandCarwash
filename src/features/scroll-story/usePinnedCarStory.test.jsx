@@ -62,6 +62,12 @@ describe('usePinnedCarStory', () => {
 
     expect(mocks.create).toHaveBeenCalledTimes(1)
     expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ pin: expect.anything(), scrub: true }))
+    expect(mocks.timeline.fromTo).toHaveBeenCalledWith(
+      '.story-ppf-panel',
+      expect.objectContaining({ scaleX: 0 }),
+      expect.objectContaining({ scaleX: 1, transformOrigin: 'left center' }),
+      'stage-3',
+    )
 
     view.unmount()
     expect(mocks.contextRevert).toHaveBeenCalledTimes(1)
@@ -69,6 +75,15 @@ describe('usePinnedCarStory', () => {
 
   it('does not pin or animate when reduced motion is requested', () => {
     window.matchMedia = vi.fn().mockReturnValue({ matches: true })
+    render(<StoryHarness />)
+
+    expect(mocks.create).not.toHaveBeenCalled()
+  })
+
+  it('does not pin the story on mobile viewports', () => {
+    window.matchMedia = vi.fn().mockImplementation((query) => ({
+      matches: query === '(max-width: 800px)',
+    }))
     render(<StoryHarness />)
 
     expect(mocks.create).not.toHaveBeenCalled()

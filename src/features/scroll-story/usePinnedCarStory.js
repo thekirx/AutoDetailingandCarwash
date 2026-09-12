@@ -10,7 +10,9 @@ export function usePinnedCarStory() {
 
   useLayoutEffect(() => {
     const root = storyRef.current
-    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const mobileViewport = window.matchMedia('(max-width: 800px)').matches
+    if (!root || reduceMotion || mobileViewport) return undefined
 
     const context = gsap.context(() => {
       const pinStage = root.querySelector('[data-pin-stage]')
@@ -54,7 +56,7 @@ export function usePinnedCarStory() {
 
         if (stage.id === 'ppf') {
           timeline
-            .fromTo('.story-ppf-panel', { clipPath: 'inset(0 100% 0 0)', opacity: 0 }, { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: duration * 0.22, stagger: duration * 0.08 }, label)
+            .fromTo('.story-ppf-panel', { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, transformOrigin: 'left center', duration: duration * 0.22, stagger: duration * 0.08 }, label)
             .to('[data-pin-stage] [data-car-stack]', { scale: 1, duration }, label)
         }
 

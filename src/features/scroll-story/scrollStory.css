@@ -22,21 +22,25 @@
 
 .story-car-visual { position:absolute; z-index:2; inset:14% 3% 5%; display:grid; place-items:center; pointer-events:none; }
 .story-car-stack { position:relative; width:min(72vw,1060px); aspect-ratio:1672/941; transform-origin:center; will-change:transform; }
-.story-car-image { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:0; will-change:opacity; }
-.story-car-dirty { opacity:1; }
+.story-car-image { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:0; will-change:opacity,filter; }
+.story-car-dirty { opacity:1; filter:grayscale(.72) saturate(.45) brightness(.5) contrast(1.04); }
+.story-car-washed { filter:saturate(.78) brightness(.72) contrast(1.02); }
+.story-car-detailed { filter:saturate(.92) brightness(.82) contrast(1.08); }
+.story-car-ppf { filter:saturate(.96) brightness(.85) contrast(1.1); }
+.story-car-ceramic { filter:saturate(1.06) brightness(.92) contrast(1.13); }
 .story-headlights,.story-mist,.story-water-sweep,.story-foam,.story-swirl,.story-ppf-coverage,.story-gloss-sweep,.story-droplets { position:absolute; inset:0; pointer-events:none; }
 .story-headlights { opacity:.55; filter:blur(6px); }
 .story-headlights i { position:absolute; top:47.5%; width:9%; height:2.3%; border-radius:50%; background:#f4f8ff; box-shadow:0 0 20px 8px rgba(195,220,255,.5); }
 .story-headlights i:first-child { left:23%; }.story-headlights i:last-child { left:44%; opacity:.35; }
 .story-mist { inset:auto 2% 5%; height:25%; background:radial-gradient(ellipse at center,rgba(185,205,232,.16),transparent 68%); filter:blur(18px); }
 .story-water-sweep { width:32%; left:-15%; background:linear-gradient(105deg,transparent 20%,rgba(108,174,255,.13) 42%,rgba(225,242,255,.72) 49%,rgba(80,142,255,.18) 57%,transparent 78%); filter:blur(2px); }
-.story-foam { inset:30% 12% 21%; border-radius:42% 35% 28% 30%; background:radial-gradient(circle at 32% 45%,rgba(255,255,255,.85) 0 2px,transparent 3px),radial-gradient(circle at 68% 55%,rgba(255,255,255,.75) 0 3px,transparent 4px),linear-gradient(135deg,rgba(255,255,255,.7),rgba(190,220,255,.22)); background-size:19px 16px,24px 21px,auto; mix-blend-mode:screen; filter:blur(.4px); }
+.story-foam { inset:28% 10% 17%; background:radial-gradient(circle at 32% 45%,rgba(255,255,255,.72) 0 2px,transparent 3px),radial-gradient(circle at 68% 55%,rgba(255,255,255,.62) 0 3px,transparent 4px),linear-gradient(135deg,rgba(255,255,255,.34),rgba(190,220,255,.1)); background-size:19px 16px,24px 21px,auto; mix-blend-mode:screen; filter:blur(.4px); -webkit-mask-image:radial-gradient(ellipse at 48% 54%,#000 12%,rgba(0,0,0,.82) 42%,transparent 72%); mask-image:radial-gradient(ellipse at 48% 54%,#000 12%,rgba(0,0,0,.82) 42%,transparent 72%); }
 .story-swirl { inset:33% 18% 27%; opacity:.5; background:repeating-radial-gradient(ellipse at 45% 48%,transparent 0 20px,rgba(255,255,255,.2) 22px,transparent 24px 38px); mix-blend-mode:screen; }
-.story-ppf-panel { position:absolute; display:block; border:1px solid #caff17; box-shadow:0 0 12px rgba(126,235,255,.8),inset 0 0 18px rgba(204,255,0,.08); }
-.ppf-hood { left:22%; top:39%; width:27%; height:18%; transform:skewX(-10deg); border-radius:18% 5% 10% 16%; }
-.ppf-bumper { left:19%; top:51%; width:24%; height:15%; border-radius:12% 8% 20% 24%; }
-.ppf-mirror { left:58%; top:37%; width:6%; height:5%; border-radius:40%; }
-.ppf-doors { left:49%; top:39%; width:29%; height:25%; transform:skewX(-4deg); border-radius:4% 10% 13% 4%; }
+.story-ppf-panel { position:absolute; display:block; border:1px solid #caff17; background:rgba(204,255,0,.025); filter:drop-shadow(0 0 7px rgba(204,255,0,.62)); }
+.ppf-hood { left:36%; top:32%; width:42%; height:26%; clip-path:polygon(12% 8%,84% 0,100% 61%,75% 96%,8% 82%,0 32%); }
+.ppf-bumper { left:35%; top:55%; width:49%; height:21%; clip-path:polygon(5% 0,95% 2%,100% 52%,82% 100%,9% 88%,0 45%); }
+.ppf-mirror { left:27%; top:36%; width:9%; height:8%; clip-path:polygon(12% 32%,85% 0,100% 62%,70% 100%,0 76%); }
+.ppf-doors { left:13%; top:39%; width:25%; height:32%; clip-path:polygon(8% 4%,94% 0,100% 84%,12% 100%,0 40%); }
 .story-gloss-sweep { left:-20%; width:28%; background:linear-gradient(104deg,transparent 15%,rgba(255,255,255,.05) 40%,rgba(255,255,255,.7) 50%,rgba(128,174,255,.16) 58%,transparent 78%); filter:blur(3px); mix-blend-mode:screen; }
 .story-droplets { inset:36% 30% 45% 27%; }
 .story-droplets i { position:absolute; width:9px; height:13px; border-radius:65% 35% 62% 38%; border:1px solid rgba(225,244,255,.9); background:rgba(190,225,255,.2); box-shadow:inset 2px 1px 2px rgba(255,255,255,.65),0 3px 5px rgba(0,0,0,.35); }
@@ -75,8 +79,24 @@
 .story-package-actions a { min-height:54px; display:inline-flex; align-items:center; gap:24px; padding:0 20px; color:#fff; border:1px solid rgba(255,255,255,.22); font-size:9px; font-weight:800; letter-spacing:.14em; text-decoration:none; text-transform:uppercase; }.story-package-actions a:last-child{color:var(--story-blue);background:#f1f1f1}.story-package-actions svg{width:16px}
 
 @media(max-width:1100px){.story-car-stack{width:78vw}.story-heading{width:43vw}.story-copy-stack{width:32vw}.story-progress li{font-size:0}.story-progress li span{font-size:7px}}
-@media(max-width:800px){.story-scroll-track{height:600svh}.story-stage-shell{width:min(100% - 32px,1240px)}.story-heading{top:108px;width:75vw}.story-heading .section-title{font-size:clamp(38px,9vw,64px)}.story-car-visual{inset:18% -10% 16%}.story-car-stack{width:108vw}.story-copy-stack{right:0;bottom:85px;width:60vw;min-height:190px}.story-copy h3{font-size:clamp(22px,5vw,34px)}.story-progress{left:0;bottom:28px}.story-package-heading,.story-package-layout{grid-template-columns:1fr}.story-package-preview{min-height:380px}.story-package-options{grid-template-columns:1fr 1fr}.story-package-options button{border-right:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}.story-package-options button:nth-child(even){border-right:0}.story-package-actions{justify-content:stretch}.story-package-actions a{flex:1;justify-content:space-between}}
-@media(max-width:600px){.story-heading{width:88vw}.story-heading .eyebrow{max-width:220px;line-height:1.6}.story-car-visual{inset:21% -25% 25%}.story-car-stack{width:135vw}.story-copy-stack{bottom:85px;width:82vw}.story-copy>p{font-size:11px}.story-detail-insets,.story-ppf-packages{display:none}.story-progress{gap:13px}.story-package-options{grid-template-columns:1fr}.story-package-options button,.story-package-options button:nth-child(even){border-right:0}.story-package-preview{min-height:285px}.story-package-actions{flex-direction:column}.story-package-heading{gap:28px;margin-bottom:42px}.story-package-heading>p{font-size:12px}}
+@media(max-width:800px){
+  .story-scroll-track{height:auto}
+  .story-pin-stage{min-height:0;padding:110px 0 72px;overflow:visible}
+  .story-stage-shell{min-height:0;width:min(100% - 32px,1240px)}
+  .story-heading,.story-copy-stack,.story-car-visual,.story-progress{position:relative;inset:auto;width:auto}
+  .story-heading{margin-bottom:36px}.story-heading .section-title{font-size:clamp(38px,9vw,64px)}
+  .story-pin-stage>.story-stage-shell>.story-car-visual{height:min(52vw,390px);margin-bottom:44px}
+  .story-car-stack{width:min(104vw,760px)}
+  .story-copy-stack{display:grid;grid-template-columns:1fr 1fr;gap:30px 24px;min-height:0}
+  .story-copy{position:relative;min-height:0;padding:24px 0;border-top:1px solid rgba(255,255,255,.14);opacity:1!important;transform:none!important}
+  .story-copy:first-child{grid-column:1/-1}.story-copy h3{font-size:clamp(22px,5vw,34px)}.story-copy>p{font-size:11px}
+  .story-detail-insets,.story-ppf-packages{display:none}.story-progress{display:none}
+  .story-water-sweep,.story-foam,.story-swirl,.story-ppf-coverage,.story-gloss-sweep,.story-droplets{display:none}
+  .story-package-heading,.story-package-layout{grid-template-columns:1fr}.story-package-preview{min-height:380px}.story-package-options{grid-template-columns:1fr 1fr}.story-package-options button{border-right:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}.story-package-options button:nth-child(even){border-right:0}.story-package-actions{justify-content:stretch}.story-package-actions a{flex:1;justify-content:space-between}
+}
+@media(max-width:600px){.story-copy-stack{grid-template-columns:1fr;gap:0}.story-copy:first-child{grid-column:auto}.story-pin-stage>.story-stage-shell>.story-car-visual{height:58vw}.story-car-stack{width:118vw}.story-package-options{grid-template-columns:1fr}.story-package-options button,.story-package-options button:nth-child(even){border-right:0}.story-package-preview{min-height:285px}.story-package-actions{flex-direction:column}.story-package-heading{gap:28px;margin-bottom:42px}.story-package-heading>p{font-size:12px}}
 
-@media(prefers-reduced-motion:reduce){.story-scroll-track{height:auto}.story-pin-stage{min-height:0;padding:120px 0 70px;overflow:visible}.story-stage-shell{min-height:0}.story-heading,.story-copy-stack,.story-car-visual,.story-progress{position:relative;inset:auto;width:auto}.story-heading{margin-bottom:55px}.story-pin-stage>.story-stage-shell>.story-car-visual{display:none}.story-copy-stack{display:grid;gap:60px;min-height:0}.story-copy{position:relative;display:grid;grid-template-columns:minmax(240px,.85fr) minmax(0,1.15fr);gap:30px;align-items:center;min-height:300px;opacity:1!important;transform:none!important}.story-copy:before{content:"";display:block;grid-row:1/4;width:100%;aspect-ratio:1672/941;background-position:center;background-size:contain;background-repeat:no-repeat}.story-copy[data-story-stage="arrival"]:before{background-image:url('../../assets/scroll-story/dirty-arrival.webp')}.story-copy[data-story-stage="carwash"]:before{background-image:url('../../assets/scroll-story/washed.webp')}.story-copy[data-story-stage="detailing"]:before{background-image:url('../../assets/scroll-story/detailed.webp')}.story-copy[data-story-stage="ppf"]:before{background-image:url('../../assets/scroll-story/ppf-protected.webp')}.story-copy[data-story-stage="ceramic"]:before{background-image:url('../../assets/scroll-story/ceramic-gloss.webp')}.story-copy>span,.story-copy h3,.story-copy>p,.story-copy>div{grid-column:2;margin-left:0}.story-copy>span{align-self:end}.story-copy>p{align-self:start}.story-progress{display:none}}
+@media(prefers-reduced-motion:reduce){
+  .story-scroll-track{height:auto}.story-pin-stage{min-height:0;padding:120px 0 70px;overflow:visible}.story-stage-shell{min-height:0}.story-heading,.story-copy-stack,.story-car-visual,.story-progress{position:relative;inset:auto;width:auto}.story-heading{margin-bottom:55px}.story-pin-stage>.story-stage-shell>.story-car-visual{display:none}.story-copy-stack{display:grid;gap:60px;min-height:0}.story-copy{position:relative;display:grid;grid-template-columns:minmax(240px,.85fr) minmax(0,1.15fr);gap:30px;align-items:center;min-height:300px;opacity:1!important;transform:none!important}.story-copy:before{content:"";display:block;grid-row:1/4;width:100%;aspect-ratio:1672/941;background:url('../../assets/hakum-hero.webp') center/contain no-repeat}.story-copy[data-story-stage="arrival"]:before{filter:grayscale(.72) saturate(.45) brightness(.5)}.story-copy[data-story-stage="carwash"]:before{filter:saturate(.78) brightness(.72)}.story-copy[data-story-stage="detailing"]:before{filter:saturate(.92) brightness(.82) contrast(1.08)}.story-copy[data-story-stage="ppf"]:before{filter:saturate(.96) brightness(.85) contrast(1.1);box-shadow:inset 0 0 0 1px rgba(204,255,0,.42)}.story-copy[data-story-stage="ceramic"]:before{filter:saturate(1.06) brightness(.92) contrast(1.13)}.story-copy>span,.story-copy h3,.story-copy>p,.story-copy>div{grid-column:2;margin-left:0}.story-copy>span{align-self:end}.story-copy>p{align-self:start}.story-progress{display:none}.story-mist,.story-water-sweep,.story-foam,.story-swirl,.story-ppf-coverage,.story-gloss-sweep,.story-droplets{display:none!important}
+}
 @media(max-width:600px) and (prefers-reduced-motion:reduce){.story-copy{grid-template-columns:1fr;gap:14px}.story-copy:before{grid-row:auto}.story-copy>span,.story-copy h3,.story-copy>p,.story-copy>div{grid-column:1}}

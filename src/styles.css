@@ -9,9 +9,11 @@
 }
 
 * { box-sizing: border-box; }
+html { scroll-behavior:smooth; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: #090d12; }
 button, input { font: inherit; }
 button { cursor: pointer; }
+:where(a,button,input,select,textarea):focus-visible { outline:2px solid #8ea7ff; outline-offset:4px; }
 
 /* Shared Hakum component library */
 .ui-section { padding-block:var(--section-space-md); }
@@ -34,7 +36,8 @@ button { cursor: pointer; }
 :root { --hakum-blue:var(--color-brand-primary); --hakum-white:var(--color-text-inverse); --hakum-ink:var(--color-text-primary); }
 .public-site { background:var(--color-surface-page); color:var(--color-text-primary); font-family:var(--font-body); font-weight:var(--font-weight-body); }
 .public-shell { width:min(var(--content-max-width),calc(100% - (var(--content-gutter) * 2))); margin-inline:auto; }
-.public-header { position:fixed; inset:0 0 auto; z-index:50; color:#fff; border-bottom:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg,rgba(2,10,49,.82),rgba(2,10,49,.42)); backdrop-filter:blur(14px); transition:background var(--transition-base); }
+.public-header { position:fixed; inset:0 0 auto; z-index:50; color:#fff; border-bottom:1px solid transparent; background:linear-gradient(180deg,rgba(2,10,49,.68),transparent); transition:background var(--transition-base),border-color var(--transition-base),box-shadow var(--transition-base); }
+.public-header.is-scrolled { border-color:rgba(255,255,255,.12); background:rgba(3,8,22,.88); box-shadow:0 12px 35px rgba(0,0,0,.18); backdrop-filter:blur(14px); }
 .public-header.menu-open { background:#03156b; }
 .header-inner { height:88px; display:flex; align-items:center; justify-content:space-between; gap:28px; }
 .wordmark { display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none; }
@@ -292,6 +295,8 @@ button { cursor: pointer; }
   .footer-navigation nav { display:grid; grid-template-columns:1fr 1fr; width:100%; }
   .footer-navigation>div { align-items:flex-start; flex-direction:column; }
 }
+
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
 @media(max-width:800px){
   .ppf-heading{grid-template-columns:1fr;gap:24px;margin-bottom:38px}

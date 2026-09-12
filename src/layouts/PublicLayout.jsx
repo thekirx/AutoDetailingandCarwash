@@ -12,12 +12,19 @@ const navItems = [
 
 export default function PublicLayout() {
   const [open, setOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const { pathname } = useLocation()
 
   useEffect(() => setOpen(false), [pathname])
+  useEffect(() => {
+    const updateHeader = () => setScrolled(window.scrollY > 28)
+    updateHeader()
+    window.addEventListener('scroll', updateHeader, { passive: true })
+    return () => window.removeEventListener('scroll', updateHeader)
+  }, [])
 
   return <div className="public-site">
-    <header className={`public-header ${open ? 'menu-open' : ''}`}>
+    <header className={`public-header ${scrolled ? 'is-scrolled' : ''} ${open ? 'menu-open' : ''}`}>
       <div className="public-shell header-inner">
         <Link className="wordmark" to="/" aria-label="Hakum Auto Care home"><b>H</b><span>HAKUM<small>AUTO CARE</small></span></Link>
         <nav className="desktop-nav" aria-label="Primary navigation">{navItems.map(([label,to]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}</nav>

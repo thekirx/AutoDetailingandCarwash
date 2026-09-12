@@ -3,7 +3,7 @@ import { scrollStoryAssets } from './scrollStoryAssets'
 import { packageOptions, storyStages } from './scrollStoryData'
 
 describe('scroll story contracts', () => {
-  it('exposes every replaceable vehicle state through one manifest', () => {
+  it('reuses the existing Hakum hero artwork for every treatment state', () => {
     expect(Object.keys(scrollStoryAssets.vehicle)).toEqual([
       'dirty',
       'washed',
@@ -12,9 +12,9 @@ describe('scroll story contracts', () => {
       'ceramic',
     ])
 
-    Object.values(scrollStoryAssets.vehicle).forEach((url) => {
-      expect(url).toMatch(/\.(png|webp)$/)
-    })
+    const urls = Object.values(scrollStoryAssets.vehicle)
+    expect(new Set(urls)).toHaveLength(1)
+    expect(urls[0]).toMatch(/hakum-hero\.webp$/)
   })
 
   it('keeps carwash shortest and PPF longest', () => {
