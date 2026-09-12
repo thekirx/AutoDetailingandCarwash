@@ -4,3 +4,11 @@ assets.json
 mock-*.html
 site/
 logos/build/
+
+# Generated mock pages: self-contained HTML with every font and image inlined
+# as base64, tens of MB at a time. The two review mocks already tracked here
+# stay tracked; everything else is rebuilt from its source, or archived to
+# Drive when it is a record of what was approved.
+webapp/*.html
+!webapp/google-reviews.html
+!webapp/service-feedback.html
