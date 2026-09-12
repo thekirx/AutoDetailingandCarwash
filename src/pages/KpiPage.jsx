@@ -47,14 +47,16 @@ export default function KpiPage() {
   const { profile, canViewQueueOperations } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const isTl = profile?.role === ROLES.TEAM_LEAD
+  const isCrewKpi = profile?.role === ROLES.STAFF
   const canSalesTabs = isTl || canSeeAllBranches(profile) || profile?.role === ROLES.ADMIN
   const canComplaints = canSalesTabs && canAccessInquiries(profile)
   const allowedTabs = useMemo(() => {
+    if (isCrewKpi) return ['crew']
     const ids = ['crew', 'compare', 'service']
     if (canSalesTabs) ids.push('sales')
     if (canComplaints) ids.push('complaints')
     return ids
-  }, [canSalesTabs, canComplaints])
+  }, [canSalesTabs, canComplaints, isCrewKpi])
   const tab = resolveOpsTab(searchParams.get('tab'), allowedTabs, 'crew')
   const visibleTabs = KPI_SHELL_TABS.filter((t) => allowedTabs.includes(t.id))
   const [crewRows, setCrewRows] = useState([])
@@ -133,6 +135,9 @@ export default function KpiPage() {
         )
       }
 
+      // Crew sees the existing KPI card for their own RPC-scoped result only.
+      if (isCrewKpi) return
+
       const bookingRows = await collectPaged(async (from, to) => {
         let bq = supabase
           .from('bookings')
@@ -186,7 +191,7 @@ export default function KpiPage() {
     } finally {
       setLoading(false)
     }
-  }, [profile, range.start, range.end, branchScope, serviceFilter])
+  }, [profile, range.start, range.end, branchScope, serviceFilter, isCrewKpi])
 
   useEffect(() => {
     listBranches().then(setBranches).catch(() => {})

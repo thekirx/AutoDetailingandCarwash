@@ -102,17 +102,18 @@ describe('queue logic', () => {
     assert.deepEqual(ACTIVE_QUEUE_STATUSES, ['waiting', 'in_progress', 'final_checking'])
   })
 
-  it('shows redo lane only for Super Admin and Assistant Super Admin', () => {
+  it('shows Services Failed QA to owners and branch floor observers', () => {
     assert.equal(canViewRedoLane({ role: 'BossMich' }), true)
     assert.equal(canViewRedoLane({ role: 'assistant_super_admin' }), true)
     assert.equal(canViewRedoLane({ role: 'admin' }), false)
-    assert.equal(canViewRedoLane({ role: 'team_lead' }), false)
-    assert.equal(canViewRedoLane({ role: 'staff' }), false)
+    assert.equal(canViewRedoLane({ role: 'team_lead' }), true)
+    assert.equal(canViewRedoLane({ role: 'staff' }), true)
     assert.equal(canViewRedoLane(null), false)
     // Console-tier roles get the for_payment lane; team lead never sees it (legacy port).
     assert.deepEqual(getOpsBoardStatuses({ role: 'BossMich' }), [...ACTIVE_QUEUE_STATUSES, 'for_payment', 'redo'])
     assert.deepEqual(getOpsBoardStatuses({ role: 'assistant_super_admin' }), [...ACTIVE_QUEUE_STATUSES, 'for_payment', 'redo'])
-    assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), ACTIVE_QUEUE_STATUSES)
+    assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), [...ACTIVE_QUEUE_STATUSES, 'redo'])
+    assert.deepEqual(getOpsBoardStatuses({ role: 'staff' }), [...ACTIVE_QUEUE_STATUSES, 'redo'])
     assert.deepEqual(getOpsBoardStatuses({ role: 'admin' }), [...ACTIVE_QUEUE_STATUSES, 'for_payment'])
     assert.ok(!ACTIVE_QUEUE_STATUSES.includes('redo'))
     assert.ok(OPS_BOARD_STATUSES.includes('redo'))

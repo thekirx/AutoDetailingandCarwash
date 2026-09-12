@@ -7,7 +7,7 @@ import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRemovePosCartLine, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership, stepPosCartLineQuantity, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
+import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRemovePosCartLine, cashAdvanceVisibleOnPos, cashTenderCoversTotal, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership, stepPosCartLineQuantity, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
@@ -600,7 +600,8 @@ export default function PosPage() {
   }, [cartTotal])
 
   const chargeBlocked = posCartBlocksCheckout(cart)
-  const chargeDisabled = !cart.length || !branch || saving || chargeBlocked
+  const cashCovered = cashTenderCoversTotal(paymentMethod, cashTenderedMinor, cartTotal)
+  const chargeDisabled = !cart.length || !branch || saving || chargeBlocked || !cashCovered
   const chargeLabel = saving
     ? 'Processing…'
     : chargeBlocked
@@ -881,6 +882,10 @@ export default function PosPage() {
 
   async function checkout() {
     if (!cart.length || !branch) return
+    if (!cashCovered) {
+      toast.error('Enter cash received that covers the order total.')
+      return
+    }
     if (posCartBlocksCheckout(cart)) {
       toast.error('This queue ticket has no linked service. Ask a Team Lead to set the service on the booking, then send it to payment again.')
       return

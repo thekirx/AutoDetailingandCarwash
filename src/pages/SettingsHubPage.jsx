@@ -2,7 +2,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { ShoppingCart, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
-  canAccessConsole,
+  canAccessPos,
   canAccessPayroll,
 } from '@/auth/permissions'
 import OpsPageShell from '@/components/ops/OpsPageShell'
@@ -17,7 +17,7 @@ const TILES = [
     description: 'Payment methods, expense kinds, and end-of-shift field labels.',
     to: '/operations/settings/pos',
     icon: ShoppingCart,
-    allow: canAccessConsole,
+    allow: canAccessPos,
   },
   {
     key: 'payroll-settings',

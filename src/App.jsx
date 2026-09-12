@@ -37,7 +37,6 @@ const CustomerLoyaltyPage = lazy(() => import('./pages/CustomerLoyaltyPage'))
 const CustomerMorePage = lazy(() => import('./pages/CustomerMorePage'))
 const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
 
-const AdminConsolePage = lazy(() => import('./pages/AdminConsolePage'))
 const PeopleManagePage = lazy(() => import('./pages/PeopleManagePage'))
 const BranchesManagePage = lazy(() => import('./pages/BranchesManagePage'))
 const CarsCatalogPage = lazy(() => import('./pages/CarsCatalogPage'))
@@ -175,7 +174,7 @@ export default function App() {
         <Route path="/queue/:branch" element={<PublicQueuePage />} />
         <Route path="/queue/:branch/tv" element={<PublicQueueTvPage />} />
         <Route path="/admin" element={<Navigate to="/operations/login" replace />} />
-        <Route path="/admin/dashboard" element={<Navigate to="/operations/console" replace />} />
+        <Route path="/admin/dashboard" element={<Navigate to="/operations/dashboard" replace />} />
         <Route path="/admin/customers" element={<Navigate to="/operations/crm" replace />} />
         <Route path="/admin/bookings" element={<Navigate to="/operations/bookings?tab=calendar" replace />} />
         <Route path="/admin/queue" element={<Navigate to="/operations/queue" replace />} />
@@ -187,7 +186,6 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={opsRoles} />}>
           <Route path="/operations" element={<OperationsLayout />}>
             <Route index element={<OpsIndexRedirect />} />
-            <Route path="console" element={gate('console', <AdminConsolePage />)} />
             <Route path="people" element={gate('people', <PeopleManagePage />)} />
             <Route path="branches" element={gate('branches', <BranchesManagePage />)} />
             <Route path="cars" element={gate('cars', <CarsCatalogPage />)} />

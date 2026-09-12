@@ -65,6 +65,13 @@ export function posCartBlocksCheckout(cart = []) {
   )
 }
 
+/** Cash can only settle an order when a valid amount covers the total. */
+export function cashTenderCoversTotal(paymentMethod, tenderedMinor, totalMinor) {
+  return paymentMethod !== 'cash' || (
+    Number.isSafeInteger(tenderedMinor) && tenderedMinor >= 0 && tenderedMinor >= totalMinor
+  )
+}
+
 /** Queue handoff wash/detailing lines stay locked — TL edits the booking. */
 export function canRemovePosCartLine(line) {
   return !(line?.from_handoff)

@@ -22,18 +22,18 @@ import {
 describe('Staff capability matrix', () => {
   const p = { role: ROLES.STAFF, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
 
-  it('allows attendance + my-tasks; denies floor queue POS finance console crew bookings', () => {
+  it('keeps Attendance, Floor, Queue, Crew, and KPI read-only for crew', () => {
     assert.equal(canViewAssignedTasks(p), true)
     assert.equal(allowRoute(p, 'my-tasks'), true)
     assert.equal(allowRoute(p, 'attendance'), true)
     assert.equal(redirectForRole(ROLES.STAFF), '/operations/attendance')
-    assert.equal(canViewQueueOperations(p), false)
+    assert.equal(canViewQueueOperations(p), true)
     assert.equal(canEditQueueOperations(p), false)
-    assert.equal(allowRoute(p, 'dashboard'), false)
-    assert.equal(allowRoute(p, 'queue'), false)
+    assert.equal(allowRoute(p, 'dashboard'), true)
+    assert.equal(allowRoute(p, 'queue'), true)
     assert.equal(allowRoute(p, 'queue-new'), false)
-    assert.equal(allowRoute(p, 'crew'), false)
-    assert.equal(allowRoute(p, 'kpi'), false)
+    assert.equal(allowRoute(p, 'crew'), true)
+    assert.equal(allowRoute(p, 'kpi'), true)
     assert.equal(allowRoute(p, 'pos'), false)
     assert.equal(allowRoute(p, 'finance'), false)
     assert.equal(allowRoute(p, 'console'), false)
@@ -45,10 +45,22 @@ describe('Staff capability matrix', () => {
     assert.equal(canManageCrew(p), false)
     assert.equal(allowRoute(p, 'planning'), true)
     assert.equal(allowRoute(p, 'history'), false)
-    assert.deepEqual(getStaffMore(p), [])
+    assert.deepEqual(
+      getStaffMore(p).map((item) => item.to),
+      ['/operations/dashboard', '/operations/queue', '/operations/crew', '/operations/kpi'],
+    )
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/attendance', '/operations/my-tasks', '/operations/planning', '/operations/my-pay'],
+      [
+        '/operations/attendance',
+        '/operations/dashboard',
+        '/operations/queue',
+        '/operations/crew',
+        '/operations/kpi',
+        '/operations/my-tasks',
+        '/operations/planning',
+        '/operations/my-pay',
+      ],
     )
   })
 })

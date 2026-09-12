@@ -265,7 +265,6 @@ describe('ops shell adoption — phase 7 admin + secondary + floor', () => {
     ['Cars', 'src/pages/CarsCatalogPage.jsx', 'hakum-cars'],
     ['Audit', 'src/pages/AuditLogPage.jsx', 'hakum-audit'],
     ['Data center', 'src/pages/DataCenterPage.jsx', 'hakum-data-center'],
-    ['Console', 'src/pages/AdminConsolePage.jsx', 'hakum-console'],
     ['History', 'src/pages/HistoryPage.jsx', 'hakum-history'],
     ['Notifications', 'src/pages/NotificationsPage.jsx', 'hakum-notifications'],
     ['Content', 'src/pages/ContentAdminPage.jsx', 'hakum-content'],
@@ -282,13 +281,6 @@ describe('ops shell adoption — phase 7 admin + secondary + floor', () => {
       assert.match(page, new RegExp(`className=.*${shellClass}`))
     })
   }
-
-  it('Console uses OpsTabList for section tabs', () => {
-    const page = read('src/pages/AdminConsolePage.jsx')
-    assert.match(page, /OpsTabList/)
-    assert.match(page, /id: 'queue'/)
-    assert.match(page, /id: 'stock'/)
-  })
 
   it('Content admin uses OpsTabList for blogs/events', () => {
     const page = read('src/pages/ContentAdminPage.jsx')

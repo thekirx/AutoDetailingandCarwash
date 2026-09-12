@@ -109,7 +109,7 @@ const LANE_META = {
   in_progress: { icon: CarFront, hint: 'On the bay' },
   final_checking: { icon: BadgeCheck, hint: 'QC before payment' },
   for_payment: { icon: Send, hint: 'Collect at POS' },
-  redo: { icon: ShieldAlert, hint: 'Owner QC fail lane' },
+  redo: { icon: ShieldAlert, hint: 'Services failed QA' },
 }
 
 const FALLBACK_VEHICLE_TYPES = [
@@ -301,10 +301,11 @@ export function OperationsDashboardPage() {
 
 function ScopedFloorDashboard() {
   const { profile, canViewQueueOperations } = useAuth()
-  const isTeamLeadFloor = profile?.role === ROLES.TEAM_LEAD
+  const isTeamLeadFloor = [ROLES.TEAM_LEAD, ROLES.STAFF].includes(profile?.role)
   const seeAll = canSeeAllBranches(profile)
-  const seeRedo = canViewRedoLane(profile) && !isTeamLeadFloor
+  const seeRedo = canViewRedoLane(profile)
   const canOpenPos = canAccessPos(profile)
+  const canViewFloorSales = profile?.role !== ROLES.STAFF
   const scopeList = getBranchScopeList(profile)
   const [branchFilter, setBranchFilter] = useState(() => {
     if (seeAll) return 'all'
@@ -349,6 +350,10 @@ function ScopedFloorDashboard() {
     () => visibleQueue.filter((t) => isSuspiciousTiming(t, timingWarnings)),
     [visibleQueue, timingWarnings],
   )
+  const failedQaTickets = useMemo(
+    () => visibleQueue.filter((ticket) => ticket.status === 'redo'),
+    [visibleQueue],
+  )
   const salesSummary = salesBoard.summary || {
     total_sales_minor: 0,
     cash_sales_minor: 0,
@@ -358,6 +363,12 @@ function ScopedFloorDashboard() {
   }
 
   const loadSales = useCallback(async () => {
+    if (!canViewFloorSales) {
+      setSalesBoard({ summary: null, recentSales: [] })
+      setSalesError('')
+      setSalesLoading(false)
+      return
+    }
     setSalesError('')
     setSalesLoading(true)
     try {
@@ -373,7 +384,7 @@ function ScopedFloorDashboard() {
     } finally {
       setSalesLoading(false)
     }
-  }, [profile, branchFilter, rangeStartDate, rangeEndDate])
+  }, [profile, branchFilter, rangeStartDate, rangeEndDate, canViewFloorSales])
 
   useEffect(() => {
     loadSales()
@@ -414,7 +425,7 @@ function ScopedFloorDashboard() {
       : branchFilter
 
   const queueMetricCols = isTeamLeadFloor
-    ? 'xl:grid-cols-4'
+    ? 'xl:grid-cols-5'
     : seeRedo
       ? 'xl:grid-cols-6'
       : 'xl:grid-cols-5'
@@ -422,14 +433,16 @@ function ScopedFloorDashboard() {
   return (
     <OpsPageShell
       className="hakum-dashboard"
-      eyebrow={profile?.role === 'admin' ? 'Branch Admin' : 'Team Lead'}
+      eyebrow={profile?.role === ROLES.STAFF ? 'Crew' : profile?.role === 'admin' ? 'Branch Admin' : 'Team Lead'}
       title={isTeamLeadFloor ? 'Floor' : 'Queue View'}
       description={
         profile?.role === 'admin'
-          ? 'High-level floor summary — waiting cars, detailing, and tickets ready for POS.'
+          ? 'High-level floor summary — waiting cars, final checks, and tickets ready for POS.'
           : isTeamLeadFloor
-            ? `Jobs on your branch · ${branchLabel}. Open Queue to assign crew and run tickets.`
-            : 'Branch summary of queue volume, detailing jobs, crew, and handoffs. Open Queue for the full detail board.'
+            ? profile?.role === ROLES.STAFF
+              ? `Live jobs on your branch · ${branchLabel}. Queue, crew, and KPI are view-only.`
+              : `Jobs on your branch · ${branchLabel}. Open Queue to assign crew and run tickets.`
+            : 'Branch summary of queue volume, final checks, crew, and handoffs. Open Queue for the full board.'
       }
       meta={
         live ? (
@@ -502,7 +515,7 @@ function ScopedFloorDashboard() {
         ) : null}
         {seeRedo ? (
           <MetricCard
-            label="Redo"
+            label="Services Failed QA"
             value={counts.redo}
             icon={ShieldAlert}
             tone="amber"
@@ -518,7 +531,16 @@ function ScopedFloorDashboard() {
           hint="Open full board"
         />
       </div>
-      <div className="mt-3 grid gap-3 grid-cols-2 sm:mt-4 sm:gap-4 xl:grid-cols-4">
+      {seeRedo ? (
+        <Panel title="Services Failed QA" icon={ShieldAlert} className="mt-4 sm:mt-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {failedQaTickets.length ? failedQaTickets.map((ticket) => (
+              <TicketCard key={ticket.booking_id} ticket={ticket} timingWarnings={timingWarnings} compact />
+            )) : <EmptyLine text="No services currently need QA correction." />}
+          </div>
+        </Panel>
+      ) : null}
+      {canViewFloorSales ? <div className="mt-3 grid gap-3 grid-cols-2 sm:mt-4 sm:gap-4 xl:grid-cols-4">
         <MetricCard
           label="Sales total"
           value={salesLoading && !salesBoard.summary ? '…' : formatMoney(salesSummary.total_sales_minor)}
@@ -537,8 +559,8 @@ function ScopedFloorDashboard() {
           icon={Wallet}
           tone="amber"
         />
-      </div>
-      {salesError ? (
+      </div> : null}
+      {canViewFloorSales && salesError ? (
         <p className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-950 dark:text-red-100" role="alert">
           {salesError}
         </p>
@@ -600,7 +622,7 @@ function ScopedFloorDashboard() {
         </Panel>
       </div>
       ) : null}
-      <Panel title={`Paid sales · ${branchLabel}`} icon={Wallet} className="mt-4 sm:mt-5">
+      {canViewFloorSales ? <Panel title={`Paid sales · ${branchLabel}`} icon={Wallet} className="mt-4 sm:mt-5">
         <p className="mb-3 text-sm text-muted-foreground">
           {formatMoney(salesSummary.total_sales_minor)} across {salesSummary.paid_count} paid sale
           {salesSummary.paid_count === 1 ? '' : 's'}
@@ -647,7 +669,7 @@ function ScopedFloorDashboard() {
             <EmptyLine text="No paid sales in this range for your branch." />
           )}
         </div>
-      </Panel>
+      </Panel> : null}
       {!isTeamLeadFloor ? (
         <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
           <div className="grid max-h-64 gap-3 overflow-y-auto sm:max-h-80">
@@ -1518,6 +1540,7 @@ export function CrewPage() {
   const presentCount = staffPool.filter((member) => member.is_present_today).length
   const presentRows = useMemo(() => staffPool.filter((m) => m.is_present_today), [staffPool])
   const canPickBranch = canSeeAllBranches(profile)
+  const canViewCompensation = profile?.role !== ROLES.STAFF
 
   useEffect(() => {
     if (!canPickBranch) return
@@ -1584,7 +1607,7 @@ export function CrewPage() {
           { key: 'pool', label: `Pool (${staffPool.length})` },
           { key: 'present', label: `Present (${presentCount})` },
           { key: 'busy', label: `Busy (${busyStaff.length})` },
-          { key: 'compensation', label: 'Compensation' },
+          ...(canViewCompensation ? [{ key: 'compensation', label: 'Compensation' }] : []),
         ].map((tab) => (
           <button
             key={tab.key}

@@ -222,7 +222,7 @@ describe('ASA CRM and content follow grants', () => {
     assert.equal(allowRoute(p, 'dashboard'), false)
     assert.equal(allowRoute(p, 'kpi'), false)
     const open = { role: ROLES.ASSISTANT_SUPER_ADMIN, permission_grants: {} }
-    assert.equal(canAccessConsole(open), true)
+    assert.equal(canAccessConsole(open), false)
     assert.equal(canAccessReviews(open), true)
     assert.equal(canAccessNotifications(open), true)
     assert.equal(canViewQueueOperations(open), true)

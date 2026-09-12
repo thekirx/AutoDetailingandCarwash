@@ -116,8 +116,8 @@ describe('TL queue status transitions (principal scenarios)', () => {
     })
   })
 
-  it('TL board has no redo column', () => {
-    assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), ['waiting', 'in_progress', 'final_checking'])
+  it('TL board includes Services Failed QA without exposing payment', () => {
+    assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), ['waiting', 'in_progress', 'final_checking', 'redo'])
   })
 
   it('final check label stays on floor for TL', () => {

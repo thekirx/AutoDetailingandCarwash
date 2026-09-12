@@ -188,7 +188,7 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(dock.some((i) => i.to === '/operations/queue/new'))
     assert.ok(dock.some((i) => i.to === '/operations/attendance'))
     assert.equal(dock.some((i) => i.to === '/operations/bookings'), false)
-    assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 0)
+    assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 4)
   })
 
   it('Command nav never links a page the role cannot open', () => {

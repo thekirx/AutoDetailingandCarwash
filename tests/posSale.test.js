@@ -5,6 +5,7 @@ import {
   buildPosSalePayload,
   canChangePosCartLineQuantity,
   canRemovePosCartLine,
+  cashTenderCoversTotal,
   priceCartForMembership,
   removePosCartLine,
   setPosCartLineQuantity,
@@ -239,5 +240,12 @@ assert.equal(setPosCartLineQuantity(qtyCart, 'm1', 0).length, 1)
 assert.equal(setPosCartLineQuantity(qtyCart, 'm1', 5000)[1].quantity, POS_MAX_LINE_QUANTITY)
 assert.equal(setPosCartLineQuantity(qtyCart, 'nope', 3).length, 2)
 assert.equal(setPosCartLineQuantity(qtyCart, 'm1', Number.NaN).length, 1)
+
+// Cash checkout stays disabled until the tender covers the order total.
+assert.equal(cashTenderCoversTotal('cash', 9999, 10000), false)
+assert.equal(cashTenderCoversTotal('cash', 10000, 10000), true)
+assert.equal(cashTenderCoversTotal('cash', 12000, 10000), true)
+assert.equal(cashTenderCoversTotal('cash', Number.NaN, 10000), false)
+assert.equal(cashTenderCoversTotal('gcash', 0, 10000), true)
 
 console.log('posSale.buildPosSalePayload + handoff cart: ok')

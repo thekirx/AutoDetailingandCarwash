@@ -6,7 +6,7 @@ export const OPS_DEMO_ACCOUNTS = [
     label: 'Super Admin',
     email: 'bossmich@hakumautocare.com',
     password: 'HakumBoss2026!',
-    hint: 'All branches · console',
+    hint: 'All branches · Floor Board',
   },
   {
     id: 'asa',

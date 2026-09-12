@@ -33,8 +33,8 @@ describe('lifecycle sms', () => {
 })
 
 describe('role-based queue lanes and overrides', () => {
-  it('team lead never sees for_payment; branch admin does; SA also sees redo', () => {
-    assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), ['waiting', 'in_progress', 'final_checking'])
+  it('team lead sees failed QA but never for_payment; branch admin sees payment', () => {
+    assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), ['waiting', 'in_progress', 'final_checking', 'redo'])
     assert.deepEqual(getOpsBoardStatuses({ role: 'admin' }), ['waiting', 'in_progress', 'final_checking', 'for_payment'])
     assert.deepEqual(getOpsBoardStatuses({ role: 'BossMich' }), [
       'waiting',

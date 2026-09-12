@@ -56,6 +56,7 @@ import { isValidCustomerPlate } from '../lib/customerAuth'
 import { plateSuggestPrefix, PLATE_SUGGEST_LIMIT, rankPlateSuggestions } from '../lib/plateSuggest'
 
 const timingWarningsCache = createTtlCache(120_000)
+const CREW_OBSERVER_STAFF_SELECT = 'id, full_name, role, branch_slug, is_active'
 
 export const QUEUE_BOARD_SELECT = `
   booking_id,
@@ -189,8 +190,9 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
   }
 
   const branchScope = resolveBranchFilter(profile, branchFilter)
+  const isCrewObserver = profile?.role === 'staff'
   // Active floor only — keeps TL/ASA snapshot payloads small under concurrent load.
-  // Lanes are role-aware: TL never fetches for_payment; console tier does.
+  // Lanes are role-aware: TL never fetches for_payment; payment-capable viewers do.
   // Detailing family includes confirmed (Assigned to Branch from Bookings).
   const boardStatuses = getOpsBoardStatuses(profile, { family })
   const queueQuery = scopedQuery(
@@ -200,7 +202,7 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
   const staffPoolQuery = scopedStaffQuery(
     supabase
       .from('staff_profiles')
-      .select('id, full_name, role, branch_slug, phone, is_active, username, login_email')
+      .select(isCrewObserver ? CREW_OBSERVER_STAFF_SELECT : 'id, full_name, role, branch_slug, phone, is_active, username, login_email')
       .eq('role', 'staff')
       .eq('is_active', true),
     branchScope,
@@ -214,8 +216,13 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
     .from('busy_staff_view')
     .select('staff_id, full_name, branch_slug, booking_id, queue_number, booking_status, assigned_at')
   busyQuery = scopedStaffQuery(busyQuery, branchScope)
-  const eventsQuery = scopedQuery(supabase.from('queue_events').select('id, booking_id, branch, old_status, new_status, notes, created_at'), branchScope)
-  const handoffsQuery = scopedQuery(supabase.from('pos_handoffs').select('id, booking_id, branch, amount_minor, status, handed_off_at'), branchScope)
+  const emptyResult = () => Promise.resolve({ data: [], error: null })
+  const eventsQuery = isCrewObserver
+    ? null
+    : scopedQuery(supabase.from('queue_events').select('id, booking_id, branch, old_status, new_status, notes, created_at'), branchScope)
+  const handoffsQuery = isCrewObserver
+    ? null
+    : scopedQuery(supabase.from('pos_handoffs').select('id, booking_id, branch, amount_minor, status, handed_off_at'), branchScope)
 
   const cachedTiming = timingWarningsCache.get()
   const settingsQuery = cachedTiming
@@ -227,8 +234,8 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
     staffPoolQuery.order('full_name'),
     attendanceQuery,
     busyQuery.order('assigned_at', { ascending: false }).limit(200),
-    eventsQuery.order('created_at', { ascending: false }).limit(40),
-    handoffsQuery.order('handed_off_at', { ascending: false }).limit(40),
+    eventsQuery ? eventsQuery.order('created_at', { ascending: false }).limit(40) : emptyResult(),
+    handoffsQuery ? handoffsQuery.order('handed_off_at', { ascending: false }).limit(40) : emptyResult(),
     settingsQuery,
   ])
 

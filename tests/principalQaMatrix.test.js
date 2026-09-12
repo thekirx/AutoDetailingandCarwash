@@ -156,9 +156,9 @@ describe('Negative allowRoute denials', () => {
     assert.equal(allowRoute(p, 'finance'), false)
   })
 
-  it('ASA empty grants keep console and queue; explicit false denies both', () => {
+  it('ASA never gets retired Console; queue still follows its grant', () => {
     const bare = profile(ROLES.ASSISTANT_SUPER_ADMIN, { permission_grants: {} })
-    assert.equal(allowRoute(bare, 'console'), true)
+    assert.equal(allowRoute(bare, 'console'), false)
     assert.equal(allowRoute(bare, 'queue'), true)
     const denied = profile(ROLES.ASSISTANT_SUPER_ADMIN, {
       permission_grants: { console: false, queue_all: false },

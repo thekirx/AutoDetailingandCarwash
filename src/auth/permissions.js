@@ -39,7 +39,6 @@ export const DEFAULT_ASSISTANT_GRANTS = {
   rbac_edit: false,
   crm: true,
   content: true,
-  console: true,
   reviews: true,
   notifications: true,
   history: true,
@@ -67,7 +66,6 @@ export const ASSISTANT_GRANT_LABELS = {
   rbac_edit: 'Edit other ASA grants',
   crm: 'CRM',
   content: 'Site content',
-  console: 'Console',
   reviews: 'Reviews inbox',
   notifications: 'Notifications',
   history: 'Customer history',
@@ -94,7 +92,7 @@ export const ASSISTANT_GRANT_GROUPS = [
   {
     id: 'comms',
     label: 'CRM & content',
-    keys: ['crm', 'content', 'inquiries', 'notifications', 'console'],
+    keys: ['crm', 'content', 'inquiries', 'notifications'],
   },
   {
     id: 'admin',
@@ -143,6 +141,7 @@ export const QUEUE_EDITOR_ROLES = [
   ROLES.ASSISTANT_SUPER_ADMIN,
 ]
 export const QUEUE_VIEWER_ROLES = [
+  ROLES.STAFF,
   ROLES.ADMIN,
   ROLES.OPERATIONS_LEAD,
   ROLES.TEAM_LEAD,
@@ -353,7 +352,6 @@ export function canAccessSettings(profile) {
     canManageBranches(profile) ||
     canManagePeople(profile) ||
     canAccessAudit(profile) ||
-    canAccessConsole(profile) ||
     canManageSiteContent(profile)
   )
 }
@@ -435,10 +433,9 @@ export function canUseAttendanceClock(profile) {
   )
 }
 
-export function canAccessConsole(profile) {
-  if (isSuperAdmin(profile)) return true
-  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'console')
-  return profile?.role === ROLES.ADMIN
+/** Compatibility guard for stale links and stored permission payloads. */
+export function canAccessConsole() {
+  return false
 }
 
 export function canEditBookings(profile) {
@@ -576,8 +573,9 @@ export function canViewQueueOperations(profile) {
   return has(profile, QUEUE_VIEWER_ROLES)
 }
 
-/** Redo QC lane — Super Admin + Assistant Super Admin only (not customers, TL, or branch admin). */
+/** Failed-QA visibility follows the Floor Board observer scope; correction actions remain separately gated. */
 export function canViewRedoLane(profile) {
+  if (has(profile, [ROLES.TEAM_LEAD, ROLES.STAFF])) return true
   if (isSuperAdmin(profile)) return true
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'queue_all')
 }
@@ -782,10 +780,14 @@ export function getOperationsNav(profile) {
     ]
   }
 
-  // Crew (staff): clock + assigned work only.
+  // Crew can observe their branch floor without gaining queue editing rights.
   if (profile?.role === ROLES.STAFF) {
     return [
       nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
+      nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
+      nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
+      nav('Crew', '/operations/crew', 'Users', 'floor'),
+      nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
       nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
@@ -960,7 +962,12 @@ export function getStaffDock(profile) {
 
 export function getStaffMore(profile) {
   if (profile?.role !== ROLES.STAFF) return []
-  return []
+  return [
+    { label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' },
+    { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
+    { label: 'Crew', to: '/operations/crew', icon: 'Users' },
+    { label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' },
+  ]
 }
 
 /** Marketing FloorApp dock. */
@@ -1051,7 +1058,6 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
 export function allowRoute(profile, key) {
   if (isBranchAdmin(profile)) return BRANCH_ADMIN_ROUTE_KEYS.includes(key)
   const map = {
-    console: canAccessConsole,
     planning: canViewPlanning,
     roadmap: canAccessOpsRoadmap,
     people: canManagePeople,

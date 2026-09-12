@@ -60,7 +60,7 @@ describe('Team Lead capability matrix', () => {
     assert.equal(canManageVehicleCatalog(p), false)
     assert.equal(canAccessReports(p), false)
     assert.equal(canEditPlanning(p), false)
-    assert.equal(canViewRedoLane(p), false)
+    assert.equal(canViewRedoLane(p), true)
     assert.equal(canOverrideAttendance(p), false)
     assert.equal(canEditAttendanceSettings(p), false)
     assert.equal(canCreateBranches(p), false)
