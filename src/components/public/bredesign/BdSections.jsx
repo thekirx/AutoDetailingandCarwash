@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react'
-import { ArrowRight, ArrowUpRight, Play, X } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { ArrowRight, ArrowUpRight, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { SERVICE_DETAIL_CONTENT } from '../../../data/serviceDetailContent'
+import BdVideoModal from './BdVideoModal'
+import BdWashModal from './BdWashModal'
+import { LoopArrows, LoopBar } from './LoopRail'
+import { loopSlides, useLoopRail } from './useLoopRail'
 import WhyIcon from './WhyIcon'
-import { ORIGIN, PHOTOS, SERVICES, WHY_SECTIONS } from './content'
+import { GALLERY_EXTRA_CLIPS, GALLERY_PAGES, ORIGIN, SERVICES, WHY_SECTIONS } from './content'
 
 /* A lede is written as an array so a phrase inside it can be emphasised
    without embedding markup in content. */
@@ -18,45 +22,66 @@ function Lede({ parts }) {
   )
 }
 
+/* The story is set on the branch photo itself. On a wide screen the title runs
+   in one line through the strip between the Hakum sign and the car roofs, and
+   the story follows directly beneath it; the stylesheet pins that strip to the
+   photo's own proportions. On a phone the photo sits across the top and the
+   title starts over the cars. */
 export function BdOrigin() {
   return (
     <section className="bd-origin" id="origin">
-      <div className="bd-shell bd-origin-in">
-        <div className="bd-reveal">
-          <p className="bd-eyebrow">{ORIGIN.eyebrow}</p>
+      <div className="bd-origin-frame">
+        <img className="bd-origin-photo" src={ORIGIN.imageWide} alt={ORIGIN.imageAlt} loading="lazy" decoding="async" />
+        <p className="bd-eyebrow bd-origin-eyebrow">{ORIGIN.eyebrow}</p>
+        <div className="bd-origin-copy bd-reveal">
           <h2>
-            {ORIGIN.headline.map((line) => (
-              <span key={line}>
-                {line}
-                <br />
-              </span>
-            ))}
-            <em>{ORIGIN.headlineAccent}</em>
+            {ORIGIN.headline.join(' ')} <em>{ORIGIN.headlineAccent}</em>
           </h2>
-          {ORIGIN.paragraphs.map((copy, i) => (
-            <p className={i === 0 ? 'bd-origin-lead' : 'bd-origin-body'} key={copy.slice(0, 24)}>
-              {copy}
-            </p>
-          ))}
+          <div className="bd-origin-text">
+            {ORIGIN.paragraphs.map((copy, i) => (
+              <p className={i === 0 ? 'bd-origin-lead' : 'bd-origin-body'} key={copy.slice(0, 24)}>
+                {copy}
+              </p>
+            ))}
+          </div>
           <div className="bd-cta-row bd-origin-cta">
             <Link className="bd-btn bd-btn-quiet" to="/services">
               What we do
             </Link>
           </div>
         </div>
-        <figure className="bd-origin-fig bd-reveal">
-          <img src={ORIGIN.image} alt={ORIGIN.imageAlt} loading="lazy" />
-          <figcaption>
-            <strong>{ORIGIN.tagTitle}</strong>
-            <span>{ORIGIN.tagLine}</span>
-          </figcaption>
-        </figure>
+        <div className="bd-origin-tag">
+          <strong>{ORIGIN.tagTitle}</strong>
+          <span>{ORIGIN.tagLine}</span>
+        </div>
       </div>
     </section>
   )
 }
 
+function ServiceCardBody({ service }) {
+  return (
+    <>
+      <img src={service.image} alt={service.alt} loading="lazy" />
+      <span className="bd-service-num" aria-hidden="true">
+        {service.number}
+      </span>
+      <div className="bd-service-body">
+        <h3>{service.title}</h3>
+        <p>{service.copy}</p>
+        <span className="bd-service-go">
+          {service.cta} <ArrowRight size={14} aria-hidden="true" />
+        </span>
+      </div>
+    </>
+  )
+}
+
 export function BdServices() {
+  const [washOpen, setWashOpen] = useState(false)
+  const washTrigger = useRef(null)
+  const closeWash = useCallback(() => setWashOpen(false), [])
+
   return (
     <section className="bd-services" id="services">
       <div className="bd-shell">
@@ -73,27 +98,27 @@ export function BdServices() {
           </p>
         </div>
         <div className="bd-service-grid bd-reveal">
-          {SERVICES.map((service) => {
-            const Card = service.to ? Link : 'a'
-            const linkProps = service.to ? { to: service.to } : { href: service.href }
-            return (
-              <Card className="bd-service" key={service.number} {...linkProps}>
-                <img src={service.image} alt={service.alt} loading="lazy" />
-                <span className="bd-service-num" aria-hidden="true">
-                  {service.number}
-                </span>
-                <div className="bd-service-body">
-                  <h3>{service.title}</h3>
-                  <p>{service.copy}</p>
-                  <span className="bd-service-go">
-                    {service.cta} <ArrowRight size={14} aria-hidden="true" />
-                  </span>
-                </div>
-              </Card>
-            )
-          })}
+          {SERVICES.map((service) =>
+            service.popup ? (
+              <button
+                type="button"
+                className="bd-service"
+                key={service.number}
+                ref={washTrigger}
+                aria-haspopup="dialog"
+                onClick={() => setWashOpen(true)}
+              >
+                <ServiceCardBody service={service} />
+              </button>
+            ) : (
+              <Link className="bd-service" key={service.number} to={service.to}>
+                <ServiceCardBody service={service} />
+              </Link>
+            ),
+          )}
         </div>
       </div>
+      <BdWashModal open={washOpen} onClose={closeWash} returnFocusRef={washTrigger} />
     </section>
   )
 }
@@ -144,40 +169,47 @@ export function BdWhySections({ exclude = [] }) {
   )
 }
 
+/* Looks a gallery clip up by [service, id]: the service-proof clips carry
+   their own service name, the two bundled clips carry theirs in the entry. */
+function resolveClip([service, id]) {
+  if (service === 'extra') return GALLERY_EXTRA_CLIPS[id]
+  const detail = SERVICE_DETAIL_CONTENT[service]
+  const found = detail?.proof?.clips.find((item) => item.id === id)
+  return found ? { ...found, serviceId: service, serviceName: detail.serviceName } : null
+}
+
+/* The collage the homepage has always had, now a page at a time: each page is
+   the original arrangement, pages scroll sideways, and past the last page the
+   rail carries on to the first. Every photo and video we have is in it once. */
 export function BdPhotos() {
   const [activeClip, setActiveClip] = useState(null)
-  const featuredClips = Object.entries(SERVICE_DETAIL_CONTENT).flatMap(([serviceId, service]) =>
-    service.proof.clips
-      .filter((clip) => clip.homepageFeatured)
-      .map((clip) => ({ ...clip, serviceId, serviceName: service.serviceName })),
+  const closeClip = useCallback(() => setActiveClip(null), [])
+
+  const pages = useMemo(
+    () =>
+      GALLERY_PAGES.map((page) => ({
+        ...page,
+        tiles: page.tiles
+          .map((tile) => (tile.clip ? { ...tile, clip: resolveClip(tile.clip) } : tile))
+          .filter((tile) => tile.photo || tile.clip),
+      })),
+    [],
   )
-  const galleryItems = [
-    { type: 'photo', ...PHOTOS[0] },
-    { type: 'photo', ...PHOTOS[1] },
-    { type: 'video', clip: featuredClips[1], span: 'tall', portrait: true },
-    { type: 'video', clip: featuredClips[0] },
-    { type: 'photo', ...PHOTOS[2] },
-    { type: 'photo', ...PHOTOS[3] },
-    { type: 'photo', ...PHOTOS[4], span: undefined },
-    { type: 'video', clip: featuredClips[2] },
-    { type: 'photo', ...PHOTOS[5] },
-  ]
-
-  useEffect(() => {
-    if (!activeClip) return undefined
-
-    const previousOverflow = document.body.style.overflow
-    const closeOnEscape = (event) => {
-      if (event.key === 'Escape') setActiveClip(null)
-    }
-
-    document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', closeOnEscape)
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', closeOnEscape)
-    }
-  }, [activeClip])
+  const counts = useMemo(
+    () =>
+      pages.reduce(
+        (total, page) => {
+          page.tiles.forEach((tile) => {
+            if (tile.clip) total.videos += 1
+            else total.photos += 1
+          })
+          return total
+        },
+        { photos: 0, videos: 0 },
+      ),
+    [pages],
+  )
+  const rail = useLoopRail(pages.length)
 
   return (
     <section className="bd-photos" id="photos">
@@ -192,86 +224,65 @@ export function BdPhotos() {
             what our teams deliver every day.
           </p>
         </div>
-        <div className="bd-mosaic bd-reveal">
-          {galleryItems.map((item) => {
-            if (item.type === 'photo') {
-              return (
-                <figure className={item.span ? `bd-${item.span}` : undefined} key={item.caption}>
-                  <img src={item.src} alt={item.alt} loading="lazy" />
-                  <figcaption>{item.caption}</figcaption>
-                </figure>
-              )
-            }
+        <div className="bd-gallery-bar">
+          <p>
+            {counts.photos} photos · {counts.videos} videos
+          </p>
+          <LoopArrows rail={rail} label="gallery page" />
+        </div>
 
-            const { clip } = item
-            const layoutClasses = [
-              item.span ? `bd-${item.span}` : '',
-              item.portrait ? 'bd-portrait' : '',
-            ].filter(Boolean).join(' ')
-            return (
-              <button
-                type="button"
-                className={`bd-gallery-video${layoutClasses ? ` ${layoutClasses}` : ''}`}
-                key={`${clip.serviceId}-${clip.id}`}
-                data-gallery-video={clip.serviceId}
-                aria-label={`Play ${clip.caption}`}
-                onClick={() => setActiveClip(clip)}
-              >
-                <img src={clip.poster} alt="" loading="lazy" />
-                <span className="bd-gallery-video-shade" aria-hidden="true" />
-                <span className="bd-gallery-play" aria-hidden="true">
-                  <Play size={22} fill="currentColor" />
-                </span>
-                <span className="bd-gallery-kind">Video</span>
-                <span className="bd-gallery-caption">
-                  <strong>{clip.serviceName}</strong>
-                  <span>{clip.caption}</span>
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-      {activeClip ? (
-        <div
-          className="bd-gallery-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${activeClip.serviceName} video`}
-          data-gallery-player
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setActiveClip(null)
-          }}
-        >
-          <div className="bd-gallery-player">
-            <button
-              type="button"
-              className="bd-gallery-close"
-              data-gallery-close
-              aria-label="Close video"
-              onClick={() => setActiveClip(null)}
-              autoFocus
+        <div className="bd-gallery-rail" ref={rail.trackRef}>
+          {loopSlides(pages, rail.copies).map(({ item: page, copy, key }) => (
+            <div
+              className={`bd-mosaic bd-gallery-page is-${page.layout}`}
+              key={key}
+              data-gallery-page={copy ? undefined : ''}
+              aria-hidden={copy || undefined}
             >
-              <X size={22} aria-hidden="true" />
-            </button>
-            <video
-              controls
-              autoPlay
-              playsInline
-              preload="metadata"
-              poster={activeClip.poster}
-              aria-label={activeClip.label}
-            >
-              <source src={activeClip.sources.av1} type='video/mp4; codecs="av01.0.08M.08"' />
-              <source src={activeClip.sources.h264} type="video/mp4" />
-            </video>
-            <div className="bd-gallery-player-copy">
-              <span>{activeClip.serviceName}</span>
-              <strong>{activeClip.caption}</strong>
+              {page.tiles.map((tile) => {
+                if (tile.photo) {
+                  return (
+                    <figure className={`bd-slot-${tile.slot}`} key={tile.slot}>
+                      <img
+                        src={tile.photo.src}
+                        alt={copy ? '' : tile.photo.alt}
+                        loading="lazy"
+                        style={tile.photo.position ? { objectPosition: tile.photo.position } : undefined}
+                      />
+                      <figcaption>{tile.photo.caption}</figcaption>
+                    </figure>
+                  )
+                }
+                const { clip } = tile
+                return (
+                  <button
+                    type="button"
+                    className={`bd-gallery-video bd-slot-${tile.slot}`}
+                    key={tile.slot}
+                    data-gallery-video={copy ? undefined : clip.serviceId}
+                    aria-label={copy ? undefined : `Play ${clip.caption}`}
+                    tabIndex={copy ? -1 : undefined}
+                    onClick={() => setActiveClip(clip)}
+                  >
+                    <img src={clip.poster} alt="" loading="lazy" />
+                    <span className="bd-gallery-video-shade" aria-hidden="true" />
+                    <span className="bd-gallery-play" aria-hidden="true">
+                      <Play size={22} fill="currentColor" />
+                    </span>
+                    <span className="bd-gallery-kind">Video</span>
+                    <span className="bd-gallery-caption">
+                      <strong>{clip.serviceName}</strong>
+                      <span>{clip.caption}</span>
+                    </span>
+                  </button>
+                )
+              })}
             </div>
-          </div>
+          ))}
         </div>
-      ) : null}
+        <LoopBar rail={rail} />
+      </div>
+      <BdVideoModal clip={activeClip} onClose={closeClip} />
     </section>
   )
 }

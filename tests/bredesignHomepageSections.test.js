@@ -57,13 +57,16 @@ describe('BreDESIGN homepage fallback sections', () => {
     assert.equal(result.tiktokHref, 'https://www.tiktok.com/@hakum_autocare')
   })
 
-  it('presents featured service videos as playable gallery items', async () => {
+  it('presents every photo and video as a scrollable collage of playable pages', async () => {
     const heading = await page.$eval('#photos h2', (node) => node.textContent.replace(/\s+/g, ' ').trim())
+    /* Copies of the pages sit either side of the real ones so the rail can
+       wrap; only the real pages carry data-gallery-page and data-gallery-video. */
+    const pages = await page.$$('#photos [data-gallery-page]')
     const videoTiles = await page.$$('#photos button[data-gallery-video]')
-    const mediaSequence = await page.$$eval('#photos .bd-mosaic > *', (nodes) =>
-      nodes.map((node) => node.tagName),
+    const firstPageSequence = await page.$eval('#photos [data-gallery-page]', (grid) =>
+      [...grid.children].map((node) => node.tagName),
     )
-    const galleryLayout = await page.$eval('#photos .bd-mosaic', (grid) => {
+    const galleryLayout = await page.$eval('#photos [data-gallery-page]', (grid) => {
       const ppf = grid.querySelector('[data-gallery-video="ppf"]').getBoundingClientRect()
       const ceramic = grid.querySelector('[data-gallery-video="ceramic"]').getBoundingClientRect()
       return {
@@ -74,18 +77,9 @@ describe('BreDESIGN homepage fallback sections', () => {
     })
 
     assert.equal(heading, 'Photos & Videos.')
-    assert.equal(videoTiles.length, 3)
-    assert.deepEqual(mediaSequence, [
-      'FIGURE',
-      'FIGURE',
-      'BUTTON',
-      'BUTTON',
-      'FIGURE',
-      'FIGURE',
-      'FIGURE',
-      'BUTTON',
-      'FIGURE',
-    ])
+    assert.equal(pages.length, 6)
+    assert.equal(videoTiles.length, 17)
+    assert.deepEqual(firstPageSequence, ['FIGURE', 'FIGURE', 'BUTTON', 'BUTTON', 'FIGURE'])
     assert.equal(galleryLayout.columns, 4)
     assert.ok(galleryLayout.ceramicHeight > galleryLayout.ppfHeight * 1.8)
 
@@ -108,7 +102,7 @@ describe('BreDESIGN homepage fallback sections', () => {
     for (const viewport of viewports) {
       await page.setViewport({ width: viewport.width, height: viewport.height })
 
-      const layout = await page.$eval('#photos .bd-mosaic', (grid) => ({
+      const layout = await page.$eval('#photos [data-gallery-page]', (grid) => ({
         columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
         hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         hasCollapsedTile: [...grid.children].some((tile) => {

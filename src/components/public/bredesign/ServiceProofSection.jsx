@@ -1,44 +1,67 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useState } from 'react'
+import { Play } from 'lucide-react'
 
-export default function ServiceProofSection({ serviceId, proof }) {
-  const sectionRef = useRef(null)
+import BdVideoModal from './BdVideoModal'
+import { LoopArrows, LoopBar } from './LoopRail'
+import { loopSlides, useLoopRail } from './useLoopRail'
+
+/* Real installation clips for one service, as a wrap-around rail of posters.
+   The page used to stack every clip as a full player — over 2,000px of scroll
+   on PPF alone. A tile opens the shared player instead, so only the clip the
+   reader chose ever loads. */
+export default function ServiceProofSection({ serviceId, serviceName, proof }) {
   const clips = proof?.clips || []
-
-  const pauseOtherClips = useCallback((event) => {
-    sectionRef.current?.querySelectorAll('video').forEach((video) => {
-      if (video !== event.currentTarget) video.pause()
-    })
-  }, [])
+  const rail = useLoopRail(clips.length)
+  const [activeClip, setActiveClip] = useState(null)
+  const close = useCallback(() => setActiveClip(null), [])
 
   if (!clips.length) return null
 
   return (
-    <section ref={sectionRef} className="bd-service-proof" data-service-proof={serviceId}>
-      <div className="bd-shell bd-service-proof-layout">
-        <header>
-          <p className="bd-eyebrow">{proof.eyebrow}</p>
-          <h2>{proof.title}</h2>
-          <p>{proof.copy}</p>
-        </header>
-        <div className="bd-service-proof-gallery">
-          {clips.map((clip) => (
-            <figure key={clip.id}>
-              <video
-                controls
-                playsInline
-                preload="metadata"
-                poster={clip.poster}
-                aria-label={clip.label}
-                onPlay={pauseOtherClips}
-              >
-                <source src={clip.sources.av1} type='video/mp4; codecs="av01.0.08M.08"' />
-                <source src={clip.sources.h264} type="video/mp4" />
-              </video>
-              <figcaption>{clip.caption}</figcaption>
-            </figure>
-          ))}
+    <section className="bd-service-proof" data-service-proof={serviceId}>
+      <div className="bd-shell">
+        <div className="bd-proof-head">
+          <header>
+            <p className="bd-eyebrow">{proof.eyebrow}</p>
+            <h2>{proof.title}</h2>
+            <p>{proof.copy}</p>
+          </header>
+          <LoopArrows rail={rail} label="video" />
         </div>
+
+        <div className="bd-proof-rail" ref={rail.trackRef}>
+          {loopSlides(clips, rail.copies).map(({ item: clip, copy, key }) => {
+            const [title, ...detail] = clip.caption.split(' · ')
+            return (
+              <button
+                type="button"
+                key={key}
+                className="bd-proof-tile"
+                onClick={() => setActiveClip({ ...clip, serviceName })}
+                aria-label={copy ? undefined : `Play ${clip.caption}`}
+                aria-hidden={copy || undefined}
+                tabIndex={copy ? -1 : undefined}
+                data-proof-clip={copy ? undefined : clip.id}
+              >
+                <img src={clip.poster} alt="" loading="lazy" decoding="async" />
+                <span className="bd-proof-shade" aria-hidden="true" />
+                <span className="bd-proof-kind" aria-hidden="true">
+                  Video
+                </span>
+                <span className="bd-proof-play" aria-hidden="true">
+                  <Play size={16} fill="currentColor" />
+                </span>
+                <span className="bd-proof-cap" aria-hidden="true">
+                  <strong>{title}</strong>
+                  {detail.length ? <span>{detail.join(' · ')}</span> : null}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        <LoopBar rail={rail} />
       </div>
+      <BdVideoModal clip={activeClip} onClose={close} />
     </section>
   )
 }

@@ -324,60 +324,120 @@
 
 /* ==== Origin ============================================================= */
 
-.bredesign .bd-origin-in {
-  display: grid;
-  gap: clamp(30px, 3.6vw, 56px);
-  align-items: center;
+/* The story is set on the branch photo. The photo keeps its own proportions
+   (999 × 640), so a share of its height is a fixed place on the picture: the
+   copy starts 38.4% down — under the Hakum sign, over the car roofs. The copy
+   is pushed there with padding (24.6% of the width is 38.4% of the photo's
+   height) rather than positioned, so a longer story makes the section taller
+   instead of spilling out of it. */
+.bredesign .bd-origin {
+  padding: 0;
+  container-type: inline-size;
+  background: var(--bd-navy);
 }
-@media (min-width: 940px) {
-  .bredesign .bd-origin-in {
-    grid-template-columns: 1.08fr 1fr;
-  }
-}
-.bredesign .bd-origin h2 {
-  margin-top: 20px;
-  font-size: clamp(1.9rem, 4.6vw, 4rem);
-}
-.bredesign .bd-origin h2 em {
-  font-style: italic;
-  color: var(--bd-accent);
-}
-.bredesign .bd-origin-lead {
-  margin-top: 24px;
-  color: var(--bd-paper);
-  font-size: clamp(15.5px, 1.35vw, 19px);
-  line-height: 1.6;
-  max-width: 54ch;
-}
-.bredesign .bd-origin-body {
-  margin-top: 16px;
-  color: var(--bd-ink-2);
-  font-size: clamp(14px, 1.15vw, 16.5px);
-  line-height: 1.7;
-  max-width: 60ch;
-}
-.bredesign .bd-origin-cta {
-  margin-top: 26px;
-}
-.bredesign .bd-origin-fig {
+.bredesign .bd-origin-frame {
   position: relative;
-  margin: 0;
+  overflow: hidden;
+  min-height: calc(100cqw * 640 / 999);
+  padding: 24.6% 4cqw 4cqw;
 }
-.bredesign .bd-origin-fig img {
+.bredesign .bd-origin-photo {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  height: auto;
+  aspect-ratio: 999 / 640;
   object-fit: cover;
 }
-.bredesign .bd-origin-fig figcaption {
+/* The dim follows the words: light over the sky and the sign, a band that
+   deepens from the title down through the story, solid navy where the photo
+   ends. */
+.bredesign .bd-origin-frame::before {
+  content: '';
   position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
   right: 0;
-  bottom: 0;
-  padding: 16px 20px;
-  background: var(--bd-blue);
-  max-width: 60%;
+  height: calc(100cqw * 640 / 999 + 1px);
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(2, 10, 49, 0.55) 0%,
+    rgba(2, 10, 49, 0.14) 16%,
+    rgba(2, 10, 49, 0.1) 33%,
+    rgba(2, 10, 49, 0.62) 37.5%,
+    rgba(2, 10, 49, 0.76) 46%,
+    rgba(2, 10, 49, 0.84) 64%,
+    rgba(2, 10, 49, 0.92) 82%,
+    var(--bd-navy) 100%
+  );
 }
-.bredesign .bd-origin-fig strong {
+.bredesign .bd-origin-frame::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 12cqw;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 0 0, rgba(2, 10, 49, 0.7), rgba(2, 10, 49, 0) 70%);
+}
+.bredesign .bd-origin-eyebrow {
+  position: absolute;
+  z-index: 2;
+  top: 3.6cqw;
+  left: 4cqw;
+  text-shadow: 0 1px 12px rgba(2, 10, 49, 0.95), 0 0 2px rgba(2, 10, 49, 0.9);
+}
+.bredesign .bd-origin-copy {
+  position: relative;
+  z-index: 2;
+}
+.bredesign .bd-origin h2 {
+  font-size: 3.45cqw;
+  line-height: 0.95;
+  white-space: nowrap;
+  text-shadow: 0 2px 22px rgba(2, 10, 49, 0.85);
+}
+.bredesign .bd-origin h2 em {
+  color: var(--bd-accent);
+}
+.bredesign .bd-origin-text {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3.4cqw;
+  max-width: calc(100% - 24cqw);
+  margin-top: 1.8cqw;
+}
+.bredesign .bd-origin-lead {
+  color: var(--bd-paper);
+  font-size: clamp(14px, 1.3cqw, 18.5px);
+  line-height: 1.6;
+  text-shadow: 0 1px 16px rgba(2, 10, 49, 0.8);
+}
+.bredesign .bd-origin-body {
+  color: rgba(241, 241, 237, 0.88);
+  font-size: clamp(13px, 1.1cqw, 16px);
+  line-height: 1.7;
+  text-shadow: 0 1px 16px rgba(2, 10, 49, 0.8);
+}
+.bredesign .bd-origin-cta {
+  margin-top: 1.8cqw;
+}
+.bredesign .bd-origin-tag {
+  position: absolute;
+  z-index: 2;
+  right: 4cqw;
+  bottom: 4cqw;
+  max-width: 36%;
+  padding: 14px 18px;
+  background: var(--bd-blue);
+}
+.bredesign .bd-origin-tag strong {
   display: block;
   font-family: var(--bd-display);
   font-style: italic;
@@ -385,14 +445,95 @@
   line-height: 1.05;
   color: #fff;
 }
-.bredesign .bd-origin-fig span {
+.bredesign .bd-origin-tag span {
   display: block;
   margin-top: 6px;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.85);
+}
+/* Too narrow for two columns beside the badge: one column, badge in the flow. */
+@container (max-width: 980px) {
+  .bredesign .bd-origin-text {
+    grid-template-columns: 1fr;
+    max-width: 62ch;
+    gap: 12px;
+  }
+  .bredesign .bd-origin-tag {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    display: inline-block;
+    margin-top: 22px;
+  }
+}
+/* Phone: the photo across the top, the title starting over the cars in its
+   lower part, and the story on the navy beneath. */
+@container (max-width: 640px) {
+  .bredesign .bd-origin-frame {
+    min-height: 0;
+    padding: 150px 22px 34px;
+  }
+  .bredesign .bd-origin-photo {
+    height: 340px;
+    aspect-ratio: auto;
+    object-position: 58% 50%;
+  }
+  .bredesign .bd-origin-frame::before {
+    height: 360px;
+    background: linear-gradient(
+      180deg,
+      rgba(2, 10, 49, 0.06) 0px,
+      rgba(2, 10, 49, 0.1) 110px,
+      rgba(2, 10, 49, 0.55) 175px,
+      rgba(2, 10, 49, 0.78) 250px,
+      rgba(2, 10, 49, 0.94) 320px,
+      var(--bd-navy) 350px
+    );
+  }
+  .bredesign .bd-origin-frame::after {
+    display: none;
+  }
+  .bredesign .bd-origin-eyebrow {
+    position: relative;
+    top: auto;
+    left: auto;
+  }
+  .bredesign .bd-origin h2 {
+    margin-top: 12px;
+    white-space: normal;
+    font-size: 12.6cqw;
+    line-height: 0.92;
+  }
+  .bredesign .bd-origin-text {
+    display: block;
+    max-width: none;
+    margin-top: 22px;
+  }
+  .bredesign .bd-origin-lead {
+    font-size: 15px;
+  }
+  .bredesign .bd-origin-body {
+    margin-top: 14px;
+    font-size: 14px;
+  }
+  .bredesign .bd-origin-cta {
+    margin-top: 22px;
+  }
+  .bredesign .bd-origin-tag {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    bottom: auto;
+    max-width: calc(100% - 36px);
+    margin-top: 0;
+    padding: 9px 12px;
+  }
+  .bredesign .bd-origin-tag strong {
+    font-size: 14px;
+  }
 }
 /* Anything on the page that is not yet signed off says so, rather than
    quietly reading as approved copy. */
@@ -504,6 +645,178 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--bd-accent);
+}
+
+/* Card 04 opens the wash & detailing pop-up, so it is a button — dressed
+   exactly like the linked cards beside it. */
+.bredesign button.bd-service {
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.bredesign .bd-service:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 3px;
+}
+
+/* ---- Wash & detailing pop-up -------------------------------------------- */
+.bredesign .bd-wash-modal {
+  position: fixed;
+  z-index: 300;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(14px, 3vw, 40px);
+  overflow-y: auto;
+  background: rgba(2, 10, 49, 0.74);
+  backdrop-filter: blur(6px);
+}
+.bredesign .bd-wash-sheet {
+  position: relative;
+  width: min(1180px, 100%);
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+  padding: clamp(22px, 3vw, 40px);
+  border: 1px solid var(--bd-rule);
+  border-radius: 18px;
+  background: var(--bd-navy);
+  box-shadow: 0 40px 120px -30px rgba(0, 0, 0, 0.8);
+}
+.bredesign .bd-wash-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(241, 241, 237, 0.3);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bd-paper);
+  cursor: pointer;
+}
+.bredesign .bd-wash-close:hover,
+.bredesign .bd-wash-close:focus-visible {
+  border-color: var(--bd-accent);
+  color: var(--bd-accent);
+}
+.bredesign .bd-wash-sheet h2 {
+  margin-top: 14px;
+  padding-right: 50px;
+  font-size: clamp(1.7rem, 3.4vw, 2.8rem);
+}
+.bredesign .bd-wash-sheet h2 em {
+  color: var(--bd-accent);
+}
+.bredesign .bd-wash-lede {
+  max-width: 62ch;
+  margin-top: 14px;
+  color: var(--bd-ink-2);
+  font-size: clamp(14.5px, 1.2vw, 17px);
+  line-height: 1.6;
+}
+.bredesign .bd-wash-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: #5bd48f;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.bredesign .bd-wash-live i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5bd48f;
+  box-shadow: 0 0 0 4px rgba(91, 212, 143, 0.18);
+}
+.bredesign .bd-wash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bredesign .bd-wash-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--bd-rule);
+  border-radius: 12px;
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-wash-card > img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 4;
+  object-fit: cover;
+}
+.bredesign .bd-wash-soon {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 5 / 4;
+  background: linear-gradient(140deg, var(--bd-blue), var(--bd-navy-3));
+  color: #fff;
+  font-family: var(--bd-display);
+  font-size: 1.2rem;
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.bredesign .bd-wash-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+.bredesign .bd-wash-body h3 {
+  font-size: 1.1rem;
+  line-height: 0.95;
+}
+.bredesign .bd-wash-body p {
+  color: var(--bd-ink-2);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.bredesign .bd-wash-benefit {
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bd-rule);
+  color: var(--bd-paper);
+  font-size: 13px;
+  font-weight: 700;
+}
+.bredesign .bd-wash-benefit::before {
+  content: '✓';
+  color: #5bd48f;
+  font-weight: 900;
+}
+.bredesign .bd-wash-body .bd-btn {
+  gap: 8px;
+  margin-top: auto;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
+.bredesign .bd-btn.is-disabled {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+@media (max-width: 460px) {
+  .bredesign .bd-wash-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ==== Why sections ======================================================= */
@@ -908,16 +1221,57 @@
 .bredesign .bd-reviews {
   background: var(--bd-navy);
 }
-.bredesign .bd-reviews-head {
-  align-items: end;
+/* The title runs the full width; the subtitle, the Google badge, the branch
+   links and the arrows share one line beneath it. */
+.bredesign .bd-reviews-head h2 {
+  margin-top: 14px;
+  font-size: clamp(2rem, 5.4vw, 5.2rem);
 }
-.bredesign .bd-reviews-grid {
-  display: grid;
-  gap: 16px;
-  margin-top: clamp(26px, 3vw, 40px);
+.bredesign .bd-reviews-head h2 em {
+  color: var(--bd-accent);
 }
-@media (min-width: 820px) {
-  .bredesign .bd-reviews-grid { grid-template-columns: 1fr 1fr; }
+.bredesign .bd-reviews-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px 28px;
+  margin-top: 18px;
+}
+.bredesign .bd-reviews-sub {
+  color: var(--bd-ink-2);
+  font-size: clamp(14.5px, 1.2vw, 17px);
+  line-height: 1.6;
+}
+.bredesign .bd-reviews-side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.bredesign .bd-review-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--bd-rule);
+  border-radius: 14px;
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-review-badge > svg {
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+.bredesign .bd-review-badge s {
+  display: block;
+  margin-top: 4px;
+  color: #95a0cc;
+  font-size: 11.5px;
+  text-decoration: none;
+}
+.bredesign .bd-reviews-rail {
+  --slide: min(440px, 84%);
 }
 
 /* The whole card is the link: a reader who wants to check a review should not
@@ -1048,28 +1402,176 @@
   width: 17px;
   height: 17px;
 }
+/* On the rail every card is the same height, and the source reads as words as
+   well as the mark. Long reviews keep their own paragraph breaks. */
+.bredesign .bd-reviews-rail .bd-review {
+  min-height: 320px;
+  height: 100%;
+}
+.bredesign .bd-reviews-rail .bd-review p {
+  font-size: 15.5px;
+  white-space: pre-line;
+}
+.bredesign .bd-review-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  height: auto;
+  color: #95a0cc;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.bredesign .bd-review-source svg {
+  width: 18px;
+  height: 18px;
+}
+.bredesign .bd-review-stars svg {
+  width: 20px;
+  height: 20px;
+}
+.bredesign .bd-review-badge .bd-review-stars svg {
+  width: 18px;
+  height: 18px;
+}
+.bredesign .bd-review-translated {
+  color: #95a0cc;
+  font-size: 10.5px;
+  font-style: italic;
+}
+
+/* ==== Wrap-around rails ==================================================
+   Shared by the reviews, the service proof clips and the gallery. Native
+   scroll-snap does the swiping; the arrows are for pointers, which have no
+   swipe to reach for. See LoopRail.jsx for how the wrap works. */
+.bredesign .bd-reviews-rail,
+.bredesign .bd-proof-rail,
+.bredesign .bd-gallery-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--slide);
+  gap: var(--rail-gap, 16px);
+  padding: 22px 0 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.bredesign .bd-reviews-rail::-webkit-scrollbar,
+.bredesign .bd-proof-rail::-webkit-scrollbar,
+.bredesign .bd-gallery-rail::-webkit-scrollbar {
+  display: none;
+}
+.bredesign .bd-reviews-rail > *,
+.bredesign .bd-proof-rail > *,
+.bredesign .bd-gallery-rail > * {
+  scroll-snap-align: start;
+}
+.bredesign .bd-loop-arrows {
+  display: flex;
+  gap: 8px;
+}
+.bredesign .bd-loop-arrow {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(241, 241, 237, 0.3);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bd-paper);
+  cursor: pointer;
+  transition: border-color 180ms ease, color 180ms ease;
+}
+.bredesign .bd-loop-arrow:hover,
+.bredesign .bd-loop-arrow:focus-visible {
+  border-color: var(--bd-accent);
+  color: var(--bd-accent);
+}
+.bredesign .bd-loop-arrow:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 3px;
+}
+@media (hover: none) and (pointer: coarse) {
+  .bredesign .bd-loop-arrows {
+    display: none;
+  }
+}
+.bredesign .bd-loop-bar {
+  height: 2px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--bd-rule);
+}
+.bredesign .bd-loop-bar i {
+  display: block;
+  width: 30%;
+  height: 100%;
+  background: var(--bd-accent);
+}
 
 /* ==== Photos ============================================================= */
 
 .bredesign .bd-photos {
   background: var(--bd-navy-2);
 }
+.bredesign .bd-gallery-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: -12px;
+}
+.bredesign .bd-gallery-bar p {
+  color: #95a0cc;
+  font-size: 12px;
+}
+.bredesign .bd-gallery-rail {
+  --slide: calc(100% - 40px);
+  --rail-gap: 12px;
+  padding-top: 16px;
+}
+/* One page of the gallery is the original collage. Layout "a" closes on a tall
+   tile, layout "b" on two small ones; a phone gets the same tiles in two
+   columns with the wide one across the top. */
 .bredesign .bd-mosaic {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 170px 130px 130px 140px;
+  grid-template-areas: 'w w' 't v' 't v' 'a b';
+}
+.bredesign .bd-mosaic.is-b {
+  grid-template-areas: 'w w' 't c' 't d' 'a b';
 }
 @media (min-width: 860px) {
+  .bredesign .bd-gallery-rail {
+    --slide: calc(100% - 72px);
+  }
   .bredesign .bd-mosaic {
-    grid-template-columns: repeat(4, 1fr);
-    grid-auto-rows: 200px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: 200px 200px;
+    grid-template-areas: 't w w v' 't a b v';
   }
-  .bredesign .bd-mosaic .bd-tall {
-    grid-row: span 2;
+  .bredesign .bd-mosaic.is-b {
+    grid-template-areas: 't w w c' 't a b d';
   }
-  .bredesign .bd-mosaic .bd-wide {
-    grid-column: span 2;
-  }
+}
+.bredesign .bd-slot-t { grid-area: t; }
+.bredesign .bd-slot-w { grid-area: w; }
+.bredesign .bd-slot-v { grid-area: v; }
+.bredesign .bd-slot-a { grid-area: a; }
+.bredesign .bd-slot-b { grid-area: b; }
+.bredesign .bd-slot-c { grid-area: c; }
+.bredesign .bd-slot-d { grid-area: d; }
+/* The tile takes the size of its slot; the phone rule further down that gives
+   loose gallery videos a 4:3 shape must not apply inside a page. */
+.bredesign .bd-gallery-page .bd-gallery-video {
+  min-height: 0;
+  aspect-ratio: auto;
 }
 .bredesign .bd-mosaic figure {
   position: relative;
@@ -2559,18 +3061,162 @@
   max-width: 46ch;
 }
 
-.bredesign .bd-clearpro-card {
-  grid-column: 1 / -1;
+/* ---- Service detail: lede across the top, photo cards, ClearPro ---------
+   The lede used to float in a half-empty left column beside four icon boxes.
+   It runs across the top now, and the points use the full width as photo
+   cards: Hakum's own install photography, a heading, one line. */
+.bredesign .bd-detail-top {
   display: grid;
-  gap: 22px;
+  gap: 26px;
+  align-items: end;
+}
+@media (min-width: 900px) {
+  .bredesign .bd-detail-top {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+.bredesign .bd-detail-top h2 {
+  margin-top: 14px;
+  font-size: clamp(2rem, 4.4vw, 3.6rem);
+}
+.bredesign .bd-detail-top h2 em {
+  color: var(--bd-accent);
+}
+.bredesign .bd-detail-top .bd-why-lede {
+  margin-top: 0;
+  max-width: 52ch;
+}
+/* Ceramic and tint already carry their headline in the page hero, so their
+   top row is the lede beside the buttons rather than a second headline. */
+.bredesign .bd-detail-top.is-lede {
   align-items: center;
-  padding: clamp(24px, 3vw, 42px);
-  background: linear-gradient(135deg, rgba(45, 89, 211, 0.22), rgba(255, 255, 255, 0.035));
-  border-left: 3px solid var(--bd-accent);
+}
+.bredesign .bd-detail-top.is-lede .bd-why-lede {
+  max-width: 62ch;
+}
+@media (min-width: 900px) {
+  .bredesign .bd-detail-top.is-lede {
+    grid-template-columns: minmax(0, 1.4fr) auto;
+  }
+  .bredesign .bd-detail-top.is-lede .bd-why-cta {
+    margin-top: 0;
+    justify-content: flex-end;
+  }
+}
+.bredesign .bd-photo-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 34px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bredesign .bd-photo-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--bd-rule);
+  border-radius: 12px;
+  background: var(--bd-navy-2);
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+.bredesign .bd-photo-card figure {
+  margin: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+.bredesign .bd-photo-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (hover: hover) {
+  .bredesign .bd-photo-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(157, 180, 255, 0.45);
+  }
+  .bredesign .bd-photo-card:hover img {
+    transform: scale(1.06);
+  }
+}
+.bredesign .bd-photo-card-num {
+  position: absolute;
+  z-index: 1;
+  top: 12px;
+  left: 12px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: rgba(2, 10, 49, 0.72);
+  color: #fff;
+  font-family: var(--bd-display);
+  font-style: italic;
+  font-size: 11px;
+}
+.bredesign .bd-photo-card > div {
+  display: grid;
+  gap: 8px;
+  padding: 18px 18px 20px;
+}
+.bredesign .bd-photo-card strong {
+  color: var(--bd-paper);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.bredesign .bd-photo-card span {
+  color: var(--bd-ink-2);
+  font-size: 13.5px;
+  line-height: 1.6;
 }
 
-/* The mark itself, at a size that reads as a credit rather than a footnote.
-   Their logo is the one thing on this card that should not be our typography. */
+/* ClearPro: their mark leads, beside a Hakum install frame that shows their
+   squeegee on the panel. Their logo is the one thing on this card that should
+   not be our typography. */
+.bredesign .bd-clearpro-card {
+  display: grid;
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid var(--bd-rule);
+  border-radius: 14px;
+  background: linear-gradient(120deg, var(--bd-navy-3), var(--bd-navy-2));
+}
+@media (min-width: 980px) {
+  .bredesign .bd-clearpro-card {
+    grid-template-columns: 1.25fr 1fr;
+  }
+}
+.bredesign .bd-clearpro-photo {
+  position: relative;
+  min-height: 320px;
+  margin: 0;
+}
+.bredesign .bd-clearpro-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bredesign .bd-clearpro-photo figcaption {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(2, 10, 49, 0.78);
+  color: var(--bd-paper);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.bredesign .bd-clearpro-body {
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  padding: clamp(26px, 3vw, 40px);
+}
 .bredesign .bd-clearpro-mark {
   display: flex;
   align-items: center;
@@ -2579,72 +3225,78 @@
 .bredesign .bd-clearpro-mark img {
   display: block;
   width: auto;
-  height: clamp(76px, 9vw, 124px);
+  max-width: 240px;
+  height: 76px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #fff;
+  object-fit: contain;
 }
 .bredesign .bd-clearpro-mark span {
-  padding-left: 18px;
+  padding-left: 14px;
   border-left: 1px solid var(--bd-rule);
-  color: var(--bd-accent);
-  font-size: 12px;
+  color: #95a0cc;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
-  line-height: 1.4;
+  line-height: 1.3;
   text-transform: uppercase;
 }
-
-.bredesign .bd-clearpro-body { display: grid; gap: 14px; }
+.bredesign .bd-clearpro-card h3 {
+  font-size: clamp(1.3rem, 2.2vw, 1.9rem);
+  line-height: 0.95;
+}
+.bredesign .bd-clearpro-card h3 em {
+  color: var(--bd-accent);
+}
 .bredesign .bd-clearpro-card p {
   margin: 0;
-  max-width: 68ch;
+  max-width: 60ch;
   color: var(--bd-ink-2);
-  font-size: 15.5px;
-  line-height: 1.7;
+  font-size: 14.5px;
+  line-height: 1.65;
 }
-
-/* The specification, out of the sentence and into figures. A buyer comparing
-   film reads these four numbers; they should not have to parse a paragraph. */
+/* The specification, out of the sentence and into figures. */
 .bredesign .bd-clearpro-figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 .bredesign .bd-clearpro-figures li {
-  padding: 15px 20px;
+  padding: 12px 14px;
   border: 1px solid var(--bd-rule);
-  border-radius: 9px;
-  background: rgba(2, 10, 49, 0.6);
+  border-radius: 8px;
+  background: rgba(2, 10, 49, 0.45);
 }
 .bredesign .bd-clearpro-figures b {
   display: block;
   font-family: var(--bd-display);
-  font-size: clamp(20px, 1.9vw, 25px);
+  font-style: italic;
+  font-size: 17px;
   line-height: 1;
   color: var(--bd-paper);
 }
 .bredesign .bd-clearpro-figures s {
   display: block;
-  margin-top: 8px;
-  color: var(--bd-ink-3);
-  font-size: 11px;
+  margin-top: 6px;
+  color: #95a0cc;
+  font-size: 9.5px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-decoration: none;
   text-transform: uppercase;
 }
-
 .bredesign .bd-clearpro-card a {
-  color: var(--bd-paper);
-  font-size: 12px;
+  justify-self: start;
+  color: var(--bd-accent);
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
+  text-decoration: none;
   text-transform: uppercase;
-  white-space: nowrap;
-}
-@media (min-width: 820px) {
-  .bredesign .bd-clearpro-card { grid-template-columns: auto 1fr auto; }
 }
 
 .bredesign .bd-service-proof,
@@ -2678,40 +3330,93 @@
   color: var(--bd-ink-2);
   line-height: 1.7;
 }
-.bredesign .bd-service-proof-gallery {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: clamp(18px, 2vw, 28px);
+/* Proof clips: a rail of posters, each opening the shared player. */
+.bredesign .bd-proof-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
 }
-.bredesign .bd-service-proof figure {
-  display: grid;
-  margin: 0;
+.bredesign .bd-proof-rail {
+  --slide: clamp(200px, 20vw, 250px);
+  padding-top: clamp(24px, 3vw, 40px);
+}
+.bredesign .bd-proof-tile {
+  position: relative;
+  aspect-ratio: 9 / 16;
   overflow: hidden;
+  padding: 0;
   border: 1px solid var(--bd-rule);
+  border-radius: 12px;
   background: #020719;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, .28);
+  color: var(--bd-paper);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.bredesign .bd-service-proof video {
+.bredesign .bd-proof-tile img {
   display: block;
   width: 100%;
-  aspect-ratio: 9 / 16;
-  background: #020719;
+  height: 100%;
   object-fit: cover;
+  transition: transform 0.5s ease;
 }
-.bredesign .bd-service-proof figcaption {
-  min-height: 54px;
-  padding: 14px 16px;
-  color: var(--bd-ink-3);
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: .12em;
+.bredesign .bd-proof-tile:hover img,
+.bredesign .bd-proof-tile:focus-visible img {
+  transform: scale(1.04);
+}
+.bredesign .bd-proof-tile:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 3px;
+}
+.bredesign .bd-proof-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(2, 10, 49, 0.9) 0%, rgba(2, 10, 49, 0) 45%);
+}
+.bredesign .bd-proof-kind {
+  position: absolute;
+  top: 14px;
+  left: 12px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: var(--bd-blue);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-@media (min-width: 680px) {
-  .bredesign .bd-service-proof-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bredesign .bd-proof-play {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(241, 241, 237, 0.92);
+  color: var(--bd-navy);
 }
-@media (min-width: 1100px) {
-  .bredesign .bd-service-proof-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bredesign .bd-proof-cap {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  left: 14px;
+  display: grid;
+  gap: 3px;
+}
+.bredesign .bd-proof-cap strong {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.bredesign .bd-proof-cap span {
+  color: var(--bd-ink-2);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .bredesign .bd-service-faq { background: var(--bd-navy); }
@@ -2820,6 +3525,37 @@
   letter-spacing: .1em;
   line-height: 1.2;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Ceramic cards, continuing the approved direction: the photograph at full
+   colour under a bottom gradient instead of a blue wash over all of it, the
+   package name set across the card instead of up its side, and the warranty as
+   one phrase that reads "5-Year Warranty" on a single line. */
+.bredesign .ceramic-package-overlay {
+  background: linear-gradient(0deg, rgba(2, 10, 49, 0.96) 0%, rgba(2, 10, 49, 0.62) 46%, rgba(2, 10, 49, 0.08) 100%);
+}
+.bredesign .ceramic-package-body {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: end;
+  gap: 12px;
+  padding: clamp(22px, 2vw, 30px);
+}
+.bredesign .ceramic-package-name {
+  writing-mode: horizontal-tb;
+  transform: none;
+  font-size: clamp(2.2rem, 3.4vw, 3.2rem);
+  line-height: 0.9;
+}
+.bredesign .ceramic-package-warranty {
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.bredesign .ceramic-package-warranty strong {
+  font-size: clamp(1.1rem, 1.7vw, 1.4rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 

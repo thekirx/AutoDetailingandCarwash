@@ -36,6 +36,7 @@ describe('homepage production content adapters', () => {
     const cards = buildPpfPackageCards(PPF_PACKAGES)
 
     assert.deepEqual(cards.map(({ id, title, thickness }) => ({ id, title, thickness })), [
+      { id: 'high-impact', title: 'High Impact Protection', thickness: '7.5 mil TPU PPF material' },
       { id: 'basic', title: 'Basic Protection', thickness: '7.5 mil TPU PPF material' },
       { id: 'ultimate', title: 'Ultimate Protection', thickness: '8 mil TPU PPF material' },
       { id: 'platinum', title: 'Platinum Protection', thickness: '8.5 mil TPU PPF material' },
@@ -64,9 +65,10 @@ describe('homepage production content adapters', () => {
       'warrantyYears',
     ].sort())
     assert.equal(cards[0].warrantySummary, '7-year factory warranty')
-    assert.equal(cards[1].recommendedLabel, 'Most Popular')
-    assert.equal(cards[2].bookingState.packageId, 'platinum')
-    assert.equal(cards[2].ctaLabel, 'Book Platinum Protection')
+    assert.equal(cards[0].priceFromLabel, 'From ₱48,000')
+    assert.equal(cards[2].recommendedLabel, 'Most Popular')
+    assert.equal(cards[3].bookingState.packageId, 'platinum')
+    assert.equal(cards[3].ctaLabel, 'Book Platinum Protection')
   })
 
   it('maps production Blog and Event rows to existing internal routes', () => {

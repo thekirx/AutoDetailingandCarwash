@@ -56,25 +56,29 @@ describe('PPF package value ladder', () => {
       ['Areas covered', 'Film thickness', 'Warranty'],
       ['Areas covered', 'Film thickness', 'Warranty'],
       ['Areas covered', 'Film thickness', 'Warranty'],
+      ['Areas covered', 'Film thickness', 'Warranty'],
     ])
     assert.deepEqual(cards.map((card) => card.figures.map((figure) => figure.value + figure.unit)), [
-      ['4', '7.5mil', '7yr'],
+      ['5', '7.5mil', '7yr'],
+      ['13', '7.5mil', '7yr'],
       ['13', '8mil', '10yr'],
       ['15', '8.5mil', '12yr'],
     ])
     /* Panel replacement rides on the warranty figure; Basic has none to show. */
-    assert.deepEqual(cards.map((card) => card.figures[2].note), ['', '+ 2 panels', '+ 3 panels'])
+    assert.deepEqual(cards.map((card) => card.figures[2].note), ['', '', '+ 2 panels', '+ 3 panels'])
     /* Two highlighted rows out of three is the same as none. */
-    assert.deepEqual(cards.map((card) => card.isHighlighted), [false, true, false])
+    assert.deepEqual(cards.map((card) => card.isHighlighted), [false, false, true, false])
     /* Every tier quotes a floor rather than a flat figure — the operational
        disclaimers reserve the right to charge more for oversized vehicles. */
     assert.deepEqual(cards.map((card) => card.priceFromLabel), [
+      'From \u20b148,000',
       'From \u20b175,000',
       'From \u20b194,000',
       'From \u20b1130,000',
     ])
     assert.deepEqual(cards.map((card) => card.headline), [
-      'The panels that take the hits.',
+      'Where the road hits first.',
+      'The whole car, on essential film.',
       'Every painted panel, covered.',
       'Nothing left exposed.',
     ])
@@ -84,9 +88,9 @@ describe('PPF package value ladder', () => {
     const cards = buildPpfPackageCards(PPF_PACKAGES)
     const section = await read('src/components/public/home/PpfPackagesSection.jsx')
 
-    assert.match(section, /Book now <ArrowRight/)
+    assert.match(section, /to="\/book"\s+state=\{card\.bookingState\}/)
     assert.match(
-      applyPublicBookPrefill({}, cards[1].bookingState)._prefNotes,
+      applyPublicBookPrefill({}, cards[2].bookingState)._prefNotes,
       /^Package: Ultimate Protection · Full Body PPF · Film: 8 mil/,
     )
   })
@@ -101,24 +105,37 @@ describe('PPF package value ladder', () => {
     assert.match(section, /ppf-install-proof/)
   })
 
-  it('states shared inclusions once and keeps tier specifics in the active accordion panel', async () => {
+  it('leads with the starting price, then the step ladder, then a panel-by-panel comparison', async () => {
     const section = await read('src/components/public/home/PpfPackagesSection.jsx')
 
-    assert.match(section, /ppf-package-included/)
-    assert.match(section, /Every package includes/)
-    /* Self-healing, hydrophobic and seamless are on all three tiers — printing
-       them per row is what made the packages look interchangeable. */
+    /* The floor is read from the packages, never typed in. */
+    assert.match(section, /Math\.min\(\.\.\.PPF_PACKAGES\.map\(\(item\) => item\.priceFrom\)\)/)
+    assert.match(section, /Starting from/)
+    assert.match(section, /className=\{`bd-tier\$\{card\.isHighlighted \? ' is-recommended' : ''\}`\}/)
+    assert.match(section, /className="bd-tier-riser"/)
+    /* Coverage is compared panel by panel: High Impact and Basic film
+       different panels, so a count of areas would hide the difference. */
+    assert.match(section, /'Front bumper', \(pkg\) => tick\(covers\(pkg, 'Front bumper'\)\)/)
+    assert.match(section, /'Taillights', \(pkg\) => tick\(covers\(pkg, 'Taillights'\)\)/)
+    assert.match(section, /<th scope="row">\{label\}<\/th>/)
+    /* Shared inclusions are said once, not repeated on every tier. */
     assert.doesNotMatch(section, /ppf-ladder-highlights|highlights\.map/)
-    assert.match(section, /className="ppfa-lane"/)
-    assert.match(section, /className=\{`ppfa-panelcard/)
-    assert.match(section, /aria-expanded=\{isOpen\}/)
-    assert.match(section, /onMouseEnter=\{\(\) => setActive\(i\)\}/)
-    assert.match(section, /onFocus=\{\(\) => setActive\(i\)\}/)
-    assert.match(section, /onClick=\{\(\) => setActive\(i\)\}/)
-    assert.match(section, /className="ppfa-figure"/)
-    assert.match(section, /className="ppfa-specs"/)
-    /* Three repeated disclaimers collapse into one. */
+    /* Repeated disclaimers collapse into one. */
     assert.equal((section.match(/Warranties cover manufacturer defects/g) || []).length, 1)
+  })
+
+  it('steps from front-only film on High Impact to full-body film from Basic up', () => {
+    const [highImpact, basic, ultimate] = PPF_PACKAGES
+
+    assert.equal(highImpact.id, 'high-impact')
+    assert.equal(highImpact.priceFrom, 48000)
+    assert.deepEqual(highImpact.coverageAreas, ['Hood', 'Headlights', 'Side mirrors', 'Front bumper', 'Front fenders'])
+    /* Basic films the whole car, like Ultimate — the step up is the film,
+       the warranty and the extras, not the panels. */
+    assert.equal(basic.coverageType, 'Full Body PPF')
+    assert.deepEqual(basic.coverageAreas, ultimate.coverageAreas)
+    assert.equal(basic.keyEnhancements.some((line) => /ceramic coating on the rest/i.test(line)), false)
+    assert.equal(basic.ladderNote.tone, 'step')
   })
 })
 

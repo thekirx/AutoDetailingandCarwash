@@ -68,10 +68,11 @@ test('PPF page contains ClearPro, packages, proof, focused FAQs, and bottom book
     assert.equal(await count(page, 'main > .bd-page-hero'), 0)
     assert.equal(await count(page, '[data-service-brand="clearpro"]'), 1)
     assert.equal(await count(page, '[data-service-packages="ppf"]'), 1)
-    assert.equal(await count(page, '[data-service-proof="ppf"] video'), 6)
-    assert.equal(await count(page, '[data-service-proof="ppf"] video[preload="metadata"][poster]'), 6)
-    assert.equal(await count(page, '[data-service-proof="ppf"] video source[type*="av01"]'), 6)
-    assert.equal(await count(page, '[data-service-proof="ppf"] video source[type="video/mp4"]'), 6)
+    assert.equal(await count(page, '[data-service-packages="ppf"] [data-package]'), 4)
+    /* Proof clips are a rail of posters; nothing loads until one is opened. */
+    assert.equal(await count(page, '[data-service-proof="ppf"] [data-proof-clip]'), 6)
+    assert.equal(await count(page, '[data-service-proof="ppf"] [data-proof-clip] img[src]'), 6)
+    assert.equal(await count(page, '[data-service-proof="ppf"] video'), 0)
     assert.equal(await count(page, '[data-service-packages="ppf"] video'), 0)
     assert.ok(await count(page, '[data-service-faq="ppf"] button') >= 5)
     assert.equal(await count(page, '[data-service-bottom-cta="ppf"] a[href="/book"]'), 1)
@@ -86,7 +87,7 @@ test('Ceramic page contains both packages, Unlimited Recoating, proof, FAQs, and
   await withPage('/services/ceramic', async (page) => {
     assert.equal(await count(page, '[data-service-packages="ceramic"] article'), 2)
     assert.equal(await page.$$eval('*', (nodes) => nodes.filter((node) => node.textContent.trim() === 'Unlimited Recoating').length), 2)
-    assert.equal(await count(page, '[data-service-proof="ceramic"] video'), 6)
+    assert.equal(await count(page, '[data-service-proof="ceramic"] [data-proof-clip]'), 6)
     assert.ok(await count(page, '[data-service-faq="ceramic"] button') >= 5)
     assert.equal(await count(page, '[data-service-bottom-cta="ceramic"] a[href="/book"]'), 1)
   })
@@ -96,44 +97,48 @@ test('Tint page contains three tint proof videos, focused FAQs, and no protectio
   await withPage('/services/tint', async (page) => {
     assert.ok(await count(page, '[data-service-faq="tint"] button') >= 5)
     assert.equal(await count(page, '[data-service-packages]'), 0)
-    assert.equal(await count(page, '[data-service-proof="tint"] video'), 3)
+    assert.equal(await count(page, '[data-service-proof="tint"] [data-proof-clip]'), 3)
     assert.equal(await count(page, '[data-service-bottom-cta="tint"] a[href="/book"]'), 1)
   })
 })
 
-test('Starting a service proof video pauses the previously playing clip', async () => {
+test('A proof clip opens in the one shared player, with AV1 and H.264 sources', async () => {
   await withPage('/services/ppf', async (page) => {
-    await page.$$eval('[data-service-proof="ppf"] video', async ([first, second]) => {
-      first.muted = true
-      second.muted = true
-      await first.play()
-      await second.play()
-    })
+    const ids = await page.$$eval('[data-service-proof="ppf"] [data-proof-clip]', (nodes) => nodes.map((node) => node.dataset.proofClip))
 
-    const playback = await page.$$eval('[data-service-proof="ppf"] video', ([first, second]) => ({
-      firstPaused: first.paused,
-      secondPaused: second.paused,
-    }))
-
-    assert.deepEqual(playback, { firstPaused: true, secondPaused: false })
+    for (const id of ids.slice(0, 2)) {
+      await page.click(`[data-proof-clip="${id}"]`)
+      await page.waitForSelector('[role="dialog"][data-gallery-player]')
+      assert.equal(await count(page, '[data-gallery-player] video'), 1)
+      assert.equal(await count(page, '[data-gallery-player] video source[type*="av01"]'), 1)
+      assert.equal(await count(page, '[data-gallery-player] video source[type="video/mp4"]'), 1)
+      await page.click('[data-gallery-close]')
+      await page.waitForSelector('[data-gallery-player]', { hidden: true })
+    }
   })
 })
 
 test('Every service proof video exposes an audio track to the browser', async () => {
   for (const [service, expectedCount] of [['ppf', 6], ['ceramic', 6], ['tint', 3]]) {
     await withPage(`/services/${service}`, async (page) => {
-      const tracks = await page.$$eval(`[data-service-proof="${service}"] video`, async (videos) => {
-        await Promise.all(videos.map((video) => new Promise((resolve, reject) => {
+      const ids = await page.$$eval(`[data-service-proof="${service}"] [data-proof-clip]`, (nodes) => nodes.map((node) => node.dataset.proofClip))
+      const tracks = []
+
+      for (const id of ids) {
+        await page.click(`[data-proof-clip="${id}"]`)
+        await page.waitForSelector('[data-gallery-player] video')
+        tracks.push(await page.$eval('[data-gallery-player] video', (video) => new Promise((resolve, reject) => {
+          const read = () => resolve(video.captureStream().getAudioTracks().length)
           if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
-            resolve()
+            read()
             return
           }
-          video.addEventListener('loadedmetadata', resolve, { once: true })
+          video.addEventListener('loadedmetadata', read, { once: true })
           video.addEventListener('error', () => reject(video.error || new Error('video metadata failed')), { once: true })
-          video.load()
         })))
-        return videos.map((video) => video.captureStream().getAudioTracks().length)
-      })
+        await page.click('[data-gallery-close]')
+        await page.waitForSelector('[data-gallery-player]', { hidden: true })
+      }
 
       assert.equal(tracks.length, expectedCount)
       assert.deepEqual(tracks, Array(expectedCount).fill(1), `${service} contains a silent proof clip`)

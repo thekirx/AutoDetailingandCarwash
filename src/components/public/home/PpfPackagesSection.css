@@ -1,0 +1,414 @@
+/* PPF packages on /services/ppf — the starting price, the step ladder, and the
+   comparison. Scoped under .bredesign like the rest of the marketing site. */
+
+.bredesign .bd-packages {
+  background: var(--bd-navy);
+  padding: clamp(64px, 8vw, 120px) 0;
+}
+.bredesign .bd-packages h2 {
+  margin-top: 14px;
+  font-size: clamp(2.1rem, 4.6vw, 4rem);
+}
+.bredesign .bd-packages h2 em {
+  color: var(--bd-accent);
+}
+
+/* ---- Top: pitch and starting price ------------------------------------ */
+.bredesign .bd-pk-top {
+  display: grid;
+  gap: 24px;
+  align-items: end;
+}
+@media (min-width: 980px) {
+  .bredesign .bd-pk-top {
+    grid-template-columns: 1.3fr 1fr;
+  }
+}
+.bredesign .bd-pk-sub {
+  margin-top: 18px;
+  max-width: 56ch;
+  color: var(--bd-ink-2);
+  font-size: clamp(14.5px, 1.2vw, 17px);
+  line-height: 1.6;
+}
+.bredesign .bd-pk-sub a {
+  color: var(--bd-paper);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.bredesign .bd-pk-price {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 24px;
+  border-radius: 14px;
+  background: var(--bd-blue);
+}
+.bredesign .bd-pk-price::after {
+  content: '';
+  position: absolute;
+  right: -60px;
+  top: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(157, 180, 255, 0.35), transparent 70%);
+  pointer-events: none;
+}
+.bredesign .bd-pk-price small {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+.bredesign .bd-pk-price strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+.bredesign .bd-pk-price b {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--bd-display);
+  font-size: clamp(2.2rem, 4.4vw, 3.5rem);
+  font-style: italic;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.bredesign .bd-pk-price p {
+  margin-top: 10px;
+  max-width: 44ch;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+/* ---- The ladder -------------------------------------------------------- */
+.bredesign .bd-pk-steps {
+  display: grid;
+  gap: 14px;
+  align-items: end;
+  margin-top: clamp(32px, 4vw, 48px);
+}
+@media (min-width: 700px) {
+  .bredesign .bd-pk-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1180px) {
+  .bredesign .bd-pk-steps {
+    grid-template-columns: 1fr 1fr 1.1fr 1fr;
+  }
+}
+.bredesign .bd-tier {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 22px 22px 0;
+  border: 1px solid var(--bd-rule);
+  border-radius: 14px;
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-tier-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #95a0cc;
+}
+.bredesign .bd-tier-badge {
+  flex: none;
+  padding: 5px 9px;
+  border-radius: 4px;
+  background: var(--bd-accent);
+  color: var(--bd-navy);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.bredesign .bd-tier h3 {
+  margin-top: 12px;
+  font-size: clamp(1.15rem, 1.7vw, 1.5rem);
+  line-height: 0.95;
+}
+.bredesign .bd-tier-cover {
+  margin-top: 8px;
+  color: var(--bd-ink-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.bredesign .bd-tier-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 16px;
+}
+.bredesign .bd-tier-price s {
+  color: #95a0cc;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.bredesign .bd-tier-price b {
+  font-family: var(--bd-display);
+  font-size: clamp(1.5rem, 2.3vw, 2rem);
+  font-style: italic;
+  letter-spacing: -0.02em;
+  color: var(--bd-paper);
+}
+.bredesign .bd-tier ul {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bredesign .bd-tier li {
+  display: flex;
+  gap: 9px;
+  color: var(--bd-ink-2);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.bredesign .bd-tier li::before {
+  content: '';
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: var(--bd-accent)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23020A31' stroke-width='4'%3E%3Cpath d='m5 12 5 5 9-10'/%3E%3C/svg%3E")
+    center / 9px no-repeat;
+}
+.bredesign .bd-tier-note {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(157, 180, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(157, 180, 255, 0.08);
+  color: var(--bd-paper);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.bredesign .bd-tier-note b {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--bd-accent);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.bredesign .bd-tier-note.is-different {
+  border-color: rgba(242, 184, 75, 0.3);
+  background: rgba(242, 184, 75, 0.07);
+}
+.bredesign .bd-tier-note.is-different b {
+  color: #f2b84b;
+}
+.bredesign .bd-tier-book {
+  margin-top: 20px;
+  gap: 8px;
+}
+/* The riser is the ladder: each step stands taller than the one before. */
+.bredesign .bd-tier-riser {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(30px + var(--step, 0) * 30px);
+  margin: 22px -22px 0;
+  border-top: 1px solid var(--bd-rule);
+  background: linear-gradient(180deg, var(--bd-navy-3), var(--bd-navy));
+  color: rgba(241, 241, 237, 0.6);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.bredesign .bd-tier.is-recommended {
+  padding-top: 30px;
+  border: 2px solid var(--bd-accent);
+  background: linear-gradient(180deg, #0f2275 0%, var(--bd-navy-2) 70%);
+  box-shadow: 0 24px 60px -20px rgba(45, 89, 211, 0.55);
+}
+.bredesign .bd-tier.is-recommended .bd-tier-step span {
+  color: var(--bd-paper);
+}
+.bredesign .bd-tier.is-recommended .bd-tier-riser {
+  background: linear-gradient(180deg, var(--bd-blue), var(--bd-navy-3));
+  color: #fff;
+}
+/* Stacked on a phone the climb cannot read, so the risers step aside. */
+@media (max-width: 699px) {
+  .bredesign .bd-tier-riser {
+    height: 34px;
+  }
+}
+
+/* ---- Comparison --------------------------------------------------------- */
+.bredesign .bd-cmp {
+  margin-top: 34px;
+  overflow-x: auto;
+  border: 1px solid var(--bd-rule);
+  border-radius: 16px;
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-cmp table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.bredesign .bd-cmp-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.bredesign .bd-cmp thead th {
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--bd-rule);
+  background: #060f37;
+  text-align: center;
+  vertical-align: bottom;
+}
+.bredesign .bd-cmp thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  text-align: left;
+  color: var(--bd-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.bredesign .bd-cmp thead th b {
+  display: block;
+  font-family: var(--bd-display);
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--bd-paper);
+}
+.bredesign .bd-cmp thead th s {
+  display: block;
+  margin-top: 7px;
+  color: var(--bd-ink-2);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.bredesign .bd-cmp thead th .bd-tier-badge {
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.bredesign .bd-cmp thead th.is-recommended {
+  background: #0f2275;
+  box-shadow: inset 0 3px 0 var(--bd-accent);
+}
+.bredesign .bd-cmp tbody tr {
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-cmp tbody tr:nth-child(odd):not(.bd-cmp-group) {
+  background: #0b1748;
+}
+.bredesign .bd-cmp tbody tr:not(.bd-cmp-group):hover {
+  background: #12205a;
+}
+.bredesign .bd-cmp tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 30%;
+  padding: 15px 18px;
+  background: inherit;
+  color: var(--bd-paper);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+}
+.bredesign .bd-cmp tbody td {
+  padding: 15px 16px;
+  border-left: 1px solid rgba(22, 37, 92, 0.6);
+  color: var(--bd-paper);
+  font-size: 15px;
+  text-align: center;
+}
+.bredesign .bd-cmp td.is-recommended {
+  background: rgba(157, 180, 255, 0.09);
+}
+.bredesign .bd-cmp .bd-cmp-group,
+.bredesign .bd-cmp .bd-cmp-group th {
+  background: var(--bd-navy);
+}
+.bredesign .bd-cmp .bd-cmp-group th {
+  padding: 22px 18px 10px;
+  border-top: 1px solid var(--bd-rule);
+  color: var(--bd-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.bredesign .bd-cmp-yes {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0f2a1c;
+  color: #5bd48f;
+}
+.bredesign .bd-cmp-no {
+  color: #6e79a8;
+  font-size: 18px;
+  font-weight: 700;
+}
+.bredesign .bd-cmp-figure {
+  font-family: var(--bd-display);
+  font-size: 16px;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+.bredesign .bd-cmp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--bd-rule);
+  color: #95a0cc;
+  font-size: 12.5px;
+}
+.bredesign .bd-cmp-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.bredesign .bd-cmp-legend .bd-cmp-yes {
+  width: 20px;
+  height: 20px;
+}
+.bredesign .bd-pk-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+.bredesign .bd-pk-foot .bd-btn {
+  gap: 8px;
+}
