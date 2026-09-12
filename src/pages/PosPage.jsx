@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
-import { Cake, Gift, Link2, LogOut, MapPin, Receipt, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
+import { Cake, Gift, Link2, LogOut, MapPin, Minus, Plus, Receipt, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { allowRoute, canAccessPos, canAccessSettings, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canRemovePosCartLine, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership, removePosCartLine } from '@/lib/posSale'
+import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRemovePosCartLine, cashAdvanceVisibleOnPos, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership, stepPosCartLineQuantity, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
@@ -37,7 +37,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { PAYMENT_METHODS } from '@/lib/paymentMethods'
 import { normalizePosSettings, DEFAULT_POS_EXPENSE_KINDS } from '@/lib/posSettings'
@@ -61,6 +61,29 @@ import {
 } from '@/lib/posInsights'
 import PosSettingsPanel from '@/pages/pos/PosSettingsPanel'
 import { PosGuideCard, PosPendingEmpty, PosSalaryPreviewCard, PosStatsBoard } from '@/pages/pos/PosPanels'
+
+/**
+ * The order panel sits beside the catalogue from 1024px up. Below that the
+ * cashier is on a phone, so it stays a sheet behind the Cart button.
+ */
+const POS_SPLIT_QUERY = '(min-width: 1024px)'
+
+function usePosSplitView() {
+  const [split, setSplit] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia(POS_SPLIT_QUERY).matches
+      : false,
+  )
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined
+    const mql = window.matchMedia(POS_SPLIT_QUERY)
+    const onChange = (e) => setSplit(e.matches)
+    setSplit(mql.matches)
+    mql.addEventListener('change', onChange)
+    return () => mql.removeEventListener('change', onChange)
+  }, [])
+  return split
+}
 
 export default function PosPage() {
   const { profile } = useAuth()
@@ -106,6 +129,8 @@ export default function PosPage() {
   const [customerHits, setCustomerHits] = useState([])
   const [searchingCustomer, setSearchingCustomer] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const posSplitView = usePosSplitView()
+  const [cashTendered, setCashTendered] = useState('')
   const [saving, setSaving] = useState(false)
   const [compToggles, setCompToggles] = useState({ freeShirt: false, cardPayment: false, crewAssisted: true, detailerAssigned: false })
   const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
@@ -511,7 +536,79 @@ export default function PosPage() {
       .filter((item) => !q || item.name.toLowerCase().includes(q) || (item.meta || '').toLowerCase().includes(q))
   }, [products, query, merchFamilyFilter])
 
+  /**
+   * One flat category rail replaces the bay/detailing/merch tabs plus the merch
+   * family toolbar — services, detailing and each merch family are peers.
+   */
+  const catalogCategories = useMemo(() => {
+    const merch = MERCH_FAMILIES.map((fam) => ({
+      id: `merch:${fam.id}`,
+      label: fam.label,
+      tab: 'merch',
+      family: fam.id,
+      count: (products || []).filter((p) => productMatchesMerchFamily(p, fam.id)).length,
+    }))
+    if (branchAdmin) return merch
+    return [
+      { id: 'bay', label: 'Services & packages', tab: 'bay', family: 'all', count: bayItems.length },
+      { id: 'detailing', label: 'Detailing', tab: 'detailing', family: 'all', count: detailingItems.length },
+      ...merch,
+    ]
+  }, [branchAdmin, products, bayItems.length, detailingItems.length])
+
+  const activeCategoryId = tab === 'merch' ? `merch:${merchFamilyFilter}` : tab
+  const activeCategoryLabel =
+    catalogCategories.find((c) => c.id === activeCategoryId)?.label || ''
+
+  function selectCatalogCategory(id) {
+    const next = catalogCategories.find((c) => c.id === id)
+    if (!next) return
+    setTab(next.tab)
+    setMerchFamilyFilter(next.family)
+  }
+
+  const catalogItems = tab === 'detailing' ? detailingItems : tab === 'merch' ? merchItems : bayItems
+
+  // Size choice lives on the page so the tile can badge the chosen price.
+  const [sizeByKey, setSizeByKey] = useState({})
+  function pickItemSize(itemKey, slug) {
+    setSizeByKey((current) => ({ ...current, [itemKey]: slug }))
+  }
+
+  // Running quantity per catalog item, so a tile shows what is already in the order.
+  const cartQuantityByItemKey = useMemo(() => {
+    const out = {}
+    for (const line of cart) {
+      const base = String(line.catalog_item_key || line.key || '')
+      if (!base) continue
+      out[base] = (out[base] || 0) + Number(line.quantity || 0)
+    }
+    return out
+  }, [cart])
+
+  const cartCount = cart.reduce((sum, line) => sum + Number(line.quantity || 0), 0)
+
   const cartTotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price_minor, 0)
+
+  // Cash tendered → change due, and the quick-cash chips a cashier reaches for.
+  const cashTenderedMinor = parsePesosToMinor(cashTendered)
+  const changeMinor = (Number.isFinite(cashTenderedMinor) ? cashTenderedMinor : 0) - cartTotal
+  const quickCashAmounts = useMemo(() => {
+    if (cartTotal <= 0) return []
+    const notes = [20000, 50000, 100000, 200000, 500000, 1000000]
+    return [cartTotal, ...notes.filter((n) => n > cartTotal)].slice(0, 4)
+  }, [cartTotal])
+
+  const chargeBlocked = posCartBlocksCheckout(cart)
+  const chargeDisabled = !cart.length || !branch || saving || chargeBlocked
+  const chargeLabel = saving
+    ? 'Processing…'
+    : chargeBlocked
+      ? 'Ticket missing service'
+      : cart.length
+        ? `Charge ${formatMoney(cartTotal)}`
+        : 'Charge'
+
   const ceramicPreview = useMemo(() => {
     const salesMinor = detailingAmountMinor(cart)
     if (!salesMinor) return null
@@ -649,6 +746,8 @@ export default function PosPage() {
         {
           ...item,
           key: birthdayAward ? `${item.key}-birthday` : loyaltyAward ? `${item.key}-loyalty` : item.key,
+          // Base catalog key (before size / award suffixes) so the tile can badge its running count.
+          catalog_item_key: item.catalog_item_key || item.key,
           quantity: 1,
           list_price_minor: listPrice,
           unit_price_minor: listPrice,
@@ -668,7 +767,15 @@ export default function PosPage() {
       }
       return [...current, priced]
     })
-    setCartOpen(true)
+  }
+
+  /** Clear the walk-in lines; a queue handoff keeps its locked line. */
+  function clearCart() {
+    setCart((current) => current.filter((line) => !canRemovePosCartLine(line)))
+    setDiscountPercent('')
+    setDiscountAmountPesos('')
+    setDiscountReason('')
+    setCashTendered('')
   }
 
   async function notifyPosStaff(payload) {
@@ -954,7 +1061,6 @@ export default function PosPage() {
 
   if (!canAccessPos(profile)) return <Navigate to="/operations/access-denied" replace />
 
-  const catalogTab = branchAdmin ? 'merch' : tab
 
   function setShellTab(next) {
     setSearchParams(next === 'checkout' ? {} : { tab: next }, { replace: true })
@@ -1108,6 +1214,395 @@ export default function PosPage() {
     }
   }
 
+  /**
+   * The order panel — lines, totals, tender and Charge. Rendered twice: pinned
+   * beside the catalogue on large screens, and inside the sheet on phones.
+   */
+  const orderPanelBody = (
+    <>
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+          <div className="flex flex-col gap-2">
+            {cart.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+                Nothing rung up yet.
+                <br />
+                Tap anything in the catalogue to start the order.
+              </p>
+            ) : null}
+            {cart.map((line) => {
+              const free = line.is_loyalty_award || line.is_membership_included
+              const canStep = canChangePosCartLineQuantity(line)
+              return (
+                <div key={line.key} className="rounded-xl border border-border bg-card p-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="min-w-0 flex-1 font-medium">{line.name}</p>
+                    <p className="shrink-0 font-semibold tabular-nums">
+                      {free ? (
+                        <span className="text-emerald-600">FREE</span>
+                      ) : (
+                        formatMoney(line.quantity * line.unit_price_minor)
+                      )}
+                    </p>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p className="min-w-0 text-xs text-muted-foreground">
+                      {free ? 'Included' : `${formatMoney(line.unit_price_minor)} ea`}
+                      {' · '}
+                      {line.catalog_kind || line.item_type}
+                      {line.from_handoff ? ' · queue job' : ''}
+                      {line.is_loyalty_award && !line.is_birthday_award ? ' · loyalty' : ''}
+                      {line.is_birthday_award ? ' · birthday' : ''}
+                      {line.is_membership_included ? ' · member include' : ''}
+                      {line.membership_discount_applied ? ' · member discount' : ''}
+                      {line.adhoc_discount_applied ? ' · discount' : ''}
+                    </p>
+                    {canStep ? (
+                      <div className="flex shrink-0 items-center gap-1 rounded-full border border-border">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-10 rounded-full"
+                          onClick={() => setCart((c) => stepPosCartLineQuantity(c, line.key, -1))}
+                          aria-label={line.quantity > 1 ? `One fewer ${line.name}` : `Remove ${line.name}`}
+                        >
+                          {line.quantity > 1 ? <Minus /> : <Trash2 />}
+                        </Button>
+                        <span className="min-w-6 text-center font-semibold tabular-nums" aria-live="polite">
+                          {line.quantity}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-10 rounded-full"
+                          disabled={line.quantity >= POS_MAX_LINE_QUANTITY}
+                          onClick={() => setCart((c) => stepPosCartLineQuantity(c, line.key, 1))}
+                          aria-label={`One more ${line.name}`}
+                        >
+                          <Plus />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="shrink-0 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+                        {line.quantity} × locked
+                      </span>
+                    )}
+                  </div>
+                  {line.from_handoff ? (
+                    <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+                      Ask Team Lead to change the wash/detailing job.
+                    </p>
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
+
+          <details className="rounded-xl border border-border bg-muted/20 [&_summary::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-semibold text-foreground">
+              Discount &amp; customer
+              <span className="text-xs font-normal text-muted-foreground">
+                {linkedCustomer ? linkedCustomer.full_name : 'Walk-in'}
+                {cart.some((l) => l.adhoc_discount_applied) ? ' · discounted' : ''}
+              </span>
+            </summary>
+            <div className="flex flex-col gap-4 px-3 pt-1 pb-3">
+            <div className="space-y-2 rounded-xl border border-dashed border-border bg-muted/20 p-3">
+              <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Ad-hoc discount</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  className="min-h-10"
+                  placeholder="% off"
+                  inputMode="decimal"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                />
+                <Input
+                  className="min-h-10"
+                  placeholder="₱ amount"
+                  inputMode="decimal"
+                  value={discountAmountPesos}
+                  onChange={(e) => setDiscountAmountPesos(e.target.value)}
+                />
+              </div>
+              <Input
+                className="min-h-10"
+                placeholder="Reason (required)"
+                value={discountReason}
+                onChange={(e) => setDiscountReason(e.target.value)}
+              />
+              <Button type="button" variant="secondary" className="min-h-10 w-full" onClick={applyCartDiscount}>
+                Apply discount
+              </Button>
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-border bg-muted/25 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Customer</p>
+                {linkedCustomer ? (
+                  <Badge variant="secondary" className="gap-1">
+                    <Link2 className="size-3" aria-hidden /> Loyalty linked
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">Walk-in</Badge>
+                )}
+              </div>
+
+              {linkedCustomer ? (
+                <div className="flex items-start justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{linkedCustomer.full_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {[linkedCustomer.phone, linkedCustomer.plate].filter(Boolean).join(' · ') || 'Account linked'}
+                    </p>
+                    {birthdayPerk ? (
+                      <p className="mt-1 text-xs font-medium text-primary">Birthday free service available</p>
+                    ) : null}
+                    {activeMembership ? (
+                      <p className="mt-1 text-xs font-medium text-primary">
+                        {activeMembership.name}
+                        {activeMembership.discount_percent > 0
+                          ? ` · ${activeMembership.discount_percent}% off services`
+                          : ''}
+                        {(activeMembership.included_services || []).length
+                          ? ` · ${(activeMembership.included_services || []).length} included`
+                          : ''}
+                      </p>
+                    ) : null}
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" className="min-h-10 min-w-10 shrink-0" onClick={clearCustomerLink} aria-label="Unlink customer">
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        className="min-h-11 pl-9"
+                        placeholder="Name, phone, or plate"
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            runCustomerSearch()
+                          }
+                        }}
+                        autoComplete="off"
+                      />
+                    </div>
+                    <Button type="button" variant="secondary" className="min-h-11 shrink-0 px-4" disabled={searchingCustomer} onClick={runCustomerSearch}>
+                      {searchingCustomer ? '…' : 'Search'}
+                    </Button>
+                  </div>
+                  {customerHits.length > 0 && (
+                    <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-background p-1">
+                      {customerHits.map((hit) => (
+                        <li key={hit.id}>
+                          <button
+                            type="button"
+                            className="flex w-full min-h-11 flex-col items-start rounded-md px-3 py-2 text-left hover:bg-accent"
+                            onClick={() => attachCustomer(hit)}
+                          >
+                            <span className="font-medium">{hit.full_name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {[hit.phone, hit.plate, hit.source === 'plate' ? 'plate match' : null].filter(Boolean).join(' · ')}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pos-guest-first" className="text-xs text-muted-foreground">
+                        First name
+                      </Label>
+                      <Input
+                        id="pos-guest-first"
+                        className="min-h-11"
+                        placeholder="First"
+                        value={guestFirstName}
+                        onChange={(e) => {
+                          setGuestFirstName(e.target.value)
+                          setGuestName([e.target.value, guestLastName].filter(Boolean).join(' '))
+                        }}
+                        autoComplete="given-name"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pos-guest-last" className="text-xs text-muted-foreground">
+                        Last name
+                      </Label>
+                      <Input
+                        id="pos-guest-last"
+                        className="min-h-11"
+                        placeholder="Last"
+                        value={guestLastName}
+                        onChange={(e) => {
+                          setGuestLastName(e.target.value)
+                          setGuestName([guestFirstName, e.target.value].filter(Boolean).join(' '))
+                        }}
+                        autoComplete="family-name"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pos-guest-phone" className="text-xs text-muted-foreground">
+                        Number
+                      </Label>
+                      <Input
+                        id="pos-guest-phone"
+                        className="min-h-11"
+                        placeholder="09…"
+                        inputMode="tel"
+                        value={guestPhone}
+                        onChange={(e) => setGuestPhone(e.target.value)}
+                        autoComplete="tel"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pos-guest-email" className="text-xs text-muted-foreground">
+                        Email <span className="font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        id="pos-guest-email"
+                        className="min-h-11"
+                        placeholder="name@…"
+                        type="email"
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        autoComplete="email"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    Search to link an existing account. With a phone number, Admin / Super Admin creates a customer on payment if none exists.
+                  </p>
+                </>
+              )}
+            </div>
+            </div>
+          </details>
+
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+              Tender
+            </Label>
+            <div
+              role="group"
+              aria-label="Payment method"
+              className="grid gap-2"
+              style={{ gridTemplateColumns: `repeat(${Math.min(3, Math.max(1, paymentOptions.length))}, minmax(0, 1fr))` }}
+            >
+              {paymentOptions.map((opt) => (
+                <Button
+                  key={opt.value}
+                  type="button"
+                  variant={paymentMethod === opt.value ? 'default' : 'outline'}
+                  aria-pressed={paymentMethod === opt.value}
+                  className="min-h-12"
+                  onClick={() => setPaymentMethod(opt.value)}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
+
+            {paymentMethod === 'cash' ? (
+              <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+                <div className="flex flex-wrap gap-2">
+                  {quickCashAmounts.map((amount) => (
+                    <Button
+                      key={amount}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="min-h-10"
+                      onClick={() => setCashTendered(String(amount / 100))}
+                    >
+                      {amount === cartTotal ? 'Exact' : formatMoney(amount)}
+                    </Button>
+                  ))}
+                </div>
+                <Input
+                  className="min-h-11"
+                  inputMode="decimal"
+                  placeholder="Cash received"
+                  aria-label="Cash received"
+                  value={cashTendered}
+                  onChange={(e) => setCashTendered(e.target.value)}
+                />
+                {cashTendered.trim() && cartTotal > 0 ? (
+                  <p className="flex items-center justify-between text-sm font-semibold">
+                    <span>{changeMinor >= 0 ? 'Change' : 'Still due'}</span>
+                    <span
+                      className={
+                        changeMinor >= 0
+                          ? 'tabular-nums text-emerald-600'
+                          : 'tabular-nums text-rose-600'
+                      }
+                    >
+                      {formatMoney(Math.abs(changeMinor))}
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          {ceramicPreview ? (
+          <div className="space-y-2 rounded-xl border border-border bg-muted/25 p-3">
+            <p className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Compensation toggles</p>
+            {[
+              { key: 'freeShirt', label: 'Free shirt included' },
+              { key: 'cardPayment', label: 'Credit/debit card payment' },
+              { key: 'crewAssisted', label: 'Car wash crew assisted' },
+              { key: 'detailerAssigned', label: 'Detailer assigned' },
+            ].map((t) => (
+              <label key={t.key} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={
+                    t.key === 'cardPayment'
+                      ? effectiveCeramicToggles(compToggles, paymentMethod).cardPayment
+                      : compToggles[t.key]
+                  }
+                  disabled={t.key === 'cardPayment' && (paymentMethod === 'card' || paymentMethod === 'credit')}
+                  onChange={(e) => setCompToggles((prev) => ({ ...prev, [t.key]: e.target.checked }))}
+                />
+                {t.label}
+              </label>
+            ))}
+            <p className="text-xs tabular-nums text-muted-foreground">
+              Crew {formatMoney(ceramicPreview.crew_minor)}
+              {' · '}
+              Detailer {formatMoney(ceramicPreview.detailer_minor)} posts as Finance drafts on pay
+            </p>
+          </div>
+          ) : null}
+        </div>
+
+        <div className="pos-checkout-footer mt-auto space-y-3 border-t border-border px-5 py-4">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">Receipt total</p>
+              <p className="text-3xl font-semibold tabular-nums tracking-tight">{formatMoney(cartTotal)}</p>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <UserRound className="size-3.5" aria-hidden />
+              {linkedCustomer ? 'Loyalty' : 'Walk-in'}
+            </div>
+          </div>
+          <Button className="min-h-12 w-full text-base" disabled={chargeDisabled} onClick={checkout}>
+            {chargeLabel}
+          </Button>
+        </div>
+    </>
+  )
+
   const checkoutBody = (
     <div className="flex flex-col gap-6">
       <PosStatsBoard stats={todaySummary} compact />
@@ -1142,96 +1637,90 @@ export default function PosPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <div className="relative min-w-[12rem] flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="min-h-11 pl-9"
-            placeholder={
-              branchAdmin || catalogTab === 'merch'
-                ? 'Search merch / items'
-                : catalogTab === 'detailing'
-                  ? 'Search detailing'
-                  : 'Search services & packages'
-            }
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        {branchLocked ? (
-          <div className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 text-sm">
-            <MapPin className="size-4 text-primary" aria-hidden />
-            <span className="font-medium">{branchLabel}</span>
+      <div className="pos-counter grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="relative min-w-[12rem] flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="min-h-11 pl-9"
+                placeholder="Search the whole catalogue"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            {branchLocked ? (
+              <div className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 text-sm">
+                <MapPin className="size-4 text-primary" aria-hidden />
+                <span className="font-medium">{branchLabel}</span>
+              </div>
+            ) : (
+              <Select value={branch} onValueChange={setBranch} disabled={!branches.length}>
+                <SelectTrigger className="min-h-11 w-full sm:w-48">
+                  <SelectValue placeholder="Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.slug} value={b.slug}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
-        ) : (
-          <Select value={branch} onValueChange={setBranch} disabled={!branches.length}>
-            <SelectTrigger className="min-h-11 w-full sm:w-48">
-              <SelectValue placeholder="Branch" />
-            </SelectTrigger>
-            <SelectContent>
-              {branches.map((b) => (
-                <SelectItem key={b.slug} value={b.slug}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
 
-      {branchAdmin ? (
-        <div>
-          <MerchFamilyToolbar value={merchFamilyFilter} onChange={setMerchFamilyFilter} />
-          <p className="mb-3 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-            Merch / items ({merchItems.length})
-          </p>
-          <CatalogGrid
-            items={merchItems}
+          <PosCategoryRail
+            categories={catalogCategories}
+            active={activeCategoryId}
+            onSelect={selectCatalogCategory}
+          />
+
+          <PosTileGrid
+            items={catalogItems}
             onAdd={addToCart}
+            sizeByKey={sizeByKey}
+            onPickSize={pickItemSize}
+            quantityByKey={cartQuantityByItemKey}
             birthdayPerk={birthdayPerk}
-            empty="No merch items for this branch yet."
+            empty={
+              query.trim()
+                ? `Nothing in the catalogue matches “${query.trim()}”.`
+                : activeCategoryLabel
+                  ? `No items under ${activeCategoryLabel} yet.`
+                  : 'No items to sell yet.'
+            }
           />
         </div>
-      ) : (
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
-            <TabsTrigger value="bay" className="min-h-11">
-              Services & packages ({bayItems.length})
-            </TabsTrigger>
-            <TabsTrigger value="detailing" className="min-h-11">
-              Detailing ({detailingItems.length})
-            </TabsTrigger>
-            <TabsTrigger value="merch" className="min-h-11">
-              Merch / items ({merchItems.length})
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="bay" className="mt-4">
-            <CatalogGrid
-              items={bayItems}
-              onAdd={addToCart}
-              birthdayPerk={birthdayPerk}
-              empty="No services or packages match."
-            />
-          </TabsContent>
-          <TabsContent value="detailing" className="mt-4">
-            <CatalogGrid
-              items={detailingItems}
-              onAdd={addToCart}
-              birthdayPerk={birthdayPerk}
-              empty="No detailing services match."
-            />
-          </TabsContent>
-          <TabsContent value="merch" className="mt-4">
-            <MerchFamilyToolbar value={merchFamilyFilter} onChange={setMerchFamilyFilter} />
-            <CatalogGrid
-              items={merchItems}
-              onAdd={addToCart}
-              birthdayPerk={birthdayPerk}
-              empty="No merch items. Add stock under Manage merch."
-            />
-          </TabsContent>
-        </Tabs>
-      )}
+
+        {/*
+          The order stays on screen from 1024px up; phones keep the sheet. Only one
+          copy is ever mounted — the panel carries form ids that must stay unique.
+        */}
+        {posSplitView ? (
+        <aside
+          className="sticky top-4 flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card"
+          aria-label="Current order"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">
+                {activeHandoff ? 'Pay queue ticket' : 'Order'}
+              </p>
+              <p className="truncate text-sm font-semibold text-foreground">
+                {cartCount ? `${cartCount} item${cartCount === 1 ? '' : 's'}` : 'Nothing rung up yet'}
+              </p>
+            </div>
+            {cart.length ? (
+              <Button type="button" variant="ghost" size="sm" className="min-h-9" onClick={clearCart}>
+                Clear
+              </Button>
+            ) : null}
+          </div>
+          {orderPanelBody}
+        </aside>
+        ) : null}
+      </div>
     </div>
   )
 
@@ -1441,10 +1930,10 @@ export default function PosPage() {
               End of shift
             </Button>
           ) : null}
-          {shellTab === 'checkout' ? (
+          {shellTab === 'checkout' && !posSplitView ? (
             <Button onClick={() => setCartOpen(true)} className="min-h-11 gap-2">
               <ShoppingCart data-icon="inline-start" />
-              Cart · {cart.length} · {formatMoney(cartTotal)}
+              Cart · {cartCount} · {formatMoney(cartTotal)}
             </Button>
           ) : null}
         </>
@@ -1574,7 +2063,7 @@ export default function PosPage() {
         </SheetContent>
       </Sheet>
 
-      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+      <Sheet open={cartOpen && !posSplitView} onOpenChange={setCartOpen}>
         <SheetContent className="pos-checkout-sheet flex w-full flex-col gap-0 border-l-0 p-0 sm:max-w-md">
           <div className="pos-checkout-head px-5 pt-5 pb-4">
             <SheetHeader className="gap-1 pr-8 text-left">
@@ -1586,408 +2075,164 @@ export default function PosPage() {
                 Linked to booking {activeHandoff.booking_id?.slice(0, 8)}… · paying closes the handoff.
               </p>
             )}
+            <div className="mt-3 flex items-center justify-between gap-2 text-xs text-white/70">
+              <span>{cartCount ? `${cartCount} item${cartCount === 1 ? '' : 's'}` : 'Nothing rung up yet'}</span>
+              {cart.length ? (
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="min-h-9 rounded-lg px-2 font-semibold text-white/85 underline-offset-4 hover:underline"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
           </div>
 
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
-            <div className="flex flex-col gap-2">
-              {cart.length === 0 && <p className="text-sm text-muted-foreground">Cart is empty.</p>}
-              {cart.map((line) => (
-                <div key={line.key} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
-                  <div>
-                    <p className="font-medium">{line.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {line.quantity} ×{' '}
-                      {line.is_loyalty_award || line.is_membership_included ? (
-                        <span className="font-medium text-emerald-600">FREE</span>
-                      ) : (
-                        formatMoney(line.unit_price_minor)
-                      )}{' '}
-                      · {line.catalog_kind || line.item_type}
-                      {line.from_handoff ? ' · queue job' : ''}
-                      {line.is_loyalty_award ? ' · loyalty' : ''}
-                      {line.is_membership_included ? ' · member include' : ''}
-                      {line.membership_discount_applied ? ' · member discount' : ''}
-                      {line.adhoc_discount_applied ? ' · discount' : ''}
-                    </p>
-                    {line.from_handoff ? (
-                      <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
-                        Ask Team Lead to change the wash/detailing job.
-                      </p>
-                    ) : null}
-                  </div>
-                  {canRemovePosCartLine(line) ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="min-h-11 min-w-11"
-                      onClick={() => setCart((c) => removePosCartLine(c, line.key))}
-                      aria-label="Remove"
-                    >
-                      <Trash2 />
-                    </Button>
-                  ) : (
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Locked</span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2 rounded-xl border border-dashed border-border bg-muted/20 p-3">
-              <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Ad-hoc discount</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  className="min-h-10"
-                  placeholder="% off"
-                  inputMode="decimal"
-                  value={discountPercent}
-                  onChange={(e) => setDiscountPercent(e.target.value)}
-                />
-                <Input
-                  className="min-h-10"
-                  placeholder="₱ amount"
-                  inputMode="decimal"
-                  value={discountAmountPesos}
-                  onChange={(e) => setDiscountAmountPesos(e.target.value)}
-                />
-              </div>
-              <Input
-                className="min-h-10"
-                placeholder="Reason (required)"
-                value={discountReason}
-                onChange={(e) => setDiscountReason(e.target.value)}
-              />
-              <Button type="button" variant="secondary" className="min-h-10 w-full" onClick={applyCartDiscount}>
-                Apply discount
-              </Button>
-            </div>
-
-            <div className="space-y-3 rounded-xl border border-border bg-muted/25 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Customer</p>
-                {linkedCustomer ? (
-                  <Badge variant="secondary" className="gap-1">
-                    <Link2 className="size-3" aria-hidden /> Loyalty linked
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">Walk-in</Badge>
-                )}
-              </div>
-
-              {linkedCustomer ? (
-                <div className="flex items-start justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{linkedCustomer.full_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {[linkedCustomer.phone, linkedCustomer.plate].filter(Boolean).join(' · ') || 'Account linked'}
-                    </p>
-                    {birthdayPerk ? (
-                      <p className="mt-1 text-xs font-medium text-primary">Birthday free service available</p>
-                    ) : null}
-                    {activeMembership ? (
-                      <p className="mt-1 text-xs font-medium text-primary">
-                        {activeMembership.name}
-                        {activeMembership.discount_percent > 0
-                          ? ` · ${activeMembership.discount_percent}% off services`
-                          : ''}
-                        {(activeMembership.included_services || []).length
-                          ? ` · ${(activeMembership.included_services || []).length} included`
-                          : ''}
-                      </p>
-                    ) : null}
-                  </div>
-                  <Button type="button" variant="ghost" size="icon" className="min-h-10 min-w-10 shrink-0" onClick={clearCustomerLink} aria-label="Unlink customer">
-                    <X className="size-4" />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        className="min-h-11 pl-9"
-                        placeholder="Name, phone, or plate"
-                        value={customerSearch}
-                        onChange={(e) => setCustomerSearch(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            runCustomerSearch()
-                          }
-                        }}
-                        autoComplete="off"
-                      />
-                    </div>
-                    <Button type="button" variant="secondary" className="min-h-11 shrink-0 px-4" disabled={searchingCustomer} onClick={runCustomerSearch}>
-                      {searchingCustomer ? '…' : 'Search'}
-                    </Button>
-                  </div>
-                  {customerHits.length > 0 && (
-                    <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-background p-1">
-                      {customerHits.map((hit) => (
-                        <li key={hit.id}>
-                          <button
-                            type="button"
-                            className="flex w-full min-h-11 flex-col items-start rounded-md px-3 py-2 text-left hover:bg-accent"
-                            onClick={() => attachCustomer(hit)}
-                          >
-                            <span className="font-medium">{hit.full_name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {[hit.phone, hit.plate, hit.source === 'plate' ? 'plate match' : null].filter(Boolean).join(' · ')}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-first" className="text-xs text-muted-foreground">
-                        First name
-                      </Label>
-                      <Input
-                        id="pos-guest-first"
-                        className="min-h-11"
-                        placeholder="First"
-                        value={guestFirstName}
-                        onChange={(e) => {
-                          setGuestFirstName(e.target.value)
-                          setGuestName([e.target.value, guestLastName].filter(Boolean).join(' '))
-                        }}
-                        autoComplete="given-name"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-last" className="text-xs text-muted-foreground">
-                        Last name
-                      </Label>
-                      <Input
-                        id="pos-guest-last"
-                        className="min-h-11"
-                        placeholder="Last"
-                        value={guestLastName}
-                        onChange={(e) => {
-                          setGuestLastName(e.target.value)
-                          setGuestName([guestFirstName, e.target.value].filter(Boolean).join(' '))
-                        }}
-                        autoComplete="family-name"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-phone" className="text-xs text-muted-foreground">
-                        Number
-                      </Label>
-                      <Input
-                        id="pos-guest-phone"
-                        className="min-h-11"
-                        placeholder="09…"
-                        inputMode="tel"
-                        value={guestPhone}
-                        onChange={(e) => setGuestPhone(e.target.value)}
-                        autoComplete="tel"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-email" className="text-xs text-muted-foreground">
-                        Email <span className="font-normal">(optional)</span>
-                      </Label>
-                      <Input
-                        id="pos-guest-email"
-                        className="min-h-11"
-                        placeholder="name@…"
-                        type="email"
-                        value={guestEmail}
-                        onChange={(e) => setGuestEmail(e.target.value)}
-                        autoComplete="email"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-muted-foreground">
-                    Search to link an existing account. With a phone number, Admin / Super Admin creates a customer on payment if none exists.
-                  </p>
-                </>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Payment method</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="min-h-11 w-full">
-                  <SelectValue placeholder="Payment" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {ceramicPreview ? (
-            <div className="space-y-2 rounded-xl border border-border bg-muted/25 p-3">
-              <p className="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase">Compensation toggles</p>
-              {[
-                { key: 'freeShirt', label: 'Free shirt included' },
-                { key: 'cardPayment', label: 'Credit/debit card payment' },
-                { key: 'crewAssisted', label: 'Car wash crew assisted' },
-                { key: 'detailerAssigned', label: 'Detailer assigned' },
-              ].map((t) => (
-                <label key={t.key} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={
-                      t.key === 'cardPayment'
-                        ? effectiveCeramicToggles(compToggles, paymentMethod).cardPayment
-                        : compToggles[t.key]
-                    }
-                    disabled={t.key === 'cardPayment' && (paymentMethod === 'card' || paymentMethod === 'credit')}
-                    onChange={(e) => setCompToggles((prev) => ({ ...prev, [t.key]: e.target.checked }))}
-                  />
-                  {t.label}
-                </label>
-              ))}
-              <p className="text-xs tabular-nums text-muted-foreground">
-                Crew {formatMoney(ceramicPreview.crew_minor)}
-                {' · '}
-                Detailer {formatMoney(ceramicPreview.detailer_minor)} posts as Finance drafts on pay
-              </p>
-            </div>
-            ) : null}
-          </div>
-
-          <div className="pos-checkout-footer mt-auto space-y-3 border-t border-border px-5 py-4">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">Receipt total</p>
-                <p className="text-3xl font-semibold tabular-nums tracking-tight">{formatMoney(cartTotal)}</p>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <UserRound className="size-3.5" aria-hidden />
-                {linkedCustomer ? 'Loyalty' : 'Walk-in'}
-              </div>
-            </div>
-            <Button className="min-h-12 w-full text-base" disabled={!cart.length || !branch || saving || posCartBlocksCheckout(cart)} onClick={checkout}>
-              {saving ? 'Processing…' : posCartBlocksCheckout(cart) ? 'Ticket missing service' : 'Complete payment'}
-            </Button>
-          </div>
+          {orderPanelBody}
         </SheetContent>
       </Sheet>
     </OpsPageShell>
   )
 }
 
-function MerchFamilyToolbar({ value, onChange }) {
+/** One flat category rail — services, detailing and each merch family as peers. */
+function PosCategoryRail({ categories, active, onSelect }) {
+  if (!categories?.length) return null
   return (
-    <div className="mb-3 flex flex-wrap gap-2" role="toolbar" aria-label="Merch family">
-      {MERCH_FAMILIES.map((fam) => (
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="Catalogue category">
+      {categories.map((cat) => (
         <Button
-          key={fam.id}
+          key={cat.id}
           type="button"
-          variant={value === fam.id ? 'default' : 'outline'}
-          className="min-h-11"
-          aria-pressed={value === fam.id}
-          onClick={() => onChange(fam.id)}
+          variant={active === cat.id ? 'default' : 'outline'}
+          aria-pressed={active === cat.id}
+          className="min-h-11 shrink-0 rounded-full"
+          onClick={() => onSelect(cat.id)}
         >
-          {fam.label}
+          {cat.label}
+          <span className="ml-1.5 tabular-nums opacity-70">{cat.count}</span>
         </Button>
       ))}
     </div>
   )
 }
 
-function CatalogGrid({ items, onAdd, empty, birthdayPerk }) {
-  const [sizeByKey, setSizeByKey] = useState({})
+/**
+ * Dense tap-to-add tiles. Size picks sit on the tile itself rather than behind a
+ * dropdown, and the running quantity is badged so the cashier sees the order
+ * without looking away from the catalogue.
+ */
+function PosTileGrid({ items, onAdd, empty, birthdayPerk, sizeByKey, onPickSize, quantityByKey }) {
   if (!items.length) return <p className="text-sm text-muted-foreground">{empty}</p>
 
-  function pricedItem(item) {
+  function selectedSize(item) {
     const options = item.size_options || []
-    if (!options.length) return item
-    const slug = sizeByKey[item.key] || options.find((o) => o.slug === 'medium')?.slug || options[0].slug
-    const price_minor =
-      item.size_prices?.[slug] != null ? Number(item.size_prices[slug]) : item.price_minor
+    if (!options.length) return ''
+    return sizeByKey[item.key] || options.find((o) => o.slug === 'medium')?.slug || options[0].slug
+  }
+
+  function priceFor(item) {
+    const slug = selectedSize(item)
+    if (slug && item.size_prices?.[slug] != null) return Number(item.size_prices[slug])
+    return item.price_minor
+  }
+
+  /** Catalog tile → the priced line addToCart expects. */
+  function pricedItem(item) {
+    const slug = selectedSize(item)
+    if (!slug) return { ...item, catalog_item_key: item.key }
     const label = PRICING_SIZES.find((x) => x.slug === slug)?.label || slug
     return {
       ...item,
       key: `${item.key}-${slug}`,
-      price_minor,
+      catalog_item_key: item.key,
+      price_minor: priceFor(item),
       meta: [item.meta, `Size ${label}`].filter(Boolean).join(' · '),
       vehicle_size: slug,
     }
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
       {items.map((item) => {
         const options = item.size_options || []
-        const selected =
-          sizeByKey[item.key] || options.find((o) => o.slug === 'medium')?.slug || options[0]?.slug || ''
+        const slug = selectedSize(item)
+        const qty = quantityByKey[item.key] || 0
         return (
-          <div key={item.key} className="min-h-[100px]">
-            <Card className="planner-ticket h-full transition hover:border-primary/50 hover:bg-accent/30">
-              <button type="button" onClick={() => onAdd(pricedItem(item))} className="w-full text-left">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg">{item.name}</CardTitle>
-                    <Badge variant="secondary">{item.catalog_kind || item.item_type}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-semibold tabular-nums">
-                    {formatMoney(
-                      options.length && selected && item.size_prices?.[selected] != null
-                        ? item.size_prices[selected]
-                        : item.price_minor,
-                    )}
-                  </p>
-                  {item.meta && <p className="mt-2 text-xs text-muted-foreground">{item.meta}</p>}
-                </CardContent>
-              </button>
-              {options.length > 0 ? (
-                <div className="border-t border-border px-4 py-2" onClick={(e) => e.stopPropagation()}>
-                  <Select
-                    value={selected}
-                    onValueChange={(slug) => setSizeByKey((cur) => ({ ...cur, [item.key]: slug }))}
-                  >
-                    <SelectTrigger className="min-h-10">
-                      <SelectValue placeholder="Pick size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {options.map((sz) => (
-                        <SelectItem key={sz.slug} value={sz.slug}>
-                          {sz.label} · {formatMoney(item.size_prices?.[sz.slug] ?? item.price_minor)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div
+            key={item.key}
+            className={`relative flex min-h-[6.5rem] flex-col rounded-xl border transition ${
+              qty > 0 ? 'border-primary bg-primary/5' : 'border-border bg-card hover:border-primary/50'
+            }`}
+          >
+            {qty > 0 ? (
+              <span
+                className="absolute top-1.5 right-1.5 z-10 inline-flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold tabular-nums text-primary-foreground"
+                aria-label={`${qty} in the order`}
+              >
+                {qty}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onAdd(pricedItem(item))}
+              className="flex flex-1 flex-col gap-1 p-3 text-left"
+              aria-label={`Add ${item.name}`}
+            >
+              <span className="pr-6 text-sm leading-tight font-semibold">{item.name}</span>
+              {slug ? (
+                <span className="text-[11px] text-muted-foreground">
+                  Size {PRICING_SIZES.find((x) => x.slug === slug)?.label || slug}
+                </span>
+              ) : item.meta ? (
+                <span className="line-clamp-1 text-[11px] text-muted-foreground">{item.meta}</span>
               ) : null}
-              <div className="flex flex-wrap gap-1 border-t border-border px-4 py-2">
+              <span className="mt-auto pt-1 text-base font-semibold tabular-nums">
+                {formatMoney(priceFor(item))}
+              </span>
+            </button>
+            {options.length > 0 ? (
+              <div className="flex gap-1 border-t border-border p-1.5" role="group" aria-label={`${item.name} size`}>
+                {options.map((sz) => (
+                  <Button
+                    key={sz.slug}
+                    type="button"
+                    size="sm"
+                    variant={slug === sz.slug ? 'secondary' : 'ghost'}
+                    aria-pressed={slug === sz.slug}
+                    className="min-h-9 flex-1 px-1 text-[11px] font-bold"
+                    onClick={() => onPickSize(item.key, sz.slug)}
+                  >
+                    {sz.label}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+            <div className="flex gap-1 border-t border-border px-1.5 py-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="min-h-9 flex-1 gap-1 px-1 text-[11px] text-muted-foreground"
+                onClick={() => onAdd(pricedItem(item), { loyaltyAward: true })}
+              >
+                <Gift className="size-3.5" aria-hidden />
+                Loyalty
+              </Button>
+              {birthdayPerk ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="min-h-11 gap-1.5 px-2 text-xs text-muted-foreground"
-                  onClick={() => onAdd(pricedItem(item), { loyaltyAward: true })}
+                  className="min-h-9 flex-1 gap-1 px-1 text-[11px] text-primary"
+                  onClick={() => onAdd(pricedItem(item), { birthdayAward: true })}
                 >
-                  <Gift className="size-3.5" aria-hidden />
-                  Loyalty / free
+                  <Cake className="size-3.5" aria-hidden />
+                  Birthday
                 </Button>
-                {birthdayPerk ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="min-h-11 gap-1.5 px-2 text-xs text-primary"
-                    onClick={() => onAdd(pricedItem(item), { birthdayAward: true })}
-                  >
-                    <Cake className="size-3.5" aria-hidden />
-                    Birthday
-                  </Button>
-                ) : null}
-              </div>
-            </Card>
+              ) : null}
+            </div>
           </div>
         )
       })}

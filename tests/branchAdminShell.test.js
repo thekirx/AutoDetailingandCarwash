@@ -74,7 +74,8 @@ describe('Branch Admin POS UI is checkout-only', () => {
     const src = await readFile(join(root, 'src/pages/PosPage.jsx'), 'utf8')
     assert.match(src, /canManageCatalog/)
     assert.match(src, /Merch, queue payment, expenses, end of shift/)
-    assert.match(src, /branchAdmin \? \(/)
+    // Branch Admin's category rail is merch families only — no service catalogue.
+    assert.match(src, /if \(branchAdmin\) return merch/)
     assert.match(src, /ShiftCloseWizard/)
     assert.doesNotMatch(src, /canManageServices\(profile\) && <TabsTrigger value="services">Manage services/)
   })

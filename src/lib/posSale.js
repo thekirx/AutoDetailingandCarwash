@@ -76,6 +76,35 @@ export function removePosCartLine(cart = [], lineKey) {
   return (cart || []).filter((x) => x.key !== lineKey)
 }
 
+/** Cashier-facing quantity cap — a counter mis-tap should not ring up 500 coffees. */
+export const POS_MAX_LINE_QUANTITY = 99
+
+/** Queue handoff lines keep their quantity — the Team Lead owns the booking. */
+export function canChangePosCartLineQuantity(line) {
+  return canRemovePosCartLine(line)
+}
+
+/**
+ * Set one line's quantity from the order panel steppers.
+ * Dropping to zero removes the line; handoff lines are left alone.
+ */
+export function setPosCartLineQuantity(cart = [], lineKey, nextQuantity) {
+  const target = (cart || []).find((x) => x.key === lineKey)
+  if (!target) return [...(cart || [])]
+  if (!canChangePosCartLineQuantity(target)) return [...(cart || [])]
+  const wanted = Math.floor(Number(nextQuantity))
+  if (!Number.isFinite(wanted) || wanted <= 0) return removePosCartLine(cart, lineKey)
+  const qty = Math.min(POS_MAX_LINE_QUANTITY, wanted)
+  return (cart || []).map((line) => (line.key === lineKey ? { ...line, quantity: qty } : line))
+}
+
+/** Stepper helper — step is +1 / -1 from the order panel. */
+export function stepPosCartLineQuantity(cart = [], lineKey, step) {
+  const target = (cart || []).find((x) => x.key === lineKey)
+  if (!target) return [...(cart || [])]
+  return setPosCartLineQuantity(cart, lineKey, Number(target.quantity || 0) + Number(step || 0))
+}
+
 /**
  * Ad-hoc ticket discount (not membership). Requires reason; returns new cart + audit meta.
  * percent: 1–100 off non-handoff priced lines, or amountMinor flat off distributed.

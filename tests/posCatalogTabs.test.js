@@ -64,16 +64,20 @@ describe('optional size pricing', () => {
 })
 
 describe('POS page wiring', () => {
-  it('uses bay/detailing tabs and drops global size filter', () => {
+  it('uses one bay/detailing/merch category rail and drops global size filter', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
     assert.match(pos, /filterPosBayCatalog/)
     assert.match(pos, /filterPosDetailingCatalog/)
-    assert.match(pos, /TabsTrigger value="bay"/)
-    assert.match(pos, /TabsTrigger value="detailing"/)
+    // Square-pattern counter: one flat rail, not nested tabs plus a merch toolbar.
+    assert.match(pos, /function PosCategoryRail/)
+    assert.match(pos, /id: 'bay'/)
+    assert.match(pos, /id: 'detailing'/)
     assert.match(pos, /Services & packages/)
     assert.doesNotMatch(pos, /setCarSize/)
     assert.match(pos, /size_options/)
-    assert.match(pos, /Pick size/)
+    // Size is picked on the tile itself now, not from a dropdown.
+    assert.doesNotMatch(pos, /Pick size/)
+    assert.match(pos, /onPickSize/)
     const mig = readFileSync(
       join(root, 'supabase/migrations/20260821200000_pos_catalog_packages_optional_size.sql'),
       'utf8',

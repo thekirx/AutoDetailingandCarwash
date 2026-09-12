@@ -3,9 +3,13 @@ import {
   applyAdHocDiscount,
   buildHandoffCartLine,
   buildPosSalePayload,
+  canChangePosCartLineQuantity,
   canRemovePosCartLine,
   priceCartForMembership,
   removePosCartLine,
+  setPosCartLineQuantity,
+  stepPosCartLineQuantity,
+  POS_MAX_LINE_QUANTITY,
   resolveMembershipUnitPrice,
   serviceMatchesIncluded,
 } from '../src/lib/posSale.js'
@@ -205,5 +209,35 @@ assert.equal(disc.ok, true)
 assert.equal(disc.cart[0].unit_price_minor, 9000)
 assert.equal(disc.cart[1].unit_price_minor, 20000)
 assert.ok(disc.audit.reason)
+
+// Order-panel quantity steppers (Square-pattern POS Counter).
+const qtyCart = [
+  { key: 'h1', from_handoff: true, name: 'Wash', quantity: 1 },
+  { key: 'm1', from_handoff: false, name: 'Coffee', quantity: 2 },
+]
+assert.equal(canChangePosCartLineQuantity(qtyCart[0]), false)
+assert.equal(canChangePosCartLineQuantity(qtyCart[1]), true)
+
+// Handoff lines ignore the steppers entirely.
+assert.equal(setPosCartLineQuantity(qtyCart, 'h1', 5)[0].quantity, 1)
+assert.equal(stepPosCartLineQuantity(qtyCart, 'h1', 1)[0].quantity, 1)
+
+// Ordinary lines step up and down.
+assert.equal(stepPosCartLineQuantity(qtyCart, 'm1', 1)[1].quantity, 3)
+assert.equal(stepPosCartLineQuantity(qtyCart, 'm1', -1)[1].quantity, 1)
+
+// Stepping a line to zero drops it, rather than leaving a 0 x line on the receipt.
+const stepped = stepPosCartLineQuantity(
+  [{ key: 'm1', from_handoff: false, name: 'Coffee', quantity: 1 }],
+  'm1',
+  -1,
+)
+assert.equal(stepped.length, 0)
+assert.equal(setPosCartLineQuantity(qtyCart, 'm1', 0).length, 1)
+
+// Mis-taps are capped, and unknown keys leave the cart alone.
+assert.equal(setPosCartLineQuantity(qtyCart, 'm1', 5000)[1].quantity, POS_MAX_LINE_QUANTITY)
+assert.equal(setPosCartLineQuantity(qtyCart, 'nope', 3).length, 2)
+assert.equal(setPosCartLineQuantity(qtyCart, 'm1', Number.NaN).length, 1)
 
 console.log('posSale.buildPosSalePayload + handoff cart: ok')

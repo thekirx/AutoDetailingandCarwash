@@ -312,9 +312,10 @@ describe('ops shell adoption — phase 7 admin + secondary + floor', () => {
     assert.doesNotMatch(page, /function PageHeader/)
   })
 
-  it('PosPage merch family uses shadcn buttons — not planner-v2-tabs', () => {
+  it('PosPage category rail uses shadcn buttons — not planner-v2-tabs', () => {
     const page = read('src/pages/PosPage.jsx')
-    assert.match(page, /MerchFamilyToolbar/)
+    assert.match(page, /function PosCategoryRail/)
+    assert.match(page, /MERCH_FAMILIES\.map/)
     assert.doesNotMatch(page, /planner-v2-tabs/)
   })
 })
