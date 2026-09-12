@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hakum POS Counter — before / after</title>
+<style>
+  :root {
+    --brand: #052699;
+    --brand-hover: #0a32b8;
+    --brand-soft: #e8edff;
+    --page: #f1f1ed;
+    --subtle: #e7e7e3;
+    --ink: #101219;
+    --text: #1c1f27;
+    --muted: #64748b;
+    --line: #dcdcd6;
+    --card: #ffffff;
+    --ok: #047857;
+    --warn: #b45309;
+    --danger: #be123c;
+    --r-int: 10px;
+    --r-card: 14px;
+    --font: "Gilmer", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--text);
+    font-family: var(--font); font-size: 14px; line-height: 1.5;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 32px 24px 80px; }
+  header.page h1 { font-size: 28px; letter-spacing: -0.02em; margin: 0 0 6px; }
+  header.page p { margin: 0; color: var(--muted); max-width: 60ch; }
+  .switch { display: inline-flex; gap: 4px; margin: 24px 0 8px; padding: 4px; background: var(--subtle); border-radius: var(--r-int); }
+  .switch button {
+    appearance: none; border: 0; background: transparent; font: inherit; font-weight: 600;
+    padding: 9px 18px; border-radius: 7px; cursor: pointer; color: var(--muted); min-height: 40px;
+  }
+  .switch button[aria-pressed="true"] { background: var(--card); color: var(--brand); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .note { margin: 8px 0 20px; color: var(--muted); font-size: 13px; max-width: 78ch; }
+  .panel { display: none; }
+  .panel.on { display: block; }
+
+  /* ---- shared POS chrome ---- */
+  .pos { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--card); overflow: hidden; }
+  .pos-top {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--card);
+  }
+  .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  .pos-top h2 { font-size: 17px; margin: 0; }
+  .pill { font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); }
+  .grow { flex: 1; }
+  input[type=text], input[type=search] {
+    font: inherit; padding: 0 12px; min-height: 44px; border: 1px solid var(--line);
+    border-radius: var(--r-int); background: var(--card); color: var(--text); width: 100%;
+  }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+  .mono { font-variant-numeric: tabular-nums; }
+
+  /* ---- BEFORE ---- */
+  .b-body { padding: 18px; }
+  .b-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 640px; padding: 4px; background: var(--subtle); border-radius: var(--r-int); margin-bottom: 16px; }
+  .b-tabs span { text-align: center; padding: 10px; border-radius: 7px; font-weight: 600; font-size: 13px; color: var(--muted); }
+  .b-tabs span.on { background: var(--card); color: var(--brand); }
+  .b-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .b-card { border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px; }
+  .b-card .row { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+  .b-card h3 { margin: 0; font-size: 17px; }
+  .b-card .price { font-size: 24px; font-weight: 600; margin: 10px 0 0; }
+  .badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--subtle); color: var(--muted); white-space: nowrap; }
+  .b-card select { font: inherit; min-height: 40px; width: 100%; margin-top: 12px; border: 1px solid var(--line); border-radius: var(--r-int); padding: 0 10px; background: var(--card); }
+  .b-cartbtn {
+    position: sticky; bottom: 0; margin-top: 18px; display: flex; justify-content: flex-end;
+  }
+  .b-cartbtn button {
+    font: inherit; font-weight: 600; min-height: 44px; padding: 0 18px; border: 0; border-radius: var(--r-int);
+    background: var(--brand); color: #fff; cursor: pointer;
+  }
+  .callout { border-left: 3px solid var(--warn); background: #fffbeb; padding: 12px 14px; border-radius: 0 var(--r-int) var(--r-int) 0; margin-top: 18px; }
+  .callout h4 { margin: 0 0 6px; font-size: 13px; }
+  .callout ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .callout li { margin: 3px 0; }
+
+  /* ---- AFTER ---- */
+  .a-shell { display: grid; grid-template-columns: minmax(0,1fr) 380px; min-height: 620px; }
+  @media (max-width: 900px) { .a-shell { grid-template-columns: minmax(0,1fr); } .a-order { border-left: 0 !important; border-top: 1px solid var(--line); } }
+  .a-catalog { padding: 14px 16px 20px; min-width: 0; }
+  .a-rail { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .a-rail button {
+    font: inherit; font-weight: 600; font-size: 13px; white-space: nowrap; cursor: pointer;
+    min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--card); color: var(--muted);
+  }
+  .a-rail button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .a-rail .count { opacity: .7; font-weight: 500; margin-left: 6px; }
+  .a-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 10px; }
+  .tile {
+    position: relative; text-align: left; font: inherit; cursor: pointer; min-height: 96px;
+    border: 1px solid var(--line); border-radius: var(--r-card); background: var(--card);
+    padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 4px;
+    transition: border-color .12s, transform .06s;
+  }
+  .tile:hover { border-color: var(--brand); }
+  .tile:active { transform: scale(.985); }
+  .tile .nm { font-weight: 600; line-height: 1.3; }
+  .tile .pr { margin-top: auto; font-size: 18px; font-weight: 600; }
+  .tile .sz { font-size: 11px; color: var(--muted); }
+  .tile .qty-chip {
+    position: absolute; top: 8px; right: 8px; min-width: 22px; height: 22px; padding: 0 6px;
+    border-radius: 999px; background: var(--brand); color: #fff; font-size: 12px; font-weight: 700;
+    display: none; align-items: center; justify-content: center;
+  }
+  .tile[data-qty]:not([data-qty="0"]) .qty-chip { display: inline-flex; }
+  .tile[data-qty]:not([data-qty="0"]) { border-color: var(--brand); background: var(--brand-soft); }
+  .sizebar { display: flex; gap: 4px; margin-top: 8px; }
+  .sizebar button {
+    flex: 1; font: inherit; font-size: 11px; font-weight: 700; min-height: 30px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); border-radius: 7px; color: var(--muted);
+  }
+  .sizebar button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .a-order { border-left: 1px solid var(--line); display: flex; flex-direction: column; background: #fbfbf9; min-width: 0; }
+  .a-order-head { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .a-order-head h3 { margin: 0; font-size: 15px; }
+  .linkbtn { font: inherit; font-size: 13px; font-weight: 600; color: var(--brand); background: none; border: 0; cursor: pointer; padding: 6px; }
+  .a-lines { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; max-height: 300px; }
+  .line { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--card); padding: 10px 12px; }
+  .line .l1 { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .line .nm { font-weight: 600; }
+  .line .amt { font-weight: 600; }
+  .line .l2 { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; }
+  .line .meta { font-size: 12px; color: var(--muted); }
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+  .stepper button {
+    font: inherit; font-size: 17px; line-height: 1; font-weight: 600; cursor: pointer;
+    width: 38px; height: 38px; border: 0; background: none; color: var(--brand); border-radius: 999px;
+  }
+  .stepper button:disabled { color: var(--line); cursor: not-allowed; }
+  .stepper .n { min-width: 26px; text-align: center; font-weight: 700; }
+  .locked { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .free { color: var(--ok); font-weight: 700; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 16px; font-size: 13px; }
+  .a-totals { border-top: 1px solid var(--line); padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .trow { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  .trow.grand { font-size: 22px; font-weight: 700; color: var(--text); margin-top: 4px; }
+  .a-tenders { padding: 0 16px 8px; }
+  .a-tenders .lab { font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .tenders { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tenders button {
+    font: inherit; font-weight: 600; font-size: 13px; min-height: 46px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: var(--r-int); background: var(--card); color: var(--text);
+  }
+  .tenders button[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+  .cashbox { display: none; gap: 6px; margin-top: 8px; }
+  .cashbox.on { display: block; }
+  .quickcash { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .quickcash button { font: inherit; font-size: 13px; font-weight: 600; min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r-int); background: var(--card); cursor: pointer; }
+  .changerow { display: flex; justify-content: space-between; margin-top: 8px; font-weight: 700; }
+  .changerow .due { color: var(--danger); }
+  .changerow .give { color: var(--ok); }
+  .a-pay { padding: 10px 16px 16px; }
+  .paybtn {
+    width: 100%; font: inherit; font-size: 16px; font-weight: 700; min-height: 54px; cursor: pointer;
+    border: 0; border-radius: var(--r-int); background: var(--brand); color: #fff;
+  }
+  .paybtn:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
+  .paybtn:not(:disabled):hover { background: var(--brand-hover); }
+  .drawer { border-top: 1px dashed var(--line); padding: 10px 16px 14px; }
+  .drawer summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--brand); list-style: none; padding: 6px 0; }
+  .drawer summary::-webkit-details-marker { display: none; }
+  .drawer summary::before { content: "+ "; }
+  .drawer[open] summary::before { content: "– "; }
+  .drawer .fields { display: grid; gap: 6px; margin-top: 6px; }
+  .drawer input { min-height: 40px; }
+  .drawer .apply { font: inherit; font-weight: 600; min-height: 42px; border: 1px solid var(--line); border-radius: var(--r-int); background: var(--card); cursor: pointer; }
+  .win { border-left: 3px solid var(--ok); background: #ecfdf5; padding: 12px 14px; border-radius: 0 var(--r-int) var(--r-int) 0; margin-top: 18px; }
+  .win h4 { margin: 0 0 6px; font-size: 13px; }
+  .win ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .win li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page">
+    <p class="eyebrow">Hakum Auto Care · client revision</p>
+    <h1>POS Counter — before / after</h1>
+    <p>Same branch, same catalogue, same three items in the order. Only the counter layout changes. The “after” side is live — tap tiles, change quantities, pick a tender.</p>
+  </header>
+
+  <div class="switch" role="group" aria-label="Compare">
+    <button type="button" data-view="before" aria-pressed="false">Before — today</button>
+    <button type="button" data-view="after" aria-pressed="true">After — Square patterns</button>
+  </div>
+  <p class="note" id="viewnote"></p>
+
+  <!-- ================= BEFORE ================= -->
+  <section class="panel" id="panel-before" aria-label="Current POS Counter">
+    <div class="pos">
+      <div class="pos-top">
+        <div>
+          <p class="eyebrow">Counter</p>
+          <h2>POS</h2>
+        </div>
+        <span class="pill">Bacoor</span>
+        <span class="grow"></span>
+        <span class="muted">Checkout · Pay queue · Expenses · Dashboard</span>
+      </div>
+      <div class="b-body">
+        <div style="max-width:420px;margin-bottom:16px"><input type="search" placeholder="Search services &amp; packages" /></div>
+        <div class="b-tabs">
+          <span class="on">Services &amp; packages (14)</span>
+          <span>Detailing (9)</span>
+          <span>Merch / items (22)</span>
+        </div>
+        <div class="b-grid">
+          <div class="b-card">
+            <div class="row"><h3>Hakum Signature Wash</h3><span class="badge">service</span></div>
+            <p class="price mono">₱450</p>
+            <select><option>Medium · ₱450</option><option>Large · ₱550</option></select>
+          </div>
+          <div class="b-card">
+            <div class="row"><h3>Interior Detailing</h3><span class="badge">package</span></div>
+            <p class="price mono">₱1,200</p>
+            <select><option>Medium · ₱1,200</option><option>Large · ₱1,450</option></select>
+          </div>
+          <div class="b-card">
+            <div class="row"><h3>Engine Wash</h3><span class="badge">service</span></div>
+            <p class="price mono">₱350</p>
+          </div>
+          <div class="b-card">
+            <div class="row"><h3>Wax &amp; Buff</h3><span class="badge">service</span></div>
+            <p class="price mono">₱800</p>
+          </div>
+        </div>
+        <div class="b-cartbtn"><button type="button">Cart · 3 · ₱2,000</button></div>
+
+        <div class="callout">
+          <h4>What slows the cashier down</h4>
+          <ul>
+            <li>The order lives behind the <em>Cart</em> button — you cannot see what you are charging while you pick items.</li>
+            <li>No quantity control anywhere. Two coffees means tapping the tile twice; three means three taps and no way back except deleting the line.</li>
+            <li>Two big cards per row, so a 22-item merch list is a long scroll.</li>
+            <li>Category is a 3-tab row, and merch families add a second filter row underneath.</li>
+            <li>Size is a dropdown inside each card — two taps and a menu before the item is even added.</li>
+            <li>Payment method is a dropdown near the bottom of the sheet; no cash-tendered field and no change due.</li>
+            <li>The ad-hoc discount block (three inputs) is always open in the middle of the order, above the customer section.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= AFTER ================= -->
+  <section class="panel on" id="panel-after" aria-label="Proposed POS Counter">
+    <div class="pos">
+      <div class="pos-top">
+        <div>
+          <p class="eyebrow">Counter</p>
+          <h2>POS</h2>
+        </div>
+        <span class="pill">Bacoor</span>
+        <div class="grow" style="max-width:340px;min-width:180px"><input type="search" id="a-search" placeholder="Search the whole catalogue…" /></div>
+        <span class="muted" id="a-pending">2 tickets waiting to pay</span>
+      </div>
+
+      <div class="a-shell">
+        <div class="a-catalog">
+          <div class="a-rail" id="a-rail" role="group" aria-label="Category"></div>
+          <div class="a-tiles" id="a-tiles"></div>
+        </div>
+
+        <aside class="a-order" aria-label="Current order">
+          <div class="a-order-head">
+            <h3>Order <span class="muted mono" id="a-count"></span></h3>
+            <button type="button" class="linkbtn" id="a-clear">Clear</button>
+          </div>
+          <div class="a-lines" id="a-lines"></div>
+
+          <div class="a-totals">
+            <div class="trow"><span>Subtotal</span><span class="mono" id="a-sub">₱0</span></div>
+            <div class="trow" id="a-disc-row" hidden><span>Discount</span><span class="mono" id="a-disc">₱0</span></div>
+            <div class="trow grand"><span>Total</span><span class="mono" id="a-total">₱0</span></div>
+          </div>
+
+          <div class="a-tenders">
+            <p class="lab">Tender</p>
+            <div class="tenders" id="a-tenders" role="group" aria-label="Payment method">
+              <button type="button" data-t="cash" aria-pressed="true">Cash</button>
+              <button type="button" data-t="gcash" aria-pressed="false">GCash</button>
+              <button type="button" data-t="card" aria-pressed="false">Card</button>
+            </div>
+            <div class="cashbox on" id="a-cashbox">
+              <div class="quickcash" id="a-quick"></div>
+              <input type="text" id="a-tendered" inputmode="decimal" placeholder="Cash received" style="margin-top:6px" />
+              <div class="changerow" id="a-changerow" hidden><span id="a-changelab">Change</span><span class="mono" id="a-change">₱0</span></div>
+            </div>
+          </div>
+
+          <details class="drawer">
+            <summary>Discount, customer &amp; notes</summary>
+            <div class="fields">
+              <input type="text" placeholder="Search customer by phone or plate" />
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <input type="text" id="a-dpct" inputmode="decimal" placeholder="% off" />
+                <input type="text" id="a-damt" inputmode="decimal" placeholder="₱ off" />
+              </div>
+              <input type="text" id="a-dreason" placeholder="Reason (required)" />
+              <button type="button" class="apply" id="a-dapply">Apply discount</button>
+            </div>
+          </details>
+
+          <div class="a-pay">
+            <button type="button" class="paybtn" id="a-pay" disabled>Charge ₱0</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="win">
+      <h4>What changes, and why</h4>
+      <ul>
+        <li><strong>Order stays on screen.</strong> The cart moves out of the slide-over and sits beside the grid, so the cashier reads the running total while they ring items up. On a phone it collapses back to a sheet.</li>
+        <li><strong>Quantity steppers on every line</strong> — the explicit ask. Minus at 1 removes the line. Queue-handoff lines stay locked, exactly as they are today.</li>
+        <li><strong>Dense tile grid</strong> — roughly four tiles across instead of two cards, with the running quantity badged on the tile so the cashier sees what is already in the order without looking away.</li>
+        <li><strong>One category rail</strong> replaces the 3-tab row plus the merch-family toolbar. Services, Detailing and each merch family are peers.</li>
+        <li><strong>Size picks inline on the tile</strong> (M / L / XL) instead of a dropdown — one tap, no menu.</li>
+        <li><strong>Tenders are three big buttons</strong>, not a dropdown, and Cash opens quick-cash chips plus a change-due readout. Card and GCash skip straight to Charge.</li>
+        <li><strong>Discount and customer fold away</strong> into one drawer, so the default order panel is just lines, total and Charge.</li>
+        <li><strong>Charge button states the amount</strong> — “Charge ₱2,000” — so there is no silent mis-tap at the end of a shift.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var peso = function (m) { return '₱' + (m / 100).toLocaleString('en-PH', { maximumFractionDigits: 0 }); };
+
+  var CATS = [
+    { id: 'bay', label: 'Services & packages' },
+    { id: 'detailing', label: 'Detailing' },
+    { id: 'coffee', label: 'Coffee' },
+    { id: 'scents', label: 'Car scents' },
+    { id: 'apparel', label: 'Apparel' },
+    { id: 'accessories', label: 'Accessories' }
+  ];
+
+  var SIZES = [{ slug: 'm', label: 'M' }, { slug: 'l', label: 'L' }, { slug: 'xl', label: 'XL' }];
+
+  var ITEMS = [
+    { key: 'sig', cat: 'bay', name: 'Hakum Signature Wash', prices: { m: 45000, l: 55000, xl: 65000 } },
+    { key: 'basic', cat: 'bay', name: 'Basic Wash', prices: { m: 25000, l: 30000, xl: 35000 } },
+    { key: 'int', cat: 'bay', name: 'Interior Detailing', prices: { m: 120000, l: 145000, xl: 170000 } },
+    { key: 'eng', cat: 'bay', name: 'Engine Wash', price: 35000 },
+    { key: 'wax', cat: 'bay', name: 'Wax & Buff', prices: { m: 80000, l: 95000, xl: 110000 } },
+    { key: 'uc', cat: 'bay', name: 'Underchassis', price: 40000 },
+    { key: 'hw', cat: 'bay', name: 'Headlight Restore', price: 60000 },
+    { key: 'tire', cat: 'bay', name: 'Tire Black', price: 15000 },
+    { key: 'cer', cat: 'detailing', name: 'Ceramic Coating', prices: { m: 1800000, l: 2200000, xl: 2600000 } },
+    { key: 'tint', cat: 'detailing', name: 'Nano Ceramic Tint', prices: { m: 1200000, l: 1500000, xl: 1800000 } },
+    { key: 'ppf', cat: 'detailing', name: 'PPF — full front', price: 4500000 },
+    { key: 'pmp', cat: 'detailing', name: 'Paint Maintenance', price: 350000 },
+    { key: 'am', cat: 'coffee', name: 'Americano', price: 12000 },
+    { key: 'lat', cat: 'coffee', name: 'Latte', price: 14000 },
+    { key: 'moc', cat: 'coffee', name: 'Mocha', price: 15000 },
+    { key: 'wat', cat: 'coffee', name: 'Bottled Water', price: 3000 },
+    { key: 'sc1', cat: 'scents', name: 'Scent — Ocean', price: 25000 },
+    { key: 'sc2', cat: 'scents', name: 'Scent — Vanilla', price: 25000 },
+    { key: 'tee', cat: 'apparel', name: 'Hakum Tee', price: 55000 },
+    { key: 'cap', cat: 'apparel', name: 'Hakum Cap', price: 45000 },
+    { key: 'mat', cat: 'accessories', name: 'Floor Mat Set', price: 120000 },
+    { key: 'twl', cat: 'accessories', name: 'Microfiber Towel', price: 18000 }
+  ];
+
+  var state = {
+    cat: 'bay',
+    q: '',
+    sizes: {},
+    tender: 'cash',
+    tendered: '',
+    discount: 0,
+    lines: [
+      { key: 'handoff-sig', name: 'Hakum Signature Wash', meta: 'Q-018 · queue job', unit: 45000, qty: 1, locked: true },
+      { key: 'am', name: 'Americano', meta: 'Coffee', unit: 12000, qty: 2 },
+      { key: 'twl', name: 'Microfiber Towel', meta: 'Accessories', unit: 18000, qty: 1 }
+    ]
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---- view switch ---- */
+  var NOTES = {
+    before: 'Today’s counter: a two-column card grid with the order hidden behind the Cart button.',
+    after: 'Proposed counter. Tap a tile to add it, use the steppers on the right, pick a tender. Nothing here is wired to real data.'
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (btn) {
+    btn.addEventListener('click', function () {
+      var v = btn.dataset.view;
+      Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      $('panel-before').classList.toggle('on', v === 'before');
+      $('panel-after').classList.toggle('on', v === 'after');
+      $('viewnote').textContent = NOTES[v];
+    });
+  });
+  $('viewnote').textContent = NOTES.after;
+
+  /* ---- catalogue ---- */
+  function sizeOf(item) { return state.sizes[item.key] || 'm'; }
+  function priceOf(item) { return item.prices ? item.prices[sizeOf(item)] : item.price; }
+  function qtyOf(item) {
+    var l = state.lines.filter(function (x) { return x.srcKey === item.key; });
+    return l.reduce(function (n, x) { return n + x.qty; }, 0);
+  }
+
+  function renderRail() {
+    $('a-rail').innerHTML = CATS.map(function (c) {
+      var n = ITEMS.filter(function (i) { return i.cat === c.id; }).length;
+      return '<button type="button" data-cat="' + c.id + '" aria-pressed="' + (state.cat === c.id) + '">' +
+        c.label + '<span class="count">' + n + '</span></button>';
+    }).join('');
+  }
+
+  function renderTiles() {
+    var q = state.q.trim().toLowerCase();
+    var list = ITEMS.filter(function (i) {
+      if (q) return i.name.toLowerCase().indexOf(q) >= 0;
+      return i.cat === state.cat;
+    });
+    if (!list.length) {
+      $('a-tiles').innerHTML = '<p class="muted">Nothing matches.</p>';
+      return;
+    }
+    $('a-tiles').innerHTML = list.map(function (i) {
+      var sizes = i.prices
+        ? '<div class="sizebar">' + SIZES.map(function (s) {
+            return '<button type="button" data-size="' + s.slug + '" data-key="' + i.key + '" aria-pressed="' +
+              (sizeOf(i) === s.slug) + '">' + s.label + '</button>';
+          }).join('') + '</div>'
+        : '';
+      return '<div class="tile" data-qty="' + qtyOf(i) + '">' +
+        '<span class="qty-chip">' + qtyOf(i) + '</span>' +
+        '<button type="button" data-add="' + i.key + '" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:4px;flex:1">' +
+          '<span class="nm">' + i.name + '</span>' +
+          (i.prices ? '<span class="sz">Size ' + sizeOf(i).toUpperCase() + '</span>' : '') +
+          '<span class="pr mono">' + peso(priceOf(i)) + '</span>' +
+        '</button>' + sizes + '</div>';
+    }).join('');
+  }
+
+  /* ---- order ---- */
+  function subtotal() {
+    return state.lines.reduce(function (s, l) { return s + l.unit * l.qty; }, 0);
+  }
+  function total() { return Math.max(0, subtotal() - state.discount); }
+
+  function renderOrder() {
+    var n = state.lines.reduce(function (s, l) { return s + l.qty; }, 0);
+    $('a-count').textContent = n ? '· ' + n + (n === 1 ? ' item' : ' items') : '';
+    if (!state.lines.length) {
+      $('a-lines').innerHTML = '<p class="empty">No items yet.<br>Tap anything on the left to start the order.</p>';
+    } else {
+      $('a-lines').innerHTML = state.lines.map(function (l, idx) {
+        var ctrl = l.locked
+          ? '<span class="locked">Locked · ask Team Lead</span>'
+          : '<span class="stepper">' +
+              '<button type="button" data-step="-1" data-i="' + idx + '" aria-label="One fewer">−</button>' +
+              '<span class="n mono">' + l.qty + '</span>' +
+              '<button type="button" data-step="1" data-i="' + idx + '" aria-label="One more">+</button>' +
+            '</span>';
+        return '<div class="line">' +
+          '<div class="l1"><span class="nm">' + l.name + '</span>' +
+            '<span class="amt mono">' + (l.free ? '<span class="free">FREE</span>' : peso(l.unit * l.qty)) + '</span></div>' +
+          '<div class="l2"><span class="meta">' + l.meta + ' · ' + peso(l.unit) + ' ea</span>' + ctrl + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    $('a-sub').textContent = peso(subtotal());
+    $('a-disc-row').hidden = state.discount <= 0;
+    $('a-disc').textContent = '−' + peso(state.discount);
+    $('a-total').textContent = peso(total());
+
+    var pay = $('a-pay');
+    pay.disabled = !state.lines.length;
+    pay.textContent = state.lines.length ? 'Charge ' + peso(total()) : 'Charge ₱0';
+
+    renderCash();
+  }
+
+  function renderCash() {
+    $('a-cashbox').classList.toggle('on', state.tender === 'cash');
+    var base = total();
+    var quick = [];
+    if (base > 0) {
+      quick.push(base);
+      [50000, 100000, 200000, 500000].forEach(function (v) { if (v > base) quick.push(v); });
+      quick = quick.slice(0, 4);
+    }
+    $('a-quick').innerHTML = quick.map(function (v) {
+      return '<button type="button" data-cash="' + v + '">' + (v === base ? 'Exact' : peso(v)) + '</button>';
+    }).join('');
+
+    var got = Math.round(parseFloat(state.tendered || '0') * 100);
+    var row = $('a-changerow');
+    if (!state.tendered || !base) { row.hidden = true; return; }
+    row.hidden = false;
+    if (got >= base) {
+      $('a-changelab').textContent = 'Change';
+      $('a-change').className = 'mono give';
+      $('a-change').textContent = peso(got - base);
+    } else {
+      $('a-changelab').textContent = 'Still due';
+      $('a-change').className = 'mono due';
+      $('a-change').textContent = peso(base - got);
+    }
+  }
+
+  function addItem(key) {
+    var item = ITEMS.filter(function (i) { return i.key === key; })[0];
+    if (!item) return;
+    var sz = sizeOf(item);
+    var lineKey = item.prices ? key + '-' + sz : key;
+    var existing = state.lines.filter(function (l) { return l.key === lineKey; })[0];
+    if (existing) { existing.qty += 1; }
+    else {
+      var cat = CATS.filter(function (c) { return c.id === item.cat; })[0];
+      state.lines.push({
+        key: lineKey, srcKey: key, name: item.name,
+        meta: cat.label + (item.prices ? ' · Size ' + sz.toUpperCase() : ''),
+        unit: priceOf(item), qty: 1
+      });
+    }
+    renderTiles(); renderOrder();
+  }
+
+  /* ---- events ---- */
+  $('a-rail').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-cat]'); if (!b) return;
+    state.cat = b.dataset.cat; state.q = ''; $('a-search').value = '';
+    renderRail(); renderTiles();
+  });
+
+  $('a-tiles').addEventListener('click', function (e) {
+    var sz = e.target.closest('button[data-size]');
+    if (sz) { state.sizes[sz.dataset.key] = sz.dataset.size; renderTiles(); return; }
+    var add = e.target.closest('button[data-add]');
+    if (add) addItem(add.dataset.add);
+  });
+
+  $('a-lines').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-step]'); if (!b) return;
+    var i = Number(b.dataset.i), d = Number(b.dataset.step);
+    var line = state.lines[i]; if (!line) return;
+    line.qty += d;
+    if (line.qty <= 0) state.lines.splice(i, 1);
+    renderTiles(); renderOrder();
+  });
+
+  $('a-clear').addEventListener('click', function () {
+    state.lines = state.lines.filter(function (l) { return l.locked; });
+    state.discount = 0; state.tendered = ''; $('a-tendered').value = '';
+    renderTiles(); renderOrder();
+  });
+
+  $('a-search').addEventListener('input', function (e) { state.q = e.target.value; renderTiles(); });
+
+  $('a-tenders').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-t]'); if (!b) return;
+    state.tender = b.dataset.t;
+    Array.prototype.forEach.call($('a-tenders').querySelectorAll('button'), function (x) {
+      x.setAttribute('aria-pressed', String(x === b));
+    });
+    renderCash();
+  });
+
+  $('a-quick').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-cash]'); if (!b) return;
+    state.tendered = String(Number(b.dataset.cash) / 100);
+    $('a-tendered').value = state.tendered;
+    renderCash();
+  });
+
+  $('a-tendered').addEventListener('input', function (e) { state.tendered = e.target.value; renderCash(); });
+
+  $('a-dapply').addEventListener('click', function () {
+    var pct = parseFloat($('a-dpct').value || '0');
+    var amt = Math.round(parseFloat($('a-damt').value || '0') * 100);
+    if (!$('a-dreason').value.trim()) { $('a-dreason').focus(); return; }
+    state.discount = pct > 0 ? Math.round(subtotal() * pct / 100) : (amt > 0 ? amt : 0);
+    renderOrder();
+  });
+
+  $('a-pay').addEventListener('click', function () {
+    alert('Mock only — this is where checkout() runs, unchanged.');
+  });
+
+  renderRail(); renderTiles(); renderOrder();
+})();
+</script>
+</body>
+</html>
