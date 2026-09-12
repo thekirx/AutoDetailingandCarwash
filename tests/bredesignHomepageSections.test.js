@@ -77,8 +77,8 @@ describe('BreDESIGN homepage fallback sections', () => {
     })
 
     assert.equal(heading, 'Photos & Videos.')
-    assert.equal(pages.length, 6)
-    assert.equal(videoTiles.length, 17)
+    assert.equal(pages.length, 7)
+    assert.equal(videoTiles.length, 23)
     assert.deepEqual(firstPageSequence, ['FIGURE', 'FIGURE', 'BUTTON', 'BUTTON', 'FIGURE'])
     assert.equal(galleryLayout.columns, 4)
     assert.ok(galleryLayout.ceramicHeight > galleryLayout.ppfHeight * 1.8)
