@@ -33,7 +33,7 @@ describe('staff provision RBAC', () => {
     assert.equal(canCreateAdminAccounts({ role: 'BossMich' }), true)
     assert.equal(canCreateAdminAccounts({ role: 'admin' }), false)
     assert.equal(canManagePeople({ role: 'admin' }), true)
-    assert.equal(redirectForRole('BossMich'), '/operations/console')
+    assert.equal(redirectForRole('BossMich'), '/operations/dashboard')
     assert.equal(redirectForRole('staff'), '/operations/attendance')
     assert.equal(redirectForRole('team_lead'), '/operations/queue')
   })

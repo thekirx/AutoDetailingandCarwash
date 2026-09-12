@@ -177,7 +177,7 @@ function Section({ title, eyebrow, children, action }) {
 }
 
 /**
- * Super Admin Floor Board — Services & Packages and Detailing Services, roster, money, tempo.
+ * Super Admin Floor Board — Services & Packages, roster, money, tempo.
  */
 export default function SuperAdminFloorBoard() {
   const { profile, canViewQueueOperations } = useAuth()
@@ -263,6 +263,7 @@ export default function SuperAdminFloorBoard() {
   const kpi = board?.kpi || {}
   const available = board?.availableStaff || []
   const absent = board?.absentStaff || []
+  const failedQaJobs = board?.failedQaJobs || []
 
   function openFamilyLane(family, lane) {
     navigate(queueFamilyHref(family, { lane, branch: branchFilter }))
@@ -287,7 +288,14 @@ export default function SuperAdminFloorBoard() {
     const tiles = [
       ...meta.liveStatuses.map((id) => ({
         id,
-        tone: id === 'in_progress' ? 'green' : id === 'final_checking' || id === 'for_payment' ? 'amber' : 'default',
+        tone:
+          id === 'in_progress'
+            ? 'green'
+            : id === 'redo'
+              ? 'rose'
+              : id === 'final_checking' || id === 'for_payment'
+                ? 'amber'
+                : 'default',
         hint: 'Live',
         onClick: () => openFamilyLane(family, id),
       })),
@@ -343,7 +351,7 @@ export default function SuperAdminFloorBoard() {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Floor Board</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Services & Packages and Detailing Services across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
+            Services & Packages across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
           </p>
         </div>
         <button
@@ -421,55 +429,55 @@ export default function SuperAdminFloorBoard() {
       ) : null}
 
       <LaneStrip family="wash" />
-      <LaneStrip family="detailing" />
 
-      <Section eyebrow="Detailing ops" title="Detailing operations">
+      <Section
+        eyebrow="Quality"
+        title="Services Failed QA"
+        action={
+          <button
+            type="button"
+            onClick={() => openFamilyLane('wash', 'redo')}
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Open failed QA lane
+          </button>
+        }
+      >
         <p className="mb-3 text-xs text-muted-foreground">
-          Multi-day pipeline pulse — Assigned through Ready for Release are live now.
+          Jobs sent back from Final Checking in this timeline. Each one counts against the crew that ran the service.
         </p>
-        <div className="grid grid-cols-2 gap-3 overflow-visible md:grid-cols-3 xl:grid-cols-5">
-          <StatTile
-            label="Assign to branch"
-            value={loading && !board ? '…' : lanesByFamily.detailing?.confirmed ?? 0}
-            hint="Live"
-            onNavigate={() => openFamilyLane('detailing', 'confirmed')}
-            breakdown="Confirmed detailing jobs waiting to be assigned to a branch bay. Opens the live Detailing Services queue on Assign to branch."
-          />
-          <StatTile
-            label="In shop"
-            value={
-              loading && !board
-                ? '…'
-                : (lanesByFamily.detailing?.waiting || 0) + (lanesByFamily.detailing?.in_progress || 0)
-            }
-            tone="green"
-            hint="Intake + in progress"
-            breakdown="Combined count of detailing jobs in waiting (intake) plus in progress. Live bay state for cars already on site."
-          />
-          <StatTile
-            label="Final checking"
-            value={loading && !board ? '…' : lanesByFamily.detailing?.final_checking ?? 0}
-            tone="amber"
-            hint="Live"
-            onNavigate={() => openFamilyLane('detailing', 'final_checking')}
-            breakdown="Detailing jobs in final QA / checking before release. Opens the live Final checking lane."
-          />
-          <StatTile
-            label="For releasing"
-            value={loading && !board ? '…' : lanesByFamily.detailing?.for_releasing ?? 0}
-            hint="Live"
-            onNavigate={() => openFamilyLane('detailing', 'for_releasing')}
-            breakdown="Detailing jobs ready for customer release / handoff. Opens the live For releasing lane."
-          />
-          <StatTile
-            label="Completed"
-            value={loading && !board ? '…' : lanesByFamily.detailing?.completed ?? 0}
-            tone="green"
-            hint="In timeline"
-            onNavigate={() => openHistory('completed')}
-            breakdown="Completed detailing jobs in the selected timeline. Opens History filtered to completed."
-          />
-        </div>
+        {failedQaJobs.length ? (
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {failedQaJobs.map((job) => {
+              const qNum =
+                job.queue_number != null ? `Q-${String(job.queue_number).padStart(3, '0')}` : null
+              return (
+                <li
+                  key={job.booking_id}
+                  className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.06] p-4"
+                >
+                  <p className="truncate font-semibold text-foreground">
+                    {job.customer_name || 'Customer'}
+                    {qNum ? ` · ${qNum}` : ''}
+                  </p>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {job.branch} · {job.vehicle_plate || '—'} · {job.service_name || 'Service'}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Sent back {job.redo_at ? new Date(job.redo_at).toLocaleString() : '—'}
+                  </p>
+                  {job.notes ? (
+                    <p className="mt-2 line-clamp-2 text-xs text-foreground">{job.notes}</p>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            No services failed QA in this timeline.
+          </p>
+        )}
       </Section>
 
       <Section

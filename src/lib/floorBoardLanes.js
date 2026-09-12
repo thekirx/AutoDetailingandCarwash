@@ -15,6 +15,7 @@ export const WASH_FLOOR_LIVE_STATUSES = Object.freeze([
   'waiting',
   'in_progress',
   'final_checking',
+  'redo',
   'for_payment',
 ])
 
@@ -34,7 +35,7 @@ export const WASH_FLOOR_LANE_LABELS = Object.freeze({
   for_payment: 'For Payment',
   completed: 'Completed',
   cancelled: 'Cancelled',
-  redo: 'Redo',
+  redo: 'Services Failed QA',
 })
 
 export const FLOOR_BOARD_FAMILY_META = Object.freeze({
@@ -42,7 +43,7 @@ export const FLOOR_BOARD_FAMILY_META = Object.freeze({
     id: QUEUE_FAMILY_WASH,
     eyebrow: 'Bay status',
     title: 'Services & Packages',
-    hint: 'Same-day wash and package jobs. Waiting through For Payment are live now; Completed and Cancelled follow the timeline.',
+    hint: 'Same-day wash and package jobs. Waiting through For Payment — including Services Failed QA — are live now; Completed and Cancelled follow the timeline.',
     liveStatuses: WASH_FLOOR_LIVE_STATUSES,
   },
   detailing: {

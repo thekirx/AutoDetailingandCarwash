@@ -79,8 +79,8 @@ describe('P0 access gates', () => {
 
 describe('Landing + shell matrix', () => {
   const cases = [
-    [ROLES.SUPER_ADMIN, '/operations/console', 'command'],
-    [ROLES.ASSISTANT_SUPER_ADMIN, '/operations/console', 'command'],
+    [ROLES.SUPER_ADMIN, '/operations/dashboard', 'command'],
+    [ROLES.ASSISTANT_SUPER_ADMIN, '/operations/dashboard', 'command'],
     [ROLES.ADMIN, '/operations/pos', 'command'],
     [ROLES.INVESTOR, '/operations/finance', 'command'],
     [ROLES.TEAM_LEAD, '/operations/queue', 'floor'],

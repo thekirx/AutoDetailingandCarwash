@@ -15,8 +15,8 @@ const storiesDir = join(root, 'docs/user-stories')
 const read = (rel) => readFileSync(join(root, rel), 'utf8')
 
 const EXPECTED_HOMES = Object.freeze({
-  [ROLES.SUPER_ADMIN]: '/operations/console',
-  [ROLES.ASSISTANT_SUPER_ADMIN]: '/operations/console',
+  [ROLES.SUPER_ADMIN]: '/operations/dashboard',
+  [ROLES.ASSISTANT_SUPER_ADMIN]: '/operations/dashboard',
   [ROLES.ADMIN]: '/operations/pos',
   [ROLES.OPERATIONS_LEAD]: '/operations/roadmap',
   [ROLES.TEAM_LEAD]: '/operations/queue',

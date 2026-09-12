@@ -28,7 +28,7 @@ describe('resolveAppHome', () => {
   })
 
   it('sends ops roles to their floor home', () => {
-    assert.equal(resolveAppHome({ role: ROLES.SUPER_ADMIN }), '/operations/console')
+    assert.equal(resolveAppHome({ role: ROLES.SUPER_ADMIN }), '/operations/dashboard')
     assert.ok(String(resolveAppHome({ role: ROLES.TEAM_LEAD }) || '').startsWith('/operations/'))
   })
 

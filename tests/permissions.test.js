@@ -35,7 +35,6 @@ describe('RBAC Part 1 matrix', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
-        '/operations/console',
         '/operations/dashboard',
         '/operations/queue',
         '/operations/bookings',
@@ -176,7 +175,7 @@ describe('RBAC Part 1 matrix', () => {
   })
 
   it('homes and sales redirect to bookings', () => {
-    assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/console')
+    assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/dashboard')
     assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
     assert.equal(redirectForRole(ROLES.STAFF), '/operations/attendance')
     assert.equal(redirectForRole(ROLES.SALES), '/operations/bookings')

@@ -52,7 +52,7 @@ if (process.env.BUSYBEE_API_KEY && process.env.BUSYBEE_CLIENT_ID) {
 
 const accounts = [
   { email: 'demo.customer@hakumautocare.com', password: 'HakumCustomer2026!', role: 'customer', home: '/account' },
-  { email: 'bossmich@hakumautocare.com', password: 'HakumBoss2026!', role: ROLES.SUPER_ADMIN, home: '/operations/console' },
+  { email: 'bossmich@hakumautocare.com', password: 'HakumBoss2026!', role: ROLES.SUPER_ADMIN, home: '/operations/dashboard' },
   { email: 'admin@hakumautocare.com', password: 'HakumAdmin2026!', role: ROLES.ADMIN, home: '/operations/pos' },
   { email: 'teamlead@hakumautocare.com', password: 'HakumTL2026!', role: ROLES.TEAM_LEAD, home: '/operations/queue' },
   { email: 'sales@hakumautocare.com', password: 'HakumSales2026!', role: ROLES.SALES, home: '/operations/bookings' },

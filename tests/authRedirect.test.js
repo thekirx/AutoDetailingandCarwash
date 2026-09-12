@@ -42,8 +42,8 @@ describe('resolvePostLoginPath', () => {
     assert.equal(resolvePostLoginPath(sales, '/operations/access-denied'), '/operations/bookings')
   })
 
-  it('sends Super Admin to console home when no return path', () => {
-    assert.equal(resolvePostLoginPath({ role: ROLES.SUPER_ADMIN }, null), '/operations/console')
+  it('sends Super Admin to the Floor Board home when no return path', () => {
+    assert.equal(resolvePostLoginPath({ role: ROLES.SUPER_ADMIN }, null), '/operations/dashboard')
   })
 
   it('skips a denied role home so ASA without console does not loop', () => {

@@ -802,9 +802,6 @@ export function getOperationsNav(profile) {
           ? 'Floor'
           : 'Dashboard'
 
-  if (canAccessConsole(profile)) {
-    items.push(nav('Console', '/operations/console', 'LayoutDashboard', 'floor'))
-  }
   if (canViewQueueOperations(profile)) {
     items.push(
       nav(floorBoardLabel, '/operations/dashboard', 'Gauge', 'floor'),
@@ -1018,7 +1015,8 @@ export function getDetailerMore(profile) {
 
 export function redirectForRole(role) {
   if (role === ROLES.SUPER_ADMIN || role === ROLES.ASSISTANT_SUPER_ADMIN) {
-    return '/operations/console'
+    // Console is off the nav — the Floor Board is the landing surface.
+    return '/operations/dashboard'
   }
   if (role === ROLES.ADMIN) return '/operations/pos'
   if (role === ROLES.OPERATIONS_LEAD) return '/operations/roadmap'

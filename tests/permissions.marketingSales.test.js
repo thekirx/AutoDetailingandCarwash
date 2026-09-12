@@ -35,6 +35,6 @@ assert.deepEqual(
 
 assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
 assert.equal(redirectForRole(ROLES.SALES), '/operations/bookings')
-assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/console')
+assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/dashboard')
 
 console.log('permissions.marketingSalesNav: ok')

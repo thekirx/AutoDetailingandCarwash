@@ -41,8 +41,8 @@ describe('request.md floor + people', () => {
   it('renames wash roster and lists admin tiles with hover names', () => {
     const floor = read('src/pages/SuperAdminFloorBoard.jsx')
     assert.match(floor, /Carwash crew on shift/)
-    assert.match(floor, /title="Detailing operations"/)
-    assert.doesNotMatch(floor, /Detailing operations summary/)
+    // Client revision: Detailing Services is off the Floor Board entirely.
+    assert.doesNotMatch(floor, /Detailing operations/)
     assert.doesNotMatch(
       floor,
       /Absent \/ not checked in[\s\S]*attendance_status/,

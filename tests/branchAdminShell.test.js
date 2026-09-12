@@ -21,7 +21,7 @@ describe('Branch Admin simplified shell', () => {
 
   it('homes to POS', () => {
     assert.equal(redirectForRole(ROLES.ADMIN), '/operations/pos')
-    assert.equal(redirectForRole(ROLES.SUPER_ADMIN), '/operations/console')
+    assert.equal(redirectForRole(ROLES.SUPER_ADMIN), '/operations/dashboard')
   })
 
   it('Command nav: Floor, Queue, attendance, POS, Inventory restock, reviews, planner, Ops Lab, history, audit', () => {

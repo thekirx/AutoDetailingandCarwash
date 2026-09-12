@@ -107,7 +107,9 @@ describe('Super Admin floor wiring', () => {
     assert.match(page, /canSeeAllBranches\(profile\)/)
     assert.match(board, /fetchSuperAdminFloorBoard/)
     assert.match(board, /Services & Packages/)
-    assert.match(board, /Detailing Services/)
+    // Client revision: Detailing Services no longer appears on the Floor Board.
+    assert.doesNotMatch(board, /Detailing Services/)
+    assert.match(board, /Services Failed QA/)
     assert.match(board, /Floor Board/)
     assert.match(board, /Cancel loss/)
     assert.match(board, /Failed QA/)

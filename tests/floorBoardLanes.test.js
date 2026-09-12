@@ -20,6 +20,7 @@ describe('floor board lanes by family', () => {
     assert.equal(floorLaneLabel('for_payment', 'wash'), 'For Payment')
     assert.equal(floorLaneLabel('completed', 'wash'), 'Completed')
     assert.equal(floorLaneLabel('cancelled', 'wash'), 'Cancelled')
+    assert.equal(floorLaneLabel('redo', 'wash'), 'Services Failed QA')
   })
 
   it('names detailing lanes with the detailing pipeline labels', () => {
@@ -52,6 +53,7 @@ describe('floor board lanes by family', () => {
       'waiting',
       'in_progress',
       'final_checking',
+      'redo',
       'for_payment',
     ])
     assert.ok(DETAILING_FLOOR_LIVE_STATUSES.includes('confirmed'))
@@ -67,17 +69,23 @@ describe('floor board lanes by family', () => {
     assert.equal(split.detailing.cancelled, 1)
   })
 
-  it('Floor Board UI separates Services & Packages from Detailing Services', () => {
+  it('Floor Board UI is Services & Packages only, with a Failed QA section', () => {
     const board = readFileSync(join(root, 'src/pages/SuperAdminFloorBoard.jsx'), 'utf8')
     const api = readFileSync(join(root, 'src/queue/queueApi.js'), 'utf8')
     const labels = readFileSync(join(root, 'src/lib/floorBoardLanes.js'), 'utf8')
     assert.match(board, /Services & Packages/)
-    assert.match(board, /Detailing Services/)
     assert.match(board, /laneCountsByFamily/)
     assert.match(board, /Floor Board/)
     assert.match(board, /floorLaneLabel/)
     assert.match(board, /LaneStrip family="wash"/)
-    assert.match(board, /LaneStrip family="detailing"/)
+    // Client revision: Detailing Services is off the Floor Board entirely.
+    assert.doesNotMatch(board, /LaneStrip family="detailing"/)
+    assert.doesNotMatch(board, /Detailing operations/)
+    // Client revision: Final Checking and Services Failed QA both render as lanes.
+    assert.match(board, /Services Failed QA/)
+    assert.match(board, /failedQaJobs/)
+    assert.match(api, /failedQaJobs/)
+    // The lane data layer still knows both families — only the board view narrowed.
     assert.match(labels, /detailingBoardStatusLabel/)
     assert.match(labels, /Services & Packages/)
     assert.match(labels, /Detailing Services/)
