@@ -17,3 +17,8 @@ supabase/.temp
 local-backups/
 .claude/
 .env*
+
+# Raw camera masters for the proof clips. The web-ready AV1/H.264 encodes and
+# their posters are committed; the originals live in Google Drive, because
+# 164MB of masters is weight the repository would carry forever.
+public/video/service-proof/*/source/
