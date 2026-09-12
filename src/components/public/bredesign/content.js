@@ -25,6 +25,11 @@ export const IMAGES = {
   ceramicPremium: new URL('../../../assets/services/ceramic-premium.webp', import.meta.url).href,
   ceramicPlatinum: new URL('../../../assets/services/ceramic-platinum.webp', import.meta.url).href,
   tint: new URL('../../../assets/services/ceramic-tint.webp', import.meta.url).href,
+  /* Two stills cut from Hakum's own tint clips, so every card on the tint page
+     shows tint work — a photo of another service reads as part of the job. */
+  tintFinished: new URL('../../../assets/services/tint-finished-wigo.webp', import.meta.url).href,
+  tintCabin: new URL('../../../assets/services/tint-cabin-through-glass.webp', import.meta.url).href,
+  tintToyota86: new URL('../../../assets/services/tint-toyota86.webp', import.meta.url).href,
   detailing: new URL('../../../assets/services/detailing.webp', import.meta.url).href,
   interior: new URL('../../../assets/services/interior-detailing.webp', import.meta.url).href,
   glass: new URL('../../../assets/services/glass-detailing.webp', import.meta.url).href,
@@ -288,21 +293,25 @@ export const SERVICE_POINT_CARDS = {
     {
       title: 'Clarity kept',
       copy: 'No mirror haze and no purple fade. Night visibility stays honest.',
-      image: IMAGES.glass,
-      alt: 'Glass detailing in progress at Hakum Auto Care',
+      image: IMAGES.tintFinished,
+      alt: 'A Toyota Wigo with nano ceramic tint fitted, seen from the side',
+      position: '50% 45%',
     },
     {
       title: 'Signal-safe',
       copy: 'No metal in the film, so GPS, radio and mobile signal work normally.',
-      image: '/video/service-proof/tint/wigo-poster.webp',
-      alt: 'Nano ceramic tint being installed on a Toyota Wigo',
-      position: '50% 45%',
+      image: IMAGES.tintToyota86,
+      alt: 'The tinted side glass of a red Toyota 86 at Hakum Auto Care',
+      position: '50% 50%',
     },
     {
+      /* The cabin seen through the tinted glass, not an interior-detailing
+         photo: nothing here should read as a service the tint does not buy. */
       title: 'Interior preserved',
       copy: 'Blocking UV keeps the dashboard from cracking and the seats from fading.',
-      image: IMAGES.interior,
-      alt: 'A detailed car interior at Hakum Auto Care',
+      image: IMAGES.tintCabin,
+      alt: 'Seats and cabin seen through the nano ceramic tint on a vehicle’s side glass',
+      position: '50% 50%',
     },
   ],
 }
