@@ -1,4 +1,5 @@
-import { ArrowRight, Check } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { PPF_FILM_BRAND, PPF_PACKAGES } from '../../../data/ppfPackages'
@@ -101,25 +102,30 @@ function CompareCell({ cell }) {
    climb, so the order reads without comparing a single number; the one tier
    Hakum recommends is the only lit card and the only solid button. */
 export default function PpfPackagesSection() {
+  /* The table is eleven coverage rows wide and four tiers deep — useful to the
+     reader who wants it, a wall of ticks to the one who has already picked a
+     step. It opens on request. */
+  const [compareOpen, setCompareOpen] = useState(false)
+
   return (
     <section id="ppf-packages" className="bd-packages" data-service-packages="ppf">
       <div className="bd-shell">
         <header className="bd-pk-top bd-reveal">
-          <div>
+          {/* The headline runs across the top; the pitch and the starting
+              price share the row beneath it. */}
+          <div className="bd-pk-title">
             <p className="bd-eyebrow">Paint protection film packages</p>
             <h2>
-              Choose your
-              <br />
-              <em>level of defense.</em>
+              Choose your <em>level of defense.</em>
             </h2>
-            <p className="bd-pk-sub">
-              Stone chips, scratches, and road debris hit the film. Never the paint. Every package uses{' '}
-              <a href={PPF_FILM_BRAND.url} target="_blank" rel="noreferrer">
-                {PPF_FILM_BRAND.name}
-              </a>{' '}
-              self-healing TPU film and includes a free glass ceramic coating.
-            </p>
           </div>
+          <p className="bd-pk-sub">
+            Stone chips, scratches, and road debris hit the film. Never the paint. Every package uses{' '}
+            <a href={PPF_FILM_BRAND.url} target="_blank" rel="noreferrer">
+              {PPF_FILM_BRAND.name}
+            </a>{' '}
+            self-healing TPU film and includes a free glass ceramic coating.
+          </p>
           <div className="bd-pk-price">
             <small>Paint protection film</small>
             <strong>Starting from</strong>
@@ -185,7 +191,23 @@ export default function PpfPackagesSection() {
           })}
         </div>
 
-        <div className="bd-cmp bd-reveal">
+        <div className="bd-cmp-block bd-reveal">
+          <button
+            type="button"
+            className="bd-cmp-toggle"
+            aria-expanded={compareOpen}
+            aria-controls="ppf-compare"
+            onClick={() => setCompareOpen((open) => !open)}
+          >
+            <span>
+              <b>Compare all four packages</b>
+              <s>Panel by panel, film, warranty, and what comes free</s>
+            </span>
+            <ChevronDown size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="bd-cmp" id="ppf-compare" hidden={!compareOpen}>
           <table>
             <caption className="bd-cmp-caption">Compare Paint Protection Film packages</caption>
             <thead>

@@ -132,20 +132,18 @@ function ServiceDetail({ slug, section }) {
         <div className={`bd-detail-top bd-reveal${withHeadline ? '' : ' is-lede'}`}>
           {withHeadline ? (
             <>
-              <div>
+              <div className="bd-detail-title">
                 <p className="bd-eyebrow">{section.eyebrow}</p>
+                {/* The headline runs across the row rather than breaking on a
+                    hard return inside a half-width column. */}
                 <h2>
-                  {section.headline.slice(0, -1).join(' ')}
-                  <br />
-                  <em>{lastLine}</em>
+                  {section.headline.slice(0, -1).join(' ')} <em>{lastLine}</em>
                 </h2>
               </div>
-              <div>
-                <p className="bd-why-lede">
-                  <LedeText parts={section.lede} />
-                </p>
-                <DetailCtas slug={slug} section={section} />
-              </div>
+              <p className="bd-why-lede">
+                <LedeText parts={section.lede} />
+              </p>
+              <DetailCtas slug={slug} section={section} />
             </>
           ) : (
             <>

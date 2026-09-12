@@ -167,25 +167,21 @@
 
 /* ---- Section heading pattern ------------------------------------------- */
 
+/* The title runs left to right across the shell and the standfirst sits
+   under it. The old two-column head squeezed every headline into 45% of the
+   page, so short titles broke into three lines with half the row empty. */
 .bredesign .bd-head {
   display: grid;
   gap: 18px;
   margin-bottom: clamp(30px, 3.6vw, 50px);
 }
-@media (min-width: 900px) {
-  .bredesign .bd-head {
-    grid-template-columns: 1fr 0.85fr;
-    align-items: end;
-    gap: 44px;
-  }
-}
 .bredesign .bd-head h2 {
   margin-top: 14px;
-  font-size: clamp(2rem, 4.8vw, 4rem);
+  font-size: clamp(2rem, 4.4vw, 3.9rem);
 }
 .bredesign .bd-head > p {
   color: var(--bd-ink-2);
-  max-width: 52ch;
+  max-width: 62ch;
   font-size: 14.5px;
   line-height: 1.65;
 }
@@ -3067,12 +3063,17 @@
    cards: Hakum's own install photography, a heading, one line. */
 .bredesign .bd-detail-top {
   display: grid;
-  gap: 26px;
+  gap: 0 36px;
   align-items: end;
 }
 @media (min-width: 900px) {
-  .bredesign .bd-detail-top {
-    grid-template-columns: 1.1fr 1fr;
+  .bredesign .bd-detail-top:not(.is-lede) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  /* The headline takes the whole row; the lede and the buttons share the one
+     under it. */
+  .bredesign .bd-detail-top .bd-detail-title {
+    grid-column: 1 / -1;
   }
 }
 .bredesign .bd-detail-top h2 {
@@ -3083,8 +3084,11 @@
   color: var(--bd-accent);
 }
 .bredesign .bd-detail-top .bd-why-lede {
-  margin-top: 0;
-  max-width: 52ch;
+  margin-top: 18px;
+  max-width: 58ch;
+}
+.bredesign .bd-detail-top .bd-why-cta {
+  margin-top: 22px;
 }
 /* Ceramic and tint already carry their headline in the page hero, so their
    top row is the lede beside the buttons rather than a second headline. */
@@ -3092,6 +3096,7 @@
   align-items: center;
 }
 .bredesign .bd-detail-top.is-lede .bd-why-lede {
+  margin-top: 0;
   max-width: 62ch;
 }
 @media (min-width: 900px) {
@@ -3310,33 +3315,50 @@
   display: grid;
   gap: clamp(34px, 6vw, 88px);
 }
-.bredesign .bd-service-proof header {
-  max-width: 820px;
-}
+/* Section titles run the width of the shell. Capping the header at 820px
+   inside a 1353px shell broke every one of these into three or four short
+   lines stacked down the left; the measure belongs on the standfirst, which
+   is what needs a comfortable line length, not on the display type. */
 .bredesign .bd-service-proof header h2,
 .bredesign .bd-service-faq header h2,
 .bredesign .bd-service-bottom-cta h2 {
-  margin-top: 16px;
-  font-size: clamp(2.2rem, 5.3vw, 5rem);
-  line-height: .92;
+  margin-top: 14px;
+  font-size: clamp(2.2rem, 4.6vw, 4.2rem);
+  line-height: 0.95;
+}
+/* The FAQ headline sits in the narrow sticky column beside the questions, so
+   it takes the smaller step of the scale. */
+.bredesign .bd-service-faq header h2 {
+  font-size: clamp(1.9rem, 3vw, 2.7rem);
 }
 .bredesign .bd-service-faq header h2 em,
 .bredesign .bd-service-bottom-cta h2 em { color: var(--bd-accent); }
-.bredesign .bd-service-proof header > p:last-child,
+.bredesign .bd-proof-lede,
 .bredesign .bd-service-faq header > p:last-child,
 .bredesign .bd-service-bottom-cta .bd-shell > p:nth-child(3) {
-  margin-top: 20px;
-  max-width: 54ch;
+  margin-top: 18px;
+  max-width: 58ch;
   color: var(--bd-ink-2);
   line-height: 1.7;
 }
 /* Proof clips: a rail of posters, each opening the shared player. */
 .bredesign .bd-proof-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0 32px;
+}
+.bredesign .bd-proof-head > header {
+  grid-column: 1 / -1;
+}
+.bredesign .bd-proof-lede {
+  margin-bottom: 0;
+}
+@media (max-width: 719px) {
+  .bredesign .bd-proof-head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
 }
 .bredesign .bd-proof-rail {
   --slide: clamp(200px, 20vw, 250px);
@@ -3463,7 +3485,7 @@
   line-height: 1.75;
 }
 @media (min-width: 900px) {
-  .bredesign .bd-service-faq-layout { grid-template-columns: .72fr 1.28fr; }
+  .bredesign .bd-service-faq-layout { grid-template-columns: .92fr 1.08fr; }
   .bredesign .bd-service-faq header { position: sticky; top: 120px; }
 }
 

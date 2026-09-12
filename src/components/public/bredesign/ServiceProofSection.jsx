@@ -20,12 +20,14 @@ export default function ServiceProofSection({ serviceId, serviceName, proof }) {
   return (
     <section className="bd-service-proof" data-service-proof={serviceId}>
       <div className="bd-shell">
+        {/* The title runs the full width of the shell; the standfirst and the
+            arrows share the row under it. */}
         <div className="bd-proof-head">
           <header>
             <p className="bd-eyebrow">{proof.eyebrow}</p>
             <h2>{proof.title}</h2>
-            <p>{proof.copy}</p>
           </header>
+          <p className="bd-proof-lede">{proof.copy}</p>
           <LoopArrows rail={rail} label="video" />
         </div>
 
