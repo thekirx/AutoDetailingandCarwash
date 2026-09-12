@@ -342,7 +342,7 @@ export const GALLERY_EXTRA_CLIPS = {
 /* The homepage gallery, page by page. Every page is the original collage: a
    tall tile each side of a wide one, with the small tiles beneath. Layout "a"
    ends in a tall tile, layout "b" in two small ones. Each photo and each clip
-   appears once — 16 photos, 17 videos. A clip is named as [service, id] and
+   appears once — 16 photos, 23 videos. A clip is named as [service, id] and
    read from SERVICE_DETAIL_CONTENT, or from GALLERY_EXTRA_CLIPS. */
 const photo = (slot, src, caption, alt, position) => ({ slot, photo: { src, caption, alt, position } })
 const clip = (slot, service, id) => ({ slot, clip: [service, id] })
@@ -409,6 +409,17 @@ export const GALLERY_PAGES = [
       clip('d', 'ceramic', 'nissan'),
       photo('a', IMAGES.tint, 'Tint, fitted', 'Nano ceramic tint being fitted'),
       clip('b', 'ppf', 'civic-feedback'),
+    ],
+  },
+  {
+    layout: 'b',
+    tiles: [
+      clip('t', 'ppf', 'mini-cooper'),
+      clip('w', 'ppf', 'santa-fe'),
+      clip('c', 'ppf', 'toyota-cross'),
+      clip('d', 'ppf', 'white-hilux-install'),
+      clip('a', 'ppf', 'black-vehicle-install'),
+      clip('b', 'ppf', 'xpander-cross'),
     ],
   },
 ]
