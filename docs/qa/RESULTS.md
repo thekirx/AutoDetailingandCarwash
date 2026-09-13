@@ -1,3 +1,34 @@
+## Latest orchestrator
+
+| Field | Value |
+|-------|-------|
+| Finished | 2026-09-13T15:20:41.426Z |
+| Overall | **PASS** |
+| Passed / failed / skipped | 14 / 0 / 2 |
+| SEND_LIVE_SMS | 0 |
+
+| ID | Step | Result |
+|----|------|--------|
+| U | npm test (unit) | PASS |
+| L1 | e2e-attendance | PASS |
+| L2 | e2e-payroll | PASS |
+| L3 | e2e-readiness | PASS |
+| L4 | e2e-queue-part3 | PASS |
+| L5 | e2e-pos-part2 | PASS |
+| L6 | smoke-busybee (balance only) | PASS |
+| L7 | e2e-real-customer-status-sms | SKIP |
+| L8 | e2e-ops-cutover | PASS |
+| L9 | e2e-shift-close-money (BUG-007 RPC) | PASS |
+| B | npm run build | PASS |
+| UI | e2e-ui-p0 | PASS |
+| UI2 | e2e-ui-money (BUG-007) | PASS |
+| R | responsive-validation | SKIP |
+
+See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./readiness-dashboard.html).
+
+
+---
+
 # Hakum QA — Living Results Log
 
 **Rule:** Every campaign slice must leave command + exit code here (or via orchestrator stamp).  

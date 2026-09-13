@@ -21,6 +21,8 @@
 | BUG-016 | Medium | Public UX | “Join the waitlist” on coming-soon branches has no waitlist | `BdEventsBranches.jsx` | **Closed** | CTA → “Ask about opening” + `/contact` |
 | BUG-017 | Medium | DX / CI | `npm test` browser suites fail without vite preview on `:4173` | 12× `ERR_CONNECTION_REFUSED` cold run | **Closed** | Default `npm test` excludes `*.browser.test.js`; use `npm run test:browser` with preview |
 | BUG-018 | Low | Legal copy | Legal pages claim “contact form”; `/contact` is channels-only | `LegalPages.jsx` vs `ContactPage.jsx` | **Closed** | Copy → Contact page links |
+| BUG-019 | High | Auth / IA | Detailer deep-link could open wash Queue/Floor/Crew/KPI (`QUEUE_VIEWER_ROLES`) | Role QA Wave A matrix | **Closed** | Removed DETAILER from viewers; `principalQaMatrix` asserts deny; `detailer-deny.png` |
+| BUG-020 | Medium | DX / CI | `bredesignLogoMarquee` (+ homepage sections) puppeteer in default unit suite | Cold `npm test` ERR_CONNECTION_REFUSED | **Closed** | Renamed to `*.browser.test.js` |
 
 ## Severity guide
 

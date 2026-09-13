@@ -1,6 +1,6 @@
 /**
  * Principal QA Phase B — role × home × shell × allowRoute matrix.
- * Also locks P0-1 (detailer queue) and P0-2 (video_editor my-tasks).
+ * Also locks P0-1 (detailer off wash queue) and P0-2 (video_editor my-tasks).
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
@@ -56,11 +56,15 @@ function allowedKeys(p) {
 }
 
 describe('P0 access gates', () => {
-  it('P0-1 detailer may open bookings for detailing work', () => {
+  it('P0-1 detailer bookings only — wash queue deep-link denied', () => {
     const p = profile(ROLES.DETAILER)
     assert.equal(redirectForRole(ROLES.DETAILER), '/operations/bookings')
     assert.equal(allowRoute(p, 'bookings'), true)
     assert.equal(allowRoute(p, 'attendance'), true)
+    assert.equal(allowRoute(p, 'queue'), false)
+    assert.equal(allowRoute(p, 'dashboard'), false)
+    assert.equal(allowRoute(p, 'crew'), false)
+    assert.equal(allowRoute(p, 'kpi'), false)
     assert.equal(allowRoute(p, 'finance'), false)
     assert.equal(allowRoute(p, 'pos'), false)
     assert.ok(getDetailerDock(p).some((i) => i.to === '/operations/bookings'))

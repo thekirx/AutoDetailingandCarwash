@@ -1,13 +1,13 @@
 {
   "ok": true,
-  "started": "2026-09-03T13:47:35.101Z",
-  "finished": "2026-09-03T13:52:11.567Z",
+  "started": "2026-09-13T15:18:37.918Z",
+  "finished": "2026-09-13T15:20:41.426Z",
   "passed": 14,
   "failed": 0,
-  "skipped": 1,
+  "skipped": 2,
   "sendLiveSms": false,
   "skipUi": false,
-  "skipResponsive": false,
+  "skipResponsive": true,
   "steps": [
     {
       "id": "U",
@@ -104,8 +104,7 @@
       "id": "R",
       "label": "responsive-validation",
       "ok": true,
-      "code": 0,
-      "skipped": false
+      "skipped": true
     }
   ]
 }

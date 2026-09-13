@@ -147,7 +147,7 @@ export const QUEUE_VIEWER_ROLES = [
   ROLES.TEAM_LEAD,
   ROLES.SUPER_ADMIN,
   ROLES.ASSISTANT_SUPER_ADMIN,
-  ROLES.DETAILER,
+  // ponytail: detailer works Bookings only — wash Queue deep-links stay denied
 ]
 export const OPS_LOGIN_ROLES = [
   ROLES.STAFF,
