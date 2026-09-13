@@ -24,7 +24,7 @@ test('Mobile PPF hero centers its intro and matches the animated chapter typogra
     const result = await page.evaluate(() => {
       const hero = document.querySelector('.ppf-information-stage')
       const eyebrow = document.querySelector('.ppf-information-heading > p')
-      const headline = document.querySelector('.ppf-information-heading > h2')
+      const headline = document.querySelector('.ppf-information-heading > h1')
       const supportingCopy = document.querySelector('.ppf-information-heading > span')
       const chapterHeadline = document.querySelector('.ppf-information-chapter h3')
       const eyebrowStyle = getComputedStyle(eyebrow)
@@ -79,6 +79,16 @@ test('PPF page contains ClearPro, packages, proof, focused FAQs, and bottom book
     const firstQuestion = await page.$('[data-service-faq="ppf"] button')
     await firstQuestion.click()
     assert.equal(await firstQuestion.evaluate((node) => node.getAttribute('aria-expanded')), 'true')
+  })
+})
+
+test('PPF page exposes its hero headline as the single h1', async () => {
+  await withPage('/services/ppf', async (page) => {
+    const headings = await page.$$eval('main h1', (nodes) => (
+      nodes.map((node) => Array.from(node.children, (line) => line.textContent.trim()))
+    ))
+
+    assert.deepEqual(headings, [['Between your paint', 'And everything out there.']])
   })
 })
 

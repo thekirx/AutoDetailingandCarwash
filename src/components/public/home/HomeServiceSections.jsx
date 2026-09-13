@@ -147,7 +147,7 @@ export function PpfInformationSection() {
           data-active={captionKey === 'introduction' ? 'true' : 'false'}
         >
           <p>{ppfInformation.eyebrow}</p>
-          <h2>{cinematicLines(ppfInformation.title)}</h2>
+          <h1>{cinematicLines(ppfInformation.title)}</h1>
           <span>{ppfInformation.copy}</span>
         </div>
 
