@@ -2466,3 +2466,52 @@ form.capp-section > .capp-sect > h2::before {
   letter-spacing: -0.005em;
   line-height: 1.12;
 }
+
+/* ---------- 9. The header on desktop web -------------------------------
+   Gating the still to phones left the desktop app looking untouched, which is
+   not what was approved — the point was that the app stops opening on a flat
+   rectangle. Desktop keeps its own shape: .capp-hero is a rounded card under
+   the public landing header, so the still fills the card rather than the top
+   of the screen, and .capp-top, which is a bare title row there, takes a rule
+   and the display face instead of a photograph it has no room for. */
+@media (min-width: 860px) {
+  .capp-hero {
+    color: #fff;
+    background:
+      linear-gradient(110deg, rgba(2, 10, 49, 0.92) 30%, rgba(2, 10, 49, 0.55)),
+      var(--capp-hero-still) 50% 40% / cover no-repeat,
+      #020a31;
+  }
+
+  .capp-hero .capp-greet,
+  .capp-hero .capp-hero-sub {
+    color: #d3dbf5;
+  }
+
+  .capp-hero .capp-weather {
+    color: #fff;
+  }
+
+  .capp-hero h1,
+  .capp-hero .capp-greet,
+  .capp-hero .capp-hero-sub,
+  .capp-hero .capp-weather {
+    text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
+  }
+
+  /* The title row carries the eyebrow rule instead, so the page still reads as
+     part of the same system without a photograph behind two lines of text. */
+  .capp-top-copy h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .capp-top-copy h1::before {
+    content: '';
+    flex: none;
+    width: 1.5rem;
+    height: 3px;
+    background: var(--capp-accent);
+  }
+}
