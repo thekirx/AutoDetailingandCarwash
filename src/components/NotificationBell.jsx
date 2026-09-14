@@ -119,7 +119,7 @@ export default function NotificationBell({
 
   return (
     <div className={`relative ${className}`} ref={root}>
-      <button type="button" className={btn} aria-label="Notifications" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+      <button type="button" className={btn} aria-label="Notifications" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         <Bell size={18} strokeWidth={1.75} />
         {unread > 0 ? (
           <span className={capp ? 'capp-inbox-badge' : 'absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground'}>

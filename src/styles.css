@@ -92,6 +92,12 @@ button { cursor: pointer; }
 .header-auth { display:inline-flex; align-items:center; padding:12px 14px; text-decoration:none; text-transform:uppercase; font-size:11px; letter-spacing:.12em; font-weight:800; transition:color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast); }
 .header-signin { color:#fff; border:1px solid rgba(255,255,255,.45); }
 .header-signin:hover { background:rgba(255,255,255,.1); }
+/* Bell sits in this navy bar (outside .capp). Do not inherit color:#fff into the paper inbox. */
+.public-header .capp-icon-btn { width:44px; height:44px; border:1px solid rgba(255,255,255,.45); background:transparent; color:#fff; }
+.public-header .capp-icon-btn:hover { background:rgba(255,255,255,.1); }
+.public-header .capp-icon-btn:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+.public-header .capp-inbox-badge { background:#fff; color:#052699; }
+.public-header .capp-inbox { color:#020a31; background:#fff; border:1px solid rgba(5,38,153,.18); }
 .header-signup { color:#020a31; background:#fff; }
 .header-signup:hover { background:rgba(255,255,255,.9); }
 .menu-button,.mobile-nav{display:none}

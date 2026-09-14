@@ -83,6 +83,17 @@ describe('customer app frame', () => {
     assert.match(layout, /public-header/)
   })
 
+  it('notification bell keeps navy ink on paper and a white glyph on the public header', () => {
+    const css = read('src/styles-customer-app.css')
+    const publicCss = read('src/styles.css')
+    assert.match(css, /\.capp-inbox\s*\{[^}]*color:\s*var\(--capp-ink/)
+    assert.match(css, /\.capp-inbox-row\s*\{[^}]*color:\s*var\(--capp-ink/)
+    assert.doesNotMatch(css, /\.capp-inbox-row\.is-new strong\s*\{[^}]*--capp-on-accent/)
+    assert.match(publicCss, /\.public-header \.capp-icon-btn[^}]*color:#fff/)
+    assert.match(publicCss, /\.public-header \.capp-inbox-badge[^}]*background:#fff/)
+    assert.match(publicCss, /\.public-header \.capp-inbox-badge[^}]*color:#052699/)
+  })
+
   it('ships dark app tokens, inline desktop tab row, landscape dock, safe areas, reduced motion', () => {
     const css = read('src/styles-customer-app.css')
     const tokens = read('src/design-tokens.css')

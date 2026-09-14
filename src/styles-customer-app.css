@@ -164,11 +164,16 @@ html.dark .capp-brand-logo--dark {
   height: 2.75rem;
   border: 1px solid var(--capp-line);
   border-radius: 999px;
-  background: var(--capp-surface);
-  color: var(--capp-ink);
+  background: var(--capp-surface, #fff);
+  color: var(--capp-ink, #020a31);
   cursor: pointer;
   text-decoration: none;
   transition: transform 180ms var(--capp-ease), background 180ms var(--capp-ease);
+}
+
+.capp-icon-btn:focus-visible {
+  outline: 2px solid var(--capp-accent, #052699);
+  outline-offset: 2px;
 }
 
 .capp-icon-btn:hover {
@@ -1266,7 +1271,7 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   height: 1rem;
   padding: 0 0.22rem;
   border-radius: 999px;
-  background: var(--capp-accent);
+  background: var(--capp-accent, #052699);
   color: #fff;
   font-size: 0.62rem;
   font-weight: 800;
@@ -1281,10 +1286,11 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   top: calc(100% + 0.45rem);
   width: min(19.5rem, calc(100vw - 2rem));
   overflow: hidden;
-  border: 1px solid var(--capp-line-strong);
-  border-radius: var(--capp-radius);
-  background: var(--capp-surface);
-  box-shadow: var(--capp-shadow);
+  border: 1px solid var(--capp-line-strong, rgba(5, 38, 153, 0.18));
+  border-radius: var(--capp-radius, 1.15rem);
+  background: var(--capp-surface, #fff);
+  color: var(--capp-ink, #020a31);
+  box-shadow: var(--capp-shadow, 0 14px 36px rgba(5, 38, 153, 0.1));
 }
 
 .capp-inbox-head,
@@ -1304,7 +1310,7 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   background: none;
   padding: 0;
   font: inherit;
-  color: var(--capp-accent);
+  color: var(--capp-accent, #052699);
   cursor: pointer;
 }
 
@@ -1326,22 +1332,27 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   padding: 0.75rem 0.9rem;
   border-top: 1px solid var(--capp-line);
   text-decoration: none;
-  color: inherit;
+  color: var(--capp-ink, #020a31);
 }
 
 .capp-inbox-row strong {
   font-size: 0.86rem;
+  color: var(--capp-ink, #020a31);
 }
 
 .capp-inbox-row em,
 .capp-inbox-row span {
   font-style: normal;
   font-size: 0.76rem;
-  color: var(--capp-steel);
+  color: var(--capp-steel, #5c6578);
+}
+
+.capp-inbox-row.is-new {
+  background: var(--capp-accent-soft, rgba(5, 38, 153, 0.1));
 }
 
 .capp-inbox-row.is-new strong {
-  color: var(--capp-on-accent);
+  color: var(--capp-ink, #020a31);
 }
 
 /* ---------- Empty / note / skeleton ---------- */
