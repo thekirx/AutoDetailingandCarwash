@@ -2212,3 +2212,257 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   color: var(--capp-ink);
   font-variant-numeric: tabular-nums;
 }
+
+/* ==========================================================================
+   Elevation pass — approved 2026-09-15 from design-mocks/webapp/customer-app.html
+
+   Correct colour was the floor, not the ceiling: aligning the palette made the
+   app right and made it basic, because it removed the accidental variety
+   without replacing it with intentional craft. What the marketing site has
+   that this did not is display type, photography and hierarchy — so that is
+   what comes across, on the components that are already here.
+
+   Presentation only. No new component, field, fetch or screen, and every value
+   on screen is one the portal payload already returns.
+   ========================================================================== */
+
+.capp {
+  --capp-display: var(--font-display, "Benzin", "Arial Black", sans-serif);
+  /* The still that opens every interior marketing page. The app opened on a
+     flat rectangle, which is the moment the two surfaces stopped matching. */
+  --capp-hero-still: url('./assets/hero/bredesign-hero-poster.webp');
+}
+
+/* ---------- 1. Photographic header -------------------------------------
+   Both headers take it: .capp-hero on home, .capp-top on queue / book / blog.
+   Without this the tab bar switches visual language between tabs.
+
+   Phone / PWA only. From 860px the app sits under the public landing header,
+   where .capp-hero is already its own card and .capp-top is nearly bare, so
+   the still would be undoing a layout rather than lifting one. */
+@media (max-width: 859px) {
+  .capp-hero,
+  .capp-top {
+    position: relative;
+    isolation: isolate;
+    color: #fff;
+    background:
+      linear-gradient(180deg, rgba(2, 10, 49, 0.34), rgba(2, 10, 49, 0.72) 58%, rgba(2, 10, 49, 0.96)),
+      var(--capp-hero-still) 50% 38% / cover no-repeat,
+      #020a31;
+  }
+
+  .capp-hero {
+    padding-bottom: 2.9rem;
+  }
+
+  .capp-top {
+    padding-bottom: 2.6rem;
+  }
+
+  /* The greeting, the plate line and the page subtitle all sit on the still now,
+     so the muted inks have to step up off the navy rather than down off paper. */
+  .capp-hero .capp-greet,
+  .capp-hero .capp-hero-sub,
+  .capp-top p {
+    color: #d3dbf5;
+  }
+
+  .capp-hero .capp-weather,
+  .capp-top h1 {
+    color: #fff;
+  }
+
+  .capp-hero h1,
+  .capp-hero .capp-greet,
+  .capp-hero .capp-hero-sub,
+  .capp-hero .capp-weather,
+  .capp-top h1,
+  .capp-top p {
+    text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
+  }
+
+  /* The light wordmark is the one that reads on the still; the blue one is for
+     paper. Both are in the DOM already and swapped by the dark-mode rules, so
+     this only has to flip which of the two is showing. */
+  .capp-hero .capp-brand-logo--light {
+    display: none;
+  }
+
+  .capp-hero .capp-brand-logo--dark {
+    display: block;
+  }
+
+  .capp-icon-btn,
+  .capp-avatar,
+  .capp-back {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    backdrop-filter: blur(6px);
+  }
+}
+
+/* ---------- 2. The display face ----------------------------------------
+   font-style: italic Benzin is the loudest brand signal the site has, and the
+   app used it once. The name, the page title and every card title take it. */
+.capp-hero h1,
+.capp-top h1,
+.capp-title {
+  font-family: var(--capp-display);
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+}
+
+.capp-hero h1 {
+  line-height: 1;
+}
+
+/* ---------- 3. Plate and figures ---------------------------------------
+   A plate is a typographic object, not a string. Tabular everywhere a number
+   can change under the reader — the queue counts refresh on a poll. */
+.capp-plate,
+.capp-q,
+.capp-stat-value,
+.capp-count b,
+.capp-row-end b {
+  font-family: var(--capp-display);
+  font-style: italic;
+  font-variant-numeric: tabular-nums;
+}
+
+.capp-plate {
+  letter-spacing: 0.02em;
+}
+
+/* The ticket is the answer to "which one is mine" — it must never wrap. */
+.capp-q {
+  white-space: nowrap;
+}
+
+/* The "Ticket" caption stays in the body face — the figure is the object, the
+   caption only names it, and two display faces stacked read as one blob. */
+.capp-q span {
+  font-family: var(--font-body, inherit);
+  font-style: normal;
+}
+
+/* ---------- 4. The eyebrow rule ----------------------------------------
+   The short rule before a label is the marketing site's section motif. It
+   costs nothing and it is instantly recognisable as the same system. */
+.capp-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--capp-accent);
+}
+
+.capp-eyebrow::before {
+  content: '';
+  flex: none;
+  width: 1rem;
+  height: 2px;
+  background: currentColor;
+}
+
+/* ---------- 5. Status as a bordered pill -------------------------------
+   The dot already carried the state without colour; the fill did not survive
+   being read at a glance on a lit card. A border reads at any brightness. */
+.capp-badge {
+  border: 1px solid currentColor;
+  background: transparent;
+}
+
+/* ---------- 6. The live ticket outranks the screen ---------------------
+   The structural move. Five cards of equal weight answer nothing; a waiting
+   customer wants one thing, so the first card lifts over the header seam and
+   nothing else competes with it. */
+@media (max-width: 859px) {
+  .capp-scroll > :first-child {
+    position: relative;
+    z-index: 2;
+    margin-top: -2.1rem;
+  }
+}
+
+.capp-scroll > :first-child.capp-card,
+.capp-scroll > :first-child.capp-empty {
+  border-color: rgba(5, 38, 153, 0.2);
+  box-shadow: 0 18px 40px -14px rgba(5, 38, 153, 0.45);
+}
+
+/* The rail is the only thing on that card that says how far along the car is,
+   so the stop it is on is the one piece of it set in the display face. */
+.capp-progress-step.is-current {
+  font-family: var(--capp-display);
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Dark theme ---------------------------------------------------
+   The headers are already dark-on-still in both themes, so only the paper-side
+   assumptions need restating. */
+html.dark .capp-scroll > :first-child.capp-card,
+html.dark .capp-scroll > :first-child.capp-empty {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 18px 40px rgba(2, 6, 28, 0.55);
+}
+
+/* ---------- Reduced motion / print safety -------------------------------
+   The still is decoration. Anyone who has asked for less, or is printing a
+   booking, gets the flat brand ground instead of a photograph. */
+@media print {
+  .capp-hero,
+  .capp-top {
+    color: var(--capp-ink);
+    background: none;
+  }
+}
+
+/* ---------- 7. The booking form reads as steps -------------------------
+   One long scroll of equally-weighted fieldsets tells you nothing about how
+   far in you are. Numbering them costs no markup — the sections are already
+   direct children of the form, so a counter can do it. Scoped to that form so
+   the shared SectionHead elsewhere in the app is left alone. */
+.capp-section:has(> .capp-sect) {
+  counter-reset: capp-step;
+}
+
+form.capp-section > .capp-sect {
+  counter-increment: capp-step;
+}
+
+form.capp-section > .capp-sect > h2::before {
+  content: counter(capp-step, decimal-leading-zero);
+  margin-right: 0.55rem;
+  color: var(--capp-accent);
+  font-family: var(--capp-display);
+  font-style: italic;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 8. The newest post leads ------------------------------------
+   A flat list of equal cards makes the reader pick; the newest one is the one
+   worth reading first. Phone only — the desktop list is already two columns,
+   where a lead card would have to span to mean anything. */
+@media (max-width: 859px) {
+  .capp-post:first-of-type .capp-post-cover {
+    aspect-ratio: 16 / 10;
+  }
+
+  .capp-post:first-of-type .capp-post-body h3 {
+    font-size: 1.22rem;
+  }
+}
+
+/* The post title is a headline, so it takes the display face like every other
+   title in the app. */
+.capp-post-body h3 {
+  font-family: var(--capp-display);
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+  line-height: 1.12;
+}
