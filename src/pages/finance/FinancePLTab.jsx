@@ -1,10 +1,9 @@
 /** Finance Profit and Loss — statement + metrics, shared chrome. */
 import { useMemo } from 'react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
-import { Download, FileSpreadsheet, FileText } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
 import {
   ChartContainer,
   ChartTooltip,
@@ -12,12 +11,9 @@ import {
 } from '@/components/ui/chart'
 import { formatMoney } from '@/queue/queueApi'
 import {
-  COMPARE_PRESETS,
   downloadCsv,
-  downloadExcel,
   formatFinanceWindow,
   mergePlByCategory,
-  printAsPdf,
   rollupPl,
   topExpenseCategories,
 } from '@/lib/financeData'
@@ -38,8 +34,6 @@ export default function FinancePLTab({
   priorPlRows = [],
   range,
   compareRange,
-  comparePreset = 'none',
-  onCompareChange,
   loading,
 }) {
   const pl = useMemo(() => rollupPl(plRows), [plRows])
@@ -126,6 +120,11 @@ export default function FinancePLTab({
 
   return (
     <div className="finance-dash flex flex-col gap-5">
+      <p className="text-xs text-muted-foreground" data-testid="finance-pl-provenance">
+        Statement proof: paid POS income − paid/posted expenses · view{' '}
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.7rem]">finance_daily_pl</code>. Draft POS
+        expenses and End of shift overrides are excluded from this statement.
+      </p>
       <FinanceMetricStrip label="P&L totals">
         <FinanceMetricCell label="Income" value={formatMoney(pl.income)} hint="POS paid" tone="ink" />
         <FinanceMetricCell label="Expenses" value={formatMoney(pl.expenses)} hint="Paid + posted" tone="muted" />
@@ -145,24 +144,9 @@ export default function FinancePLTab({
 
       <div className="finance-toolbar">
         <p className="text-sm text-muted-foreground max-w-xl">
-          Income is paid POS sales. Expenses are paid or posted bills. Use Compare in the filter bar or here.
+          Income is paid POS sales. Expenses are paid or posted bills. Use Compare in the filter bar above.
         </p>
         <div className="finance-toolbar-actions">
-          <div className="finance-filter-group">
-            <Label htmlFor="pl-compare">Compare with</Label>
-            <select
-              id="pl-compare"
-              className="finance-toolbar-select min-h-10"
-              value={comparePreset}
-              onChange={(e) => onCompareChange?.(e.target.value)}
-            >
-              {COMPARE_PRESETS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </div>
           <Button
             type="button"
             variant="outline"
@@ -171,24 +155,6 @@ export default function FinancePLTab({
           >
             <Download data-icon="inline-start" />
             CSV
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-10 cursor-pointer"
-            onClick={() => downloadExcel(exportRows, exportColumns, `${fileBase}.xls`, 'Hakum Profit and Loss')}
-          >
-            <FileSpreadsheet data-icon="inline-start" />
-            Excel
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-10 cursor-pointer"
-            onClick={() => printAsPdf(exportRows, exportColumns, 'Hakum Profit and Loss', subtitle)}
-          >
-            <FileText data-icon="inline-start" />
-            PDF
           </Button>
         </div>
       </div>

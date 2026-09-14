@@ -5,7 +5,7 @@
 **Bug register:** [`BUGS.md`](./BUGS.md)  
 **Rule:** Do not mark `[x]` without exit **0** (or signed manual proof) from **this campaign**.
 
-Last readiness run: **2026-09-13T15:20:41.426Z** (ok=true passed=14 failed=0)
+Last readiness run: **2026-09-13T16:02:59.235Z** (ok=true passed=14 failed=0)
 Artifact: [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./readiness-dashboard.html) · [`RESULTS.md`](./RESULTS.md)
 
 ```mermaid

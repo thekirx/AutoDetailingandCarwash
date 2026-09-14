@@ -5201,6 +5201,33 @@ body:has(.account-app) {
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
+.finance-filter-group[data-invalid] input {
+  border-color: var(--destructive);
+}
+.finance-filter-error {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--destructive);
+}
+.finance-statement-cue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in oklab, var(--primary) 28%, var(--border));
+  border-radius: 0.75rem;
+  background: color-mix(in oklab, var(--primary) 8%, var(--card));
+}
+.finance-statement-cue p {
+  margin: 0;
+  flex: 1 1 16rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--foreground);
+}
 .finance-tabs { display: flex; flex-direction: column; gap: 0; min-width: 0; }
 .finance-tabs-rail {
   margin: 0 -0.15rem;
@@ -5238,6 +5265,31 @@ body:has(.account-app) {
   background: var(--primary);
   color: var(--primary-foreground);
   box-shadow: 0 2px 10px color-mix(in oklab, var(--primary) 28%, transparent);
+}
+.finance-tabs-more {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  gap: 0.4rem;
+  padding-inline: 0.85rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  font-weight: 650;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.finance-tabs-more[data-active] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 2px 10px color-mix(in oklab, var(--primary) 28%, transparent);
+}
+.finance-tabs-more:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
 }
 .finance-tabs-sep { margin: 0.85rem 0 0; }
 .finance-tab-panel { margin-top: 1.15rem; outline: none; }
@@ -6496,7 +6548,11 @@ a.planner-ticket:active {
   --pos-end-shift: #b42318;
   --pos-end-shift-ink: #fffaf8;
   --pos-end-shift-edge: #7f1d1d;
+  --pos-navy: #02081f;
   min-width: 0;
+}
+.hakum-pos .pos-order-head {
+  background: var(--pos-navy);
 }
 .hakum-pos-head-actions {
   display: flex;

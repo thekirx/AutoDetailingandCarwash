@@ -11,7 +11,7 @@ export default function OpsTabList({ tabs, className, 'aria-label': ariaLabel })
   return (
     <TabsList
       aria-label={ariaLabel}
-      className={cn('inline-flex h-11 w-full max-w-full gap-1 overflow-x-auto p-1 sm:w-auto', className)}
+      className={cn('inline-flex h-11 w-full max-w-full justify-start gap-1 overflow-x-auto p-1 sm:w-auto', className)}
     >
       {tabs.map((item) => {
         const Icon = item.icon

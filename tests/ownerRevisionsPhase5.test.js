@@ -62,6 +62,14 @@ describe('quote payload', () => {
     assert.ok(errs.some((e) => /email/i.test(e)))
     assert.ok(errs.some((e) => /customer/i.test(e)))
   })
+
+  it('rejects a zero peso quote', () => {
+    const zero = buildFinanceQuotePayload({
+      customer: { id: 'c1', email: 'ana@example.com' },
+      amountPesos: '0',
+    })
+    assert.ok(financeQuotePayloadErrors(zero).some((e) => /greater than zero/i.test(e)))
+  })
 })
 
 describe('investor cannot see hq', () => {
@@ -159,7 +167,7 @@ describe('P5 source seams', () => {
     assert.match(page, /FinanceQuotesTab/)
     assert.match(page, /FinanceCorporateTab/)
     const pos = read('src/pages/PosPage.jsx')
-    assert.match(pos, /expense_categories/)
-    assert.match(pos, /source of truth/)
+    assert.match(pos, /ops_pos_settings/)
+    assert.doesNotMatch(pos, /expense_categories/)
   })
 })

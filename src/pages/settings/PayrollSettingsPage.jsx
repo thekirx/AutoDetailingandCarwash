@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPayroll, isAdmin } from '@/auth/permissions'
+import { canAccessPayroll, canRunPayroll } from '@/auth/permissions'
 import { Navigate } from 'react-router-dom'
 import {
   DEFAULT_COMPENSATION_RULES,
@@ -19,7 +19,7 @@ import { toast } from 'sonner'
 /** Settings → Payroll: attendance weights, pending policy, CA netting (same compensation_settings row). */
 export default function PayrollSettingsPage() {
   const { profile } = useAuth()
-  const canWrite = isAdmin(profile)
+  const canWrite = canRunPayroll(profile)
   const [rules, setRules] = useState(DEFAULT_COMPENSATION_RULES)
   const [saving, setSaving] = useState(false)
 
@@ -117,7 +117,7 @@ export default function PayrollSettingsPage() {
                 {saving ? 'Saving…' : 'Save payroll settings'}
               </Button>
             ) : (
-              <p className="text-sm text-muted-foreground sm:col-span-2">Only Super Admin can edit.</p>
+              <p className="text-sm text-muted-foreground sm:col-span-2">Super Admin or ASA with finance write can edit.</p>
             )}
           </form>
         </CardContent>

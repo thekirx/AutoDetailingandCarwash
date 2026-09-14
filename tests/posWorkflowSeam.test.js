@@ -70,8 +70,9 @@ describe('POS checkout workflow seam', () => {
 
   it('Sell tab links to Pay queue instead of duplicating handoff cards', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
-    assert.match(pos, /Open Pay queue/)
+    assert.match(pos, /Pay queue tab/)
     assert.doesNotMatch(pos, /Waiting for payment/)
+    assert.doesNotMatch(pos, /Open Pay queue/)
   })
 
   it('cash advance inbox is fail-closed: kind + branch, never empty-branch leak', () => {

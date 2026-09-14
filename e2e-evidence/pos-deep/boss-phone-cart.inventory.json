@@ -1,0 +1,482 @@
+{
+  "buttons": [
+    {
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "",
+      "aria": "Open command menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "9+",
+      "aria": "Notifications",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "text": "",
+      "aria": "Account menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "End of shift",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 133
+    },
+    {
+      "text": "Cart · 2 · ₱700",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 150
+    },
+    {
+      "text": "Hide guide",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "Sell",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 77
+    },
+    {
+      "text": "Pay queue",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 132
+    },
+    {
+      "text": "Expenses",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 99
+    },
+    {
+      "text": "Today",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 73
+    },
+    {
+      "text": "Settings",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 115
+    },
+    {
+      "text": "Daily sales report",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 138
+    },
+    {
+      "text": "bacoor▼",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 358
+    },
+    {
+      "text": "Services & packages8",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 182
+    },
+    {
+      "text": "Detailing4",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 102
+    },
+    {
+      "text": "All merch8",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 104
+    },
+    {
+      "text": "Coffee / refreshments0",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 191
+    },
+    {
+      "text": "Accessories1",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 122
+    },
+    {
+      "text": "Hakum clothing0",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 148
+    },
+    {
+      "text": "Other sellables7",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 143
+    },
+    {
+      "text": "CarwashService · A careful exterior clean that bri",
+      "aria": "Add Carwash",
+      "disabled": false,
+      "h": 93,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Interior DetailingService · Deep cabin care for cl",
+      "aria": "Add Interior Detailing",
+      "disabled": false,
+      "h": 93,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Full Exterior DetailingService · Deep exterior car",
+      "aria": "Add Full Exterior Detailing",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Glass DetailingService · Polished, decontaminated ",
+      "aria": "Add Glass Detailing",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Engine WashService · A precise, component-safe cle",
+      "aria": "Add Engine Wash",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Express Wash PackagePackage · Includes Carwash · G",
+      "aria": "Add Express Wash Package",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Full Care PackagePackage · Includes Carwash · Inte",
+      "aria": "Add Full Care Package",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Hakum Custom PackagePackage · Custom same-day pack",
+      "aria": "Add Hakum Custom Package",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Clear",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 47
+    },
+    {
+      "text": "",
+      "aria": "One fewer Carwash",
+      "disabled": false,
+      "h": 40,
+      "w": 40
+    },
+    {
+      "text": "",
+      "aria": "One more Carwash",
+      "disabled": false,
+      "h": 40,
+      "w": 40
+    },
+    {
+      "text": "Apply discount",
+      "aria": "",
+      "disabled": false,
+      "h": 40,
+      "w": 200
+    },
+    {
+      "text": "Search",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 82
+    },
+    {
+      "text": "Cash",
+      "aria": "",
+      "disabled": false,
+      "h": 48,
+      "w": 79
+    },
+    {
+      "text": "GCash",
+      "aria": "",
+      "disabled": false,
+      "h": 48,
+      "w": 79
+    },
+    {
+      "text": "Credit Cards",
+      "aria": "",
+      "disabled": false,
+      "h": 48,
+      "w": 79
+    },
+    {
+      "text": "Exact",
+      "aria": "",
+      "disabled": false,
+      "h": 40,
+      "w": 61
+    },
+    {
+      "text": "₱1,000",
+      "aria": "",
+      "disabled": false,
+      "h": 40,
+      "w": 65
+    },
+    {
+      "text": "₱2,000",
+      "aria": "",
+      "disabled": false,
+      "h": 40,
+      "w": 68
+    },
+    {
+      "text": "₱5,000",
+      "aria": "",
+      "disabled": false,
+      "h": 40,
+      "w": 68
+    },
+    {
+      "text": "Charge ₱700",
+      "aria": "",
+      "disabled": true,
+      "h": 48,
+      "w": 252
+    },
+    {
+      "text": "Close",
+      "aria": "",
+      "disabled": false,
+      "h": 28,
+      "w": 28
+    }
+  ],
+  "inputs": [
+    {
+      "id": "base-ui-_r_5s_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Search the whole catalogue",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5t_-hidden-input",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6g_",
+      "name": "",
+      "type": "text",
+      "inputmode": "decimal",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "% off",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6h_",
+      "name": "",
+      "type": "text",
+      "inputmode": "decimal",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "₱ amount",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6i_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Reason (required)",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6j_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "off",
+      "labelled": false,
+      "placeholder": "Name, phone, or plate",
+      "required": false
+    },
+    {
+      "id": "pos-guest-first",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "given-name",
+      "labelled": true,
+      "placeholder": "First",
+      "required": false
+    },
+    {
+      "id": "pos-guest-last",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "family-name",
+      "labelled": true,
+      "placeholder": "Last",
+      "required": false
+    },
+    {
+      "id": "pos-guest-phone",
+      "name": "",
+      "type": "text",
+      "inputmode": "tel",
+      "autocomplete": "tel",
+      "labelled": true,
+      "placeholder": "09…",
+      "required": false
+    },
+    {
+      "id": "pos-guest-email",
+      "name": "",
+      "type": "email",
+      "inputmode": "",
+      "autocomplete": "email",
+      "labelled": true,
+      "placeholder": "name@…",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6o_",
+      "name": "",
+      "type": "text",
+      "inputmode": "decimal",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "Cash received",
+      "required": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 23,
+  "headings": [
+    "H1:POS",
+    "H2:Go to",
+    "H2:Checkout"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5294/operations/pos"
+}

@@ -1,6 +1,6 @@
 /** Finance Reports tab: sales, ops, retention, shift closes, best sellers — same filter window as Finance. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Download, FileSpreadsheet, FileText, Users, Wrench, ShoppingCart, ClipboardCheck, Trophy } from 'lucide-react'
+import { Download, Users, Wrench, ShoppingCart, ClipboardCheck, Trophy } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,12 +17,11 @@ import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
 import {
   downloadCsv,
-  downloadExcel,
   formatFinanceWindow,
-  printAsPdf,
   retentionBuckets,
   rollupPl,
   rollupRetentionByCustomer,
+  retentionInWindow,
   salesByBranch,
   salesByDay,
   scopeBranch,
@@ -141,7 +140,8 @@ export default function FinanceReportsTab({
       crew: crew.count || 0,
     })
     let retentionRows = retentionRes.data || []
-    if (allSites) retentionRows = rollupRetentionByCustomer(retentionRows).slice(0, 50)
+    if (allSites) retentionRows = rollupRetentionByCustomer(retentionRows)
+    retentionRows = retentionInWindow(retentionRows, range).slice(0, 50)
     setRetention(retentionRows)
     setRetentionSummary(retentionBuckets(retentionRows))
     setShiftCloses(shiftRes.data || [])
@@ -167,7 +167,7 @@ export default function FinanceReportsTab({
     } finally {
       setSellersLoading(false)
     }
-  }, [range.start, range.end, profile, branchFilter, showComplaints])
+  }, [range, profile, branchFilter, showComplaints])
 
   useEffect(() => {
     load()
@@ -292,6 +292,10 @@ export default function FinanceReportsTab({
 
   return (
     <div className="finance-dash flex flex-col gap-5">
+      <p className="text-xs text-muted-foreground" data-testid="finance-reports-provenance">
+        Export proof: sales &amp; P&amp;L from paid POS / paid-posted expenses · shift closes = accepted/locked
+        attestation only (not crew pay). Window {formatFinanceWindow(range?.start, range?.end)}.
+      </p>
       <FinanceMetricStrip label="Report snapshot">
         <FinanceMetricCell label="Income" value={formatMoney(incomeTotal)} hint={subtitle} tone="ink" />
         <FinanceMetricCell label="Expenses" value={formatMoney(expenseTotal)} hint="P&L / paid bills" tone="muted" />
@@ -314,8 +318,6 @@ export default function FinanceReportsTab({
             : `${bestSellers.length} top SKUs from paid sales · ${subtitle}`
         }
         onCsv={() => downloadCsv(bestSellers, bestSellerColumns, `hakum-best-sellers-${range.start}-to-${range.end}.csv`)}
-        onExcel={() => downloadExcel(bestSellers, bestSellerColumns, `hakum-best-sellers-${range.start}-to-${range.end}.xls`, 'Hakum Best Sellers')}
-        onPdf={() => printAsPdf(bestSellers, bestSellerColumns, 'Hakum Best Sellers', subtitle)}
       >
         {bestSellers.length ? (
           <ChartContainer config={bestSellerConfig} className="finance-chart-mid aspect-auto h-[280px] w-full">
@@ -348,8 +350,6 @@ export default function FinanceReportsTab({
         title="Shift close attestation"
         description={`${shiftCloses.length} accepted/locked closes · read-only · does not rewrite POS sales`}
         onCsv={() => downloadCsv(shiftCloses, shiftCloseColumns, `hakum-shift-close-${range.start}-to-${range.end}.csv`)}
-        onExcel={() => downloadExcel(shiftCloses, shiftCloseColumns, `hakum-shift-close-${range.start}-to-${range.end}.xls`, 'Hakum Shift Close')}
-        onPdf={() => printAsPdf(shiftCloses, shiftCloseColumns, 'Hakum Shift Close Attestation', subtitle)}
       >
         <div className="finance-table-wrap">
           <Table>
@@ -399,8 +399,6 @@ export default function FinanceReportsTab({
         title="Sales report"
         description={`${salesByDayRows.length} days · ${formatMoney(salesTotal)} in paid sales`}
         onCsv={() => downloadCsv(salesByDayRows, salesColumns, `hakum-sales-report-${range.start}-to-${range.end}.csv`)}
-        onExcel={() => downloadExcel(salesByDayRows, salesColumns, `hakum-sales-report-${range.start}-to-${range.end}.xls`, 'Hakum Sales Report')}
-        onPdf={() => printAsPdf(salesByDayRows, salesColumns, 'Hakum Sales Report', subtitle)}
       >
         <div className="finance-table-wrap">
           <Table>
@@ -440,15 +438,13 @@ export default function FinanceReportsTab({
           ? `${operations.bookings} completed bookings · ${operations.complaints} complaints`
           : `${operations.bookings} completed bookings`}
         onCsv={() => downloadCsv(operationsRows, operationsColumns, `hakum-operations-report-${range.start}-to-${range.end}.csv`)}
-        onExcel={() => downloadExcel(operationsRows, operationsColumns, `hakum-operations-report-${range.start}-to-${range.end}.xls`, 'Hakum Operations Report')}
-        onPdf={() => printAsPdf(operationsRows, operationsColumns, 'Hakum Operations Report', subtitle)}
       >
         <FinanceMetricStrip label="Operations">
           <FinanceMetricCell label="Completed bookings" value={String(operations.bookings)} tone="ink" />
           {showComplaints ? (
             <FinanceMetricCell label="Complaints" value={String(operations.complaints)} tone="muted" />
           ) : null}
-          <FinanceMetricCell label="Crew in KPI" value={String(operations.crew)} tone="ink" />
+          <FinanceMetricCell label="Crew in KPI (current roster)" value={String(operations.crew)} tone="ink" />
           <FinanceMetricCell label="Branches with sales" value={String(salesByBranchRows.length)} tone="muted" />
         </FinanceMetricStrip>
       </ReportSection>
@@ -456,10 +452,8 @@ export default function FinanceReportsTab({
       <ReportSection
         icon={<Users aria-hidden />}
         title="Customer retention"
-        description={`${retentionSummary.total} customers · ${retentionSummary.fresh} new · ${retentionSummary.loyal} loyal`}
+        description={`${retentionSummary.total} customers with last paid in this window · ${retentionSummary.fresh} new · ${retentionSummary.loyal} loyal`}
         onCsv={() => downloadCsv(retention, retentionColumns, `hakum-retention-report-${range.start}-to-${range.end}.csv`)}
-        onExcel={() => downloadExcel(retention, retentionColumns, `hakum-retention-report-${range.start}-to-${range.end}.xls`, 'Hakum Customer Retention')}
-        onPdf={() => printAsPdf(retention, retentionColumns, 'Hakum Customer Retention', subtitle)}
       >
         <FinanceMetricStrip label="Retention">
           <FinanceMetricCell label="New (1 visit)" value={String(retentionSummary.fresh)} tone="ink" />
@@ -487,7 +481,7 @@ export default function FinanceReportsTab({
                 </TableRow>
               ))}
               {!retention.length && (
-                <TableRow><TableCell colSpan={4} className="text-muted-foreground">No customers with paid sales yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-muted-foreground">No customers last paid in this window.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -497,7 +491,7 @@ export default function FinanceReportsTab({
   )
 }
 
-function ReportSection({ icon, title, description, onCsv, onExcel, onPdf, children }) {
+function ReportSection({ icon, title, description, onCsv, children }) {
   return (
     <FinancePanel
       title={
@@ -510,20 +504,10 @@ function ReportSection({ icon, title, description, onCsv, onExcel, onPdf, childr
       }
       description={description}
       actions={
-        <>
-          <Button type="button" variant="outline" className="min-h-10 cursor-pointer" onClick={onCsv}>
-            <Download data-icon="inline-start" />
-            CSV
-          </Button>
-          <Button type="button" variant="outline" className="min-h-10 cursor-pointer" onClick={onExcel}>
-            <FileSpreadsheet data-icon="inline-start" />
-            Excel
-          </Button>
-          <Button type="button" variant="outline" className="min-h-10 cursor-pointer" onClick={onPdf}>
-            <FileText data-icon="inline-start" />
-            PDF
-          </Button>
-        </>
+        <Button type="button" variant="outline" className="min-h-10 cursor-pointer" onClick={onCsv}>
+          <Download data-icon="inline-start" />
+          CSV
+        </Button>
       }
     >
       {children}

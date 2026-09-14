@@ -17,7 +17,7 @@ import {
 
 const KIND_OPTIONS = [
   { value: 'general', label: 'General' },
-  { value: 'payroll', label: 'Payroll / salary' },
+  { value: 'payroll', label: 'Payroll / salary (P&L bucket)' },
   { value: 'marketing', label: 'Marketing' },
   { value: 'utilities', label: 'Utilities' },
   { value: 'chemicals', label: 'Chemicals' },
@@ -98,6 +98,9 @@ export default function FinanceCategoriesTab({ categories, canWrite, onReload })
                   </option>
                 ))}
               </select>
+              {form.kind === 'payroll' ? (
+                <p className="text-sm text-muted-foreground">Posted payroll grouping — not commission %.</p>
+              ) : null}
             </div>
             <div className="flex items-end gap-2 pb-2">
               <label className="flex min-h-10 items-center gap-2 text-sm text-foreground">
@@ -121,7 +124,7 @@ export default function FinanceCategoriesTab({ categories, canWrite, onReload })
 
       <FinancePanel
         title="Categories"
-        description={`${metrics.total} categor${metrics.total === 1 ? 'y' : 'ies'} · POS expense kinds load from this list · kinds drive P&L grouping`}
+        description={`${metrics.total} categor${metrics.total === 1 ? 'y' : 'ies'} · POS expense kinds load from this list · kinds drive P&L grouping, not commission %`}
       >
         {!categories.length ? (
           <FinanceEmpty

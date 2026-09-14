@@ -1,0 +1,245 @@
+{
+  "buttons": [
+    {
+      "tag": "BUTTON",
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Open command menu",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "9+",
+      "aria": "Notifications",
+      "href": "",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Account menu",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Show guide",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Refresh",
+      "aria": "Refresh finance data",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 329
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Dashboard",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 122
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Sales",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 87
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Bills & expenses",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 153
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Profit and loss",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 142
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Shift reviews",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 133
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Expense reports",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 155
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Vendors",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 104
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Quotations",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 123
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Corporate",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 117
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Categories",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 122
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Reports",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 102
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Add vendor",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 40,
+      "w": 120
+    }
+  ],
+  "inputs": [
+    {
+      "id": "finance-branch-filter",
+      "name": "",
+      "type": "select-one",
+      "min": "",
+      "max": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "finance-preset-filter",
+      "name": "",
+      "type": "select-one",
+      "min": "",
+      "max": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "finance-compare-filter",
+      "name": "",
+      "type": "select-one",
+      "min": "",
+      "max": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "vendor-name",
+      "name": "",
+      "type": "text",
+      "min": "",
+      "max": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": true,
+      "disabled": false
+    },
+    {
+      "id": "vendor-contact",
+      "name": "",
+      "type": "text",
+      "min": "",
+      "max": "",
+      "labelled": true,
+      "placeholder": "Phone, email, or person",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "vendor-notes",
+      "name": "",
+      "type": "textarea",
+      "min": "",
+      "max": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 2,
+  "unlabelled": 0,
+  "headings": [
+    "H1:Vendors",
+    "H2:Add vendor",
+    "H2:Vendors",
+    "H2:Go to"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5295/operations/finance?tab=vendors"
+}

@@ -49,7 +49,9 @@ export const FINANCE_WORKFLOW_STEPS = Object.freeze([
   {
     id: 'payroll',
     title: 'Payroll handoff',
-    body: 'After shifts are accepted, Payroll posts crew pay from POS proof — not from close attestation alone.',
+    body: 'After shifts are accepted, confirm crew pay on Payroll. Finance does not set commission %. Posted salary expenses then return here as P&L.',
+    href: '/operations/payroll',
+    linkLabel: 'Open Payroll',
   },
 ])
 

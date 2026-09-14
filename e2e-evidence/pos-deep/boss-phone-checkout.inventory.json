@@ -1,0 +1,293 @@
+{
+  "buttons": [
+    {
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "",
+      "aria": "Open command menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "9+",
+      "aria": "Notifications",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "text": "",
+      "aria": "Account menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "End of shift",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 133
+    },
+    {
+      "text": "Cart · 0 · ₱0",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 133
+    },
+    {
+      "text": "Hide guide",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "Sell",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 77
+    },
+    {
+      "text": "Pay queue",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 132
+    },
+    {
+      "text": "Expenses",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 99
+    },
+    {
+      "text": "Today",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 73
+    },
+    {
+      "text": "Settings",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 115
+    },
+    {
+      "text": "Daily sales report",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 138
+    },
+    {
+      "text": "bacoor▼",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 358
+    },
+    {
+      "text": "Services & packages8",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 182
+    },
+    {
+      "text": "Detailing4",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 102
+    },
+    {
+      "text": "All merch8",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 104
+    },
+    {
+      "text": "Coffee / refreshments0",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 191
+    },
+    {
+      "text": "Accessories1",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 122
+    },
+    {
+      "text": "Hakum clothing0",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 148
+    },
+    {
+      "text": "Other sellables7",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 143
+    },
+    {
+      "text": "CarwashService · A careful exterior clean that bri",
+      "aria": "Add Carwash",
+      "disabled": false,
+      "h": 93,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Interior DetailingService · Deep cabin care for cl",
+      "aria": "Add Interior Detailing",
+      "disabled": false,
+      "h": 93,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Full Exterior DetailingService · Deep exterior car",
+      "aria": "Add Full Exterior Detailing",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Glass DetailingService · Polished, decontaminated ",
+      "aria": "Add Glass Detailing",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Engine WashService · A precise, component-safe cle",
+      "aria": "Add Engine Wash",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Express Wash PackagePackage · Includes Carwash · G",
+      "aria": "Add Express Wash Package",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Full Care PackagePackage · Includes Carwash · Inte",
+      "aria": "Add Full Care Package",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Hakum Custom PackagePackage · Custom same-day pack",
+      "aria": "Add Hakum Custom Package",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    }
+  ],
+  "inputs": [
+    {
+      "id": "base-ui-_r_5s_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Search the whole catalogue",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5t_-hidden-input",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 14,
+  "headings": [
+    "H1:POS",
+    "H2:Go to"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5294/operations/pos?tab=checkout"
+}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -61,7 +62,20 @@ export default function OpsGuideCard({
                       {Icon ? <Icon className="size-4 text-primary" aria-hidden /> : null}
                       {step.title}
                     </p>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      {step.body}
+                      {step.href ? (
+                        <>
+                          {' '}
+                          <Link
+                            to={step.href}
+                            className="font-medium text-primary underline-offset-4 hover:underline"
+                          >
+                            {step.linkLabel || 'Open'}
+                          </Link>
+                        </>
+                      ) : null}
+                    </p>
                   </div>
                 </li>
               )

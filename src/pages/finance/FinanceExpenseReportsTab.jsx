@@ -177,16 +177,18 @@ export default function FinanceExpenseReportsTab({
         >
           <form onSubmit={createAndAddLine} className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label>Branch</Label>
+              <Label htmlFor="er-branch">Branch</Label>
               <NamedSelect
+                id="er-branch"
                 value={form.branch}
                 onChange={(branch) => setForm((f) => ({ ...f, branch }))}
                 options={writableBranches.map((b) => ({ value: b.slug, label: b.name || b.slug }))}
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Title</Label>
+              <Label htmlFor="er-title">Title</Label>
               <Input
+                id="er-title"
                 className="min-h-10"
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
@@ -194,8 +196,9 @@ export default function FinanceExpenseReportsTab({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Period start</Label>
+              <Label htmlFor="er-period-start">Period start</Label>
               <Input
+                id="er-period-start"
                 type="date"
                 required
                 className="min-h-10"
@@ -204,8 +207,9 @@ export default function FinanceExpenseReportsTab({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Period end</Label>
+              <Label htmlFor="er-period-end">Period end</Label>
               <Input
+                id="er-period-end"
                 type="date"
                 required
                 className="min-h-10"
@@ -214,16 +218,18 @@ export default function FinanceExpenseReportsTab({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Category</Label>
+              <Label htmlFor="er-category">Category</Label>
               <NamedSelect
+                id="er-category"
                 value={form.category_id}
                 onChange={(category_id) => setForm((f) => ({ ...f, category_id }))}
                 options={categories.map((c) => ({ value: c.id, label: c.name }))}
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Amount (pesos)</Label>
+              <Label htmlFor="er-amount">Amount (pesos)</Label>
               <Input
+                id="er-amount"
                 type="number"
                 min="0"
                 step="0.01"
@@ -234,8 +240,9 @@ export default function FinanceExpenseReportsTab({
               />
             </div>
             <div className="sm:col-span-2 flex flex-col gap-1.5">
-              <Label>Line notes</Label>
+              <Label htmlFor="er-notes">Line notes</Label>
               <Input
+                id="er-notes"
                 className="min-h-10"
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}

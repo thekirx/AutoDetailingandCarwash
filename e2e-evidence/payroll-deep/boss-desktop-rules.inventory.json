@@ -1,0 +1,496 @@
+{
+  "buttons": [
+    {
+      "tag": "A",
+      "text": "",
+      "aria": "Hakum Auto Care home",
+      "href": "/operations/dashboard",
+      "disabled": false,
+      "h": 62,
+      "w": 202
+    },
+    {
+      "tag": "A",
+      "text": "Floor Board",
+      "aria": "",
+      "href": "/operations/dashboard",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Queue",
+      "aria": "",
+      "href": "/operations/queue",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Bookings",
+      "aria": "",
+      "href": "/operations/bookings",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Attendance",
+      "aria": "",
+      "href": "/operations/attendance",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Crew",
+      "aria": "",
+      "href": "/operations/crew",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "KPI",
+      "aria": "",
+      "href": "/operations/kpi",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "POS",
+      "aria": "",
+      "href": "/operations/pos",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Inventory",
+      "aria": "",
+      "href": "/operations/inventory",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "CRM",
+      "aria": "",
+      "href": "/operations/crm",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Reviews",
+      "aria": "",
+      "href": "/operations/reviews",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Memberships",
+      "aria": "",
+      "href": "/operations/memberships",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Finance",
+      "aria": "",
+      "href": "/operations/finance",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Payroll",
+      "aria": "",
+      "href": "/operations/payroll",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Planner",
+      "aria": "",
+      "href": "/operations/planning",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Ops Lab",
+      "aria": "",
+      "href": "/operations/roadmap",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "History",
+      "aria": "",
+      "href": "/operations/history",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Notifications",
+      "aria": "",
+      "href": "/operations/notifications",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "People",
+      "aria": "",
+      "href": "/operations/people",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Branches",
+      "aria": "",
+      "href": "/operations/branches",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Cars",
+      "aria": "",
+      "href": "/operations/cars",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Content",
+      "aria": "",
+      "href": "/operations/content",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Audit",
+      "aria": "",
+      "href": "/operations/audit",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Data Center",
+      "aria": "",
+      "href": "/operations/data-center",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Inquiries",
+      "aria": "",
+      "href": "/operations/inquiries",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "A",
+      "text": "Settings",
+      "aria": "",
+      "href": "/operations/settings",
+      "disabled": false,
+      "h": 44,
+      "w": 211
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Account",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 208
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Sign out",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 208
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Search⌘K",
+      "aria": "Open command menu",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 139
+    },
+    {
+      "tag": "BUTTON",
+      "text": "9+",
+      "aria": "Notifications",
+      "href": "",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Account menu",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Show guide",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Dashboard",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 144
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Run payroll",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 144
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Cash advances",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 178
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Salaries",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 120
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Payouts",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 121
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Rules",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 100
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Save rules",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 91
+    },
+    {
+      "tag": "A",
+      "text": "Also on Settings",
+      "aria": "",
+      "href": "/operations/settings",
+      "disabled": false,
+      "h": 17,
+      "w": 109
+    }
+  ],
+  "inputs": [
+    {
+      "id": "rule-freq",
+      "name": "",
+      "type": "select-one",
+      "min": "",
+      "max": "",
+      "step": "",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "rule-day",
+      "name": "",
+      "type": "select-one",
+      "min": "",
+      "max": "",
+      "step": "",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "rule-wash_pool_pct",
+      "name": "",
+      "type": "number",
+      "min": "0",
+      "max": "",
+      "step": "1",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "rule-ceramic_card_fee_pct",
+      "name": "",
+      "type": "number",
+      "min": "0",
+      "max": "",
+      "step": "0.1",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "rule-ceramic_crew_solo_pct",
+      "name": "",
+      "type": "number",
+      "min": "0",
+      "max": "",
+      "step": "1",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "rule-ceramic_crew_split_pct",
+      "name": "",
+      "type": "number",
+      "min": "0",
+      "max": "",
+      "step": "1",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "rule-ceramic_detailer_split_pct",
+      "name": "",
+      "type": "number",
+      "min": "0",
+      "max": "",
+      "step": "1",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "rule-ceramic_shirt_deduction_minor",
+      "name": "",
+      "type": "number",
+      "min": "0",
+      "max": "",
+      "step": "100",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 7,
+  "unlabelled": 0,
+  "headings": [
+    "H1:Payroll",
+    "H2:Go to"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5293/operations/payroll?tab=rules"
+}

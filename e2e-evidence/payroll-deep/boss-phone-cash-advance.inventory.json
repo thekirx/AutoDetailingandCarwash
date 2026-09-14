@@ -1,0 +1,130 @@
+{
+  "buttons": [
+    {
+      "tag": "BUTTON",
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Open command menu",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "9+",
+      "aria": "Notifications",
+      "href": "",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Account menu",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Show guide",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Dashboard",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 136
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Run payroll",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 136
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Cash advances",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 170
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Salaries",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 112
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Payouts",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 113
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Rules",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 92
+    }
+  ],
+  "inputs": [
+    {
+      "id": "payroll-ca-branch",
+      "name": "",
+      "type": "select-one",
+      "min": "",
+      "max": "",
+      "step": "",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 7,
+  "unlabelled": 0,
+  "headings": [
+    "H1:Payroll",
+    "H2:Pending",
+    "H2:Approved today",
+    "H2:Go to"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5293/operations/payroll?tab=cash-advance"
+}

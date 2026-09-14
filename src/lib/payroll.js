@@ -6,6 +6,7 @@
 import { getLocalCalendarDate } from './localCalendarDate.js'
 import {
   PAYOUT_FREQUENCIES,
+  clampCompensationPercent,
   salaryPctPoolMinor,
   splitWashPool,
   washPoolAmountMinor,
@@ -308,11 +309,12 @@ export function buildPayrollPreview({
   frequency = 'weekly',
 } = {}) {
   const claimed = new Set((claimedSaleIds || []).map(String))
-  const poolPct = Number(rules.wash_pool_pct)
+  const poolPct = clampCompensationPercent(rules.wash_pool_pct)
   const washByBranchDay = new Map()
   const salaryPctByBranchDay = new Map()
   const proof = []
   let posSalesMinor = 0
+  let salaryPctTotalMinor = 0
   const kind = String(runKind || 'all').toLowerCase()
   const includeFloor = kind === 'all' || kind === 'floor'
   const includeFixed = kind === 'all' || kind === 'fixed'
@@ -330,6 +332,7 @@ export function buildPayrollPreview({
       const directPct = salaryPctPoolMinor(sale)
       if (wash <= 0 && directPct <= 0) continue
       posSalesMinor += wash
+      salaryPctTotalMinor += directPct
       proof.push({
         sale_id: id,
         branch,
@@ -465,6 +468,7 @@ export function buildPayrollPreview({
     frequency,
     rules: { wash_pool_pct: poolPct },
     pos_sales_minor: posSalesMinor,
+    theoretical_pool_minor: Math.round(posSalesMinor * poolPct / 100) + salaryPctTotalMinor,
     pool_minor: lines.filter((l) => l.kind === 'wash_pool').reduce((s, l) => s + l.pay_minor, 0),
     total_payout_minor: totalPayoutMinor,
     proof,
@@ -602,8 +606,18 @@ export function rebuildWashPoolLines(preview, washPoolPct) {
   const input = preview?.input || {}
   return buildPayrollPreview({
     ...input,
-    rules: { ...(input.rules || preview?.rules || {}), wash_pool_pct: Number(washPoolPct) },
+    rules: { ...(input.rules || preview?.rules || {}), wash_pool_pct: clampCompensationPercent(washPoolPct) },
   })
+}
+
+export function pesosFromMinor(minor) {
+  return Math.round(Number(minor) || 0) / 100
+}
+
+export function minorFromPesos(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 0) return 0
+  return Math.round(n * 100)
 }
 
 export function payrollBlocksConfirm(preview) {
@@ -703,7 +717,7 @@ export function buildRunPayrollPayload({ preview, branch, frequency, notes = '',
     frequency,
     period_start: period.start,
     period_end: period.end,
-    wash_pool_pct: Number(preview?.rules?.wash_pool_pct) || 0,
+    wash_pool_pct: clampCompensationPercent(preview?.rules?.wash_pool_pct),
     notes,
     run_kind: kind,
     sales: (preview?.proof || []).map((row) => ({
@@ -995,7 +1009,7 @@ export function applyFloorPreviewToBacoorReport(report, preview, rules = {}) {
   out.carwash_salary_minor = wash || poolFallback
   out.detailer_salary_minor = detailer
   out.tinter_salary_minor = tinter
-  out.wash_pool_pct = Number(rules.wash_pool_pct ?? preview?.rules?.wash_pool_pct) || 0
+  out.wash_pool_pct = clampCompensationPercent(rules.wash_pool_pct ?? preview?.rules?.wash_pool_pct)
   out.salary_from_preview = true
   return out
 }

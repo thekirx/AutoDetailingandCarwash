@@ -25,6 +25,7 @@ import {
   DEFAULT_COMPENSATION_RULES,
   PAYOUT_FREQUENCIES,
   attendanceRowForPayroll,
+  clampCompensationPercent,
   hoursForAttendanceDay,
   indexBranchOperatingHours,
   normalizeCompensationSettings,
@@ -46,7 +47,9 @@ import {
   filterCeramicExpensesForSales,
   floorConfirmBlockedByPendingCloses,
   groupPayrollLinesByStaff,
+  minorFromPesos,
   netPayrollLinesMinor,
+  pesosFromMinor,
   posProofTotalsByBranchDay,
   saleBusinessDate,
   payrollBlocksConfirm,
@@ -91,7 +94,7 @@ const SETTINGS_FREQUENCIES = PAYOUT_FREQUENCIES.filter((f) => f !== 'custom')
 const PAYROLL_SHELL_TABS = [
   { id: 'home', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'run', label: 'Run payroll', icon: Play },
-  { id: 'cash-advance', label: 'Cash advances', icon: Wallet },
+  { id: 'cash-advance', label: 'Advances', icon: Wallet },
   { id: 'packages', label: 'Salaries', icon: Receipt },
   { id: 'history', label: 'Payouts', icon: History },
   { id: 'rules', label: 'Rules', icon: Settings2 },
@@ -259,10 +262,16 @@ export default function PayrollPage() {
       .limit(90)
     if (Array.isArray(scope) && scope.length) q = q.in('branch', scope)
     const { data, error } = await q
-    if (!error) setPendingCloses(data || [])
+    if (error) {
+      toast.error(error.message)
+      return
+    }
+    const today = getLocalCalendarDate()
+    const closes = (data || []).filter((c) => String(c.business_date || '').slice(0, 10) <= today)
+    setPendingCloses(closes)
 
-    const days = (data || []).map((c) => String(c.business_date || '').slice(0, 10)).filter(Boolean)
-    const branchesIn = [...new Set((data || []).map((c) => c.branch).filter(Boolean))]
+    const days = closes.map((c) => String(c.business_date || '').slice(0, 10)).filter(Boolean)
+    const branchesIn = [...new Set(closes.map((c) => c.branch).filter(Boolean))]
     if (!days.length || !branchesIn.length) {
       setPosProofByKey(null)
       return
@@ -279,9 +288,8 @@ export default function PayrollPage() {
     if (branchesIn.length === 1) salesQ = salesQ.eq('branch', branchesIn[0])
     else salesQ = salesQ.in('branch', branchesIn)
     const salesRes = await salesQ
-    if (!salesRes.error) {
-      setPosProofByKey(posProofTotalsByBranchDay(salesRes.data || []))
-    }
+    if (salesRes.error) toast.error(salesRes.error.message)
+    else setPosProofByKey(posProofTotalsByBranchDay(salesRes.data || []))
   }, [scope])
 
   const pendingFloorQueue = useMemo(
@@ -324,7 +332,8 @@ export default function PayrollPage() {
         .order('effective_from', { ascending: false }),
       supabase.from('staff_profiles').select('id, full_name, role, branch_slug').eq('is_active', true).order('full_name'),
     ]).then(([pkg, staff]) => {
-      if (!pkg.error) {
+      if (pkg.error) toast.error(pkg.error.message)
+      else {
         const rows = pkg.data || []
         const scoped =
           Array.isArray(scope) && scope.length
@@ -332,7 +341,8 @@ export default function PayrollPage() {
             : rows
         setPackages(scoped)
       }
-      if (!staff.error) {
+      if (staff.error) toast.error(staff.error.message)
+      else {
         const rows = staff.data || []
         const scoped =
           Array.isArray(scope) && scope.length
@@ -353,12 +363,10 @@ export default function PayrollPage() {
       toast.error('Pick a branch for floor pay')
       return
     }
-    if (frequency === 'custom') {
-      const check = validatePayrollCustomRange(periodStart, periodEnd)
-      if (!check.ok) {
-        toast.error(check.reason)
-        return
-      }
+    const check = validatePayrollCustomRange(periodStart, periodEnd)
+    if (!check.ok) {
+      toast.error(check.reason)
+      return
     }
     setLoading(true)
     try {
@@ -554,7 +562,7 @@ export default function PayrollPage() {
       toast.error(error.message)
       return
     }
-    toast.success(`Payroll posted · ${formatMoney(data?.total_payout_minor || preview.total_payout_minor)}`)
+    toast.success(`Payroll confirmed · ${formatMoney(data?.total_payout_minor || preview.total_payout_minor)}`)
     setPreview(null)
     setStep(0)
     setNotes('')
@@ -588,7 +596,7 @@ export default function PayrollPage() {
         description="From POS proof to posted payout. Open any step if this is your first run."
         steps={PAYROLL_WORKFLOW_STEPS}
         stepIcons={payrollStepIcons}
-        defaultOpen={tab === 'home'}
+        defaultOpen={false}
       />
 
       <Tabs value={tab} onValueChange={setShellTab} className="flex flex-col gap-5">
@@ -845,7 +853,7 @@ export default function PayrollPage() {
                   </p>
                 ) : (
                   <p className="sm:col-span-2 text-xs text-muted-foreground">
-                    Loads wash pool + ceramic from days with attendance and unpaid POS tickets.
+                    Loads wash pool + ceramic from paid POS tickets not yet on a payroll run, plus attendance those days.
                   </p>
                 )}
                 <div className="sm:col-span-2">
@@ -879,7 +887,11 @@ export default function PayrollPage() {
                 ) : (
                   <>
                     <p className="text-sm">
-                      Wash sales {formatMoney(preview.pos_sales_minor)} · wash pool {formatMoney(preview.pool_minor)} · {preview.proof.length} tickets
+                      Wash sales {formatMoney(preview.pos_sales_minor)} · pool {formatMoney(preview.theoretical_pool_minor ?? preview.pool_minor)}
+                      {preview.theoretical_pool_minor > 0 && preview.pool_minor === 0
+                        ? ' (none allocated — no crew clocked in on those sale days)'
+                        : ` · allocated ${formatMoney(preview.pool_minor)}`}
+                      {' · '}{preview.proof.length} tickets
                     </p>
                     <div className="hakum-payroll-table">
                       {(preview.proof || []).map((row) => (
@@ -890,7 +902,7 @@ export default function PayrollPage() {
                         </article>
                       ))}
                       {!preview.proof.length ? (
-                        <p className="text-sm text-muted-foreground">No unpaid POS wash tickets in this window.</p>
+                        <p className="text-sm text-muted-foreground">No paid wash tickets left to claim in this window.</p>
                       ) : null}
                     </div>
                   </>
@@ -933,13 +945,14 @@ export default function PayrollPage() {
                             id={`sal-${salaryLine.key}`}
                             type="number"
                             min="0"
-                            step="100"
+                            step="0.01"
+                            inputMode="decimal"
                             className="min-h-11"
                             disabled={!canRun}
-                            value={salaryLine.pay_minor}
+                            value={pesosFromMinor(salaryLine.pay_minor)}
                             onChange={(e) =>
                               setPreview((prev) => {
-                                const lines = adjustPayrollLine(prev.lines, salaryLine.key, e.target.value)
+                                const lines = adjustPayrollLine(prev.lines, salaryLine.key, minorFromPesos(e.target.value))
                                 return { ...prev, lines, total_payout_minor: netPayrollLinesMinor(lines) }
                               })
                             }
@@ -989,34 +1002,47 @@ export default function PayrollPage() {
                 ) : (
                   <>
                     <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
-                      <NamedSelect
-                        value={commissionForm.staffId}
-                        onChange={(staffId) => setCommissionForm((f) => ({ ...f, staffId }))}
-                        options={staffGroups
-                          .filter((g) => g.staff_id)
-                          .map((g) => ({ value: g.staff_id, label: g.staff_name }))}
-                        placeholder="Employee"
-                      />
-                      <Input
-                        placeholder="Label (e.g. Sales commission)"
-                        value={commissionForm.label}
-                        onChange={(e) => setCommissionForm((f) => ({ ...f, label: e.target.value }))}
-                      />
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Amount (pesos)"
-                        value={commissionForm.amountPesos}
-                        onChange={(e) => setCommissionForm((f) => ({ ...f, amountPesos: e.target.value }))}
-                      />
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="payroll-comm-staff">Employee</Label>
+                        <NamedSelect
+                          id="payroll-comm-staff"
+                          value={commissionForm.staffId}
+                          onChange={(staffId) => setCommissionForm((f) => ({ ...f, staffId }))}
+                          options={staffGroups
+                            .filter((g) => g.staff_id)
+                            .map((g) => ({ value: g.staff_id, label: g.staff_name }))}
+                          placeholder="Employee"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="payroll-comm-label">Label</Label>
+                        <Input
+                          id="payroll-comm-label"
+                          placeholder="Sales commission…"
+                          value={commissionForm.label}
+                          onChange={(e) => setCommissionForm((f) => ({ ...f, label: e.target.value }))}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="payroll-comm-amount">Amount (₱)</Label>
+                        <Input
+                          id="payroll-comm-amount"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          placeholder="0.00"
+                          value={commissionForm.amountPesos}
+                          onChange={(e) => setCommissionForm((f) => ({ ...f, amountPesos: e.target.value }))}
+                        />
+                      </div>
                       <Button
                         type="button"
                         className="min-h-11"
                         disabled={!canRun}
                         onClick={() => {
                           const staff = staffRoster.find((s) => s.id === commissionForm.staffId)
-                          const amountMinor = Math.round(Number(commissionForm.amountPesos) * 100)
+                          const amountMinor = minorFromPesos(commissionForm.amountPesos)
                           if (!staff || !(amountMinor > 0)) {
                             toast.error('Pick an employee and enter a commission amount')
                             return
@@ -1049,16 +1075,18 @@ export default function PayrollPage() {
                             <Input
                               type="number"
                               min="0"
-                              step="100"
+                              step="0.01"
+                              inputMode="decimal"
                               className="min-h-11"
                               disabled={!canRun}
-                              value={row.pay_minor}
+                              value={pesosFromMinor(row.pay_minor)}
                               onChange={(e) =>
                                 setPreview((prev) => {
-                                  const lines = adjustPayrollLine(prev.lines, row.key, e.target.value)
+                                  const lines = adjustPayrollLine(prev.lines, row.key, minorFromPesos(e.target.value))
                                   return { ...prev, lines, total_payout_minor: netPayrollLinesMinor(lines) }
                                 })
                               }
+                              aria-label={`${row.label || 'Commission'} for ${row.staff_name}`}
                             />
                           </article>
                         ))}
@@ -1107,13 +1135,14 @@ export default function PayrollPage() {
                       <Input
                         type="number"
                         min="0"
-                        step="100"
+                        step="0.01"
+                        inputMode="decimal"
                         className="min-h-11"
                         disabled={!canRun || row.kind?.startsWith('adjustment')}
-                        value={row.pay_minor}
+                        value={pesosFromMinor(row.pay_minor)}
                         onChange={(e) =>
                           setPreview((prev) => {
-                            const lines = adjustPayrollLine(prev.lines, row.key, e.target.value)
+                            const lines = adjustPayrollLine(prev.lines, row.key, minorFromPesos(e.target.value))
                             return {
                               ...prev,
                               lines,
@@ -1126,48 +1155,69 @@ export default function PayrollPage() {
                     </article>
                   ))}
                   {!preview?.lines?.length ? (
-                    <p className="text-sm text-muted-foreground">No payout lines. Check attendance, packages, and POS proof.</p>
+                    <p className="text-sm text-muted-foreground">
+                      {preview?.theoretical_pool_minor > 0 && !preview?.lines?.length
+                        ? 'No crew clocked in on those sale days — wash pool is not allocated.'
+                        : 'No payout lines. Check attendance and POS proof.'}
+                    </p>
                   ) : null}
                 </div>
                 {canRun && preview ? (
                   <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
                     <p className="sm:col-span-2 text-sm font-medium">Add / deduct</p>
-                    <NamedSelect
-                      value={adjForm.staffId}
-                      onChange={(staffId) => setAdjForm((f) => ({ ...f, staffId }))}
-                      options={(staffRoster.length ? staffRoster : []).map((s) => ({
-                        value: s.id,
-                        label: s.full_name || s.id,
-                      }))}
-                      placeholder="Employee"
-                    />
-                    <NamedSelect
-                      value={adjForm.direction}
-                      onChange={(direction) => setAdjForm((f) => ({ ...f, direction }))}
-                      options={[
-                        { value: 'add', label: 'Add' },
-                        { value: 'deduct', label: 'Deduct' },
-                      ]}
-                    />
-                    <Input
-                      placeholder="Label (required)"
-                      value={adjForm.label}
-                      onChange={(e) => setAdjForm((f) => ({ ...f, label: e.target.value }))}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Amount (pesos)"
-                      value={adjForm.amountPesos}
-                      onChange={(e) => setAdjForm((f) => ({ ...f, amountPesos: e.target.value }))}
-                    />
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="payroll-adj-staff">Employee</Label>
+                      <NamedSelect
+                        id="payroll-adj-staff"
+                        value={adjForm.staffId}
+                        onChange={(staffId) => setAdjForm((f) => ({ ...f, staffId }))}
+                        options={(staffRoster.length ? staffRoster : []).map((s) => ({
+                          value: s.id,
+                          label: s.full_name || s.id,
+                        }))}
+                        placeholder="Employee"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="payroll-adj-direction">Direction</Label>
+                      <NamedSelect
+                        id="payroll-adj-direction"
+                        value={adjForm.direction}
+                        onChange={(direction) => setAdjForm((f) => ({ ...f, direction }))}
+                        options={[
+                          { value: 'add', label: 'Add' },
+                          { value: 'deduct', label: 'Deduct' },
+                        ]}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="payroll-adj-label">Label</Label>
+                      <Input
+                        id="payroll-adj-label"
+                        placeholder="Label (required)"
+                        value={adjForm.label}
+                        onChange={(e) => setAdjForm((f) => ({ ...f, label: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="payroll-adj-amount">Amount (₱)</Label>
+                      <Input
+                        id="payroll-adj-amount"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        value={adjForm.amountPesos}
+                        onChange={(e) => setAdjForm((f) => ({ ...f, amountPesos: e.target.value }))}
+                      />
+                    </div>
                     <Button
                       type="button"
                       className="sm:col-span-2 min-h-11"
                       onClick={() => {
                         const staff = staffRoster.find((s) => s.id === adjForm.staffId)
-                        const amountMinor = Math.round(Number(adjForm.amountPesos) * 100)
+                        const amountMinor = minorFromPesos(adjForm.amountPesos)
                         const check = validatePayrollAdjustment({
                           direction: adjForm.direction,
                           label: adjForm.label,
@@ -1237,13 +1287,14 @@ export default function PayrollPage() {
                               <Input
                                 type="number"
                                 min="0"
-                                step="100"
+                                step="0.01"
+                                inputMode="decimal"
                                 className="min-h-11 max-w-[9rem]"
                                 disabled={!canRun}
-                                value={row.pay_minor}
+                                value={pesosFromMinor(row.pay_minor)}
                                 onChange={(e) =>
                                   setPreview((prev) => {
-                                    const lines = adjustPayrollLine(prev.lines, row.key, e.target.value)
+                                    const lines = adjustPayrollLine(prev.lines, row.key, minorFromPesos(e.target.value))
                                     return { ...prev, lines, total_payout_minor: netPayrollLinesMinor(lines) }
                                   })
                                 }
@@ -1333,7 +1384,7 @@ export default function PayrollPage() {
                 className="grid gap-3 sm:grid-cols-2"
                 onSubmit={async (e) => {
                   e.preventDefault()
-                  const amount_minor = Math.round(Number(pkgForm.amountPesos) * 100)
+                  const amount_minor = minorFromPesos(pkgForm.amountPesos)
                   const pkgBranch = pkgForm.branch || null
                   if (!pkgForm.staff_id || !(amount_minor > 0)) {
                     toast.error('Employee and monthly amount required')
@@ -1359,27 +1410,39 @@ export default function PayrollPage() {
                   }
                 }}
               >
-                <NamedSelect
-                  value={pkgForm.staff_id}
-                  onChange={(staff_id) => setPkgForm((f) => ({ ...f, staff_id }))}
-                  options={staffRoster.map((s) => ({ value: s.id, label: s.full_name }))}
-                  placeholder="Employee"
-                />
-                <NamedSelect
-                  value={pkgForm.branch || ''}
-                  onChange={(next) => setPkgForm((f) => ({ ...f, branch: next }))}
-                  options={packageBranchOptions}
-                  placeholder="Branch (optional)"
-                />
-                <NamedSelect
-                  value={pkgForm.package_kind}
-                  onChange={(package_kind) => setPkgForm((f) => ({ ...f, package_kind }))}
-                  options={[
-                    { value: 'fixed', label: 'Fixed salary' },
-                    { value: 'hybrid', label: 'Hybrid (salary + extras)' },
-                    { value: 'custom', label: 'Custom' },
-                  ]}
-                />
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="pkg-staff">Employee</Label>
+                  <NamedSelect
+                    id="pkg-staff"
+                    value={pkgForm.staff_id}
+                    onChange={(staff_id) => setPkgForm((f) => ({ ...f, staff_id }))}
+                    options={staffRoster.map((s) => ({ value: s.id, label: s.full_name }))}
+                    placeholder="Employee"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="pkg-branch">Branch</Label>
+                  <NamedSelect
+                    id="pkg-branch"
+                    value={pkgForm.branch || ''}
+                    onChange={(next) => setPkgForm((f) => ({ ...f, branch: next }))}
+                    options={packageBranchOptions}
+                    placeholder="Company / HQ"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="pkg-kind">Package kind</Label>
+                  <NamedSelect
+                    id="pkg-kind"
+                    value={pkgForm.package_kind}
+                    onChange={(package_kind) => setPkgForm((f) => ({ ...f, package_kind }))}
+                    options={[
+                      { value: 'fixed', label: 'Fixed salary' },
+                      { value: 'hybrid', label: 'Hybrid (salary + extras)' },
+                      { value: 'custom', label: 'Custom' },
+                    ]}
+                  />
+                </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="pkg-amount">Monthly amount (₱)</Label>
                   <Input
@@ -1392,12 +1455,15 @@ export default function PayrollPage() {
                     onChange={(e) => setPkgForm((f) => ({ ...f, amountPesos: e.target.value }))}
                   />
                 </div>
-                <Input
-                  className="sm:col-span-2"
-                  placeholder="Notes (optional)"
-                  value={pkgForm.notes}
-                  onChange={(e) => setPkgForm((f) => ({ ...f, notes: e.target.value }))}
-                />
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <Label htmlFor="pkg-notes">Notes</Label>
+                  <Input
+                    id="pkg-notes"
+                    placeholder="Optional…"
+                    value={pkgForm.notes}
+                    onChange={(e) => setPkgForm((f) => ({ ...f, notes: e.target.value }))}
+                  />
+                </div>
                 <Button type="submit" className="min-h-11 sm:col-span-2 sm:w-auto">
                   Save monthly salary
                 </Button>
@@ -1482,7 +1548,6 @@ export default function PayrollPage() {
                 { key: 'ceramic_crew_solo_pct', label: 'Crew solo %', step: '1' },
                 { key: 'ceramic_crew_split_pct', label: 'Crew split %', step: '1' },
                 { key: 'ceramic_detailer_split_pct', label: 'Detailer split %', step: '1' },
-                { key: 'ceramic_shirt_deduction_minor', label: 'Shirt deduction (centavos)', step: '100' },
               ].map((f) => (
                 <div key={f.key} className="flex flex-col gap-1.5">
                   <Label htmlFor={`rule-${f.key}`}>{f.label}</Label>
@@ -1491,12 +1556,29 @@ export default function PayrollPage() {
                     type="number"
                     step={f.step}
                     min="0"
+                    max="100"
                     disabled={!canRun}
                     value={rules[f.key] ?? ''}
-                    onChange={(e) => setRules((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setRules((prev) => ({ ...prev, [f.key]: clampCompensationPercent(e.target.value) }))
+                    }
                   />
                 </div>
               ))}
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="rule-ceramic_shirt_deduction_minor">Shirt deduction (₱)</Label>
+                <Input
+                  id="rule-ceramic_shirt_deduction_minor"
+                  type="number"
+                  step="1"
+                  min="0"
+                  disabled={!canRun}
+                  value={pesosFromMinor(rules.ceramic_shirt_deduction_minor)}
+                  onChange={(e) =>
+                    setRules((prev) => ({ ...prev, ceramic_shirt_deduction_minor: minorFromPesos(e.target.value) }))
+                  }
+                />
+              </div>
               <div className="sm:col-span-2 lg:col-span-3">
                 <Button type="submit" className="min-h-11" disabled={saving || !canRun}>
                   {saving ? 'Saving…' : 'Save rules'}

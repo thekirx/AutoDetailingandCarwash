@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
-import { isAdmin } from '@/auth/permissions'
+import { canWritePosSettings } from '@/auth/permissions'
 import { supabase } from '@/lib/supabase'
 import { normalizePosSettings, toPosSettingsRow } from '@/lib/posSettings'
 import { Button } from '@/components/ui/button'
@@ -17,10 +17,11 @@ import { toast } from 'sonner'
  */
 export default function PosSettingsPanel({ embedded = false }) {
   const { profile } = useAuth()
-  const canWrite = isAdmin(profile)
+  const canWrite = canWritePosSettings(profile)
   const [settings, setSettings] = useState(() => normalizePosSettings())
   const [fields, setFields] = useState([])
   const [saving, setSaving] = useState(false)
+  const [fieldsReady, setFieldsReady] = useState(false)
 
   const load = useCallback(async () => {
     const [posRes, fieldRes] = await Promise.all([
@@ -32,6 +33,7 @@ export default function PosSettingsPanel({ embedded = false }) {
     } else if (posRes.data) setSettings(normalizePosSettings(posRes.data))
     if (fieldRes.error) toast.error(fieldRes.error.message)
     else setFields(fieldRes.data || [])
+    setFieldsReady(true)
   }, [])
 
   useEffect(() => {
@@ -97,9 +99,10 @@ export default function PosSettingsPanel({ embedded = false }) {
       ) : (
         <Card className="border-border/80 bg-muted/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Customize this counter</CardTitle>
+            <CardTitle className="text-base">Counter options</CardTitle>
             <CardDescription>
-              Payment methods appear at checkout. Expense kinds appear under Expenses. Crew late-pay weights live under{' '}
+              These lists only control checkout payment labels and the Expenses kinds on this POS. They do not customize
+              payroll, P&amp;L, or catalog pricing. Crew late-pay weights live under{' '}
               <Link to="/operations/attendance?tab=settings" className="font-medium text-primary underline-offset-2 hover:underline">
                 Attendance → Settings
               </Link>
@@ -168,7 +171,7 @@ export default function PosSettingsPanel({ embedded = false }) {
                 {saving ? 'Saving…' : 'Save POS lists'}
               </Button>
             ) : (
-              <p className="text-sm text-muted-foreground">Only Super Admin can edit lists.</p>
+              <p className="text-sm text-muted-foreground">Only Super Admin (or ASA with Finance write) can edit lists.</p>
             )}
           </form>
         </CardContent>
@@ -180,7 +183,9 @@ export default function PosSettingsPanel({ embedded = false }) {
           <CardDescription>Labels and sort order for the shift-close wizard. Finance uses the same rows.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {!fields.length ? (
+          {!fieldsReady ? (
+            <p className="text-sm text-muted-foreground">Loading end-of-shift fields…</p>
+          ) : !fields.length ? (
             <p className="text-sm text-muted-foreground">No field config rows yet.</p>
           ) : (
             fields.map((row) => (

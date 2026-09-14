@@ -1,0 +1,262 @@
+[
+  {
+    "k": "asa login",
+    "v": "http://127.0.0.1:5295/operations/dashboard"
+  },
+  {
+    "k": "asa-desktop overview meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=overview\",\"title\":\"Dashboard\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-overview inventory",
+    "v": "ctas=54 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=10 scrollX=false"
+  },
+  {
+    "k": "asa-desktop sales meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=sales\",\"title\":\"Sales\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-sales inventory",
+    "v": "ctas=48 inputs=5 unlabelled=0 iconOnlyNoAria=0 <44px=4 scrollX=false"
+  },
+  {
+    "k": "asa-desktop purchases meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=purchases\",\"title\":\"Bills & expenses\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-purchases inventory",
+    "v": "ctas=48 inputs=5 unlabelled=0 iconOnlyNoAria=0 <44px=4 scrollX=false"
+  },
+  {
+    "k": "asa-desktop pl meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=pl\",\"title\":\"Profit and loss\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-pl inventory",
+    "v": "ctas=48 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=4 scrollX=false"
+  },
+  {
+    "k": "asa-desktop shift-close meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=shift-close\",\"title\":\"Shift reviews\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-shift-close inventory",
+    "v": "ctas=45 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-desktop expense-reports meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=expense-reports\",\"title\":\"Expense reports\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-expense-reports inventory",
+    "v": "ctas=45 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-desktop vendors meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=vendors\",\"title\":\"Vendors\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-vendors inventory",
+    "v": "ctas=45 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-desktop quotes meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=quotes\",\"title\":\"Quotations\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-quotes inventory",
+    "v": "ctas=45 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-desktop corporate meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=corporate\",\"title\":\"Corporate\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-corporate inventory",
+    "v": "ctas=45 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-desktop categories meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=categories\",\"title\":\"Categories\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-categories inventory",
+    "v": "ctas=45 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-desktop reports meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=reports\",\"title\":\"Reports\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":true,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":false,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":false,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":false,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":false,\"w\":155},{\"text\":\"Vendors\",\"clipped\":false,\"w\":104},{\"text\":\"Quotations\",\"clipped\":false,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-desktop-reports inventory",
+    "v": "ctas=60 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=16 scrollX=false"
+  },
+  {
+    "k": "asa-desktop reports best-sellers",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-desktop reports shift-attestation",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-desktop reports sales-report",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-desktop reports operations",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-desktop reports retention",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-phone overview meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=overview\",\"title\":\"Dashboard\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-overview inventory",
+    "v": "ctas=26 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=10 scrollX=false"
+  },
+  {
+    "k": "asa-phone sales meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=sales\",\"title\":\"Sales\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-sales inventory",
+    "v": "ctas=20 inputs=5 unlabelled=0 iconOnlyNoAria=0 <44px=4 scrollX=false"
+  },
+  {
+    "k": "asa-phone purchases meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=purchases\",\"title\":\"Bills & expenses\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-purchases inventory",
+    "v": "ctas=20 inputs=5 unlabelled=0 iconOnlyNoAria=0 <44px=4 scrollX=false"
+  },
+  {
+    "k": "asa-phone pl meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=pl\",\"title\":\"Profit and loss\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-pl inventory",
+    "v": "ctas=20 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=4 scrollX=false"
+  },
+  {
+    "k": "asa-phone shift-close meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=shift-close\",\"title\":\"Shift reviews\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-shift-close inventory",
+    "v": "ctas=17 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-phone expense-reports meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=expense-reports\",\"title\":\"Expense reports\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-expense-reports inventory",
+    "v": "ctas=17 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-phone vendors meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=vendors\",\"title\":\"Vendors\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-vendors inventory",
+    "v": "ctas=17 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-phone quotes meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=quotes\",\"title\":\"Quotations\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-quotes inventory",
+    "v": "ctas=17 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-phone corporate meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=corporate\",\"title\":\"Corporate\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-corporate inventory",
+    "v": "ctas=17 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-phone categories meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=categories\",\"title\":\"Categories\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-categories inventory",
+    "v": "ctas=17 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa-phone reports meta",
+    "v": "{\"url\":\"http://127.0.0.1:5295/operations/finance?tab=reports\",\"title\":\"Reports\",\"badge\":\"View only\",\"net\":\"₱0\",\"window\":\"1–30 Sep 2026\",\"guideOpen\":false,\"tabs\":[{\"text\":\"Dashboard\",\"clipped\":false,\"w\":122},{\"text\":\"Sales\",\"clipped\":false,\"w\":87},{\"text\":\"Bills & expenses\",\"clipped\":true,\"w\":153},{\"text\":\"Profit and loss\",\"clipped\":true,\"w\":142},{\"text\":\"Shift reviews\",\"clipped\":true,\"w\":133},{\"text\":\"Expense reports\",\"clipped\":true,\"w\":155},{\"text\":\"Vendors\",\"clipped\":true,\"w\":104},{\"text\":\"Quotations\",\"clipped\":true,\"w\":123},{\"text\":\"Corporate\",\"clipped\":true,\"w\":117},{\"text\":\"Categories\",\"clipped\":true,\"w\":122},{\"text\":\"Reports\",\"clipped\":true,\"w\":102}],\"denied\":false}"
+  },
+  {
+    "k": "asa-phone-reports inventory",
+    "v": "ctas=32 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=16 scrollX=false"
+  },
+  {
+    "k": "asa-phone reports best-sellers",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-phone reports shift-attestation",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-phone reports sales-report",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-phone reports operations",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-phone reports retention",
+    "v": "scrolled"
+  },
+  {
+    "k": "asa-desktop inverted custom range",
+    "v": "{\"presetOk\":true,\"refreshed\":\"Refresh\",\"start\":\"2026-09-01\",\"end\":\"2020-01-01\",\"window\":\"Sep 1, 2026 – Jan 1, 2020\",\"net\":\"₱0\",\"toasts\":[]}"
+  },
+  {
+    "k": "asa-desktop bill-empty-submit",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop vendor-empty-submit",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop quote-empty-submit",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop category-empty-submit",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop corporate-empty-submit",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop expense-report-empty-submit",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop reject-without-note",
+    "v": "no reject :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop /operations/reports lands",
+    "v": "http://127.0.0.1:5295/operations/finance?tab=reports"
+  },
+  {
+    "k": "brand-landing-ref",
+    "v": "reused pos-deep/brand-landing-ref.png"
+  }
+]

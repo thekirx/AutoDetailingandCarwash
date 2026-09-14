@@ -20,11 +20,160 @@ export const FINANCE_TABS = [
 
 export const FINANCE_TAB_IDS = FINANCE_TABS.map((t) => t.id)
 
+/** Dashboard, Sales, Bills, P&L, Shift reviews. Everything else lives under More. */
+export const FINANCE_PRIMARY_TAB_IDS = ['overview', 'sales', 'purchases', 'pl', 'shift-close']
+
+export const FINANCE_DEFAULT_PERIOD = 'last_30'
+
 const FINANCE_TAB_ALIASES = { expenses: 'purchases' }
 
 export function resolveFinanceTab(raw) {
   const key = FINANCE_TAB_ALIASES[raw] || raw
   return FINANCE_TAB_IDS.includes(key) ? key : 'overview'
+}
+
+export function isFinancePrimaryTab(id) {
+  return FINANCE_PRIMARY_TAB_IDS.includes(id)
+}
+
+function searchParamGet(searchParams, key) {
+  if (!searchParams) return null
+  if (typeof searchParams.get === 'function') return searchParams.get(key)
+  const value = searchParams[key]
+  return value == null ? null : String(value)
+}
+
+/** Read Finance filters from URL. Unknown period/compare fall back to defaults. */
+export function parseFinanceSearch(searchParams, { defaultBranch = 'all' } = {}) {
+  const tab = resolveFinanceTab(searchParamGet(searchParams, 'tab'))
+  const periodRaw = searchParamGet(searchParams, 'period')
+  const period = DATE_PRESETS.some((p) => p.value === periodRaw) ? periodRaw : FINANCE_DEFAULT_PERIOD
+  const branch = searchParamGet(searchParams, 'branch') || defaultBranch
+  const compareRaw = searchParamGet(searchParams, 'compare')
+  const compare = COMPARE_PRESETS.some((p) => p.value === compareRaw) ? compareRaw : 'none'
+  return {
+    tab,
+    period,
+    branch,
+    compare,
+    from: searchParamGet(searchParams, 'from') || '',
+    to: searchParamGet(searchParams, 'to') || '',
+  }
+}
+
+/** Persist tab + period + branch + compare. Default tab/period omit those keys. */
+export function buildFinanceSearchParams({
+  tab = 'overview',
+  period = FINANCE_DEFAULT_PERIOD,
+  branch = 'all',
+  compare = 'none',
+  from = '',
+  to = '',
+  defaultBranch = 'all',
+  reportsOnly = false,
+} = {}) {
+  const q = {}
+  if (reportsOnly) q.tab = 'reports'
+  else if (tab && tab !== 'overview') q.tab = tab
+  if (period && period !== FINANCE_DEFAULT_PERIOD) q.period = period
+  if (branch && branch !== defaultBranch) q.branch = branch
+  if (compare && compare !== 'none') q.compare = compare
+  if (period === 'custom') {
+    if (from) q.from = from
+    if (to) q.to = to
+  }
+  return q
+}
+
+/** Validate custom range: both days present, end ≥ start. Does not swap inverted dates. */
+export function validateFinanceCustomRange(start, end) {
+  const s = String(start || '').slice(0, 10)
+  const e = String(end || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || !/^\d{4}-\d{2}-\d{2}$/.test(e)) {
+    return { ok: false, reason: 'Start and end dates are required' }
+  }
+  if (e < s) return { ok: false, reason: 'End date must be on or after start' }
+  return { ok: true, reason: null, start: s, end: e }
+}
+
+export function financeDayYmd(value) {
+  const raw = String(value || '').trim()
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10)
+  return ''
+}
+
+export function dateInFinanceRange(ymd, range) {
+  const d = financeDayYmd(ymd)
+  if (!d || !range?.start || !range?.end) return false
+  return d >= range.start && d <= range.end
+}
+
+/** Slice retention to customers whose last paid day falls in the Finance window. */
+export function retentionInWindow(rows, range) {
+  return (rows || []).filter((row) => dateInFinanceRange(row?.last_paid_at, range))
+}
+
+export function postedPayrollExpenseMinor(plRows) {
+  let n = 0
+  for (const row of plRows || []) {
+    if (row.kind !== 'expense') continue
+    if (/payroll|salary|crew.?pay|wage/i.test(String(row.category || ''))) {
+      n += Number(row.amount_minor || 0)
+    }
+  }
+  return n
+}
+
+/** Empty window: point at the latest paid POS day when it sits outside the filter. */
+export function financeEmptyWindowCue({
+  income = 0,
+  expenses = 0,
+  lastPaidDate,
+  lastPaidMinor = 0,
+  range,
+} = {}) {
+  if (income > 0 || expenses > 0) return null
+  const ymd = financeDayYmd(lastPaidDate)
+  if (ymd && range && !dateInFinanceRange(ymd, range)) {
+    return {
+      id: 'last-paid-outside',
+      lastPaidDate: ymd,
+      lastPaidMinor: Number(lastPaidMinor) || 0,
+      text: `No books in this window. Last paid POS was ${ymd}. Switch the period to include that day.`,
+    }
+  }
+  return {
+    id: 'empty-window',
+    lastPaidDate: ymd || null,
+    lastPaidMinor: Number(lastPaidMinor) || 0,
+    text: 'No paid sales or posted expenses in this window. Close POS days or post bills to populate books.',
+  }
+}
+
+/** Honesty cues when income exists but closes / payroll expense do not. */
+export function financeStatementCues({
+  income = 0,
+  payrollExpenseMinor = 0,
+  shiftCloseCount = 0,
+  paidCount = 0,
+} = {}) {
+  if (!(income > 0)) return []
+  const cues = []
+  if (payrollExpenseMinor <= 0) {
+    cues.push({
+      id: 'unposted-pay',
+      href: '/operations/payroll',
+      text: 'Crew pay is not in this statement until Payroll confirms a run. Open Payroll — this page does not set commission %.',
+    })
+  }
+  if (paidCount > 0 && Number(shiftCloseCount) === 0) {
+    cues.push({
+      id: 'no-close',
+      href: '/operations/pos',
+      text: 'Paid POS in this window has no accepted shift close. Floor payroll stays locked until End of shift is submitted and accepted.',
+    })
+  }
+  return cues
 }
 
 export const DATE_PRESETS = [
@@ -112,8 +261,11 @@ export function financeRange(preset, customStart, customEnd, now = new Date()) {
   const toManilaDay = (d) =>
     d.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
 
-  if (preset === 'custom' && customStart && customEnd) {
-    return { start: customStart, end: customEnd }
+  if (preset === 'custom') {
+    const check = validateFinanceCustomRange(customStart, customEnd)
+    if (check.ok) return { start: check.start, end: check.end }
+    // ponytail: keep typed days (including inverted). Callers must not query when invalid.
+    return { start: String(customStart || ''), end: String(customEnd || '') }
   }
   if (preset === 'today') {
     const d = toManilaDay(now)
@@ -365,7 +517,7 @@ export function topExpenseCategories(plRows, limit = 6) {
  * Principal-owner readouts from POS + P&L in the window.
  * Pure helpers — no fake fill when books are empty.
  */
-export function financeOwnerInsights(salesRows, plRows) {
+export function financeOwnerInsights(salesRows, plRows, extras = {}) {
   const pl = rollupPl(plRows)
   const paidCount = (salesRows || []).reduce((acc, r) => acc + Number(r.paid_count || 0), 0)
   const salesTotal = sumMinor(salesRows, 'total_sales_minor')
@@ -380,9 +532,16 @@ export function financeOwnerInsights(salesRows, plRows) {
 
   const cues = []
   if (pl.income === 0 && pl.expenses === 0) {
+    const empty = financeEmptyWindowCue({
+      income: 0,
+      expenses: 0,
+      lastPaidDate: extras.lastPaidDate,
+      lastPaidMinor: extras.lastPaidMinor,
+      range: extras.range,
+    })
     cues.push({
-      tone: 'neutral',
-      text: 'No paid sales or posted expenses in this window. Close POS days or post bills to populate books.',
+      tone: empty?.id === 'last-paid-outside' ? 'info' : 'neutral',
+      text: empty?.text || 'No paid sales or posted expenses in this window. Close POS days or post bills to populate books.',
     })
   } else {
     if (expenseRatio != null && expenseRatio >= 80) {

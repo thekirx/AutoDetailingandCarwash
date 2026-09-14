@@ -1,0 +1,219 @@
+{
+  "buttons": [
+    {
+      "tag": "BUTTON",
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Open command menu",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "9+",
+      "aria": "Notifications",
+      "href": "",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Account menu",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Show guide",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Dashboard",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 136
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Run payroll",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 136
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Cash advances",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 170
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Salaries",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 112
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Payouts",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 113
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Rules",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 36,
+      "w": 92
+    },
+    {
+      "tag": "BUTTON",
+      "text": "1Period",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 175
+    },
+    {
+      "tag": "BUTTON",
+      "text": "2Employees",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 175
+    },
+    {
+      "tag": "BUTTON",
+      "text": "3Commissions",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 175
+    },
+    {
+      "tag": "BUTTON",
+      "text": "4Review",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 175
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Add commission",
+      "aria": "",
+      "href": "",
+      "disabled": true,
+      "h": 44,
+      "w": 300
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Back",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 81
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Next",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 78
+    }
+  ],
+  "inputs": [
+    {
+      "id": "",
+      "name": "",
+      "type": "select-one",
+      "min": "",
+      "max": "",
+      "step": "",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "base-ui-_r_6c_",
+      "name": "",
+      "type": "text",
+      "min": "",
+      "max": "",
+      "step": "",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label (e.g. Sales commission)",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "base-ui-_r_6d_",
+      "name": "",
+      "type": "number",
+      "min": "0",
+      "max": "",
+      "step": "0.01",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Amount (pesos)",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 7,
+  "unlabelled": 3,
+  "headings": [
+    "H1:Payroll",
+    "H2:Go to"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5294/operations/payroll?tab=run"
+}

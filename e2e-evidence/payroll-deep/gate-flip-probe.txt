@@ -1,0 +1,17 @@
+Probe 2026-09-14 (throwaway puppeteer script, deleted after run) — does a tab hide/show wipe the loaded payroll preview?
+
+Steps: login boss → /operations/payroll?tab=run → period 2026-08-01..2026-09-15 → Load POS proof → wait 5s
+       → CDP Page.setWebLifecycleState frozen (800ms) → active   (== user switches tab / locks phone and comes back)
+
+BEFORE focus change: {"step":"2POS proof","proof":"Wash sales ₱2,850 · wash pool ₱0 · 2 tickets","gate":false}
+A lifecycle frozen→active: t+250ms → {"proof":null,"gate":false}
+A lifecycle frozen→active: +3s → {"step":"1Period","proof":null,"gate":false}
+
+Control (earlier probe, same session, no visibility change): polled 40s ×2 after load — gate never appeared, preview intact.
+Synthetic document.dispatchEvent(new Event('visibilitychange')) alone: no change (auth-js needs the real visibilityState transition).
+
+Chain: @supabase/auth-js 2.108 GoTrueClient._onVisibilityChanged → _recoverAndRefresh() → _notifyAllSubscribers('SIGNED_IN') (dist/module/GoTrueClient.js:4042)
+       → src/lib/session.js:64 shouldReloadProfile('SIGNED_IN') === true
+       → src/auth/AuthProvider.jsx:150 setLoading(true)
+       → src/auth/ProtectedRoute.jsx:13 waiting = loading || … → renders the navy "Verifying access" gate → PayrollPage unmounts
+       → remount: step 0, preview null, edited lines / added commissions / notes gone.

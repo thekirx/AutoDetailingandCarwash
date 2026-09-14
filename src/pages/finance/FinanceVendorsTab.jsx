@@ -1,5 +1,5 @@
 /** Finance Vendors — supplier directory (Owner Revisions P5). */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,21 +21,27 @@ import {
 export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [form, setForm] = useState({ name: '', contact: '', notes: '' })
+  const onVendorsChangeRef = useRef(onVendorsChange)
+  onVendorsChangeRef.current = onVendorsChange
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError('')
     const { data, error } = await supabase
       .from('vendors')
       .select('id, name, contact, notes, is_active, created_at')
       .order('name')
-    if (error) toast.error(error.message)
-    else {
+    if (error) {
+      setLoadError(error.message)
+      toast.error(error.message)
+    } else {
       setRows(data || [])
-      onVendorsChange?.(data || [])
+      onVendorsChangeRef.current?.(data || [])
     }
     setLoading(false)
-  }, [onVendorsChange])
+  }, [])
 
   useEffect(() => {
     load()
@@ -80,7 +86,7 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
     }
   }
 
-  if (loading) return <FinanceTabSkeleton metrics={2} />
+  if (loading && !rows.length && !loadError) return <FinanceTabSkeleton metrics={2} />
 
   return (
     <div className="finance-dash flex flex-col gap-5">
@@ -131,7 +137,13 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
       ) : null}
 
       <FinancePanel title="Vendors" description={`${metrics.total} supplier${metrics.total === 1 ? '' : 's'}`}>
-        {!rows.length ? (
+        {loadError ? (
+          <FinanceEmpty
+            title="Vendors failed to load"
+            body={loadError}
+            action={{ label: 'Retry', onClick: load }}
+          />
+        ) : !rows.length ? (
           <FinanceEmpty
             title="No vendors yet"
             body={canManage ? 'Add a supplier above.' : 'Ask Super Admin to add vendors.'}

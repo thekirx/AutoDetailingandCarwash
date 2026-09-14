@@ -1,0 +1,454 @@
+[
+  {
+    "k": "admin login",
+    "v": "http://127.0.0.1:5294/operations/pos"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-desktop-checkout inventory",
+    "v": "buttons=41 inputs=10 iconOnlyNoAria=0 <44px=15 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-desktop-pending inventory",
+    "v": "buttons=13 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-desktop-expenses inventory",
+    "v": "buttons=15 inputs=3 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-desktop-dashboard inventory",
+    "v": "buttons=14 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-desktop-settings inventory",
+    "v": "buttons=34 inputs=102 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-desktop add item",
+    "v": "Add Ceramic Top-Up Kit (of 8 tiles)"
+  },
+  {
+    "k": "admin-desktop-cart inventory",
+    "v": "buttons=47 inputs=10 iconOnlyNoAria=0 <44px=21 scrollX=false"
+  },
+  {
+    "k": "admin-desktop discount panel",
+    "v": "none"
+  },
+  {
+    "k": "admin-desktop-discount-customer inventory",
+    "v": "buttons=0 inputs=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "admin-desktop discount 150 into",
+    "v": "no discount input"
+  },
+  {
+    "k": "admin-desktop charge w/o cash",
+    "v": "no charge button"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-desktop expense empty submit",
+    "v": "Record expense"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-desktop eos",
+    "v": "End of shift"
+  },
+  {
+    "k": "admin-desktop-eos inventory",
+    "v": "buttons=14 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "admin-desktop eos next",
+    "v": "no next"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-phone-checkout inventory",
+    "v": "buttons=34 inputs=1 iconOnlyNoAria=0 <44px=14 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-phone-pending inventory",
+    "v": "buttons=11 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-phone-expenses inventory",
+    "v": "buttons=13 inputs=3 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-phone-dashboard inventory",
+    "v": "buttons=12 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-phone-settings inventory",
+    "v": "buttons=32 inputs=102 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-phone add item",
+    "v": "Add Ceramic Top-Up Kit (of 8 tiles)"
+  },
+  {
+    "k": "admin-phone open cart",
+    "v": "Cart · 2 · ₱3,000"
+  },
+  {
+    "k": "admin-phone-cart inventory",
+    "v": "buttons=47 inputs=10 iconOnlyNoAria=0 <44px=22 scrollX=false"
+  },
+  {
+    "k": "admin-phone discount panel",
+    "v": "none"
+  },
+  {
+    "k": "admin-phone-discount-customer inventory",
+    "v": "buttons=0 inputs=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "admin-phone discount 150 into",
+    "v": "no discount input"
+  },
+  {
+    "k": "admin-phone charge w/o cash",
+    "v": "no charge button"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-phone expense empty submit",
+    "v": "Record expense"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "admin-phone eos",
+    "v": "End of shift"
+  },
+  {
+    "k": "admin-phone-eos inventory",
+    "v": "buttons=12 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "admin-phone eos next",
+    "v": "no next"
+  },
+  {
+    "k": "boss login",
+    "v": "http://127.0.0.1:5294/operations/dashboard"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-desktop-checkout inventory",
+    "v": "buttons=44 inputs=11 iconOnlyNoAria=0 <44px=15 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-desktop-pending inventory",
+    "v": "buttons=13 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-desktop-expenses inventory",
+    "v": "buttons=15 inputs=3 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-desktop-dashboard inventory",
+    "v": "buttons=14 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-desktop-settings inventory",
+    "v": "buttons=14 inputs=22 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-desktop add item",
+    "v": "Add Carwash (of 8 tiles)"
+  },
+  {
+    "k": "boss-desktop-cart inventory",
+    "v": "buttons=0 inputs=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-desktop discount panel",
+    "v": "none"
+  },
+  {
+    "k": "boss-desktop-discount-customer inventory",
+    "v": "buttons=0 inputs=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-desktop discount 150 into",
+    "v": "no discount input"
+  },
+  {
+    "k": "boss-desktop charge w/o cash",
+    "v": "no charge button"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-desktop expense empty submit",
+    "v": "Record expense"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-desktop eos",
+    "v": "End of shift"
+  },
+  {
+    "k": "boss-desktop-eos inventory",
+    "v": "buttons=14 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "boss-desktop eos next",
+    "v": "no next"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-phone-checkout inventory",
+    "v": "buttons=37 inputs=2 iconOnlyNoAria=0 <44px=14 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-phone-pending inventory",
+    "v": "buttons=11 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-phone-expenses inventory",
+    "v": "buttons=13 inputs=3 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-phone-dashboard inventory",
+    "v": "buttons=12 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-phone-settings inventory",
+    "v": "buttons=12 inputs=22 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-phone add item",
+    "v": "Add Carwash (of 8 tiles)"
+  },
+  {
+    "k": "boss-phone open cart",
+    "v": "Cart · 2 · ₱700"
+  },
+  {
+    "k": "boss-phone-cart inventory",
+    "v": "buttons=51 inputs=11 iconOnlyNoAria=0 <44px=23 scrollX=false"
+  },
+  {
+    "k": "boss-phone discount panel",
+    "v": "none"
+  },
+  {
+    "k": "boss-phone-discount-customer inventory",
+    "v": "buttons=0 inputs=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-phone discount 150 into",
+    "v": "no discount input"
+  },
+  {
+    "k": "boss-phone charge w/o cash",
+    "v": "no charge button"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-phone expense empty submit",
+    "v": "Record expense"
+  },
+  {
+    "k": "http 400",
+    "v": "/rest/v1/expense_categories?select=id%2Cname%2Ckind%2Cis_active&is_active=eq.true&order=name.asc :: {\"code\":\"42703\",\"details\":null,\"hint\":null,\"message\":\"column expense_categories.is_active does not exist\"}"
+  },
+  {
+    "k": "boss-phone eos",
+    "v": "End of shift"
+  },
+  {
+    "k": "boss-phone-eos inventory",
+    "v": "buttons=12 inputs=0 iconOnlyNoAria=0 <44px=6 scrollX=false"
+  },
+  {
+    "k": "boss-phone eos next",
+    "v": "no next"
+  },
+  {
+    "k": "boss-settings-pos-route inventory",
+    "v": "buttons=7 inputs=22 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  }
+]

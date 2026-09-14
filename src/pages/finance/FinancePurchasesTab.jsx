@@ -1,6 +1,6 @@
 /** Finance Bills & expenses — status flow + CRUD, dashboard chrome. */
 import { useMemo, useState } from 'react'
-import { Download, FileSpreadsheet, FileText, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Download, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
-import { downloadCsv, downloadExcel, formatFinanceWindow, printAsPdf } from '@/lib/financeData'
+import { downloadCsv, formatFinanceWindow } from '@/lib/financeData'
 import {
   FinanceEmpty,
   FinanceMetricCell,
@@ -256,24 +256,6 @@ export default function FinancePurchasesTab({
           >
             <Download data-icon="inline-start" />
             CSV
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-10 cursor-pointer"
-            onClick={() => downloadExcel(filtered, exportColumns, `${fileBase}.xls`, 'Hakum Purchases')}
-          >
-            <FileSpreadsheet data-icon="inline-start" />
-            Excel
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-10 cursor-pointer"
-            onClick={() => printAsPdf(filtered, exportColumns, 'Hakum Purchases', subtitle)}
-          >
-            <FileText data-icon="inline-start" />
-            PDF
           </Button>
         </div>
       </div>

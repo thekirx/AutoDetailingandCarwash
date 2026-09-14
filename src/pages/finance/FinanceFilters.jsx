@@ -24,8 +24,10 @@ export default function FinanceFilters({
   onRefresh,
   refreshing = false,
   windowLabel = '',
+  rangeError = '',
 }) {
   const showCustom = datePreset === 'custom'
+  const rangeInvalid = Boolean(rangeError)
 
   return (
     <div className="finance-filters" role="search" aria-label="Finance filters">
@@ -61,22 +63,26 @@ export default function FinanceFilters({
 
         {showCustom ? (
           <>
-            <div className="finance-filter-group">
+            <div className="finance-filter-group" data-invalid={rangeInvalid || undefined}>
               <Label htmlFor="finance-start">From</Label>
               <Input
                 id="finance-start"
                 type="date"
                 value={customStart}
+                aria-invalid={rangeInvalid || undefined}
+                aria-describedby={rangeInvalid ? 'finance-range-error' : undefined}
                 onChange={(e) => onCustomRangeChange(e.target.value, customEnd)}
                 className="min-h-10"
               />
             </div>
-            <div className="finance-filter-group">
+            <div className="finance-filter-group" data-invalid={rangeInvalid || undefined}>
               <Label htmlFor="finance-end">To</Label>
               <Input
                 id="finance-end"
                 type="date"
                 value={customEnd}
+                aria-invalid={rangeInvalid || undefined}
+                aria-describedby={rangeInvalid ? 'finance-range-error' : undefined}
                 onChange={(e) => onCustomRangeChange(customStart, e.target.value)}
                 className="min-h-10"
               />
@@ -96,6 +102,12 @@ export default function FinanceFilters({
           </div>
         ) : null}
       </div>
+
+      {rangeError ? (
+        <p id="finance-range-error" className="finance-filter-error" role="alert" aria-live="polite">
+          {rangeError}
+        </p>
+      ) : null}
 
       {onRefresh ? (
         <div className="finance-filters-actions">

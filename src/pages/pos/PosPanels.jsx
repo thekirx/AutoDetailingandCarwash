@@ -93,7 +93,7 @@ const STEP_ICONS = {
   close: CircleDollarSign,
 }
 
-export function PosGuideCard({ defaultOpen = true }) {
+export function PosGuideCard({ defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen)
 
   return (

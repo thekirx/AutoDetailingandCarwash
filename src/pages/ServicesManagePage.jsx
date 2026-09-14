@@ -388,7 +388,9 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                 onChange={(e) => setForm({ ...form, salary_pct: e.target.value })}
                 placeholder="Blank = global wash pool"
               />
-              <p className="text-xs text-muted-foreground">Preview only — does not auto-pay.</p>
+              <p className="text-xs text-muted-foreground">
+                Paid on the next floor payroll run (replaces the global wash-pool % for this SKU). Blank = company wash pool.
+              </p>
             </div>
             <div className="flex flex-col gap-2">
               <Label>Duration (minutes)</Label>
@@ -587,6 +589,9 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                   onChange={(e) => setEditing({ ...editing, salary_pct: e.target.value })}
                   placeholder="Blank = global wash pool"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Paid on the next floor payroll run (replaces the global wash-pool % for this SKU).
+                </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">

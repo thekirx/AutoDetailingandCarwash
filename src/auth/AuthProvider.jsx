@@ -228,6 +228,20 @@ export function AuthProvider({ children }) {
     return loadProfile(session.user, { quiet: true })
   }, [loadProfile, session?.user])
 
+  const retryAuth = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { data } = await supabase.auth.getSession()
+      setSession(data.session)
+      if (data.session?.user) await loadProfile(data.session.user)
+      else setProfile(null)
+    } catch (err) {
+      console.warn('[auth] retry failed', err?.message || err)
+    } finally {
+      setLoading(false)
+    }
+  }, [loadProfile])
+
   const value = useMemo(
     () => ({
       session,
@@ -247,8 +261,9 @@ export function AuthProvider({ children }) {
       loading,
       signOut,
       refreshProfile,
+      retryAuth,
     }),
-    [session, profile, loading, signOut, refreshProfile],
+    [session, profile, loading, signOut, refreshProfile, retryAuth],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

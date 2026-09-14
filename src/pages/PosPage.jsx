@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
 import { Cake, Gift, Link2, LogOut, MapPin, Minus, Plus, Receipt, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { allowRoute, canAccessPos, canAccessSettings, canManageServices, canSeeAllBranches, canWriteFinance, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
+import { allowRoute, canAccessPos, canManageServices, canSeeAllBranches, canWriteFinance, canWritePosSettings, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRemovePosCartLine, cashAdvanceVisibleOnPos, cashTenderCoversTotal, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership, stepPosCartLineQuantity, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
+import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashAdvanceVisibleOnPos, cashTenderCoversTotal, clearPosDraft, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership, readPosDraft, stepPosCartLineQuantity, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
@@ -31,7 +31,7 @@ import ShiftCloseWizard from '@/components/ShiftCloseWizard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -55,6 +55,7 @@ import {
 import {
   POS_SETTINGS_TAB,
   resolvePosShellTab,
+  resolvePosLandingTab,
   summarizePendingHandoffs,
   summarizeTodayPos,
   buildPosWashPoolPreview,
@@ -91,7 +92,7 @@ export default function PosPage() {
   const branchAdmin = isBranchAdmin(profile)
   const canManageCatalog = canManageServices(profile)
   const canOpenFinance = allowRoute(profile, 'finance')
-  const showSettingsTab = canAccessSettings(profile)
+  const showSettingsTab = canWritePosSettings(profile)
   const shellTab = resolvePosShellTab(searchParams.get('tab'), { canSettings: showSettingsTab })
   const scopeList = getBranchScopeList(profile)
   const canPickPosBranch = canSeeAllBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
@@ -131,6 +132,11 @@ export default function PosPage() {
   const [cartOpen, setCartOpen] = useState(false)
   const posSplitView = usePosSplitView()
   const [cashTendered, setCashTendered] = useState('')
+  const [paymentRef, setPaymentRef] = useState('')
+  const [loyaltyStamps, setLoyaltyStamps] = useState(0)
+  const [loyaltyMilestones, setLoyaltyMilestones] = useState([])
+  const [catalogReady, setCatalogReady] = useState(false)
+  const draftRestored = useRef(false)
   const [saving, setSaving] = useState(false)
   const [compToggles, setCompToggles] = useState({ freeShirt: false, cardPayment: false, crewAssisted: true, detailerAssigned: false })
   const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
@@ -215,6 +221,18 @@ export default function PosPage() {
 
   const pendingSummary = useMemo(() => summarizePendingHandoffs(handoffs), [handoffs])
 
+  // Cashier scan path: unpaid handoffs jump to Pay queue unless the URL already chose a tab.
+  useEffect(() => {
+    const raw = searchParams.get('tab')
+    const next = resolvePosLandingTab(raw, {
+      canSettings: showSettingsTab,
+      pendingCount: pendingSummary.count,
+    })
+    if (next === 'pending' && shellTab !== 'pending' && (raw == null || raw === '')) {
+      setSearchParams({ tab: 'pending' }, { replace: true })
+    }
+  }, [pendingSummary.count, searchParams, setSearchParams, shellTab, showSettingsTab])
+
   const washPreview = useMemo(
     () =>
       buildPosWashPoolPreview({
@@ -228,6 +246,7 @@ export default function PosPage() {
 
   const load = useCallback(async () => {
     if (!branch) return
+    setCatalogReady(false)
     const today = getLocalCalendarDate()
     const startIso = `${today}T00:00:00+08:00`
     const endIso = `${today}T23:59:59.999+08:00`
@@ -289,20 +308,6 @@ export default function PosPage() {
       setPaymentOptions(normalized.payment_methods)
       setExpenseKinds(normalized.expense_kinds)
     }
-    // Finance expense_categories is source of truth when present
-    const { data: finCats } = await supabase
-      .from('expense_categories')
-      .select('id, name, kind, is_active')
-      .eq('is_active', true)
-      .order('name')
-    if (finCats?.length) {
-      setExpenseKinds(
-        finCats.map((c) => ({
-          value: String(c.kind || c.name || c.id).toLowerCase().replace(/\s+/g, '_'),
-          label: c.name,
-        })),
-      )
-    }
     setServices(
       (svc.data || []).map((row) => ({
         ...row,
@@ -354,6 +359,7 @@ export default function PosPage() {
       }
     }
     setCategoryTotals(accumulatePosCategoryTotals(catRows))
+    setCatalogReady(true)
   }, [branch, branchAdmin])
 
   useEffect(() => {
@@ -377,12 +383,52 @@ export default function PosPage() {
   }, [assignedBranch, branchLocked, branch])
 
   useEffect(() => {
-    setCart([])
     setActiveHandoff(null)
     setShiftOverrides({})
     setShiftReasons({})
     setShiftFieldErrors({})
+    const draft = branch ? readPosDraft(branch) : null
+    draftRestored.current = true
+    if (draft?.cart?.length) {
+      setCart(draft.cart)
+      setCustomerId(draft.customerId || '')
+      setLinkedCustomer(draft.linkedCustomer || null)
+      if (draft.paymentMethod) setPaymentMethod(draft.paymentMethod)
+      setCashTendered(draft.cashTendered || '')
+      setPaymentRef(draft.paymentRef || '')
+      setDiscountPercent(draft.discountPercent || '')
+      setDiscountAmountPesos(draft.discountAmountPesos || '')
+      setDiscountReason(draft.discountReason || '')
+    } else {
+      setCart([])
+    }
   }, [branch])
+
+  useEffect(() => {
+    if (!branch || !draftRestored.current) return
+    writePosDraft(branch, {
+      cart,
+      customerId,
+      linkedCustomer,
+      paymentMethod,
+      cashTendered,
+      paymentRef,
+      discountPercent,
+      discountAmountPesos,
+      discountReason,
+    })
+  }, [
+    branch,
+    cart,
+    customerId,
+    linkedCustomer,
+    paymentMethod,
+    cashTendered,
+    paymentRef,
+    discountPercent,
+    discountAmountPesos,
+    discountReason,
+  ])
 
   const loadExpenses = useCallback(async () => {
     if (!branch) return
@@ -601,7 +647,17 @@ export default function PosPage() {
 
   const chargeBlocked = posCartBlocksCheckout(cart)
   const cashCovered = cashTenderCoversTotal(paymentMethod, cashTenderedMinor, cartTotal)
-  const chargeDisabled = !cart.length || !branch || saving || chargeBlocked || !cashCovered
+  const refReady = isValidPaymentRef(paymentMethod, paymentRef)
+  const chargeDisabled = !cart.length || !branch || saving || chargeBlocked || !cashCovered || !refReady
+  const chargeHint = !cart.length
+    ? 'Add an item to charge'
+    : chargeBlocked
+      ? 'This queue ticket has no linked service'
+      : !cashCovered
+        ? 'Enter cash received that covers the total'
+        : !refReady
+          ? 'Enter the GCash / card reference'
+          : ''
   const chargeLabel = saving
     ? 'Processing…'
     : chargeBlocked
@@ -609,6 +665,12 @@ export default function PosPage() {
       : cart.length
         ? `Charge ${formatMoney(cartTotal)}`
         : 'Charge'
+  const loyaltyReady = canRedeemLoyaltyAward({
+    customerId,
+    stamps: loyaltyStamps,
+    milestones: loyaltyMilestones,
+    cart,
+  })
 
   const ceramicPreview = useMemo(() => {
     const salesMinor = detailingAmountMinor(cart)
@@ -668,6 +730,20 @@ export default function PosPage() {
     }
   }
 
+  async function refreshLoyaltyReady(customerIdValue) {
+    if (!customerIdValue) {
+      setLoyaltyStamps(0)
+      setLoyaltyMilestones([])
+      return
+    }
+    const [cust, miles] = await Promise.all([
+      supabase.from('customers').select('loyalty_stamps').eq('id', customerIdValue).maybeSingle(),
+      supabase.from('loyalty_milestones').select('threshold_points, is_active, reward_label'),
+    ])
+    setLoyaltyStamps(Number(cust.data?.loyalty_stamps) || 0)
+    setLoyaltyMilestones(miles.data || [])
+  }
+
   async function refreshBirthdayPerk(customerIdValue) {
     if (!customerIdValue) {
       setBirthdayPerk(null)
@@ -692,7 +768,8 @@ export default function PosPage() {
     setCustomerSearch('')
     setActiveMembership(null)
     setBirthdayPerk(null)
-    setBirthdayPerk(null)
+    setLoyaltyStamps(0)
+    setLoyaltyMilestones([])
     setCart((current) =>
       priceCartForMembership(current, {
         membershipsEnabled: false,
@@ -739,6 +816,19 @@ export default function PosPage() {
   }
 
   function addToCart(item, { loyaltyAward = false, birthdayAward = false } = {}) {
+    if (loyaltyAward && !canRedeemLoyaltyAward({
+      customerId,
+      stamps: loyaltyStamps,
+      milestones: loyaltyMilestones,
+      cart,
+    })) {
+      toast.error('Link a customer with a redeemable loyalty reward first.')
+      return
+    }
+    if (birthdayAward && !birthdayPerk) {
+      toast.error('No birthday perk available for this customer.')
+      return
+    }
     if (!keepQueueHandoffWhenAdding(item)) setActiveHandoff(null)
     const listPrice = item.price_minor
     const free = loyaltyAward || birthdayAward
@@ -772,6 +862,8 @@ export default function PosPage() {
 
   /** Clear the walk-in lines; a queue handoff keeps its locked line. */
   function clearCart() {
+    if (!cart.length) return
+    if (!window.confirm('Clear the current order?')) return
     setCart((current) => current.filter((line) => !canRemovePosCartLine(line)))
     setDiscountPercent('')
     setDiscountAmountPesos('')
@@ -844,9 +936,12 @@ export default function PosPage() {
     if (cid) {
       refreshMembershipForCustomer(cid)
       refreshBirthdayPerk(cid)
+      refreshLoyaltyReady(cid)
     } else {
       setActiveMembership(null)
       setBirthdayPerk(null)
+      setLoyaltyStamps(0)
+      setLoyaltyMilestones([])
     }
   }
 
@@ -878,6 +973,7 @@ export default function PosPage() {
     toast.success(`Linked · ${hit.full_name}`)
     refreshMembershipForCustomer(hit.id)
     refreshBirthdayPerk(hit.id)
+    refreshLoyaltyReady(hit.id)
   }
 
   async function checkout() {
@@ -892,6 +988,20 @@ export default function PosPage() {
     }
     if (!isAllowedPosPaymentMethod(paymentMethod, paymentOptions)) {
       toast.error('Choose a payment method from the list.')
+      return
+    }
+    const gate = validatePosSaleCart(cart, {
+      customerId,
+      birthdayPerk,
+      stamps: loyaltyStamps,
+      milestones: loyaltyMilestones,
+      paymentMethod,
+      paymentRef,
+      catalog: { services, products },
+      isHandoff: Boolean(activeHandoff),
+    })
+    if (!gate.ok) {
+      toast.error(gate.error)
       return
     }
     setSaving(true)
@@ -959,6 +1069,13 @@ export default function PosPage() {
         branch,
         customerId: resolvedCustomerId,
         paymentMethod,
+        paymentRef,
+        discountReason: cart.some((l) => l.adhoc_discount_applied) ? discountReason : '',
+        discountMinor: cart.reduce((sum, line) => {
+          const list = Math.max(Math.floor(Number(line.list_price_minor ?? line.unit_price_minor) || 0), 0)
+          const unit = Math.max(Math.floor(Number(line.unit_price_minor) || 0), 0)
+          return sum + Math.max(0, list - unit) * Math.max(1, Number(line.quantity) || 1)
+        }, 0),
         cart,
         activeHandoff: handoff,
         notes: noteParts.join(' · '),
@@ -1041,6 +1158,8 @@ export default function PosPage() {
     }
     setCart([])
     setActiveHandoff(null)
+    setPaymentRef('')
+    clearPosDraft()
     resetCheckoutExtras()
     setCompToggles({ freeShirt: false, cardPayment: false, crewAssisted: true, detailerAssigned: false })
     setCartOpen(false)
@@ -1093,7 +1212,7 @@ export default function PosPage() {
     }).select('id').maybeSingle()
     setSavingExpense(false)
     if (error) return toast.error(error.message)
-    toast.success('Expense recorded')
+    toast.success('Expense saved as draft (counts in End of shift cash-left)')
     writeAudit({
       action: 'pos.expense',
       entityType: 'expense',
@@ -1123,8 +1242,7 @@ export default function PosPage() {
         caRepayments: dailyReportData?.ca_repayments,
       })
     ) {
-      toast.message('Nothing to close today — no paid sales, expenses, or cash advances')
-      return
+      toast.message('Quiet day — you can still close the shift with a zero count.')
     }
     setShiftCloseMode(true)
     setShiftOverrides({})
@@ -1316,27 +1434,41 @@ export default function PosPage() {
             <div className="space-y-2 rounded-xl border border-dashed border-border bg-muted/20 p-3">
               <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Ad-hoc discount</p>
               <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="pos-discount-pct" className="text-xs text-muted-foreground">Percent off</Label>
+                  <Input
+                    id="pos-discount-pct"
+                    className="min-h-10"
+                    placeholder="0"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    value={discountPercent}
+                    onChange={(e) => setDiscountPercent(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pos-discount-peso" className="text-xs text-muted-foreground">₱ amount</Label>
+                  <Input
+                    id="pos-discount-peso"
+                    className="min-h-10"
+                    placeholder="0.00"
+                    inputMode="decimal"
+                    value={discountAmountPesos}
+                    onChange={(e) => setDiscountAmountPesos(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pos-discount-reason" className="text-xs text-muted-foreground">Reason</Label>
                 <Input
+                  id="pos-discount-reason"
                   className="min-h-10"
-                  placeholder="% off"
-                  inputMode="decimal"
-                  value={discountPercent}
-                  onChange={(e) => setDiscountPercent(e.target.value)}
-                />
-                <Input
-                  className="min-h-10"
-                  placeholder="₱ amount"
-                  inputMode="decimal"
-                  value={discountAmountPesos}
-                  onChange={(e) => setDiscountAmountPesos(e.target.value)}
+                  placeholder="Required · 3+ characters"
+                  value={discountReason}
+                  onChange={(e) => setDiscountReason(e.target.value)}
                 />
               </div>
-              <Input
-                className="min-h-10"
-                placeholder="Reason (required)"
-                value={discountReason}
-                onChange={(e) => setDiscountReason(e.target.value)}
-              />
               <Button type="button" variant="secondary" className="min-h-10 w-full" onClick={applyCartDiscount}>
                 Apply discount
               </Button>
@@ -1532,11 +1664,12 @@ export default function PosPage() {
                     </Button>
                   ))}
                 </div>
+                <Label htmlFor="pos-cash-received" className="text-xs text-muted-foreground">Cash received</Label>
                 <Input
+                  id="pos-cash-received"
                   className="min-h-11"
                   inputMode="decimal"
-                  placeholder="Cash received"
-                  aria-label="Cash received"
+                  placeholder="0.00"
                   value={cashTendered}
                   onChange={(e) => setCashTendered(e.target.value)}
                 />
@@ -1555,7 +1688,21 @@ export default function PosPage() {
                   </p>
                 ) : null}
               </div>
-            ) : null}
+            ) : (
+              <div className="space-y-1">
+                <Label htmlFor="pos-payment-ref" className="text-xs text-muted-foreground">
+                  {paymentOptions.find((o) => o.value === paymentMethod)?.label || 'Payment'} reference
+                </Label>
+                <Input
+                  id="pos-payment-ref"
+                  className="min-h-11"
+                  placeholder="Wallet / card reference"
+                  autoComplete="off"
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           {ceramicPreview ? (
@@ -1601,6 +1748,9 @@ export default function PosPage() {
               {linkedCustomer ? 'Loyalty' : 'Walk-in'}
             </div>
           </div>
+          {chargeDisabled && chargeHint ? (
+            <p className="text-xs text-muted-foreground">{chargeHint}</p>
+          ) : null}
           <Button className="min-h-12 w-full text-base" disabled={chargeDisabled} onClick={checkout}>
             {chargeLabel}
           </Button>
@@ -1611,34 +1761,13 @@ export default function PosPage() {
   const checkoutBody = (
     <div className="flex flex-col gap-6">
       <PosStatsBoard stats={todaySummary} compact />
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
-          Daily sales report
-        </Button>
-        {canManageCatalog ? (
-          <Button type="button" variant="secondary" className="min-h-11" asChild>
-            <Link to="/operations/inventory">Inventory Management</Link>
-          </Button>
-        ) : null}
-      </div>
 
       {handoffs.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
-          <div>
-            <p className="font-medium">
-              {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} waiting · {formatMoney(pendingSummary.totalMinor)}
-            </p>
-            <p className="text-sm text-muted-foreground">Open Pay queue to settle floor handoffs.</p>
-          </div>
-          <Button
-            type="button"
-            className="min-h-11"
-            onClick={() => {
-              setShellTab('pending')
-            }}
-          >
-            Open Pay queue
-          </Button>
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+          <p className="font-medium">
+            {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} waiting · {formatMoney(pendingSummary.totalMinor)}
+          </p>
+          <p className="text-sm text-muted-foreground">Open the Pay queue tab to settle floor handoffs.</p>
         </div>
       )}
 
@@ -1646,8 +1775,11 @@ export default function PosPage() {
         <div className="flex min-w-0 flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <div className="relative min-w-[12rem] flex-1">
+              <Label htmlFor="pos-catalog-search" className="sr-only">Search catalogue</Label>
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                id="pos-catalog-search"
+                type="search"
                 className="min-h-11 pl-9"
                 placeholder="Search the whole catalogue"
                 value={query}
@@ -1688,12 +1820,15 @@ export default function PosPage() {
             onPickSize={pickItemSize}
             quantityByKey={cartQuantityByItemKey}
             birthdayPerk={birthdayPerk}
+            loyaltyReady={loyaltyReady}
             empty={
-              query.trim()
-                ? `Nothing in the catalogue matches “${query.trim()}”.`
-                : activeCategoryLabel
-                  ? `No items under ${activeCategoryLabel} yet.`
-                  : 'No items to sell yet.'
+              !catalogReady
+                ? 'Loading catalogue…'
+                : query.trim()
+                  ? `Nothing in the catalogue matches “${query.trim()}”.`
+                  : activeCategoryLabel
+                    ? `No items under ${activeCategoryLabel} yet.`
+                    : 'No items to sell yet.'
             }
           />
         </div>
@@ -1707,17 +1842,17 @@ export default function PosPage() {
           className="sticky top-4 flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card"
           aria-label="Current order"
         >
-          <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+          <div className="pos-order-head flex items-center justify-between gap-2 px-4 py-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">
+              <p className="text-[10px] font-bold tracking-[0.18em] text-white/55 uppercase">
                 {activeHandoff ? 'Pay queue ticket' : 'Order'}
               </p>
-              <p className="truncate text-sm font-semibold text-foreground">
+              <p className="truncate text-sm font-semibold text-white">
                 {cartCount ? `${cartCount} item${cartCount === 1 ? '' : 's'}` : 'Nothing rung up yet'}
               </p>
             </div>
             {cart.length ? (
-              <Button type="button" variant="ghost" size="sm" className="min-h-9" onClick={clearCart}>
+              <Button type="button" variant="ghost" size="sm" className="min-h-9 text-white/85 hover:bg-white/10 hover:text-white" onClick={clearCart}>
                 Clear
               </Button>
             ) : null}
@@ -1785,6 +1920,10 @@ export default function PosPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Submit expense</CardTitle>
+          <CardDescription>
+            Saves as <strong>draft</strong> — counts in End of shift cash-left. Profit and loss only includes paid/posted
+            expenses (not these drafts).
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {!canWriteFinance(profile) ? (
@@ -1902,14 +2041,7 @@ export default function PosPage() {
     </div>
   )
 
-  const settingsBody = showSettingsTab ? (
-    <div className="flex flex-col gap-4">
-      <PosSettingsPanel embedded />
-      <Button type="button" variant="link" className="min-h-11 w-fit px-0" asChild>
-        <Link to="/operations/settings/pos">Open full POS settings page</Link>
-      </Button>
-    </div>
-  ) : null
+  const settingsBody = showSettingsTab ? <PosSettingsPanel embedded /> : null
 
   return (
     <OpsPageShell
@@ -1944,7 +2076,7 @@ export default function PosPage() {
         </>
       }
     >
-      <PosGuideCard defaultOpen={shellTab === 'checkout'} />
+      <PosGuideCard defaultOpen={false} />
 
       <Tabs value={shellTab} onValueChange={setShellTab} className="flex w-full flex-col gap-5">
         <OpsTabList
@@ -2104,9 +2236,11 @@ export default function PosPage() {
 /** One flat category rail — services, detailing and each merch family as peers. */
 function PosCategoryRail({ categories, active, onSelect }) {
   if (!categories?.length) return null
+  const visible = categories.filter((cat) => cat.count > 0 || cat.id === active)
+  if (!visible.length) return null
   return (
     <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="Catalogue category">
-      {categories.map((cat) => (
+      {visible.map((cat) => (
         <Button
           key={cat.id}
           type="button"
@@ -2128,7 +2262,7 @@ function PosCategoryRail({ categories, active, onSelect }) {
  * dropdown, and the running quantity is badged so the cashier sees the order
  * without looking away from the catalogue.
  */
-function PosTileGrid({ items, onAdd, empty, birthdayPerk, sizeByKey, onPickSize, quantityByKey }) {
+function PosTileGrid({ items, onAdd, empty, birthdayPerk, loyaltyReady, sizeByKey, onPickSize, quantityByKey }) {
   if (!items.length) return <p className="text-sm text-muted-foreground">{empty}</p>
 
   function selectedSize(item) {
@@ -2214,7 +2348,9 @@ function PosTileGrid({ items, onAdd, empty, birthdayPerk, sizeByKey, onPickSize,
                 ))}
               </div>
             ) : null}
+            {loyaltyReady || birthdayPerk ? (
             <div className="flex gap-1 border-t border-border px-1.5 py-1">
+              {loyaltyReady ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -2225,6 +2361,7 @@ function PosTileGrid({ items, onAdd, empty, birthdayPerk, sizeByKey, onPickSize,
                 <Gift className="size-3.5" aria-hidden />
                 Loyalty
               </Button>
+              ) : null}
               {birthdayPerk ? (
                 <Button
                   type="button"
@@ -2238,6 +2375,7 @@ function PosTileGrid({ items, onAdd, empty, birthdayPerk, sizeByKey, onPickSize,
                 </Button>
               ) : null}
             </div>
+            ) : null}
           </div>
         )
       })}

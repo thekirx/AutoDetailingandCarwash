@@ -1,0 +1,114 @@
+{
+  "buttons": [
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Notifications",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Settings",
+      "href": "",
+      "disabled": false,
+      "h": 48,
+      "w": 48
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Open more menu",
+      "href": "",
+      "disabled": false,
+      "h": 48,
+      "w": 48
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Sign out",
+      "href": "",
+      "disabled": false,
+      "h": 48,
+      "w": 48
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Hide guide",
+      "aria": "",
+      "href": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "tag": "A",
+      "text": "Bookings",
+      "aria": "",
+      "href": "/operations/bookings",
+      "disabled": false,
+      "h": 60,
+      "w": 60
+    },
+    {
+      "tag": "A",
+      "text": "Attendance",
+      "aria": "",
+      "href": "/operations/attendance",
+      "disabled": false,
+      "h": 56,
+      "w": 122
+    },
+    {
+      "tag": "A",
+      "text": "Tasks",
+      "aria": "",
+      "href": "/operations/my-tasks",
+      "disabled": false,
+      "h": 56,
+      "w": 122
+    }
+  ],
+  "inputs": [
+    {
+      "id": "",
+      "name": "",
+      "type": "select-one",
+      "min": "",
+      "max": "",
+      "step": "",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    },
+    {
+      "id": "base-ui-_r_3_",
+      "name": "",
+      "type": "date",
+      "min": "",
+      "max": "",
+      "step": "",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false,
+      "disabled": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 0,
+  "unlabelled": 2,
+  "headings": [
+    "H1:My pay"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5293/operations/my-pay"
+}

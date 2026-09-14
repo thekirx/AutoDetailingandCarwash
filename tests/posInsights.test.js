@@ -10,6 +10,7 @@ import {
   buildPosWashPoolPreview,
   posVisibleShellTabs,
   resolvePosShellTab,
+  resolvePosLandingTab,
   summarizePendingHandoffs,
   summarizeTodayPos,
 } from '../src/lib/posInsights.js'
@@ -46,6 +47,13 @@ describe('posInsights', () => {
     assert.equal(resolvePosShellTab('settings', { canSettings: true }), 'settings')
   })
 
+  it('lands cashiers on Pay queue when pending and no explicit tab', () => {
+    assert.equal(resolvePosLandingTab(null, { pendingCount: 2 }), 'pending')
+    assert.equal(resolvePosLandingTab('', { pendingCount: 2 }), 'pending')
+    assert.equal(resolvePosLandingTab('checkout', { pendingCount: 2 }), 'checkout')
+    assert.equal(resolvePosLandingTab(null, { pendingCount: 0 }), 'checkout')
+  })
+
   it('builds wash pool preview from car-wash sales and attendance', () => {
     const preview = buildPosWashPoolPreview({
       carWashMinor: 100000,
@@ -73,7 +81,7 @@ describe('POS redesign seams', () => {
     assert.match(pos, /POS_SETTINGS_TAB/)
     assert.match(pos, /OpsPageShell/)
     assert.match(pos, /hakum-pos/)
-    assert.match(pos, /settings\/pos/)
+    assert.match(pos, /canWritePosSettings/)
   })
 
   it('PosSettingsPage delegates to shared panel', () => {

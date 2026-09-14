@@ -104,6 +104,12 @@ describe('financeRange', () => {
     assert.equal(r.end, '2026-01-10')
   })
 
+  it('custom inverted dates stay inverted and are not swapped', () => {
+    const r = financeRange('custom', '2026-09-01', '2020-01-01', FIXED_NOW)
+    assert.equal(r.start, '2026-09-01')
+    assert.equal(r.end, '2020-01-01')
+  })
+
   it('3mo ends today and starts 3 months earlier', () => {
     const r = financeRange('3mo', '', '', FIXED_NOW)
     assert.equal(r.end, '2026-08-11')

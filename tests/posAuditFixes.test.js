@@ -72,6 +72,7 @@ describe('POS audit follow-up fixes', () => {
     assert.equal(isAllowedPosPaymentMethod('cash', methods), true)
     assert.equal(isAllowedPosPaymentMethod('card', methods), false)
     assert.equal(isAllowedPosPaymentMethod('cash', []), true)
+    assert.equal(isAllowedPosPaymentMethod('bitcoin', []), false)
   })
 
   it('EoS labels and hints warn against double-counting CA', () => {
@@ -95,7 +96,7 @@ describe('POS audit follow-up fixes', () => {
 
   it('POS and Payroll wire settings entry and pending policy', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
-    assert.match(pos, /settings\/pos/)
+    assert.match(pos, /canWritePosSettings/)
     assert.match(pos, /isAllowedPosPaymentMethod/)
     const payroll = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
     assert.match(payroll, /pending_floor_optional/)

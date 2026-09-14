@@ -178,6 +178,9 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
               <Label htmlFor="quote-amount">Amount (₱)</Label>
               <Input
                 id="quote-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
                 className="min-h-10"
                 required
                 value={form.amount}

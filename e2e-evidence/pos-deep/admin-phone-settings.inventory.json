@@ -1,0 +1,1258 @@
+{
+  "buttons": [
+    {
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "",
+      "aria": "Open command menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "9+",
+      "aria": "Notifications",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "text": "",
+      "aria": "Account menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "End of shift",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 133
+    },
+    {
+      "text": "Show guide",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "Sell",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 77
+    },
+    {
+      "text": "Pay queue",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 132
+    },
+    {
+      "text": "Expenses",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 99
+    },
+    {
+      "text": "Today",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 73
+    },
+    {
+      "text": "Settings",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 115
+    },
+    {
+      "text": "Save POS lists",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 119
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    },
+    {
+      "text": "Save field",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 88
+    }
+  ],
+  "inputs": [
+    {
+      "id": "base-ui-_r_3c_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3d_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3e_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3f_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3g_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3h_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3i_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3j_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3k_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3l_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3m_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3n_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3o_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_3p_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4a_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4b_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4c_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4d_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4e_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4f_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4g_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4h_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4i_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4j_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4k_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4l_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4m_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4n_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4o_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4p_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4q_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4r_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4s_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4t_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4u_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_4v_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_50_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_51_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_52_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_53_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_54_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_55_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_56_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_57_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_58_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_59_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5a_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5b_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5c_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5d_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5e_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5f_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5g_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5h_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5i_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5j_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5k_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5l_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5m_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5n_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5o_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_5p_",
+      "name": "",
+      "type": "number",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "checkbox",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "",
+      "required": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 6,
+  "headings": [
+    "H1:POS",
+    "H2:Go to"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5294/operations/pos?tab=settings"
+}

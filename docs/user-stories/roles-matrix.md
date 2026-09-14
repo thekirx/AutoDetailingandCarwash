@@ -17,6 +17,12 @@ Canonical landing + epic map for **all** `ROLES` in `src/auth/permissions.js`, p
 | `investor` | Investor | `/operations/finance` | [Leadership](./epic-role-leadership.md) · [Finance US-FIN-04](./epic-finance.md) |
 | `customer` *(portal)* | Customer | `/account` | [Customer portal](./epic-customer-portal.md) |
 
+**POS settings write** (`canWritePosSettings`): Super Admin, or ASA with `finance_write`. Branch Admin rings the counter; the Settings tab is hidden.
+
+**Payroll settings write** (`canRunPayroll`): Super Admin, or ASA with `finance_write`. Same gate as confirming a run — view-only ASA cannot change late-pay / pending-floor policy.
+
+**Finance books:** default window is last 30 days; Reports/Quotes/Vendors/Categories sit under More (not merged into P&L). Ledgers export CSV; Dashboard still has CSV/Excel/PDF. Commission % stays on Payroll — Categories “Payroll / salary” is a P&L bucket only.
+
 **Deprecated:** `cashier` still redirects to POS for legacy rows — do not hire new cashiers.
 
 **Seam:** `redirectForRole` · `resolveAppHome` · `tests/principalQaMatrix.test.js` · `tests/rolePersonaCoverage.test.js`

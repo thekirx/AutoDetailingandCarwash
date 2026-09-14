@@ -252,6 +252,12 @@ export function canWriteFinance(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+/** Matches ops_pos_settings + shift_close_field_config write RLS (SA / ASA finance_write). */
+export function canWritePosSettings(profile) {
+  if (isSuperAdmin(profile)) return true
+  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'finance_write')
+}
+
 /** SA + ASA with finance_view: open the payroll register. Branch Admin runs Finance, not payroll. */
 export function canAccessPayroll(profile) {
   if (isSuperAdmin(profile)) return true

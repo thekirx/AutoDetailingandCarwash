@@ -99,8 +99,8 @@ export function financeQuotePayloadErrors(payload) {
   const errs = []
   if (!payload?.to || !String(payload.to).includes('@')) errs.push('Customer email is required')
   if (!payload?.customer_id) errs.push('Select a CRM customer')
-  if (!Number.isFinite(Number(payload?.amount_minor)) || Number(payload.amount_minor) < 0) {
-    errs.push('Amount must be zero or greater')
+  if (!Number.isFinite(Number(payload?.amount_minor)) || Number(payload.amount_minor) <= 0) {
+    errs.push('Amount must be greater than zero')
   }
   return errs
 }

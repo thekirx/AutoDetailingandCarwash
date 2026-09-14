@@ -323,24 +323,196 @@ export function priceCartForMembership(cart = [], membershipContext = {}) {
   })
 }
 
-/** True when payment_method is in the configured POS list (fallback: any non-empty). */
+/** True when payment_method is in the configured POS list.
+ * Empty config falls back to platform PAYMENT_METHODS (cash/gcash/card) — never open-ended.
+ */
 export function isAllowedPosPaymentMethod(method, paymentMethods = []) {
   const key = String(method || '').trim().toLowerCase()
   if (!key) return false
   const list = Array.isArray(paymentMethods) ? paymentMethods : []
-  if (!list.length) return true
-  return list.some((m) => String(m?.value || m || '').trim().toLowerCase() === key)
+  const effective = list.length
+    ? list
+    : [{ value: 'cash' }, { value: 'gcash' }, { value: 'card' }]
+  return effective.some((m) => String(m?.value || m || '').trim().toLowerCase() === key)
+}
+
+export const POS_PAYMENT_REF_MIN = 4
+export const POS_CART_DRAFT_KEY = 'hakum.pos.draft'
+
+/** Loyalty free line: linked customer + at least one earned milestone + one award per sale. */
+export function canRedeemLoyaltyAward({ customerId, stamps = 0, milestones = [], cart = [] } = {}) {
+  if (!String(customerId || '').trim()) return false
+  if ((cart || []).some((line) => line.is_loyalty_award && !line.is_birthday_award)) return false
+  const earned = (milestones || []).filter(
+    (m) => m?.is_active !== false && Number(stamps) >= Number(m.threshold_points),
+  )
+  return earned.length > 0
+}
+
+export function paymentRefRequired(method) {
+  return String(method || '').trim().toLowerCase() !== 'cash' && Boolean(String(method || '').trim())
+}
+
+export function isValidPaymentRef(method, ref) {
+  if (!paymentRefRequired(method)) return true
+  return String(ref || '').trim().length >= POS_PAYMENT_REF_MIN
+}
+
+export function resolveCatalogListMinor(line = {}, { services = [], products = [] } = {}) {
+  if (line.from_handoff) {
+    return Math.max(Math.floor(Number(line.list_price_minor ?? line.unit_price_minor) || 0), 0)
+  }
+  const kind = normalizePosLineItemType(line.item_type)
+  if (kind === 'product') {
+    const product = (products || []).find((p) => p.id === line.id || p.id === line.product_id)
+    return Math.max(Math.floor(Number(product?.price_minor ?? line.list_price_minor ?? line.price_minor) || 0), 0)
+  }
+  const service = (services || []).find((s) => s.id === line.id || s.id === line.service_id)
+  const slug = line.vehicle_size
+  if (slug && service?.size_prices?.[slug] != null) {
+    return Math.max(Math.floor(Number(service.size_prices[slug]) || 0), 0)
+  }
+  return Math.max(
+    Math.floor(Number(service?.price_minor ?? line.list_price_minor ?? line.price_minor) || 0),
+    0,
+  )
+}
+
+export function validatePosLinePrice(line = {}, catalog = {}) {
+  if (line.is_loyalty_award || line.is_birthday_award || line.is_membership_included) {
+    if (Math.floor(Number(line.unit_price_minor) || 0) !== 0) {
+      return { ok: false, error: 'Award lines must be free' }
+    }
+    return { ok: true }
+  }
+  if (line.from_handoff) return { ok: true }
+  const list = resolveCatalogListMinor(line, catalog)
+  const unit = Math.floor(Number(line.unit_price_minor) || 0)
+  if (unit > list) return { ok: false, error: `${line.name || 'Item'} is priced above the catalog` }
+  if (unit < list && String(line.adhoc_discount_reason || '').trim().length < 3) {
+    return { ok: false, error: 'Discount needs a reason (3+ characters)' }
+  }
+  return { ok: true }
+}
+
+/** Counter + RPC share this gate before complete_pos_sale. */
+export function validatePosSaleCart(cart = [], opts = {}) {
+  const {
+    customerId,
+    birthdayPerk,
+    stamps = 0,
+    milestones = [],
+    paymentMethod = 'cash',
+    paymentRef = '',
+    catalog = {},
+    isHandoff = false,
+  } = opts
+  if (!isValidPaymentRef(paymentMethod, paymentRef)) {
+    return { ok: false, error: 'Enter the GCash / card reference (4+ characters).' }
+  }
+  const loyalty = (cart || []).filter((line) => line.is_loyalty_award && !line.is_birthday_award)
+  if (loyalty.length > 1) return { ok: false, error: 'One loyalty award per sale' }
+  if (loyalty.length && !canRedeemLoyaltyAward({ customerId, stamps, milestones, cart: [] })) {
+    return { ok: false, error: 'Link a customer with a redeemable loyalty reward before giving an item away.' }
+  }
+  const birthday = (cart || []).filter((line) => line.is_birthday_award)
+  if (birthday.length > 1) return { ok: false, error: 'One birthday award per sale' }
+  if (birthday.length && !birthdayPerk) {
+    return { ok: false, error: 'No birthday perk available for this customer.' }
+  }
+  if (!isHandoff) {
+    for (const line of cart || []) {
+      const priced = validatePosLinePrice(line, catalog)
+      if (!priced.ok) return priced
+    }
+  } else {
+    for (const line of cart || []) {
+      if (line.from_handoff) continue
+      const priced = validatePosLinePrice(line, catalog)
+      if (!priced.ok) return priced
+    }
+  }
+  return { ok: true }
+}
+
+export function serializePosDraft(branch, state = {}) {
+  return JSON.stringify({
+    branch: String(branch || ''),
+    cart: state.cart || [],
+    customerId: state.customerId || '',
+    linkedCustomer: state.linkedCustomer || null,
+    paymentMethod: state.paymentMethod || 'cash',
+    cashTendered: state.cashTendered || '',
+    paymentRef: state.paymentRef || '',
+    discountPercent: state.discountPercent || '',
+    discountAmountPesos: state.discountAmountPesos || '',
+    discountReason: state.discountReason || '',
+  })
+}
+
+export function parsePosDraft(raw, branch) {
+  if (!raw) return null
+  try {
+    const draft = JSON.parse(raw)
+    if (!draft || String(draft.branch || '') !== String(branch || '')) return null
+    if (!Array.isArray(draft.cart)) return null
+    return draft
+  } catch {
+    return null
+  }
+}
+
+export function readPosDraft(branch) {
+  if (typeof sessionStorage === 'undefined') return null
+  try {
+    return parsePosDraft(sessionStorage.getItem(POS_CART_DRAFT_KEY), branch)
+  } catch {
+    return null
+  }
+}
+
+export function writePosDraft(branch, state) {
+  if (typeof sessionStorage === 'undefined') return
+  try {
+    sessionStorage.setItem(POS_CART_DRAFT_KEY, serializePosDraft(branch, state))
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function clearPosDraft() {
+  if (typeof sessionStorage === 'undefined') return
+  try {
+    sessionStorage.removeItem(POS_CART_DRAFT_KEY)
+  } catch {
+    /* */
+  }
 }
 
 /** Build complete_pos_sale payload — keep queue handoffs linked to booking completion. */
-export function buildPosSalePayload({ branch, customerId, paymentMethod, cart, activeHandoff, notes }) {
+export function buildPosSalePayload({
+  branch,
+  customerId,
+  paymentMethod,
+  cart,
+  activeHandoff,
+  notes,
+  paymentRef,
+  discountReason,
+  discountMinor,
+}) {
   const note = typeof notes === 'string' ? notes.trim() : ''
+  const reason = typeof discountReason === 'string' ? discountReason.trim() : ''
+  const ref = typeof paymentRef === 'string' ? paymentRef.trim() : ''
   return {
     branch,
     customer_id: customerId || activeHandoff?.bookings?.customer_id || null,
     booking_id: activeHandoff?.booking_id || null,
     pos_handoff_id: activeHandoff?.id || null,
     payment_method: paymentMethod,
+    payment_ref: paymentRefRequired(paymentMethod) ? ref || null : null,
+    discount_reason: reason || null,
+    discount_minor: Math.max(Math.floor(Number(discountMinor) || 0), 0),
     status: 'paid',
     notes: note || null,
     lines: (cart || []).map((line) => {
@@ -357,6 +529,7 @@ export function buildPosSalePayload({ branch, customerId, paymentMethod, cart, a
         is_loyalty_award: Boolean(line.is_loyalty_award || line.is_birthday_award),
         is_birthday_award: Boolean(line.is_birthday_award),
         is_membership_included: Boolean(line.is_membership_included),
+        vehicle_size: line.vehicle_size || null,
       }
     }),
   }

@@ -1,3 +1,45 @@
+## Latest unit (2026-09-14 money-path leftovers)
+
+| Field | Value |
+|-------|-------|
+| `npx eslint .` | PASS exit 0 |
+| `npm test` | **1239/1239** |
+| `npm run build` | PASS exit 0 |
+| Soft-launch | **READY_WITH_OPS_BLOCKERS** (BUG-002/003 SMS) |
+
+---
+
+## Latest orchestrator
+
+| Field | Value |
+|-------|-------|
+| Finished | 2026-09-13T16:02:59.235Z |
+| Overall | **PASS** |
+| Passed / failed / skipped | 14 / 0 / 2 |
+| SEND_LIVE_SMS | 0 |
+
+| ID | Step | Result |
+|----|------|--------|
+| U | npm test (unit) | PASS |
+| L1 | e2e-attendance | PASS |
+| L2 | e2e-payroll | PASS |
+| L3 | e2e-readiness | PASS |
+| L4 | e2e-queue-part3 | PASS |
+| L5 | e2e-pos-part2 | PASS |
+| L6 | smoke-busybee (balance only) | PASS |
+| L7 | e2e-real-customer-status-sms | SKIP |
+| L8 | e2e-ops-cutover | PASS |
+| L9 | e2e-shift-close-money (BUG-007 RPC) | PASS |
+| B | npm run build | PASS |
+| UI | e2e-ui-p0 | PASS |
+| UI2 | e2e-ui-money (BUG-007) | PASS |
+| R | responsive-validation | SKIP |
+
+See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./readiness-dashboard.html).
+
+
+---
+
 ## Latest orchestrator
 
 | Field | Value |
@@ -69,6 +111,30 @@ See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./re
 ---
 
 ## Campaign log
+
+### 2026-09-14 — POS deep-audit leftovers
+
+| Claim | Command | Exit | Key output |
+|-------|---------|------|------------|
+| Lint | `npx eslint .` | 0 | clean |
+| Units | `npm test` | 0 | **1206/1206** |
+| Build | `npm run build` | 0 | Vite + PWA |
+
+Closed: BUG-023…027. Seam tests no longer require `expense_categories` or “Open Pay queue”.
+
+---
+
+### 2026-09-14 — Payroll deep-audit leftovers
+
+| Claim | Command | Exit | Key output |
+|-------|---------|------|------------|
+| Lint | `npx eslint .` | 0 | clean |
+| Units | `npm test` | 0 | **1219/1219** |
+| Build | `npm run build` | 0 | Vite + PWA |
+
+Closed: BUG-028…034. Residual: `run_payroll` client amounts; pending-floor gate client-only.
+
+---
 
 ### 2026-09-08 — Audit plan execution (Waves 0–3)
 

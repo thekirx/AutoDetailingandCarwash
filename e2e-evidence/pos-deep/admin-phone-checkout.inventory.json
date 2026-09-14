@@ -1,0 +1,262 @@
+{
+  "buttons": [
+    {
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "",
+      "aria": "Open command menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "9+",
+      "aria": "Notifications",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "text": "",
+      "aria": "Account menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "End of shift",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 133
+    },
+    {
+      "text": "Cart · 0 · ₱0",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 133
+    },
+    {
+      "text": "Hide guide",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "Sell",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 77
+    },
+    {
+      "text": "Pay queue",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 132
+    },
+    {
+      "text": "Expenses",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 99
+    },
+    {
+      "text": "Today",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 73
+    },
+    {
+      "text": "Settings",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 115
+    },
+    {
+      "text": "Daily sales report",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 138
+    },
+    {
+      "text": "All merch8",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 104
+    },
+    {
+      "text": "Coffee / refreshments0",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 191
+    },
+    {
+      "text": "Accessories1",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 122
+    },
+    {
+      "text": "Hakum clothing0",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 148
+    },
+    {
+      "text": "Other sellables7",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 143
+    },
+    {
+      "text": "Ceramic Top-Up KitStock 100 · CER-TOP₱1,500",
+      "aria": "Add Ceramic Top-Up Kit",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Interior FreshenerStock 100 · INT-FRESH₱350",
+      "aria": "Add Interior Freshener",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "Microfiber Towel PackStock 100 · MF-PACK₱450",
+      "aria": "Add Microfiber Towel Pack",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "QA Microfiber TowelStock 100 · QA-TOWEL-mrxk6i4i₱1",
+      "aria": "Add QA Microfiber Towel",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "QA Microfiber TowelStock 100 · QA-TOWEL-mrxmyzz0₱1",
+      "aria": "Add QA Microfiber Towel",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "QA Microfiber TowelStock 100 · QA-TOWEL-mrxn2hp9₱1",
+      "aria": "Add QA Microfiber Towel",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "QA Microfiber TowelStock 100 · QA-TOWEL-mrxp0co9₱1",
+      "aria": "Add QA Microfiber Towel",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    },
+    {
+      "text": "QA Microfiber TowelStock 100 · QA-TOWEL-mrxp2goi₱1",
+      "aria": "Add QA Microfiber Towel",
+      "disabled": false,
+      "h": 111,
+      "w": 172
+    },
+    {
+      "text": "Loyalty",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 160
+    }
+  ],
+  "inputs": [
+    {
+      "id": "base-ui-_r_38_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Search the whole catalogue",
+      "required": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 14,
+  "headings": [
+    "H1:POS",
+    "H2:Go to"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5294/operations/pos?tab=checkout"
+}

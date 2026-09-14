@@ -1,0 +1,149 @@
+{
+  "buttons": [
+    {
+      "text": "Account",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 208
+    },
+    {
+      "text": "Sign out",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 208
+    },
+    {
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "Search⌘K",
+      "aria": "Open command menu",
+      "disabled": false,
+      "h": 44,
+      "w": 139
+    },
+    {
+      "text": "9+",
+      "aria": "Notifications",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "text": "",
+      "aria": "Account menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "End of shift",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 133
+    },
+    {
+      "text": "Show guide",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "Sell",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 85
+    },
+    {
+      "text": "Pay queue",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 140
+    },
+    {
+      "text": "Expenses",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 107
+    },
+    {
+      "text": "Today",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 81
+    },
+    {
+      "text": "Settings",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 123
+    },
+    {
+      "text": "daily▼",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 74
+    },
+    {
+      "text": "Record expense",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 129
+    }
+  ],
+  "inputs": [
+    {
+      "id": "pos-exp-title",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "e.g. ice, supplies, parking",
+      "required": true
+    },
+    {
+      "id": "pos-exp-amount",
+      "name": "",
+      "type": "text",
+      "inputmode": "decimal",
+      "autocomplete": "",
+      "labelled": true,
+      "placeholder": "0.00",
+      "required": true
+    },
+    {
+      "id": "base-ui-_r_60_-hidden-input",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "",
+      "required": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 6,
+  "headings": [
+    "H1:POS",
+    "H2:Go to"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5294/operations/pos?tab=expenses"
+}

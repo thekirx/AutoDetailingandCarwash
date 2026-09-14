@@ -1,0 +1,318 @@
+{
+  "buttons": [
+    {
+      "text": "Toggle Sidebar",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "",
+      "aria": "Open command menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "9+",
+      "aria": "Notifications",
+      "disabled": false,
+      "h": 34,
+      "w": 34
+    },
+    {
+      "text": "",
+      "aria": "Account menu",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "End of shift",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 133
+    },
+    {
+      "text": "Show guide",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 44
+    },
+    {
+      "text": "Sell",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 77
+    },
+    {
+      "text": "Pay queue",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 132
+    },
+    {
+      "text": "Expenses",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 99
+    },
+    {
+      "text": "Today",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 73
+    },
+    {
+      "text": "Settings",
+      "aria": "",
+      "disabled": false,
+      "h": 36,
+      "w": 115
+    },
+    {
+      "text": "Save POS lists",
+      "aria": "",
+      "disabled": false,
+      "h": 44,
+      "w": 119
+    }
+  ],
+  "inputs": [
+    {
+      "id": "base-ui-_r_60_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_61_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_62_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_63_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_64_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_65_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_66_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_67_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_68_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_69_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6a_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6b_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6c_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6d_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6u_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_6v_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_70_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_71_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_72_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_73_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_74_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "value",
+      "required": false
+    },
+    {
+      "id": "base-ui-_r_75_",
+      "name": "",
+      "type": "text",
+      "inputmode": "",
+      "autocomplete": "",
+      "labelled": false,
+      "placeholder": "Label",
+      "required": false
+    }
+  ],
+  "iconOnlyNoAria": 0,
+  "small": 6,
+  "headings": [
+    "H1:POS",
+    "H2:Go to"
+  ],
+  "scrollX": false,
+  "url": "http://127.0.0.1:5294/operations/pos?tab=settings"
+}

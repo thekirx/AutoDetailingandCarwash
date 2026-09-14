@@ -23,6 +23,27 @@
 | BUG-018 | Low | Legal copy | Legal pages claim “contact form”; `/contact` is channels-only | `LegalPages.jsx` vs `ContactPage.jsx` | **Closed** | Copy → Contact page links |
 | BUG-019 | High | Auth / IA | Detailer deep-link could open wash Queue/Floor/Crew/KPI (`QUEUE_VIEWER_ROLES`) | Role QA Wave A matrix | **Closed** | Removed DETAILER from viewers; `principalQaMatrix` asserts deny; `detailer-deny.png` |
 | BUG-020 | Medium | DX / CI | `bredesignLogoMarquee` (+ homepage sections) puppeteer in default unit suite | Cold `npm test` ERR_CONNECTION_REFUSED | **Closed** | Renamed to `*.browser.test.js` |
+| BUG-021 | High | POS / authz | Empty POS payment allowlist accepted any method string | `isAllowedPosPaymentMethod([], …)` | **Closed** | Fallback cash/gcash/card; unit lock |
+| BUG-022 | Medium | POS honesty | Expense “recorded” hid draft status; settings “Customize” overclaimed | Money-path audit | **Closed** | Draft copy + Counter options |
+| BUG-023 | Critical | POS / money | Loyalty tile gave any item away free with no redemption | POS-DEEP-AUDIT P0-1 | **Closed** | Client + RPC stamp gate; hide button until earned |
+| BUG-024 | High | POS / money | `complete_pos_sale` trusted client `unit_price_minor` | POS-DEEP-AUDIT P0-2 | **Closed** | Catalog re-price + discount reason + `sales.discount_*` |
+| BUG-025 | Medium | POS | Every load 400 on `expense_categories.is_active` | POS-DEEP-AUDIT P1-1 | **Closed** | Removed dead query |
+| BUG-026 | High | Ops UI | Phone tab strip hid Sell (`justify-center` overflow) | POS-DEEP-AUDIT P1-2 | **Closed** | `OpsTabList` `justify-start` |
+| BUG-027 | Medium | POS / authz | BA saw editable POS settings; RLS blocked writes | POS-DEEP-AUDIT P1-4 | **Closed** | `canWritePosSettings` = SA / ASA finance_write |
+| BUG-028 | High | Payroll / money | Merch/product lines inflated wash-pool base | PAYROLL-DEEP-AUDIT P0-2 | **Closed** | `isWashEligibleLine` drops product/merch/coffee |
+| BUG-029 | High | Payroll honesty | ₱2,850 sales / ₱0 pool with no “nobody clocked in” | PAYROLL-DEEP-AUDIT P0-1 | **Closed** | `theoretical_pool_minor` + allocated copy |
+| BUG-030 | High | Payroll / UX | Wizard and shirt fields bound to centavos | PAYROLL-DEEP-AUDIT P0-3 | **Closed** | `pesosFromMinor` / `minorFromPesos` |
+| BUG-031 | Medium | Payroll | Inverted range + `wash_pool_pct` 150 accepted | PAYROLL-DEEP-AUDIT P1-1/2 | **Closed** | Range always validated; % clamped 0–100 |
+| BUG-032 | Medium | Payroll / copy | Inventory `salary_pct` said preview-only | PAYROLL-DEEP-AUDIT P1-3 | **Closed** | Copy: paid on next floor run |
+| BUG-033 | Medium | Payroll / authz | View-only ASA could edit Settings → Payroll | PAYROLL-DEEP-AUDIT P1-4b | **Closed** | `canWrite = canRunPayroll` |
+| BUG-034 | Medium | Payroll / UX | “Unpaid POS” copy, swallowed loads, 2099 close, open guide, clipped tab | PAYROLL-DEEP-AUDIT P1-5/8/9 | **Closed** | Paid-unclaimed copy; toasts; date filter; guide closed; Advances |
+| BUG-035 | High | Finance | Default This month showed ₱0 while Aug 8 had paid POS | FINANCE-DEEP-AUDIT P0-1 | **Closed** | Default last 30 days + last-paid cue |
+| BUG-036 | High | Finance / Reports | Retention listed lifetime customers inside a windowed header | FINANCE-DEEP-AUDIT P0-2 | **Closed** | `retentionInWindow`; crew KPI labeled roster |
+| BUG-037 | Medium | Finance | Inverted custom range queried without error | FINANCE-DEEP-AUDIT P0-3 | **Closed** | `validateFinanceCustomRange` + inline error |
+| BUG-038 | Medium | Finance / UX | 11 tabs clipped Reports; filters not in URL; guide open | FINANCE-DEEP-AUDIT P1-1/2/3 | **Closed** | 5 primary + More; URL filters; guide closed |
+| BUG-039 | Medium | Finance | Vendors tab stuck on skeleton | FINANCE-DEEP-AUDIT P1-5 | **Closed** | Stable vendor callback + error empty |
+| BUG-040 | Medium | Finance / honesty | No unposted-pay cue; Categories looked like commission setup | FINANCE-DEEP-AUDIT P1-9 | **Closed** | Payroll/POS cues; P&L-bucket copy |
+| BUG-041 | Low | Finance / UX | CSV/Excel/PDF × 5 on Reports; duplicate P&L Compare; ₱0 quotes | FINANCE-DEEP-AUDIT P1-7 / P2 | **Closed** | CSV-only ledgers; Dashboard trio; quote > 0 |
 
 ## Severity guide
 

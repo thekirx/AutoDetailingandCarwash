@@ -37,13 +37,29 @@ const COMP_KEYS = [
   'ceramic_detailer_split_pct',
 ]
 
+const COMP_PCT_KEYS = new Set([
+  'wash_pool_pct',
+  'ceramic_card_fee_pct',
+  'ceramic_crew_solo_pct',
+  'ceramic_crew_split_pct',
+  'ceramic_detailer_split_pct',
+])
+
+/** Owner percents are 0–100. Shirt deduction stays minor units (not a %). */
+export function clampCompensationPercent(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return 0
+  return Math.min(100, Math.max(0, n))
+}
+
 /** Map a compensation_settings row (scalar columns, or legacy rules json) to engine input. */
 export function normalizeCompensationSettings(row) {
   const src = row && typeof row.rules === 'object' && row.rules ? { ...row, ...row.rules } : row || {}
   const out = { ...DEFAULT_COMPENSATION_RULES }
   for (const key of COMP_KEYS) {
     const n = Number(src[key])
-    if (Number.isFinite(n)) out[key] = n
+    if (!Number.isFinite(n)) continue
+    out[key] = COMP_PCT_KEYS.has(key) ? clampCompensationPercent(n) : Math.max(0, n)
   }
   const freq = String(src.payout_frequency || out.payout_frequency).toLowerCase()
   out.payout_frequency = PAYOUT_FREQUENCIES.includes(freq) ? freq : DEFAULT_COMPENSATION_RULES.payout_frequency
@@ -475,11 +491,17 @@ function lineSalaryPct(line) {
   return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null
 }
 
-function isWashEligibleLine(line) {
+/** Wash pool = bay services/packages. Merch, PPF, and detailing stay out. */
+export function isWashEligibleLine(line = {}) {
   const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
-  const kind = String(line?.catalog_kind || '').toLowerCase()
-  if (cat === 'detailing' || kind === 'detailing') return false
+  const kind = String(line?.catalog_kind || line?.item_type || '').toLowerCase()
+  if (kind === 'product' || kind === 'merch') return false
+  if (cat === 'detailing' || cat === 'ppf' || kind === 'detailing') return false
+  if (['coffee', 'clothing', 'accessories', 'merch'].includes(cat)) return false
   if (isCeramicCompensationLine(line)) return false
+  if (!cat && !line?.service_id && line?.services == null && (kind === '' || kind === 'unknown')) {
+    return false
+  }
   return true
 }
 
@@ -499,17 +521,17 @@ export function salaryPctPoolMinor(sale) {
 
 /** Group today's wash/package sales + present roster into per-branch pool drafts for Finance. */
 export function washPoolAmountMinor(sale) {
-  const lines = sale?.sale_line_items || sale?.lines || []
-  if (lines.length) {
-    return lines.reduce((sum, line) => {
+  const embedded = sale?.sale_line_items ?? sale?.lines
+  if (Array.isArray(embedded)) {
+    return embedded.reduce((sum, line) => {
       if (!isWashEligibleLine(line)) return sum
-      // Preview-only: optional catalog % replaces global pool for this SKU.
+      // Catalog salary_pct replaces the global pool % for this SKU (still paid on confirm).
       if (lineSalaryPct(line) != null) return sum
       return sum + (Number(line.line_total_minor) || 0)
     }, 0)
   }
   const cat = String(sale?.pay_category || sale?.service_pay_category || '').toLowerCase()
-  if (cat === 'detailing') return 0
+  if (cat === 'detailing' || cat === 'ppf') return 0
   return Number(sale?.total_minor) || 0
 }
 

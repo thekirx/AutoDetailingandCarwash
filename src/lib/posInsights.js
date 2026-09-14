@@ -13,6 +13,18 @@ export function resolvePosShellTab(tabParam, { canSettings = false } = {}) {
   return allowed.includes(tabParam) ? tabParam : 'checkout'
 }
 
+/**
+ * Cashier landing: when URL has no tab and Pay queue has work, land on pending.
+ * Explicit ?tab= always wins (including checkout).
+ */
+export function resolvePosLandingTab(tabParam, { canSettings = false, pendingCount = 0 } = {}) {
+  if (tabParam != null && String(tabParam).trim() !== '') {
+    return resolvePosShellTab(tabParam, { canSettings })
+  }
+  if (Number(pendingCount) > 0) return 'pending'
+  return 'checkout'
+}
+
 /** Pending handoffs waiting for payment. */
 export function summarizePendingHandoffs(handoffs = []) {
   const rows = handoffs || []
@@ -51,7 +63,7 @@ export const POS_WORKFLOW_STEPS = Object.freeze([
   {
     id: 'sell',
     title: 'Sell',
-    body: 'Pick services or merch, add to cart, link the customer if you have their phone, then take payment.',
+    body: 'Add merch or extras to the cart, or open Pay queue when the floor sends a ticket. Link a customer if you have their phone, then take payment.',
   },
   {
     id: 'queue',

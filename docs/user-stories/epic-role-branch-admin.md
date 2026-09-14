@@ -28,8 +28,8 @@
 
 **Acceptance**
 
-- [x] POS shell tabs: checkout, pending, expenses, dashboard (no cash-advance tab)
-- [x] End of shift when activity exists
+- [x] POS shell tabs: checkout, pending, expenses, dashboard (no cash-advance tab; no Settings — SA / ASA `finance_write` only)
+- [x] End of shift on a quiet day (zero-count close allowed)
 - [x] Override reason when submitted ≠ baseline
 
 **Test seam:** `tests/posWorkflowSeam.test.js`, `tests/payrollFullStack.test.js`, `tests/shiftClose.test.js`, `tests/dailyOpsWorkflow.test.js`

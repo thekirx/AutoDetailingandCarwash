@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "passed": 21,
+  "total": 21,
+  "failed": [],
+  "evidence": "e2e-evidence/money-path",
+  "note": "Non-destructive: does not submit shift_close or complete_pos_sale",
+  "at": "2026-09-13T16:00:44.103Z"
+}

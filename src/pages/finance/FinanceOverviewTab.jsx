@@ -87,6 +87,7 @@ export default function FinanceOverviewTab({
   compareRange = null,
   loading,
   onNavigate,
+  lastPaidHint = null,
 }) {
   const pl = useMemo(() => rollupPl(plRows), [plRows])
   const prior = useMemo(() => rollupPl(priorPlRows), [priorPlRows])
@@ -94,7 +95,15 @@ export default function FinanceOverviewTab({
   const byBranch = useMemo(() => salesByBranch(salesRows), [salesRows])
   const trend = useMemo(() => plTrendByDay(plRows), [plRows])
   const expenseBars = useMemo(() => topExpenseCategories(plRows, 6), [plRows])
-  const insights = useMemo(() => financeOwnerInsights(salesRows, plRows), [salesRows, plRows])
+  const insights = useMemo(
+    () =>
+      financeOwnerInsights(salesRows, plRows, {
+        lastPaidDate: lastPaidHint?.sale_date,
+        lastPaidMinor: lastPaidHint?.total_sales_minor,
+        range,
+      }),
+    [salesRows, plRows, lastPaidHint, range],
+  )
 
   const branchChart = useMemo(
     () =>
@@ -187,6 +196,12 @@ export default function FinanceOverviewTab({
 
   return (
     <div className="finance-dash flex flex-col gap-5">
+      <p className="text-xs text-muted-foreground" data-testid="finance-proof-provenance">
+        Proof: income = paid POS sales · expenses = paid/posted only · source view{' '}
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.7rem]">finance_daily_pl</code>
+        {comparing ? ` · compare ${formatFinanceWindow(compareRange?.start, compareRange?.end)}` : ''}. End of shift
+        attestation does not rewrite these totals.
+      </p>
       <FinanceMetricStrip label="Business totals">
         <FinanceMetricCell
           label="Income"

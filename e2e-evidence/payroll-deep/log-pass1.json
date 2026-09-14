@@ -1,0 +1,518 @@
+[
+  {
+    "k": "boss login",
+    "v": "http://127.0.0.1:5293/operations/dashboard"
+  },
+  {
+    "k": "boss-desktop-home inventory",
+    "v": "ctas=42 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-desktop-run inventory",
+    "v": "ctas=48 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-desktop-cash-advance inventory",
+    "v": "ctas=39 inputs=1 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-desktop-packages inventory",
+    "v": "ctas=40 inputs=5 unlabelled=4 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-desktop-history inventory",
+    "v": "ctas=39 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-desktop-rules inventory",
+    "v": "ctas=41 inputs=8 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-desktop floor period defaults",
+    "v": "{\"start\":\"2026-09-01\",\"end\":\"2026-09-15\",\"freq\":\"DailyWeeklyEvery 2 weeks15th & month-endMonthlyCustom range (override anytime)\"}"
+  },
+  {
+    "k": "boss-desktop floor end<start load",
+    "v": "Load POS proof :: toasts=[]"
+  },
+  {
+    "k": "boss-desktop floor load proof",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "boss-desktop-floor-proof inventory",
+    "v": "ctas=48 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-desktop floor → payouts",
+    "v": "Next disabled"
+  },
+  {
+    "k": "boss-desktop-floor-lines inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-desktop wash pool 150",
+    "v": "no pct input"
+  },
+  {
+    "k": "boss-desktop add line empty",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "boss-desktop floor → confirm",
+    "v": "Next disabled"
+  },
+  {
+    "k": "boss-desktop-floor-confirm inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-desktop fixed kind",
+    "v": "Fixed salaryOffice / BA / marketing — monthly package prorat"
+  },
+  {
+    "k": "boss-desktop fixed load",
+    "v": "Load salaried employees :: toasts=[]"
+  },
+  {
+    "k": "boss-desktop-fixed-people inventory",
+    "v": "ctas=48 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-desktop-fixed-extras inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-desktop add commission empty",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "boss-desktop-fixed-review inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-desktop salary empty submit",
+    "v": "Save monthly salary :: toasts=[\"Employee and monthly amount required\"]"
+  },
+  {
+    "k": "boss-desktop salary -5000 typed",
+    "v": "{}"
+  },
+  {
+    "k": "boss-desktop rules values",
+    "v": "{\"rule-wash_pool_pct\":\"35\",\"rule-ceramic_card_fee_pct\":\"3.5\",\"rule-ceramic_crew_solo_pct\":\"20\",\"rule-ceramic_crew_split_pct\":\"10\",\"rule-ceramic_detailer_split_pct\":\"10\",\"rule-ceramic_shirt_deduction_minor\":\"50000\"}"
+  },
+  {
+    "k": "boss-desktop rules 150 / -3 typed",
+    "v": "{\"pct\":\"3150\",\"pctValid\":true,\"fee\":\"03\",\"feeValid\":true,\"formValid\":true}"
+  },
+  {
+    "k": "boss-phone-home inventory",
+    "v": "ctas=14 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-phone-run inventory",
+    "v": "ctas=20 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-phone-cash-advance inventory",
+    "v": "ctas=11 inputs=1 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-phone-packages inventory",
+    "v": "ctas=12 inputs=5 unlabelled=4 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-phone-history inventory",
+    "v": "ctas=11 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-phone-rules inventory",
+    "v": "ctas=13 inputs=8 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-phone floor period defaults",
+    "v": "{\"start\":\"2026-09-01\",\"end\":\"2026-09-15\",\"freq\":\"DailyWeeklyEvery 2 weeks15th & month-endMonthlyCustom range (override anytime)\"}"
+  },
+  {
+    "k": "boss-phone floor end<start load",
+    "v": "Load POS proof :: toasts=[]"
+  },
+  {
+    "k": "boss-phone floor load proof",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "boss-phone-floor-proof inventory",
+    "v": "ctas=20 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-phone floor → payouts",
+    "v": "Next disabled"
+  },
+  {
+    "k": "boss-phone-floor-lines inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-phone wash pool 150",
+    "v": "no pct input"
+  },
+  {
+    "k": "boss-phone add line empty",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "boss-phone floor → confirm",
+    "v": "Next disabled"
+  },
+  {
+    "k": "boss-phone-floor-confirm inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-phone fixed kind",
+    "v": "Fixed salaryOffice / BA / marketing — monthly package prorat"
+  },
+  {
+    "k": "boss-phone fixed load",
+    "v": "Load salaried employees :: toasts=[]"
+  },
+  {
+    "k": "boss-phone-fixed-people inventory",
+    "v": "ctas=20 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "boss-phone-fixed-extras inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-phone add commission empty",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "boss-phone-fixed-review inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "boss-phone salary empty submit",
+    "v": "Save monthly salary :: toasts=[\"Employee and monthly amount required\"]"
+  },
+  {
+    "k": "boss-phone salary -5000 typed",
+    "v": "{}"
+  },
+  {
+    "k": "boss-phone rules values",
+    "v": "{\"rule-wash_pool_pct\":\"35\",\"rule-ceramic_card_fee_pct\":\"3.5\",\"rule-ceramic_crew_solo_pct\":\"20\",\"rule-ceramic_crew_split_pct\":\"10\",\"rule-ceramic_detailer_split_pct\":\"10\",\"rule-ceramic_shirt_deduction_minor\":\"50000\"}"
+  },
+  {
+    "k": "boss-phone rules 150 / -3 typed",
+    "v": "{\"pct\":\"3150\",\"pctValid\":true,\"fee\":\"03\",\"feeValid\":true,\"formValid\":true}"
+  },
+  {
+    "k": "boss-settings-payroll inventory",
+    "v": "ctas=35 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "boss /my-pay lands",
+    "v": "http://127.0.0.1:5293/operations/access-denied"
+  },
+  {
+    "k": "asa login",
+    "v": "http://127.0.0.1:5293/operations/dashboard"
+  },
+  {
+    "k": "asa-desktop-home inventory",
+    "v": "ctas=42 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-desktop-run inventory",
+    "v": "ctas=48 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-desktop-cash-advance inventory",
+    "v": "ctas=39 inputs=1 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-desktop-packages inventory",
+    "v": "ctas=39 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-desktop-history inventory",
+    "v": "ctas=39 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-desktop-rules inventory",
+    "v": "ctas=41 inputs=8 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-desktop floor period defaults",
+    "v": "{\"start\":\"2026-09-01\",\"end\":\"2026-09-15\",\"freq\":\"DailyWeeklyEvery 2 weeks15th & month-endMonthlyCustom range (override anytime)\"}"
+  },
+  {
+    "k": "asa-desktop floor end<start load",
+    "v": "Load POS proof :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop floor load proof",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop-floor-proof inventory",
+    "v": "ctas=48 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-desktop floor → payouts",
+    "v": "Next disabled"
+  },
+  {
+    "k": "asa-desktop-floor-lines inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "asa-desktop wash pool 150",
+    "v": "no pct input"
+  },
+  {
+    "k": "asa-desktop add line empty",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop floor → confirm",
+    "v": "Next disabled"
+  },
+  {
+    "k": "asa-desktop-floor-confirm inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "asa-desktop fixed kind",
+    "v": "Fixed salaryOffice / BA / marketing — monthly package prorat"
+  },
+  {
+    "k": "asa-desktop fixed load",
+    "v": "Load salaried employees :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop-fixed-people inventory",
+    "v": "ctas=48 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-desktop-fixed-extras inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "asa-desktop add commission empty",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop-fixed-review inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "asa-desktop salary empty submit",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-desktop salary -5000 typed",
+    "v": "{}"
+  },
+  {
+    "k": "asa-desktop rules values",
+    "v": "{\"rule-wash_pool_pct\":\"35\",\"rule-ceramic_card_fee_pct\":\"3.5\",\"rule-ceramic_crew_solo_pct\":\"20\",\"rule-ceramic_crew_split_pct\":\"10\",\"rule-ceramic_detailer_split_pct\":\"10\",\"rule-ceramic_shirt_deduction_minor\":\"50000\"}"
+  },
+  {
+    "k": "asa-desktop rules 150 / -3 typed",
+    "v": "{\"pct\":\"35\",\"pctValid\":true,\"fee\":\"3.5\",\"feeValid\":true,\"formValid\":true}"
+  },
+  {
+    "k": "asa-phone-home inventory",
+    "v": "ctas=14 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-phone-run inventory",
+    "v": "ctas=20 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-phone-cash-advance inventory",
+    "v": "ctas=11 inputs=1 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-phone-packages inventory",
+    "v": "ctas=11 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-phone-history inventory",
+    "v": "ctas=11 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-phone-rules inventory",
+    "v": "ctas=13 inputs=8 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-phone floor period defaults",
+    "v": "{\"start\":\"2026-09-01\",\"end\":\"2026-09-15\",\"freq\":\"DailyWeeklyEvery 2 weeks15th & month-endMonthlyCustom range (override anytime)\"}"
+  },
+  {
+    "k": "asa-phone floor end<start load",
+    "v": "Load POS proof :: toasts=[]"
+  },
+  {
+    "k": "asa-phone floor load proof",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-phone-floor-proof inventory",
+    "v": "ctas=20 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-phone floor → payouts",
+    "v": "Next disabled"
+  },
+  {
+    "k": "asa-phone-floor-lines inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "asa-phone wash pool 150",
+    "v": "no pct input"
+  },
+  {
+    "k": "asa-phone add line empty",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-phone floor → confirm",
+    "v": "Next disabled"
+  },
+  {
+    "k": "asa-phone-floor-confirm inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "asa-phone fixed kind",
+    "v": "Fixed salaryOffice / BA / marketing — monthly package prorat"
+  },
+  {
+    "k": "asa-phone fixed load",
+    "v": "Load salaried employees :: toasts=[]"
+  },
+  {
+    "k": "asa-phone-fixed-people inventory",
+    "v": "ctas=20 inputs=4 unlabelled=0 iconOnlyNoAria=0 <44px=7 scrollX=false"
+  },
+  {
+    "k": "asa-phone-fixed-extras inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "asa-phone add commission empty",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-phone-fixed-review inventory",
+    "v": "ctas=0 inputs=0 unlabelled=0 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "asa-phone salary empty submit",
+    "v": "no button :: toasts=[]"
+  },
+  {
+    "k": "asa-phone salary -5000 typed",
+    "v": "{}"
+  },
+  {
+    "k": "asa-phone rules values",
+    "v": "{\"rule-wash_pool_pct\":\"35\",\"rule-ceramic_card_fee_pct\":\"3.5\",\"rule-ceramic_crew_solo_pct\":\"20\",\"rule-ceramic_crew_split_pct\":\"10\",\"rule-ceramic_detailer_split_pct\":\"10\",\"rule-ceramic_shirt_deduction_minor\":\"50000\"}"
+  },
+  {
+    "k": "asa-phone rules 150 / -3 typed",
+    "v": "{\"pct\":\"35\",\"pctValid\":true,\"fee\":\"3.5\",\"feeValid\":true,\"formValid\":true}"
+  },
+  {
+    "k": "asa-settings-payroll inventory",
+    "v": "ctas=35 inputs=3 unlabelled=0 iconOnlyNoAria=0 <44px=1 scrollX=false"
+  },
+  {
+    "k": "asa /my-pay lands",
+    "v": "http://127.0.0.1:5293/operations/my-pay"
+  },
+  {
+    "k": "admin login",
+    "v": "http://127.0.0.1:5293/operations/pos"
+  },
+  {
+    "k": "admin /payroll lands",
+    "v": "http://127.0.0.1:5293/operations/access-denied"
+  },
+  {
+    "k": "admin /settings/payroll lands",
+    "v": "http://127.0.0.1:5293/operations/access-denied"
+  },
+  {
+    "k": "investor login",
+    "v": "http://127.0.0.1:5293/operations/finance"
+  },
+  {
+    "k": "investor /payroll lands",
+    "v": "http://127.0.0.1:5293/operations/access-denied"
+  },
+  {
+    "k": "investor /settings/payroll lands",
+    "v": "http://127.0.0.1:5293/operations/access-denied"
+  },
+  {
+    "k": "tl login",
+    "v": "http://127.0.0.1:5293/operations/queue"
+  },
+  {
+    "k": "tl /payroll lands",
+    "v": "http://127.0.0.1:5293/operations/access-denied"
+  },
+  {
+    "k": "tl /settings/payroll lands",
+    "v": "http://127.0.0.1:5293/operations/access-denied"
+  },
+  {
+    "k": "crew1 login",
+    "v": "http://127.0.0.1:5293/operations/attendance"
+  },
+  {
+    "k": "crew1-desktop-my-pay inventory",
+    "v": "ctas=9 inputs=2 unlabelled=2 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "crew1 desktop my-pay text",
+    "v": "ATTENDANCE TASKS PAY FORMS Hakum Crew Crew One · BACOOR PAY My pay Confirmed pay is money already posted from Payroll — floor (wash/ceramic) and fixed salary both show here. Estimates are unpaid wash-pool shares until a run confirms. 2026-09-01 to 2026-09-30 How your pay works Confirmed vs estimate, advances, and report periods. Tap a step if this screen is new. Hide guide 1 Confirmed pay Money already posted from a Payroll run shows as confirmed. That is pay in the books, not an estimate. 2 Today’s estimate Unpaid wash-pool share from today’s sales and attendance. It changes until Payroll con"
+  },
+  {
+    "k": "crew1-phone-my-pay inventory",
+    "v": "ctas=9 inputs=2 unlabelled=2 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "crew1 phone my-pay text",
+    "v": "Hakum Crew Crew One · BACOOR PAY My pay Confirmed pay is money already posted from Payroll — floor (wash/ceramic) and fixed salary both show here. Estimates are unpaid wash-pool shares until a run confirms. 2026-09-01 to 2026-09-30 How your pay works Confirmed vs estimate, advances, and report periods. Tap a step if this screen is new. Hide guide 1 Confirmed pay Money already posted from a Payroll run shows as confirmed. That is pay in the books, not an estimate. 2 Today’s estimate Unpaid wash-pool share from today’s sales and attendance. It changes until Payroll confirms a run. 3 Cash advance"
+  },
+  {
+    "k": "detailer login",
+    "v": "http://127.0.0.1:5293/operations/bookings"
+  },
+  {
+    "k": "detailer-desktop-my-pay inventory",
+    "v": "ctas=8 inputs=2 unlabelled=2 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "detailer desktop my-pay text",
+    "v": "BOOKINGS ATTENDANCE TASKS Hakum Detailing Demo Detailer · BACOOR PAY My pay Confirmed pay is money already posted from Payroll — floor (wash/ceramic) and fixed salary both show here. Estimates are unpaid wash-pool shares until a run confirms. 2026-09-01 to 2026-09-30 How your pay works Confirmed vs estimate, advances, and report periods. Tap a step if this screen is new. Hide guide 1 Confirmed pay Money already posted from a Payroll run shows as confirmed. That is pay in the books, not an estimate. 2 Today’s estimate Unpaid wash-pool share from today’s sales and attendance. It changes until Pa"
+  },
+  {
+    "k": "detailer-phone-my-pay inventory",
+    "v": "ctas=8 inputs=2 unlabelled=2 iconOnlyNoAria=0 <44px=0 scrollX=false"
+  },
+  {
+    "k": "detailer phone my-pay text",
+    "v": "Hakum Detailing Demo Detailer · BACOOR PAY My pay Confirmed pay is money already posted from Payroll — floor (wash/ceramic) and fixed salary both show here. Estimates are unpaid wash-pool shares until a run confirms. 2026-09-01 to 2026-09-30 How your pay works Confirmed vs estimate, advances, and report periods. Tap a step if this screen is new. Hide guide 1 Confirmed pay Money already posted from a Payroll run shows as confirmed. That is pay in the books, not an estimate. 2 Today’s estimate Unpaid wash-pool share from today’s sales and attendance. It changes until Payroll confirms a run. 3 Ca"
+  }
+]
