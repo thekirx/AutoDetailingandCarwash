@@ -2023,9 +2023,27 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
     color-scheme: dark;
   }
 
+  /* The still was being loaded and then thrown away: --hakum-auth-img is set
+     on the root, so the phone downloaded all 97 kB of it, and this rule set
+     `background: transparent` over the top. Computed background-image here was
+     `none`. It now carries the same still, under the same gradient, as the app
+     header the customer lands on — so signing in stops being a jump from a
+     flat wall to a photograph. */
   .hakum-auth--app .hakum-auth-brand {
-    background: transparent;
     padding-top: max(1.4rem, env(safe-area-inset-top, 0px));
+    padding-bottom: 3.1rem;
+    background:
+      linear-gradient(180deg, rgba(2, 10, 49, 0.34), rgba(2, 10, 49, 0.72) 58%, rgba(2, 10, 49, 0.96)),
+      var(--hakum-auth-img, none) 50% 38% / cover no-repeat,
+      #020a31;
+  }
+
+  /* A photograph's luminance under any given line is not knowable from the
+     gradient alone, so the copy carries its own shadow, as the marketing hero
+     and the app header both do. */
+  .hakum-auth--app .hakum-auth-brand-body h1,
+  .hakum-auth--app .hakum-auth-brand-body p {
+    text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
   }
 
   .hakum-auth--app .hakum-auth-wordmark span {
@@ -2065,18 +2083,22 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   }
 
   .hakum-auth--app .hakum-auth-brand-body p {
-    color: #8e98bd;
+    color: #d3dbf5;
   }
 
   .hakum-auth--app .hakum-auth-panel {
-    padding-top: 0.25rem;
+    position: relative;
+    z-index: 2;
+    margin-top: -2.1rem;
+    padding-top: 0;
   }
 
   .hakum-auth--app .hakum-auth-panel-inner {
     padding: 1.15rem 1.1rem 1.25rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 1.25rem;
     background: #0c1535;
+    box-shadow: 0 18px 40px -14px rgba(2, 6, 28, 0.75);
   }
 
   .hakum-auth--app .hakum-auth-panel h2 {
