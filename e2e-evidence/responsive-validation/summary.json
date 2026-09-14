@@ -1,0 +1,464 @@
+{
+  "overall": "PASS",
+  "cells": [
+    {
+      "page": "home",
+      "viewport": "mobile-375",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home--mobile-375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "mobile-393",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 393,
+        "clientWidth": 393,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home--mobile-393.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "mobile-430",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home--mobile-430.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "tablet-768",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home--tablet-768.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "tablet-1024",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home--tablet-1024.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "laptop-1280",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 8,
+        "bodyFont": 16
+      },
+      "shot": "home--laptop-1280.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "desktop-1440",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 8,
+        "bodyFont": 16
+      },
+      "shot": "home--desktop-1440.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "wide-1920",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 8,
+        "bodyFont": 16
+      },
+      "shot": "home--wide-1920.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home",
+      "viewport": "landscape-667x375",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 667,
+        "clientWidth": 667,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home--landscape-667x375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home-signed",
+      "viewport": "mobile-375",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home-signed--mobile-375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home-signed",
+      "viewport": "mobile-393",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 393,
+        "clientWidth": 393,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home-signed--mobile-393.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home-signed",
+      "viewport": "mobile-430",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home-signed--mobile-430.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home-signed",
+      "viewport": "tablet-768",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home-signed--tablet-768.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home-signed",
+      "viewport": "tablet-1024",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home-signed--tablet-1024.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home-signed",
+      "viewport": "laptop-1280",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 9,
+        "bodyFont": 16
+      },
+      "shot": "home-signed--laptop-1280.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home-signed",
+      "viewport": "desktop-1440",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 9,
+        "bodyFont": 16
+      },
+      "shot": "home-signed--desktop-1440.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home-signed",
+      "viewport": "wide-1920",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 9,
+        "bodyFont": 16
+      },
+      "shot": "home-signed--wide-1920.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "home-signed",
+      "viewport": "landscape-667x375",
+      "url": "http://localhost:5173/home",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 667,
+        "clientWidth": 667,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 0,
+        "bodyFont": 16
+      },
+      "shot": "home-signed--landscape-667x375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "mobile-375",
+      "url": "http://localhost:5173/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 1,
+        "bodyFont": 16
+      },
+      "shot": "account--mobile-375.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "mobile-393",
+      "url": "http://localhost:5173/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 393,
+        "clientWidth": 393,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 1,
+        "bodyFont": 16
+      },
+      "shot": "account--mobile-393.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "mobile-430",
+      "url": "http://localhost:5173/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 1,
+        "bodyFont": 16
+      },
+      "shot": "account--mobile-430.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "tablet-768",
+      "url": "http://localhost:5173/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 1,
+        "bodyFont": 16
+      },
+      "shot": "account--tablet-768.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "tablet-1024",
+      "url": "http://localhost:5173/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 1,
+        "bodyFont": 16
+      },
+      "shot": "account--tablet-1024.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "laptop-1280",
+      "url": "http://localhost:5173/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 10,
+        "bodyFont": 16
+      },
+      "shot": "account--laptop-1280.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "desktop-1440",
+      "url": "http://localhost:5173/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 10,
+        "bodyFont": 16
+      },
+      "shot": "account--desktop-1440.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "wide-1920",
+      "url": "http://localhost:5173/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 10,
+        "bodyFont": 16
+      },
+      "shot": "account--wide-1920.png",
+      "verdict": "PASS"
+    },
+    {
+      "page": "account",
+      "viewport": "landscape-667x375",
+      "url": "http://localhost:5173/account",
+      "issues": [],
+      "touchWarn": false,
+      "metrics": {
+        "scrollWidth": 667,
+        "clientWidth": 667,
+        "canScrollX": false,
+        "bleed": 0,
+        "smallTargets": 1,
+        "bodyFont": 16
+      },
+      "shot": "account--landscape-667x375.png",
+      "verdict": "PASS"
+    }
+  ]
+}

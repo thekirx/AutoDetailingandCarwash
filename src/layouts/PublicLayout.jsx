@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, ArrowUpRight, Facebook, Instagram, Mail, MapPin, Menu, Phone, X } from 'lucide-react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import PublicPageMeta from '@/components/PublicPageMeta'
 import NotificationBell from '@/components/NotificationBell'
+import UserSettingsModal from '@/components/UserSettingsModal'
 import { CookiePreferencesButton } from '@/components/CookieConsent'
 import { useAuth } from '@/auth/AuthProvider'
 import { branchCityName, usePublicBranches } from '@/lib/branches'
@@ -10,6 +11,14 @@ import { CustomerInstallPopup } from '@/components/InstallGuide'
 import TikTokIcon from '@/components/public/TikTokIcon'
 import { PUBLIC_NAV_ITEMS } from '@/data/publicNavigation'
 import { buildHomeBranchCards } from '@/lib/homeBranches'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 // Routes actually rebuilt in BreDESIGN. A page only joins this list once its
 // own sections exist, because the scope repaints headings and body text for a
@@ -19,6 +28,24 @@ import { buildHomeBranchCards } from '@/lib/homeBranches'
 const BREDESIGN_ROUTES = ['/home', '/services', '/branches', '/partnerships', '/events', '/blog', '/contact', '/complaints', '/terms', '/privacy', '/cookies']
 
 function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const { profile, signOut } = useAuth()
+  const navigate = useNavigate()
+
+  async function leaveAccount() {
+    setOpen(false)
+    setAccountOpen(false)
+    await signOut()
+    navigate('/signin', { replace: true })
+  }
+
+  function openSettings() {
+    setOpen(false)
+    setAccountOpen(false)
+    setSettingsOpen(true)
+  }
+
   return (
     <header className={`public-header ${className} ${open ? 'menu-open' : ''}`.trim()}>
       <div className="public-shell header-inner">
@@ -43,9 +70,16 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
           {isCustomer ? (
             <>
               <NotificationBell light />
-              <Link className="header-auth header-signin" to="/account">
+              <button
+                type="button"
+                className="header-auth header-signin"
+                aria-label="Account menu"
+                aria-haspopup="dialog"
+                aria-expanded={accountOpen}
+                onClick={() => setAccountOpen(true)}
+              >
                 Account
-              </Link>
+              </button>
             </>
           ) : (
             <>
@@ -62,13 +96,14 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
           </Link>
         </div>
         <button
+          type="button"
           className="menu-button"
           onClick={() => setOpen(!open)}
-          aria-label="Toggle navigation"
+          aria-label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
           aria-controls="mobile-navigation"
         >
-          {open ? <X /> : <Menu />}
+          {open ? <X size={22} aria-hidden /> : <Menu size={22} aria-hidden />}
         </button>
       </div>
       {open && (
@@ -79,7 +114,15 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
             </NavLink>
           ))}
           {isCustomer ? (
-            <NavLink to="/account">My account</NavLink>
+            <>
+              <NavLink to="/account">My account</NavLink>
+              <button type="button" className="mobile-nav-action" onClick={openSettings}>
+                Settings
+              </button>
+              <button type="button" className="mobile-nav-action" onClick={leaveAccount}>
+                Sign out
+              </button>
+            </>
           ) : (
             <>
               <Link to="/signin">Sign in</Link>
@@ -91,6 +134,43 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
           </Link>
         </nav>
       )}
+      {isCustomer ? (
+        <>
+          <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
+            <DialogContent className="header-account-dialog sm:max-w-sm">
+              <DialogHeader>
+                <DialogTitle>{profile?.full_name || 'Account'}</DialogTitle>
+                <DialogDescription>Open your portal, change settings, or sign out.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11 w-full justify-start"
+                  onClick={() => {
+                    setAccountOpen(false)
+                    navigate('/account')
+                  }}
+                >
+                  My account
+                </Button>
+                <Button type="button" variant="outline" className="min-h-11 w-full justify-start" onClick={openSettings}>
+                  Settings
+                </Button>
+                <Button type="button" variant="destructive" className="min-h-11 w-full justify-start" onClick={leaveAccount}>
+                  Sign out
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <UserSettingsModal
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            profile={profile}
+            audience="customer"
+          />
+        </>
+      ) : null}
     </header>
   )
 }

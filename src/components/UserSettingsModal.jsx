@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Cake, KeyRound, LogOut, Mail, Moon, Phone, Plus, Settings, Sun, Smartphone } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
@@ -49,6 +50,7 @@ export default function UserSettingsModal({
 }) {
   const { theme, setTheme, resolvedTheme } = useTheme()
   const { signOut } = useAuth()
+  const navigate = useNavigate()
   const [tab, setTab] = useState(initialTab)
   const [busy, setBusy] = useState(false)
   const [email, setEmail] = useState('')
@@ -393,35 +395,34 @@ export default function UserSettingsModal({
                 </Button>
               </form>
 
-              {!isCustomer ? (
-                <div className="space-y-3 border-t border-border pt-5">
-                  <div className="flex items-center gap-2 text-sm font-bold">
-                    <LogOut className="size-4 text-primary" aria-hidden />
-                    Session
-                  </div>
-                  <p className="text-sm text-muted-foreground">Sign out on this device and clear the saved session.</p>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    className="min-h-11 w-full"
-                    disabled={busy}
-                    onClick={async () => {
-                      setBusy(true)
-                      try {
-                        await signOut()
-                        onOpenChange?.(false)
-                        toast.success('Signed out')
-                      } catch (err) {
-                        toast.error(err.message || 'Unable to sign out')
-                      } finally {
-                        setBusy(false)
-                      }
-                    }}
-                  >
-                    Log out
-                  </Button>
+              <div className="space-y-3 border-t border-border pt-5">
+                <div className="flex items-center gap-2 text-sm font-bold">
+                  <LogOut className="size-4 text-primary" aria-hidden />
+                  Session
                 </div>
-              ) : null}
+                <p className="text-sm text-muted-foreground">Sign out on this device and clear the saved session.</p>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className={isCustomer ? 'account-btn min-h-11 w-full' : 'min-h-11 w-full'}
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true)
+                    try {
+                      await signOut()
+                      onOpenChange?.(false)
+                      if (isCustomer) navigate('/signin', { replace: true })
+                      toast.success('Signed out')
+                    } catch (err) {
+                      toast.error(err.message || 'Unable to sign out')
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                >
+                  Log out
+                </Button>
+              </div>
             </div>
           ) : null}
 

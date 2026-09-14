@@ -83,6 +83,24 @@ describe('customer app frame', () => {
     assert.match(layout, /public-header/)
   })
 
+  it('account button opens settings and sign out; phones use the hamburger', () => {
+    const layout = read('src/layouts/PublicLayout.jsx')
+    const css = read('src/styles.css')
+    const settings = read('src/components/UserSettingsModal.jsx')
+    assert.match(layout, /aria-label="Account menu"/)
+    assert.match(layout, /UserSettingsModal/)
+    assert.match(layout, /aria-haspopup="dialog"/)
+    assert.match(layout, /Sign out/)
+    assert.match(layout, /openSettings/)
+    assert.doesNotMatch(layout, /className="header-auth header-signin" to="\/account"/)
+    assert.match(layout, /aria-label=\{open \? 'Close menu' : 'Open menu'\}/)
+    assert.match(css, /@media\(max-width:1100px\)[\s\S]*?\.menu-button\{display:grid/)
+    assert.match(css, /min-width:44px;min-height:44px/)
+    assert.match(css, /\.mobile-nav \.mobile-nav-action/)
+    assert.match(settings, /Log out/)
+    assert.match(settings, /Session/)
+  })
+
   it('notification bell keeps navy ink on paper and a white glyph on the public header', () => {
     const css = read('src/styles-customer-app.css')
     const publicCss = read('src/styles.css')

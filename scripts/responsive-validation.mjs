@@ -16,7 +16,8 @@ import { isLoginWallUrl, isOpsAuthedUrl } from './screenshotAuth.mjs'
 import { OPS_DEMO_ACCOUNTS, CUSTOMER_DEMO_ACCOUNT } from '../src/lib/demoAccounts.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const outDir = join(root, 'e2e-evidence', 'responsive')
+const chromeOnly = process.env.CHROME_ONLY === '1'
+const outDir = join(root, 'e2e-evidence', chromeOnly ? 'responsive-validation' : 'responsive')
 mkdirSync(outDir, { recursive: true })
 
 if (existsSync(join(root, '.env'))) {
@@ -42,13 +43,19 @@ const VIEWPORTS = [
   { id: 'landscape-667x375', width: 667, height: 375, dpr: 2, flags: ['mobile', 'touch', 'landscape'] },
 ]
 
-const PAGES = [
-  { id: 'home', path: '/home', auth: null },
-  { id: 'book', path: '/book', auth: null },
-  { id: 'queue', path: '/operations/queue', auth: 'tl' },
-  { id: 'pos', path: '/operations/pos', auth: 'admin' },
-  { id: 'account', path: '/account', auth: 'customer' },
-]
+const PAGES = chromeOnly
+  ? [
+      { id: 'home', path: '/home', auth: null },
+      { id: 'home-signed', path: '/home', auth: 'customer' },
+      { id: 'account', path: '/account', auth: 'customer' },
+    ]
+  : [
+      { id: 'home', path: '/home', auth: null },
+      { id: 'book', path: '/book', auth: null },
+      { id: 'queue', path: '/operations/queue', auth: 'tl' },
+      { id: 'pos', path: '/operations/pos', auth: 'admin' },
+      { id: 'account', path: '/account', auth: 'customer' },
+    ]
 
 const cells = []
 
@@ -165,7 +172,7 @@ async function measurePage(page, base, route, vp) {
   if (route.auth && route.auth !== 'customer' && isLoginWallUrl(url)) {
     issues.push('login_wall')
   }
-  if (route.auth === 'customer' && !url.includes('/account')) {
+  if (route.auth === 'customer' && /\/signin|\/signup|\/operations\/login/.test(url)) {
     issues.push('customer_auth_failed')
   }
   if (route.path.startsWith('/operations') && route.auth && !isOpsAuthedUrl(url) && !isLoginWallUrl(url)) {
@@ -205,6 +212,54 @@ async function measurePage(page, base, route, vp) {
   }
   const touchWarn = vp.flags.includes('touch') && metrics.smallTargets > 15
 
+  const chrome = await page.evaluate(() => {
+    const vis = (el) => {
+      if (!el) return false
+      const s = getComputedStyle(el)
+      const r = el.getBoundingClientRect()
+      return s.display !== 'none' && s.visibility !== 'hidden' && r.width > 0 && r.height > 0
+    }
+    const menu = document.querySelector('.menu-button')
+    const actions = document.querySelector('.header-actions')
+    const account = document.querySelector('[aria-label="Account menu"]')
+    const header = document.querySelector('.public-header')
+    const menuRect = menu?.getBoundingClientRect()
+    return {
+      hamburger: vis(menu),
+      hamburgerW: menuRect?.width || 0,
+      hamburgerH: menuRect?.height || 0,
+      actions: vis(actions),
+      accountBtn: vis(account),
+      header: vis(header),
+    }
+  })
+
+  if (route.path === '/home') {
+    if (vp.width <= 1100) {
+      if (!chrome.hamburger) issues.push('hamburger_hidden')
+      if (chrome.actions) issues.push('desktop_actions_visible_on_phone')
+      if (chrome.hamburger && (chrome.hamburgerW < 44 || chrome.hamburgerH < 44)) {
+        issues.push(`hamburger_touch_${Math.round(chrome.hamburgerW)}x${Math.round(chrome.hamburgerH)}`)
+      }
+    } else if (chrome.hamburger) {
+      issues.push('hamburger_visible_on_desktop')
+    }
+    if (vp.width > 1100 && route.auth === 'customer' && !chrome.accountBtn) {
+      issues.push('account_button_missing')
+    }
+  }
+  if (route.id === 'account') {
+    if (vp.width < 860 && chrome.header) issues.push('account_header_shown_on_phone')
+    if (vp.width >= 860 && vp.width <= 1100) {
+      if (!chrome.header) issues.push('account_header_hidden_tablet')
+      if (!chrome.hamburger) issues.push('hamburger_hidden')
+    }
+    if (vp.width > 1100) {
+      if (!chrome.accountBtn) issues.push('account_button_missing')
+      if (chrome.hamburger) issues.push('hamburger_visible_on_desktop')
+    }
+  }
+
   const shotName = `${route.id}--${vp.id}.png`
   try {
     await page.screenshot({ path: join(outDir, shotName), fullPage: false })
@@ -212,9 +267,55 @@ async function measurePage(page, base, route, vp) {
     issues.push(`screenshot_fail:${String(err?.message || err).slice(0, 80)}`)
   }
 
+  if (chromeOnly && chrome.header && chrome.hamburger && vp.width <= 1100) {
+    await page.click('.menu-button').catch(() => null)
+    await new Promise((r) => setTimeout(r, 250))
+    const drawer = await page.evaluate(() => {
+      const nav = document.querySelector('#mobile-navigation')
+      const text = nav?.innerText || ''
+      return { open: Boolean(nav), hasSettings: /Settings/i.test(text), hasSignOut: /Sign out/i.test(text) }
+    })
+    if (!drawer.open) issues.push('hamburger_did_not_open')
+    if (route.auth === 'customer' && (!drawer.hasSettings || !drawer.hasSignOut)) {
+      issues.push('drawer_missing_account_actions')
+    }
+    await page.screenshot({ path: join(outDir, `${route.id}--${vp.id}-menu.png`), fullPage: false }).catch(() => null)
+    await page.click('.menu-button').catch(() => null)
+  }
+
+  if (chromeOnly && chrome.accountBtn) {
+    await page.click('[aria-label="Account menu"]').catch(() => null)
+    const opened = await page.waitForSelector('[data-slot="dialog-content"]', { timeout: 4000 }).catch(() => null)
+    const menu = opened
+      ? await page.evaluate(() => {
+          const root = document.querySelector('[data-slot="dialog-content"]')
+          return { open: Boolean(root), text: root?.innerText || '' }
+        })
+      : { open: false, text: '' }
+    if (!menu.open) issues.push('account_menu_did_not_open')
+    else {
+      if (!/Settings/i.test(menu.text)) issues.push('account_menu_missing_settings')
+      if (!/Sign out/i.test(menu.text)) issues.push('account_menu_missing_signout')
+    }
+    await page.screenshot({ path: join(outDir, `${route.id}--${vp.id}-account-menu.png`), fullPage: false }).catch(() => null)
+    await page.keyboard.press('Escape').catch(() => null)
+    await page.waitForSelector('[data-slot="dialog-content"]', { hidden: true, timeout: 3000 }).catch(() => null)
+  }
+
   let verdict = 'PASS'
-  if (issues.some((i) => i === 'login_wall' || i === 'customer_auth_failed')) verdict = 'FAIL'
-  else if (issues.some((i) => i.startsWith('overflow_x'))) verdict = 'FAIL'
+  const hardFail = issues.some(
+    (i) =>
+      i === 'login_wall' ||
+      i === 'customer_auth_failed' ||
+      i === 'hamburger_hidden' ||
+      i === 'hamburger_did_not_open' ||
+      i === 'account_button_missing' ||
+      i === 'account_menu_did_not_open' ||
+      i === 'drawer_missing_account_actions' ||
+      i.startsWith('overflow_x') ||
+      i.startsWith('hamburger_touch'),
+  )
+  if (hardFail) verdict = 'FAIL'
   else if (touchWarn || issues.length) verdict = 'CONDITIONAL'
 
   return {
@@ -387,7 +488,10 @@ else {
 }
 reportLines.push('', `## Overall Verdict: ${overall}`, '')
 
-writeFileSync(join(root, 'docs', 'qa', 'responsive-report.md'), reportLines.join('\n'))
+writeFileSync(
+  chromeOnly ? join(outDir, 'report.md') : join(root, 'docs', 'qa', 'responsive-report.md'),
+  reportLines.join('\n'),
+)
 writeFileSync(join(outDir, 'summary.json'), JSON.stringify({ overall, cells }, null, 2))
 console.log(`\nOverall: ${overall} (fail=${fails.length} conditional=${conditionals.length})`)
 process.exit(fails.length ? 1 : 0)
