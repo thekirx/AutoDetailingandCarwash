@@ -90,7 +90,11 @@ describe('Public branding assets and scope', () => {
        2026-09-12, scoped under .bredesign in its own stylesheet. */
     assert.match(packagesCss, /\.bredesign \.bd-pk-steps\s*\{/)
     assert.match(packagesCss, /\.bredesign \.bd-tier\.is-recommended\s*\{/)
-    assert.match(packagesCss, /\.bredesign \.bd-tier-riser\s*\{/)
+    /* The risers are gone: the tiers stand on one baseline so none of them
+       reads as a step the reader has to climb through. */
+    assert.doesNotMatch(packagesCss, /\.bd-tier-riser|\.bd-tier-step\b/)
+    assert.match(packagesCss, /\.bredesign \.bd-pk-steps\s*\{[^}]*align-items: stretch/s)
+    assert.match(packagesCss, /\.bredesign \.bd-tier-book\s*\{[^}]*margin-top: auto/s)
     assert.match(packagesCss, /\.bredesign \.bd-cmp table\s*\{/)
     assert.match(packages, /className="bd-pk-steps bd-reveal"/)
     /* The comparison opens from a button rather than standing open under the
@@ -112,7 +116,9 @@ describe('Public branding assets and scope', () => {
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.ceramic-layout\s*\{[^}]*grid-template-columns:minmax\(0,1fr\)/)
     assert.match(css, /@media\(max-width:900px\)\{[\s\S]*?\.ppf-package-ladder-layout\{grid-template-columns:1fr\}/)
     assert.match(packagesCss, /@media \(min-width: 700px\)[\s\S]*?\.bd-pk-steps[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/)
-    assert.match(packagesCss, /@media \(max-width: 699px\)[\s\S]*?\.bd-tier-riser[\s\S]*?height: 34px/)
+    /* Nothing tier-specific is left to unwind on a phone now that the
+       risers are gone; the single-column grid is the whole phone case. */
+    assert.doesNotMatch(packagesCss, /\.bd-tier-riser/)
     assert.match(css, /@media\(max-width:600px\)\{[\s\S]*?\.partnership-field-row,.partnership-type-grid\{grid-template-columns:1fr\}/)
     assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.home-branch-grid\{grid-template-columns:1fr\}/)
   })

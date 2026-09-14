@@ -36,8 +36,8 @@ describe('homepage production content adapters', () => {
     const cards = buildPpfPackageCards(PPF_PACKAGES)
 
     assert.deepEqual(cards.map(({ id, title, thickness }) => ({ id, title, thickness })), [
-      { id: 'high-impact', title: 'High Impact Protection', thickness: '7.5 mil TPU PPF material' },
-      { id: 'basic', title: 'Basic Protection', thickness: '7.5 mil TPU PPF material' },
+      { id: 'high-impact', title: 'Starter Partial PPF Package', thickness: '7.5 mil TPU PPF material' },
+      { id: 'basic', title: 'Starter Full PPF Package', thickness: '7.5 mil TPU PPF material' },
       { id: 'ultimate', title: 'Ultimate Protection', thickness: '8 mil TPU PPF material' },
       { id: 'platinum', title: 'Platinum Protection', thickness: '8.5 mil TPU PPF material' },
     ])
@@ -69,6 +69,9 @@ describe('homepage production content adapters', () => {
     assert.equal(cards[2].recommendedLabel, 'Most Popular')
     assert.equal(cards[3].bookingState.packageId, 'platinum')
     assert.equal(cards[3].ctaLabel, 'Book Platinum Protection')
+    assert.ok(PPF_PACKAGES.every((pkg) => pkg.freeAddOns.includes('FREE Wheels Ceramic Coating')))
+    assert.ok(PPF_PACKAGES[1].coverageAreas.includes('Rocker panels'))
+    assert.ok(PPF_PACKAGES[1].coverageAreas.includes('Additional high-impact areas where applicable'))
   })
 
   it('maps production Blog and Event rows to existing internal routes', () => {

@@ -68,10 +68,10 @@ export function CeramicSection() {
                         as one object. The years and the words are one
                         phrase on one line, so the figure can never be
                         stranded apart from "Year Warranty". */}
-                    <div className="ceramic-package-warranty">
+                    <div className="ceramic-package-warranty is-pulsing">
                       <Check size={16} strokeWidth={3} aria-hidden="true" />
                       <strong>{item.warrantyYears}-Year Warranty</strong>
-                      <em className="ceramic-package-unlimited">
+                      <em className="ceramic-package-unlimited is-pulsing">
                         {SERVICE_DETAIL_CONTENT.ceramic.packageHighlights[item.id]}
                       </em>
                     </div>

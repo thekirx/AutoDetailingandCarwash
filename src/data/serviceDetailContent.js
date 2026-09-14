@@ -10,6 +10,16 @@ const proofClip = (service, id, label, caption) => ({
 })
 
 export const SERVICE_DETAIL_CONTENT = {
+  'wash-detailing': {
+    serviceName: 'Premium Wash & Detailing',
+    bookState: { service: 'Premium Wash & Detailing' },
+    faqs: [
+      { question: 'Do I need to book a premium car wash?', answer: 'Premium car wash and selected cleaning services are available as walk-in services. Check the live queue before heading to your preferred branch.' },
+      { question: 'Which services need an assessment?', answer: 'Protective treatments and restoration work, including glass coating and headlight restoration, may need a quick vehicle assessment before the team confirms timing and price.' },
+      { question: 'Can I combine wash and detailing services?', answer: 'Yes. The team can recommend a practical combination based on your vehicle’s condition and the result you want.' },
+      { question: 'How long will the service take?', answer: 'Timing varies by vehicle size, condition, selected service, and the branch queue. The live queue gives you the best view of current demand.' },
+    ],
+  },
   ppf: {
     serviceName: 'Paint Protection Film',
     bookState: { service: 'Paint Protection Film' },
@@ -95,7 +105,7 @@ export const SERVICE_DETAIL_CONTENT = {
     ],
     proof: {
       eyebrow: 'Hakum coating proof',
-      title: 'Gloss you can see move.',
+      title: 'A finish that stays showroom ready.',
       copy: 'Real Ceramic Coating work across different finishes, captured during preparation, application, and final inspection.',
       clips: [
         { ...proofClip('ceramic', 'honda-city', 'Hakum Ceramic Coating preparation and finish on a Honda City', 'Honda City · Coating preparation and finish'), homepageFeatured: true },

@@ -335,7 +335,7 @@
   position: relative;
   overflow: hidden;
   min-height: calc(100cqw * 640 / 999);
-  padding: 24.6% 4cqw 4cqw;
+  padding: 8.5% 4cqw 4cqw;
 }
 .bredesign .bd-origin-photo {
   position: absolute;
@@ -361,11 +361,11 @@
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgba(2, 10, 49, 0.55) 0%,
-    rgba(2, 10, 49, 0.14) 16%,
-    rgba(2, 10, 49, 0.1) 33%,
-    rgba(2, 10, 49, 0.62) 37.5%,
-    rgba(2, 10, 49, 0.76) 46%,
+    rgba(2, 10, 49, 0.82) 0%,
+    rgba(2, 10, 49, 0.78) 16%,
+    rgba(2, 10, 49, 0.76) 33%,
+    rgba(2, 10, 49, 0.72) 40%,
+    rgba(2, 10, 49, 0.66) 48%,
     rgba(2, 10, 49, 0.84) 64%,
     rgba(2, 10, 49, 0.92) 82%,
     var(--bd-navy) 100%
@@ -397,6 +397,7 @@
   font-size: 3.45cqw;
   line-height: 0.95;
   white-space: nowrap;
+  word-spacing: 0.12em;
   text-shadow: 0 2px 22px rgba(2, 10, 49, 0.85);
 }
 .bredesign .bd-origin h2 em {
@@ -3116,6 +3117,13 @@
   padding: 0;
   list-style: none;
 }
+.bredesign .bd-benefits-heading {
+  margin-top: clamp(42px, 6vw, 76px);
+  color: var(--bd-paper);
+  font-size: clamp(1.8rem, 3.6vw, 3rem);
+  line-height: 1;
+  text-transform: uppercase;
+}
 .bredesign .bd-photo-card {
   position: relative;
   overflow: hidden;
@@ -3184,7 +3192,8 @@
   overflow: hidden;
   border: 1px solid var(--bd-rule);
   border-radius: 14px;
-  background: linear-gradient(120deg, var(--bd-navy-3), var(--bd-navy-2));
+  border-color: rgba(197, 255, 0, 0.3);
+  background: linear-gradient(120deg, #070a08, #111710);
 }
 @media (min-width: 980px) {
   .bredesign .bd-clearpro-card {
@@ -3222,6 +3231,16 @@
   gap: 16px;
   padding: clamp(26px, 3vw, 40px);
 }
+/* Names the section as education about the film partner before the ClearPro
+   mark is read, so the panel cannot be mistaken for another Hakum ad. */
+.bredesign .bd-clearpro-kicker {
+  margin: 0;
+  color: #9fb27f;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
 .bredesign .bd-clearpro-mark {
   display: flex;
   align-items: center;
@@ -3252,7 +3271,7 @@
   line-height: 0.95;
 }
 .bredesign .bd-clearpro-card h3 em {
-  color: var(--bd-accent);
+  color: #c5ff00;
 }
 .bredesign .bd-clearpro-card p {
   margin: 0;
@@ -3284,7 +3303,8 @@
   line-height: 1;
   color: var(--bd-paper);
 }
-.bredesign .bd-clearpro-figures s {
+.bredesign .bd-clearpro-figures s,
+.bredesign .bd-clearpro-figures span {
   display: block;
   margin-top: 6px;
   color: #95a0cc;
@@ -3296,12 +3316,53 @@
 }
 .bredesign .bd-clearpro-card a {
   justify-self: start;
-  color: var(--bd-accent);
+  color: #c5ff00;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-decoration: none;
   text-transform: uppercase;
+}
+
+.bredesign .bd-wash-services,
+.bredesign .bd-service-reviews { padding: clamp(72px, 9vw, 128px) 0; background: var(--bd-navy); }
+.bredesign .bd-wash-services-head { display:flex; align-items:end; justify-content:space-between; gap:24px; }
+.bredesign .bd-wash-services h2,
+.bredesign .bd-service-reviews h2 { margin-top:14px; font-size:clamp(2rem, 4.6vw, 4rem); line-height:.95; }
+.bredesign .bd-wash-service-rail { --slide: clamp(270px, 29vw, 390px); display:grid; grid-auto-flow:column; grid-auto-columns:var(--slide); gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; margin-top:40px; }
+.bredesign .bd-wash-service-card { overflow:hidden; scroll-snap-align:start; border:1px solid var(--bd-rule); border-radius:14px; background:var(--bd-navy-2); }
+.bredesign .bd-wash-service-card > img,
+.bredesign .bd-wash-coming { display:block; width:100%; aspect-ratio:4/3; object-fit:cover; }
+.bredesign .bd-wash-coming { display:grid; place-items:center; background:var(--bd-blue); color:#fff; font-family:var(--bd-display); font-size:24px; text-transform:uppercase; }
+.bredesign .bd-wash-service-card > div:last-child { display:grid; gap:14px; padding:22px; }
+.bredesign .bd-wash-service-card h3 { font-size:22px; line-height:1; }
+.bredesign .bd-wash-service-card p { color:var(--bd-ink-2); font-size:14px; line-height:1.6; }
+.bredesign .bd-wash-service-card strong { color:#54df93; font-size:13px; }
+.bredesign .bd-wash-service-card .bd-btn { justify-self:start; margin-top:6px; }
+.bredesign .bd-wash-unavailable { color:var(--bd-ink-3); font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.bredesign .bd-service-reviews { background:var(--bd-navy-2); }
+.bredesign .bd-service-review-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin-top:36px; }
+.bredesign .bd-service-review-grid a { display:grid; gap:10px; padding:24px; border:1px solid var(--bd-rule); border-radius:12px; color:var(--bd-paper); text-decoration:none; background:var(--bd-navy); }
+.bredesign .bd-service-review-grid a > span { color:#f5ba35; letter-spacing:.12em; }
+.bredesign .bd-service-review-grid blockquote { margin:0; color:var(--bd-ink-2); font-size:14px; line-height:1.65; }
+.bredesign .bd-service-review-grid small { color:var(--bd-ink-3); }
+
+/* Both halves of the warranty badge pulse, as approved: the duration and the
+   recoating chip are the two claims that close the sale, so neither should be
+   the still one. They breathe on the same 1.15s clock so the badge reads as one
+   object blinking rather than two lights racing each other. The chip fades; the
+   duration glows instead, because dropping a 3rem figure to half opacity on
+   solid blue reads as a rendering fault rather than an accent. */
+@keyframes bd-unli-pulse { 0%,100% { opacity:1; text-shadow:0 0 0 rgba(157,180,255,0); } 50% { opacity:.5; text-shadow:0 0 14px rgba(157,180,255,.9); } }
+@keyframes bd-warranty-pulse {
+  0%,100% { text-shadow:0 2px 18px rgba(0,0,0,.35); }
+  50% { text-shadow:0 2px 18px rgba(0,0,0,.35), 0 0 18px rgba(255,255,255,.95); }
+}
+.bredesign .ceramic-package-unlimited.is-pulsing { animation:bd-unli-pulse 1.15s ease-in-out infinite; }
+.bredesign .ceramic-package-warranty.is-pulsing strong { animation:bd-warranty-pulse 1.15s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .bredesign .ceramic-package-unlimited.is-pulsing,
+  .bredesign .ceramic-package-warranty.is-pulsing strong { animation:none; }
 }
 
 .bredesign .bd-service-proof,

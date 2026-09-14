@@ -34,11 +34,11 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-/* ---- The ladder -------------------------------------------------------- */
+/* ---- Package cards ----------------------------------------------------- */
 .bredesign .bd-pk-steps {
   display: grid;
   gap: 14px;
-  align-items: end;
+  align-items: stretch;
   margin-top: clamp(32px, 4vw, 48px);
 }
 @media (min-width: 700px) {
@@ -55,24 +55,16 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 22px 22px 0;
+  position: relative;
+  padding: 28px 24px 24px;
   border: 1px solid var(--bd-rule);
   border-radius: 14px;
   background: var(--bd-navy-2);
 }
-.bredesign .bd-tier-step {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #95a0cc;
-}
 .bredesign .bd-tier-badge {
-  flex: none;
+  position: absolute;
+  top: 14px;
+  right: 14px;
   padding: 5px 9px;
   border-radius: 4px;
   background: var(--bd-accent);
@@ -83,12 +75,14 @@
   text-transform: uppercase;
 }
 .bredesign .bd-tier h3 {
-  margin-top: 12px;
+  min-height: 2.15em;
+  margin-top: 24px;
   font-size: clamp(1.15rem, 1.7vw, 1.5rem);
   line-height: 0.95;
 }
 .bredesign .bd-tier-cover {
-  margin-top: 8px;
+  min-height: 3em;
+  margin-top: 12px;
   color: var(--bd-ink-2);
   font-size: 12.5px;
   line-height: 1.5;
@@ -165,42 +159,13 @@
   color: #f2b84b;
 }
 .bredesign .bd-tier-book {
-  margin-top: 20px;
+  margin-top: auto;
   gap: 8px;
 }
-/* The riser is the ladder: each step stands taller than the one before. */
-.bredesign .bd-tier-riser {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: calc(30px + var(--step, 0) * 30px);
-  margin: 22px -22px 0;
-  border-top: 1px solid var(--bd-rule);
-  background: linear-gradient(180deg, var(--bd-navy-3), var(--bd-navy));
-  color: rgba(241, 241, 237, 0.6);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
 .bredesign .bd-tier.is-recommended {
-  padding-top: 30px;
   border: 2px solid var(--bd-accent);
   background: linear-gradient(180deg, #0f2275 0%, var(--bd-navy-2) 70%);
   box-shadow: 0 24px 60px -20px rgba(45, 89, 211, 0.55);
-}
-.bredesign .bd-tier.is-recommended .bd-tier-step span {
-  color: var(--bd-paper);
-}
-.bredesign .bd-tier.is-recommended .bd-tier-riser {
-  background: linear-gradient(180deg, var(--bd-blue), var(--bd-navy-3));
-  color: #fff;
-}
-/* Stacked on a phone the climb cannot read, so the risers step aside. */
-@media (max-width: 699px) {
-  .bredesign .bd-tier-riser {
-    height: 34px;
-  }
 }
 
 /* ---- Comparison --------------------------------------------------------- */

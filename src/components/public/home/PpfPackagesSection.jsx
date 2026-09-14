@@ -9,11 +9,13 @@ import './PpfPackagesSection.css'
 
 const packageCards = buildPpfPackageCards(PPF_PACKAGES)
 const shortName = (card) => card.title.replace(' Protection', '')
+const displayName = (card) => card.id === 'high-impact' || card.id === 'basic' ? card.title : `${shortName(card)} Protection`
 
 /* What each step card lists. Read from the package itself, so a change to a
    tier's film, warranty or extras cannot leave the card saying something else. */
 function tierPoints(pkg, card) {
   const points = [`${card.figures[1].value} mil ClearPro TPU film`, pkg.warranty[0]]
+  if (pkg.id === 'basic') points.push('Rocker panels & extra high-impact areas')
   if (pkg.replacementClause[0]) points.push(pkg.replacementClause[0])
   const ceramicRest = pkg.keyEnhancements.find((line) => /ceramic coating on the rest/i.test(line))
   if (ceramicRest) points.push(ceramicRest.replace('of the vehicle exterior', 'of the exterior'))
@@ -97,9 +99,8 @@ function CompareCell({ cell }) {
 }
 
 /* Flow, top to bottom: what are my choices → which one should I get → what is
-   the difference → book. The steps stand on risers that
-   climb, so the order reads without comparing a single number; the one tier
-   Hakum recommends is the only lit card and the only solid button. */
+   the difference → book. Packages share one baseline so none reads as a
+   required step; the Hakum recommendation is identified with a compact tag. */
 export default function PpfPackagesSection() {
   /* The table is eleven coverage rows wide and four tiers deep — useful to the
      reader who wants it, a wall of ticks to the one who has already picked a
@@ -121,7 +122,7 @@ export default function PpfPackagesSection() {
             <a href={PPF_FILM_BRAND.url} target="_blank" rel="noreferrer">
               {PPF_FILM_BRAND.name}
             </a>{' '}
-            self-healing TPU film and includes a free glass ceramic coating.
+            self-healing TPU film and includes free glass and wheels ceramic coating.
           </p>
         </header>
 
@@ -133,22 +134,12 @@ export default function PpfPackagesSection() {
               <article
                 key={card.id}
                 className={`bd-tier${card.isHighlighted ? ' is-recommended' : ''}`}
-                style={{ '--step': index }}
                 data-package={card.id}
               >
-                <div className="bd-tier-step">
-                  <span>
-                    Step {String(index + 1).padStart(2, '0')} · {pkg.ladderLabel}
-                  </span>
-                  {card.isHighlighted && card.recommendedLabel ? (
-                    <strong className="bd-tier-badge">{card.recommendedLabel}</strong>
-                  ) : null}
-                </div>
-                <h3>
-                  {name}
-                  <br />
-                  Protection
-                </h3>
+                {card.isHighlighted && card.recommendedLabel ? (
+                  <strong className="bd-tier-badge">{card.recommendedLabel}</strong>
+                ) : null}
+                <h3>{displayName(card)}</h3>
                 <p className="bd-tier-cover">{pkg.coverageLine}</p>
                 <p className="bd-tier-price">
                   <s>From</s>
@@ -171,12 +162,9 @@ export default function PpfPackagesSection() {
                   state={card.bookingState}
                   aria-label={card.ctaLabel}
                 >
-                  Book {name}
+                  Book {card.id === 'high-impact' || card.id === 'basic' ? card.title : name}
                   {card.isHighlighted ? <ArrowRight size={15} aria-hidden="true" /> : null}
                 </Link>
-                <span className="bd-tier-riser" aria-hidden="true">
-                  Step {index + 1}
-                </span>
               </article>
             )
           })}
@@ -209,7 +197,7 @@ export default function PpfPackagesSection() {
                     {card.isHighlighted && card.recommendedLabel ? (
                       <span className="bd-tier-badge">{card.recommendedLabel}</span>
                     ) : null}
-                    <b>{shortName(card)}</b>
+                    <b>{displayName(card)}</b>
                     <s>{card.priceFromLabel}</s>
                   </th>
                 ))}

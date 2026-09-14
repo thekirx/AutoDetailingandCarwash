@@ -1,13 +1,11 @@
-/* The free coatings are no longer uniform across the ladder: the two front-end
-   tiers carry the glass treatment only, and the wheels coating is part of what
-   the step up to Ultimate buys. Kept as two named lists rather than one shared
-   constant so the difference is visible in the data rather than implied by the
-   tier. */
-export const PPF_ADD_ONS_GLASS_ONLY = ['FREE Glass Ceramic Coating']
-export const PPF_ADD_ONS_GLASS_AND_WHEELS = [
-  'FREE Glass Ceramic Coating',
-  'FREE Wheels Ceramic Coating',
-]
+/* Every tier now carries both free coatings, so this is one list rather than
+   the two it was split into while the wheels coating was still a step up. The
+   two names are kept because the tiers below read as a ladder, and a single
+   shared constant is what makes "all packages include it" true by construction
+   instead of by four entries agreeing. */
+export const PPF_ADD_ONS = ['FREE Glass Ceramic Coating', 'FREE Wheels Ceramic Coating']
+export const PPF_ADD_ONS_GLASS_ONLY = PPF_ADD_ONS
+export const PPF_ADD_ONS_GLASS_AND_WHEELS = PPF_ADD_ONS
 
 /* Film characteristics quoted from the ClearPro specification. They are shared
    by every tier except where the tier's own entry overrides them. */
@@ -48,12 +46,12 @@ export const PPF_PACKAGES = [
        ceramic coating on the rest, from ₱48,000. Film, warranty and free
        extras match Basic Protection, as Kirk directed — to be confirmed with
        Hakum before anything beyond the website depends on them. */
-    id: 'high-impact', title: 'High Impact Protection', subtitle: 'Front PPF + Ceramic Coating',
+    id: 'high-impact', title: 'Starter Partial PPF Package', subtitle: 'Front PPF + Ceramic Coating',
     headline: 'Where the road hits first.',
     shortDescription: 'Film on the front of the car, where stone chips land, and ceramic coating on the rest.',
     coverageType: 'Front PPF',
     coverageAreas: ['Hood', 'Headlights', 'Side mirrors', 'Front bumper', 'Front fenders'],
-    ladderLabel: 'Frontal defense',
+    ladderLabel: 'Starter partial',
     coverageLine: 'Front PPF · hood, headlights, side mirrors, front bumper, front fenders',
     ladderNote: null,
     priceFrom: 48000,
@@ -63,22 +61,22 @@ export const PPF_PACKAGES = [
     warranty: ['7-year factory warranty'],
     replacementClause: [], freeAddOns: PPF_ADD_ONS_GLASS_ONLY, coveredDefects: COVERED_DEFECTS,
     exclusions: EXCLUSIONS, operationalDisclaimers: OPERATIONAL_DISCLAIMERS,
-    recommendedLabel: null, ctaLabel: 'Book High Impact Protection',
+    recommendedLabel: null, ctaLabel: 'Book Starter Partial PPF Package',
   },
   {
     /* Full-body film since 2026-09-12, per Kirk: Basic covers the whole car, so
        the steps up to Ultimate and Platinum are the film, the warranty and the
        extras rather than the panels. With no bare panels left, the ceramic
        coating "on the rest of the vehicle" no longer applies to this tier. */
-    id: 'basic', title: 'Basic Protection', subtitle: 'Full Body PPF',
+    id: 'basic', title: 'Starter Full PPF Package', subtitle: 'Full Body PPF',
     headline: 'The whole car, on essential film.',
     shortDescription: 'Full-body protection on 7.5 mil film with a 7-year warranty.',
     coverageType: 'Full Body PPF',
-    coverageAreas: ['Full exterior', 'Trims', 'Hood', 'Front bumper', 'Rear bumper', 'Headlights', 'Taillights', 'Side mirrors', 'Fenders', 'All four doors', 'Roof', 'Trunk', 'Quarter panels'],
-    ladderLabel: 'Essential',
+    coverageAreas: ['Full exterior', 'Trims', 'Hood', 'Front bumper', 'Rear bumper', 'Headlights', 'Taillights', 'Side mirrors', 'Fenders', 'All four doors', 'Roof', 'Trunk', 'Quarter panels', 'Rocker panels', 'Additional high-impact areas where applicable'],
+    ladderLabel: 'Starter full',
     coverageLine: 'Full body PPF · every painted panel and trims',
     ladderNote: {
-      label: 'Over High Impact',
+      label: 'Over Starter Partial',
       text: 'The whole car instead of the front only',
       tone: 'step',
     },
@@ -89,7 +87,7 @@ export const PPF_PACKAGES = [
     warranty: ['7-year factory warranty'],
     replacementClause: [], freeAddOns: PPF_ADD_ONS_GLASS_ONLY, coveredDefects: COVERED_DEFECTS,
     exclusions: EXCLUSIONS, operationalDisclaimers: OPERATIONAL_DISCLAIMERS,
-    recommendedLabel: null, ctaLabel: 'Book Basic Protection',
+    recommendedLabel: null, ctaLabel: 'Book Starter Full PPF Package',
   },
   {
     id: 'ultimate', title: 'Ultimate Protection', subtitle: 'Full Body PPF',
@@ -100,7 +98,7 @@ export const PPF_PACKAGES = [
     ladderLabel: 'Hakum recommends',
     coverageLine: 'Full body PPF · thicker film and panel replacement',
     ladderNote: {
-      label: 'Over Basic',
+      label: 'Over Starter Full',
       text: 'Thicker film · +3 years warranty · faster self-healing · super hydrophobic · panel replacement · wheels coating',
       tone: 'step',
     },

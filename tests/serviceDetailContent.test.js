@@ -2,7 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { SERVICE_DETAIL_CONTENT } from '../src/data/serviceDetailContent.js'
-import { GALLERY_PAGES, ORIGIN, WHY_SECTIONS } from '../src/components/public/bredesign/content.js'
+import {
+  GALLERY_PAGES,
+  ORIGIN,
+  SERVICES,
+  SERVICE_POINT_CARDS,
+  WASH_SERVICES,
+  WHY_SECTIONS,
+} from '../src/components/public/bredesign/content.js'
 import { publicServiceDestination } from '../src/lib/publicCatalog.js'
 
 test('public service destinations keep editorial pages, queue, and booking flows distinct', () => {
@@ -60,7 +67,7 @@ test('ceramic package benefit is owned by both packages without invented conditi
 
 test('homepage gallery features one real clip from each proof-backed service', () => {
   const featured = Object.entries(SERVICE_DETAIL_CONTENT).flatMap(([serviceId, service]) =>
-    service.proof.clips
+    (service.proof?.clips || [])
       .filter((clip) => clip.homepageFeatured)
       .map((clip) => ({ serviceId, id: clip.id, poster: clip.poster, sources: clip.sources })),
   )
@@ -134,6 +141,77 @@ test('the Tint detail-page CTA books Tint instead of looping back to the service
 })
 
 test('the Hakum story uses the shopfront-at-dusk photograph and matching alternative text', () => {
-  assert.equal(new URL(ORIGIN.image).pathname.split('/').at(-1), 'hakum-shopfront-dusk.webp')
+  assert.equal(new URL(ORIGIN.image).pathname.split('/').at(-1), 'hakum-octp1-23.webp')
   assert.equal(ORIGIN.imageAlt, 'Hakum Auto Care branch at dusk with illuminated signage and cars waiting outside')
+  assert.equal(ORIGIN.tagLine, undefined)
+})
+
+test('Premium Wash & Detailing opens a page whose only subservice surface is a looping rail', () => {
+  const wash = SERVICES.find((service) => service.title === 'Premium Wash & Detailing')
+  assert.equal(wash.to, '/services/wash-detailing')
+  assert.equal(wash.popup, undefined)
+  assert.deepEqual(WASH_SERVICES.map((service) => service.title), [
+    'Premium Car Wash',
+    'Interior Detailing',
+    'Glass Coating',
+    'Headlight Restoration',
+    'Glass Cleaning',
+    'Engine Wash',
+    'Mobile Detailing',
+  ])
+  assert.equal(SERVICE_DETAIL_CONTENT['wash-detailing'].serviceName, 'Premium Wash & Detailing')
+})
+
+test('PPF and Ceramic benefit cards keep the approved claims and use claim-specific photography', () => {
+  assert.deepEqual(SERVICE_POINT_CARDS.ppf.map((card) => card.title), [
+    'Self-healing top coat',
+    'Impact-ready barrier',
+    'Hydrophobic performance',
+    'Anti-yellowing TPU',
+  ])
+  assert.equal(SERVICE_POINT_CARDS.ppf.some((card) => /optical clarity/i.test(card.title)), false)
+
+  assert.deepEqual(SERVICE_POINT_CARDS.ceramic.map((card) => card.title), [
+    'Permanent molecular bond',
+    'Extreme gloss & depth',
+    'Hydrophobic self-cleaning',
+    'UV & chemical resistance',
+  ])
+  /* Bundled assets arrive as absolute URLs and files under public/ as root
+     paths, so compare on the filename either way. */
+  const fileName = (src) => src.split('?')[0].split('/').at(-1)
+
+  /* Every benefit photograph is real Hakum work, and no two benefits share a
+     frame: a tile that repeats its neighbour is a tile that is illustrating the
+     heading rather than the claim. */
+  assert.deepEqual(SERVICE_POINT_CARDS.ceramic.map((card) => fileName(card.image)), [
+    'tesla-poster.webp',
+    'ceramic-tesla-gloss.jpg',
+    'ceramic-tesla-finish.jpg',
+    'mg-poster.webp',
+  ])
+  assert.deepEqual(SERVICE_POINT_CARDS.ppf.map((card) => fileName(card.image)), [
+    'mini-cooper-poster.webp',
+    'panel-install-poster.webp',
+    'ppf-information-grey-truck-clean.jpg',
+    'toyota-cross-poster.webp',
+  ])
+
+  for (const service of ['ppf', 'ceramic']) {
+    const shots = SERVICE_POINT_CARDS[service].map((card) => fileName(card.image))
+    assert.equal(new Set(shots).size, shots.length, `${service} benefit photos repeat`)
+    /* ceramic-tesla-application.jpg is a social post with "BOOK NOW" and the
+       site address burnt into the frame; ceramic-tesla-hydrophobic.jpg is a
+       buffing shot, which is the mismatch this card set exists to fix. */
+    for (const shot of shots) {
+      assert.doesNotMatch(shot, /ceramic-tesla-application|ceramic-tesla-hydrophobic|^clearpro-/)
+    }
+  }
+  assert.equal(SERVICE_DETAIL_CONTENT.ceramic.proof.title, 'A finish that stays showroom ready.')
+  assert.deepEqual(SERVICE_POINT_CARDS.tint.map((card) => card.title), [
+    'Heat rejection',
+    'Clear outward visibility',
+    'Signal-safe performance',
+    'UV interior protection',
+  ])
 })

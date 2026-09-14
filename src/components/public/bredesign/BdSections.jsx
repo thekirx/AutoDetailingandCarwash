@@ -1,10 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ArrowRight, ArrowUpRight, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { SERVICE_DETAIL_CONTENT } from '../../../data/serviceDetailContent'
 import BdVideoModal from './BdVideoModal'
-import BdWashModal from './BdWashModal'
 import { LoopArrows, LoopBar } from './LoopRail'
 import { loopSlides, useLoopRail } from './useLoopRail'
 import WhyIcon from './WhyIcon'
@@ -52,7 +51,7 @@ export function BdOrigin() {
         </div>
         <div className="bd-origin-tag">
           <strong>{ORIGIN.tagTitle}</strong>
-          <span>{ORIGIN.tagLine}</span>
+          {ORIGIN.tagLine ? <span>{ORIGIN.tagLine}</span> : null}
         </div>
       </div>
     </section>
@@ -78,10 +77,6 @@ function ServiceCardBody({ service }) {
 }
 
 export function BdServices() {
-  const [washOpen, setWashOpen] = useState(false)
-  const washTrigger = useRef(null)
-  const closeWash = useCallback(() => setWashOpen(false), [])
-
   return (
     <section className="bd-services" id="services">
       <div className="bd-shell">
@@ -98,27 +93,13 @@ export function BdServices() {
           </p>
         </div>
         <div className="bd-service-grid bd-reveal">
-          {SERVICES.map((service) =>
-            service.popup ? (
-              <button
-                type="button"
-                className="bd-service"
-                key={service.number}
-                ref={washTrigger}
-                aria-haspopup="dialog"
-                onClick={() => setWashOpen(true)}
-              >
-                <ServiceCardBody service={service} />
-              </button>
-            ) : (
-              <Link className="bd-service" key={service.number} to={service.to}>
-                <ServiceCardBody service={service} />
-              </Link>
-            ),
-          )}
+          {SERVICES.map((service) => (
+            <Link className="bd-service" key={service.number} to={service.to}>
+              <ServiceCardBody service={service} />
+            </Link>
+          ))}
         </div>
       </div>
-      <BdWashModal open={washOpen} onClose={closeWash} returnFocusRef={washTrigger} />
     </section>
   )
 }

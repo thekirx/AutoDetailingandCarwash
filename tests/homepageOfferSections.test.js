@@ -60,7 +60,7 @@ describe('PPF package value ladder', () => {
     ])
     assert.deepEqual(cards.map((card) => card.figures.map((figure) => figure.value + figure.unit)), [
       ['5', '7.5mil', '7yr'],
-      ['13', '7.5mil', '7yr'],
+      ['15', '7.5mil', '7yr'],
       ['13', '8mil', '10yr'],
       ['15', '8.5mil', '12yr'],
     ])
@@ -105,11 +105,14 @@ describe('PPF package value ladder', () => {
     assert.match(section, /ppf-install-proof/)
   })
 
-  it('leads with the package pitch, then the step ladder and panel-by-panel comparison', async () => {
+  it('leads with the package pitch, then the levelled tiers and panel-by-panel comparison', async () => {
     const section = await read('src/components/public/home/PpfPackagesSection.jsx')
 
     assert.match(section, /className=\{`bd-tier\$\{card\.isHighlighted \? ' is-recommended' : ''\}`\}/)
-    assert.match(section, /className="bd-tier-riser"/)
+    /* No riser and no step counter: the cards are four peers, and the one
+       Hakum recommends is marked by its badge alone. */
+    assert.doesNotMatch(section, /bd-tier-riser|bd-tier-step\b|Step \{String/)
+    assert.match(section, /className="bd-tier-badge"/)
     /* Coverage is compared panel by panel: High Impact and Basic film
        different panels, so a count of areas would hide the difference. */
     assert.match(section, /'Front bumper', \(pkg\) => tick\(covers\(pkg, 'Front bumper'\)\)/)
@@ -130,7 +133,11 @@ describe('PPF package value ladder', () => {
     /* Basic films the whole car, like Ultimate — the step up is the film,
        the warranty and the extras, not the panels. */
     assert.equal(basic.coverageType, 'Full Body PPF')
-    assert.deepEqual(basic.coverageAreas, ultimate.coverageAreas)
+    assert.deepEqual(basic.coverageAreas, [
+      ...ultimate.coverageAreas,
+      'Rocker panels',
+      'Additional high-impact areas where applicable',
+    ])
     assert.equal(basic.keyEnhancements.some((line) => /ceramic coating on the rest/i.test(line)), false)
     assert.equal(basic.ladderNote.tone, 'step')
   })
