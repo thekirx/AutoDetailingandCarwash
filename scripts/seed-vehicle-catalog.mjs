@@ -38,6 +38,7 @@ for (let i = 0; i < rows.length; i += chunk) {
     make: r.make,
     model: r.model,
     sort_order: r.sort_order,
+    size_slug: r.size_slug,
     is_active: true,
     updated_at: new Date().toISOString(),
   }))

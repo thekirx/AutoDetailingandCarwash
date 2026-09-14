@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
-import { buildCompletedVisitReview, VISIT_REVIEW_AXES } from '../src/lib/serviceReviews.js'
+import { buildCompletedVisitReview, visitReviewAxesForKind, VISIT_REVIEW_AXES } from '../src/lib/serviceReviews.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(root, p), 'utf8')
@@ -23,6 +23,13 @@ describe('completed visit review payload', () => {
     )
     assert.equal(buildCompletedVisitReview({ overall: 5, app: 4, service: 5 }, ''), null)
     assert.equal(buildCompletedVisitReview({ overall: 0, app: 4, service: 5, detailing: 3 }, ''), null)
+    assert.deepEqual(
+      buildCompletedVisitReview({ overall: 5, app: 4, detailing: 5 }, '', { kind: 'detailing' }),
+      { overall_rating: 5, app_rating: 4, service_rating: null, detailing_rating: 5, comment: null },
+    )
+    assert.equal(buildCompletedVisitReview({ overall: 5, app: 4, service: 5 }, '', { kind: 'detailing' }), null)
+    assert.equal(visitReviewAxesForKind('detailing').map((a) => a.id).join(','), 'overall,app,detailing')
+    assert.equal(visitReviewAxesForKind('service').map((a) => a.id).join(','), 'overall,app,service')
   })
 
   it('wires four axes on customer home and ops reviews', () => {
@@ -32,7 +39,7 @@ describe('completed visit review payload', () => {
     const portal = read('server/customerPortal.mjs')
     const garage = read('src/pages/CustomerMorePage.jsx')
     assert.match(home, /buildCompletedVisitReview/)
-    assert.match(home, /VISIT_REVIEW_AXES/)
+    assert.match(home, /visitReviewAxesForKind/)
     assert.match(reviews, /VISIT_REVIEW_AXES/)
     assert.match(reviews, /app_rating/)
     assert.match(css, /\.capp-rate-stars/)

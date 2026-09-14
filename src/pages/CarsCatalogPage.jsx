@@ -19,9 +19,32 @@ import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { clearVehicleCatalogCache } from '@/components/VehicleMakeModelFields'
 import { writeAudit } from '@/lib/audit'
+import { inferPhPricingSize } from '@/lib/phVehicleSizes'
+import { PRICING_SIZES } from '@/lib/servicePricing'
 import { supabase } from '@/lib/supabase'
 
-const emptyForm = { make: '', model: '' }
+const emptyForm = { make: '', model: '', size_slug: 'medium' }
+
+function sizeLabel(slug) {
+  return PRICING_SIZES.find((s) => s.slug === slug)?.label || slug || 'Medium'
+}
+
+function SizeSelect({ id, value, onChange }) {
+  return (
+    <select
+      id={id}
+      value={value || 'medium'}
+      onChange={(e) => onChange(e.target.value)}
+      className="flex h-9 min-w-[9rem] rounded-md border border-input bg-transparent px-3 text-sm"
+    >
+      {PRICING_SIZES.map((sz) => (
+        <option key={sz.slug} value={sz.slug}>
+          {sz.label}
+        </option>
+      ))}
+    </select>
+  )
+}
 
 export default function CarsCatalogPage() {
   const { profile } = useAuth()
@@ -32,11 +55,12 @@ export default function CarsCatalogPage() {
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
+  const [sizeFilter, setSizeFilter] = useState('all')
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from('vehicle_catalog')
-      .select('id, make, model, is_active, sort_order, updated_at')
+      .select('id, make, model, size_slug, is_active, sort_order, updated_at')
       .order('make')
       .order('model')
     if (error) toast.error(error.message)
@@ -52,16 +76,21 @@ export default function CarsCatalogPage() {
     return rows.filter((row) => {
       if (activeFilter === 'active' && !row.is_active) return false
       if (activeFilter === 'hidden' && row.is_active) return false
+      if (sizeFilter !== 'all' && (row.size_slug || 'medium') !== sizeFilter) return false
       if (!q) return true
       return `${row.make} ${row.model}`.toLowerCase().includes(q)
     })
-  }, [rows, search, activeFilter])
+  }, [rows, search, activeFilter, sizeFilter])
 
   if (!isSuperAdmin(profile)) return <Navigate to="/operations/access-denied" replace />
 
   function openEdit(row) {
     setEditing(row)
-    setEditForm({ make: row.make, model: row.model })
+    setEditForm({
+      make: row.make,
+      model: row.model,
+      size_slug: row.size_slug || inferPhPricingSize(row.make, row.model),
+    })
   }
 
   function closeEdit() {
@@ -74,10 +103,11 @@ export default function CarsCatalogPage() {
     const make = addForm.make.trim()
     const model = addForm.model.trim()
     if (!make || !model) return
+    const size_slug = addForm.size_slug || inferPhPricingSize(make, model)
     setSaving(true)
     const { data, error } = await supabase
       .from('vehicle_catalog')
-      .insert({ make, model, is_active: true, sort_order: 0 })
+      .insert({ make, model, size_slug, is_active: true, sort_order: 0 })
       .select('id')
       .single()
     setSaving(false)
@@ -89,8 +119,8 @@ export default function CarsCatalogPage() {
       action: 'create',
       entityType: 'vehicle_catalog',
       entityId: data.id,
-      summary: `Added master car ${make} ${model}`,
-      meta: { make, model },
+      summary: `Added master car ${make} ${model} (${sizeLabel(size_slug)})`,
+      meta: { make, model, size_slug },
     })
     clearVehicleCatalogCache()
     toast.success('Added')
@@ -104,10 +134,11 @@ export default function CarsCatalogPage() {
     const make = editForm.make.trim()
     const model = editForm.model.trim()
     if (!make || !model) return
+    const size_slug = editForm.size_slug || inferPhPricingSize(make, model)
     setSaving(true)
     const { error } = await supabase
       .from('vehicle_catalog')
-      .update({ make, model, updated_at: new Date().toISOString() })
+      .update({ make, model, size_slug, updated_at: new Date().toISOString() })
       .eq('id', editing.id)
       .select('id')
       .single()
@@ -120,8 +151,8 @@ export default function CarsCatalogPage() {
       action: 'update',
       entityType: 'vehicle_catalog',
       entityId: editing.id,
-      summary: `Updated master car to ${make} ${model}`,
-      meta: { make, model, previous: { make: editing.make, model: editing.model } },
+      summary: `Updated master car to ${make} ${model} (${sizeLabel(size_slug)})`,
+      meta: { make, model, size_slug, previous: { make: editing.make, model: editing.model, size_slug: editing.size_slug } },
     })
     clearVehicleCatalogCache()
     toast.success('Saved')
@@ -174,23 +205,43 @@ export default function CarsCatalogPage() {
       className="hakum-cars"
       eyebrow="Masterlist"
       title="Cars catalog"
-      description="Super Admin CRUD for the TL queue picker. PH makes/models (1990s–present) seed the list; edit opens in a modal."
+      description="Super Admin CRUD for the TL queue picker. Each make/model has a bay size (Small–XL) so bookings and packages auto-price; staff can override on the ticket."
     >
 
       <Card>
         <CardHeader>
           <CardTitle>Add make / model</CardTitle>
-          <CardDescription>Used by VehicleMakeModelFields on the floor for Team Lead and staff.</CardDescription>
+          <CardDescription>Used by VehicleMakeModelFields on the floor for Team Lead and staff. Size seeds from the PH market chart; change it if this shop prices the car differently.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={addRow} className="flex flex-wrap gap-3">
             <div className="flex flex-col gap-2">
               <Label>Make</Label>
-              <Input required value={addForm.make} onChange={(e) => setAddForm({ ...addForm, make: e.target.value })} placeholder="Toyota" />
+              <Input
+                required
+                value={addForm.make}
+                onChange={(e) => {
+                  const make = e.target.value
+                  setAddForm({ ...addForm, make, size_slug: inferPhPricingSize(make, addForm.model) })
+                }}
+                placeholder="Toyota"
+              />
             </div>
             <div className="flex flex-col gap-2">
               <Label>Model</Label>
-              <Input required value={addForm.model} onChange={(e) => setAddForm({ ...addForm, model: e.target.value })} placeholder="Vios" />
+              <Input
+                required
+                value={addForm.model}
+                onChange={(e) => {
+                  const model = e.target.value
+                  setAddForm({ ...addForm, model, size_slug: inferPhPricingSize(addForm.make, model) })
+                }}
+                placeholder="Vios"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="add-size">Size</Label>
+              <SizeSelect id="add-size" value={addForm.size_slug} onChange={(size_slug) => setAddForm({ ...addForm, size_slug })} />
             </div>
             <Button type="submit" className="self-end" disabled={saving}>
               {saving && !editing ? 'Saving…' : 'Add'}
@@ -204,7 +255,7 @@ export default function CarsCatalogPage() {
           <CardTitle>
             {filtered.length} of {rows.length} entries
           </CardTitle>
-          <CardDescription>Search and filter the master list. Active models appear in the TL picker immediately.</CardDescription>
+          <CardDescription>Search and filter the master list. Active models appear in the TL picker immediately with this size.</CardDescription>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex flex-1 flex-col gap-2">
               <Label htmlFor="cars-search">Search</Label>
@@ -214,6 +265,22 @@ export default function CarsCatalogPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Make or model…"
               />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="cars-size">Size</Label>
+              <select
+                id="cars-size"
+                value={sizeFilter}
+                onChange={(e) => setSizeFilter(e.target.value)}
+                className="flex h-9 min-w-[8rem] rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                <option value="all">All</option>
+                {PRICING_SIZES.map((sz) => (
+                  <option key={sz.slug} value={sz.slug}>
+                    {sz.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="cars-active">Visibility</Label>
@@ -236,6 +303,7 @@ export default function CarsCatalogPage() {
               <TableRow>
                 <TableHead>Make</TableHead>
                 <TableHead>Model</TableHead>
+                <TableHead>Size</TableHead>
                 <TableHead>Active</TableHead>
                 <TableHead />
               </TableRow>
@@ -245,6 +313,7 @@ export default function CarsCatalogPage() {
                 <TableRow key={row.id}>
                   <TableCell>{row.make}</TableCell>
                   <TableCell>{row.model}</TableCell>
+                  <TableCell>{sizeLabel(row.size_slug)}</TableCell>
                   <TableCell>{row.is_active ? 'Yes' : 'Hidden'}</TableCell>
                   <TableCell className="flex flex-wrap gap-1">
                     <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
@@ -261,8 +330,8 @@ export default function CarsCatalogPage() {
               ))}
               {!filtered.length && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-muted-foreground">
-                    {rows.length ? 'No entries match this search/filter.' : 'Catalog empty — TL uses static PH list.'}
+                  <TableCell colSpan={5} className="text-muted-foreground">
+                    {rows.length ? 'No entries match this search/filter.' : 'Catalog empty — add a make and model above.'}
                   </TableCell>
                 </TableRow>
               )}
@@ -287,7 +356,10 @@ export default function CarsCatalogPage() {
                 id="edit-make"
                 required
                 value={editForm.make}
-                onChange={(e) => setEditForm({ ...editForm, make: e.target.value })}
+                onChange={(e) => {
+                  const make = e.target.value
+                  setEditForm({ ...editForm, make, size_slug: inferPhPricingSize(make, editForm.model) })
+                }}
                 placeholder="Toyota"
               />
             </div>
@@ -297,9 +369,17 @@ export default function CarsCatalogPage() {
                 id="edit-model"
                 required
                 value={editForm.model}
-                onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
+                onChange={(e) => {
+                  const model = e.target.value
+                  setEditForm({ ...editForm, model, size_slug: inferPhPricingSize(editForm.make, model) })
+                }}
                 placeholder="Vios"
               />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-size">Size</Label>
+              <SizeSelect id="edit-size" value={editForm.size_slug} onChange={(size_slug) => setEditForm({ ...editForm, size_slug })} />
+              <p className="text-xs text-muted-foreground">Auto-fills from the PH chart when make or model changes. Override if this bay prices it differently.</p>
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button type="button" variant="outline" onClick={closeEdit}>

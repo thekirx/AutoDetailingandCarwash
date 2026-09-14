@@ -66,8 +66,14 @@ describe('request.md floor + people', () => {
     assert.deepEqual(tiles.find((t) => t.role === 'video_editor').names, ['Rico Films'])
   })
 
-  it('People create form toggles attendance, geofence, and on-call', () => {
+  it('Create account is a modal; directory has tabs, search, supervisor, attendance', () => {
     const people = read('src/pages/PeopleManagePage.jsx')
+    assert.match(people, /Create account/)
+    assert.match(people, /setCreateOpen\(true\)/)
+    assert.match(people, /PEOPLE_DIRECTORY_TABS/)
+    assert.match(people, /dirTab === 'attendance'/)
+    assert.match(people, /Tag as supervisor/)
+    assert.match(people, /Reports to/)
     assert.match(people, /attendance_enabled/)
     assert.match(people, /geofence_enabled/)
     assert.match(people, /on_call/)
@@ -293,7 +299,7 @@ describe('request.md reviews + garage', () => {
     const css = read('src/styles-customer-app.css')
     const app = read('src/App.jsx')
     assert.match(home, /buildCompletedVisitReview/)
-    assert.match(home, /VISIT_REVIEW_AXES/)
+    assert.match(home, /visitReviewAxesForKind/)
     assert.match(reviews, /VISIT_REVIEW_AXES/)
     assert.match(css, /min-width: 44px/)
     assert.match(app, /path="reviews"/)

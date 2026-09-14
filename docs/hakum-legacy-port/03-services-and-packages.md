@@ -16,7 +16,7 @@ On a car job:
 
 ## Size pricing
 
-Car sizes: `small` | `medium` | `large` | `extra_large`.
+Car sizes: `small` | `medium` | `large` | `extra_large`. Hakum source of truth is Super Admin Cars (`vehicle_catalog.size_slug`) plus per-service `service_size_prices`. Queue/book forms auto-select the catalog size; staff may override.
 
 ```ts
 interface SizePricing {

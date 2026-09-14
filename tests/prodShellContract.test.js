@@ -29,6 +29,7 @@ describe('Production shell contract (CSP + stale chunks)', () => {
     assert.match(csp, /connect-src[^;]*\bblob:/)
     assert.match(csp, /connect-src[^;]*fcm\.googleapis\.com/)
     assert.match(csp, /connect-src[^;]*web\.push\.apple\.com/)
+    assert.match(csp, /connect-src[^;]*api\.open-meteo\.com/)
     assert.match(csp, /connect-src[^;]*notify\.windows\.com/)
     assert.match(csp, /worker-src 'self' blob:/)
     assert.doesNotMatch(csp, /script-src 'self' 'unsafe-inline'$/)

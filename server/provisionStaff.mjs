@@ -192,6 +192,12 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
       employment_type: body.employment_type === 'on_call' ? 'on_call' : 'permanent',
       is_active: true,
       is_archived: false,
+      ...(caller.role === SUPER
+        ? {
+            is_supervisor: Boolean(body.is_supervisor),
+            reports_to: body.reports_to && body.reports_to !== authUser.id ? String(body.reports_to) : null,
+          }
+        : {}),
     },
     { onConflict: 'id' },
   )

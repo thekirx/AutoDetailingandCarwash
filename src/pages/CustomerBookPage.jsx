@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Car, MapPin, Sparkles } from 'lucide-react'
+import { ArrowRight, Car, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { fetchPortal } from '@/lib/customerPortalClient'
-import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '@/lib/servicePricing'
+import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor, normalizePricingSize } from '@/lib/servicePricing'
+import { filterFloorDetailingServices } from '@/lib/serviceKinds'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
 import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import { usePageMeta } from '@/lib/pageMeta'
@@ -72,24 +73,32 @@ export default function CustomerBookPage() {
       fetchPortal().catch(() => null),
       supabase
         .from('services')
-        .select('id, name, description, price_minor, service_size_prices(size_slug, price_minor)')
+        .select('id, name, description, slug, pay_category, price_minor, service_size_prices(size_slug, price_minor)')
         .eq('is_active', true)
         .order('display_order'),
     ]).then(([data, svc]) => {
       if (cancelled) return
       if (svc.error) setError(svc.error.message)
-      setServices(
+      setPortal(data)
+      const name = String(data?.profile?.full_name || authProfile?.full_name || '').trim()
+      const parts = name.split(/\s+/).filter(Boolean)
+      const wantedVehicle = params.get('vehicle')
+      const wantedPlate = String(params.get('plate') || '').trim()
+      const wantedService = String(params.get('service') || '').toLowerCase()
+      const detailing = filterFloorDetailingServices(
         (svc.data || []).map((row) => ({
           ...row,
           size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
         })),
       )
-      setPortal(data)
-      const name = String(data?.profile?.full_name || authProfile?.full_name || '').trim()
-      const parts = name.split(/\s+/).filter(Boolean)
-      const wantedVehicle = params.get('vehicle')
-      const pick = (data?.vehicles || []).find((v) => v.id === wantedVehicle) || data?.vehicles?.[0] || null
+      setServices(detailing)
+      const pickById = (data?.vehicles || []).find((v) => v.id === wantedVehicle)
+      const pickByPlate = wantedPlate
+        ? (data?.vehicles || []).find((v) => String(v.plate_number || '').toUpperCase() === wantedPlate.toUpperCase())
+        : null
+      const pick = pickById || pickByPlate || (!wantedPlate && !wantedVehicle ? data?.vehicles?.[0] : null) || null
       const wantedBranch = params.get('branch')
+      const serviceId = wantedService ? detailing.find((s) => String(s.slug || '').toLowerCase() === wantedService)?.id || '' : ''
       setForm((f) =>
         seedBookingFromVehicle(
           {
@@ -101,6 +110,8 @@ export default function CustomerBookPage() {
               (wantedBranch && data?.branches?.some((b) => b.slug === wantedBranch) && wantedBranch) ||
               data?.branches?.[0]?.slug ||
               '',
+            service_id: serviceId || f.service_id,
+            vehicle_plate: wantedPlate || f.vehicle_plate,
           },
           pick,
         ),
@@ -123,7 +134,7 @@ export default function CustomerBookPage() {
       vehicle_plate: v.plate_number || '',
       vehicle_make: v.vehicle_make || '',
       vehicle_model: v.vehicle_model || '',
-      vehicle_type: v.vehicle_type || f.vehicle_type || 'medium',
+      vehicle_type: v.vehicle_type ? normalizePricingSize(v.vehicle_type) : f.vehicle_type || 'medium',
     }))
   }
 
@@ -193,7 +204,7 @@ export default function CustomerBookPage() {
         </label>
 
         <div className="capp-sect">
-          <h2>Select a service</h2>
+          <h2>Select a detailing service</h2>
         </div>
         {loading ? (
           <Skeleton n={3} />
@@ -210,9 +221,6 @@ export default function CustomerBookPage() {
                   className={`capp-service${active ? ' is-active' : ''}`}
                   onClick={() => set('service_id', s.id)}
                 >
-                  <span className="capp-row-icon" aria-hidden>
-                    <Sparkles size={18} strokeWidth={1.75} />
-                  </span>
                   <span className="capp-row-body">
                     <strong>{s.name}</strong>
                     {s.description ? <em>{s.description}</em> : null}
@@ -224,7 +232,7 @@ export default function CustomerBookPage() {
                 </button>
               )
             })}
-            {!services.length ? <div className="capp-empty">No services are open for booking right now.</div> : null}
+            {!services.length ? <div className="capp-empty">No detailing services are open for booking right now.</div> : null}
           </div>
         )}
 
@@ -257,6 +265,7 @@ export default function CustomerBookPage() {
             model={form.vehicle_model}
             onMakeChange={(vehicle_make) => set('vehicle_make', vehicle_make)}
             onModelChange={(vehicle_model) => set('vehicle_model', vehicle_model)}
+            onSizeSuggest={(size) => set('vehicle_type', size)}
             variant="public"
             makeLabel="Brand"
             modelLabel="Model"

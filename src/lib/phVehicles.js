@@ -3,6 +3,8 @@
  * from the 1990s through present (CAMPI-era + legacy icons).
  * Used by floor autocomplete; Super Admin vehicle_catalog prefers DB when seeded.
  */
+
+import { inferPhPricingSize } from './phVehicleSizes.js'
 export const PH_VEHICLE_CATALOG = {
   Toyota: [
     'Vios', 'Wigo', 'Raize', 'Yaris', 'Yaris Cross', 'Corolla', 'Corolla Altis', 'Corolla Cross',
@@ -104,13 +106,19 @@ export const PH_VEHICLE_CATALOG = {
 
 export const PH_VEHICLE_MAKES = Object.keys(PH_VEHICLE_CATALOG).sort((a, b) => a.localeCompare(b))
 
-/** Flatten catalog to {make, model, sort_order}[] for DB seed. */
+/** Flatten catalog to {make, model, sort_order, size_slug}[] for DB seed. */
 export function flattenVehicleCatalog(catalog = PH_VEHICLE_CATALOG) {
   const rows = []
   for (const make of Object.keys(catalog).sort((a, b) => a.localeCompare(b))) {
     const models = catalog[make] || []
     models.forEach((model, sort_order) => {
-      rows.push({ make, model: String(model).trim(), sort_order })
+      const name = String(model).trim()
+      rows.push({
+        make,
+        model: name,
+        sort_order,
+        size_slug: inferPhPricingSize(make, name),
+      })
     })
   }
   return rows.filter((r) => r.make && r.model)

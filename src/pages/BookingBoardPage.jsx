@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar'
 import { format, getDay, parse, startOfWeek } from 'date-fns'
@@ -7,12 +7,14 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessBookingBoard,
+  canAdvanceBookingStatus,
   canCheckInFormBooking,
   canCreateBookings,
   canEditBookings,
   canModifyBookingServicePrice,
   canSeeAllBranches,
   getBranchScopeList,
+  isBranchAdmin,
   isFormBookingsOnlyRole,
   ROLES,
 } from '@/auth/permissions'
@@ -76,6 +78,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
+import { normalizePricingSize, PRICING_SIZES, resolveServicePriceMinor } from '@/lib/servicePricing'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { cn } from '@/lib/utils'
 import { ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ClipboardList, Send, Sparkles, Wrench } from 'lucide-react'
@@ -117,6 +121,7 @@ const emptyBooking = {
   vehicle_plate: '',
   vehicle_make: '',
   vehicle_model: '',
+  vehicle_type: 'medium',
   notes: '',
   status: 'pending',
   price_pesos: '',
@@ -291,10 +296,11 @@ export default function BookingBoardPage() {
   const canCreate = canCreateBookings(profile)
   const canEditServicePrice = canModifyBookingServicePrice(profile)
   const isMarketing = profile?.role === ROLES.MARKETING
+  const bookingsReadOnly = isMarketing || isBranchAdmin(profile)
   const formBookingsOnly = isFormBookingsOnlyRole(profile)
-  const canCheckIn = canCheckInFormBooking(profile)
-  const canAdvanceStatus = canEdit && !isMarketing
-  const canCancelForm = canEdit
+  const canCheckIn = canCheckInFormBooking(profile) && !bookingsReadOnly
+  const canAdvanceStatus = canAdvanceBookingStatus(profile) && !bookingsReadOnly
+  const canCancelForm = canEdit && !bookingsReadOnly
   const canSeePayment = false // Bookings board ends at Successful Release — POS is separate
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = BOOKING_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'board'
@@ -360,7 +366,7 @@ export default function BookingBoardPage() {
 
   const load = useCallback(async () => {
     const select =
-      'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, service_id, final_price_minor, price_minor, services(name, slug, pay_category)'
+      'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, vehicle_type, service_id, final_price_minor, price_minor, services(name, slug, pay_category)'
     // Open pipeline stays on board/calendar until released/cancelled — date filter only gates terminal rows.
     const openStatuses = boardStatuses.filter((s) => isOpenBookingStatus(s))
     const closedStatuses = boardStatuses.filter((s) => !isOpenBookingStatus(s))
@@ -697,27 +703,60 @@ export default function BookingBoardPage() {
     }
   }
 
-  function openCreate() {
+  function openCreate(prefill = {}) {
     setEditing(null)
     const formBranches = formBranchOptions
     const defaultBranch =
-      branchFilter !== 'all'
+      prefill.branch ||
+      (branchFilter !== 'all'
         ? branchFilter
         : preferredBranchSlug(formBranches) ||
           pickDefaultBranchSlug(profile, formBranches) ||
           formBranches[0]?.slug ||
-          ''
+          '')
+    const slug = String(prefill.serviceSlug || '').toLowerCase()
     const defaultService =
-      formServices[0]?.id || ''
+      (slug && formServices.find((s) => String(s.slug || '').toLowerCase() === slug)?.id) ||
+      formServices[0]?.id ||
+      ''
+    const defaultSize = 'medium'
+    const createPriceMinor = resolveServicePriceMinor(
+      formServices.find((s) => s.id === defaultService),
+      defaultSize,
+    )
     setForm({
       ...emptyBooking,
       branch: defaultBranch,
       service_id: defaultService,
+      vehicle_plate: prefill.plate || '',
+      customer_name: prefill.customerName || '',
+      customer_phone: prefill.phone || '',
+      vehicle_type: defaultSize,
       scheduled_start: `${todayISO()}T10:00`,
+      price_pesos: createPriceMinor ? String(createPriceMinor / 100) : '',
     })
     setCustomerLookup({ loading: false, error: '', match: null })
     setFormOpen(true)
   }
+
+  const bookedFromUrl = useRef(false)
+  useEffect(() => {
+    if (bookedFromUrl.current || !canCreate || !formServices.length) return
+    const book = searchParams.get('book')
+    const serviceSlug = searchParams.get('service')
+    const plate = searchParams.get('plate')
+    if (book !== '1' && !serviceSlug && !plate) return
+    bookedFromUrl.current = true
+    openCreate({
+      serviceSlug: serviceSlug || 'paint-maintenance',
+      plate: plate || '',
+      customerName: searchParams.get('name') || '',
+      phone: searchParams.get('phone') || '',
+      branch: searchParams.get('branch') || '',
+    })
+    // ponytail: fire once from the URL; openCreate closes over current services.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canCreate, formServices, searchParams])
 
   async function lookupExistingCustomer(identifier) {
     const raw = String(identifier || '').trim()
@@ -772,6 +811,7 @@ export default function BookingBoardPage() {
       vehicle_plate: booking.vehicle_plate || '',
       vehicle_make: booking.vehicle_make || '',
       vehicle_model: booking.vehicle_model || '',
+      vehicle_type: normalizePricingSize(booking.vehicle_type),
       notes: booking.notes || '',
       status: booking.status || 'pending',
       price_pesos:
@@ -822,6 +862,7 @@ export default function BookingBoardPage() {
       vehicle_plate: form.vehicle_plate.trim().toUpperCase() || null,
       vehicle_make: make,
       vehicle_model: model,
+      vehicle_type: normalizePricingSize(form.vehicle_type),
       notes: form.notes.trim() || null,
     }
     if (canEditServicePrice && form.price_pesos !== '') {
@@ -920,8 +961,8 @@ export default function BookingBoardPage() {
       eyebrow="Hakum Auto Care"
       title="Bookings"
       description={
-        isMarketing
-          ? 'Read-only detailing pipeline · ceramic · tint · PPF'
+        isMarketing || isBranchAdmin(profile)
+          ? 'Read-only detailing pipeline · ceramic · tint · PPF · paint maintenance'
           : formBookingsOnly
             ? 'Detailing pipeline · ceramic · tint · PPF · wash stays on Queue'
             : `${rangeLabel} · detailing only`
@@ -1350,7 +1391,15 @@ export default function BookingBoardPage() {
               <Label>Service</Label>
               <Select
                 value={form.service_id || undefined}
-                onValueChange={(service_id) => setForm({ ...form, service_id })}
+                onValueChange={(service_id) => {
+                  const svc = formServices.find((s) => s.id === service_id)
+                  const minor = resolveServicePriceMinor(svc, form.vehicle_type)
+                  setForm((f) => ({
+                    ...f,
+                    service_id,
+                    price_pesos: minor ? String(minor / 100) : f.price_pesos,
+                  }))
+                }}
                 items={formServiceItems}
               >
                 <SelectTrigger className="cursor-pointer" aria-label="Service">
@@ -1372,19 +1421,55 @@ export default function BookingBoardPage() {
               <Label htmlFor="bk-start">Scheduled start</Label>
               <Input id="bk-start" type="datetime-local" required value={form.scheduled_start} onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="flex flex-col gap-2">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-2 sm:col-span-2">
                 <Label htmlFor="bk-plate">Plate / sticker</Label>
                 <Input id="bk-plate" required value={form.vehicle_plate} onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} placeholder="ABC 1234" />
                 <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
               </div>
+              <VehicleMakeModelFields
+                make={form.vehicle_make}
+                model={form.vehicle_model}
+                onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
+                onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
+                onSizeSuggest={(size) => {
+                  const vehicle_type = normalizePricingSize(size)
+                  const svc = formServices.find((s) => s.id === form.service_id)
+                  const minor = resolveServicePriceMinor(svc, vehicle_type)
+                  setForm((f) => ({
+                    ...f,
+                    vehicle_type,
+                    price_pesos: minor ? String(minor / 100) : f.price_pesos,
+                  }))
+                }}
+                variant="crm"
+                makeLabel="Make"
+                modelLabel="Model"
+              />
               <div className="flex flex-col gap-2">
-                <Label htmlFor="bk-make">Make</Label>
-                <Input id="bk-make" required value={form.vehicle_make} onChange={(e) => setForm({ ...form, vehicle_make: e.target.value })} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="bk-model">Model</Label>
-                <Input id="bk-model" required value={form.vehicle_model} onChange={(e) => setForm({ ...form, vehicle_model: e.target.value })} />
+                <Label htmlFor="bk-size">Car size</Label>
+                <select
+                  id="bk-size"
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={form.vehicle_type || 'medium'}
+                  onChange={(e) => {
+                    const vehicle_type = normalizePricingSize(e.target.value)
+                    const svc = formServices.find((s) => s.id === form.service_id)
+                    const minor = resolveServicePriceMinor(svc, vehicle_type)
+                    setForm((f) => ({
+                      ...f,
+                      vehicle_type,
+                      price_pesos: minor ? String(minor / 100) : f.price_pesos,
+                    }))
+                  }}
+                >
+                  {PRICING_SIZES.map((sz) => (
+                    <option key={sz.slug} value={sz.slug}>
+                      {sz.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">Auto-fills from make and model. Override if this visit prices differently.</p>
               </div>
             </div>
             <div className="flex flex-col gap-2">

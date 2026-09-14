@@ -1,9 +1,18 @@
-/** Short customer-facing step names for the bar; keys come from buildVisitProgress(status). */
+/** Short customer-facing step names; prefer labels from buildVisitProgress. */
 const SHORT = {
   waiting: 'Queued',
   in_progress: 'Washing',
   final_checking: 'Checking',
   for_payment: 'Payment',
+  pending: 'Booked',
+  for_releasing: 'Releasing',
+}
+
+function stepCaption(step, kind) {
+  if (step?.label) return step.label
+  if (kind === 'detailing' && step?.key === 'in_progress') return 'In progress'
+  if (kind === 'detailing' && step?.key === 'waiting') return 'Intake'
+  return SHORT[step?.key] || step?.key
 }
 
 /**
@@ -18,6 +27,7 @@ export default function VisitProgress({ visit }) {
   const raw = Number(visit.currentIndex)
   const idx = visit.isComplete ? last : Math.min(Math.max(Number.isFinite(raw) ? raw : 0, 0), last)
   const pct = visit.isComplete ? 100 : last === 0 ? 0 : (idx / last) * 100
+  const currentLabel = visit.isComplete ? 'Completed' : stepCaption(steps[idx], visit.kind)
 
   return (
     <div
@@ -27,7 +37,7 @@ export default function VisitProgress({ visit }) {
       aria-valuemin={0}
       aria-valuemax={last}
       aria-valuenow={idx}
-      aria-valuetext={visit.isComplete ? 'Completed' : steps[idx]?.label || SHORT[steps[idx]?.key]}
+      aria-valuetext={currentLabel}
     >
       <div className="capp-progress-track">
         <div className="capp-progress-fill" style={{ '--p': `${pct}%` }} />
@@ -43,7 +53,7 @@ export default function VisitProgress({ visit }) {
               aria-current={current ? 'step' : undefined}
             >
               <span className="capp-progress-dot" aria-hidden />
-              <span>{SHORT[step.key] || step.label}</span>
+              <span>{stepCaption(step, visit.kind)}</span>
             </li>
           )
         })}

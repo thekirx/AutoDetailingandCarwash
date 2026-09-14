@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url'
 import {
   catalogMakes,
   catalogRowsToMap,
+  catalogRowsToSizeIndex,
+  catalogSizeFor,
   filterCatalogMakes,
   filterCatalogModels,
   modelsForCatalogMake,
@@ -34,6 +36,14 @@ assert.ok(filterCatalogMakes(map, '', 2).length === 2)
 assert.deepEqual(filterCatalogModels(map, 'Toyota', 'for'), ['Fortuner'])
 assert.equal(filterCatalogModels(map, '', '').length, 0)
 
+const sized = catalogRowsToSizeIndex([
+  { make: 'Toyota', model: 'Vios', size_slug: 'small' },
+  { make: 'Toyota', model: 'Fortuner' },
+])
+assert.equal(catalogSizeFor(sized, 'toyota', 'vios'), 'small')
+assert.equal(catalogSizeFor(sized, 'Toyota', 'Fortuner'), 'large')
+assert.equal(catalogSizeFor(null, 'Toyota', 'Alphard'), 'extra_large')
+
 const pickerSrc = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), '../src/components/VehicleMakeModelFields.jsx'),
   'utf8',
@@ -41,5 +51,7 @@ const pickerSrc = readFileSync(
 assert.ok(!pickerSrc.includes('phVehicles'), 'picker must not fall back to static phVehicles')
 assert.match(pickerSrc, /vehicle_catalog/)
 assert.match(pickerSrc, /is_active/)
+assert.match(pickerSrc, /size_slug/)
+assert.match(pickerSrc, /onSizeSuggest/)
 
 console.log('vehicleCatalog helpers: ok')

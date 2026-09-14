@@ -507,7 +507,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                         </CardDescription>
                       </div>
                       <Button type="button" variant="outline" className="min-h-11" asChild>
-                        <Link to="/operations/crew">Open crew pool</Link>
+                        <Link to="/operations/attendance">Open attendance</Link>
                       </Button>
                     </div>
                   </CardHeader>

@@ -4,17 +4,31 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { getQueueCounts, buildVisitProgress, formatQueueNumber, normalizePlate } from '../src/queue/queueLogic.js'
+import { isBookingBoardService } from '../src/lib/serviceKinds.js'
+import { maintenanceNeedsOpsAttention } from '../src/lib/paintMaintenance.js'
 import { isValidCustomerPlate, plateValidationError, safeVehiclePhotoUrl } from '../src/lib/customerAuth.js'
 import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
 import { CUSTOMER_ACTIVE_VISIT_STATUSES } from '../src/lib/customerPortalActive.js'
 import { prepareGaragePlateChange } from '../src/lib/customerGarage.js'
+import { inferPhPricingSize } from '../src/lib/phVehicleSizes.js'
+import { normalizePricingSize } from '../src/lib/servicePricing.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+
+function resolveGarageSize(body) {
+  const raw = String(body?.vehicle_type || '').trim()
+  if (raw) return normalizePricingSize(raw)
+  return inferPhPricingSize(body?.vehicle_make, body?.vehicle_model)
+}
 
 function adminClient() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+}
+
+function visitKindFromService(svc) {
+  return isBookingBoardService(svc) ? 'detailing' : 'service'
 }
 
 async function requireCustomer(accessToken) {
@@ -42,12 +56,12 @@ async function requireCustomer(accessToken) {
 export async function loadCustomerPortal({ accessToken }) {
   const { admin, userId, user, customer } = await requireCustomer(accessToken)
 
-  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow] =
+  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow, maint] =
     await Promise.all([
-      admin.from('branches').select('slug, name, address, is_active').eq('is_active', true).eq('is_archived', false).order('name'),
+      admin.from('branches').select('slug, name, address, is_active, latitude, longitude').eq('is_active', true).eq('is_archived', false).order('name'),
       admin
         .from('bookings')
-        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, final_price_minor, scheduled_start, created_at, customer_name')
+        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, final_price_minor, scheduled_start, created_at, customer_name, service_id, services(name, slug, pay_category)')
         .eq('customer_id', userId)
         .order('created_at', { ascending: false })
         .limit(40),
@@ -60,7 +74,7 @@ export async function loadCustomerPortal({ accessToken }) {
         .limit(40),
       admin
         .from('bookings')
-        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, final_price_minor, queue_number, service_id, services(name)')
+        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, final_price_minor, queue_number, service_id, services(name, slug, pay_category)')
         .eq('customer_id', userId)
         .in('status', CUSTOMER_ACTIVE_VISIT_STATUSES)
         .order('scheduled_start', { ascending: true }),
@@ -97,6 +111,11 @@ export async function loadCustomerPortal({ accessToken }) {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
+      admin
+        .from('vehicle_maintenance_schedules')
+        .select('id, plate_number, next_due_at, status, branch_slug, service_slug, last_notified_at')
+        .eq('customer_id', userId)
+        .in('status', ['scheduled', 'notified']),
     ])
 
   let birthdayPerk = null
@@ -149,12 +168,18 @@ export async function loadCustomerPortal({ accessToken }) {
       )
     : null
 
-  const activeBookings = (active.data || []).map((row) => ({
-    ...row,
-    service_name: row.services?.name || null,
-    queue_label: row.queue_number != null ? formatQueueNumber(row.queue_number) : null,
-    visit: buildVisitProgress(row.status),
-  }))
+  const decorateVisit = (row) => {
+    const kind = visitKindFromService(row.services)
+    return {
+      ...row,
+      service_name: row.services?.name || null,
+      kind,
+      queue_label: row.queue_number != null ? formatQueueNumber(row.queue_number, row.services?.pay_category) : null,
+      visit: buildVisitProgress(row.status, kind),
+    }
+  }
+
+  const activeBookings = (active.data || []).map(decorateVisit)
 
   const historyRows = history.data || []
   const photoBookingIds = [
@@ -203,7 +228,7 @@ export async function loadCustomerPortal({ accessToken }) {
   return {
     profile,
     branches: branches.data || [],
-    history: withPhotos(historyRows),
+    history: withPhotos(historyRows.map(decorateVisit)),
     purchases: purchases.data || [],
     bookings: withPhotos(activeBookings),
     vehicles: vehicles.data || [],
@@ -221,6 +246,7 @@ export async function loadCustomerPortal({ accessToken }) {
       date_of_birth: profile.date_of_birth,
       perk: birthdayPerk && birthdayPerk.status === 'available' ? birthdayPerk : null,
     },
+    maintenanceDue: (maint.data || []).filter((row) => maintenanceNeedsOpsAttention(row)),
   }
 }
 
@@ -242,7 +268,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       normalized_plate_number: normalized,
       vehicle_make: String(body.vehicle_make || '').trim() || null,
       vehicle_model: String(body.vehicle_model || '').trim() || null,
-      vehicle_type: String(body.vehicle_type || 'sedan').trim() || 'sedan',
+      vehicle_type: resolveGarageSize(body),
       color: String(body.color || '').trim() || null,
       photo_url: safeVehiclePhotoUrl(body.photo_url),
       icon: String(body.icon || '').trim().toLowerCase() || null,
@@ -314,7 +340,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       normalized_plate_number: prepared.normalized_plate_number,
       vehicle_make: String(body.vehicle_make || '').trim() || null,
       vehicle_model: String(body.vehicle_model || '').trim() || null,
-      vehicle_type: String(body.vehicle_type || 'sedan').trim() || 'sedan',
+      vehicle_type: resolveGarageSize(body),
       color: String(body.color || '').trim() || null,
       photo_url: safeVehiclePhotoUrl(body.photo_url),
       icon: String(body.icon || '').trim().toLowerCase() || null,
@@ -442,14 +468,16 @@ export async function mutateCustomerPortal({ accessToken, body }) {
 
     const overall = Number(body.overall_rating)
     const app = Number(body.app_rating)
-    const service = Number(body.service_rating)
-    const detailing = Number(body.detailing_rating)
-    const scoreOk = [overall, app, service, detailing].every((n) => Number.isInteger(n) && n >= 1 && n <= 5)
-    if (!scoreOk) throw Object.assign(new Error('Rate overall, app, services, and detailing (1-5).'), { status: 400 })
+    const service = body.service_rating == null || body.service_rating === '' ? null : Number(body.service_rating)
+    const detailing = body.detailing_rating == null || body.detailing_rating === '' ? null : Number(body.detailing_rating)
+    const score = (n) => Number.isInteger(n) && n >= 1 && n <= 5
+    if (!score(overall) || !score(app)) {
+      throw Object.assign(new Error('Rate customer experience and the app (1-5).'), { status: 400 })
+    }
 
     const { data: booking, error: bookingErr } = await admin
       .from('bookings')
-      .select('id, branch, status, customer_id, customer_name')
+      .select('id, branch, status, customer_id, customer_name, services(name, slug, pay_category)')
       .eq('id', bookingId)
       .eq('customer_id', userId)
       .eq('status', 'completed')
@@ -457,6 +485,13 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     if (bookingErr) throw Object.assign(new Error(bookingErr.message), { status: 400 })
     if (!booking) {
       throw Object.assign(new Error('Only your completed visits can be reviewed.'), { status: 403 })
+    }
+    const kind = visitKindFromService(booking.services)
+    if (kind === 'detailing' && !score(detailing)) {
+      throw Object.assign(new Error('Rate the detailing on this visit (1-5).'), { status: 400 })
+    }
+    if (kind !== 'detailing' && !score(service)) {
+      throw Object.assign(new Error('Rate the service or package on this visit (1-5).'), { status: 400 })
     }
 
     const { data: existing } = await admin

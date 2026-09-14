@@ -13,8 +13,9 @@
 **Acceptance**
 
 - [x] Home → `/operations/pos`
-- [x] Allowed: dashboard, queue, attendance, pos, reviews, planning, roadmap, history, my-pay, audit
-- [x] Denied: finance, CRM, people, console, payroll, inventory, bookings
+- [x] Allowed: dashboard, queue, bookings (view-only), attendance, pos, inventory restock, reviews, planning, roadmap, history, my-pay, audit
+- [x] Queue and Bookings: no ticket/status writes (`canStaffUpdateBookingStatus` denies `admin`)
+- [x] Denied: finance, CRM, people, console, payroll, Cars, Data Center
 
 **Test seam:** `tests/leftoverUxSeam.test.js`, `tests/branchAdminShell.test.js`, `tests/principalQaMatrix.test.js`
 

@@ -6,8 +6,8 @@
 
 ## Dock
 
-Queue · New · Floor · Attendance · Crew (max 5)  
-More: History, KPI, My Tasks, Planner, Pay
+Queue · New · Floor · Attendance (max 5)  
+More: History, KPI, My Tasks, Planner, Pay. `/operations/crew` redirects to Attendance; hire is on People (SA/ASA).
 
 ## Daily flow
 

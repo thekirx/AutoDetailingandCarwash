@@ -28,6 +28,7 @@ import { loadUserSettings, saveSmsOptIn } from '@/lib/userSettings'
 import { isSyntheticCustomerEmail } from '@/lib/customerOnboarding'
 import { isValidCustomerPlate, plateValidationError, PLATE_FIELD_HINT, safeVehiclePhotoUrl } from '@/lib/customerAuth'
 import { VEHICLE_ICON_PRESETS, normalizeVehicleIcon, vehicleIconGlyph } from '@/lib/ownerRevisionsPhase7'
+import { normalizePricingSize, PRICING_SIZES } from '@/lib/servicePricing'
 import { fetchPortal, initials, portalAction } from '@/lib/customerPortalClient'
 import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH } from '@/lib/customerAccountNav'
 import { usePageMeta } from '@/lib/pageMeta'
@@ -43,7 +44,7 @@ const TAB_TITLES = {
   alerts: ['Notifications', 'Push, text messages, and your inbox.'],
 }
 
-const EMPTY_CAR = { plate_number: '', vehicle_make: '', vehicle_model: '', color: '', photo_url: '', icon: '' }
+const EMPTY_CAR = { plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'medium', color: '', photo_url: '', icon: '' }
 
 function formatWhen(iso) {
   if (!iso) return ''
@@ -365,6 +366,7 @@ function CarForm({ vehicle, onDone, onCancel }) {
           plate_number: vehicle.plate_number || '',
           vehicle_make: vehicle.vehicle_make || '',
           vehicle_model: vehicle.vehicle_model || '',
+          vehicle_type: normalizePricingSize(vehicle.vehicle_type),
           color: vehicle.color || '',
           photo_url: vehicle.photo_url || '',
           icon: vehicle.icon || '',
@@ -449,10 +451,26 @@ function CarForm({ vehicle, onDone, onCancel }) {
         model={car.vehicle_model}
         onMakeChange={(vehicle_make) => setCar((c) => ({ ...c, vehicle_make }))}
         onModelChange={(vehicle_model) => setCar((c) => ({ ...c, vehicle_model }))}
+        onSizeSuggest={(vehicle_type) => setCar((c) => ({ ...c, vehicle_type }))}
         variant="public"
         makeLabel="Brand"
         modelLabel="Model"
       />
+      <label className="capp-field">
+        <span>Car size</span>
+        <select
+          required
+          value={car.vehicle_type || 'medium'}
+          onChange={(e) => setCar((c) => ({ ...c, vehicle_type: e.target.value }))}
+        >
+          {PRICING_SIZES.map((sz) => (
+            <option key={sz.slug} value={sz.slug}>
+              {sz.label}
+            </option>
+          ))}
+        </select>
+        <p className="capp-field-hint">Auto-fills from make and model. Change it if the car is lifted, wrapped, or otherwise priced differently.</p>
+      </label>
       <label className="capp-field">
         <span>Color (optional)</span>
         <input value={car.color} onChange={(e) => setCar((c) => ({ ...c, color: e.target.value }))} />

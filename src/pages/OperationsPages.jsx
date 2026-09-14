@@ -320,13 +320,23 @@ function ScopedFloorDashboard() {
   const [salesBoard, setSalesBoard] = useState({ summary: null, recentSales: [] })
   const [salesError, setSalesError] = useState('')
   const [salesLoading, setSalesLoading] = useState(true)
-  const { activeQueue, availableStaff, busyStaff, events, handoffs, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter)
+  const { activeQueue, availableStaff, busyStaff, events, handoffs, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter, 'detailing')
   const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
-  const visibleQueue = useMemo(
-    () => (activeQueue || []).filter((ticket) => boardStatuses.includes(ticket.status)),
+  const detailingStatuses = useMemo(() => getOpsBoardStatuses(profile, { family: 'detailing' }), [profile])
+  const washQueue = useMemo(
+    () => filterTicketsByFamily(activeQueue || [], 'wash').filter((ticket) => boardStatuses.includes(ticket.status)),
     [activeQueue, boardStatuses],
   )
-  const counts = useMemo(() => getQueueCounts(visibleQueue, { statuses: boardStatuses }), [visibleQueue, boardStatuses])
+  const detailingQueue = useMemo(
+    () => filterTicketsByFamily(activeQueue || [], 'detailing').filter((ticket) => detailingStatuses.includes(ticket.status)),
+    [activeQueue, detailingStatuses],
+  )
+  const visibleQueue = washQueue
+  const counts = useMemo(() => getQueueCounts(washQueue, { statuses: boardStatuses }), [washQueue, boardStatuses])
+  const detailingCounts = useMemo(
+    () => getQueueCounts(detailingQueue, { statuses: detailingStatuses }),
+    [detailingQueue, detailingStatuses],
+  )
   const range = useMemo(() => getDashboardDateRange(datePreset, customStart, customEnd), [datePreset, customStart, customEnd])
   const rangeStartDate = useMemo(() => getLocalCalendarDate(range.start), [range.start])
   const rangeEndDate = useMemo(() => getLocalCalendarDate(range.end), [range.end])
@@ -479,7 +489,9 @@ function ScopedFloorDashboard() {
           </>
         )}
       </div>
-      <div className={`mt-4 grid gap-3 grid-cols-2 sm:mt-6 sm:gap-4 ${queueMetricCols}`}>
+      <div className="mt-4">
+        <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">Services &amp; Packages</p>
+        <div className={`grid gap-3 grid-cols-2 sm:gap-4 ${queueMetricCols}`}>
         <MetricCard
           label="Waiting"
           value={counts.waiting}
@@ -530,6 +542,57 @@ function ScopedFloorDashboard() {
           to={operationsQueueHref({ branch: branchFilter })}
           hint="Open full board"
         />
+      </div>
+      </div>
+      <div className="mt-3">
+        <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">Detailing pipeline</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          <MetricCard
+            label="Assign / booked"
+            value={detailingCounts.confirmed || 0}
+            icon={ClipboardList}
+            to={`/operations/bookings?tab=board${branchFilter && branchFilter !== 'all' ? `&branch=${encodeURIComponent(branchFilter)}` : ''}`}
+            hint="Open bookings board"
+          />
+          <MetricCard
+            label="Intake"
+            value={detailingCounts.waiting || 0}
+            icon={Clock3}
+            to="/operations/bookings?tab=board"
+            hint="Open bookings"
+          />
+          <MetricCard
+            label="In progress"
+            value={detailingCounts.in_progress || 0}
+            icon={CarFront}
+            tone="green"
+            to="/operations/bookings?tab=board"
+            hint="Open bookings"
+          />
+          <MetricCard
+            label="Checking"
+            value={detailingCounts.final_checking || 0}
+            icon={BadgeCheck}
+            tone="amber"
+            to="/operations/bookings?tab=board"
+            hint="Open bookings"
+          />
+          <MetricCard
+            label="Releasing"
+            value={detailingCounts.for_releasing || 0}
+            icon={Send}
+            to="/operations/bookings?tab=board"
+            hint="Open bookings"
+          />
+          <MetricCard
+            label="For payment"
+            value={detailingCounts.for_payment || 0}
+            icon={Wallet}
+            tone="amber"
+            to="/operations/bookings?tab=board"
+            hint="Open bookings"
+          />
+        </div>
       </div>
       {seeRedo ? (
         <Panel title="Services Failed QA" icon={ShieldAlert} className="mt-4 sm:mt-5">
@@ -1354,19 +1417,21 @@ export function NewQueueTicketPage() {
   }
   const setMake = (vehicle_make) => setForm((current) => ({ ...current, vehicle_make }))
   const setModel = (vehicle_model) => setForm((current) => ({ ...current, vehicle_model }))
-  const updateVehicleType = (event) => {
-    const vehicle_type = normalizeVehicleType(event.target.value)
+  const applyCatalogSize = (size) => {
+    const vehicle_type = normalizeVehicleType(size)
+    if (!vehicle_type) return
     setForm((current) => {
       const ids = current.service_ids || []
       const total = sumSelectedPrices(services, ids, vehicle_type)
       return {
-      ...current,
+        ...current,
         vehicle_type,
         _sizeReady: true,
         final_price: ids.length ? String(total / 100) : current.final_price,
       }
     })
   }
+  const updateVehicleType = (event) => applyCatalogSize(event.target.value)
   const updateServiceIds = (ids) => {
     setForm((current) => {
       const nextIds = Array.isArray(ids) ? ids : []
@@ -1496,11 +1561,19 @@ export function NewQueueTicketPage() {
               model={form.vehicle_model}
               onMakeChange={setMake}
               onModelChange={setModel}
+              onSizeSuggest={applyCatalogSize}
               variant="floor"
             />
             <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
             <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
-            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Car size (pricing)<select value={form.vehicle_type} onChange={updateVehicleType} className="floor-control">{vehicleTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+              Car size (pricing)
+              <select value={form.vehicle_type} onChange={updateVehicleType} className="floor-control">
+                {vehicleTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
             <ServiceKindPicker
               services={services}
               selectedIds={form.service_ids}

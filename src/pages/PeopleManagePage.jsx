@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { Pencil, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
@@ -38,7 +38,10 @@ import {
   canCreateStaffRoleOverride,
   canRevokeStaffRoleOverride,
 } from '@/lib/ownerRevisionsPhase7'
-import { validateRoleDefinition, BASELINE_TEMPLATES } from '@/lib/roleDefinitions'
+import { filterDirectoryPeople, PEOPLE_DIRECTORY_TABS, supervisorCandidates } from '@/lib/peopleDirectory'
+import { summarizeTodayAttendance } from '@/lib/attendanceInsights'
+import { BASELINE_TEMPLATES, validateRoleDefinition } from '@/lib/roleDefinitions'
+import { cn } from '@/lib/utils'
 
 const ROLE_LABELS = {
   admin: 'Admin',
@@ -108,10 +111,17 @@ function canMutateDirectoryPerson(actor, target) {
 
 export default function PeopleManagePage() {
   const { profile } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [people, setPeople] = useState([])
   const [branches, setBranches] = useState([])
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [dirQuery, setDirQuery] = useState('')
+  const [dirBranch, setDirBranch] = useState('')
+  const [dirStatus, setDirStatus] = useState('all')
+  const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, empty: 0, total: 0, onSite: 0 })
+  const [todayAttRows, setTodayAttRows] = useState([])
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -124,6 +134,8 @@ export default function PeopleManagePage() {
     attendance_enabled: true,
     geofence_enabled: true,
     employment_type: 'permanent',
+    is_supervisor: false,
+    reports_to: '',
   })
   const [roleDefs, setRoleDefs] = useState([])
   const [roleDefForm, setRoleDefForm] = useState({
@@ -176,6 +188,19 @@ export default function PeopleManagePage() {
     const scopedPeople = filterPeopleForProfile(p, profile)
     setPeople(scopedPeople)
     setBranches(scopedBranches)
+    const today = getLocalCalendarDate()
+    const { data: att } = await supabase
+      .from('staff_attendance')
+      .select('staff_id, status, attendance_date')
+      .eq('attendance_date', today)
+    setTodayAttRows(att || [])
+    setTodayAttendance(
+      summarizeTodayAttendance(
+        scopedPeople.filter((p) => p.attendance_enabled !== false),
+        att || [],
+        today,
+      ),
+    )
     if (!defs.error) setRoleDefs(defs.data || [])
     if (!ov.error) setOverrides(ov.data || [])
     const defaultBranch = pickDefaultBranchSlug(profile, scopedBranches)
@@ -193,6 +218,30 @@ export default function PeopleManagePage() {
   useEffect(() => {
     if (canManagePeople(profile)) load().catch((e) => toast.error(e.message))
   }, [load, profile])
+
+  const dirTab = PEOPLE_DIRECTORY_TABS.some((t) => t.id === searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : searchParams.get('tab') === 'attendance'
+      ? 'attendance'
+      : 'crew'
+  const directory = useMemo(
+    () =>
+      dirTab === 'attendance'
+        ? []
+        : filterDirectoryPeople(people, { tab: dirTab, q: dirQuery, branch: dirBranch, status: dirStatus }),
+    [people, dirTab, dirQuery, dirBranch, dirStatus],
+  )
+  const supervisors = useMemo(() => supervisorCandidates(people), [people])
+  const roster = useMemo(() => people.filter((p) => p.attendance_enabled !== false && p.is_active), [people])
+  const attendanceExceptions = useMemo(() => {
+    const today = getLocalCalendarDate()
+    const byStaff = new Map(
+      (todayAttRows || []).filter((row) => row.attendance_date === today).map((row) => [row.staff_id, row]),
+    )
+    return roster
+      .map((member) => ({ member, status: byStaff.get(member.id)?.status || null }))
+      .filter((row) => row.status === 'late' || row.status === 'absent' || !row.status)
+  }, [roster, todayAttRows])
 
   if (!canManagePeople(profile)) return <Navigate to="/operations/access-denied" replace />
 
@@ -261,7 +310,8 @@ export default function PeopleManagePage() {
         employment_type: form.employment_type,
       })
       toast.success('Account created')
-      setForm((f) => ({ ...f, full_name: '', email: '', phone: '', temporary_password: '' }))
+      setForm((f) => ({ ...f, full_name: '', email: '', phone: '', temporary_password: '', is_supervisor: false, reports_to: '' }))
+      setCreateOpen(false)
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -291,6 +341,8 @@ export default function PeopleManagePage() {
         attendance_enabled: editing.attendance_enabled,
         geofence_enabled: editing.geofence_enabled,
         employment_type: editing.employment_type,
+        is_supervisor: Boolean(editing.is_supervisor),
+        reports_to: editing.reports_to || null,
       }
       if (editing.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile)) {
         payload.permission_grants = editing.permission_grants
@@ -328,6 +380,13 @@ export default function PeopleManagePage() {
     }
   }
 
+  function setDirTab(id) {
+    const next = new URLSearchParams(searchParams)
+    if (!id || id === 'crew') next.delete('tab')
+    else next.set('tab', id)
+    setSearchParams(next, { replace: true })
+  }
+
   return (
     <OpsPageShell
       className="hakum-people"
@@ -339,6 +398,12 @@ export default function PeopleManagePage() {
           : canEditAssistantGrants(profile)
             ? 'Manage people and ASA grants for your authority. Branch-scoped data follows assignments.'
             : 'Create Team Leads and staff for your assigned branch.'
+      }
+      actions={
+        <Button type="button" className="min-h-11" onClick={() => setCreateOpen(true)}>
+          <UserPlus size={16} className="mr-1.5" aria-hidden />
+          Create account
+        </Button>
       }
     >
 
@@ -355,7 +420,12 @@ export default function PeopleManagePage() {
               className="grid gap-3 sm:grid-cols-2"
               onSubmit={async (e) => {
                 e.preventDefault()
-                const check = validateRoleDefinition(roleDefForm)
+                const check = validateRoleDefinition({
+                  roleKey: roleDefForm.role_key,
+                  label: roleDefForm.label,
+                  baselineTemplate: roleDefForm.baseline_template,
+                  grants: roleDefForm.grants,
+                })
                 if (!check.ok) {
                   toast.error(Object.values(check.errors)[0])
                   return
@@ -416,13 +486,11 @@ export default function PeopleManagePage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><UserPlus size={18} /> Create account</CardTitle>
-            <CardDescription>Auth login + staff profile. Optional temp password.</CardDescription>
-          </CardHeader>
-          <CardContent>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create account</DialogTitle>
+          </DialogHeader>
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="p-name">Full name</Label>
@@ -517,23 +585,169 @@ export default function PeopleManagePage() {
                   </Select>
                 </div>
               </div>
+              {isSuperAdmin(profile) ? (
+                <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.is_supervisor)}
+                      onChange={() => setForm((f) => ({ ...f, is_supervisor: !f.is_supervisor }))}
+                    />
+                    Tag as supervisor
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <Label>Reports to</Label>
+                    <Select
+                      value={form.reports_to || 'none'}
+                      onValueChange={(v) => setForm((f) => ({ ...f, reports_to: v === 'none' ? '' : v }))}
+                    >
+                      <SelectTrigger className="min-h-11"><SelectValue placeholder="No supervisor" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No supervisor</SelectItem>
+                        {supervisors.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.full_name} ({ROLE_LABELS[p.role] || p.role})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : null}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="p-pass">Temporary password (optional)</Label>
                 <Input id="p-pass" type="text" value={form.temporary_password} onChange={(e) => setForm((f) => ({ ...f, temporary_password: e.target.value }))} />
               </div>
               <Button type="submit" disabled={saving}>{saving ? 'Creating…' : 'Create account'}</Button>
             </form>
-          </CardContent>
-        </Card>
+        </DialogContent>
+      </Dialog>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Directory</CardTitle>
-            <CardDescription>{people.length} profiles</CardDescription>
+          <CardHeader className="gap-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <CardTitle>Directory</CardTitle>
+                <CardDescription>
+                  {dirTab === 'attendance'
+                    ? 'Today’s clock-in picture across this directory.'
+                    : `${directory.length} of ${people.length} profiles`}
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1" role="tablist" aria-label="People groups">
+              {PEOPLE_DIRECTORY_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={dirTab === tab.id}
+                  className={cn(
+                    'min-h-11 cursor-pointer rounded-full border px-3 text-xs font-semibold',
+                    dirTab === tab.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground',
+                  )}
+                  onClick={() => setDirTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={dirTab === 'attendance'}
+                className={cn(
+                  'min-h-11 cursor-pointer rounded-full border px-3 text-xs font-semibold',
+                  dirTab === 'attendance' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground',
+                )}
+                onClick={() => setDirTab('attendance')}
+              >
+                Attendance
+              </button>
+            </div>
+            {dirTab !== 'attendance' ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Input
+                  type="search"
+                  value={dirQuery}
+                  onChange={(e) => setDirQuery(e.target.value)}
+                  placeholder="Search name, phone, role…"
+                  aria-label="Search directory"
+                  className="min-h-11"
+                />
+                <Select value={dirBranch || 'all'} onValueChange={(v) => setDirBranch(v === 'all' ? '' : v)}>
+                  <SelectTrigger className="min-h-11"><SelectValue placeholder="All branches" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All branches</SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.slug} value={b.slug}>{b.name || b.slug}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={dirStatus} onValueChange={setDirStatus}>
+                  <SelectTrigger className="min-h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
           </CardHeader>
           <CardContent>
+            {dirTab === 'attendance' ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-2xl border border-border bg-background p-4 sm:col-span-2">
+                    <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">On site</p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+                      {todayAttendance.onSite}
+                      <span className="ml-1 text-sm font-medium text-muted-foreground">/ {todayAttendance.total} roster</span>
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">Present or late vs attendance-enabled people</p>
+                  </div>
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
+                    <p className="text-[10px] font-bold tracking-[0.16em] text-amber-800 uppercase">Late</p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{todayAttendance.late}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Checked in late</p>
+                  </div>
+                  <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+                    <p className="text-[10px] font-bold tracking-[0.16em] text-destructive uppercase">Absent + no stamp</p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{todayAttendance.absent + todayAttendance.empty}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{todayAttendance.absent} absent · {todayAttendance.empty} no stamp</p>
+                  </div>
+                </div>
+                {attendanceExceptions.length ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Needs action</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendanceExceptions.map(({ member, status }) => (
+                        <TableRow key={member.id}>
+                          <TableCell className="font-medium">{member.full_name}</TableCell>
+                          <TableCell className="text-xs">{ROLE_LABELS[member.role] || member.role}</TableCell>
+                          <TableCell>
+                            <Badge variant={status === 'absent' ? 'destructive' : 'outline'}>
+                              {status === 'late' ? 'Late' : status === 'absent' ? 'Absent' : 'No stamp'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Everyone on the roster has an on-time stamp.</p>
+                )}
+              </div>
+            ) : (
+              <>
             <ul className="people-directory-cards">
-              {people.map((row) => (
+              {directory.map((row) => (
                 <li key={row.id} className="people-directory-card">
                   <div>
                     <strong>{row.full_name}</strong>
@@ -560,12 +774,13 @@ export default function PeopleManagePage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Branch</TableHead>
+                  <TableHead>Reports to</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {people.map((row) => (
+              {directory.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium">
                       <div>{row.full_name}</div>
@@ -574,6 +789,12 @@ export default function PeopleManagePage() {
                     <TableCell><Badge variant="secondary">{ROLE_LABELS[row.role] || row.role}</Badge></TableCell>
                     <TableCell className="max-w-[10rem] truncate text-xs">
                       {(row.branch_slugs || []).join(', ') || row.branch_slug || 'All / HQ'}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {row.is_supervisor ? <Badge variant="outline">Supervisor</Badge> : null}
+                      <span className="ml-1 text-muted-foreground">
+                        {people.find((p) => p.id === row.reports_to)?.full_name || (row.is_supervisor ? '' : '—')}
+                      </span>
                     </TableCell>
                     <TableCell>
                       {row.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
@@ -591,9 +812,13 @@ export default function PeopleManagePage() {
               </TableBody>
             </Table>
             </div>
+            {!directory.length ? (
+              <p className="mt-4 text-sm text-muted-foreground">No people in this filter. Try another tab or search.</p>
+            ) : null}
+              </>
+            )}
           </CardContent>
         </Card>
-      </div>
 
       {canCreateStaffRoleOverride(profile) ? (
         <Card className="mt-6">
@@ -770,6 +995,37 @@ export default function PeopleManagePage() {
                   placeholder="Leave blank to keep the current password"
                 />
               </div>
+              {isSuperAdmin(profile) ? (
+                <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editing.is_supervisor)}
+                      onChange={() => setEditing((r) => ({ ...r, is_supervisor: !r.is_supervisor }))}
+                    />
+                    Tag as supervisor
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <Label>Reports to</Label>
+                    <Select
+                      value={editing.reports_to || 'none'}
+                      onValueChange={(v) => setEditing((r) => ({ ...r, reports_to: v === 'none' ? null : v }))}
+                    >
+                      <SelectTrigger className="min-h-11"><SelectValue placeholder="No supervisor" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No supervisor</SelectItem>
+                        {supervisors
+                          .filter((p) => p.id !== editing.id)
+                          .map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.full_name} ({ROLE_LABELS[p.role] || p.role})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : null}
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select

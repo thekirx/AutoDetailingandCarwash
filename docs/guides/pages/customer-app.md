@@ -4,7 +4,7 @@
 **Shell:** `.capp` + HakumAuthShell (auth)
 
 ## Purpose
-Loyalty home, book, garage, live queue, visit progress, content, auth.
+Loyalty home, book, garage, live queue, visit progress, content, auth. Garage and book auto-fill car size from the Cars catalog; the customer can override.
 
 ## Layout
 ```

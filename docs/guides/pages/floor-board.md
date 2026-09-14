@@ -5,13 +5,14 @@
 **Shell:** Command or Floor
 
 ## Purpose
-Live lanes / tempo / money pulse for the day.
+Live lanes / tempo / money pulse for the day. Wash/package tickets and detailing tickets stay on separate strips.
 
 ## Layout
 ```
 [PageHeader Floor]
 [Stat strip]
-[Lane columns or cards]
+[Services & packages lanes]
+[Detailing services lanes]
 ```
 
 ## Components

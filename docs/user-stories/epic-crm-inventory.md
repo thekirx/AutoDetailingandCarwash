@@ -60,5 +60,7 @@
 
 - [x] `/operations/cars` modal + catalog helpers
 - [x] Plate suggest / PH vehicle helpers covered
+- [x] Each make/model has `size_slug` (Small–XL); picker auto-selects it on queue/book/CRM/garage; staff/customer can override
+- [x] Service/package prices resolve from `bookings.vehicle_type` (legacy body styles still map)
 
-**Test seam:** `tests/carsCatalogModal.test.js`, `tests/vehicleCatalog.test.js`, `tests/plateSuggest.test.js`
+**Test seam:** `tests/carsCatalogModal.test.js`, `tests/vehicleCatalog.test.js`, `tests/phVehicleSizes.test.js`, `tests/phVehicles.test.js`, `tests/plateSuggest.test.js`, `tests/uiDeadControls.test.js`

@@ -105,6 +105,23 @@ export function maintenanceUrgency(nextDueAt, today = manilaTodayDateOnly(), soo
   return 'upcoming'
 }
 
+/**
+ * Default Maintenance tab: due soon / overdue, plus rows not yet reminded.
+ * Notified upcoming plates stay hidden until ops search for them.
+ */
+export function maintenanceNeedsOpsAttention(row, today = manilaTodayDateOnly()) {
+  const urgency = maintenanceUrgency(row?.next_due_at, today)
+  if (urgency === 'overdue' || urgency === 'due_soon') return true
+  return String(row?.status || '') !== 'notified'
+}
+
+export function matchesMaintenanceSearch(row, query) {
+  const q = String(query || '').trim().toLowerCase()
+  if (!q) return true
+  const hay = `${row?.plate_number || ''} ${row?.customer_name || ''} ${row?.customer_phone || ''} ${row?.branch_slug || ''} ${row?.service_slug || ''}`.toLowerCase()
+  return hay.includes(q)
+}
+
 export function sortMaintenanceSchedules(rows, today = manilaTodayDateOnly()) {
   const rank = { overdue: 0, due_soon: 1, upcoming: 2, none: 3 }
   return [...(rows || [])].sort((a, b) => {

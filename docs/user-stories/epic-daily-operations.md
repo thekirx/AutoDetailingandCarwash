@@ -29,6 +29,7 @@
 
 - [x] TL can open `/operations/queue` and create tickets
 - [x] Queue is wash-only; detailing stays on Bookings
+- [x] Catalog make/model auto-selects car size (Small–XL); TL can override; prices follow `vehicle_type`
 - [x] Handoff to POS loads `visit_group_id` + `queue_number`
 - [x] Merch add keeps handoff; walk-in service clears handoff
 
@@ -46,6 +47,7 @@
 
 - [x] Pipeline statuses: pending → … → completed (`DETAILING_BOARD_STATUSES`)
 - [x] Sales scoped to all branches; updates respect `bookingStatusAccess`
+- [x] Booking form auto-selects car size from catalog; package/service price follows size
 - [x] Paid detailing lands in POS with correct bucket (coating vs generic detailing)
 
 **Test seam:** `tests/principalQaFlows.test.js`, `tests/salesAllBranchesNotifications.test.js`, `tests/dailyOpsWorkflow.test.js`

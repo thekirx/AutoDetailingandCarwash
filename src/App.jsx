@@ -100,9 +100,6 @@ const QueueTicketPage = lazy(() =>
 const NewQueueTicketPage = lazy(() =>
   import('./pages/OperationsPages').then((m) => ({ default: m.NewQueueTicketPage })),
 )
-const CrewPage = lazy(() =>
-  import('./pages/OperationsPages').then((m) => ({ default: m.CrewPage })),
-)
 const MyTasksPage = lazy(() =>
   import('./pages/OperationsPages').then((m) => ({ default: m.MyTasksPage })),
 )
@@ -196,7 +193,7 @@ export default function App() {
             <Route path="queue" element={gate('queue', <OperationsQueuePage />)} />
             <Route path="queue/new" element={gate('queue-new', <NewQueueTicketPage />)} />
             <Route path="queue/:id" element={gate('queue', <QueueTicketPage />)} />
-            <Route path="crew" element={gate('crew', <CrewPage />)} />
+            <Route path="crew" element={<Navigate to="/operations/attendance" replace />} />
             <Route path="attendance" element={gate('attendance', <AttendancePage />)} />
             <Route path="kpi" element={gate('kpi', <KpiPage />)} />
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />

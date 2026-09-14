@@ -7,6 +7,9 @@ import {
   canEditPlanning,
   canEditQueueOperations,
   canManageVehicleCatalog,
+  canOverrideQueueStatus,
+  canEditBookings,
+  canAdvanceBookingStatus,
   canEditAttendanceRoles,
   canWriteFinance,
   canViewRedoLane,
@@ -44,11 +47,16 @@ describe('Admin capability matrix', () => {
     assert.equal(canWriteFinance(p), true)
     assert.equal(allowRoute(p, 'queue-new'), false)
     assert.equal(allowRoute(p, 'inventory'), true)
+    assert.equal(allowRoute(p, 'bookings'), true)
+    assert.equal(canEditBookings(p), false)
+    assert.equal(canAdvanceBookingStatus(p), false)
+    assert.equal(canOverrideQueueStatus(p), false)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
         '/operations/dashboard',
         '/operations/queue',
+        '/operations/bookings',
         '/operations/attendance',
         '/operations/pos',
         '/operations/inventory',

@@ -3,6 +3,8 @@ import SuggestInput from './SuggestInput'
 import {
   catalogMakes,
   catalogRowsToMap,
+  catalogRowsToSizeIndex,
+  catalogSizeFor,
   filterCatalogMakes,
   filterCatalogModels,
   modelsForCatalogMake,
@@ -17,24 +19,37 @@ const SUGGEST_LIMIT = 40
 let cachedCatalog = null
 let catalogPromise = null
 
+async function fetchCatalogRows() {
+  const full = await supabase
+    .from('vehicle_catalog')
+    .select('make, model, size_slug')
+    .eq('is_active', true)
+    .order('make')
+    .order('sort_order')
+  if (!full.error) return full
+  return supabase
+    .from('vehicle_catalog')
+    .select('make, model')
+    .eq('is_active', true)
+    .order('make')
+    .order('sort_order')
+}
+
 async function loadCatalogMap() {
   if (cachedCatalog) return cachedCatalog
   if (!catalogPromise) {
-    catalogPromise = supabase
-      .from('vehicle_catalog')
-      .select('make, model')
-      .eq('is_active', true)
-      .order('make')
-      .order('sort_order')
+    catalogPromise = fetchCatalogRows()
       .then(({ data, error }) => {
         if (error) {
           cachedCatalog = null
           throw error
         }
         // Same source as Super Admin Cars (active rows only). Empty = empty picker — no static fork.
-        const map = catalogRowsToMap(data || [])
-        cachedCatalog = map
-        return map
+        cachedCatalog = {
+          map: catalogRowsToMap(data || []),
+          sizes: catalogRowsToSizeIndex(data || []),
+        }
+        return cachedCatalog
       })
       .finally(() => {
         catalogPromise = null
@@ -46,33 +61,38 @@ async function loadCatalogMap() {
 /**
  * Brand + model smart search.
  * Source of truth: Super Admin `vehicle_catalog` (is_active). No static PH fallback.
+ * onSizeSuggest fires on an exact catalog model so queue/book can auto-pick Small–XL.
  */
 export default function VehicleMakeModelFields({
   make,
   model,
   onMakeChange,
   onModelChange,
+  onSizeSuggest,
   required = true,
   variant = 'floor',
   makeLabel = 'Vehicle brand',
   modelLabel = 'Vehicle model',
 }) {
-  const [dbMap, setDbMap] = useState(cachedCatalog)
-  const [loadState, setLoadState] = useState(cachedCatalog ? 'ready' : 'loading')
+  const [dbMap, setDbMap] = useState(cachedCatalog?.map || null)
+  const [sizeIndex, setSizeIndex] = useState(cachedCatalog?.sizes || null)
+  const [loadState, setLoadState] = useState(cachedCatalog?.map ? 'ready' : 'loading')
 
   useEffect(() => {
     let alive = true
-    function apply(map) {
+    function apply(bundle) {
       if (!alive) return
-      setDbMap(map)
-      setLoadState(Object.keys(map || {}).length ? 'ready' : 'empty')
+      setDbMap(bundle.map)
+      setSizeIndex(bundle.sizes)
+      setLoadState(Object.keys(bundle.map || {}).length ? 'ready' : 'empty')
     }
     function fail() {
       if (!alive) return
       setDbMap(null)
+      setSizeIndex(null)
       setLoadState('error')
     }
-    setLoadState((s) => (s === 'ready' && cachedCatalog ? 'ready' : 'loading'))
+    setLoadState((s) => (s === 'ready' && cachedCatalog?.map ? 'ready' : 'loading'))
     loadCatalogMap().then(apply).catch(fail)
 
     const channel = supabase
@@ -124,6 +144,12 @@ export default function VehicleMakeModelFields({
           ? 'Cars catalog is empty. Super Admin can add brands under Operations → Cars.'
           : null
 
+  function suggestSize(nextMake, nextModel) {
+    if (!onSizeSuggest || !nextMake || !nextModel) return
+    const size = catalogSizeFor(sizeIndex, nextMake, nextModel)
+    if (size) onSizeSuggest(size)
+  }
+
   return (
     <>
       <SuggestInput
@@ -141,6 +167,8 @@ export default function VehicleMakeModelFields({
           const allowed = modelsForCatalogMake(dbMap, canonical || next)
           if (model && allowed.length && !allowed.some((m) => m.toLowerCase() === model.toLowerCase())) {
             onModelChange('')
+          } else if (model) {
+            suggestSize(canonical || next, model)
           }
         }}
       />
@@ -156,7 +184,9 @@ export default function VehicleMakeModelFields({
         onChange={(next) => {
           const models = modelsForCatalogMake(dbMap, make)
           const hit = models.find((m) => m.toLowerCase() === String(next || '').trim().toLowerCase())
-          onModelChange(hit || next)
+          const nextModel = hit || next
+          onModelChange(nextModel)
+          if (String(nextModel || '').trim()) suggestSize(make, nextModel)
         }}
       />
       {statusHint && variant === 'public' ? (

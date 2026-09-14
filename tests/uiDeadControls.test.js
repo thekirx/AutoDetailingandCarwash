@@ -59,6 +59,13 @@ describe('Garage book seeds chosen vehicle (PUB-3)', () => {
     )
     assert.equal(seeded.vehicle_plate, 'BBB123')
     assert.equal(seeded.vehicle_make, 'Toyota')
+    assert.equal(seeded.vehicle_type, 'small')
+  })
+
+  it('maps legacy body-style garage size to pricing slugs', () => {
+    const seeded = seedBookingFromVehicle({}, { plate_number: 'CCC', vehicle_type: 'sedan' })
+    assert.equal(seeded.vehicle_type, 'medium')
+    assert.equal(seedBookingFromVehicle({}, { vehicle_type: 'suv' }).vehicle_type, 'large')
   })
 })
 

@@ -128,15 +128,57 @@ export const CANCELABLE_STATUSES = [
 
 export const VISIT_PROGRESS_STEPS = ['waiting', 'in_progress', 'final_checking', 'for_payment']
 
-/** Customer-facing visit stepper — public status only, no internal ops data. */
-export function buildVisitProgress(status) {
+/** Same-day services / packages — bay wash pipeline. */
+export const WASH_VISIT_STEPS = [
+  { key: 'waiting', label: 'Queued' },
+  { key: 'in_progress', label: 'Washing' },
+  { key: 'final_checking', label: 'Checking' },
+  { key: 'for_payment', label: 'Payment' },
+]
+
+/** Multi-day detailing — bookings board pipeline, not the wash bay. */
+export const DETAILING_VISIT_STEPS = [
+  { key: 'pending', label: 'Booked' },
+  { key: 'waiting', label: 'Intake' },
+  { key: 'in_progress', label: 'In progress' },
+  { key: 'final_checking', label: 'Checking' },
+  { key: 'for_releasing', label: 'Releasing' },
+  { key: 'for_payment', label: 'Payment' },
+]
+
+function visitStepsForKind(kind) {
+  return String(kind || '') === 'detailing' ? DETAILING_VISIT_STEPS : WASH_VISIT_STEPS
+}
+
+function visitStepIndex(status, steps) {
   const normalized = String(status || 'waiting').toLowerCase()
-  const idx = VISIT_PROGRESS_STEPS.indexOf(normalized)
-  const currentIndex = idx >= 0 ? idx : normalized === 'completed' ? VISIT_PROGRESS_STEPS.length : 0
+  if (normalized === 'completed') return steps.length
+  if (normalized === 'cancelled') return 0
+  if (normalized === 'confirmed') {
+    const booked = steps.findIndex((s) => s.key === 'pending' || s.key === 'confirmed')
+    return booked >= 0 ? booked : 0
+  }
+  const idx = steps.findIndex((s) => s.key === normalized)
+  return idx >= 0 ? idx : 0
+}
+
+/**
+ * Customer-facing visit stepper from bookings.status.
+ * `kind` is `detailing` vs same-day service/package — the pipelines stay separate.
+ */
+export function buildVisitProgress(status, kind = 'service') {
+  const normalized = String(status || 'waiting').toLowerCase()
+  const steps = visitStepsForKind(kind)
+  const currentIndex = visitStepIndex(normalized, steps)
+  const current = steps[Math.min(currentIndex, steps.length - 1)]
   return {
-    steps: VISIT_PROGRESS_STEPS.map((key) => ({ key, label: CUSTOMER_VISIT_LABELS[key] || key })),
+    kind: String(kind || '') === 'detailing' ? 'detailing' : 'service',
+    steps,
     currentIndex,
-    label: CUSTOMER_VISIT_LABELS[normalized] || STATUS_LABELS[normalized] || normalized,
+    label:
+      normalized === 'completed'
+        ? CUSTOMER_VISIT_LABELS.completed
+        : current?.label || CUSTOMER_VISIT_LABELS[normalized] || STATUS_LABELS[normalized] || normalized,
     isComplete: normalized === 'completed',
   }
 }

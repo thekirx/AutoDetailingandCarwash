@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-15 — PH car size on catalog, tickets, bookings
+
+- Super Admin Cars stores `vehicle_catalog.size_slug` (Small / Medium / Large / Extra Large). Live Hakum rows are backfilled from the PH bay chart (Vios/City small, Civic/Xpander medium, Fortuner/Hilux large, Alphard/Hiace extra large).
+- Picking make + model auto-selects that size on TL queue, bookings, public/account book, CRM, and garage. Staff and customers can override; service and package prices follow `bookings.vehicle_type`.
+- Legacy garage values (`sedan` / `suv`) still map to pricing slugs. Seed upserts `size_slug`.
+
+## 2026-09-14 — Floor, maintenance, people, BA view-only
+
+- Floor Board shows Services & Packages and Detailing Services as separate lane strips. Branch-scoped Floor has the same split.
+- Maintenance tab lists overdue/due-soon and un-notified plates. Notify client sends SMS/push to book paint maintenance. Set date marks the visit done and hides the plate until the next cycle. Search finds already-notified upcoming cars. TL can ticket a paint-maintenance booking.
+- People: Crew / Team Leads / Admins / Office tabs, Create account modal, directory search/filter, attendance dashboard, Super Admin supervisor tag and reports-to.
+- `/operations/crew` redirects to Attendance for every role. Branch Admin can open Queue and Bookings as view-only (no ticket/status writes).
+
 ## 2026-09-14 — Finance books honesty
 
 - Default reporting window is last 30 days. An empty window names the last paid POS day and can jump to it. Custom ranges reject end-before-start and do not query inverted dates.

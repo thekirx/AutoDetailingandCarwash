@@ -11,7 +11,7 @@ Floor · Queue · Attendance · POS · Inventory · Reviews · Planner · Ops La
 ## Daily flow
 
 1. POS / shift open  
-2. Queue oversight  
+2. Queue and Bookings as **view-only** (no ticket or status writes)  
 3. Inventory / restock  
 4. End-of-shift close  
 5. Attendance exceptions

@@ -13,6 +13,8 @@ import {
   paintMaintenanceActionForSlug,
   resolveFrequencyMonthsFromSettings,
   sortMaintenanceSchedules,
+  maintenanceNeedsOpsAttention,
+  matchesMaintenanceSearch,
 } from '../src/lib/paintMaintenance.js'
 
 describe('paint maintenance program', () => {
@@ -50,6 +52,15 @@ describe('paint maintenance program', () => {
     assert.equal(maintenanceUrgency('2026-03-01', '2026-03-10'), 'overdue')
     assert.equal(maintenanceUrgency('2026-03-15', '2026-03-10'), 'due_soon')
     assert.equal(maintenanceUrgency('2026-06-01', '2026-03-10'), 'upcoming')
+    assert.equal(
+      maintenanceNeedsOpsAttention({ status: 'notified', next_due_at: '2026-06-01' }, '2026-03-10'),
+      false,
+    )
+    assert.equal(
+      maintenanceNeedsOpsAttention({ status: 'notified', next_due_at: '2026-03-01' }, '2026-03-10'),
+      true,
+    )
+    assert.equal(matchesMaintenanceSearch({ plate_number: 'CRM1101', customer_name: 'Ada' }, 'crm'), true)
     const sorted = sortMaintenanceSchedules(
       [
         { id: 'a', next_due_at: '2026-06-01' },

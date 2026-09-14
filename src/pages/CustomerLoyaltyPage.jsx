@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Cake, Check, Gift, Percent, Star } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
+import StampTrack from '@/components/customer/StampTrack'
 import { Row, SectionHead, Skeleton, Stat } from '@/components/customer/CustomerUi'
 import { fetchPortal } from '@/lib/customerPortalClient'
 import { CUSTOMER_LOYALTY_PATH } from '@/lib/customerAccountNav'
@@ -20,7 +21,6 @@ export default function CustomerLoyaltyPage() {
   const birthday = data?.birthday
   const slots = Number(loyalty?.cardSlots) || 10
   const completed = Math.min(Number(loyalty?.completed) || 0, slots)
-  const giftAt = new Set((loyalty?.milestones || []).map((m) => Number(m.threshold_points)))
 
   return (
     <CustomerAppFrame title="Loyalty program" subtitle="Wash more. Get rewarded." backTo="/account" cols>
@@ -44,18 +44,11 @@ export default function CustomerLoyaltyPage() {
               <b>{completed}</b> / {slots}
             </p>
           </div>
-          <ol className="capp-stamps" aria-label={`${completed} of ${slots} stamps`}>
-            {Array.from({ length: slots }, (_, i) => {
-              const n = i + 1
-              const on = n <= completed
-              const gift = giftAt.has(n)
-              return (
-                <li key={n} className={`capp-stamp${on ? ' is-on' : ''}${gift && !on ? ' is-gift' : ''}`} aria-label={on ? `Stamp ${n} earned` : `Stamp ${n}`}>
-                  {on ? <Check size={14} strokeWidth={2.5} aria-hidden /> : gift ? <Gift size={13} strokeWidth={2} aria-hidden /> : n}
-                </li>
-              )
-            })}
-          </ol>
+          <StampTrack
+            slots={slots}
+            completed={completed}
+            gifts={(loyalty.milestones || []).map((m) => m.threshold_points)}
+          />
           {loyalty.nextMilestone ? (
             <Row
               icon={Gift}

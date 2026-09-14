@@ -30,7 +30,7 @@ const READ_ROLES = new Set([
   'marketing',
   'operations_lead',
 ])
-const WRITE_ROLES = new Set(['BossMich', 'assistant_super_admin', 'admin', 'sales', 'operations_lead'])
+const WRITE_ROLES = new Set(['BossMich', 'assistant_super_admin', 'sales', 'operations_lead', 'team_lead'])
 const TYPE_ROLES = new Set(['BossMich', 'assistant_super_admin'])
 
 const SELECT_COLS =
@@ -196,7 +196,13 @@ export async function handleMaintenanceSchedulesRequest(req, res) {
 
       const patch = { updated_at: new Date().toISOString() }
 
-      if (body.action === 'bump') {
+      if (body.action === 'serviced') {
+        const due = String(body.next_due_at || '').slice(0, 10)
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) return json(res, 400, { error: 'next_due_at must be YYYY-MM-DD' })
+        patch.next_due_at = due
+        patch.last_maintenance_at = coatedAtDateOnly(new Date())
+        patch.status = 'scheduled'
+      } else if (body.action === 'bump') {
         const months = Math.min(24, Math.max(1, Number(body.months) || 6))
         const from = coatedAtDateOnly(existing.last_maintenance_at || existing.coated_at || new Date())
         patch.next_due_at = addMonthsDateOnly(from, months)

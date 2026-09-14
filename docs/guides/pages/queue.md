@@ -5,7 +5,7 @@
 **Shell:** Floor (TL) / Command
 
 ## Purpose
-Advance tickets through wash/detail statuses.
+Advance same-day service and package tickets. Detailing stays on Bookings. Branch Admin may watch; Team Lead creates and advances.
 
 ## Layout
 ```

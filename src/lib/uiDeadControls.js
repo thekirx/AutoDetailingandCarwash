@@ -2,6 +2,8 @@
  * UI control visibility — hide forever-gated / misleading CTAs (dead-controls audit).
  */
 
+import { normalizePricingSize } from './servicePricing.js'
+
 /** Queue ticket primary actions: hide when role cannot edit (don't leave forever-disabled buttons). */
 export function showQueueTicketEditActions(canManageQueue) {
   return Boolean(canManageQueue)
@@ -59,7 +61,7 @@ export function seedBookingFromVehicle(form, vehicle) {
     vehicle_plate: vehicle.plate_number || form.vehicle_plate || '',
     vehicle_make: vehicle.vehicle_make || form.vehicle_make || '',
     vehicle_model: vehicle.vehicle_model || form.vehicle_model || '',
-    vehicle_type: vehicle.vehicle_type || form.vehicle_type || 'medium',
+    vehicle_type: normalizePricingSize(vehicle.vehicle_type || form.vehicle_type || 'medium'),
   }
 }
 

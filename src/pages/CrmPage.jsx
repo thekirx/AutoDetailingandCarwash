@@ -16,6 +16,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { plateValidationError, PLATE_FIELD_HINT, normalizePlate } from '@/lib/customerAuth'
+import { normalizePricingSize, PRICING_SIZES } from '@/lib/servicePricing'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import CustomerNotesPanel from '@/components/CustomerNotesPanel'
 import CrmInsightsPanel from '@/pages/CrmInsightsPanel'
@@ -50,8 +51,8 @@ const CRM_SHELL_TABS = Object.freeze([
   { id: 'insights', label: 'Insights', icon: Search },
   { id: 'sms', label: 'SMS', icon: MessageSquare },
 ])
-const emptyForm = { first_name: '', last_name: '', phone: '', email: '', plate: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan' }
-const emptyVehicle = { plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'sedan', color: '', icon: '' }
+const emptyForm = { first_name: '', last_name: '', phone: '', email: '', plate: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'medium' }
+const emptyVehicle = { plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'medium', color: '', icon: '' }
 
 async function provisionCustomer(body) {
   const token = await getAccessTokenFresh()
@@ -236,7 +237,7 @@ export default function CrmPage() {
         plate: plate || null,
         vehicle_make: form.vehicle_make || null,
         vehicle_model: form.vehicle_model || null,
-        vehicle_type: form.vehicle_type || 'sedan',
+        vehicle_type: normalizePricingSize(form.vehicle_type),
       })
       toast.success('Customer registered — account invite queued')
       setForm(emptyForm)
@@ -298,7 +299,7 @@ export default function CrmPage() {
         normalized_plate_number: normalizePlate(plate),
         vehicle_make: vehicleForm.vehicle_make.trim() || null,
         vehicle_model: vehicleForm.vehicle_model.trim() || null,
-        vehicle_type: vehicleForm.vehicle_type || 'sedan',
+        vehicle_type: normalizePricingSize(vehicleForm.vehicle_type),
         color: vehicleForm.color.trim() || null,
         icon: normalizeVehicleIcon(vehicleForm.icon),
         is_archived: false,
@@ -758,7 +759,7 @@ export default function CrmPage() {
                     <div>
                       <p className="font-medium">{v.plate_number}</p>
                       <p className="text-muted-foreground">
-                        {[v.vehicle_make, v.vehicle_model, v.vehicle_type, v.color].filter(Boolean).join(' · ')}
+                        {[v.vehicle_make, v.vehicle_model, PRICING_SIZES.find((s) => s.slug === normalizePricingSize(v.vehicle_type))?.label, v.color].filter(Boolean).join(' · ')}
                       </p>
                     </div>
                   </div>
@@ -824,11 +825,27 @@ export default function CrmPage() {
                 model={form.vehicle_model}
                 onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
                 onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
+                onSizeSuggest={(vehicle_type) => setForm((f) => ({ ...f, vehicle_type }))}
                 variant="crm"
                 required={false}
                 makeLabel="Brand"
                 modelLabel="Model"
               />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="crm-reg-size">Car size</Label>
+              <select
+                id="crm-reg-size"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                value={form.vehicle_type || 'medium'}
+                onChange={(e) => setForm({ ...form, vehicle_type: e.target.value })}
+              >
+                {PRICING_SIZES.map((sz) => (
+                  <option key={sz.slug} value={sz.slug}>
+                    {sz.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setRegisterOpen(false)}>Cancel</Button>
@@ -895,17 +912,26 @@ export default function CrmPage() {
               <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-2"><Label>Make</Label><Input value={vehicleForm.vehicle_make} onChange={(e) => setVehicleForm({ ...vehicleForm, vehicle_make: e.target.value })} /></div>
-              <div className="flex flex-col gap-2"><Label>Model</Label><Input value={vehicleForm.vehicle_model} onChange={(e) => setVehicleForm({ ...vehicleForm, vehicle_model: e.target.value })} /></div>
+              <VehicleMakeModelFields
+                make={vehicleForm.vehicle_make}
+                model={vehicleForm.vehicle_model}
+                onMakeChange={(vehicle_make) => setVehicleForm((f) => ({ ...f, vehicle_make }))}
+                onModelChange={(vehicle_model) => setVehicleForm((f) => ({ ...f, vehicle_model }))}
+                onSizeSuggest={(vehicle_type) => setVehicleForm((f) => ({ ...f, vehicle_type }))}
+                variant="crm"
+                required={false}
+                makeLabel="Make"
+                modelLabel="Model"
+              />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label>Type</Label>
-                <Select value={vehicleForm.vehicle_type} onValueChange={(v) => setVehicleForm({ ...vehicleForm, vehicle_type: v })}>
+                <Label>Car size</Label>
+                <Select value={normalizePricingSize(vehicleForm.vehicle_type)} onValueChange={(v) => setVehicleForm({ ...vehicleForm, vehicle_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {['sedan', 'suv', 'pickup', 'van', 'motorcycle', 'other'].map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    {PRICING_SIZES.map((t) => (
+                      <SelectItem key={t.slug} value={t.slug}>{t.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

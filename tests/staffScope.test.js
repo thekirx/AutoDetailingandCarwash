@@ -32,7 +32,7 @@ describe('Staff capability matrix', () => {
     assert.equal(allowRoute(p, 'dashboard'), true)
     assert.equal(allowRoute(p, 'queue'), true)
     assert.equal(allowRoute(p, 'queue-new'), false)
-    assert.equal(allowRoute(p, 'crew'), true)
+    assert.equal(allowRoute(p, 'crew'), false)
     assert.equal(allowRoute(p, 'kpi'), true)
     assert.equal(allowRoute(p, 'pos'), false)
     assert.equal(allowRoute(p, 'finance'), false)
@@ -47,7 +47,7 @@ describe('Staff capability matrix', () => {
     assert.equal(allowRoute(p, 'history'), false)
     assert.deepEqual(
       getStaffMore(p).map((item) => item.to),
-      ['/operations/dashboard', '/operations/queue', '/operations/crew', '/operations/kpi'],
+      ['/operations/dashboard', '/operations/queue', '/operations/kpi'],
     )
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
@@ -55,7 +55,6 @@ describe('Staff capability matrix', () => {
         '/operations/attendance',
         '/operations/dashboard',
         '/operations/queue',
-        '/operations/crew',
         '/operations/kpi',
         '/operations/my-tasks',
         '/operations/planning',

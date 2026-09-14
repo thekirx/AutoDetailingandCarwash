@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { BellRing, CalendarClock, LoaderCircle, Save, Send, Wrench } from 'lucide-react'
+import { BellRing, CalendarClock, LoaderCircle, Save, Search, Send, Ticket, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
+import { Link } from 'react-router-dom'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import {
   DETAILING_SCHEDULE_TYPES,
+  PAINT_MAINTENANCE_SLUG,
   daysUntilDue,
+  maintenanceNeedsOpsAttention,
   maintenanceUrgency,
+  matchesMaintenanceSearch,
   resolveFrequencyMonthsFromSettings,
 } from '@/lib/paintMaintenance'
 import StatusBadge from '@/components/ops/StatusBadge'
@@ -33,7 +37,8 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
   const [typeMonths, setTypeMonths] = useState({})
   const [savingTypes, setSavingTypes] = useState(false)
   const [busyId, setBusyId] = useState(null)
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('action')
+  const [search, setSearch] = useState('')
   const [draftDue, setDraftDue] = useState({})
 
   const load = useCallback(async () => {
@@ -86,18 +91,26 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
   }, [load])
 
   const visible = useMemo(() => {
-    if (filter === 'all') return schedules
-    return schedules.filter((row) => maintenanceUrgency(row.next_due_at) === filter)
-  }, [schedules, filter])
+    const q = search.trim()
+    const searched = q ? schedules.filter((row) => matchesMaintenanceSearch(row, q)) : schedules
+    if (q) {
+      if (filter === 'all' || filter === 'action') return searched
+      return searched.filter((row) => maintenanceUrgency(row.next_due_at) === filter)
+    }
+    const actionable = searched.filter((row) => maintenanceNeedsOpsAttention(row))
+    if (filter === 'action' || filter === 'all') return actionable
+    return actionable.filter((row) => maintenanceUrgency(row.next_due_at) === filter)
+  }, [schedules, filter, search])
 
   const counts = useMemo(() => {
-    const c = { all: schedules.length, overdue: 0, due_soon: 0, upcoming: 0 }
-    for (const row of schedules) {
+    const pool = search.trim() ? schedules.filter((row) => matchesMaintenanceSearch(row, search)) : schedules.filter((row) => maintenanceNeedsOpsAttention(row))
+    const c = { action: pool.length, overdue: 0, due_soon: 0, upcoming: 0 }
+    for (const row of pool) {
       const u = maintenanceUrgency(row.next_due_at)
       if (u in c) c[u] += 1
     }
     return c
-  }, [schedules])
+  }, [schedules, search])
 
   async function saveTypeIntervals() {
     setSavingTypes(true)
@@ -266,12 +279,24 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
           <div>
             <h2 className="text-sm font-bold tracking-wide text-foreground uppercase">Vehicle schedules</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Adjust due dates, cancel, or send a maintenance reminder to the client.
+              Due soon and overdue stay on this list. Notify the client to book. After the visit, set the next date to hide the plate until the next cycle. Search to find already-notified upcoming cars.
             </p>
           </div>
-          <div className="flex flex-wrap gap-1" role="toolbar" aria-label="Filter by urgency">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:items-end">
+            <label className="relative w-full sm:max-w-xs">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search plate, name, phone…"
+                className="min-h-11 pl-9"
+                aria-label="Search maintenance schedules"
+              />
+            </label>
+            <div className="flex flex-wrap gap-1" role="toolbar" aria-label="Filter by urgency">
             {[
-              ['all', 'All'],
+              ['action', 'Needs action'],
               ['overdue', 'Overdue'],
               ['due_soon', 'Due soon'],
               ['upcoming', 'Upcoming'],
@@ -292,13 +317,15 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
                 <span className="tabular-nums opacity-70">{counts[id] ?? 0}</span>
               </button>
             ))}
+            </div>
           </div>
         </div>
 
         {!visible.length ? (
           <p className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-            No active maintenance schedules{branchFilter !== 'all' ? ' for this branch' : ''}. Complete Ceramic or PPF
-            to enroll a plate.
+            {search.trim()
+              ? 'No schedules match that search.'
+              : 'No plates need action. Search to find upcoming cars already notified.'}
           </p>
         ) : (
           <ul className="flex flex-col gap-3">
@@ -357,11 +384,12 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
                           size="sm"
                           className="min-h-11 cursor-pointer gap-1.5"
                           disabled={busy || draftDue[row.id] === String(row.next_due_at || '').slice(0, 10)}
-                          onClick={() => patchSchedule(row.id, { next_due_at: draftDue[row.id] })}
+                          onClick={() => patchSchedule(row.id, { action: 'serviced', next_due_at: draftDue[row.id] })}
                         >
                           <CalendarClock className="size-4" aria-hidden />
                           Set date
                         </Button>
+                        {(urgency === 'overdue' || urgency === 'due_soon') ? (
                         <Button
                           type="button"
                           size="sm"
@@ -375,6 +403,15 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
                             <BellRing className="size-4" aria-hidden />
                           )}
                           Notify client
+                        </Button>
+                        ) : null}
+                        <Button type="button" variant="outline" size="sm" className="min-h-11 cursor-pointer gap-1.5" asChild>
+                          <Link
+                            to={`/operations/bookings?tab=board&book=1&service=${PAINT_MAINTENANCE_SLUG}&plate=${encodeURIComponent(row.plate_number || '')}&name=${encodeURIComponent(row.customer_name || '')}&phone=${encodeURIComponent(row.customer_phone || '')}&branch=${encodeURIComponent(row.branch_slug || '')}`}
+                          >
+                            <Ticket className="size-4" aria-hidden />
+                            Ticket maintenance
+                          </Link>
                         </Button>
                         <Button
                           type="button"

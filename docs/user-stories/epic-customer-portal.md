@@ -27,6 +27,7 @@
 **Acceptance**
 
 - [x] Customer account frame + garage helpers
+- [x] Garage/book auto-fill car size from Cars catalog; customer can override
 - [x] History / account nav coverage
 
 **Test seam:** `tests/customerGarage.test.js`, `tests/customerHistory.test.js`, `tests/customerAccountNav.test.js`

@@ -45,7 +45,7 @@ const OPS_ROUTES = [
   { slug: 'console', path: '/operations/console' },
   { slug: 'dashboard', path: '/operations/dashboard' },
   { slug: 'queue', path: '/operations/queue' },
-  { slug: 'crew', path: '/operations/crew' },
+  { slug: 'people', path: '/operations/people' },
   { slug: 'attendance--clock', path: '/operations/attendance' },
   { slug: 'attendance--register', path: '/operations/attendance?tab=register' },
   { slug: 'attendance--settings', path: '/operations/attendance?tab=settings' },

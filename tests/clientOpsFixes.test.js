@@ -43,12 +43,15 @@ describe('client ops fixes batch', () => {
     assert.ok(DETAILING_BOARD_STATUSES.length >= 7)
   })
 
-  it('Bookings view is Sales / SA / Marketing — not TL', () => {
+  it('Bookings view includes TL (create) and Branch Admin (read-only)', () => {
     assert.equal(canAccessBookingBoard({ role: ROLES.SALES }), true)
     assert.equal(canAccessBookingBoard({ role: ROLES.SUPER_ADMIN }), true)
     assert.equal(canAccessBookingBoard({ role: ROLES.MARKETING }), true)
-    assert.equal(canAccessBookingBoard({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' }), false)
+    assert.equal(canAccessBookingBoard({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' }), true)
+    assert.equal(canAccessBookingBoard({ role: ROLES.ADMIN, branch_slug: 'bacoor' }), true)
     assert.equal(canCreateBookings({ role: ROLES.SALES }), true)
+    assert.equal(canCreateBookings({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' }), true)
+    assert.equal(canCreateBookings({ role: ROLES.ADMIN, branch_slug: 'bacoor' }), false)
     assert.equal(canEditBookings({ role: ROLES.TEAM_LEAD }), false)
     assert.equal(canEditBookings({ role: ROLES.ADMIN }), false)
   })

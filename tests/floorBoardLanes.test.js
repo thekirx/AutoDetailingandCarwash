@@ -78,8 +78,7 @@ describe('floor board lanes by family', () => {
     assert.match(board, /Floor Board/)
     assert.match(board, /floorLaneLabel/)
     assert.match(board, /LaneStrip family="wash"/)
-    // Client revision: Detailing Services is off the Floor Board entirely.
-    assert.doesNotMatch(board, /LaneStrip family="detailing"/)
+    assert.match(board, /LaneStrip family="detailing"/)
     assert.doesNotMatch(board, /Detailing operations/)
     // Client revision: Final Checking and Services Failed QA both render as lanes.
     assert.match(board, /Services Failed QA/)

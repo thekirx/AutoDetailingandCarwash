@@ -222,14 +222,32 @@ export async function saveBranchOperatingHours(branchSlug, week) {
   return data || []
 }
 
+const STAFF_LIST_COLS =
+  'id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, is_supervisor, reports_to, created_at, updated_at'
+const STAFF_LIST_COLS_LEGACY =
+  'id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, created_at, updated_at'
+
+function isMissingStaffColumn(error) {
+  return /is_supervisor|reports_to|42703|column .* does not exist/i.test(error?.message || '')
+}
+
 export async function listStaffPeople({ includeInactive = false } = {}) {
   let q = supabase
     .from('staff_profiles')
-    .select('id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, created_at, updated_at')
+    .select(STAFF_LIST_COLS)
     .eq('is_archived', false)
     .order('full_name')
   if (!includeInactive) q = q.eq('is_active', true)
-  const { data, error } = await q
+  let { data, error } = await q
+  if (error && isMissingStaffColumn(error)) {
+    q = supabase
+      .from('staff_profiles')
+      .select(STAFF_LIST_COLS_LEGACY)
+      .eq('is_archived', false)
+      .order('full_name')
+    if (!includeInactive) q = q.eq('is_active', true)
+    ;({ data, error } = await q)
+  }
   if (error) throw mapDbError(error)
   const rows = data || []
   if (!rows.length) return rows
@@ -269,6 +287,8 @@ export async function updateStaffPerson({
   attendance_enabled,
   geofence_enabled,
   employment_type,
+  is_supervisor,
+  reports_to,
 }) {
   const primary =
     branch_slug || (Array.isArray(branch_slugs) && branch_slugs.length ? branch_slugs[0] : null)
@@ -290,6 +310,8 @@ export async function updateStaffPerson({
   if (attendance_enabled !== undefined) patch.attendance_enabled = attendance_enabled
   if (geofence_enabled !== undefined) patch.geofence_enabled = geofence_enabled
   if (employment_type !== undefined) patch.employment_type = employment_type
+  if (is_supervisor !== undefined) patch.is_supervisor = Boolean(is_supervisor)
+  if (reports_to !== undefined) patch.reports_to = reports_to && reports_to !== id ? reports_to : null
   // Only patch grants when explicitly provided (People UI omits when editor lacks rbac_edit)
   if (
     v.role === 'assistant_super_admin' &&

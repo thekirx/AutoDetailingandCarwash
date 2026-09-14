@@ -282,6 +282,7 @@ export function BookingPage() {
             model={form.vehicle_model}
             onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
             onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
+            onSizeSuggest={(vehicle_type) => setForm((f) => ({ ...f, vehicle_type }))}
             variant="public"
             makeLabel="Vehicle brand"
             modelLabel="Vehicle model"

@@ -39,7 +39,6 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/queue',
         '/operations/bookings',
         '/operations/attendance',
-        '/operations/crew',
         '/operations/kpi',
         '/operations/pos',
         '/operations/inventory',
@@ -130,6 +129,7 @@ describe('RBAC Part 1 matrix', () => {
       [
         '/operations/dashboard',
         '/operations/queue',
+        '/operations/bookings',
         '/operations/attendance',
         '/operations/pos',
         '/operations/inventory',
@@ -187,8 +187,8 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(dock.some((i) => i.to === '/operations/queue'))
     assert.ok(dock.some((i) => i.to === '/operations/queue/new'))
     assert.ok(dock.some((i) => i.to === '/operations/attendance'))
-    assert.equal(dock.some((i) => i.to === '/operations/bookings'), false)
-    assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 4)
+    assert.ok(dock.some((i) => i.to === '/operations/bookings'))
+    assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 3)
   })
 
   it('Command nav never links a page the role cannot open', () => {

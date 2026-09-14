@@ -3,6 +3,7 @@ import { notifyBookingStatus } from './notifyBooking.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
 import { plateValidationError } from '../src/lib/customerAuth.js'
+import { inferPhPricingSize } from '../src/lib/phVehicleSizes.js'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -54,7 +55,7 @@ export async function handlePublicBookRequest(req, res) {
     // Align casing with Super Admin vehicle_catalog when the pair exists (active).
     const { data: catalogHit } = await db
       .from('vehicle_catalog')
-      .select('make, model')
+      .select('make, model, size_slug')
       .eq('is_active', true)
       .ilike('make', vehicle_make)
       .ilike('model', vehicle_model)
@@ -80,9 +81,12 @@ export async function handlePublicBookRequest(req, res) {
       .maybeSingle()
     if (!svc) return json(res, 400, { error: 'Service not found.' })
     const sizeMap = Object.fromEntries((svc.service_size_prices || []).map((p) => [p.size_slug, p.price_minor]))
-    const pricingSlug = ['small', 'medium', 'large', 'extra_large'].includes(vehicle_type)
-      ? vehicle_type
-      : 'medium'
+    const rawSize = String(vehicle_type || '').trim().toLowerCase().replace(/\s+/g, '_')
+    const clientIsPricing = ['small', 'medium', 'large', 'extra_large'].includes(rawSize)
+    const catalogSize = String(catalogHit?.size_slug || '').trim()
+    const pricingSlug = clientIsPricing
+      ? rawSize
+      : catalogSize || inferPhPricingSize(vehicle_make, vehicle_model) || 'medium'
     const priced =
       sizeMap[pricingSlug] ?? sizeMap.medium ?? svc.price_minor ?? 0
 

@@ -152,8 +152,8 @@ async function main() {
     if (nav.includes('/operations/branches') || nav.includes('/operations/people') || nav.includes('/operations/finance')) {
       fail('tl.nav.denied_admin', new Error(nav.join(',')))
     } else ok('tl.nav.denied_admin')
-    if (!nav.includes('/operations/queue') || !nav.includes('/operations/crew')) fail('tl.nav.queue_crew', new Error(nav.join(',')))
-    else ok('tl.nav.queue_crew')
+    if (!nav.includes('/operations/queue') || !nav.includes('/operations/bookings')) fail('tl.nav.queue_bookings', new Error(nav.join(',')))
+    else ok('tl.nav.queue_bookings')
     if (!nav.includes('/operations/bookings')) fail('tl.nav.bookings', new Error(nav.join(',')))
     else ok('tl.nav.bookings')
   }

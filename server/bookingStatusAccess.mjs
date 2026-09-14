@@ -53,14 +53,8 @@ export function canStaffUpdateBookingStatus(staff, booking, opts = {}) {
     return true
   }
 
-  if (staff.role === 'admin') {
-    const slugs = Array.isArray(staff.branch_slugs) && staff.branch_slugs.length
-      ? staff.branch_slugs.filter(Boolean)
-      : staff.branch_slug
-        ? [staff.branch_slug]
-        : []
-    return slugs.includes(branch)
-  }
+  // Branch Admin: Bookings + Queue are view-only.
+  if (staff.role === 'admin') return false
 
   return false
 }

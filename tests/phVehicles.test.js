@@ -26,5 +26,8 @@ assert.ok(filterVehicleModels('Honda', 'cr').some((m) => /CR-V/i.test(m)))
 assert.deepEqual(splitCustomerName('Juan Dela Cruz'), { first: 'Juan', last: 'Dela Cruz' })
 assert.deepEqual(splitCustomerName('Maria'), { first: 'Maria', last: '' })
 assert.equal(modelsForMake('NotABrand').length, 0)
+assert.equal(flat.find((r) => r.make === 'Toyota' && r.model === 'Vios')?.size_slug, 'small')
+assert.equal(flat.find((r) => r.make === 'Toyota' && r.model === 'Fortuner')?.size_slug, 'large')
+assert.equal(flat.find((r) => r.make === 'Toyota' && r.model === 'Alphard')?.size_slug, 'extra_large')
 
 console.log(`phVehicles catalog: ok (${PH_VEHICLE_MAKES.length} makes, ${flat.length} pairs)`)

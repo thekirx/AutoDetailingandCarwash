@@ -1,5 +1,7 @@
 /** Shared vehicle_catalog helpers (Super Admin CRUD + book/floor pickers). */
 
+import { inferPhPricingSize } from './phVehicleSizes.js'
+
 export function normalizeCatalogPair(make, model) {
   return { make: String(make || '').trim(), model: String(model || '').trim() }
 }
@@ -15,6 +17,25 @@ export function catalogRowsToMap(rows) {
     if (!map[make].includes(model)) map[make].push(model)
   }
   return map
+}
+
+/** make|model → size_slug for auto-select on the floor / book forms. */
+export function catalogRowsToSizeIndex(rows) {
+  const index = new Map()
+  for (const row of rows || []) {
+    const make = String(row.make || '').trim()
+    const model = String(row.model || '').trim()
+    if (!make || !model) continue
+    const size = String(row.size_slug || '').trim() || inferPhPricingSize(make, model)
+    index.set(`${make.toLowerCase()}|${model.toLowerCase()}`, size)
+  }
+  return index
+}
+
+export function catalogSizeFor(index, make, model) {
+  if (!index) return inferPhPricingSize(make, model)
+  const key = `${String(make || '').trim().toLowerCase()}|${String(model || '').trim().toLowerCase()}`
+  return index.get(key) || inferPhPricingSize(make, model)
 }
 
 export function catalogMakes(map) {

@@ -31,6 +31,7 @@ describe('Branch Admin simplified shell', () => {
       [
         '/operations/dashboard',
         '/operations/queue',
+        '/operations/bookings',
         '/operations/attendance',
         '/operations/pos',
         '/operations/inventory',

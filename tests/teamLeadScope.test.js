@@ -38,10 +38,10 @@ describe('Team Lead capability matrix', () => {
     assert.equal(allowRoute(p, 'dashboard'), true)
     assert.equal(allowRoute(p, 'queue'), true)
     assert.equal(allowRoute(p, 'queue-new'), true)
-    assert.equal(allowRoute(p, 'crew'), true)
+    assert.equal(allowRoute(p, 'crew'), false)
     assert.equal(allowRoute(p, 'attendance'), true)
     assert.equal(allowRoute(p, 'kpi'), true)
-    assert.equal(allowRoute(p, 'bookings'), false)
+    assert.equal(allowRoute(p, 'bookings'), true)
     assert.equal(allowRoute(p, 'my-tasks'), true)
     assert.equal(canEditQueueOperations(p), true)
     assert.equal(allowRoute(p, 'console'), false)
@@ -122,7 +122,7 @@ describe('booking-status branch gate (TL-C1)', () => {
     )
   })
 
-  it('allows Super Admin any branch; scopes Admin to assignments', () => {
+  it('allows Super Admin any branch; Branch Admin cannot mutate bookings', () => {
     assert.equal(
       canStaffUpdateBookingStatus({ role: 'BossMich' }, { branch: 'batangas' }),
       true,
@@ -132,7 +132,7 @@ describe('booking-status branch gate (TL-C1)', () => {
         { role: 'admin', branch_slugs: ['bacoor', 'imus'] },
         { branch: 'imus' },
       ),
-      true,
+      false,
     )
     assert.equal(
       canStaffUpdateBookingStatus(

@@ -450,7 +450,7 @@ export function canEditBookings(profile) {
 }
 
 export function canCreateBookings(profile) {
-  return isSuperAdmin(profile) || profile?.role === ROLES.SALES
+  return isSuperAdmin(profile) || profile?.role === ROLES.SALES || profile?.role === ROLES.TEAM_LEAD
 }
 
 export function canAccessCrm(profile) {
@@ -464,17 +464,20 @@ export function canAccessMarketing(profile) {
   return canAccessCrm(profile)
 }
 
-/** Bookings view: Sales, Super Admin/ASA, Marketing (readonly), Detailer (pipeline). TL/Admin use Queue for wash. */
+/** Bookings view: Sales, Super Admin/ASA, Marketing (readonly), Detailer, TL (ticket), Branch Admin (readonly). */
 export function canAccessBookingBoard(profile) {
   if (profile?.role === ROLES.MARKETING) return true
   if (profile?.role === ROLES.DETAILER) return true
+  if (profile?.role === ROLES.TEAM_LEAD) return true
+  if (isBranchAdmin(profile)) return true
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'bookings')
   return profile?.role === ROLES.SALES
 }
 
-/** Advance detailing board status without editing services (TL / Branch Admin / SA). */
+/** Advance detailing board status without editing services (TL / SA / Sales / OL / Detailer). Branch Admin is view-only. */
 export function canAdvanceBookingStatus(profile) {
+  if (isBranchAdmin(profile)) return false
   return has(profile, [
     ...ADMIN_ROLES,
     ROLES.TEAM_LEAD,
@@ -599,12 +602,11 @@ export function canSeeForPaymentLane(profile) {
   return isAdmin(profile) || isOperationsLead(profile)
 }
 
-/** Branch Admin / Super Admin / ASA(queue_all) may pull tickets back to earlier lanes. */
+/** Super Admin / ASA(queue_all) / Operations Lead may pull tickets back. Branch Admin is view-only. */
 export function canOverrideQueueStatus(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
-  if (isOperationsLead(profile)) return true
-  return profile?.role === ROLES.ADMIN
+  return isOperationsLead(profile)
 }
 
 export function canViewAssignedTasks(profile) {
@@ -756,6 +758,7 @@ export function getOperationsNav(profile) {
     return [
       nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
       nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
+      nav('Bookings', '/operations/bookings', 'Kanban', 'floor'),
       nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
       nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
       nav('Inventory', '/operations/inventory', 'Package', 'counter'),
@@ -773,7 +776,6 @@ export function getOperationsNav(profile) {
     return [
       nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
       nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
-      nav('Crew', '/operations/crew', 'Users', 'floor'),
       nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
       nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
       nav('Reviews', '/operations/reviews', 'Star', 'customers'),
@@ -792,7 +794,6 @@ export function getOperationsNav(profile) {
       nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
       nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
       nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
-      nav('Crew', '/operations/crew', 'Users', 'floor'),
       nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
@@ -822,7 +823,6 @@ export function getOperationsNav(profile) {
   if (canViewQueueOperations(profile)) {
     items.push(
       nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
-      nav('Crew', '/operations/crew', 'Users', 'floor'),
       nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
     )
   } else if (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF) {
@@ -910,7 +910,7 @@ export function getTeamLeadDock(profile) {
   if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
   if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
   if (canQueue) dock.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
-  if (canQueue) dock.push({ label: 'Crew', to: '/operations/crew', icon: 'Users' })
+  if (canAccessBookingBoard(profile)) dock.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
   return dock.slice(0, 5)
 }
 
@@ -971,7 +971,6 @@ export function getStaffMore(profile) {
   return [
     { label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' },
     { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList' },
-    { label: 'Crew', to: '/operations/crew', icon: 'Users' },
     { label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' },
   ]
 }
@@ -1049,6 +1048,7 @@ export function redirectForRole(role) {
 export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'dashboard',
   'queue',
+  'bookings',
   'attendance',
   'pos',
   'inventory',
@@ -1075,7 +1075,7 @@ export function allowRoute(profile, key) {
     dashboard: canViewQueueOperations,
     queue: canViewQueueOperations,
     'queue-new': canEditQueueOperations,
-    crew: canViewQueueOperations,
+    crew: () => false,
     attendance: canAccessAttendance,
     kpi: canViewQueueOperations,
     'my-tasks': canViewAssignedTasks,

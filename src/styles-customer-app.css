@@ -124,11 +124,44 @@ html.dark .capp-brand-logo--dark {
   display: block;
 }
 
+.capp-hero-greet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.45rem 1rem;
+  min-height: 1.25rem;
+}
+
+@media (max-width: 639px) {
+  .capp-hero-greet {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+}
+
 .capp-greet {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--capp-steel);
+}
+
+.capp-weather {
+  margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--capp-ink);
+  white-space: nowrap;
+}
+
+.capp-weather-temp {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
 }
 
 .capp-hero h1 {
@@ -473,7 +506,7 @@ html.dark .capp-badge--info {
   gap: 0.3rem;
   min-width: 0;
   text-align: center;
-  font-size: 0.66rem;
+  font-size: clamp(0.58rem, 2.1vw, 0.66rem);
   font-weight: 700;
   color: var(--capp-steel);
 }
@@ -953,11 +986,6 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-}
-
-.capp-service.is-active .capp-row-icon {
-  background: var(--capp-accent);
-  color: #fff;
 }
 
 .capp-price {
@@ -1441,36 +1469,77 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
 }
 
 /* ---------- Stamps (Loyalty) ---------- */
+.capp-loyalty-home {
+  display: grid;
+  gap: 0.85rem;
+  text-decoration: none;
+  color: inherit;
+  background:
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--capp-accent) 16%, transparent), transparent 42%),
+    var(--capp-surface);
+}
+
 .capp-stamps {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.55rem;
   margin: 0;
-  padding: 0;
+  padding: 0.15rem 0 0;
   list-style: none;
 }
 
 .capp-stamp {
+  position: relative;
   display: grid;
   place-items: center;
   aspect-ratio: 1;
   border-radius: 999px;
-  border: 1px solid var(--capp-line-strong);
-  background: var(--capp-surface-2);
-  color: var(--capp-steel);
-  font-size: 0.72rem;
-  font-weight: 800;
+  border: 2px dashed color-mix(in srgb, var(--capp-line-strong) 80%, transparent);
+  background:
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, #fff 55%, transparent), transparent 48%),
+    var(--capp-surface-2);
+  color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.capp-stamp:nth-child(3n) {
+  transform: rotate(-4deg);
+}
+
+.capp-stamp:nth-child(4n) {
+  transform: rotate(5deg);
 }
 
 .capp-stamp.is-on {
-  border-color: var(--capp-accent);
-  background: var(--capp-accent);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--capp-accent) 82%, #020a31);
+  background:
+    radial-gradient(circle at 32% 28%, color-mix(in srgb, #fff 28%, transparent), transparent 42%),
+    var(--capp-accent);
   color: #fff;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--capp-accent) 28%, transparent);
 }
 
 .capp-stamp.is-gift {
-  color: #f3cf7a;
-  border-color: rgba(233, 185, 73, 0.45);
+  color: #c9a227;
+  border-style: solid;
+  border-color: rgba(201, 162, 39, 0.55);
+  background: color-mix(in srgb, #f3cf7a 16%, var(--capp-surface));
+}
+
+.capp-stamps.is-compact {
+  gap: 0.35rem;
+}
+
+.capp-stamps.is-compact .capp-stamp {
+  border-width: 1.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capp-stamp:nth-child(3n),
+  .capp-stamp:nth-child(4n) {
+    transform: none;
+  }
 }
 
 /* ---------- Blog / Events cards ---------- */

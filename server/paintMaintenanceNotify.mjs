@@ -94,7 +94,7 @@ export async function sendPaintMaintenanceReminder({
           userIds: [row.customer_id],
           title,
           body: message,
-          url: '/book',
+          url: '/account/book?service=paint-maintenance',
           tag: `maintenance-${row.id}-${row.next_due_at}`,
           kind: 'maintenance_reminder',
         })

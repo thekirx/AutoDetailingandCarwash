@@ -266,6 +266,13 @@ export default function SuperAdminFloorBoard() {
   const failedQaJobs = board?.failedQaJobs || []
 
   function openFamilyLane(family, lane) {
+    if (family === 'detailing') {
+      const params = new URLSearchParams({ tab: 'board' })
+      if (branchFilter && branchFilter !== 'all') params.set('branch', branchFilter)
+      if (lane) params.set('status', lane)
+      navigate(`/operations/bookings?${params}`)
+      return
+    }
     navigate(queueFamilyHref(family, { lane, branch: branchFilter }))
   }
 
@@ -351,7 +358,7 @@ export default function SuperAdminFloorBoard() {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Floor Board</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Services & Packages across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
+            Services & Packages and Detailing Services stay separate across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
           </p>
         </div>
         <button
@@ -429,6 +436,7 @@ export default function SuperAdminFloorBoard() {
       ) : null}
 
       <LaneStrip family="wash" />
+      <LaneStrip family="detailing" />
 
       <Section
         eyebrow="Quality"
@@ -484,8 +492,8 @@ export default function SuperAdminFloorBoard() {
         eyebrow="Roster"
         title="Carwash crew on shift"
         action={
-          <Link to="/operations/crew" className="text-sm font-medium text-primary no-underline hover:underline">
-            Open crew
+          <Link to="/operations/attendance" className="text-sm font-medium text-primary no-underline hover:underline">
+            Open attendance
           </Link>
         }
       >
@@ -495,7 +503,7 @@ export default function SuperAdminFloorBoard() {
             value={board?.availableCount ?? available.length}
             tone="green"
             hint="Present or late · free"
-            onNavigate={() => navigate('/operations/crew')}
+            onNavigate={() => navigate('/operations/attendance')}
             breakdown={
               available.length
                 ? `Free carwash crew on site (present or late, not on a bay):\n${available
@@ -509,7 +517,7 @@ export default function SuperAdminFloorBoard() {
             label="On a bay"
             value={board?.onBayCount ?? (board?.busyStaff?.length || 0)}
             hint="Assigned now"
-            onNavigate={() => navigate('/operations/crew')}
+            onNavigate={() => navigate('/operations/attendance')}
             breakdown={
               (board?.busyStaff || []).length
                 ? `Crew currently assigned to a live bay:\n${(board.busyStaff || [])
@@ -538,7 +546,7 @@ export default function SuperAdminFloorBoard() {
             label="Crew total"
             value={board?.staffPool?.length ?? available.length + absent.length}
             hint={branchLabel}
-            onNavigate={() => navigate('/operations/crew')}
+            onNavigate={() => navigate('/operations/attendance')}
             breakdown={`Total carwash staff in the pool for ${branchLabel} (available + on bay + absent).`}
           />
         </div>

@@ -1,24 +1,20 @@
 import { Link } from 'react-router-dom'
 import { Radio } from 'lucide-react'
 import { customerQueuePath } from '@/lib/liveQueuePath'
+import { isBookingBoardService } from '@/lib/serviceKinds'
+import { buildVisitProgress } from '@/queue/queueLogic'
 import { Badge } from './CustomerUi'
 import VisitProgress from './VisitProgress'
-
-const FALLBACK_STEPS = [
-  { key: 'waiting', label: 'Waiting' },
-  { key: 'in_progress', label: 'In Progress' },
-  { key: 'final_checking', label: 'Final Checking' },
-  { key: 'for_payment', label: 'For Payment' },
-]
 
 /** Home "Active visit" card. `visit` (one active booking from /api/customer-portal) drives every field. */
 export default function ActiveVisitCard({ visit, branchName }) {
   const car = [visit.vehicle_make, visit.vehicle_model].filter(Boolean).join(' ')
-  const statusLabel = visit.visit?.label || visit.status
-  // Always render the bar when we have a booking — pending/confirmed land on Queued.
+  const detailing = visit.kind === 'detailing' || isBookingBoardService(visit.services || visit)
+  const kind = detailing ? 'detailing' : 'service'
   const progress = visit.visit?.steps?.length
-    ? visit.visit
-    : { steps: FALLBACK_STEPS, currentIndex: 0, isComplete: false, label: statusLabel }
+    ? { ...visit.visit, kind: visit.visit.kind || kind }
+    : buildVisitProgress(visit.status, kind)
+  const statusLabel = progress.label || visit.status
 
   return (
     <article className="capp-card capp-span" aria-label="Active visit">

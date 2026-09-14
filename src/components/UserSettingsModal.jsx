@@ -8,6 +8,7 @@ import { getAccessTokenFresh } from '@/lib/authToken'
 import { loadUserSettings, saveSmsOptIn } from '@/lib/userSettings'
 import PushToggle from '@/components/PushToggle'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
+import { PRICING_SIZES } from '@/lib/servicePricing'
 import { useAuth } from '@/auth/AuthProvider'
 import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import { Button } from '@/components/ui/button'
@@ -60,7 +61,7 @@ export default function UserSettingsModal({
   const [password2, setPassword2] = useState('')
   const [smsOptIn, setSmsOptIn] = useState(true)
   const [smsBusy, setSmsBusy] = useState(false)
-  const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '' })
+  const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'medium', color: '' })
   const [mounted, setMounted] = useState(false)
 
   const isCustomer = audience === 'customer' || showGarage
@@ -164,7 +165,7 @@ export default function UserSettingsModal({
     try {
       await portalAction('add-vehicle', car)
       toast.success('Car saved to your garage')
-      setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '' })
+      setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'medium', color: '' })
       onUpdated?.()
       onOpenChange(false)
     } catch (err) {
@@ -441,10 +442,27 @@ export default function UserSettingsModal({
                 model={car.vehicle_model}
                 onMakeChange={(vehicle_make) => setCar((c) => ({ ...c, vehicle_make }))}
                 onModelChange={(vehicle_model) => setCar((c) => ({ ...c, vehicle_model }))}
+                onSizeSuggest={(vehicle_type) => setCar((c) => ({ ...c, vehicle_type }))}
                 variant="public"
                 makeLabel="Brand"
                 modelLabel="Model"
               />
+              <div className="grid gap-1.5">
+                <Label htmlFor="car-size">Car size</Label>
+                <select
+                  id="car-size"
+                  className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={car.vehicle_type || 'medium'}
+                  onChange={(e) => setCar((c) => ({ ...c, vehicle_type: e.target.value }))}
+                >
+                  {PRICING_SIZES.map((sz) => (
+                    <option key={sz.slug} value={sz.slug}>
+                      {sz.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">Filled from make and model. You can change it.</p>
+              </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="car-color">Color (optional)</Label>
                 <Input id="car-color" className="min-h-11" value={car.color} onChange={(e) => setCar((c) => ({ ...c, color: e.target.value }))} />

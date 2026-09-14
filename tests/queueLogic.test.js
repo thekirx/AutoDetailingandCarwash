@@ -53,13 +53,26 @@ describe('queue logic', () => {
   it('builds customer visit progress from booking status', () => {
     const inProgress = buildVisitProgress('in_progress')
     assert.equal(inProgress.currentIndex, 1)
-    assert.equal(inProgress.label, 'In Progress')
+    assert.equal(inProgress.label, 'Washing')
     assert.equal(inProgress.isComplete, false)
     assert.equal(inProgress.steps.length, 4)
+    assert.equal(inProgress.kind, 'service')
 
     const done = buildVisitProgress('completed')
     assert.equal(done.isComplete, true)
     assert.equal(done.currentIndex, 4)
+
+    const coating = buildVisitProgress('in_progress', 'detailing')
+    assert.equal(coating.kind, 'detailing')
+    assert.equal(coating.steps.length, 6)
+    assert.equal(coating.currentIndex, 2)
+    assert.equal(coating.label, 'In progress')
+    assert.equal(coating.steps[2].key, 'in_progress')
+    assert.notEqual(coating.steps[2].label, 'Washing')
+
+    const booked = buildVisitProgress('confirmed', 'detailing')
+    assert.equal(booked.currentIndex, 0)
+    assert.equal(booked.label, 'Booked')
   })
 
   it('builds a public model with queue numbers only', () => {

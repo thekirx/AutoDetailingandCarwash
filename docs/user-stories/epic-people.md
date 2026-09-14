@@ -11,6 +11,7 @@
 **Acceptance**
 
 - [x] People directory + edit form on `/operations/people`
+- [x] Crew / Team Leads / Admins / Office tabs, create-account modal, search, attendance dashboard, Super Admin supervisor (reports-to)
 - [x] Temporary password via `updateStaffAccountFields`
 - [x] Mobile card layout scrolls without clipping (`people-directory-cards`)
 
