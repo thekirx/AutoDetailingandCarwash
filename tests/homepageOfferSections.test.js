@@ -105,12 +105,9 @@ describe('PPF package value ladder', () => {
     assert.match(section, /ppf-install-proof/)
   })
 
-  it('leads with the starting price, then the step ladder, then a panel-by-panel comparison', async () => {
+  it('leads with the package pitch, then the step ladder and panel-by-panel comparison', async () => {
     const section = await read('src/components/public/home/PpfPackagesSection.jsx')
 
-    /* The floor is read from the packages, never typed in. */
-    assert.match(section, /Math\.min\(\.\.\.PPF_PACKAGES\.map\(\(item\) => item\.priceFrom\)\)/)
-    assert.match(section, /Starting from/)
     assert.match(section, /className=\{`bd-tier\$\{card\.isHighlighted \? ' is-recommended' : ''\}`\}/)
     assert.match(section, /className="bd-tier-riser"/)
     /* Coverage is compared panel by panel: High Impact and Basic film

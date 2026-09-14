@@ -1,5 +1,5 @@
-/* PPF packages on /services/ppf — the starting price, the step ladder, and the
-   comparison. Scoped under .bredesign like the rest of the marketing site. */
+/* PPF packages on /services/ppf — the step ladder and comparison. Scoped
+   under .bredesign like the rest of the marketing site. */
 
 .bredesign .bd-packages {
   background: var(--bd-navy);
@@ -14,26 +14,13 @@
   color: var(--bd-accent);
 }
 
-/* ---- Top: pitch and starting price ------------------------------------ */
-/* The headline runs across the row; the pitch and the price card share the
-   one under it, so the title is never squeezed into a half-width column. */
+/* ---- Top: headline and pitch ------------------------------------------ */
 .bredesign .bd-pk-top {
   display: grid;
-  gap: 18px 36px;
-  /* Both sit directly under the headline: bottom-aligning them dropped the
-     pitch 126px clear of the title it belongs to. */
-  align-items: start;
+  gap: 18px;
 }
 .bredesign .bd-pk-title {
   margin-bottom: 0;
-}
-@media (min-width: 980px) {
-  .bredesign .bd-pk-top {
-    grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
-  }
-  .bredesign .bd-pk-title {
-    grid-column: 1 / -1;
-  }
 }
 .bredesign .bd-pk-sub {
   margin: 0;
@@ -47,57 +34,6 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.bredesign .bd-pk-price {
-  position: relative;
-  overflow: hidden;
-  padding: 22px 24px;
-  border-radius: 14px;
-  background: var(--bd-blue);
-}
-.bredesign .bd-pk-price::after {
-  content: '';
-  position: absolute;
-  right: -60px;
-  top: -60px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(157, 180, 255, 0.35), transparent 70%);
-  pointer-events: none;
-}
-.bredesign .bd-pk-price small {
-  display: block;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.82);
-}
-.bredesign .bd-pk-price strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-}
-.bredesign .bd-pk-price b {
-  display: block;
-  margin-top: 2px;
-  font-family: var(--bd-display);
-  font-size: clamp(2.2rem, 4.4vw, 3.5rem);
-  font-style: italic;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  color: #fff;
-}
-.bredesign .bd-pk-price p {
-  margin-top: 10px;
-  max-width: 44ch;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.86);
-}
-
 /* ---- The ladder -------------------------------------------------------- */
 .bredesign .bd-pk-steps {
   display: grid;

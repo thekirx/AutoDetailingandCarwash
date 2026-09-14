@@ -52,12 +52,14 @@ describe('BreDESIGN public page fallbacks', () => {
     await page.goto(`${PREVIEW_ORIGIN}/services/ppf`, { waitUntil: 'networkidle0' })
     const comparisonState = () => page.evaluate(() => ({
       tiers: document.querySelectorAll('.bd-tier').length,
+      redundantPriceSummary: Boolean(document.querySelector('.bd-pk-price')),
       expanded: document.querySelector('.bd-cmp-toggle')?.getAttribute('aria-expanded'),
       comparisonHidden: document.querySelector('#ppf-compare')?.hidden,
     }))
 
     assert.deepEqual(await comparisonState(), {
       tiers: 4,
+      redundantPriceSummary: false,
       expanded: 'false',
       comparisonHidden: true,
     })
@@ -65,6 +67,7 @@ describe('BreDESIGN public page fallbacks', () => {
     await page.click('.bd-cmp-toggle')
     assert.deepEqual(await comparisonState(), {
       tiers: 4,
+      redundantPriceSummary: false,
       expanded: 'true',
       comparisonHidden: false,
     })
@@ -72,6 +75,7 @@ describe('BreDESIGN public page fallbacks', () => {
     await page.click('.bd-cmp-toggle')
     assert.deepEqual(await comparisonState(), {
       tiers: 4,
+      redundantPriceSummary: false,
       expanded: 'false',
       comparisonHidden: true,
     })

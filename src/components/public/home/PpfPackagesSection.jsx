@@ -8,7 +8,6 @@ import { buildPpfPackageCards } from '../../../lib/homepageContent'
 import './PpfPackagesSection.css'
 
 const packageCards = buildPpfPackageCards(PPF_PACKAGES)
-const startingFrom = `₱${Math.min(...PPF_PACKAGES.map((item) => item.priceFrom)).toLocaleString('en-US')}`
 const shortName = (card) => card.title.replace(' Protection', '')
 
 /* What each step card lists. Read from the package itself, so a change to a
@@ -97,8 +96,8 @@ function CompareCell({ cell }) {
   return <span className={cell.kind === 'figure' ? 'bd-cmp-figure' : undefined}>{cell.value}</span>
 }
 
-/* Flow, top to bottom: what does it start at → what are my choices → which one
-   should I get → what is the difference → book. The steps stand on risers that
+/* Flow, top to bottom: what are my choices → which one should I get → what is
+   the difference → book. The steps stand on risers that
    climb, so the order reads without comparing a single number; the one tier
    Hakum recommends is the only lit card and the only solid button. */
 export default function PpfPackagesSection() {
@@ -111,8 +110,6 @@ export default function PpfPackagesSection() {
     <section id="ppf-packages" className="bd-packages" data-service-packages="ppf">
       <div className="bd-shell">
         <header className="bd-pk-top bd-reveal">
-          {/* The headline runs across the top; the pitch and the starting
-              price share the row beneath it. */}
           <div className="bd-pk-title">
             <p className="bd-eyebrow">Paint protection film packages</p>
             <h2>
@@ -126,12 +123,6 @@ export default function PpfPackagesSection() {
             </a>{' '}
             self-healing TPU film and includes a free glass ceramic coating.
           </p>
-          <div className="bd-pk-price">
-            <small>Paint protection film</small>
-            <strong>Starting from</strong>
-            <b>{startingFrom}</b>
-            <p>Final pricing may vary depending on vehicle size, film/package selected, and vehicle condition.</p>
-          </div>
         </header>
 
         <div className="bd-pk-steps bd-reveal">
