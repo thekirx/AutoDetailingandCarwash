@@ -1,0 +1,43 @@
+/* Customer mock refinement: presentation only, using existing state. */
+.capp .capp-home-action {
+  background: #052699;
+  color: #d9e1ff;
+  border: 0;
+  padding: 1.4rem;
+  text-align: left;
+  box-shadow: 0 15px 32px #05269930;
+}
+.capp-home-action strong { color: white; font-size: 1.25rem; }
+.capp-home-action .capp-btn-fill { background: white; color: #052699; }
+.capp-home-action .capp-btn-ghost { color: white; border-color: #ffffff60; }
+.capp .capp-home-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.capp-loyalty-ring { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; flex: none; border-radius: 50%; background: conic-gradient(var(--capp-accent) var(--stamp-progress), var(--capp-line) 0); }
+.capp-loyalty-ring > span { display: grid; place-items: center; width: 2.8rem; height: 2.8rem; border-radius: 50%; background: var(--capp-surface); font-size: .7rem; font-weight: 800; }
+.capp .capp-loyalty-home .capp-title { font-family: inherit; font-size: 1rem; text-transform: none; }
+.capp .capp-stats { gap: 0; border: 1px solid var(--capp-line); border-radius: 1rem; overflow: hidden; background: var(--capp-surface); }
+.capp .capp-stat { border: 0; border-radius: 0; box-shadow: none; border-right: 1px solid var(--capp-line); }
+.capp .capp-stat:last-child { border-right: 0; }
+.capp-service-photo { width: 4.75rem; height: 4.25rem; object-fit: cover; border-radius: .65rem; flex: none; }
+.capp-booking-refined .capp-service { padding: .55rem; gap: .7rem; border: 2px solid transparent; }
+.capp-booking-refined .capp-service.is-active { border-color: var(--capp-accent); box-shadow: 0 8px 20px #05269918; }
+.capp-booking-refined .capp-price { flex: 0 0 auto; max-width: 8rem; }
+.capp-booking-refined .capp-service em { font-size: .72rem; }
+.capp-booking-summary { position: sticky; bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); z-index: 5; padding: .9rem; border-radius: 1.1rem; background: #020a31; color: white; box-shadow: 0 12px 30px #020a3138; }
+.capp-booking-recap { display: flex; gap: .8rem; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
+.capp-booking-recap span { min-width: 0; }
+.capp-booking-recap small { display: block; color: #b7c2df; font-size: .7rem; }
+.capp-booking-recap strong { display: block; font-size: .85rem; }
+.capp-booking-recap b { font-size: 1.05rem; white-space: nowrap; }
+.capp-booking-summary .capp-btn { background: white; color: #052699; }
+.capp .capp-queue-car { --capp-ink: #fff; --capp-steel: #bac4df; --capp-accent: #9db4ff; --capp-line: #354168; background: #020a31; color: white; padding: 1.25rem; box-shadow: 0 14px 28px #020a3128; }
+.capp-queue-car .capp-title { font-size: 1.4rem !important; }
+.capp-queue-car .capp-progress { margin-top: 1.2rem; }
+.capp-queue-personal { order: 1; }
+.capp-queue-counts { order: 2; }
+.capp-section[aria-label="Other branches"] { order: 3; }
+@media (min-width: 860px) { .capp-booking-summary { bottom: 1rem; } }
+@media (max-width: 380px) {
+  .capp-service-photo { width: 3.25rem; height: 3.8rem; }
+  .capp-booking-refined .capp-price { max-width: 6rem; font-size: .65rem; }
+}
+@media print { .capp-booking-summary { position: static; box-shadow: none; } }

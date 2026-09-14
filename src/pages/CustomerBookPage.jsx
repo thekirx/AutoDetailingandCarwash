@@ -15,6 +15,12 @@ import { CUSTOMER_BOOK_PATH } from '@/lib/customerAccountNav'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Pills, Row, Skeleton } from '@/components/customer/CustomerUi'
+import ceramicPhoto from '@/assets/services/ceramic.webp'
+import maintenancePhoto from '@/assets/services/detailing.webp'
+import tintPhoto from '@/assets/services/ceramic-tint.webp'
+import ppfPhoto from '@/assets/services/paint-protection-film.webp'
+
+const SERVICE_PHOTOS = { 'ceramic-coating': ceramicPhoto, 'paint-maintenance': maintenancePhoto, 'nano-ceramic-tint': tintPhoto, 'ceramic-tint': tintPhoto, 'paint-protection-film': ppfPhoto, ppf: ppfPhoto }
 
 function formatPeso(minor) {
   return `₱${(Number(minor || 0) / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`
@@ -178,7 +184,7 @@ export default function CustomerBookPage() {
 
   return (
     <CustomerAppFrame title="Book a service" subtitle="Choose a branch, service, and time." backTo="/account">
-      <form className="capp-section" onSubmit={submit} noValidate={false}>
+      <form className="capp-section capp-booking-refined" onSubmit={submit} noValidate={false}>
         <label className="capp-row is-static" style={{ cursor: 'default' }}>
           <span className="capp-row-icon" aria-hidden>
             <MapPin size={18} strokeWidth={1.75} />
@@ -221,6 +227,7 @@ export default function CustomerBookPage() {
                   className={`capp-service${active ? ' is-active' : ''}`}
                   onClick={() => set('service_id', s.id)}
                 >
+                  {SERVICE_PHOTOS[s.slug] ? <img className="capp-service-photo" src={SERVICE_PHOTOS[s.slug]} alt="" loading="lazy" /> : null}
                   <span className="capp-row-body">
                     <strong>{s.name}</strong>
                     {s.description ? <em>{s.description}</em> : null}
@@ -341,10 +348,13 @@ export default function CustomerBookPage() {
           </p>
         ) : null}
 
+        <div className="capp-booking-summary">
+          {selected ? <div className="capp-booking-recap"><span><small>Selected service · {sizeLabel}</small><strong>{selected.name}</strong></span><b>{formatPeso(resolveServicePriceMinor(selected, form.vehicle_type))}</b></div> : null}
         <button type="submit" className="capp-btn capp-btn-accent capp-btn-block" disabled={busy || loading}>
           {busy ? 'Submitting…' : 'Request booking'}
           <ArrowRight size={16} strokeWidth={2} aria-hidden />
         </button>
+        </div>
         {!vehicles.length && !loading ? (
           <Row icon={Car} title="Save this car to your garage" sub="Next time it is one tap." chevron to="/account/more?tab=garage" />
         ) : null}

@@ -217,7 +217,7 @@ export default function CustomerAccountPage() {
       ) : activeVisit ? (
         <ActiveVisitCard visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
       ) : (
-        <div className="capp-empty capp-span">
+        <div className="capp-empty capp-span capp-home-action">
           <strong>No active visit</strong>
           Book a service to track your car on the floor.
           <div className="capp-empty-actions">
@@ -255,8 +255,8 @@ export default function CustomerAccountPage() {
         </div>
       ) : null}
 
-      <div className="capp-tiles capp-span">
-        <Tile icon={CalendarPlus} title="Book a service" sub="Schedule your visit" to={CUSTOMER_BOOK_PATH} />
+      <div className={`capp-tiles capp-span${!activeVisit ? ' capp-home-quick' : ''}`}>
+        {activeVisit ? <Tile icon={CalendarPlus} title="Book a service" sub="Schedule your visit" to={CUSTOMER_BOOK_PATH} /> : null}
         <Tile
           icon={vehicles.length ? Car : Plus}
           title={vehicles.length ? 'My cars' : 'Add a car'}
@@ -269,6 +269,7 @@ export default function CustomerAccountPage() {
       {loyalty && loyalty.stampsEnabled !== false ? (
         <Link className="capp-card capp-loyalty-home capp-span" to={CUSTOMER_LOYALTY_PATH}>
           <div className="capp-card-row">
+            <span className="capp-loyalty-ring" aria-hidden style={{ '--stamp-progress': `${Math.min(100, Math.max(0, ((loyalty.completed || 0) / Math.max(1, loyalty.cardSlots || 10)) * 100))}%` }}><span>{loyalty.completed || 0}/{loyalty.cardSlots || 10}</span></span>
             <div className="min-w-0">
               <p className="capp-eyebrow">Loyalty</p>
               <h2 className="capp-title">Loyalty program</h2>

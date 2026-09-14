@@ -88,7 +88,7 @@ export default function CustomerQueuePage() {
         </div>
       ) : null}
 
-      <section className="capp-section" aria-label="Bay counts">
+      <section className="capp-section capp-queue-counts" aria-label="Bay counts">
         <div className="capp-livebar" aria-live="polite">
           <span className="capp-live">
             <span className="capp-live-dot" aria-hidden />
@@ -100,14 +100,14 @@ export default function CustomerQueuePage() {
         {!loading && selectedCounts.total === 0 ? <p className="capp-meta">Bay is clear at this branch right now.</p> : null}
       </section>
 
-      <section className="capp-section" aria-label="Your cars">
+      <section className={`capp-section${carsHere.length ? ' capp-queue-personal' : ''}`} aria-label="Your cars">
         <SectionHead title="Your cars" note={selectedBranch ? branchShortName(selectedBranch.name) : ''} />
         {myCars === null ? (
           <Skeleton />
         ) : carsHere.length ? (
           <div className="capp-list">
             {carsHere.map((b) => (
-              <article key={b.id} className="capp-card">
+              <article key={b.id} className="capp-card capp-queue-car">
                 <div className="capp-card-row">
                   <div className="min-w-0">
                     <p className="capp-eyebrow">{b.queue_label || 'Ticket'}</p>

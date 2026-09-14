@@ -1,6 +1,7 @@
 import { ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import CustomerAccountDock from '@/components/CustomerAccountDock'
+import '@/styles/customer-refinement.css'
 
 /**
  * Customer account chrome.
