@@ -65,11 +65,12 @@ export function CeramicSection() {
                         pitch makes the case, the buttons act on it, and the
                         guarantee is the last thing read before deciding. The
                         recoating claim sits inside the badge so the offer reads
-                        as one object. */}
+                        as one object. The years and the words are one
+                        phrase on one line, so the figure can never be
+                        stranded apart from "Year Warranty". */}
                     <div className="ceramic-package-warranty">
                       <Check size={16} strokeWidth={3} aria-hidden="true" />
-                      <strong>{item.warrantyYears}</strong>
-                      <span>Year<br />warranty</span>
+                      <strong>{item.warrantyYears}-Year Warranty</strong>
                       <em className="ceramic-package-unlimited">
                         {SERVICE_DETAIL_CONTENT.ceramic.packageHighlights[item.id]}
                       </em>

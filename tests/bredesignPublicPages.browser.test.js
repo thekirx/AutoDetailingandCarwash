@@ -48,16 +48,32 @@ describe('BreDESIGN public page fallbacks', () => {
     assert.equal(href, 'https://www.tiktok.com/@hakum_autocare')
   })
 
-  it('opens one PPF package panel at a time by click and keyboard focus', async () => {
+  it('shows all four PPF tiers and toggles the package comparison', async () => {
     await page.goto(`${PREVIEW_ORIGIN}/services/ppf`, { waitUntil: 'networkidle0' })
-    const expanded = () => page.$$eval('.ppfa-panelcard', (buttons) => (
-      buttons.map((button) => button.getAttribute('aria-expanded'))
-    ))
+    const comparisonState = () => page.evaluate(() => ({
+      tiers: document.querySelectorAll('.bd-tier').length,
+      expanded: document.querySelector('.bd-cmp-toggle')?.getAttribute('aria-expanded'),
+      comparisonHidden: document.querySelector('#ppf-compare')?.hidden,
+    }))
 
-    assert.deepEqual(await expanded(), ['false', 'true', 'false'])
-    await page.click('.ppfa-panelcard.is-basic')
-    assert.deepEqual(await expanded(), ['true', 'false', 'false'])
-    await page.focus('.ppfa-panelcard.is-platinum')
-    assert.deepEqual(await expanded(), ['false', 'false', 'true'])
+    assert.deepEqual(await comparisonState(), {
+      tiers: 4,
+      expanded: 'false',
+      comparisonHidden: true,
+    })
+
+    await page.click('.bd-cmp-toggle')
+    assert.deepEqual(await comparisonState(), {
+      tiers: 4,
+      expanded: 'true',
+      comparisonHidden: false,
+    })
+
+    await page.click('.bd-cmp-toggle')
+    assert.deepEqual(await comparisonState(), {
+      tiers: 4,
+      expanded: 'false',
+      comparisonHidden: true,
+    })
   })
 })

@@ -50,7 +50,7 @@ export default function BdAppPreview() {
           <p className="bd-app-tagline">Taking care of your car never gets this exciting!</p>
           <p>
             Your Hakum experience, all in one app. Check live branch queues, track your loyalty
-            points and free services, find locations near you, and get real-time notifications —
+            stamps and free services, find locations near you, and get real-time notifications —
             because your time matters as much as your car.
           </p>
           <div className="bd-cta-row bd-app-actions">

@@ -62,11 +62,7 @@ export default function BdProducts() {
         <div className="bd-head bd-reveal">
           <div>
             <p className="bd-eyebrow">Products we use</p>
-            <h2 className="bd-skew">
-              What goes
-              <br />
-              on your car.
-            </h2>
+            <h2 className="bd-skew">What goes on your car.</h2>
           </div>
           <p>
             We name our materials because the finish is only ever as good as they are. Film, coating,

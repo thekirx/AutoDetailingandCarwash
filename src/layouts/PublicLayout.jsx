@@ -138,6 +138,9 @@ export default function PublicLayout() {
   }
 
   const homeRoute = pathname === '/home' || pathname === '/'
+  /* A service page closes on its own booking section, so the footer pitch
+     keeps the line but drops its "Book a service" button there. */
+  const serviceDetailRoute = /^\/services\/[^/]+/.test(pathname)
 
   return (
     <div
@@ -162,9 +165,11 @@ export default function PublicLayout() {
               <i>Protect it.</i>
             </h2>
           </div>
-          <Link to="/book">
-            Book a service <ArrowRight />
-          </Link>
+          {serviceDetailRoute ? null : (
+            <Link to="/book">
+              Book a service <ArrowRight />
+            </Link>
+          )}
         </div>
 
         <div className="public-shell footer-details">

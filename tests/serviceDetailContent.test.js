@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { SERVICE_DETAIL_CONTENT } from '../src/data/serviceDetailContent.js'
-import { ORIGIN, WHY_SECTIONS } from '../src/components/public/bredesign/content.js'
+import { GALLERY_PAGES, ORIGIN, WHY_SECTIONS } from '../src/components/public/bredesign/content.js'
 import { publicServiceDestination } from '../src/lib/publicCatalog.js'
 
 test('public service destinations keep editorial pages, queue, and booking flows distinct', () => {
@@ -76,6 +76,56 @@ test('homepage gallery features one real clip from each proof-backed service', (
   assert.ok(featured.every((clip) => clip.poster.endsWith('-poster.webp')))
   assert.ok(featured.every((clip) => clip.sources.av1.endsWith('.av1.mp4')))
   assert.ok(featured.every((clip) => clip.sources.h264.endsWith('.h264.mp4')))
+})
+
+test('PPF and tint loops contain every approved video once on their service page and homepage', () => {
+  const ppfIds = SERVICE_DETAIL_CONTENT.ppf.proof.clips.map((clip) => clip.id)
+  const tintIds = SERVICE_DETAIL_CONTENT.tint.proof.clips.map((clip) => clip.id)
+  const allSources = [
+    ...SERVICE_DETAIL_CONTENT.ppf.proof.clips,
+    ...SERVICE_DETAIL_CONTENT.tint.proof.clips,
+    ...SERVICE_DETAIL_CONTENT.ceramic.proof.clips,
+  ].flatMap((clip) => Object.values(clip.sources))
+  const homepageClipIds = GALLERY_PAGES.flatMap((page) => page.tiles)
+    .filter((tile) => tile.clip)
+    .map((tile) => tile.clip[1])
+
+  assert.deepEqual(ppfIds, [
+    'fortuner',
+    'hilux',
+    'sorento',
+    'full-body-install',
+    'panel-install',
+    'civic-feedback',
+    'mini-cooper',
+    'santa-fe',
+    'toyota-cross',
+    'white-hilux-install',
+    'black-vehicle-install',
+    'xpander-cross',
+  ])
+  assert.deepEqual(tintIds, ['naval', 'wigo', 'toyota86'])
+  /* One rail, one clip: the same file must never appear twice on a rail, nor
+     under two services. A "Santa Fe ceramic coating" file turned out to be the
+     PPF Santa Fe clip, which this catches. */
+  const ceramicIds = SERVICE_DETAIL_CONTENT.ceramic.proof.clips.map((clip) => clip.id)
+  assert.deepEqual(ceramicIds, [
+    'honda-city',
+    'byd-emax6',
+    'crv',
+    'veloz',
+    'vios',
+    'nissan',
+    'tesla',
+    'mg',
+    'vespa',
+  ])
+  assert.equal(new Set(ceramicIds).size, ceramicIds.length)
+  assert.equal(new Set(ppfIds).size, ppfIds.length)
+  assert.equal(new Set(tintIds).size, tintIds.length)
+  assert.equal(new Set(allSources).size, allSources.length)
+  assert.ok(ppfIds.every((id) => homepageClipIds.filter((homepageId) => homepageId === id).length === 1))
+  assert.ok(tintIds.every((id) => homepageClipIds.filter((homepageId) => homepageId === id).length === 1))
 })
 
 test('the Tint detail-page CTA books Tint instead of looping back to the services catalog', () => {

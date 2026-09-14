@@ -9,7 +9,7 @@ export default function ServiceFaqSection({ serviceId, serviceName, faqs }) {
       <div className="bd-shell bd-service-faq-layout">
         <header>
           <p className="bd-eyebrow">Questions, answered</p>
-          <h2>{serviceName}<br /><em>FAQs.</em></h2>
+          <h2>{serviceName} <em>FAQs.</em></h2>
           <p>What to expect before, during, and after your service.</p>
         </header>
 
