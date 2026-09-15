@@ -40,7 +40,8 @@ export async function handleSendPushRequest(req, res) {
       if (!userData?.user) return json(res, 401, { error: 'Unauthorized' }, req)
       const titleText = title || 'Hakum alerts ready'
       const bodyText = message || 'Push is working on this device.'
-      const url = body.url || '/'
+      // Prefer app shells over bare "/" so click-through lands in account/ops, not marketing home
+      const url = String(body.url || '').trim() || '/account'
       const result = await sendWebPushToUsers({
         userIds: [userData.user.id],
         title: titleText,

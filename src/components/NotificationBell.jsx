@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { createCoalescedReload } from '@/lib/coalesceReload'
+import { notificationHref } from '@/lib/notificationUrl'
 import { subscribeUserNotificationRealtime } from '@/lib/userNotificationsRealtime'
 
 export function useUserNotifications() {
@@ -142,7 +143,7 @@ export default function NotificationBell({
             {rows.map((row) => (
               <Link
                 key={row.id}
-                to={row.url || homeUrl}
+                to={notificationHref(row.url, homeUrl)}
                 onClick={() => openRow(row)}
                 className={capp ? `capp-inbox-row${row.read_at ? '' : ' is-new'}` : 'block border-b border-border/60 px-3 py-2.5 text-left hover:bg-muted/50'}
               >

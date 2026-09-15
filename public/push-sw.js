@@ -14,6 +14,8 @@ self.addEventListener('push', (event) => {
       badge: '/favicon.png',
       tag: data.tag || 'hakum',
       renotify: true,
+      // Chrome: must be user-visible; requireInteraction keeps important alerts on screen
+      requireInteraction: Boolean(data.requireInteraction),
       data: { url: data.url || '/' },
     }),
   )
@@ -27,20 +29,25 @@ self.addEventListener('notificationclick', (event) => {
     (async () => {
       const all = await clients.matchAll({ type: 'window', includeUncontrolled: true })
       for (const client of all) {
-        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-          // navigate() is not universal — openWindow is the reliable fallback
+        if (!client.url.startsWith(self.location.origin)) continue
+        try {
           if (typeof client.navigate === 'function') {
-            try {
-              await client.navigate(path)
-              return client.focus()
-            } catch {
-              /* fall through */
-            }
+            await client.navigate(path)
+            await client.focus()
+            return
           }
+        } catch {
+          /* fall through to postMessage / next client */
+        }
+        try {
+          client.postMessage({ type: 'HAKUM_NAV', url: path })
           await client.focus()
           return
+        } catch {
+          /* try next client */
         }
       }
+      // Never focus-only — Chrome would leave the user on the wrong route
       if (clients.openWindow) return clients.openWindow(path)
     })(),
   )

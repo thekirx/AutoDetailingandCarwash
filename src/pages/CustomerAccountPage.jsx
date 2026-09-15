@@ -192,7 +192,7 @@ export default function CustomerAccountPage() {
               </p>
             </div>
             <div className="capp-icon-row account-mobile-only">
-              <NotificationBell variant="capp" homeUrl="/account" homeLabel="Home" />
+              <NotificationBell variant="capp" homeUrl={`${CUSTOMER_MORE_PATH}?tab=alerts`} homeLabel="Notifications" />
               <Link className="capp-avatar" to={CUSTOMER_MORE_PATH} aria-label="Settings">
                 {initials(fullName) || <Car size={18} strokeWidth={1.75} aria-hidden />}
               </Link>

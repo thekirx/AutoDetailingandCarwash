@@ -180,7 +180,12 @@ export function buildBookingNotifyPayload(booking, status, templates = null) {
     title: applyTemplateText(tpl?.title, vars, copy.title),
     body: applyTemplateText(tpl?.body, vars, copy.body(booking)),
     sms: applyTemplateText(tpl?.sms_body, vars, copy.sms(booking)),
-    url: userId ? '/account' : '/book',
+    // Floor statuses → live queue; booking lifecycle / photos stay on account home
+    url: userId
+      ? ['waiting', 'in_progress', 'final_checking', 'for_releasing', 'for_payment', 'redo'].includes(key)
+        ? '/account/queue'
+        : '/account'
+      : '/book',
     tag: `booking-${booking.id}-${key}`,
   }
 }

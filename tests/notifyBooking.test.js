@@ -30,10 +30,12 @@ assert.match(guest.sms, /Ceramic Coating/)
 
 const checking = buildBookingNotifyPayload(booking, 'final_checking')
 assert.equal(checking.kind, 'booking_status')
+assert.equal(checking.url, '/account/queue')
 assert.match(checking.sms, /final QC|final checking/i)
 
 const releasing = buildBookingNotifyPayload(booking, 'for_releasing')
 assert.equal(releasing.kind, 'booking_status')
+assert.equal(releasing.url, '/account/queue')
 assert.match(releasing.sms, /releas|ready|pick/i)
 assert.match(releasing.sms, /Ceramic Coating/)
 
@@ -41,6 +43,7 @@ assert.equal(buildBookingNotifyPayload(booking, 'nope'), null)
 
 const redo = buildBookingNotifyPayload(booking, 'redo')
 assert.equal(redo.kind, 'booking_status')
+assert.equal(redo.url, '/account/queue')
 assert.match(redo.sms, /redoing/i)
 
 const photos = buildBookingNotifyPayload(booking, 'photos_ready')

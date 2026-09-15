@@ -31,6 +31,7 @@ import { VEHICLE_ICON_PRESETS, normalizeVehicleIcon, vehicleIconGlyph } from '@/
 import { normalizePricingSize, PRICING_SIZES } from '@/lib/servicePricing'
 import { fetchPortal, initials, portalAction } from '@/lib/customerPortalClient'
 import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH } from '@/lib/customerAccountNav'
+import { notificationHref } from '@/lib/notificationUrl'
 import { usePageMeta } from '@/lib/pageMeta'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import NotificationBell, { useUserNotifications } from '@/components/NotificationBell'
@@ -100,7 +101,7 @@ export default function CustomerMorePage() {
     <CustomerAppFrame
       title="Settings"
       backTo="/account"
-      actions={<NotificationBell variant="capp" homeUrl="/account" homeLabel="Home" />}
+      actions={<NotificationBell variant="capp" homeUrl={`${CUSTOMER_MORE_PATH}?tab=alerts`} homeLabel="Notifications" />}
       cols
     >
       <Link className="capp-card capp-profile capp-span" to={`${CUSTOMER_MORE_PATH}?tab=account`}>
@@ -619,7 +620,7 @@ function AlertsSection({ phone, smsOptIn, setSmsOptIn }) {
                 title={row.title}
                 sub={row.body}
                 end={formatWhen(row.created_at)}
-                to={row.url || '/account'}
+                to={notificationHref(row.url, '/account')}
                 onClick={() => markRead(row)}
               />
             ))}

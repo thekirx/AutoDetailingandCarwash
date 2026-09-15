@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Bell, BellRing, ShieldCheck, Smartphone } from 'lucide-react'
-import { disablePush, enablePush, getPushStatus, pushSupported, pushUnsupportedReason } from '@/lib/push'
+import { disablePush, enablePush, getPushStatus, healPushSubscription, pushSupported, pushUnsupportedReason } from '@/lib/push'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { Button } from '@/components/ui/button'
 import {
@@ -46,6 +46,41 @@ export default function PushToggle({
     refresh()
   }, [refresh])
 
+  // Persist opt-in for heal after SW updates (covers users who enabled before this flag existed)
+  useEffect(() => {
+    if (status !== 'subscribed') return
+    try {
+      localStorage.setItem('hakum-push-enabled', '1')
+    } catch {
+      /* ignore */
+    }
+  }, [status])
+
+  // Chrome: permission can stay granted while PushManager subscription is lost after SW update.
+  // Only heal when the user previously opted in (local flag) — never undo a deliberate opt-out.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (!pushSupported() || Notification.permission !== 'granted') return
+      try {
+        if (localStorage.getItem('hakum-push-enabled') !== '1') return
+      } catch {
+        return
+      }
+      try {
+        const token = await getAccessTokenFresh()
+        if (!token || cancelled) return
+        await healPushSubscription(token)
+        if (!cancelled) await refresh()
+      } catch {
+        /* silent heal */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [refresh])
+
   useEffect(() => {
     if (!autoPrompt || status !== 'idle') return
     if (typeof localStorage !== 'undefined' && localStorage.getItem('hakum-push-prompt-v1')) return
@@ -81,6 +116,7 @@ export default function PushToggle({
       setOpen(false)
       try {
         localStorage.setItem('hakum-push-prompt-v1', '1')
+        localStorage.setItem('hakum-push-enabled', '1')
       } catch {
         /* ignore */
       }
@@ -96,6 +132,11 @@ export default function PushToggle({
     try {
       const token = await sessionToken()
       await disablePush(token)
+      try {
+        localStorage.removeItem('hakum-push-enabled')
+      } catch {
+        /* ignore */
+      }
       toast.success('Alerts off')
       await refresh()
     } catch (err) {
