@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, Home, LogOut, Newspaper, Radio, Settings, Sparkles } from 'lucide-react'
+import { Bell, CalendarDays, CalendarPlus, Home, MoreHorizontal, Newspaper, Plus, Radio } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 /* Device frame from the "iPhone 15 / 15 Pro Device Frames" Figma Community
@@ -8,22 +8,9 @@ import { Link } from 'react-router-dom'
 const DEVICE_FRAME = new URL('../../../assets/device/iphone-15-pro-white-titanium.svg', import.meta.url).href
 
 /**
- * A miniature of the real customer app, not an idealised one.
- *
- * The earlier version led on a car mid-wash with a progress bar. That is the
- * app's rarest state — a signed-in customer with nothing booked sees "No active
- * visit", which is what most people opening it will get. It also showed
- * membership as a single points figure and left out the stamp card entirely,
- * which is the most distinctive screen in the app and the reason to install it.
- *
- * So the frame carries what the app actually leads with: the greeting and its
- * three controls, the live branch counts, and the rewards card. The bottom tab
- * bar is included because it is what makes a phone frame read as an app rather
- * than a web page inside a phone outline.
- *
- * Figures are illustrative and deliberately neutral — the real screens carry
- * test plates like QA364BA, which have no business on a marketing page. The
- * note under the frame says so on the page, not only here.
+ * Decorative miniature of CustomerAccountPage's mobile dashboard. Static
+ * sample content keeps this public preview independent of customer sessions
+ * and portal availability. Keep its card order and dock aligned with the app.
  */
 
 const QUEUE = [
@@ -68,67 +55,75 @@ export default function BdAppPreview() {
               tech and summarised in one line below, rather than walking a reader
               through decorative controls that do nothing. */}
           <div className="bd-app-device" aria-hidden="true">
-            <div className="bd-app-screen">
-              <div className="bd-app-topbar">
-                <div>
-                  <span>Hakum Auto Care</span>
-                  <strong>Hi, there</strong>
+            <div className="bd-app-screen bd-app-dashboard">
+              <div className="bd-preview-hero">
+                <div className="bd-preview-brandbar">
+                  <img src="/branding/hakum-lw-ow.png" alt="" />
+                  <div className="bd-preview-controls">
+                    <span><Bell size={17} /></span>
+                    <span>AC</span>
+                  </div>
                 </div>
-                <div className="bd-app-controls">
-                  <i><Settings size={13} /></i>
-                  <i className="has-badge"><Bell size={13} /><b>3</b></i>
-                  <i><LogOut size={13} /></i>
+                <p>Good morning,</p>
+                <small>26° Partly cloudy</small>
+                <strong>ALEX</strong>
+                <p className="bd-preview-sub">Your car deserves a great day too.</p>
+              </div>
+
+              <div className="bd-preview-content">
+                <div className="bd-preview-visit">
+                  <strong>No active visit</strong>
+                  <p>Book a service to track your car on the floor.</p>
+                  <div className="bd-preview-actions">
+                    <span><CalendarPlus size={12} />Book a service</span>
+                    <span><Plus size={12} />Add a car</span>
+                  </div>
+                </div>
+                <div className="bd-preview-quick">
+                  <div><Plus size={19} /><span><strong>Add a car</strong><small>Save a plate</small></span></div>
+                  <div><CalendarDays size={19} /><span><strong>Events</strong><small>Meets and promos</small></span></div>
+                </div>
+                <div className="bd-preview-loyalty">
+                  <div className="bd-preview-loyalty-head">
+                    <span className="bd-preview-ring">6/10</span>
+                    <div><small>LOYALTY</small><strong>Loyalty program</strong><p>6/10 stamps</p></div>
+                  </div>
+                  <div className="bd-preview-stamps">
+                    {Array.from({ length: STAMPS_TOTAL }, (_, i) => (
+                      <span key={i} className={i < STAMPS_EARNED ? 'is-filled' : undefined}>
+                        {i < STAMPS_EARNED ? 'H' : i + 1}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="bd-preview-queue">
+                  <div><strong>Live queue</strong><span>Bacoor</span></div>
+                  <div className="bd-preview-counts">
+                    {QUEUE.map((q) => <span key={q.label}><b>{q.value}</b><small>{q.label}</small></span>)}
+                  </div>
                 </div>
               </div>
 
-              <div className="bd-app-branch">
-                <div className="bd-app-branch-head">
-                  <span>This branch</span>
-                  <strong>Bacoor</strong>
-                </div>
-                <div className="bd-app-queue">
-                  {QUEUE.map((q) => (
-                    <div key={q.label}>
-                      <b>{q.value}</b>
-                      <span>{q.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bd-app-rewards">
-                <p className="bd-app-rewards-kicker">
-                  <Sparkles size={11} /> Hakum rewards
-                </p>
-                <strong>4 stamps from a free wash</strong>
-                <div className="bd-app-stamps">
-                  {Array.from({ length: STAMPS_TOTAL }, (_, i) => (
-                    <span key={i} className={i < STAMPS_EARNED ? 'is-filled' : undefined}>
-                      {i < STAMPS_EARNED ? 'H' : i + 1}
-                    </span>
-                  ))}
-                </div>
-                <small>
-                  {STAMPS_EARNED} / {STAMPS_TOTAL}
-                </small>
-              </div>
-
-              <div className="bd-app-tabs">
+              <div className="bd-app-tabs bd-preview-dock">
                 <span className="is-active">
                   <Home size={13} />
                   Home
+                </span>
+                <span>
+                  <CalendarPlus size={13} />
+                  Book
+                </span>
+                <span>
+                  <Radio size={13} />
+                  Queue
                 </span>
                 <span>
                   <Newspaper size={13} />
                   Blog
                 </span>
                 <span>
-                  <CalendarDays size={13} />
-                  Events
-                </span>
-                <span>
-                  <Radio size={13} />
-                  Queue
+                  <MoreHorizontal size={13} />
+                  More
                 </span>
               </div>
             </div>

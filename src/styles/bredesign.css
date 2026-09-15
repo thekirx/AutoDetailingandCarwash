@@ -3830,6 +3830,75 @@
   flex-direction: column;
 }
 
+/* Current customer dashboard, scaled for the decorative phone preview. */
+.bredesign .bd-app-screen.bd-app-dashboard {
+  padding: 0;
+  background: #f1f1ee;
+  color: #020a31;
+  font-family: var(--font-public-body);
+}
+.bd-preview-hero {
+  flex: none;
+  padding: 42px 16px 24px;
+  color: #fff;
+  background: linear-gradient(180deg, #020a3140, #020a31e8), url('../assets/hero/bredesign-hero-poster.webp') 50% 38% / cover;
+}
+.bd-preview-brandbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.bd-preview-brandbar > img { width: 70px; height: 36px; object-fit: contain; }
+.bd-preview-controls { display: flex; gap: 7px; }
+.bd-preview-controls > span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #ffffff30; font-size: 12px; font-weight: 700; }
+.bd-preview-hero p { margin: 0; font-size: 13px; color: #d3dbf5; }
+.bd-preview-hero small { display: block; margin-top: 5px; font-size: 11px; font-weight: 700; }
+.bd-preview-hero > strong { display: block; font-family: var(--font-public-display); font-size: 27px; line-height: 1.2; }
+.bd-preview-hero .bd-preview-sub { margin-top: 8px; font-size: 11px; }
+.bd-preview-content { display: grid; gap: 10px; padding: 12px; padding-bottom: 70px; }
+.bd-preview-visit { padding: 17px; background: #052699; color: #fff; border-radius: 20px; }
+.bd-preview-visit > strong { font-size: 17px; }
+.bd-preview-visit p { margin: 6px 0 13px; font-size: 11px; line-height: 1.5; color: #d9e1ff; }
+.bd-preview-actions { display: flex; gap: 6px; }
+.bd-preview-actions span { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 10px 8px; border: 1px solid #ffffff60; border-radius: 24px; white-space: nowrap; font-size: 10px; font-weight: 700; }
+.bd-preview-actions span:first-child { background: white; color: #052699; }
+.bd-preview-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.bd-preview-quick > div { display: flex; align-items: center; gap: 8px; padding: 13px 10px; background: #fff; border: 1px solid #e0e5f4; border-radius: 18px; }
+.bd-preview-quick svg { flex: none; color: #9db4ff; }
+.bd-preview-quick strong { display: block; font-size: 12px; }
+.bd-preview-quick small { display: block; margin-top: 3px; font-size: 10px; line-height: 1.3; color: #626a80; }
+.bd-preview-loyalty { padding: 14px; background: white; border: 1px solid #e0e5f4; border-radius: 18px; }
+.bd-preview-loyalty-head { display: flex; align-items: center; gap: 10px; }
+.bd-preview-ring { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border: 4px solid #052699; border-right-color: #e0e5f4; border-bottom-color: #e0e5f4; border-radius: 50%; font-size: 9px; font-weight: 800; }
+.bd-preview-loyalty-head small { font-size: 8px; letter-spacing: .13em; color: #052699; }
+.bd-preview-loyalty-head strong { display: block; font-size: 13px; }
+.bd-preview-loyalty-head p { margin: 3px 0 0; font-size: 10px; color: #626a80; }
+.bd-preview-stamps { display: flex; justify-content: space-between; gap: 3px; margin-top: 13px; }
+.bd-preview-stamps span { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid #d3d9ed; border-radius: 50%; color: #626a80; font-size: 8px; }
+.bd-preview-stamps .is-filled { color: white; background: #052699; border-color: #052699; }
+.bd-preview-queue > div:first-child { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px; }
+.bd-preview-queue > div:first-child > span { color: #626a80; font-size: 10px; }
+.bd-preview-counts { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid #e0e5f4; border-radius: 14px; background: white; overflow: hidden; }
+.bd-preview-counts > span { display: grid; justify-items: center; gap: 3px; padding: 8px 2px; border-right: 1px solid #e0e5f4; }
+.bd-preview-counts > span:last-child { border: 0; }
+.bd-preview-counts b { font-size: 16px; }
+.bd-preview-counts small { font-size: 8px; color: #626a80; }
+.bredesign .bd-preview-dock { position: absolute; z-index: 2; bottom: 12px; left: 8px; right: 8px; grid-template-columns: repeat(5, 1fr); padding: 5px; border: 1px solid #d3d9ed; border-radius: 25px; background: #fff; box-shadow: 0 6px 22px #05269920; }
+.bredesign .bd-preview-dock > span { padding: 8px 2px; color: #626a80; font-size: 8px; letter-spacing: 0; gap: 5px; }
+.bredesign .bd-preview-dock > .is-active { border-radius: 20px; background: #052699; color: white; }
+.bd-preview-hero { padding-bottom: 16px; }
+.bd-preview-brandbar { margin-bottom: 8px; }
+.bd-preview-visit { padding: 13px; }
+.bd-preview-visit p { margin: 5px 0 9px; font-size: 10px; }
+.bd-preview-quick > div { padding: 10px 8px; }
+.bd-preview-loyalty { padding: 11px; }
+.bd-preview-stamps { margin-top: 9px; }
+@media (max-width: 720px) {
+  .bd-preview-hero { padding-top: 34px; padding-bottom: 12px; }
+  .bd-preview-hero .bd-preview-sub { font-size: 10px; }
+  .bd-preview-content { gap: 8px; padding: 10px; }
+  .bd-preview-visit > strong { font-size: 15px; }
+  .bd-preview-quick > div { padding: 8px; }
+  .bd-preview-quick small { font-size: 9px; }
+  .bd-preview-queue { display: none; }
+}
+
 /* ==== Phone frame ======================================================== */
 /* The frame is the Figma Community "iPhone 15 / 15 Pro Device Frames" export
    with the screen subtracted, laid over the live app markup. The screen is
