@@ -26,7 +26,19 @@ export const OPS_BOARD_STATUSES = [...ACTIVE_QUEUE_STATUSES, 'redo']
 export const WORKFLOW_STATUSES = [...ACTIVE_QUEUE_STATUSES, 'for_payment', 'redo']
 export const REDO_FROM_STATUSES = ['in_progress', 'final_checking', 'for_payment']
 // Branch slugs are validated against public.branches at runtime — no static list.
-export const VALID_VEHICLE_TYPES = ['sedan', 'suv', 'pickup', 'van', 'motorcycle', 'other']
+/** DB CHECK allowlist for bookings.vehicle_type. Prefer pricing slugs; legacy body styles still accepted. */
+export const VALID_VEHICLE_TYPES = [
+  'small',
+  'medium',
+  'large',
+  'extra_large',
+  'sedan',
+  'suv',
+  'pickup',
+  'van',
+  'motorcycle',
+  'other',
+]
 export const BOSS_MICH_ROLE = ROLES.SUPER_ADMIN
 export const QUEUE_EDITOR_ROLES = PERM_QUEUE_EDITOR_ROLES
 export const QUEUE_VIEWER_ROLES = PERM_QUEUE_VIEWER_ROLES

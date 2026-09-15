@@ -1,0 +1,55 @@
+# Noise — never ingest into the knowledge graph
+tmp-*
+tmp-*.txt
+tmp-*.json
+e2e-evidence/
+Brand Assets/
+design-mocks/
+local-backups/
+*.backup
+coverage/
+dist/
+dev-dist/
+node_modules/
+.vercel/
+.worktrees/
+.superpowers/
+supabase/.temp/
+public/
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.svg
+*.mp4
+*.webm
+*.mov
+*.ico
+
+# Skill dump files sitting at repo root (not Hakum product docs)
+api-designer.md
+backend-developer (1).md
+bestpracticeskill.md
+bugskill.md
+cleancode.md
+fullstack-developer.md
+kaizen.md
+mobile-developer.md
+optimizer.md
+planskill.md
+principal-system-audit-SKILL.md
+request.md
+security.md
+Security (2).md
+seo.md
+ui-designer.md
+Busybee Brandtxt - API Documentation.pdf
+list.title
+hakum-hero-SVIIBATR.webp
+
+# Graphify internals / cost
+graphify-out/cost.json
+graphify-out/cache/
+graphify-out/.graphify_*
+graphify-out/memory/

@@ -18,6 +18,15 @@ local-backups/
 .claude/
 .env*
 
+# Graphify: commit graph.json / report / wiki / manifest; skip cost, cache, sidecars
+graphify-out/cost.json
+graphify-out/.graphify_python
+graphify-out/cache/
+graphify-out/memory/
+graphify-out/.graphify_*
+graphify-out/.graphify_chunks/
+graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+
 # Raw camera masters for the proof clips. The web-ready AV1/H.264 encodes and
 # their posters are committed; the originals live in Google Drive, because
 # 164MB of masters is weight the repository would carry forever.

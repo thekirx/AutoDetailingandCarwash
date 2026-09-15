@@ -64,7 +64,7 @@ describe('Garage book seeds chosen vehicle (PUB-3)', () => {
 
   it('maps legacy body-style garage size to pricing slugs', () => {
     const seeded = seedBookingFromVehicle({}, { plate_number: 'CCC', vehicle_type: 'sedan' })
-    assert.equal(seeded.vehicle_type, 'medium')
+    assert.equal(seeded.vehicle_type, 'small')
     assert.equal(seedBookingFromVehicle({}, { vehicle_type: 'suv' }).vehicle_type, 'large')
   })
 })

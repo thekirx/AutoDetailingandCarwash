@@ -742,8 +742,8 @@ function ScopedFloorDashboard() {
                 <p className="mt-1 text-xs text-muted-foreground">{event.branch} · {event.notes || 'Status update'} · {new Date(event.created_at).toLocaleString()}</p>
             </div>
             )) : <EmptyLine text="No queue activity in this range." />}
-      </div>
-        </Panel>
+        </div>
+      </Panel>
       ) : null}
     </OpsPageShell>
   )

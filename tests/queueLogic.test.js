@@ -23,6 +23,7 @@ import {
   normalizePlate,
   parsePesoInputToMinor,
   normalizeVehicleType,
+  VALID_VEHICLE_TYPES,
   OPS_BOARD_STATUSES,
   averageDwellByStatus,
   fifoNextTicketId,
@@ -209,6 +210,15 @@ describe('queue logic', () => {
     assert.equal(normalizeVehicleType('Not A Type!!!'), 'medium')
     assert.equal(normalizeVehicleType('extra_large'), 'extra_large')
     assert.equal(normalizeVehicleType('xl'), 'extra_large')
+    assert.equal(normalizeVehicleType('small'), 'small')
+    assert.equal(normalizeVehicleType('medium'), 'medium')
+    assert.equal(normalizeVehicleType('large'), 'large')
+  })
+
+  it('VALID_VEHICLE_TYPES includes pricing slugs and legacy body styles', () => {
+    for (const slug of ['small', 'medium', 'large', 'extra_large', 'sedan', 'suv', 'pickup', 'van', 'motorcycle', 'other']) {
+      assert.ok(VALID_VEHICLE_TYPES.includes(slug), slug)
+    }
   })
 
   it('converts visible peso inputs to minor units', () => {
