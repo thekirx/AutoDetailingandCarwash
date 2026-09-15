@@ -60,7 +60,7 @@ export function bookingServiceText(booking) {
   const name = booking?.services?.name || booking?.service_name
   const kind = booking?.services?.pay_category || booking?.service_pay_category
   if (!name && !kind) return null
-  if (kind === 'detailing' || kind === 'ppf' || isBookingBoardRow(booking)) {
+  if (isBookingBoardRow(booking) || kind === 'detailing') {
     return name ? `${name} · Detailing` : 'Detailing'
   }
   return name || null

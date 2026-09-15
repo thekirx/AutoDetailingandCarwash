@@ -8,6 +8,7 @@ import { usePublicBranches } from '../lib/branches'
 import { getAccessTokenFresh } from '../lib/authToken'
 import { supabase } from '../lib/supabase'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '../lib/servicePricing'
+import { filterFloorDetailingServices } from '../lib/serviceKinds'
 import { applyPublicBookPrefill, matchServiceIdByPrefillName } from '../lib/uiDeadControls'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import FormLegalNotice from '../components/FormLegalNotice'
@@ -126,7 +127,7 @@ export function BookingPage() {
   useEffect(() => {
     supabase
       .from('services')
-      .select('id, name, price_minor, service_size_prices(size_slug, price_minor)')
+      .select('id, name, slug, pay_category, price_minor, service_size_prices(size_slug, price_minor)')
       .eq('is_active', true)
       .order('display_order')
       .then(({ data, error: e }) => {
@@ -134,15 +135,17 @@ export function BookingPage() {
           setError(e.message)
           return
         }
-        const rows = (data || []).map((row) => ({
-          ...row,
-          size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
-        }))
+        const rows = filterFloorDetailingServices(
+          (data || []).map((row) => ({
+            ...row,
+            size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+          })),
+        )
         setServices(rows)
         setForm((f) => {
-          if (f.service_id) return f
+          if (f.service_id && rows.some((s) => s.id === f.service_id)) return f
           const matched = matchServiceIdByPrefillName(rows, prefServiceName)
-          return matched ? { ...f, service_id: matched } : f
+          return matched ? { ...f, service_id: matched } : { ...f, service_id: '' }
         })
       })
   }, [prefServiceName])

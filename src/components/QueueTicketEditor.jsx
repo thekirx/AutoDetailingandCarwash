@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -15,7 +15,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { canAccessPos, canMarkFailedQa, canModifyBookingServicePrice, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane } from '../auth/permissions'
 import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
 import { PRICING_SIZES } from '../lib/servicePricing'
-import { serviceKindFromPayCategory } from '../lib/serviceKinds'
+import { filterPosBayCatalog, serviceKindFromPayCategory } from '../lib/serviceKinds'
 import CancellationReasonDialog from './CancellationReasonDialog'
 import CustomerNotesPanel from './CustomerNotesPanel'
 import { supabase } from '../lib/supabase'
@@ -186,6 +186,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const [vehicleTypeDraft, setVehicleTypeDraft] = useState('medium')
   const [priceOpen, setPriceOpen] = useState(false)
   const crewPanelRef = useRef(null)
+  const bayServices = useMemo(() => filterPosBayCatalog(services), [services])
 
   const load = useCallback(async () => {
     if (!bookingId) return
@@ -685,7 +686,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
                 >
                   <option value="">Pick a service…</option>
-                  {services.map((service) => (
+                  {bayServices.map((service) => (
                     <option key={service.id} value={service.id}>
                       {service.name}
                     </option>

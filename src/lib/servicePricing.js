@@ -12,9 +12,43 @@ export const PRICING_SIZES = [
   { slug: 'extra_large', label: 'Extra Large' },
 ]
 
+/**
+ * Detailing matrix ratios (Medium = catalog). Used to seed bay services/packages
+ * and to prefill create forms so all four tiers stay filled.
+ */
+export const SIZE_PRICE_MULTIPLIERS = Object.freeze({
+  small: 0.85,
+  medium: 1,
+  large: 1.2,
+  extra_large: 1.4,
+})
+
+/** Pesos strings for the create/edit size matrix from a Medium catalog price. */
+export function suggestSizedPricePesos(mediumPesos) {
+  const mid = Number(mediumPesos)
+  if (!Number.isFinite(mid) || mid < 0) return emptySizePriceForm('')
+  const out = emptySizePriceForm('')
+  for (const slug of PRICING_SIZE_SLUGS) {
+    const n = Math.round(mid * SIZE_PRICE_MULTIPLIERS[slug] * 100) / 100
+    out[slug] = String(n)
+  }
+  return out
+}
+
+/** Integer minor units for all four sizes from Medium minor (same ratios as detailing). */
+export function sizedPriceMinorFromMedium(mediumMinor) {
+  const mid = Math.max(0, Math.round(Number(mediumMinor) || 0))
+  const out = {}
+  for (const slug of PRICING_SIZE_SLUGS) {
+    out[slug] = Math.round(mid * SIZE_PRICE_MULTIPLIERS[slug])
+  }
+  out.medium = mid
+  return out
+}
+
 /** Map legacy body-style slugs → pricing tier for price lookup. */
 const LEGACY_TO_PRICING = {
-  sedan: 'medium',
+  sedan: 'small',
   motorcycle: 'small',
   pickup: 'large',
   van: 'extra_large',

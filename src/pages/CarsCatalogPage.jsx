@@ -211,7 +211,11 @@ export default function CarsCatalogPage() {
       <Card>
         <CardHeader>
           <CardTitle>Add make / model</CardTitle>
-          <CardDescription>Used by VehicleMakeModelFields on the floor for Team Lead and staff. Size seeds from the PH market chart; change it if this shop prices the car differently.</CardDescription>
+          <CardDescription>
+            Used by VehicleMakeModelFields on the floor for Team Lead and staff. Size chart:
+            Small = sedans/hatchbacks · Medium = crossovers · Large = SUVs/vans · Extra Large = full-size.
+            Seeds pricing for services, packages, and detailing; change if this shop prices the car differently.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={addRow} className="flex flex-wrap gap-3">

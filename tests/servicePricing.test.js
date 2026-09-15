@@ -1,13 +1,11 @@
-/**
- * Service size pricing helpers.
- * Run: node tests/servicePricing.test.js
- */
 import assert from 'node:assert/strict'
 import {
   formatSizePriceRange,
   normalizePricingSize,
   resolveServicePriceMinor,
   sizePricesMap,
+  suggestSizedPricePesos,
+  sizedPriceMinorFromMedium,
 } from '../src/lib/servicePricing.js'
 import { validateServiceInput } from '../src/lib/opsValidation.js'
 import { canManageServices } from '../src/auth/permissions.js'
@@ -19,11 +17,22 @@ const svc = {
 
 assert.equal(normalizePricingSize('Large'), 'large')
 assert.equal(normalizePricingSize('suv'), 'large')
-assert.equal(normalizePricingSize('sedan'), 'medium')
+assert.equal(normalizePricingSize('sedan'), 'small')
 assert.equal(resolveServicePriceMinor(svc, 'small'), 40000)
 assert.equal(resolveServicePriceMinor(svc, 'extra_large'), 80000)
 assert.equal(resolveServicePriceMinor(svc, 'suv'), 65000)
 assert.equal(resolveServicePriceMinor({ price_minor: 1000 }, 'medium'), 1000)
+
+assert.deepEqual(sizedPriceMinorFromMedium(35000), {
+  small: 29750,
+  medium: 35000,
+  large: 42000,
+  extra_large: 49000,
+})
+assert.equal(suggestSizedPricePesos(350).medium, '350')
+assert.equal(suggestSizedPricePesos(350).small, '297.5')
+assert.equal(suggestSizedPricePesos(350).large, '420')
+assert.equal(suggestSizedPricePesos(350).extra_large, '490')
 
 const mapped = sizePricesMap({
   service_size_prices: [

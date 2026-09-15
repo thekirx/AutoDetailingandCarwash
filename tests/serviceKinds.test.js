@@ -8,6 +8,7 @@ import {
   filterPosDetailingCatalog,
   filterServicesByKind,
   formatQueueNumberForKind,
+  isBookingBoardService,
   isDetailingPayCategory,
   isSameDayQueueKind,
   isTicketOnTodayFloor,
@@ -34,6 +35,16 @@ describe('serviceKinds', () => {
     assert.equal(isDetailingPayCategory('detailing'), true)
     assert.equal(isSameDayQueueKind('detailing'), false)
     assert.equal(isSameDayQueueKind('package'), true)
+    assert.equal(isSameDayQueueKind('ppf'), true)
+  })
+
+  it('keeps bookings board to detailing SKUs only (not legacy ppf package rows)', () => {
+    assert.equal(isBookingBoardService({ slug: 'paint-protection-film', pay_category: 'detailing' }), true)
+    assert.equal(isBookingBoardService({ slug: 'ceramic-coating', pay_category: 'detailing' }), true)
+    assert.equal(isBookingBoardService({ slug: 'premium-car-wash', pay_category: 'wash' }), false)
+    assert.equal(isBookingBoardService({ slug: 'express-wash-package', pay_category: 'package' }), false)
+    // Legacy ppf package category is bay/package — not Bookings board.
+    assert.equal(isBookingBoardService({ slug: 'custom-ppf-bundle', pay_category: 'ppf' }), false)
   })
 
   it('filters and searches catalog rows by kind', () => {

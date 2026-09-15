@@ -107,6 +107,17 @@ describe('P0 residual fixes (full-system 2026-08-01)', () => {
     const src = readFileSync(join(root, 'src/pages/PublicUtilityPage.jsx'), 'utf8')
     assert.match(src, /getAccessTokenFresh/)
     assert.doesNotMatch(src, /getSession\(\)/)
+    assert.match(src, /filterFloorDetailingServices/)
+  })
+
+  it('queue create/upsell rejects detailing SKUs (wash vs detailing split)', () => {
+    const api = readFileSync(join(root, 'src/queue/queueApi.js'), 'utf8')
+    assert.match(api, /isSameDayQueueKind/)
+    assert.match(api, /isBookingBoardService/)
+    assert.match(api, /Detailing services belong on Bookings/)
+    const editor = readFileSync(join(root, 'src/components/QueueTicketEditor.jsx'), 'utf8')
+    assert.match(editor, /filterPosBayCatalog/)
+    assert.match(editor, /bayServices/)
   })
 
   it('ReportsPage redirects into Finance Reports tab (RPT-P0-1)', () => {

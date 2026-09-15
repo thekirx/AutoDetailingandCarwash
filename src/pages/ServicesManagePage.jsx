@@ -10,6 +10,7 @@ import {
   serviceHasSizePricing,
   sizePricesFromService,
   emptySizePriceForm,
+  suggestSizedPricePesos,
 } from '@/lib/servicePricing'
 import { formatMoney } from '@/queue/queueApi'
 import { Badge } from '@/components/ui/badge'
@@ -42,9 +43,9 @@ function emptyForm(catalogScope = 'all') {
     salary_pct: '',
     duration_minutes: '60',
     sla_minutes: '',
-    use_size_pricing: false,
+    use_size_pricing: true,
     size_prices: emptySizePriceForm(''),
-    size_enabled: { small: false, medium: true, large: false, extra_large: false },
+    size_enabled: { small: true, medium: true, large: true, extra_large: true },
     included_service_ids: [],
   }
 }
@@ -58,10 +59,10 @@ function OptionalSizePriceFields({ enabled, sizeEnabled, sizePrices, onEnabledCh
           checked={enabled}
           onChange={(e) => onEnabledChange(e.target.checked)}
         />
-        Optional size pricing (multi-select)
+        Size pricing (Small · Medium · Large · Extra Large)
       </label>
       <p className="text-xs text-muted-foreground">
-        Off = one flat price for all cars. On = set prices only for the sizes you enable.
+        Matches Cars catalog sizes. Off = flat price. On = all four tiers (typing Medium prefills Small/Large/XL at detailing ratios 0.85 / 1.2 / 1.4).
       </p>
       {enabled ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -83,7 +84,13 @@ function OptionalSizePriceFields({ enabled, sizeEnabled, sizePrices, onEnabledCh
                 step="0.01"
                 disabled={!sizeEnabled[size.slug]}
                 value={sizePrices[size.slug] ?? ''}
-                onChange={(e) => onPricesChange({ ...sizePrices, [size.slug]: e.target.value })}
+                onChange={(e) => {
+                  if (size.slug === 'medium') {
+                    onPricesChange(suggestSizedPricePesos(e.target.value))
+                    return
+                  }
+                  onPricesChange({ ...sizePrices, [size.slug]: e.target.value })
+                }}
                 placeholder="0.00"
               />
             </div>
@@ -434,9 +441,21 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
               enabled={form.use_size_pricing}
               sizeEnabled={form.size_enabled}
               sizePrices={form.size_prices}
-              onEnabledChange={(use_size_pricing) => setForm({ ...form, use_size_pricing })}
+              onEnabledChange={(use_size_pricing) => {
+                if (!use_size_pricing) {
+                  setForm({ ...form, use_size_pricing: false })
+                  return
+                }
+                const mid = form.size_prices?.medium || form.price
+                setForm({
+                  ...form,
+                  use_size_pricing: true,
+                  size_enabled: { small: true, medium: true, large: true, extra_large: true },
+                  size_prices: mid ? suggestSizedPricePesos(mid) : emptySizePriceForm(''),
+                })
+              }}
               onSizeEnabledChange={(size_enabled) => setForm({ ...form, size_enabled })}
-              onPricesChange={(size_prices) => setForm({ ...form, size_prices })}
+              onPricesChange={(size_prices) => setForm({ ...form, size_prices, price: size_prices.medium || form.price })}
             />
             <Button type="submit" className="min-h-11 md:col-span-2" disabled={saving}>
               {saving ? 'Saving…' : 'Create'}
@@ -637,9 +656,21 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                 enabled={editing.use_size_pricing}
                 sizeEnabled={editing.size_enabled}
                 sizePrices={editing.size_prices}
-                onEnabledChange={(use_size_pricing) => setEditing({ ...editing, use_size_pricing })}
+                onEnabledChange={(use_size_pricing) => {
+                  if (!use_size_pricing) {
+                    setEditing({ ...editing, use_size_pricing: false })
+                    return
+                  }
+                  const mid = editing.size_prices?.medium || editing.price
+                  setEditing({
+                    ...editing,
+                    use_size_pricing: true,
+                    size_enabled: { small: true, medium: true, large: true, extra_large: true },
+                    size_prices: mid ? suggestSizedPricePesos(mid) : emptySizePriceForm(''),
+                  })
+                }}
                 onSizeEnabledChange={(size_enabled) => setEditing({ ...editing, size_enabled })}
-                onPricesChange={(size_prices) => setEditing({ ...editing, size_prices })}
+                onPricesChange={(size_prices) => setEditing({ ...editing, size_prices, price: size_prices.medium || editing.price })}
               />
               <DialogFooter>
                 <Button type="button" variant="outline" className="min-h-11" onClick={() => setEditing(null)}>

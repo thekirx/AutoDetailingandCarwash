@@ -37,7 +37,7 @@ import {
 import { resolveServicePriceMinor } from '../lib/servicePricing'
 import { createTtlCache } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
-import { isDetailingPayCategory, isTicketOnTodayFloor } from '../lib/serviceKinds'
+import { isBookingBoardService, isSameDayQueueKind, isTicketOnTodayFloor } from '../lib/serviceKinds'
 import { aggregateSalesFinancials } from '../lib/paymentMethods'
 import { buildAdminRoster } from '../lib/floorBoardRoster'
 import {
@@ -1032,6 +1032,15 @@ export async function createQueueTicket(form) {
       : []
   if (!serviceIds.length) throw new Error('Select at least one service.')
 
+  // Queue is same-day Services & Packages only — detailing belongs on Bookings.
+  for (const id of serviceIds) {
+    const svc = form.services?.find((item) => item.id === id)
+    if (!svc) throw new Error('Selected service was not found. Refresh and try again.')
+    if (!isSameDayQueueKind(svc.pay_category) || isBookingBoardService(svc)) {
+      throw new Error('Detailing services belong on Bookings, not the wash queue. Pick a service or package.')
+    }
+  }
+
   const visitGroupId = serviceIds.length > 1 ? crypto.randomUUID() : null
   const shared = {
     customer_id: customerId,
@@ -1056,24 +1065,6 @@ export async function createQueueTicket(form) {
 
   let primaryId = null
   let sharedQueueNumber = null
-
-  // If any line is detailing, pin one persistent number for the whole visit
-  // (daily reset must not apply even when a same-day add-on is selected too).
-  const visitHasDetailing = serviceIds.some((id) => {
-    const svc = form.services?.find((item) => item.id === id)
-    return isDetailingPayCategory(svc?.pay_category)
-  })
-  if (visitHasDetailing) {
-    const { data: persistentNumber, error: persistentError } = await supabase.rpc(
-      'assign_persistent_queue_number',
-      { p_branch: form.branch },
-    )
-    if (persistentError) {
-      console.error('Unable to assign detailing queue number', persistentError)
-      throw formatQueueActionError(persistentError)
-    }
-    sharedQueueNumber = persistentNumber
-  }
 
   for (let i = 0; i < serviceIds.length; i += 1) {
     const serviceId = serviceIds[i]
@@ -1298,6 +1289,9 @@ export async function addServiceToVisit(ticket, service, { priceMinor = null } =
     throw new Error('Services can only be added while the ticket is waiting or in progress.')
   }
   if (!service?.id) throw new Error('Pick a service to add.')
+  if (!isSameDayQueueKind(service.pay_category) || isBookingBoardService(service)) {
+    throw new Error('Detailing services belong on Bookings. Add a wash service or package to this visit.')
+  }
 
   const profile = await getCurrentProfile({ required: true })
 

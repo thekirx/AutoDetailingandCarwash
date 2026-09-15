@@ -6,7 +6,7 @@ Short vocabulary for audits and architecture reviews. Expand as seams deepen.
 |------|---------|
 | Floor | Live queue board + ticket lifecycle (waiting → … → payment). Queue = same-day services & packages only. Dashboard lanes split **Services & packages** vs **Detailing** |
 | Bookings | Detailing multi-day pipeline (Assigned → intake → … → release). Ceramic / tint / PPF / paint maint only — not wash Queue. Cards: detailing type over `car - plate` |
-| POS catalog | Sell tabs: **Services & packages** (same-day) · **Detailing** · Merch. No global size filter — size pricing is optional per catalog item (multi-select). Packages = mixed `included_service_ids` or custom price |
+| POS catalog | Sell tabs: **Services & packages** (same-day) · **Detailing** · Merch. Size pricing is on by default for new catalog SKUs (S/M/L/XL). Packages = mixed `included_service_ids` or custom price. Online `/book` is detailing-only; wash queue rejects detailing SKUs |
 | Inventory | `/operations/inventory` mirrors POS: **Services & packages** · **Detailing** · Merch — separate create/list so bay and multi-day data stay distributed |
 | Visit group | Multi-service tickets sharing one `queue_number` / `visit_group_id` |
 | Queue allocator | `queue_number_counters` + `assign_daily_queue_number` (atomic per branch/day) |
@@ -15,7 +15,7 @@ Short vocabulary for audits and architecture reviews. Expand as seams deepen.
 | Branch scope | `getBranchScopeList` / `user_has_branch_access` — null = all sites |
 | Public queue | DEFINER views projecting only branch/queue_number/status |
 | Cars catalog | Super Admin `/operations/cars` — `vehicle_catalog` make/model + `size_slug` (`small` \| `medium` \| `large` \| `extra_large`). Active rows feed the floor/book picker. Size auto-fills `bookings.vehicle_type` for service/package prices; TL/customer may override |
-| Car size | Bay/pricing tier, not body style. Same slugs as `service_size_prices`. Legacy `sedan`→medium, `suv`/`pickup`→large, `van`→extra_large, `motorcycle`→small |
+| Car size | Bay/pricing tier from body footprint. Small = sedans/hatchbacks · Medium = crossovers · Large = SUVs/pickups/larger MPVs · Extra Large = full-size vans/people movers. Same slugs as `service_size_prices`. Legacy `sedan`→small, `suv`/`pickup`→large, `van`→extra_large, `motorcycle`→small |
 | Data Center | Super Admin only. Catalog/CRM importable; floor/finance export-only (PITR). Standard purge: archived tickets/vehicles/customers (FK-safe) + 90d logs / 365d audit |
 | Loyalty program | Singleton `loyalty_program_settings` — SA kill-switches for stamps / points / memberships |
 | Stamp earn mode | `all_weighted` or `pay_categories` (e.g. wash-only carwash stamps) |

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-15 — Car size chart accuracy + bay size pricing
+
+- Cars catalog sizes follow body footprint: **Small** = sedans/hatchbacks · **Medium** = crossovers · **Large** = SUVs/pickups/larger MPVs · **Extra Large** = full-size vans/people movers (e.g. Raize/Q2 medium, Civic/Corolla small, Tucson/Sportage large).
+- Live `vehicle_catalog.size_slug` resynced for all 492 rows; inference + Cars UI copy match the chart.
+- Wash, packages, and bay services now have S/M/L/XL `service_size_prices` (same 0.85 / 1 / 1.2 / 1.4 ratios as detailing). Inventory create defaults size pricing on for all four tiers.
+- Legacy `sedan` maps to small for price lookup.
+- DB advisors: covering FK indexes, RLS `auth.uid()` initplan fixes, revoke Ops Lab trigger RPCs from anon/authenticated.
+
+## 2026-09-15 — Wash vs detailing catalog split hardened
+
+- Online `/book` and `/api/public-book` accept detailing SKUs only (Ceramic / Tint / PPF / Paint Maintenance). Same-day wash and packages stay on the shop queue.
+- Queue create and visit upsell reject detailing; ticket editor add-service lists bay Services & Packages only.
+- Bookings board no longer treats legacy `pay_category=ppf` package rows as multi-day detailing. Live PPF film remains `pay_category=detailing`.
+- Database CHECK constrains `services.pay_category` to the known catalog families.
+
 ## 2026-09-15 — PH car size on catalog, tickets, bookings
 
 - Super Admin Cars stores `vehicle_catalog.size_slug` (Small / Medium / Large / Extra Large). Live Hakum rows are backfilled from the PH bay chart (Vios/City small, Civic/Xpander medium, Fortuner/Hilux large, Alphard/Hiace extra large).

@@ -8,16 +8,30 @@ import { inferPhPricingSize, PRICING_SIZE_SLUGS } from '../src/lib/phVehicleSize
 import { flattenVehicleCatalog } from '../src/lib/phVehicles.js'
 
 describe('inferPhPricingSize — PH wash/detail bay chart', () => {
-  it('classifies high-volume nameplates', () => {
+  it('classifies by body footprint (sedan/hatch · crossover · SUV · XL)', () => {
+    // Small — sedans / hatchbacks
     assert.equal(inferPhPricingSize('Toyota', 'Vios'), 'small')
     assert.equal(inferPhPricingSize('Toyota', 'Wigo'), 'small')
     assert.equal(inferPhPricingSize('Honda', 'City'), 'small')
-    assert.equal(inferPhPricingSize('Honda', 'Civic'), 'medium')
+    assert.equal(inferPhPricingSize('Honda', 'Civic'), 'small')
+    assert.equal(inferPhPricingSize('Toyota', 'Corolla'), 'small')
+    assert.equal(inferPhPricingSize('Mazda', 'Mazda3'), 'small')
+    // Medium — crossovers / compact CUVs / small MPVs
+    assert.equal(inferPhPricingSize('Toyota', 'Raize'), 'medium')
+    assert.equal(inferPhPricingSize('Honda', 'WR-V'), 'medium')
+    assert.equal(inferPhPricingSize('Audi', 'Q2'), 'medium')
     assert.equal(inferPhPricingSize('Mitsubishi', 'Xpander'), 'medium')
+    assert.equal(inferPhPricingSize('Honda', 'HR-V'), 'medium')
+    // Large — SUVs / pickups / larger MPVs
     assert.equal(inferPhPricingSize('Toyota', 'Fortuner'), 'large')
     assert.equal(inferPhPricingSize('Toyota', 'Hilux'), 'large')
+    assert.equal(inferPhPricingSize('Hyundai', 'Tucson'), 'large')
+    assert.equal(inferPhPricingSize('Kia', 'Sportage'), 'large')
+    assert.equal(inferPhPricingSize('Honda', 'CR-V'), 'large')
+    // Extra Large — full-size vans / people movers
     assert.equal(inferPhPricingSize('Toyota', 'Alphard'), 'extra_large')
     assert.equal(inferPhPricingSize('Toyota', 'Hiace'), 'extra_large')
+    assert.equal(inferPhPricingSize('Audi', 'Q7'), 'extra_large')
     assert.equal(inferPhPricingSize('Yamaha', 'NMAX'), 'small')
   })
 

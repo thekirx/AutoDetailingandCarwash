@@ -125,14 +125,13 @@ export function filterFloorDetailingServices(services) {
 }
 
 /**
- * Bookings board is multi-day detailing only (ceramic, paint maint, tint, PPF).
- * Wash / same-day packages stay on Queue.
+ * Bookings board is multi-day detailing only (ceramic, paint maint, tint, PPF film).
+ * Wash / same-day packages (including legacy pay_category=ppf package rows) stay on Queue / POS bay.
  */
 export function isBookingBoardService(service = {}) {
   const slug = String(service?.slug || '').toLowerCase()
   if (FLOOR_DETAILING_SERVICE_SLUGS.includes(slug)) return true
-  const cat = String(service?.pay_category || '').toLowerCase()
-  return cat === 'detailing' || cat === 'ppf'
+  return String(service?.pay_category || '').toLowerCase() === 'detailing'
 }
 
 export function isBookingBoardRow(booking = {}) {

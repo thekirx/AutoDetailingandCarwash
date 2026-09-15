@@ -4,6 +4,7 @@ import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './http
 import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
 import { plateValidationError } from '../src/lib/customerAuth.js'
 import { inferPhPricingSize } from '../src/lib/phVehicleSizes.js'
+import { isBookingBoardService } from '../src/lib/serviceKinds.js'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -76,10 +77,16 @@ export async function handlePublicBookRequest(req, res) {
 
     const { data: svc } = await db
       .from('services')
-      .select('id, price_minor, service_size_prices(size_slug, price_minor)')
+      .select('id, slug, pay_category, price_minor, is_active, service_size_prices(size_slug, price_minor)')
       .eq('id', service_id)
       .maybeSingle()
-    if (!svc) return json(res, 400, { error: 'Service not found.' })
+    if (!svc || svc.is_active === false) return json(res, 400, { error: 'Service not found.' })
+    // Online /book is the detailing pipeline only — wash & packages use the shop queue.
+    if (!isBookingBoardService(svc)) {
+      return json(res, 400, {
+        error: 'Online booking is for detailing only (Ceramic, Tint, PPF, Paint Maintenance). Same-day wash and packages use the shop queue.',
+      })
+    }
     const sizeMap = Object.fromEntries((svc.service_size_prices || []).map((p) => [p.size_slug, p.price_minor]))
     const rawSize = String(vehicle_type || '').trim().toLowerCase().replace(/\s+/g, '_')
     const clientIsPricing = ['small', 'medium', 'large', 'extra_large'].includes(rawSize)
