@@ -151,13 +151,12 @@ test('Premium Wash & Detailing opens a page whose only subservice surface is a l
   assert.equal(wash.to, '/services/wash-detailing')
   assert.equal(wash.popup, undefined)
   assert.deepEqual(WASH_SERVICES.map((service) => service.title), [
-    'Premium Car Wash',
-    'Interior Detailing',
     'Glass Coating',
-    'Headlight Restoration',
-    'Glass Cleaning',
-    'Engine Wash',
-    'Mobile Detailing',
+    'Glass Detailing',
+    'Interior Detailing',
+    'Interior Deep Cleaning',
+    'Bactozero',
+    'Black Trims Restoration',
   ])
   assert.equal(SERVICE_DETAIL_CONTENT['wash-detailing'].serviceName, 'Premium Wash & Detailing')
 })
@@ -185,14 +184,14 @@ test('PPF and Ceramic benefit cards keep the approved claims and use claim-speci
      frame: a tile that repeats its neighbour is a tile that is illustrating the
      heading rather than the claim. */
   assert.deepEqual(SERVICE_POINT_CARDS.ceramic.map((card) => fileName(card.image)), [
-    'tesla-poster.webp',
+    'ceramic-tesla-application.jpg',
     'ceramic-tesla-gloss.jpg',
     'ceramic-tesla-finish.jpg',
     'mg-poster.webp',
   ])
   assert.deepEqual(SERVICE_POINT_CARDS.ppf.map((card) => fileName(card.image)), [
     'mini-cooper-poster.webp',
-    'panel-install-poster.webp',
+    'ppf-clearpro-install.webp',
     'ppf-information-grey-truck-clean.jpg',
     'toyota-cross-poster.webp',
   ])
@@ -200,11 +199,11 @@ test('PPF and Ceramic benefit cards keep the approved claims and use claim-speci
   for (const service of ['ppf', 'ceramic']) {
     const shots = SERVICE_POINT_CARDS[service].map((card) => fileName(card.image))
     assert.equal(new Set(shots).size, shots.length, `${service} benefit photos repeat`)
-    /* ceramic-tesla-application.jpg is a social post with "BOOK NOW" and the
-       site address burnt into the frame; ceramic-tesla-hydrophobic.jpg is a
-       buffing shot, which is the mismatch this card set exists to fix. */
+    /* The ceramic application crop is deliberately anchored low so its
+       technician, applicator, and paint—not the social-post header—carry the
+       claim. The remaining rejected assets mismatch their card claims. */
     for (const shot of shots) {
-      assert.doesNotMatch(shot, /ceramic-tesla-application|ceramic-tesla-hydrophobic|^clearpro-/)
+      assert.doesNotMatch(shot, /ceramic-tesla-hydrophobic|clearpro-(?:hydrophobic|self-healing|anti-yellowing)/)
     }
   }
   assert.equal(SERVICE_DETAIL_CONTENT.ceramic.proof.title, 'A finish that stays showroom ready.')
