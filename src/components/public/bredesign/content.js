@@ -38,6 +38,7 @@ export const IMAGES = {
   washGlassDetailing: new URL('../../../assets/services/wash-detailing/glass-detailing.webp', import.meta.url).href,
   washInteriorDeepCleaning: new URL('../../../assets/services/wash-detailing/interior-deep-cleaning.webp', import.meta.url).href,
   washBactozero: new URL('../../../assets/services/wash-detailing/bactozero.webp', import.meta.url).href,
+  washMobileDetailing: new URL('../../../assets/services/wash-detailing/mobile-detailing.webp', import.meta.url).href,
   washBlackTrims: new URL('../../../assets/services/wash-detailing/black-trims-restoration.webp', import.meta.url).href,
   carwash: new URL('../../../assets/services/carwash.webp', import.meta.url).href,
   engine: new URL('../../../assets/services/engine-wash.webp', import.meta.url).href,
@@ -138,7 +139,7 @@ export const WASH_SERVICES = [
     copy: 'Restores clearer glass by removing stubborn watermarks and reducing visible wiper scratches.',
     benefit: 'Clearer glass with fewer visible marks',
     image: IMAGES.washGlassDetailing,
-    alt: 'Clear side glass after detailing at Hakum Auto Care',
+    alt: 'A Hakum technician machine polishing vehicle side glass',
     available: true,
   },
   {
@@ -165,7 +166,7 @@ export const WASH_SERVICES = [
     copy: 'A focused cabin sanitation treatment that helps reduce odor-causing bacteria and refresh the interior environment.',
     benefit: 'A fresher, sanitized cabin',
     image: IMAGES.washBactozero,
-    alt: 'A clean, refreshed Audi cabin after interior treatment at Hakum Auto Care',
+    alt: 'Bactozero fogging treatment inside a vehicle cabin at Hakum Auto Care',
     available: true,
   },
   {
@@ -200,8 +201,8 @@ export const WASH_SERVICES = [
     title: 'Mobile Detailing',
     copy: 'Premium Hakum car care delivered where it is most convenient.',
     benefit: 'We come to you',
-    image: null,
-    alt: '',
+    image: IMAGES.washMobileDetailing,
+    alt: 'A Hakum technician machine polishing a white vehicle',
     available: false,
   },
 ]

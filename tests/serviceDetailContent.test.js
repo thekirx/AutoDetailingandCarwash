@@ -175,6 +175,7 @@ test('Premium Wash & Detailing opens a page whose only subservice surface is a l
     'black-trims-restoration.webp',
     'detailing.webp',
     'engine-wash.webp',
+    'mobile-detailing.webp',
   ])
   assert.equal(WASH_SERVICES.find((service) => service.id === 'interior-detailing').image, IMAGES.interior)
   assert.equal(SERVICE_DETAIL_CONTENT['wash-detailing'].serviceName, 'Premium Wash & Detailing')
