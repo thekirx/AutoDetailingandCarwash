@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { SERVICE_DETAIL_CONTENT } from '../src/data/serviceDetailContent.js'
 import {
   GALLERY_PAGES,
+  IMAGES,
   ORIGIN,
   SERVICES,
   SERVICE_POINT_CARDS,
@@ -151,23 +152,31 @@ test('Premium Wash & Detailing opens a page whose only subservice surface is a l
   assert.equal(wash.to, '/services/wash-detailing')
   assert.equal(wash.popup, undefined)
   assert.deepEqual(WASH_SERVICES.map((service) => service.title), [
+    'Premium Car Wash',
     'Glass Coating',
     'Glass Detailing',
     'Interior Detailing',
     'Interior Deep Cleaning',
     'Bactozero',
     'Black Trims Restoration',
+    'Headlight Restoration',
+    'Engine Wash',
+    'Mobile Detailing',
   ])
-  const washImages = WASH_SERVICES.map((service) => service.image)
-  assert.equal(new Set(washImages).size, WASH_SERVICES.length, 'wash services must not reuse photos')
+  const washImages = WASH_SERVICES.map((service) => service.image).filter(Boolean)
+  assert.equal(new Set(washImages).size, washImages.length, 'wash services must not reuse photos')
   assert.deepEqual(washImages.map((src) => src.split('?')[0].split('/').at(-1)), [
+    'carwash.webp',
     'glass-coating.webp',
     'glass-detailing.webp',
     'interior-detailing.webp',
     'interior-deep-cleaning.webp',
     'bactozero.webp',
     'black-trims-restoration.webp',
+    'detailing.webp',
+    'engine-wash.webp',
   ])
+  assert.equal(WASH_SERVICES.find((service) => service.id === 'interior-detailing').image, IMAGES.interior)
   assert.equal(SERVICE_DETAIL_CONTENT['wash-detailing'].serviceName, 'Premium Wash & Detailing')
 })
 

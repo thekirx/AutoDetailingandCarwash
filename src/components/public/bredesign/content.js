@@ -36,7 +36,6 @@ export const IMAGES = {
   glass: new URL('../../../assets/services/glass-detailing.webp', import.meta.url).href,
   washGlassCoating: new URL('../../../assets/services/wash-detailing/glass-coating.webp', import.meta.url).href,
   washGlassDetailing: new URL('../../../assets/services/wash-detailing/glass-detailing.webp', import.meta.url).href,
-  washInteriorDetailing: new URL('../../../assets/services/wash-detailing/interior-detailing.webp', import.meta.url).href,
   washInteriorDeepCleaning: new URL('../../../assets/services/wash-detailing/interior-deep-cleaning.webp', import.meta.url).href,
   washBactozero: new URL('../../../assets/services/wash-detailing/bactozero.webp', import.meta.url).href,
   washBlackTrims: new URL('../../../assets/services/wash-detailing/black-trims-restoration.webp', import.meta.url).href,
@@ -116,6 +115,15 @@ export const SERVICES = [
    already name. */
 export const WASH_SERVICES = [
   {
+    id: 'car-wash',
+    title: 'Premium Car Wash',
+    copy: 'A thorough exterior wash that removes everyday dirt and restores a clean, refreshed finish.',
+    benefit: 'A crisp, spotless finish',
+    image: IMAGES.carwash,
+    alt: 'A car being washed at Hakum Auto Care',
+    available: true,
+  },
+  {
     id: 'glass-coating',
     title: 'Glass Coating',
     copy: 'Watermark removal followed by a hydrophobic glass treatment that repels water and makes your glass easier to maintain.',
@@ -138,8 +146,8 @@ export const WASH_SERVICES = [
     title: 'Interior Detailing',
     copy: 'A complete 3–4 day interior restoration with seats and carpets removed for a thorough clean. Best for flooded, insect-infested, or long-overdue interiors.',
     benefit: 'Complete interior restoration',
-    image: IMAGES.washInteriorDetailing,
-    alt: 'A fully restored Audi cabin after interior detailing at Hakum Auto Care',
+    image: IMAGES.interior,
+    alt: 'Interior detailing in progress at Hakum Auto Care',
     available: true,
   },
   {
@@ -168,6 +176,33 @@ export const WASH_SERVICES = [
     image: IMAGES.washBlackTrims,
     alt: 'Restored black grille trim with a clean, even finish at Hakum Auto Care',
     available: true,
+  },
+  {
+    id: 'headlight-restoration',
+    title: 'Headlight Restoration',
+    copy: 'Careful correction for cloudy, oxidized lenses to restore clarity and a cleaner front-end finish.',
+    benefit: 'Brighter, clearer lenses',
+    image: IMAGES.detailing,
+    alt: 'The front end of a vehicle being worked on at Hakum Auto Care',
+    available: true,
+  },
+  {
+    id: 'engine-wash',
+    title: 'Engine Wash',
+    copy: 'A careful, component-safe engine bay cleaning for a cleaner and more presentable finish.',
+    benefit: 'A neater engine bay',
+    image: IMAGES.engine,
+    alt: 'A cleaned engine bay',
+    available: true,
+  },
+  {
+    id: 'mobile-detailing',
+    title: 'Mobile Detailing',
+    copy: 'Premium Hakum car care delivered where it is most convenient.',
+    benefit: 'We come to you',
+    image: null,
+    alt: '',
+    available: false,
   },
 ]
 

@@ -112,13 +112,17 @@ describe('BreDESIGN public page fallbacks', () => {
 
     assert.match(result.heading, /Premium Wash & Detailing/i)
     assert.equal(result.rail, 'true')
-    assert.deepEqual(result.services.slice(0, 6), [
+    assert.deepEqual(result.services.slice(0, 10), [
+      'Premium Car Wash',
       'Glass Coating',
       'Glass Detailing',
       'Interior Detailing',
       'Interior Deep Cleaning',
       'Bactozero',
       'Black Trims Restoration',
+      'Headlight Restoration',
+      'Engine Wash',
+      'Mobile Detailing',
     ])
     assert.equal(result.dialog, false)
     assert.ok(result.actions.length > 0)
