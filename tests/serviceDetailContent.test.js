@@ -158,6 +158,16 @@ test('Premium Wash & Detailing opens a page whose only subservice surface is a l
     'Bactozero',
     'Black Trims Restoration',
   ])
+  const washImages = WASH_SERVICES.map((service) => service.image)
+  assert.equal(new Set(washImages).size, WASH_SERVICES.length, 'wash services must not reuse photos')
+  assert.deepEqual(washImages.map((src) => src.split('?')[0].split('/').at(-1)), [
+    'glass-coating.webp',
+    'glass-detailing.webp',
+    'interior-detailing.webp',
+    'interior-deep-cleaning.webp',
+    'bactozero.webp',
+    'black-trims-restoration.webp',
+  ])
   assert.equal(SERVICE_DETAIL_CONTENT['wash-detailing'].serviceName, 'Premium Wash & Detailing')
 })
 
