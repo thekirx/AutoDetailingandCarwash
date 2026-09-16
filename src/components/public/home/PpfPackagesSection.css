@@ -74,6 +74,13 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+.bredesign .bd-tier.is-recommended > .bd-tier-badge {
+  animation: bd-popular-pulse 1.6s ease-in-out infinite;
+}
+@keyframes bd-popular-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(157, 180, 255, 0.3), 0 0 16px rgba(157, 180, 255, 0.18); transform: scale(1); }
+  50% { box-shadow: 0 0 0 9px rgba(157, 180, 255, 0), 0 0 30px rgba(157, 180, 255, 0.82); transform: scale(1.035); }
+}
 .bredesign .bd-tier h3 {
   min-height: 2.15em;
   margin-top: 24px;
@@ -110,6 +117,8 @@
 }
 .bredesign .bd-tier ul {
   display: grid;
+  flex: 1 1 auto;
+  align-content: start;
   gap: 8px;
   margin: 16px 0 0;
   padding: 0;
@@ -134,14 +143,22 @@
     center / 9px no-repeat;
 }
 .bredesign .bd-tier-note {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 76px;
   margin-top: 16px;
-  padding: 10px 12px;
+  padding: 12px;
   border: 1px solid rgba(157, 180, 255, 0.2);
   border-radius: 8px;
   background: rgba(157, 180, 255, 0.08);
   color: var(--bd-paper);
   font-size: 12px;
   line-height: 1.5;
+}
+.bredesign .bd-tier-note.is-empty {
+  display: block;
+  visibility: hidden;
 }
 .bredesign .bd-tier-note b {
   display: block;
@@ -162,6 +179,22 @@
   margin-top: auto;
   gap: 8px;
 }
+/* Side by side, the cards share one set of rows, so the name, the coverage
+   line, the price, the ladder note and the button each sit at the same height
+   in every card however long that card's own feature list runs. The flex
+   fallback above still bottoms out the note and button together. */
+@supports (grid-template-rows: subgrid) {
+  @media (min-width: 700px) {
+    .bredesign .bd-pk-steps {
+      grid-auto-rows: auto auto auto 1fr auto auto;
+    }
+    .bredesign .bd-tier {
+      display: grid;
+      grid-template-rows: subgrid;
+      grid-row: span 6;
+    }
+  }
+}
 .bredesign .bd-tier.is-recommended {
   border: 2px solid var(--bd-accent);
   background: linear-gradient(180deg, #0f2275 0%, var(--bd-navy-2) 70%);
@@ -169,62 +202,44 @@
 }
 
 /* ---- Comparison --------------------------------------------------------- */
-/* The table opens from a button rather than sitting open under the ladder. */
-.bredesign .bd-cmp-block {
-  margin-top: 34px;
-}
-.bredesign .bd-cmp-toggle {
+/* The comparison stays visible: package selection is the primary decision on
+   this page, so hiding the detail behind a disclosure only adds work. */
+.bredesign .bd-cmp-heading {
   display: flex;
-  align-items: center;
+  align-items: end;
   justify-content: space-between;
   gap: 18px;
-  width: 100%;
-  padding: 18px 22px;
-  border: 1px solid var(--bd-rule);
-  border-radius: 14px;
-  background: var(--bd-navy-2);
-  color: var(--bd-paper);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.25s ease, background 0.25s ease;
+  margin-top: 34px;
+  padding: 24px 2px 0;
 }
-.bredesign .bd-cmp-toggle:hover {
-  border-color: var(--bd-accent);
-  background: #0d1a52;
-}
-.bredesign .bd-cmp-toggle:focus-visible {
-  outline: 2px solid var(--bd-accent);
-  outline-offset: 3px;
-}
-.bredesign .bd-cmp-toggle b {
+.bredesign .bd-cmp-heading b {
   display: block;
   font-family: var(--bd-display);
-  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  font-size: clamp(1.35rem, 2.2vw, 2rem);
   font-style: italic;
   text-transform: uppercase;
   letter-spacing: -0.01em;
+  color: var(--bd-paper);
 }
-.bredesign .bd-cmp-toggle s {
+.bredesign .bd-cmp-heading s {
   display: block;
   margin-top: 5px;
   color: var(--bd-ink-2);
   font-size: 13px;
   text-decoration: none;
 }
-.bredesign .bd-cmp-toggle svg {
-  flex: none;
-  color: var(--bd-accent);
-  transition: transform 0.25s ease;
-}
-.bredesign .bd-cmp-toggle[aria-expanded='true'] svg {
-  transform: rotate(180deg);
-}
 .bredesign .bd-cmp {
-  margin-top: 14px;
+  margin-top: 18px;
   overflow-x: auto;
   border: 1px solid var(--bd-rule);
   border-radius: 16px;
   background: var(--bd-navy-2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bredesign .bd-tier.is-recommended > .bd-tier-badge {
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(157, 180, 255, 0.2);
+  }
 }
 .bredesign .bd-cmp table {
   width: 100%;

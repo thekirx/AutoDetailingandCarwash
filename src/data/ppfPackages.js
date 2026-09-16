@@ -46,7 +46,7 @@ export const PPF_PACKAGES = [
        ceramic coating on the rest, from ₱48,000. Film, warranty and free
        extras match Basic Protection, as Kirk directed — to be confirmed with
        Hakum before anything beyond the website depends on them. */
-    id: 'high-impact', title: 'Starter Partial PPF Package', subtitle: 'Front PPF + Ceramic Coating',
+    id: 'high-impact', title: 'High Impact Partial', subtitle: 'Front PPF + Ceramic Coating',
     headline: 'Where the road hits first.',
     shortDescription: 'Film on the front of the car, where stone chips land, and ceramic coating on the rest.',
     coverageType: 'Front PPF',
@@ -68,7 +68,7 @@ export const PPF_PACKAGES = [
        the steps up to Ultimate and Platinum are the film, the warranty and the
        extras rather than the panels. With no bare panels left, the ceramic
        coating "on the rest of the vehicle" no longer applies to this tier. */
-    id: 'basic', title: 'Starter Full PPF Package', subtitle: 'Full Body PPF',
+    id: 'basic', title: 'Basic PPF Protection', subtitle: 'Full Body PPF',
     headline: 'The whole car, on essential film.',
     shortDescription: 'Full-body protection on 7.5 mil film with a 7-year warranty.',
     coverageType: 'Full Body PPF',
@@ -90,7 +90,7 @@ export const PPF_PACKAGES = [
     recommendedLabel: null, ctaLabel: 'Book Starter Full PPF Package',
   },
   {
-    id: 'ultimate', title: 'Ultimate Protection', subtitle: 'Full Body PPF',
+    id: 'ultimate', title: 'Ultimate PPF Protection', subtitle: 'Full Body PPF',
     headline: 'Every painted panel, covered.',
     shortDescription: 'Complete, virtually invisible protection across the exterior and trims.',
     coverageType: 'Full Body PPF',
@@ -113,7 +113,7 @@ export const PPF_PACKAGES = [
     ctaLabel: 'Book Ultimate Protection',
   },
   {
-    id: 'platinum', title: 'Platinum Protection', subtitle: 'Full Body PPF with Heavier Defense',
+    id: 'platinum', title: 'Platinum PPF Protection', subtitle: 'Full Body PPF with Heavier Defense',
     headline: 'Nothing left exposed.',
     shortDescription: 'Maximum full-body coverage with thicker film for stronger high-impact defense.',
     coverageType: 'Full Body PPF',

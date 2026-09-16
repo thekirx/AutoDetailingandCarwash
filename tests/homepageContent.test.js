@@ -36,10 +36,10 @@ describe('homepage production content adapters', () => {
     const cards = buildPpfPackageCards(PPF_PACKAGES)
 
     assert.deepEqual(cards.map(({ id, title, thickness }) => ({ id, title, thickness })), [
-      { id: 'high-impact', title: 'Starter Partial PPF Package', thickness: '7.5 mil TPU PPF material' },
-      { id: 'basic', title: 'Starter Full PPF Package', thickness: '7.5 mil TPU PPF material' },
-      { id: 'ultimate', title: 'Ultimate Protection', thickness: '8 mil TPU PPF material' },
-      { id: 'platinum', title: 'Platinum Protection', thickness: '8.5 mil TPU PPF material' },
+      { id: 'high-impact', title: 'High Impact Partial', thickness: '7.5 mil TPU PPF material' },
+      { id: 'basic', title: 'Basic PPF Protection', thickness: '7.5 mil TPU PPF material' },
+      { id: 'ultimate', title: 'Ultimate PPF Protection', thickness: '8 mil TPU PPF material' },
+      { id: 'platinum', title: 'Platinum PPF Protection', thickness: '8.5 mil TPU PPF material' },
     ])
     assert.deepEqual(Object.keys(cards[0]).sort(), [
       'bookingState',

@@ -40,6 +40,14 @@ export const IMAGES = {
   washBactozero: new URL('../../../assets/services/wash-detailing/bactozero.webp', import.meta.url).href,
   washMobileDetailing: new URL('../../../assets/services/wash-detailing/mobile-detailing.webp', import.meta.url).href,
   washBlackTrims: new URL('../../../assets/services/wash-detailing/black-trims-restoration.webp', import.meta.url).href,
+  washGallery01: new URL('../../../assets/services/wash-detailing/gallery/wash-gallery-01.jpg', import.meta.url).href,
+  washGallery02: new URL('../../../assets/services/wash-detailing/gallery/wash-gallery-02.jpg', import.meta.url).href,
+  washGallery03: new URL('../../../assets/services/wash-detailing/gallery/wash-gallery-03.jpg', import.meta.url).href,
+  washGallery04: new URL('../../../assets/services/wash-detailing/gallery/wash-gallery-04.jpg', import.meta.url).href,
+  washGallery05: new URL('../../../assets/services/wash-detailing/gallery/wash-gallery-05.jpg', import.meta.url).href,
+  washGallery06: new URL('../../../assets/services/wash-detailing/gallery/wash-gallery-06.jpg', import.meta.url).href,
+  washGallery07: new URL('../../../assets/services/wash-detailing/gallery/wash-gallery-07.jpg', import.meta.url).href,
+  washGallery08: new URL('../../../assets/services/wash-detailing/gallery/wash-gallery-08.jpg', import.meta.url).href,
   carwash: new URL('../../../assets/services/carwash.webp', import.meta.url).href,
   engine: new URL('../../../assets/services/engine-wash.webp', import.meta.url).href,
   ceramicTeslaGloss: new URL('../../../assets/services/ceramic-tesla-gloss.jpg', import.meta.url).href,
@@ -49,7 +57,7 @@ export const IMAGES = {
   /* The same dusk photo cropped to landscape, so the story title can sit on a
      fixed place in it — between the sign and the car roofs. */
   shopfrontWide: new URL('../../../assets/about/hakum-shopfront-dusk-wide.webp', import.meta.url).href,
-  hakumStory: new URL('../../../assets/about/hakum-octp1-23.webp', import.meta.url).href,
+  hakumStory: new URL('../../../assets/about/hakum-story-storefront.jpg', import.meta.url).href,
   heroStill: new URL('../../../assets/hero/bredesign-hero-poster.webp', import.meta.url).href,
   event: '/content/events-stay-tuned.webp',
 }
@@ -60,12 +68,11 @@ export const ORIGIN = {
   headlineAccent: 'love.',
   paragraphs: [
     'Founded in 2024, Hakum Auto Care was established on the principle that exceptional service begins with genuine care and pride in every job we undertake.',
-    'We specialize in fast, high-quality auto detailing, treating every vehicle with the same attention and respect we give our own. The name “Hakum” originates from a heartfelt expression my son used as a child to say “I love you.” It serves as a constant reminder that our work should always come from a place of sincerity and dedication.',
+    'We specialize in fast, high-quality auto detailing, treating every vehicle with the same attention and respect we give our own. The name “Hakum” originates from a heartfelt expression my son used as a child to say “I love you.” It serves as a constant reminder that our work should always come from a place of sincerity and dedication. Whether it’s a quick wash or comprehensive detailing, our customers can expect expert craftsmanship, premium products, and a team that truly treats every car as if it were their own.',
   ],
-  tagTitle: 'Est. 2024',
   image: IMAGES.hakumStory,
   imageWide: IMAGES.hakumStory,
-  imageAlt: 'Hakum Auto Care branch at dusk with illuminated signage and cars waiting outside',
+  imageAlt: 'Hakum Auto Care storefront with the full shop sign visible',
 }
 
 export const SERVICES = [
@@ -204,6 +211,31 @@ export const WASH_SERVICES = [
     image: IMAGES.washMobileDetailing,
     alt: 'A Hakum technician machine polishing a white vehicle',
     available: false,
+  },
+]
+
+/* The wash page gallery deliberately uses the same paged mosaic vocabulary as
+   the homepage Photos & Videos rail. Each photo comes from the owner's CARWASH
+   Drive folder and appears once in the real pages; useLoopRail supplies only
+   the off-screen copies needed for seamless wrap-around navigation. */
+export const WASH_GALLERY_PAGES = [
+  {
+    id: 'wash-floor-01',
+    tiles: [
+      { slot: 't', photo: { src: IMAGES.washGallery01, alt: 'Finished gray Honda Brio rear detail under the Hakum lights', caption: 'Finished with care' } },
+      { slot: 'w', photo: { src: IMAGES.washGallery02, alt: 'Finished gray Honda Brio front detail under the Hakum lights', caption: 'Clean from every angle' } },
+      { slot: 'a', photo: { src: IMAGES.washGallery03, alt: 'Hakum technician carefully washing a wheel', caption: 'The details matter' } },
+      { slot: 'b', photo: { src: IMAGES.washGallery04, alt: 'Dusty vehicle step board before detailing', caption: 'Ready for restoration' } },
+    ],
+  },
+  {
+    id: 'wash-floor-02',
+    tiles: [
+      { slot: 't', photo: { src: IMAGES.washGallery05, alt: 'Detailed white vehicle with a high-gloss finish', caption: 'A brighter finish' } },
+      { slot: 'w', photo: { src: IMAGES.washGallery06, alt: 'Detailed orange pickup on the Hakum wash floor', caption: 'Fresh from the floor' } },
+      { slot: 'a', photo: { src: IMAGES.washGallery07, alt: 'Detailed red Honda wheel and paint finish', caption: 'Restored gloss' } },
+      { slot: 'b', photo: { src: IMAGES.washGallery08, alt: 'Glossy red Honda rear detail under the Hakum lights', caption: 'Clean lines, deep shine' } },
+    ],
   },
 ]
 

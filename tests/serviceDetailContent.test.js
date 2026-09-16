@@ -8,6 +8,7 @@ import {
   ORIGIN,
   SERVICES,
   SERVICE_POINT_CARDS,
+  WASH_GALLERY_PAGES,
   WASH_SERVICES,
   WHY_SECTIONS,
 } from '../src/components/public/bredesign/content.js'
@@ -141,10 +142,37 @@ test('the Tint detail-page CTA books Tint instead of looping back to the service
   assert.deepEqual(tint.cta, { label: 'Book nano ceramic tint', to: '/book' })
 })
 
-test('the Hakum story uses the shopfront-at-dusk photograph and matching alternative text', () => {
-  assert.equal(new URL(ORIGIN.image).pathname.split('/').at(-1), 'hakum-octp1-23.webp')
-  assert.equal(ORIGIN.imageAlt, 'Hakum Auto Care branch at dusk with illuminated signage and cars waiting outside')
+test('the Hakum story uses the supplied storefront photograph and complete approved story', () => {
+  assert.equal(new URL(ORIGIN.image).pathname.split('/').at(-1), 'hakum-story-storefront.jpg')
+  assert.equal(ORIGIN.imageAlt, 'Hakum Auto Care storefront with the full shop sign visible')
+  /* The story reads as a lede and then one block: the second and third
+     paragraphs were combined, so no sentence of the owner's story may be lost
+     in the join. */
+  assert.deepEqual(ORIGIN.paragraphs, [
+    'Founded in 2024, Hakum Auto Care was established on the principle that exceptional service begins with genuine care and pride in every job we undertake.',
+    'We specialize in fast, high-quality auto detailing, treating every vehicle with the same attention and respect we give our own. The name “Hakum” originates from a heartfelt expression my son used as a child to say “I love you.” It serves as a constant reminder that our work should always come from a place of sincerity and dedication. Whether it’s a quick wash or comprehensive detailing, our customers can expect expert craftsmanship, premium products, and a team that truly treats every car as if it were their own.',
+  ])
+  /* The founding date lives in the lede now that the Est. badge is gone. */
+  assert.equal(ORIGIN.tagTitle, undefined)
   assert.equal(ORIGIN.tagLine, undefined)
+  assert.match(ORIGIN.paragraphs[0], /Founded in 2024/)
+})
+
+test('wash and detailing has two unique photo mosaics for its looping gallery', () => {
+  assert.equal(WASH_GALLERY_PAGES.length, 2)
+  assert.ok(WASH_GALLERY_PAGES.every((page) => page.tiles.length === 4))
+  const photos = WASH_GALLERY_PAGES.flatMap((page) => page.tiles.map((tile) => tile.photo.src))
+  assert.equal(new Set(photos).size, photos.length)
+  assert.deepEqual(photos.map((src) => src.split('?')[0].split('/').at(-1)), [
+    'wash-gallery-01.jpg',
+    'wash-gallery-02.jpg',
+    'wash-gallery-03.jpg',
+    'wash-gallery-04.jpg',
+    'wash-gallery-05.jpg',
+    'wash-gallery-06.jpg',
+    'wash-gallery-07.jpg',
+    'wash-gallery-08.jpg',
+  ])
 })
 
 test('Premium Wash & Detailing opens a page whose only subservice surface is a looping rail', () => {

@@ -48,42 +48,29 @@ describe('BreDESIGN public page fallbacks', () => {
     assert.equal(href, 'https://www.tiktok.com/@hakum_autocare')
   })
 
-  it('shows all four PPF tiers and toggles the package comparison', async () => {
+  it('shows the approved PPF names and keeps the package comparison visible', async () => {
     await page.goto(`${PREVIEW_ORIGIN}/services/ppf`, { waitUntil: 'networkidle0' })
-    const comparisonState = () => page.evaluate(() => ({
+    const comparisonState = await page.evaluate(() => ({
       tiers: document.querySelectorAll('.bd-tier').length,
+      tierNames: [...document.querySelectorAll('.bd-tier h3')].map((item) => item.textContent.trim()),
       redundantPriceSummary: Boolean(document.querySelector('.bd-pk-price')),
-      expanded: document.querySelector('.bd-cmp-toggle')?.getAttribute('aria-expanded'),
+      toggle: Boolean(document.querySelector('.bd-cmp-toggle')),
       comparisonHidden: document.querySelector('#ppf-compare')?.hidden,
       stepLabels: document.querySelectorAll('.bd-tier-step').length,
       risers: document.querySelectorAll('.bd-tier-riser').length,
     }))
 
-    assert.deepEqual(await comparisonState(), {
+    assert.deepEqual(comparisonState, {
       tiers: 4,
+      tierNames: [
+        'High Impact Partial',
+        'Basic PPF Protection',
+        'Ultimate PPF Protection',
+        'Platinum PPF Protection',
+      ],
       redundantPriceSummary: false,
-      expanded: 'false',
-      comparisonHidden: true,
-      stepLabels: 0,
-      risers: 0,
-    })
-
-    await page.click('.bd-cmp-toggle')
-    assert.deepEqual(await comparisonState(), {
-      tiers: 4,
-      redundantPriceSummary: false,
-      expanded: 'true',
+      toggle: false,
       comparisonHidden: false,
-      stepLabels: 0,
-      risers: 0,
-    })
-
-    await page.click('.bd-cmp-toggle')
-    assert.deepEqual(await comparisonState(), {
-      tiers: 4,
-      redundantPriceSummary: false,
-      expanded: 'false',
-      comparisonHidden: true,
       stepLabels: 0,
       risers: 0,
     })
@@ -108,6 +95,11 @@ describe('BreDESIGN public page fallbacks', () => {
         .filter((link) => new URL(link.href).pathname === '/book').length,
       headerBookLinks: [...document.querySelectorAll('header a, .public-header a')]
         .filter((link) => new URL(link.href).pathname === '/book').length,
+      galleryPages: document.querySelectorAll('[data-wash-gallery-page]').length,
+      galleryPhotos: [...document.querySelectorAll('[data-wash-gallery-page] img')]
+        .map((image) => new URL(image.src).pathname.split('/').at(-1)),
+      galleryUsesHomeRail: Boolean(document.querySelector('.bd-wash-gallery .bd-gallery-rail')),
+      mobileComingSoon: document.querySelector('[data-wash-service-card][data-package="mobile-detailing"] .bd-wash-unavailable')?.textContent.trim(),
     }))
 
     assert.match(result.heading, /Premium Wash & Detailing/i)
@@ -132,6 +124,10 @@ describe('BreDESIGN public page fallbacks', () => {
     assert.ok(result.reviews.some((review) => /Paul Russel Sandoval/.test(review)))
     assert.ok(result.reviews.every((review) => /wash|clean|buffing/i.test(review)))
     assert.ok(result.reviews.every((review) => !/ceramic coating/i.test(review)))
+    assert.equal(result.galleryPages, 2)
+    assert.equal(new Set(result.galleryPhotos).size, 8)
+    assert.equal(result.galleryUsesHomeRail, true)
+    assert.equal(result.mobileComingSoon, 'Coming soon')
   })
 
   it('labels tint benefits and pulses both ceramic warranty messages', async () => {

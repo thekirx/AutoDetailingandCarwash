@@ -97,11 +97,10 @@ describe('Public branding assets and scope', () => {
     assert.match(packagesCss, /\.bredesign \.bd-tier-book\s*\{[^}]*margin-top: auto/s)
     assert.match(packagesCss, /\.bredesign \.bd-cmp table\s*\{/)
     assert.match(packages, /className="bd-pk-steps bd-reveal"/)
-    /* The comparison opens from a button rather than standing open under the
-       ladder, so the table carries the disclosure wiring. */
-    assert.match(packages, /className="bd-cmp-toggle"/)
-    assert.match(packages, /aria-expanded=\{compareOpen\}/)
-    assert.match(packages, /className="bd-cmp" id="ppf-compare" hidden=\{!compareOpen\}/)
+    /* The comparison is permanently visible under the package ladder. */
+    assert.match(packages, /className="bd-cmp-heading bd-reveal"/)
+    assert.match(packages, /className="bd-cmp" id="ppf-compare"/)
+    assert.doesNotMatch(packages, /bd-cmp-toggle|aria-expanded|hidden=\{!compareOpen\}/)
     assert.doesNotMatch(packages, /ppf-static-lists|ppf-static-addons|ppf-static-tags/)
     assert.match(css, /\.partnership-layout\s*\{/)
     assert.match(css, /\.home-branch-card\.is-coming-soon\s*\{/s)

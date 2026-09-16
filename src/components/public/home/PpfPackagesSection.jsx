@@ -1,5 +1,4 @@
-import { ArrowRight, Check, ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowRight, Check } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { PPF_FILM_BRAND, PPF_PACKAGES } from '../../../data/ppfPackages'
@@ -8,8 +7,7 @@ import { buildPpfPackageCards } from '../../../lib/homepageContent'
 import './PpfPackagesSection.css'
 
 const packageCards = buildPpfPackageCards(PPF_PACKAGES)
-const shortName = (card) => card.title.replace(' Protection', '')
-const displayName = (card) => card.id === 'high-impact' || card.id === 'basic' ? card.title : `${shortName(card)} Protection`
+const displayName = (card) => card.title
 
 /* What each step card lists. Read from the package itself, so a change to a
    tier's film, warranty or extras cannot leave the card saying something else. */
@@ -102,11 +100,6 @@ function CompareCell({ cell }) {
    the difference → book. Packages share one baseline so none reads as a
    required step; the Hakum recommendation is identified with a compact tag. */
 export default function PpfPackagesSection() {
-  /* The table is eleven coverage rows wide and four tiers deep — useful to the
-     reader who wants it, a wall of ticks to the one who has already picked a
-     step. It opens on request. */
-  const [compareOpen, setCompareOpen] = useState(false)
-
   return (
     <section id="ppf-packages" className="bd-packages" data-service-packages="ppf">
       <div className="bd-shell">
@@ -129,7 +122,6 @@ export default function PpfPackagesSection() {
         <div className="bd-pk-steps bd-reveal">
           {packageCards.map((card, index) => {
             const pkg = PPF_PACKAGES[index]
-            const name = shortName(card)
             return (
               <article
                 key={card.id}
@@ -155,14 +147,14 @@ export default function PpfPackagesSection() {
                     <b>{pkg.ladderNote.label}</b>
                     {pkg.ladderNote.text}
                   </p>
-                ) : null}
+                ) : <span className="bd-tier-note is-empty" aria-hidden="true" />}
                 <Link
                   className={`bd-btn ${card.isHighlighted ? 'bd-btn-light' : 'bd-btn-quiet'} bd-tier-book`}
                   to="/book"
                   state={card.bookingState}
                   aria-label={card.ctaLabel}
                 >
-                  Book {card.id === 'high-impact' || card.id === 'basic' ? card.title : name}
+                  Book {card.title}
                   {card.isHighlighted ? <ArrowRight size={15} aria-hidden="true" /> : null}
                 </Link>
               </article>
@@ -170,23 +162,14 @@ export default function PpfPackagesSection() {
           })}
         </div>
 
-        <div className="bd-cmp-block bd-reveal">
-          <button
-            type="button"
-            className="bd-cmp-toggle"
-            aria-expanded={compareOpen}
-            aria-controls="ppf-compare"
-            onClick={() => setCompareOpen((open) => !open)}
-          >
-            <span>
-              <b>Compare all four packages</b>
-              <s>Panel by panel, film, warranty, and what comes free</s>
-            </span>
-            <ChevronDown size={18} aria-hidden="true" />
-          </button>
+        <div className="bd-cmp-heading bd-reveal">
+          <span>
+            <b>Compare all four packages</b>
+            <s>Panel by panel, film, warranty, and what comes free</s>
+          </span>
         </div>
 
-        <div className="bd-cmp" id="ppf-compare" hidden={!compareOpen}>
+        <div className="bd-cmp" id="ppf-compare">
           <table>
             <caption className="bd-cmp-caption">Compare Paint Protection Film packages</caption>
             <thead>

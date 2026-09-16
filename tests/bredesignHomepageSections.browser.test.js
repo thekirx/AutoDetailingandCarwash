@@ -37,8 +37,8 @@ describe('BreDESIGN homepage fallback sections', () => {
 
   it('shows the real stamp-card rewards model instead of obsolete membership points', async () => {
     const appCopy = await page.$eval('#app-preview', (section) => section.textContent.replace(/\s+/g, ' ').trim())
-    assert.match(appCopy, /Hakum rewards/i)
-    assert.match(appCopy, /4 stamps from a free wash/i)
+    assert.match(appCopy, /Loyalty program/i)
+    assert.match(appCopy, /6\/10 stamps/i)
     assert.match(appCopy, /Stamp rewards/i)
     assert.doesNotMatch(appCopy, /points/i)
   })

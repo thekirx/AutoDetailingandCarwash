@@ -320,22 +320,24 @@
 
 /* ==== Origin ============================================================= */
 
-/* The story is set on the branch photo. The photo keeps its own proportions
-   (999 × 640), so a share of its height is a fixed place on the picture: the
-   copy starts 38.4% down — under the Hakum sign, over the car roofs. The copy
-   is pushed there with padding (24.6% of the width is 38.4% of the photo's
-   height) rather than positioned, so a longer story makes the section taller
-   instead of spilling out of it. */
+/* The branch photo runs as a band across the top of the section and the story
+   sits on navy beneath it, at every width. The title is set into the strip
+   where the two meet, so it reads over the forecourt while the sign above it
+   stays clear. The copy is pushed down with padding rather than positioned, so
+   a longer story makes the section taller instead of spilling out of it. */
 .bredesign .bd-origin {
   padding: 0;
   container-type: inline-size;
   background: var(--bd-navy);
+  /* The photo is a band across the top; the copy clears it by everything but
+     the overlap, which is the strip the title is set into. */
+  --bd-origin-band: clamp(400px, 52cqw, 1000px);
+  --bd-origin-overlap: clamp(58px, 9cqw, 150px);
 }
 .bredesign .bd-origin-frame {
   position: relative;
   overflow: hidden;
-  min-height: calc(100cqw * 640 / 999);
-  padding: 8.5% 4cqw 4cqw;
+  padding: calc(var(--bd-origin-band) - var(--bd-origin-overlap)) 0 clamp(42px, 5cqw, 84px);
 }
 .bredesign .bd-origin-photo {
   position: absolute;
@@ -343,13 +345,12 @@
   left: 0;
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 999 / 640;
+  height: var(--bd-origin-band);
   object-fit: cover;
+  object-position: center 58%;
 }
-/* The dim follows the words: light over the sky and the sign, a band that
-   deepens from the title down through the story, solid navy where the photo
-   ends. */
+/* The dim runs down the band only: open over the sky and the sign, deepening
+   through the forecourt, solid navy by the time the band meets the story. */
 .bredesign .bd-origin-frame::before {
   content: '';
   position: absolute;
@@ -357,47 +358,34 @@
   top: 0;
   left: 0;
   right: 0;
-  height: calc(100cqw * 640 / 999 + 1px);
+  height: var(--bd-origin-band);
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgba(2, 10, 49, 0.82) 0%,
-    rgba(2, 10, 49, 0.78) 16%,
-    rgba(2, 10, 49, 0.76) 33%,
-    rgba(2, 10, 49, 0.72) 40%,
-    rgba(2, 10, 49, 0.66) 48%,
-    rgba(2, 10, 49, 0.84) 64%,
-    rgba(2, 10, 49, 0.92) 82%,
+    rgba(2, 10, 49, 0.1) 0%,
+    rgba(2, 10, 49, 0.24) 38%,
+    rgba(2, 10, 49, 0.62) 64%,
+    rgba(2, 10, 49, 0.92) 86%,
     var(--bd-navy) 100%
   );
 }
-.bredesign .bd-origin-frame::after {
-  content: '';
-  position: absolute;
-  z-index: 1;
-  top: 0;
-  left: 0;
-  width: 40%;
-  height: 12cqw;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 0 0, rgba(2, 10, 49, 0.7), rgba(2, 10, 49, 0) 70%);
-}
 .bredesign .bd-origin-eyebrow {
-  position: absolute;
+  position: relative;
   z-index: 2;
-  top: 3.6cqw;
-  left: 4cqw;
+  margin-bottom: 18px;
   text-shadow: 0 1px 12px rgba(2, 10, 49, 0.95), 0 0 2px rgba(2, 10, 49, 0.9);
 }
 .bredesign .bd-origin-copy {
   position: relative;
   z-index: 2;
+  width: var(--bd-shell);
+  margin-inline: auto;
 }
 .bredesign .bd-origin h2 {
-  font-size: 3.45cqw;
-  line-height: 0.95;
-  white-space: nowrap;
-  word-spacing: 0.12em;
+  font-size: clamp(46px, 6.7cqw, 104px);
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+  white-space: normal;
   text-shadow: 0 2px 22px rgba(2, 10, 49, 0.85);
 }
 .bredesign .bd-origin h2 em {
@@ -405,131 +393,49 @@
 }
 .bredesign .bd-origin-text {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3.4cqw;
-  max-width: calc(100% - 24cqw);
-  margin-top: 1.8cqw;
+  gap: 26px;
+  margin-top: 30px;
 }
 .bredesign .bd-origin-lead {
-  color: var(--bd-paper);
-  font-size: clamp(14px, 1.3cqw, 18.5px);
-  line-height: 1.6;
-  text-shadow: 0 1px 16px rgba(2, 10, 49, 0.8);
+  color: #fff;
+  font-size: clamp(20px, 1.65cqw, 25px);
+  font-weight: 700;
+  line-height: 1.48;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
 }
 .bredesign .bd-origin-body {
-  color: rgba(241, 241, 237, 0.88);
-  font-size: clamp(13px, 1.1cqw, 16px);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: clamp(17px, 1.35cqw, 20px);
   line-height: 1.7;
-  text-shadow: 0 1px 16px rgba(2, 10, 49, 0.8);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
 }
-.bredesign .bd-origin-cta {
-  margin-top: 1.8cqw;
-}
-.bredesign .bd-origin-tag {
-  position: absolute;
-  z-index: 2;
-  right: 4cqw;
-  bottom: 4cqw;
-  max-width: 36%;
-  padding: 14px 18px;
-  background: var(--bd-blue);
-}
-.bredesign .bd-origin-tag strong {
-  display: block;
-  font-family: var(--bd-display);
-  font-style: italic;
-  font-size: 18px;
-  line-height: 1.05;
-  color: #fff;
-}
-.bredesign .bd-origin-tag span {
-  display: block;
-  margin-top: 6px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
-}
-/* Too narrow for two columns beside the badge: one column, badge in the flow. */
 @container (max-width: 980px) {
   .bredesign .bd-origin-text {
-    grid-template-columns: 1fr;
-    max-width: 62ch;
-    gap: 12px;
-  }
-  .bredesign .bd-origin-tag {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    display: inline-block;
-    margin-top: 22px;
+    gap: 16px;
   }
 }
-/* Phone: the photo across the top, the title starting over the cars in its
-   lower part, and the story on the navy beneath. */
+/* Phone: the band is narrow enough that the crop has to hold the sign, and
+   the type steps down. The stacked construction itself is the default. */
 @container (max-width: 640px) {
-  .bredesign .bd-origin-frame {
-    min-height: 0;
-    padding: 150px 22px 34px;
-  }
   .bredesign .bd-origin-photo {
-    height: 340px;
-    aspect-ratio: auto;
     object-position: 58% 50%;
-  }
-  .bredesign .bd-origin-frame::before {
-    height: 360px;
-    background: linear-gradient(
-      180deg,
-      rgba(2, 10, 49, 0.06) 0px,
-      rgba(2, 10, 49, 0.1) 110px,
-      rgba(2, 10, 49, 0.55) 175px,
-      rgba(2, 10, 49, 0.78) 250px,
-      rgba(2, 10, 49, 0.94) 320px,
-      var(--bd-navy) 350px
-    );
-  }
-  .bredesign .bd-origin-frame::after {
-    display: none;
-  }
-  .bredesign .bd-origin-eyebrow {
-    position: relative;
-    top: auto;
-    left: auto;
   }
   .bredesign .bd-origin h2 {
     margin-top: 12px;
-    white-space: normal;
-    font-size: 12.6cqw;
-    line-height: 0.92;
+    font-size: 12cqw;
+    line-height: 0.88;
   }
   .bredesign .bd-origin-text {
-    display: block;
     max-width: none;
     margin-top: 22px;
+    gap: 16px;
   }
   .bredesign .bd-origin-lead {
-    font-size: 15px;
+    font-size: 18px;
+    line-height: 1.5;
   }
   .bredesign .bd-origin-body {
-    margin-top: 14px;
-    font-size: 14px;
-  }
-  .bredesign .bd-origin-cta {
-    margin-top: 22px;
-  }
-  .bredesign .bd-origin-tag {
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    bottom: auto;
-    max-width: calc(100% - 36px);
-    margin-top: 0;
-    padding: 9px 12px;
-  }
-  .bredesign .bd-origin-tag strong {
-    font-size: 14px;
+    font-size: 15px;
   }
 }
 /* Anything on the page that is not yet signed off says so, rather than
@@ -549,7 +455,7 @@
 /* ==== Services grid ====================================================== */
 
 .bredesign .bd-services {
-  background: var(--bd-navy-2);
+  background: linear-gradient(180deg, var(--bd-navy) 0%, var(--bd-navy-2) 18%, var(--bd-navy-2) 100%);
 }
 .bredesign .bd-services h2 em {
   font-style: italic;
@@ -948,7 +854,7 @@
   overflow: hidden;
   background:
     radial-gradient(70% 90% at 84% 50%, rgba(45, 89, 211, 0.3), transparent 68%),
-    var(--bd-navy);
+    linear-gradient(180deg, var(--bd-navy-2) 0%, var(--bd-navy) 20%, var(--bd-navy) 100%);
 }
 .bredesign .bd-app-preview::after {
   content: '';
@@ -1216,7 +1122,7 @@
    two panels read as raised against it, the way the gallery's tiles do. */
 
 .bredesign .bd-reviews {
-  background: var(--bd-navy);
+  background: linear-gradient(180deg, var(--bd-navy-2) 0%, var(--bd-navy) 18%, var(--bd-navy) 100%);
 }
 /* The title runs the full width; the subtitle, the Google badge, the branch
    links and the arrows share one line beneath it. */
@@ -1513,7 +1419,7 @@
 /* ==== Photos ============================================================= */
 
 .bredesign .bd-photos {
-  background: var(--bd-navy-2);
+  background: linear-gradient(180deg, var(--bd-navy) 0%, var(--bd-navy-2) 18%, var(--bd-navy-2) 100%);
 }
 .bredesign .bd-gallery-bar {
   display: flex;
@@ -1891,7 +1797,7 @@
 /* ==== Branches =========================================================== */
 
 .bredesign .bd-branches {
-  background: var(--bd-navy-2);
+  background: linear-gradient(180deg, var(--bd-navy) 0%, var(--bd-navy-2) 18%, var(--bd-navy-2) 100%);
 }
 .bredesign .bd-branch-grid {
   display: grid;
@@ -3330,7 +3236,7 @@
 .bredesign .bd-wash-services h2,
 .bredesign .bd-service-reviews h2 { margin-top:14px; font-size:clamp(2rem, 4.6vw, 4rem); line-height:.95; }
 .bredesign .bd-wash-service-rail { --slide: clamp(270px, 29vw, 390px); display:grid; grid-auto-flow:column; grid-auto-columns:var(--slide); gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; margin-top:40px; }
-.bredesign .bd-wash-service-card { overflow:hidden; scroll-snap-align:start; border:1px solid var(--bd-rule); border-radius:14px; background:var(--bd-navy-2); }
+.bredesign .bd-wash-service-card { position:relative; overflow:hidden; scroll-snap-align:start; border:1px solid var(--bd-rule); border-radius:14px; background:var(--bd-navy-2); }
 .bredesign .bd-wash-service-card > img,
 .bredesign .bd-wash-coming { display:block; width:100%; aspect-ratio:4/3; object-fit:cover; }
 .bredesign .bd-wash-coming { display:grid; place-items:center; background:var(--bd-blue); color:#fff; font-family:var(--bd-display); font-size:24px; text-transform:uppercase; }
@@ -3340,12 +3246,60 @@
 .bredesign .bd-wash-service-card strong { color:#54df93; font-size:13px; }
 .bredesign .bd-wash-service-card .bd-btn { justify-self:start; margin-top:6px; }
 .bredesign .bd-wash-unavailable { color:var(--bd-ink-3); font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.bredesign .bd-wash-service-card[data-package='mobile-detailing'] > img { filter:brightness(.48) saturate(.72); }
+.bredesign .bd-wash-coming-badge {
+  position:absolute;
+  z-index:2;
+  top:24px;
+  right:20px;
+  left:20px;
+  padding:16px 12px;
+  border:2px solid #fff;
+  background:var(--bd-blue);
+  box-shadow:0 0 30px rgba(47,91,255,.75);
+  color:#fff;
+  font-family:var(--bd-display);
+  font-size:clamp(1.55rem,2.4vw,2.15rem);
+  font-style:italic;
+  line-height:.9;
+  text-align:center;
+  text-transform:uppercase;
+  transform:rotate(-2deg);
+}
+.bredesign .bd-wash-service-card[data-package='mobile-detailing'] .bd-wash-unavailable {
+  justify-self:start;
+  padding:13px 18px;
+  border:1px solid rgba(157,180,255,.55);
+  border-radius:999px;
+  background:rgba(157,180,255,.08);
+  color:var(--bd-paper);
+  font-size:13px;
+}
 .bredesign .bd-service-reviews { background:var(--bd-navy-2); }
 .bredesign .bd-service-review-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin-top:36px; }
 .bredesign .bd-service-review-grid a { display:grid; gap:10px; padding:24px; border:1px solid var(--bd-rule); border-radius:12px; color:var(--bd-paper); text-decoration:none; background:var(--bd-navy); }
 .bredesign .bd-service-review-grid a > span { color:#f5ba35; letter-spacing:.12em; }
 .bredesign .bd-service-review-grid blockquote { margin:0; color:var(--bd-ink-2); font-size:14px; line-height:1.65; }
 .bredesign .bd-service-review-grid small { color:var(--bd-ink-3); }
+
+/* Wash proof follows the homepage Photos & Videos language exactly: mosaic
+   pages inside the same wrap-around rail, with the same arrows, captions and
+   progress treatment. Four photos make each page feel editorial instead of a
+   row of repeated portrait cards. */
+.bredesign .bd-wash-gallery { background:var(--bd-navy); }
+.bredesign .bd-wash-gallery .bd-head h2 { font-size:clamp(2.25rem,5.2vw,5rem); }
+.bredesign .bd-wash-gallery-page {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-rows:220px 220px;
+  grid-template-areas:'t w w a' 't w w b';
+}
+@media (max-width:859px) {
+  .bredesign .bd-wash-gallery-page {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:170px 170px 170px;
+    grid-template-areas:'w w' 't a' 't b';
+  }
+}
 
 /* Both halves of the warranty badge pulse, as approved: the duration and the
    recoating chip are the two claims that close the sale, so neither should be

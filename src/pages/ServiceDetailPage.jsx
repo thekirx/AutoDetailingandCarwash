@@ -5,7 +5,7 @@ import ServiceBottomCta from '../components/public/bredesign/ServiceBottomCta'
 import ServiceFaqSection from '../components/public/bredesign/ServiceFaqSection'
 import ServiceProofSection from '../components/public/bredesign/ServiceProofSection'
 import useReveal from '../components/public/bredesign/useReveal'
-import { IMAGES, SERVICE_POINT_CARDS, WASH_SERVICES, WHY_SECTIONS } from '../components/public/bredesign/content'
+import { IMAGES, SERVICE_POINT_CARDS, WASH_GALLERY_PAGES, WASH_SERVICES, WHY_SECTIONS } from '../components/public/bredesign/content'
 import { LoopArrows, LoopBar } from '../components/public/bredesign/LoopRail'
 import { loopSlides, useLoopRail } from '../components/public/bredesign/useLoopRail'
 import { CeramicSection, PpfInformationSection } from '../components/public/home/HomeServiceSections'
@@ -71,8 +71,9 @@ function WashServiceRail() {
         </div>
         <div className="bd-wash-service-rail" ref={rail.trackRef} data-wash-service-rail data-looping="true">
           {loopSlides(WASH_SERVICES, rail.copies).map(({ item, copy, key }) => (
-            <article className="bd-wash-service-card" data-wash-service-card key={key} aria-hidden={copy || undefined}>
+            <article className="bd-wash-service-card" data-wash-service-card data-package={item.id} key={key} aria-hidden={copy || undefined}>
               {item.image ? <img src={item.image} alt={copy ? '' : item.alt} loading="lazy" /> : <div className="bd-wash-coming">Coming soon</div>}
+              {!item.available ? <span className="bd-wash-coming-badge">Coming soon</span> : null}
               <div><h3>{item.title}</h3><p>{item.copy}</p><strong>✓ {item.benefit}</strong>
                 {item.available ? <Link className="bd-btn bd-btn-primary" to="/queue">View live queue</Link> : <span className="bd-wash-unavailable">Coming soon</span>}
               </div>
@@ -95,6 +96,47 @@ function WashReviews() {
         </a>
       ))}</div>
     </div></section>
+  )
+}
+
+function WashGallery() {
+  const rail = useLoopRail(WASH_GALLERY_PAGES.length)
+  return (
+    <section className="bd-photos bd-wash-gallery" aria-labelledby="wash-gallery-title">
+      <div className="bd-shell">
+        <div className="bd-head bd-reveal">
+          <div><p className="bd-eyebrow">Inside Hakum</p><h2 className="bd-skew" id="wash-gallery-title">Photos from the wash floor.</h2></div>
+          <p>Real wash and detailing work from our own bays—care in progress and finished vehicles ready for the road.</p>
+        </div>
+        <div className="bd-gallery-bar">
+          <p>8 photos · Wash &amp; detailing</p>
+          <LoopArrows rail={rail} label="wash gallery page" />
+        </div>
+        <div className="bd-gallery-rail" ref={rail.trackRef} data-wash-gallery-rail>
+          {loopSlides(WASH_GALLERY_PAGES, rail.copies).map(({ item: page, copy, key }) => (
+            <div
+              className="bd-mosaic bd-wash-gallery-page"
+              key={key}
+              data-wash-gallery-page={copy ? undefined : page.id}
+              aria-hidden={copy || undefined}
+            >
+              {page.tiles.map((tile) => (
+                <figure className={`bd-slot-${tile.slot}`} key={tile.slot}>
+                  <img
+                    src={tile.photo.src}
+                    alt={copy ? '' : tile.photo.alt}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <figcaption>{tile.photo.caption}</figcaption>
+                </figure>
+              ))}
+            </div>
+          ))}
+        </div>
+        <LoopBar rail={rail} />
+      </div>
+    </section>
   )
 }
 
@@ -280,6 +322,7 @@ export default function ServiceDetailPage() {
       {slug === 'ppf' ? <PpfPackagesSection /> : null}
       {slug === 'ceramic' ? <CeramicSection /> : null}
       {slug === 'wash-detailing' ? <WashReviews /> : null}
+      {slug === 'wash-detailing' ? <WashGallery /> : null}
       {detail.proof ? (
         <ServiceProofSection serviceId={slug} serviceName={detail.serviceName} proof={detail.proof} />
       ) : null}

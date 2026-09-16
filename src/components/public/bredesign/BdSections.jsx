@@ -21,18 +21,16 @@ function Lede({ parts }) {
   )
 }
 
-/* The story is set on the branch photo itself. On a wide screen the title runs
-   in one line through the strip between the Hakum sign and the car roofs, and
-   the story follows directly beneath it; the stylesheet pins that strip to the
-   photo's own proportions. On a phone the photo sits across the top and the
-   title starts over the cars. */
+/* The story is set on the branch photo itself: the photo runs as a band across
+   the top, the title is set into the strip where the band meets the navy, and
+   the story closes the section beneath it. */
 export function BdOrigin() {
   return (
     <section className="bd-origin" id="origin">
       <div className="bd-origin-frame">
         <img className="bd-origin-photo" src={ORIGIN.imageWide} alt={ORIGIN.imageAlt} loading="lazy" decoding="async" />
-        <p className="bd-eyebrow bd-origin-eyebrow">{ORIGIN.eyebrow}</p>
         <div className="bd-origin-copy bd-reveal">
+          <p className="bd-eyebrow bd-origin-eyebrow">{ORIGIN.eyebrow}</p>
           <h2>
             {ORIGIN.headline.join(' ')} <em>{ORIGIN.headlineAccent}</em>
           </h2>
@@ -43,15 +41,6 @@ export function BdOrigin() {
               </p>
             ))}
           </div>
-          <div className="bd-cta-row bd-origin-cta">
-            <Link className="bd-btn bd-btn-quiet" to="/services">
-              What we do
-            </Link>
-          </div>
-        </div>
-        <div className="bd-origin-tag">
-          <strong>{ORIGIN.tagTitle}</strong>
-          {ORIGIN.tagLine ? <span>{ORIGIN.tagLine}</span> : null}
         </div>
       </div>
     </section>

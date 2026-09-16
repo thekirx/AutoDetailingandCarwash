@@ -91,7 +91,7 @@ describe('PPF package value ladder', () => {
     assert.match(section, /to="\/book"\s+state=\{card\.bookingState\}/)
     assert.match(
       applyPublicBookPrefill({}, cards[2].bookingState)._prefNotes,
-      /^Package: Ultimate Protection · Full Body PPF · Film: 8 mil/,
+      /^Package: Ultimate PPF Protection · Full Body PPF · Film: 8 mil/,
     )
   })
 
