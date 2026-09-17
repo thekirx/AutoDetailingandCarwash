@@ -1474,9 +1474,7 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   gap: 0.85rem;
   text-decoration: none;
   color: inherit;
-  background:
-    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--capp-accent) 16%, transparent), transparent 42%),
-    var(--capp-surface);
+  background: var(--capp-surface);
 }
 
 .capp-stamps {
@@ -1492,32 +1490,28 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   position: relative;
   display: grid;
   place-items: center;
-  aspect-ratio: 1;
-  border-radius: 999px;
-  border: 2px dashed color-mix(in srgb, var(--capp-line-strong) 80%, transparent);
-  background:
-    radial-gradient(circle at 35% 30%, color-mix(in srgb, #fff 55%, transparent), transparent 48%),
-    var(--capp-surface-2);
-  color: transparent;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  height: 3.5rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--capp-line-strong);
+  background: transparent;
+  color: var(--capp-steel);
+  box-shadow: none;
 }
 
 .capp-stamp:nth-child(3n) {
-  transform: rotate(-4deg);
+  transform: none;
 }
 
 .capp-stamp:nth-child(4n) {
-  transform: rotate(5deg);
+  transform: none;
 }
 
 .capp-stamp.is-on {
   border-style: solid;
   border-color: color-mix(in srgb, var(--capp-accent) 82%, #020a31);
-  background:
-    radial-gradient(circle at 32% 28%, color-mix(in srgb, #fff 28%, transparent), transparent 42%),
-    var(--capp-accent);
+  background: #052699;
   color: #fff;
-  box-shadow: 0 6px 14px color-mix(in srgb, var(--capp-accent) 28%, transparent);
+  box-shadow: none;
 }
 
 .capp-stamp.is-gift {
@@ -1532,8 +1526,26 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
 }
 
 .capp-stamps.is-compact .capp-stamp {
-  border-width: 1.5px;
+  height: 2.75rem;
 }
+
+.capp-stamps { max-width: 36rem; width: 100%; }
+.capp-stamp-mark {
+  display: block;
+  width: 2.1rem;
+  height: 1.5rem;
+  background: currentColor;
+  mask: url('/branding/hakum-mark-blue.png') center / 150% auto no-repeat;
+  opacity: 0.35;
+}
+.capp-stamp.is-on .capp-stamp-mark { opacity: 1; }
+.capp-stamp-number {
+  position: absolute;
+  bottom: 0.15rem;
+  left: 0.3rem;
+  font: 600 0.55rem/1.2 var(--font-body, sans-serif);
+}
+.capp-stamp-gift { position: absolute; top: 0.25rem; right: 0.25rem; }
 
 @media (prefers-reduced-motion: reduce) {
   .capp-stamp:nth-child(3n),

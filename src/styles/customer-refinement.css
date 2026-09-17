@@ -41,3 +41,65 @@
   .capp-booking-refined .capp-price { max-width: 6rem; font-size: .65rem; }
 }
 @media print { .capp-booking-summary { position: static; box-shadow: none; } }
+
+/* Account-only brand polish. Keep BranchWeather and other customer routes unchanged. */
+.capp-account-home {
+  --capp-radius: 0.75rem;
+  --capp-radius-sm: 0.5rem;
+}
+.capp-account-home .capp-card,
+.capp-account-home .capp-row,
+.capp-account-home .capp-tile,
+.capp-account-home .capp-scroll > :first-child.capp-card {
+  box-shadow: none;
+}
+.capp-account-home .capp-loyalty-home {
+  --capp-ink: #f1f1ed;
+  --capp-steel: #c4cee7;
+  --capp-accent: #9db4ff;
+  --capp-line-strong: #526393;
+  background: #020a31;
+  color: #f1f1ed;
+  border-color: #16255c;
+  padding: 1.35rem;
+  gap: 1rem;
+}
+.capp-account-home .capp-loyalty-home .capp-title {
+  font-family: var(--capp-display);
+  font-style: italic;
+  text-transform: uppercase;
+  font-size: clamp(1rem, 2vw, 1.35rem);
+}
+.capp-account-home .capp-loyalty-home .capp-stamp.is-on {
+  background: #f1f1ed;
+  color: #052699;
+  border-color: #f1f1ed;
+}
+.capp-account-home .capp-loyalty-home .capp-stamp.is-gift {
+  color: #e7c976;
+  background: transparent;
+}
+.capp-loyalty-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 2.75rem;
+  border-top: 1px solid #35466f;
+  padding-top: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.capp-account-home .capp-loyalty-home:focus-visible {
+  outline: 3px solid #9db4ff;
+  outline-offset: 4px;
+}
+@media (min-width: 860px) {
+  .capp-account-home .capp-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .capp-account-home .capp-home-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .capp-account-home .capp-loyalty-home {
+    grid-template-columns: minmax(12rem, 1fr) minmax(0, 1.7fr);
+    align-items: center;
+    column-gap: 2rem;
+  }
+  .capp-account-home .capp-loyalty-link { grid-column: 1 / -1; }
+}

@@ -17,13 +17,14 @@ export default function CustomerAppFrame({
   actions,
   hero,
   cols = false,
+  className = '',
   children,
 }) {
   const showTop = Boolean(title || backTo || onBack || actions)
   const hasBack = Boolean(onBack || backTo)
 
   return (
-    <div className="capp">
+    <div className={`capp ${className}`.trim()}>
       <div className="capp-stage">
         {hero || null}
         {showTop ? (

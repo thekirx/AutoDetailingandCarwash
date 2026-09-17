@@ -157,6 +157,7 @@ export default function CustomerAccountPage() {
   return (
     <CustomerAppFrame
       cols
+      className="capp-account-home"
       hero={
         <header className="capp-hero">
           <div className="capp-hero-bar">
@@ -269,7 +270,6 @@ export default function CustomerAccountPage() {
       {loyalty && loyalty.stampsEnabled !== false ? (
         <Link className="capp-card capp-loyalty-home capp-span" to={CUSTOMER_LOYALTY_PATH}>
           <div className="capp-card-row">
-            <span className="capp-loyalty-ring" aria-hidden style={{ '--stamp-progress': `${Math.min(100, Math.max(0, ((loyalty.completed || 0) / Math.max(1, loyalty.cardSlots || 10)) * 100))}%` }}><span>{loyalty.completed || 0}/{loyalty.cardSlots || 10}</span></span>
             <div className="min-w-0">
               <p className="capp-eyebrow">Loyalty</p>
               <h2 className="capp-title">Loyalty program</h2>
@@ -281,6 +281,7 @@ export default function CustomerAccountPage() {
             completed={loyalty.completed}
             gifts={(loyalty.milestones || []).map((m) => m.threshold_points)}
           />
+          <span className="capp-loyalty-link">View rewards <span aria-hidden="true">↗</span></span>
         </Link>
       ) : (
         <Link className="capp-card capp-span" to={CUSTOMER_LOYALTY_PATH}>
