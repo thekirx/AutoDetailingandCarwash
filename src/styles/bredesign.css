@@ -320,37 +320,32 @@
 
 /* ==== Origin ============================================================= */
 
-/* The branch photo runs as a band across the top of the section and the story
-   sits on navy beneath it, at every width. The title is set into the strip
-   where the two meet, so it reads over the forecourt while the sign above it
-   stays clear. The copy is pushed down with padding rather than positioned, so
-   a longer story makes the section taller instead of spilling out of it. */
+/* The branch photo fills the story section so every line of the story sits over
+   the storefront. The copy is still pushed down with padding rather than
+   positioned, so a longer story makes the photo-backed section taller instead
+   of clipping or spilling out of it. */
 .bredesign .bd-origin {
   padding: 0;
   container-type: inline-size;
   background: var(--bd-navy);
-  /* The photo is a band across the top; the copy clears it by everything but
-     the overlap, which is the strip the title is set into. */
-  --bd-origin-band: clamp(400px, 52cqw, 1000px);
-  --bd-origin-overlap: clamp(58px, 9cqw, 150px);
+  --bd-origin-copy-offset: clamp(96px, 7cqw, 112px);
 }
 .bredesign .bd-origin-frame {
   position: relative;
   overflow: hidden;
-  padding: calc(var(--bd-origin-band) - var(--bd-origin-overlap)) 0 clamp(42px, 5cqw, 84px);
+  padding: var(--bd-origin-copy-offset) 0 clamp(42px, 5cqw, 84px);
 }
 .bredesign .bd-origin-photo {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   display: block;
   width: 100%;
-  height: var(--bd-origin-band);
+  height: 100%;
   object-fit: cover;
-  object-position: center 58%;
+  object-position: center 42%;
 }
-/* The dim runs down the band only: open over the sky and the sign, deepening
-   through the forecourt, solid navy by the time the band meets the story. */
+/* The dim runs down the complete photo: open over the sky and the sign,
+   deepening behind the longer paragraphs so every line stays readable. */
 .bredesign .bd-origin-frame::before {
   content: '';
   position: absolute;
@@ -358,7 +353,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: var(--bd-origin-band);
+  height: 100%;
   pointer-events: none;
   background: linear-gradient(
     180deg,
@@ -414,9 +409,12 @@
     gap: 16px;
   }
 }
-/* Phone: the band is narrow enough that the crop has to hold the sign, and
-   the type steps down. The stacked construction itself is the default. */
+/* Phone: use a taller photo-backed section, keep the sign in the crop, and
+   step the type down so the complete story remains readable. */
 @container (max-width: 640px) {
+  .bredesign .bd-origin {
+    --bd-origin-copy-offset: clamp(88px, 24cqw, 104px);
+  }
   .bredesign .bd-origin-photo {
     object-position: 58% 50%;
   }
