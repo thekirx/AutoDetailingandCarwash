@@ -408,20 +408,37 @@
     gap: 16px;
   }
 }
-/* Desktop: the storefront photo carries its own "Clean Cars?" lettering on a
-   white sky, so it is shown whole and undimmed as a plate. The title then runs
-   in one line across the navy below it, with the story underneath. The title
-   is sized in cqw and capped so it stays on one line inside the shell. */
+/* Desktop: the storefront is cropped just above the roof and set under a band
+   of white that continues the photo's own white sky. It is shown undimmed and
+   fades into the navy at the road. The title then runs in one line across the
+   navy, with the story underneath. The title is sized in cqw and capped so it
+   stays on one line inside the shell. */
 @container (min-width: 641px) {
   .bredesign .bd-origin-frame {
     padding: 0 0 clamp(56px, 6cqw, 96px);
   }
+  /* The lower half is navy so a rounding gap under the photo never shows as a
+     white hairline. The fade runs 2px past the edge for the same reason. */
+  .bredesign .bd-origin-picture {
+    position: relative;
+    display: block;
+    padding-top: clamp(64px, 8cqw, 140px);
+    background: linear-gradient(180deg, #fff 50%, var(--bd-navy) 50%);
+  }
+  .bredesign .bd-origin-picture::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: calc(24% + 2px);
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(2, 10, 49, 0), var(--bd-navy));
+  }
   .bredesign .bd-origin-photo {
     position: static;
     height: auto;
-    aspect-ratio: 2000 / 1328;
-    -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent);
-    mask-image: linear-gradient(180deg, #000 82%, transparent);
+    aspect-ratio: 2000 / 858;
   }
   .bredesign .bd-origin-frame::before {
     content: none;

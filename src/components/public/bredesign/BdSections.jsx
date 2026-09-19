@@ -28,7 +28,12 @@ export function BdOrigin() {
   return (
     <section className="bd-origin" id="origin">
       <div className="bd-origin-frame">
-        <img className="bd-origin-photo" src={ORIGIN.imageWide} alt={ORIGIN.imageAlt} loading="lazy" decoding="async" />
+        {/* Keep this media query in step with the 640px container query in
+            bredesign.css: phone keeps the full poster, desktop the crop. */}
+        <picture className="bd-origin-picture">
+          <source media="(min-width: 641px)" srcSet={ORIGIN.imageWide} />
+          <img className="bd-origin-photo" src={ORIGIN.image} alt={ORIGIN.imageAlt} loading="lazy" decoding="async" />
+        </picture>
         <div className="bd-origin-copy bd-reveal">
           <p className="bd-eyebrow bd-origin-eyebrow">{ORIGIN.eyebrow}</p>
           <h2>

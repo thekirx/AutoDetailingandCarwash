@@ -58,6 +58,9 @@ export const IMAGES = {
      fixed place in it — between the sign and the car roofs. */
   shopfrontWide: new URL('../../../assets/about/hakum-shopfront-dusk-wide.webp', import.meta.url).href,
   hakumStory: new URL('../../../assets/about/hakum-story-clean-cars.webp', import.meta.url).href,
+  /* The same photo cut just above the roof, dropping the "Clean Cars?"
+     lettering so the storefront sits on open white sky on desktop. */
+  hakumStoryWide: new URL('../../../assets/about/hakum-story-storefront-crop.webp', import.meta.url).href,
   heroStill: new URL('../../../assets/hero/bredesign-hero-poster.webp', import.meta.url).href,
   event: '/content/events-stay-tuned.webp',
 }
@@ -71,8 +74,8 @@ export const ORIGIN = {
     'We specialize in fast, high-quality auto detailing, treating every vehicle with the same attention and respect we give our own. The name “Hakum” originates from a heartfelt expression my son used as a child to say “I love you.” It serves as a constant reminder that our work should always come from a place of sincerity and dedication. Whether it’s a quick wash or comprehensive detailing, our customers can expect expert craftsmanship, premium products, and a team that truly treats every car as if it were their own.',
   ],
   image: IMAGES.hakumStory,
-  imageWide: IMAGES.hakumStory,
-  imageAlt: 'Hakum storefront under the Clean Cars? headline, listing the Batangas City, Bacoor and Dasma branches, with a car speeding past',
+  imageWide: IMAGES.hakumStoryWide,
+  imageAlt: 'Hakum storefront with its PPF, coating, tint and wash sign as a car speeds past',
 }
 
 export const SERVICES = [
