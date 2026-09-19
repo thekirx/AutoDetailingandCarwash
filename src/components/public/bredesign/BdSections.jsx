@@ -21,9 +21,9 @@ function Lede({ parts }) {
   )
 }
 
-/* The story is set on the branch photo itself: the photo runs as a band across
-   the top, the title is set into the strip where the band meets the navy, and
-   the story closes the section beneath it. */
+/* On phone the storefront photo comes first and the story follows on navy. On
+   desktop the section is white: the story comes first and the storefront crop
+   closes it (the order is set in bredesign.css). */
 export function BdOrigin() {
   return (
     <section className="bd-origin" id="origin">

@@ -76,7 +76,7 @@ describe('BreDESIGN public page fallbacks', () => {
     })
   })
 
-  it('shows the storefront under white sky with a one-line title on desktop and stacks the story on phone', async () => {
+  it('sets the story on white above the storefront with a one-line title on desktop and stacks the story on phone', async () => {
     for (const viewport of [
       { width: 1440, height: 900, layout: 'plate' },
       { width: 1024, height: 768, layout: 'plate' },
@@ -92,11 +92,8 @@ describe('BreDESIGN public page fallbacks', () => {
         return {
           photoWidth: photo.width,
           photoSrc: document.querySelector('.bd-origin-photo').currentSrc,
-          skyColor: (() => {
-            const band = document.querySelector('.bd-origin-picture')
-            const top = parseFloat(getComputedStyle(band).paddingTop)
-            return top > 0 ? getComputedStyle(band).backgroundImage.match(/rgb\([^)]*\)/)?.[0] : null
-          })(),
+          sectionBackground: getComputedStyle(document.querySelector('.bd-origin-frame')).backgroundColor,
+          titleColor: getComputedStyle(document.querySelector('.bd-origin h2')).color,
           titleLines: Math.round(title.getBoundingClientRect().height / parseFloat(getComputedStyle(title).lineHeight)),
           titleOverflows: title.scrollWidth > title.clientWidth + 1,
           copyTop: copy.top,
@@ -111,12 +108,13 @@ describe('BreDESIGN public page fallbacks', () => {
       })
 
       if (viewport.layout === 'plate') {
-        /* Desktop shows the storefront crop whole, at its native 2000x858
-           shape, under a white sky band; the story starts where its fade ends. */
+        /* Desktop is a white section: navy story first, then the storefront
+           crop whole at its native 2000x858 shape closing the section. */
+        assert.equal(layout.sectionBackground, 'rgb(255, 255, 255)', 'desktop story is not on white')
+        assert.equal(layout.titleColor, 'rgb(2, 10, 49)', 'desktop title is not navy ink')
         assert.match(layout.photoSrc, /hakum-story-storefront-crop/, 'desktop does not use the storefront crop')
         assert.ok(Math.abs(layout.photoHeight - (layout.photoWidth * 858) / 2000) <= 2, 'desktop photo is cropped')
-        assert.equal(layout.skyColor, 'rgb(255, 255, 255)', 'desktop photo has no white sky above it')
-        assert.ok(layout.copyTop >= layout.photoBottom - 48, `desktop story overlaps the photo at ${viewport.width}px`)
+        assert.ok(layout.copyBottom <= layout.photoTop, `desktop story overlaps the photo at ${viewport.width}px`)
         assert.equal(layout.titleLines, 1, `desktop title wraps at ${viewport.width}px`)
         assert.equal(layout.titleOverflows, false, `desktop title is clipped at ${viewport.width}px`)
       } else {
