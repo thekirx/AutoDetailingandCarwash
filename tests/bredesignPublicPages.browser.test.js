@@ -84,6 +84,13 @@ describe('BreDESIGN public page fallbacks', () => {
     ]) {
       await page.setViewport(viewport)
       await page.goto(`${PREVIEW_ORIGIN}/home#origin`, { waitUntil: 'networkidle0' })
+      /* The photo is lazy and sits below the services grid, so wait for the
+         responsive source to resolve before reading which one was chosen. */
+      await page.evaluate(async () => {
+        const img = document.querySelector('.bd-origin-photo')
+        img.scrollIntoView()
+        if (!img.complete || !img.currentSrc) await new Promise((resolve) => img.addEventListener('load', resolve, { once: true }))
+      })
       const layout = await page.evaluate(() => {
         const photo = document.querySelector('.bd-origin-photo')?.getBoundingClientRect()
         const copy = document.querySelector('.bd-origin-copy')?.getBoundingClientRect()

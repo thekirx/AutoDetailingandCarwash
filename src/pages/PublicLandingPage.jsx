@@ -48,8 +48,8 @@ export default function PublicLandingPage() {
   return (
     <>
       <BdHero />
-      <BdOrigin />
       <BdServices />
+      <BdOrigin />
       <BdAppPreview />
       <BdPhotos />
       {/* The gallery is our own work; the reviews are the outside voice
