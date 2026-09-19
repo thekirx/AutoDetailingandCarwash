@@ -320,10 +320,9 @@
 
 /* ==== Origin ============================================================= */
 
-/* The branch photo fills the story section so every line of the story sits over
-   the storefront. The copy is still pushed down with padding rather than
-   positioned, so a longer story makes the photo-backed section taller instead
-   of clipping or spilling out of it. */
+/* The storefront photo sits first and the story follows on navy. The width
+   queries below set how the photo is framed. The copy stays in normal flow, so
+   a longer story makes the section taller instead of clipping. */
 .bredesign .bd-origin {
   padding: 0;
   container-type: inline-size;
@@ -409,14 +408,63 @@
     gap: 16px;
   }
 }
-/* Phone: use a taller photo-backed section, keep the sign in the crop, and
-   step the type down so the complete story remains readable. */
-@container (max-width: 640px) {
-  .bredesign .bd-origin {
-    --bd-origin-copy-offset: clamp(88px, 24cqw, 104px);
+/* Desktop: the storefront photo carries its own "Clean Cars?" lettering on a
+   white sky, so it is shown whole and undimmed as a plate. The title then runs
+   in one line across the navy below it, with the story underneath. The title
+   is sized in cqw and capped so it stays on one line inside the shell. */
+@container (min-width: 641px) {
+  .bredesign .bd-origin-frame {
+    padding: 0 0 clamp(56px, 6cqw, 96px);
   }
   .bredesign .bd-origin-photo {
+    position: static;
+    height: auto;
+    aspect-ratio: 2000 / 1328;
+    -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent);
+    mask-image: linear-gradient(180deg, #000 82%, transparent);
+  }
+  .bredesign .bd-origin-frame::before {
+    content: none;
+  }
+  .bredesign .bd-origin-copy {
+    margin-top: clamp(-40px, -2cqw, -20px);
+  }
+  .bredesign .bd-origin h2 {
+    font-size: min(3.9cqw, 64px);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .bredesign .bd-origin-text {
+    margin-top: clamp(24px, 2.4cqw, 40px);
+  }
+}
+@container (min-width: 981px) {
+  .bredesign .bd-origin-text {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: clamp(32px, 5cqw, 88px);
+    align-items: start;
+  }
+}
+/* Phone: show the storefront as its own panel, then place the complete story
+   on navy below it. Desktop shows the whole photo as a plate instead. */
+@container (max-width: 640px) {
+  .bredesign .bd-origin-frame {
+    --bd-origin-mobile-photo-height: clamp(320px, 92cqw, 380px);
+    padding: calc(var(--bd-origin-mobile-photo-height) + 32px) 0 42px;
+  }
+  .bredesign .bd-origin-photo {
+    inset: 0 0 auto;
+    height: var(--bd-origin-mobile-photo-height);
     object-position: 58% 50%;
+  }
+  .bredesign .bd-origin-frame::before {
+    height: var(--bd-origin-mobile-photo-height);
+    background: linear-gradient(
+      180deg,
+      rgba(2, 10, 49, 0.04) 0%,
+      rgba(2, 10, 49, 0.08) 62%,
+      var(--bd-navy) 100%
+    );
   }
   .bredesign .bd-origin h2 {
     margin-top: 12px;

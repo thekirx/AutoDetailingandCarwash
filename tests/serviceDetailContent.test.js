@@ -143,8 +143,8 @@ test('the Tint detail-page CTA books Tint instead of looping back to the service
 })
 
 test('the Hakum story uses the supplied storefront photograph and complete approved story', () => {
-  assert.equal(new URL(ORIGIN.image).pathname.split('/').at(-1), 'hakum-story-storefront.jpg')
-  assert.equal(ORIGIN.imageAlt, 'Hakum Auto Care storefront with the full shop sign visible')
+  assert.equal(new URL(ORIGIN.image).pathname.split('/').at(-1), 'hakum-story-clean-cars.webp')
+  assert.equal(ORIGIN.imageAlt, 'Hakum storefront under the Clean Cars? headline, listing the Batangas City, Bacoor and Dasma branches, with a car speeding past')
   /* The story reads as a lede and then one block: the second and third
      paragraphs were combined, so no sentence of the owner's story may be lost
      in the join. */

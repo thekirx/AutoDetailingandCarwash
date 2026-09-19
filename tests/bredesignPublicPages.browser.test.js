@@ -76,10 +76,11 @@ describe('BreDESIGN public page fallbacks', () => {
     })
   })
 
-  it('keeps the complete Hakum story over the storefront image at desktop and phone widths', async () => {
+  it('shows the storefront photo as a plate with a one-line title on desktop and stacks the story on phone', async () => {
     for (const viewport of [
-      { width: 1440, height: 900, maxCopyTopRatio: 0.2 },
-      { width: 390, height: 844, maxCopyTopRatio: 0.16 },
+      { width: 1440, height: 900, layout: 'plate' },
+      { width: 1024, height: 768, layout: 'plate' },
+      { width: 390, height: 844, layout: 'stacked' },
     ]) {
       await page.setViewport(viewport)
       await page.goto(`${PREVIEW_ORIGIN}/home#origin`, { waitUntil: 'networkidle0' })
@@ -87,24 +88,33 @@ describe('BreDESIGN public page fallbacks', () => {
         const photo = document.querySelector('.bd-origin-photo')?.getBoundingClientRect()
         const copy = document.querySelector('.bd-origin-copy')?.getBoundingClientRect()
         const header = document.querySelector('.public-header')?.getBoundingClientRect()
+        const title = document.querySelector('.bd-origin h2')
         return {
+          photoWidth: photo.width,
+          titleLines: Math.round(title.getBoundingClientRect().height / parseFloat(getComputedStyle(title).lineHeight)),
+          titleOverflows: title.scrollWidth > title.clientWidth + 1,
           copyTop: copy.top,
           copyBottom: copy.bottom,
           photoTop: photo.top,
           photoBottom: photo.bottom,
           headerBottom: header.bottom,
           copyTopRatio: (copy.top - photo.top) / photo.height,
+          photoHeight: photo.height,
           horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         }
       })
 
-      assert.ok(layout.copyTop >= layout.photoTop, `story starts above photo at ${viewport.width}px`)
-      assert.ok(layout.copyTop >= layout.headerBottom + 8, `story is hidden behind header at ${viewport.width}px`)
-      assert.ok(
-        layout.copyTopRatio <= viewport.maxCopyTopRatio,
-        `story starts too low at ${viewport.width}px: ${layout.copyTopRatio}`,
-      )
-      assert.ok(layout.copyBottom <= layout.photoBottom + 1, `story ends below photo at ${viewport.width}px`)
+      if (viewport.layout === 'plate') {
+        /* The photo carries its own lettering, so it is shown whole at its
+           native 2000x1328 shape and the story starts where its fade ends. */
+        assert.ok(Math.abs(layout.photoHeight - (layout.photoWidth * 1328) / 2000) <= 2, 'desktop photo is cropped')
+        assert.ok(layout.copyTop >= layout.photoBottom - 48, `desktop story overlaps the photo at ${viewport.width}px`)
+        assert.equal(layout.titleLines, 1, `desktop title wraps at ${viewport.width}px`)
+        assert.equal(layout.titleOverflows, false, `desktop title is clipped at ${viewport.width}px`)
+      } else {
+        assert.ok(layout.photoHeight >= viewport.width * 0.7, 'mobile storefront photo is too short')
+        assert.ok(layout.copyTop >= layout.photoBottom + 24, 'mobile story does not begin below photo')
+      }
       assert.equal(layout.horizontalOverflow, false, `story causes horizontal overflow at ${viewport.width}px`)
     }
 

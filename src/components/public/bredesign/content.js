@@ -57,7 +57,7 @@ export const IMAGES = {
   /* The same dusk photo cropped to landscape, so the story title can sit on a
      fixed place in it — between the sign and the car roofs. */
   shopfrontWide: new URL('../../../assets/about/hakum-shopfront-dusk-wide.webp', import.meta.url).href,
-  hakumStory: new URL('../../../assets/about/hakum-story-storefront.jpg', import.meta.url).href,
+  hakumStory: new URL('../../../assets/about/hakum-story-clean-cars.webp', import.meta.url).href,
   heroStill: new URL('../../../assets/hero/bredesign-hero-poster.webp', import.meta.url).href,
   event: '/content/events-stay-tuned.webp',
 }
@@ -72,7 +72,7 @@ export const ORIGIN = {
   ],
   image: IMAGES.hakumStory,
   imageWide: IMAGES.hakumStory,
-  imageAlt: 'Hakum Auto Care storefront with the full shop sign visible',
+  imageAlt: 'Hakum storefront under the Clean Cars? headline, listing the Batangas City, Bacoor and Dasma branches, with a car speeding past',
 }
 
 export const SERVICES = [
