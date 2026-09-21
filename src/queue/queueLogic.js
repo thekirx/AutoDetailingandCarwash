@@ -746,6 +746,132 @@ export function buildPublicFloorModel(rows = [], branch) {
   }
 }
 
+/** Customer-facing shop TV: three lanes. Wash QC and detailing release map into these. */
+export const TV_BOARD_LANES = Object.freeze([
+  { id: 'waiting', label: 'Waiting in queue', tone: 'wait' },
+  { id: 'in_progress', label: 'In progress', tone: 'work' },
+  { id: 'for_payment', label: 'Ready for payment', tone: 'pay' },
+])
+
+export function mapBookingStatusToTvLane(status) {
+  const key = String(status || '')
+  if (key === 'waiting') return 'waiting'
+  if (key === 'in_progress' || key === 'final_checking') return 'in_progress'
+  if (key === 'for_payment' || key === 'for_releasing') return 'for_payment'
+  return null
+}
+
+export function tvBoardDensity(maxLaneCount) {
+  const n = Number(maxLaneCount) || 0
+  if (n <= 4) return 1
+  if (n <= 7) return 2
+  if (n <= 12) return 3
+  if (n <= 18) return 4
+  return 5
+}
+
+export function formatTvClock(date, timeZone = 'Asia/Manila') {
+  const d = date instanceof Date ? date : new Date(date)
+  if (Number.isNaN(d.getTime())) return ''
+  const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone }).format(d)
+  const monthDay = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone }).format(d)
+  const time = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZone,
+  }).format(d)
+  return `${weekday}, ${monthDay} | ${time}`
+}
+
+export function formatTvVehicleLine(row = {}) {
+  const car = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ').trim()
+  const size = String(row.vehicle_type || '')
+    .replaceAll('_', ' ')
+    .trim()
+  if (car && size) return `${car} · ${size}`
+  return car || size || ''
+}
+
+export function tvCrewLabel(raw) {
+  const parts = Array.isArray(raw)
+    ? raw
+    : String(raw || '')
+        .split(',')
+        .map((n) => n.trim())
+  return parts.filter(Boolean).join('  ')
+}
+
+export function tvIsMotorcycle(row = {}) {
+  const blob = `${row.vehicle_type || ''} ${row.vehicle_make || ''} ${row.vehicle_model || ''}`.toLowerCase()
+  return blob.includes('motor') || blob.includes('bike') || blob.includes('scooter')
+}
+
+function tvKindLabel(kind) {
+  if (kind === 'detailing') return 'Detailing'
+  if (kind === 'package') return 'Package'
+  return 'Service'
+}
+
+/** Shop TV board: grouped cars, blended wash/detailing statuses, no PII. */
+export function buildPublicTvBoardModel(rows = [], branch) {
+  const lanes = Object.fromEntries(TV_BOARD_LANES.map((lane) => [lane.id, []]))
+  const grouped = new Map()
+
+  for (const row of rows) {
+    if (branch && row.branch && row.branch !== branch) continue
+    const lane = mapBookingStatusToTvLane(row.status)
+    if (!lane) continue
+    const plate = String(row.vehicle_plate || '').trim().toUpperCase() || '—'
+    const visit = row.visit_group_id || row.booking_id || `${plate}|${lane}|${row.queue_number || ''}`
+    const key = `${lane}:${visit}`
+    const kind = serviceKindFromPayCategory(row.service_pay_category)
+    const serviceName = row.service_name || tvKindLabel(kind)
+    const crew = tvCrewLabel(row.crew_names)
+    const existing = grouped.get(key)
+    const queueSort = Number(row.queue_number) || 0
+    if (!existing) {
+      grouped.set(key, {
+        id: String(row.booking_id || key),
+        lane,
+        plate,
+        vehicleLine: formatTvVehicleLine(row),
+        isMotorcycle: tvIsMotorcycle(row),
+        services: [serviceName],
+        kind,
+        kindLabel: tvKindLabel(kind),
+        crew,
+        queueNumber: formatQueueNumber(row.queue_number, row.service_pay_category),
+        queueSort,
+      })
+      continue
+    }
+    if (serviceName && !existing.services.includes(serviceName)) existing.services.push(serviceName)
+    if (crew) {
+      const names = new Set([...existing.crew.split(/\s{2,}/), ...crew.split(/\s{2,}/)].filter(Boolean))
+      existing.crew = [...names].join('  ')
+    }
+    if (tvIsMotorcycle(row)) existing.isMotorcycle = true
+    if (queueSort && (!existing.queueSort || queueSort < existing.queueSort)) existing.queueSort = queueSort
+  }
+
+  for (const card of grouped.values()) lanes[card.lane].push(card)
+  for (const lane of TV_BOARD_LANES) {
+    lanes[lane.id].sort((a, b) => (a.queueSort || 0) - (b.queueSort || 0) || a.plate.localeCompare(b.plate))
+  }
+
+  const counts = {
+    waiting: lanes.waiting.length,
+    in_progress: lanes.in_progress.length,
+    for_payment: lanes.for_payment.length,
+  }
+  counts.total = counts.waiting + counts.in_progress + counts.for_payment
+  const density = tvBoardDensity(Math.max(counts.waiting, counts.in_progress, counts.for_payment))
+
+  return { lanes, counts, density }
+}
+
 export function normalizeAssignmentStatus(status) {
   if (status === 'released' || status === 'cancelled') return status
   if (status === 'completed') return 'released'

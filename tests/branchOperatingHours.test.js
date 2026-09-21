@@ -63,6 +63,13 @@ describe('branch operating hours', () => {
     const manage = readFileSync(join(root, 'src/pages/BranchesManagePage.jsx'), 'utf8')
     assert.match(manage, /Operating hours/)
     assert.match(manage, /saveBranchOperatingHours/)
+    assert.match(manage, /BranchLaunchDialog/)
+    assert.match(manage, /shopTvPath/)
+    assert.match(manage, /setLaunch/)
+
+    const dialog = readFileSync(join(root, 'src/components/ops/BranchLaunchDialog.jsx'), 'utf8')
+    assert.match(dialog, /I will set this up later/)
+    assert.match(dialog, /Open shop TV/)
 
     const pub = readFileSync(join(root, 'src/pages/PublicPages.jsx'), 'utf8')
     assert.match(pub, /formatHoursSummary/)

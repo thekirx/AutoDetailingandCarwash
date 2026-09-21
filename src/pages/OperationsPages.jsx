@@ -759,7 +759,6 @@ export function OperationsQueuePage() {
 function OperationsQueueBoardPage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
   const seeAll = canSeeAllBranches(profile)
-  const seeRedo = canViewRedoLane(profile)
   const scopeList = getBranchScopeList(profile)
   const [searchParams, setSearchParams] = useSearchParams()
   const queueFamily = queueFamilyForProfile(searchParams.get('family'), profile)
@@ -791,7 +790,6 @@ function OperationsQueueBoardPage() {
     () => Object.fromEntries(boardStatuses.map((status) => [status, boardTickets.filter((ticket) => ticket.status === status)])),
     [boardTickets, boardStatuses],
   )
-  const counts = useMemo(() => getQueueCounts(visibleQueue, { statuses: boardStatuses }), [visibleQueue, boardStatuses])
   const focusLane = requestedLane && boardStatuses.includes(requestedLane) ? requestedLane : null
   const tableSource = useMemo(() => {
     const list = focusLane ? grouped[focusLane] || [] : boardTickets
@@ -900,14 +898,10 @@ function OperationsQueueBoardPage() {
 
   return (
     <OpsPageShell
-      className="hakum-queue queue-board"
+      className="hakum-queue queue-board queue-board--fill"
       eyebrow="Floor"
       title="Queue"
-      description={
-        seeRedo
-          ? 'Same-day services and packages until POS completes the sale. Redo is the owner QC lane. Detailing lives on Bookings.'
-          : 'Same-day services and packages — waiting, on the bay, and final check until POS release. Detailing lives on Bookings.'
-      }
+      description="Same-day floor until POS. Tap a lane header to focus."
       icon={CarFront}
       meta={
         live ? (
@@ -981,47 +975,17 @@ function OperationsQueueBoardPage() {
             </div>
           ) : null}
         </div>
-        <div
-          className="floor-status-chips flex w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
-          role="toolbar"
-          aria-label="Filter queue by status"
-        >
-          <button
-            type="button"
-            className={`floor-status-chip floor-touch-btn shrink-0 rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition ${
-              !focusLane
-                ? 'border-primary bg-primary/10 text-foreground'
-                : 'border-border bg-card text-foreground hover:border-primary/40'
-            }`}
-            aria-pressed={!focusLane}
-            onClick={() => setLaneFilter(null)}
-          >
-            <span className="block text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">All</span>
-            <span className="tabular-nums text-primary">{counts.total}</span>
-          </button>
-          {boardStatuses.map((status) => {
-            const active = focusLane === status
-            const n = (grouped[status] || []).length
-              return (
-              <button
-                key={status}
-                type="button"
-                className={`floor-status-chip floor-touch-btn shrink-0 rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition ${
-                  active
-                    ? 'border-primary bg-primary/10 text-foreground'
-                    : 'border-border bg-card text-foreground hover:border-primary/40'
-                }`}
-                aria-pressed={active}
-                onClick={() => setLaneFilter(active ? null : status)}
-              >
-                <span className="block text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">
-                  {statusShortLabel(status)}
-                </span>
-                <span className="tabular-nums text-primary">{n}</span>
-              </button>
-              )
-            })}
+        {/* Counts live on lane headers — no redundant status card strip */}
+        {focusLane ? (
+          <div className="queue-lane-focus-bar flex items-center justify-between gap-2">
+            <p className="m-0 text-xs font-semibold text-muted-foreground">
+              Focused · {statusShortLabel(focusLane)}
+            </p>
+            <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setLaneFilter(null)}>
+              Show all lanes
+            </Button>
           </div>
+        ) : null}
       </div>
 
       {view === 'table' ? (
@@ -1160,7 +1124,7 @@ function OperationsQueueBoardPage() {
         </div>
       ) : (
       <div
-        className="queue-lane-board-fit mt-3 sm:mt-4"
+        className="queue-lane-board-fit"
         style={{ '--queue-lane-count': boardStatuses.length }}
         role="region"
         aria-label="Active queue lanes"

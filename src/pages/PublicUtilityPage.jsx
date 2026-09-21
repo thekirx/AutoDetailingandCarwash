@@ -53,7 +53,7 @@ export function QueuePage() {
             <i>arrival.</i>
           </h1>
           <p className="lq-picker-lede">
-            Customer view shows counts only. Shop TV shows plate and service for the floor display.
+            Customer view shows counts only. Shop TV is the in-store landscape board — no sign-in.
           </p>
         </div>
 

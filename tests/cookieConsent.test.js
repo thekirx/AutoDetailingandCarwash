@@ -72,6 +72,7 @@ describe('customer legal surface', () => {
     assert.match(read('src/pages/LegalPages.jsx'), /export function CookiesPage/)
     assert.match(read('src/main.jsx'), /AppErrorBoundary/)
     assert.match(read('src/components/CookieConsent.jsx'), /COOKIE_CONSENT_OPEN_EVENT/)
+    assert.match(read('src/components/CookieConsent.jsx'), /isShopTvPath/)
     assert.match(read('src/layouts/PublicLayout.jsx'), /CookiePreferencesButton/)
     assert.match(read('src/layouts/PublicLayout.jsx'), /to="\/cookies"/)
   })

@@ -14,9 +14,7 @@ const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'))
 const RootEntry = lazy(() => import('./pages/RootEntry'))
 const AppShellGate = lazy(() => import('./pages/AppShellGate'))
 const PublicQueuePage = lazy(() => import('./pages/PublicQueuePage'))
-const PublicQueueTvPage = lazy(() =>
-  import('./pages/PublicQueuePage').then((m) => ({ default: m.PublicQueueTvPage })),
-)
+const PublicQueueTvPage = lazy(() => import('./pages/PublicQueueTvPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const PartnershipsPage = lazy(() => import('./pages/PartnershipsPage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))

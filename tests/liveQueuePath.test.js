@@ -3,16 +3,35 @@ import { describe, it } from 'node:test'
 import {
   CUSTOMER_QUEUE_PATH,
   PUBLIC_QUEUE_POLL_MS,
+  absolutePublicUrl,
+  branchLaunchGuide,
   branchQueueTotal,
   customerQueuePath,
   liveQueuePath,
   queueCountsFromRow,
+  shopTvPath,
 } from '../src/lib/liveQueuePath.js'
 
 describe('live queue paths', () => {
   it('keeps public kiosk paths on /queue', () => {
     assert.equal(liveQueuePath('bacoor'), '/queue/bacoor')
     assert.equal(liveQueuePath(''), '/queue')
+    assert.equal(shopTvPath('imus'), '/queue/imus/tv')
+    assert.equal(shopTvPath('hakum south'), '/queue/hakum%20south/tv')
+    assert.equal(shopTvPath(''), '/queue')
+    assert.equal(absolutePublicUrl('/queue/imus/tv', 'https://hakum.example'), 'https://hakum.example/queue/imus/tv')
+  })
+
+  it('builds a skippable launch guide from the slug alone', () => {
+    const live = branchLaunchGuide({ slug: 'imus', name: 'Hakum Auto Care Imus', status: 'active' })
+    assert.equal(live.tvPath, '/queue/imus/tv')
+    assert.equal(live.customerPath, '/queue/imus')
+    assert.equal(live.live, true)
+    assert.ok(live.steps.some((s) => s.id === 'tv' && s.ready && s.copyPath === '/queue/imus/tv'))
+    assert.ok(live.steps.some((s) => s.id === 'people' && !s.ready))
+    const soon = branchLaunchGuide({ slug: 'silang', name: 'Silang', status: 'coming_soon' })
+    assert.equal(soon.live, false)
+    assert.equal(soon.tvPath, '/queue/silang/tv')
   })
 
   it('keeps signed-in customers on /account/queue', () => {

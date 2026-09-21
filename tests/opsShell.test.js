@@ -137,7 +137,7 @@ describe('ops shell adoption — inventory', () => {
 describe('ops shell adoption — queue + bookings', () => {
   it('Queue board uses OpsPageShell, guide, and shadcn tab list — keeps lane board', () => {
     const page = read('src/pages/OperationsPages.jsx')
-    assert.match(page, /className="hakum-queue queue-board"/)
+    assert.match(page, /className="hakum-queue queue-board queue-board--fill"/)
     assert.match(page, /OpsGuideCard/)
     assert.match(page, /QUEUE_WORKFLOW_STEPS/)
     assert.match(page, /until POS completes/)

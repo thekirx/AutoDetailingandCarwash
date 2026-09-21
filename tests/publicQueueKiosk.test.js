@@ -11,7 +11,12 @@ const migration = readFileSync(
   'utf8',
 )
 const page = readFileSync(join(root, 'src/pages/PublicQueuePage.jsx'), 'utf8')
+const tvPage = readFileSync(join(root, 'src/pages/PublicQueueTvPage.jsx'), 'utf8')
 const app = readFileSync(join(root, 'src/App.jsx'), 'utf8')
+const tvMigration = readFileSync(
+  join(root, 'supabase/migrations/20260921100000_public_queue_tv_floor.sql'),
+  'utf8',
+)
 
 describe('public queue kiosk modes', () => {
   it('adds public_queue_floor with plate + service, no phone/name', () => {
@@ -23,12 +28,29 @@ describe('public queue kiosk modes', () => {
     assert.doesNotMatch(migration, /customer_name/)
   })
 
+  it('shop TV view adds car + crew + payment lanes without PII', () => {
+    assert.match(tvMigration, /vehicle_make/)
+    assert.match(tvMigration, /crew_names/)
+    assert.match(tvMigration, /for_payment/)
+    assert.match(tvMigration, /for_releasing/)
+    assert.doesNotMatch(tvMigration, /customer_phone/)
+    assert.doesNotMatch(tvMigration, /customer_name/)
+  })
+
   it('wires customer and shop TV routes', () => {
     assert.match(app, /\/queue\/:branch\/tv/)
-    assert.match(page, /mode === 'tv'|mode = 'tv'|mode="tv"/)
+    assert.match(app, /PublicQueueTvPage/)
     assert.match(page, /public_queue_counts/)
-    assert.match(page, /public_queue_floor/)
-    assert.match(page, /counts only|Customer view|Shop TV/i)
+    assert.match(tvPage, /public_queue_floor/)
+    assert.match(tvPage, /PUBLIC_TV_POLL_MS/)
+    assert.match(tvPage, /TV_BOARD_LANES/)
+    assert.match(tvPage, /buildPublicTvBoardModel/)
+    assert.match(tvPage, /fetchPublicBranches/)
+    assert.match(tvPage, /mode: 'visible'/)
+    assert.doesNotMatch(tvPage, /fallbackSlug/)
+    assert.doesNotMatch(tvPage, /useAuth/)
+    assert.doesNotMatch(tvPage, /customer_phone|customer_name/)
+    assert.doesNotMatch(tvPage, /from\('bookings'\)/)
   })
 
   it('builds floor model with plate and kind labels', () => {

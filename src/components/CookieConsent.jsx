@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   COOKIE_CONSENT_OPEN_EVENT,
   needsCookieConsentPrompt,
@@ -7,7 +7,12 @@ import {
   writeCookieConsent,
 } from '@/lib/cookieConsent'
 
+function isShopTvPath(pathname) {
+  return /\/queue\/[^/]+\/tv\/?$/.test(String(pathname || ''))
+}
+
 export default function CookieConsent() {
+  const { pathname } = useLocation()
   const [visible, setVisible] = useState(() => {
     if (typeof window === 'undefined') return false
     return needsCookieConsentPrompt()
@@ -19,7 +24,7 @@ export default function CookieConsent() {
     return () => window.removeEventListener(COOKIE_CONSENT_OPEN_EVENT, reopen)
   }, [])
 
-  if (!visible) return null
+  if (!visible || isShopTvPath(pathname)) return null
 
   const choose = (choice) => {
     writeCookieConsent(choice)

@@ -34,12 +34,14 @@ describe('Floor status cards → queue lanes', () => {
     assert.match(page, /Jump to waiting lane/)
   })
 
-  it('queue board exposes clickable status chips and lane focus', () => {
-    assert.match(page, /floor-status-chips/)
+  it('queue board focuses lanes from headers (no redundant status cards)', () => {
+    assert.doesNotMatch(page, /floor-status-chips/)
     assert.match(page, /setLaneFilter/)
     assert.match(page, /queue-lane-focused/)
+    assert.match(page, /queue-lane-count/)
     assert.match(page, /parseQueueLaneParam/)
     assert.match(page, /useSearchParams/)
+    assert.match(page, /Show all lanes/)
   })
 })
 

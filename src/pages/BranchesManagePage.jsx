@@ -6,6 +6,7 @@ import { canCreateBranches, canManageBranches } from '@/auth/permissions'
 import { archiveBranch, createBranch, listBranches, listBranchOperatingHours, saveBranchOperatingHours, updateBranch } from '@/lib/adminApi'
 import { filterBranchesForProfile } from '@/queue/queueLogic'
 import { branchStatusLabel } from '@/lib/branches'
+import { liveQueuePath, shopTvPath } from '@/lib/liveQueuePath'
 import {
   WEEKDAY_LABELS,
   defaultWeekHours,
@@ -13,6 +14,7 @@ import {
   normalizeWeekHours,
 } from '@/lib/branchOperatingHours'
 import BranchLocationPicker from '@/components/BranchLocationPicker'
+import BranchLaunchDialog from '@/components/ops/BranchLaunchDialog'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,6 +48,7 @@ export default function BranchesManagePage() {
   const [editingSlug, setEditingSlug] = useState(null)
   const [hours, setHours] = useState(() => defaultWeekHours(''))
   const [saving, setSaving] = useState(false)
+  const [launch, setLaunch] = useState(null)
 
   const load = useCallback(async () => {
     const all = await listBranches({ includeArchived: true })
@@ -81,10 +84,11 @@ export default function BranchesManagePage() {
         if (!canCreate) throw new Error('Only Super Admin can open new company sites.')
         await createBranch(payload)
         await saveBranchOperatingHours(payload.slug, hours.length ? hours : defaultWeekHours(payload.slug))
+        setLaunch({ slug: payload.slug, name: payload.name, status: form.status })
         toast.success(
           form.status === 'coming_soon'
             ? 'Branch announced as coming soon'
-            : 'Branch created — ready for queue, staff, and bookings',
+            : 'Branch created — live queue and shop TV use this slug',
         )
       }
       setForm(empty)
@@ -170,7 +174,7 @@ export default function BranchesManagePage() {
       title="Branches"
       description={
         canCreate
-          ? 'Add a Philippine site with map pin. Active branches get live queue, booking, staff assignment, and show on customer visits. Coming soon sites appear on the public branches page without accepting bookings yet.'
+          ? 'Add a Philippine site with map pin. Active branches automatically get live queue, shop TV, booking, and staff assignment — the slug is the only switch. Coming soon sites appear on the public branches page without accepting bookings yet.'
           : 'Update geo and status for your assigned sites. Opening or archiving company sites is Super Admin only.'
       }
     >
@@ -207,7 +211,9 @@ export default function BranchesManagePage() {
                     pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
                     title="Lowercase letters, numbers, and hyphens"
                   />
-                  <p className="text-[11px] text-muted-foreground">Becomes /queue/{form.slug || 'imus'} and bookings.branch</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Becomes {liveQueuePath(form.slug || 'imus')} and {shopTvPath(form.slug || 'imus')} — no extra TV setup.
+                  </p>
                 </div>
               )}
               <div className="flex flex-col gap-2">
@@ -336,8 +342,11 @@ export default function BranchesManagePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Building2 size={18} /> {canCreate ? 'All branches' : 'My branches'}</CardTitle>
             <CardDescription>
-              After create: assign staff under <Link className="text-primary underline-offset-2 hover:underline" to="/operations/people">People</Link>,
-              open queue at /queue/&#123;slug&#125;, and take bookings — branch slug is stored on every visit.
+              After create: assign staff under{' '}
+              <Link className="text-primary underline-offset-2 hover:underline" to="/operations/people">
+                People
+              </Link>
+              . Live queue and shop TV exist as soon as the slug does — pin the TV link on the shop display.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -366,9 +375,18 @@ export default function BranchesManagePage() {
                     <TableCell>
                       <code className="text-xs">{row.slug}</code>
                       {row.is_active && !row.coming_soon ? (
+                        <div className="flex flex-col">
+                          <Link className="text-[11px] text-primary hover:underline" to={liveQueuePath(row.slug)} target="_blank" rel="noreferrer">
+                            Customer queue
+                          </Link>
+                          <Link className="text-[11px] text-primary hover:underline" to={shopTvPath(row.slug)} target="_blank" rel="noreferrer">
+                            Shop TV
+                          </Link>
+                        </div>
+                      ) : row.coming_soon ? (
                         <div>
-                          <Link className="text-[11px] text-primary hover:underline" to={`/queue/${row.slug}`} target="_blank" rel="noreferrer">
-                            Open queue
+                          <Link className="text-[11px] text-muted-foreground hover:underline" to={shopTvPath(row.slug)} target="_blank" rel="noreferrer">
+                            Preview TV
                           </Link>
                         </div>
                       ) : null}
@@ -387,6 +405,19 @@ export default function BranchesManagePage() {
                       {!row.is_archived && (
                         <div className="flex flex-wrap justify-end gap-2">
                           <Button size="sm" variant="outline" onClick={() => startEdit(row)}>Edit</Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setLaunch({
+                                slug: row.slug,
+                                name: row.name,
+                                status: statusFromRow(row),
+                              })
+                            }
+                          >
+                            Setup
+                          </Button>
                           {statusFromRow(row) !== 'active' && (
                             <Button size="sm" variant="outline" onClick={() => setStatus(row, 'active')}>Activate</Button>
                           )}
@@ -410,6 +441,7 @@ export default function BranchesManagePage() {
           </CardContent>
         </Card>
       </div>
+      <BranchLaunchDialog branch={launch} onClose={() => setLaunch(null)} />
     </OpsPageShell>
   )
 }

@@ -1,0 +1,138 @@
+{
+  "fails": 0,
+  "results": [
+    {
+      "viewport": "tv-1920",
+      "path": "/queue/bacoor/tv",
+      "hasLogin": false,
+      "hasCookie": false,
+      "hasBoard": true,
+      "title": "HAKUM AUTO CARE BACOOR",
+      "live": "Live queue",
+      "clock": "Monday, September 21, 2026 | 05:51:43 PM",
+      "density": "1",
+      "laneCount": 3,
+      "laneLabels": [
+        "Waiting in queue",
+        "In progress",
+        "Ready for payment"
+      ],
+      "laneCounts": [
+        "3",
+        "0",
+        "0"
+      ],
+      "plates": [
+        "CRM1101",
+        "TGD2134",
+        "DRE8762"
+      ],
+      "services": [
+        "Paint Maintenance",
+        "Carwash",
+        "Interior Detailing",
+        "Full Exterior Detailing"
+      ],
+      "overflowX": 0,
+      "overflowY": 0,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": "tv-1920.png"
+    },
+    {
+      "viewport": "tv-1280",
+      "path": "/queue/bacoor/tv",
+      "hasLogin": false,
+      "hasCookie": false,
+      "hasBoard": true,
+      "title": "HAKUM AUTO CARE BACOOR",
+      "live": "Live queue",
+      "clock": "Monday, September 21, 2026 | 05:51:44 PM",
+      "density": "1",
+      "laneCount": 3,
+      "laneLabels": [
+        "Waiting in queue",
+        "In progress",
+        "Ready for payment"
+      ],
+      "laneCounts": [
+        "3",
+        "0",
+        "0"
+      ],
+      "plates": [
+        "CRM1101",
+        "TGD2134",
+        "DRE8762"
+      ],
+      "services": [
+        "Paint Maintenance",
+        "Carwash",
+        "Interior Detailing",
+        "Full Exterior Detailing"
+      ],
+      "overflowX": 0,
+      "overflowY": 0,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": "tv-1280.png"
+    },
+    {
+      "viewport": "tv-landscape-phone",
+      "path": "/queue/bacoor/tv",
+      "hasLogin": false,
+      "hasCookie": false,
+      "hasBoard": true,
+      "title": "HAKUM AUTO CARE BACOOR",
+      "live": "Live queue",
+      "clock": "Monday, September 21, 2026 | 05:51:46 PM",
+      "density": "2",
+      "laneCount": 3,
+      "laneLabels": [
+        "Waiting in queue",
+        "In progress",
+        "Ready for payment"
+      ],
+      "laneCounts": [
+        "3",
+        "0",
+        "0"
+      ],
+      "plates": [
+        "CRM1101",
+        "TGD2134",
+        "DRE8762"
+      ],
+      "services": [
+        "Paint Maintenance",
+        "Carwash",
+        "Interior Detailing",
+        "Full Exterior Detailing"
+      ],
+      "overflowX": 0,
+      "overflowY": 0,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": "tv-landscape-phone.png"
+    },
+    {
+      "viewport": "new-branch-slug",
+      "path": "/queue/new-site-preview/tv",
+      "hasBoard": true,
+      "hasLogin": false,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": null
+    },
+    {
+      "viewport": "tv-1920-dense",
+      "ok": true,
+      "count": 19,
+      "platePx": 16.32,
+      "overflowX": 0,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": "tv-1920-dense.png"
+    }
+  ]
+}

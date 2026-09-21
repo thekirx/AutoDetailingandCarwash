@@ -406,7 +406,3 @@ export default function PublicQueuePage({ mode = 'customer' }) {
     </div>
   )
 }
-
-export function PublicQueueTvPage() {
-  return <PublicQueuePage mode="tv" />
-}
