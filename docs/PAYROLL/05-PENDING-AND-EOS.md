@@ -25,7 +25,7 @@ Pending queue is a **reminder** of shop days Finance has (or is) reviewing that 
 2. If `payroll_run_sales` present → day covered only if a claimed sale’s `business_date` matches (and branch).
 3. Else fallback: day inside `period_start`…`period_end`.
 
-**Timezone risk:** Client maps `sales.occurred_at` with `String(...).slice(0, 10)` (UTC prefix), while closes use local business_date — near midnight Manila can desync.
+**Shop day:** `saleBusinessDate` maps a sale to the Asia/Manila calendar date. Do not take a UTC `.slice(0, 10)` of `occurred_at`.
 
 ## `pending_floor_optional`
 
@@ -46,3 +46,4 @@ Reporting only via `shiftClosePayrollCoverage` — not a ledger.
 3. Day appears on Payroll → Pending (optional or “should run” copy).
 4. SA runs Floor for that window from POS proof.
 5. Confirm posts lines; claimed sales clear coverage.
+6. Super Admin may **reopen** an accepted close (note required). Status returns to `rejected` so BA can submit a corrected drawer. A locked close stays locked. A confirmed payroll run is not voided.

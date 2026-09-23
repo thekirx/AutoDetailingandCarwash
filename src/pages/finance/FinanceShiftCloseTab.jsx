@@ -111,8 +111,8 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
 
   async function review(action) {
     if (!canReview || !selected) return
-    if (action === 'reject' && String(reviewNote).trim().length < 3) {
-      toast.error('Reject needs a review note')
+    if ((action === 'reject' || action === 'reopen') && String(reviewNote).trim().length < 3) {
+      toast.error(action === 'reopen' ? 'Reopen needs a note' : 'Reject needs a review note')
       return
     }
     setBusy(true)
@@ -331,9 +331,30 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
             ) : null}
 
             {canReview && selected.status === 'accepted' ? (
-              <Button type="button" variant="secondary" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review('lock')}>
-                Lock day
-              </Button>
+              <div className="flex flex-col gap-3 border-t border-border pt-4">
+                {profile?.role === 'BossMich' ? (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="shift-reopen-note">Reopen note</Label>
+                    <Input
+                      id="shift-reopen-note"
+                      className="min-h-10"
+                      value={reviewNote}
+                      onChange={(e) => setReviewNote(e.target.value)}
+                      placeholder="Why this accepted count is being sent back"
+                    />
+                    <div>
+                      <Button type="button" variant="outline" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review('reopen')}>
+                        Reopen for a new count
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+                <div>
+                  <Button type="button" variant="secondary" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review('lock')}>
+                    Lock day
+                  </Button>
+                </div>
+              </div>
             ) : null}
 
             {selected.status === 'locked' ? (

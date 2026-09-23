@@ -51,14 +51,14 @@ export default function PayrollSettingsPage() {
       className="hakum-payroll-settings"
       eyebrow="Settings"
       title="Payroll settings"
-      description="Attendance weights, pending-floor policy, and cash-advance netting. Pool % and ceramic splits stay on Payroll → Rules."
+      description="Super Admin sets the wash pool, detailing splits, attendance weights, and the close gate. Cash-advance auto-deduct stays off."
       actions={
         <>
           <Button type="button" variant="outline" className="min-h-11" asChild>
             <Link to="/operations/settings">← Company settings</Link>
           </Button>
           <Button type="button" variant="secondary" className="min-h-11" asChild>
-            <Link to="/operations/payroll?tab=rules">Open pool / ceramic rules</Link>
+            <Link to="/operations/payroll?tab=run">Open payroll register</Link>
           </Button>
         </>
       }
@@ -67,7 +67,7 @@ export default function PayrollSettingsPage() {
         <CardHeader>
           <CardTitle>Policy</CardTitle>
           <CardDescription>
-            These columns live on compensation_settings — the same singleton floor pay and POS ceramic drafts read.
+            Floor pay and detailing drafts read these numbers. Branch Admin cannot change them.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,6 +98,59 @@ export default function PayrollSettingsPage() {
                 onChange={(e) =>
                   setRules((r) => ({ ...r, attendance_late_weight: Number(e.target.value) }))
                 }
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="wash-pool">Wash pool %</Label>
+              <Input
+                id="wash-pool"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={rules.wash_pool_pct}
+                disabled={!canWrite}
+                onChange={(e) => setRules((r) => ({ ...r, wash_pool_pct: Number(e.target.value) }))}
+              />
+              <p className="text-xs text-muted-foreground">Share of paid services and packages for bay crew. Detailing and merch stay out.</p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="crew-split">Detailing crew split %</Label>
+              <Input
+                id="crew-split"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={rules.ceramic_crew_split_pct}
+                disabled={!canWrite}
+                onChange={(e) => setRules((r) => ({ ...r, ceramic_crew_split_pct: Number(e.target.value) }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="crew-solo">Detailing crew solo %</Label>
+              <Input
+                id="crew-solo"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={rules.ceramic_crew_solo_pct}
+                disabled={!canWrite}
+                onChange={(e) => setRules((r) => ({ ...r, ceramic_crew_solo_pct: Number(e.target.value) }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="detailer-split">Detailer split %</Label>
+              <Input
+                id="detailer-split"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={rules.ceramic_detailer_split_pct}
+                disabled={!canWrite}
+                onChange={(e) => setRules((r) => ({ ...r, ceramic_detailer_split_pct: Number(e.target.value) }))}
               />
             </div>
             <label className="flex items-center gap-2 text-sm sm:col-span-2">

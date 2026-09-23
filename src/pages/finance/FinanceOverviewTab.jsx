@@ -31,6 +31,7 @@ import {
   pctChange,
   plTrendByDay,
   printAsPdf,
+  rollupLineKinds,
   rollupPl,
   salesByBranch,
   shareOfTotal,
@@ -82,6 +83,7 @@ export default function FinanceOverviewTab({
   plRows,
   priorPlRows = [],
   salesRows,
+  kindRows = [],
   branchOptions,
   range,
   compareRange = null,
@@ -93,6 +95,8 @@ export default function FinanceOverviewTab({
   const prior = useMemo(() => rollupPl(priorPlRows), [priorPlRows])
   const comparing = Boolean(compareRange)
   const byBranch = useMemo(() => salesByBranch(salesRows), [salesRows])
+  const byKind = useMemo(() => rollupLineKinds(kindRows), [kindRows])
+  const kindTotal = useMemo(() => byKind.reduce((sum, row) => sum + row.amount_minor, 0), [byKind])
   const trend = useMemo(() => plTrendByDay(plRows), [plRows])
   const expenseBars = useMemo(() => topExpenseCategories(plRows, 6), [plRows])
   const insights = useMemo(
@@ -247,6 +251,46 @@ export default function FinanceOverviewTab({
           tone="ink"
         />
       </FinanceMetricStrip>
+
+      <FinancePanel
+        title="Paid by kind"
+        description={`Services, packages, detailing, PPF, and merch from paid sale lines · ${windowLabel}. Uses the branch and date filters above. End of shift does not change these amounts.`}
+      >
+        {kindTotal <= 0 ? (
+          <FinanceEmpty
+            title="No paid lines in this window"
+            body="Ticket income above can still show. This table fills from paid sale lines in the same filter."
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Kind</TableHead>
+                <TableHead>Share of paid lines</TableHead>
+                <TableHead className="text-right">Paid</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {byKind
+                .filter((row) => row.amount_minor > 0)
+                .map((row) => (
+                <TableRow key={row.line_kind}>
+                  <TableCell>{row.label}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 min-w-24 flex-1 rounded-sm bg-muted" aria-hidden>
+                        <div className="h-2 rounded-sm bg-primary" style={{ width: `${row.share}%` }} />
+                      </div>
+                      <span className="w-14 text-right text-sm tabular-nums">{row.share}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">{formatMoney(row.amount_minor)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </FinancePanel>
 
       {comparing && compareRange ? (
         <p className="finance-compare-note">

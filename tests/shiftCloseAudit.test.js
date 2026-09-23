@@ -2,6 +2,9 @@
  * Phase 3 — End of shift / Finance accept audit.
  */
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 import {
   moneySnapshotFromReport,
@@ -99,5 +102,22 @@ describe('shift close audit', () => {
       fieldConfig: [],
     })
     assert.equal(result.ok, true)
+  })
+
+  it('Super Admin can reopen an accepted close and cannot reopen a locked one', () => {
+    const sql = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '../supabase/migrations/20260923143000_shift_close_reopen.sql'),
+      'utf8',
+    )
+    assert.match(sql, /'reopen'/)
+    assert.match(sql, /Only Super Admin may reopen an accepted close/)
+    assert.match(sql, /Only accepted reports can be reopened/)
+    assert.match(sql, /v_status = 'locked'/)
+    const page = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '../src/pages/finance/FinanceShiftCloseTab.jsx'),
+      'utf8',
+    )
+    assert.match(page, /review\('reopen'\)/)
+    assert.match(page, /BossMich/)
   })
 })

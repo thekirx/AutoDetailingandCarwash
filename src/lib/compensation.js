@@ -345,7 +345,18 @@ export function detailingAmountMinor(lines = []) {
  * Lines that feed detailing crew/detailer drafts (coating / paint maint / tint / detailing).
  * Excludes PPF film packages — those are not detailing split jobs.
  */
+function stampedLineKind(line = {}) {
+  const kind = String(line?.line_kind || '').toLowerCase()
+  if (kind === 'service' || kind === 'package' || kind === 'detailing' || kind === 'ppf' || kind === 'merch') {
+    return kind
+  }
+  return ''
+}
+
 export function isCeramicCompensationLine(line = {}) {
+  const stamped = stampedLineKind(line)
+  if (stamped === 'detailing') return true
+  if (stamped) return false
   const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
   if (cat === 'ppf') return false
   if (cat === 'detailing') return true
@@ -493,6 +504,9 @@ function lineSalaryPct(line) {
 
 /** Wash pool = bay services/packages. Merch, PPF, and detailing stay out. */
 export function isWashEligibleLine(line = {}) {
+  const stamped = stampedLineKind(line)
+  if (stamped === 'service' || stamped === 'package') return true
+  if (stamped === 'detailing' || stamped === 'ppf' || stamped === 'merch') return false
   const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
   const kind = String(line?.catalog_kind || line?.item_type || '').toLowerCase()
   if (kind === 'product' || kind === 'merch') return false

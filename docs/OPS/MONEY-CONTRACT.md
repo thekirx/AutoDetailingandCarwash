@@ -80,6 +80,7 @@ Paid POS (services / packages / detailing / merch)
 | ID | Choice | Why |
 |----|--------|-----|
 | F1 | Accept = attestation + unlock pending + notify. Not rewrite sales. Not auto-pay. | Trust boundary stays on RPCs; SA must confirm pay. |
+| F5 | **Reopen** (`review_shift_close` action `reopen`) is Super Admin only. Accepted close + a note → status `rejected`, so Branch Admin can submit a new drawer. Locked stays locked. Reopen does not notify payroll and does not void a confirmed `payroll_runs` row. | A wrong attestation can be replaced. Pay already confirmed stays the pay record. |
 | F2 | P&L income = **paid POS sales only**. Expenses on books = **paid / posted** bills (`finance_daily_pl`). | Overrides on close are drawer stories, not inventing revenue. `approved` unpaid bills are pending, not P&L. |
 | F3 | Drafts allowed on close; Finance marks paid later. | Matches A5 and BA speed. |
 | F4 | Column = **Floor coverage** (posted / pending / awaiting review). | Stops “close ₱ was paid” misread. |
@@ -93,6 +94,7 @@ Paid POS (services / packages / detailing / merch)
 |-----|--------|----------|
 | **Branch Admin** | Run EoS; edit salary **preview** cells and draft extras; see estimate on Crew | Open Payroll register; call `run_payroll`; invent sales |
 | **SA / ASA (`finance_write`)** | Accept close; confirm floor/fixed; apply draft extras as wizard lines | Auto-pay without confirm |
+| **Super Admin only** | Reopen an **accepted** close (note required) so the drawer can be resubmitted | Reopen a **locked** day; void a confirmed payroll run |
 | **Finance accept** | Unlock pending floor | Rewrite paid POS totals |
 
 ---

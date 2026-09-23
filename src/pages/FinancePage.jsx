@@ -18,7 +18,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessFinance, canOpenFinanceHub, canSeeAllBranches, canWriteFinance, ROLES } from '@/auth/permissions'
+import { canAccessFinance, canEditFinanceBooks, canOpenFinanceHub, canSeeAllBranches, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
@@ -92,7 +92,7 @@ const TAB_ICONS = {
 export default function FinancePage() {
   const { profile } = useAuth()
   const booksAccess = canAccessFinance(profile)
-  const canWrite = booksAccess && canWriteFinance(profile)
+  const canWrite = booksAccess && canEditFinanceBooks(profile)
   const canManageVendors = canManageFinanceVendors(profile)
   const showCorporate = canAccessCorporateFinance(profile)
   const reportsOnly = !booksAccess && canOpenFinanceHub(profile)
@@ -131,6 +131,7 @@ export default function FinancePage() {
   const [categories, setCategories] = useState([])
   const [vendors, setVendors] = useState([])
   const [salesRows, setSalesRows] = useState([])
+  const [kindRows, setKindRows] = useState([])
   const [plRows, setPlRows] = useState([])
   const [priorPlRows, setPriorPlRows] = useState([])
   const [expenses, setExpenses] = useState([])
@@ -236,6 +237,13 @@ export default function FinancePage() {
         .lte('period_date', queryRange.end)
       plQ = scopeBranch(plQ, profile, branchFilter)
 
+      let kindQ = supabase
+        .from('finance_daily_line_kind')
+        .select('branch, period_date, line_kind, amount_minor')
+        .gte('period_date', queryRange.start)
+        .lte('period_date', queryRange.end)
+      kindQ = scopeBranch(kindQ, profile, branchFilter)
+
       let priorQ = null
       if (compareRange) {
         priorQ = supabase
@@ -262,11 +270,12 @@ export default function FinancePage() {
         .lte('business_date', queryRange.end)
       shiftCountQ = scopeBranch(shiftCountQ, profile, branchFilter)
 
-      const [branchRows, cats, sales, pl, expRows, prior, vendorRes, lastPaidRes, shiftCountRes] = await Promise.all([
+      const [branchRows, cats, sales, pl, kindRes, expRows, prior, vendorRes, lastPaidRes, shiftCountRes] = await Promise.all([
         listBranches(),
         supabase.from('expense_categories').select('id, name, is_chemical, kind').order('name'),
         salesQ,
         plQ,
+        kindQ,
         collectPaged(async (from, to) => {
           let q = supabase
             .from('expenses')
@@ -295,6 +304,7 @@ export default function FinancePage() {
       setCategories(cats.data || [])
       setVendors(vendorRes.error ? [] : vendorRes.data || [])
       setSalesRows(sales.data || [])
+      setKindRows(kindRes.error ? [] : kindRes.data || [])
       setPlRows(pl.data || [])
       setPriorPlRows(prior.data || [])
       setExpenses(expRows)
@@ -533,6 +543,7 @@ export default function FinancePage() {
             plRows={plRows}
             priorPlRows={priorPlRows}
             salesRows={salesRows}
+            kindRows={kindRows}
             branchOptions={branchOptions.filter((b) => b.slug !== 'all')}
             range={queryRange}
             compareRange={compareRange}

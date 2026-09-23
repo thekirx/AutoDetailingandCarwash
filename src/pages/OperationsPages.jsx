@@ -1118,7 +1118,7 @@ function OperationsQueueBoardPage() {
               >
                 <ChevronRight size={16} strokeWidth={2} />
               </Button>
-        </div>
+            </div>
           </div>
         </div>
         </div>

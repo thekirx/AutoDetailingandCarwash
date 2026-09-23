@@ -397,6 +397,31 @@ export function rollupPl(rows) {
   return { income, expenses, net, margin }
 }
 
+export const FINANCE_LINE_KINDS = Object.freeze([
+  { id: 'service', label: 'Services' },
+  { id: 'package', label: 'Packages' },
+  { id: 'detailing', label: 'Detailing' },
+  { id: 'ppf', label: 'PPF' },
+  { id: 'merch', label: 'Merch' },
+])
+
+/** Paid line totals by catalog kind. Unknown kinds are dropped. */
+export function rollupLineKinds(rows = []) {
+  const totals = Object.fromEntries(FINANCE_LINE_KINDS.map((k) => [k.id, 0]))
+  for (const row of rows || []) {
+    const key = String(row?.line_kind || '')
+    if (!Object.prototype.hasOwnProperty.call(totals, key)) continue
+    totals[key] += Number(row.amount_minor) || 0
+  }
+  const total = FINANCE_LINE_KINDS.reduce((sum, k) => sum + totals[k.id], 0)
+  return FINANCE_LINE_KINDS.map((k) => ({
+    line_kind: k.id,
+    label: k.label,
+    amount_minor: totals[k.id],
+    share: total > 0 ? Math.round((totals[k.id] / total) * 1000) / 10 : 0,
+  }))
+}
+
 /** Group P&L rows by category → {category, kind, amount_minor}. */
 export function plByCategory(rows) {
   const map = new Map()

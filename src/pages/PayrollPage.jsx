@@ -763,6 +763,9 @@ export default function PayrollPage() {
 
       {tab === 'run' && (
         <div className="flex flex-col gap-4">
+          <p className="max-w-[65ch] text-sm leading-relaxed text-foreground">
+            Confirm writes payroll. End of shift does not pay the crew. Floor confirm stays blocked until Finance has accepted that branch’s close. Cash advances deduct only when you add them in this wizard.
+          </p>
           <ol className="hakum-payroll-steps">
             {wizardSteps.map((item, idx) => (
               <li key={item.id}>
@@ -1514,7 +1517,7 @@ export default function PayrollPage() {
           <CardHeader>
             <CardTitle>Payout rules</CardTitle>
             <CardDescription>
-              Company defaults for wash pool, ceramic splits, and how often payroll runs. Same singleton POS uses at checkout.
+              Same company defaults as Settings → Payroll. Wash pool and detailing splits apply on the next confirm.
             </CardDescription>
           </CardHeader>
           <CardContent>

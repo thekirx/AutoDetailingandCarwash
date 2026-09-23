@@ -245,11 +245,19 @@ export function canOpenFinanceHub(profile) {
   return canAccessFinance(profile) || canAccessReports(profile)
 }
 
+/** POS counter writes: expenses and detailing salary drafts. Branch Admin is included. */
 export function canWriteFinance(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'finance_write')
   if (profile?.role === ROLES.INVESTOR) return false
   return profile?.role === ROLES.ADMIN
+}
+
+/** Finance books (categories, bills, vendors). Not the counter, and not shift-close accept. */
+export function canEditFinanceBooks(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'finance_write')
+  return false
 }
 
 /** Matches ops_pos_settings + shift_close_field_config write RLS (SA / ASA finance_write). */

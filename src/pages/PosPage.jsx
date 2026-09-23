@@ -2011,6 +2011,9 @@ export default function PosPage() {
 
   const dashboardBody = (
     <div className="flex flex-col gap-6">
+      <p className="max-w-[65ch] text-sm leading-relaxed text-foreground">
+        These tiles are paid POS for {branchLabel}. End of shift is the drawer count. Crew pay uses paid POS after Finance accepts the close.
+      </p>
       <PosStatsBoard stats={todaySummary} categoryRows={familyTiles} />
       <PosSalaryPreviewCard
         washPreview={washPreview}

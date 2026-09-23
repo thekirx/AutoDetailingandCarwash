@@ -18,7 +18,7 @@ flowchart TB
     EoS[End of shift]
   end
   subgraph Finance
-    Rev[Accept reject lock]
+    Rev[Accept reject lock reopen]
   end
   subgraph Payroll
     Pend[Pending floor reminder]

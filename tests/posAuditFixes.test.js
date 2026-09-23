@@ -6,11 +6,15 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { canEditFinanceBooks, canWriteFinance, ROLES } from '../src/auth/permissions.js'
 import {
   detailingAmountMinor,
   isCeramicCompensationLine,
+  isWashEligibleLine,
   washPoolAmountMinor,
 } from '../src/lib/compensation.js'
+import { rollupLineKinds } from '../src/lib/financeData.js'
+import { catalogLineKind } from '../src/lib/serviceKinds.js'
 import {
   buildPosSalePayload,
   isAllowedPosPaymentMethod,
@@ -103,5 +107,62 @@ describe('POS audit follow-up fixes', () => {
     const wiz = readFileSync(join(root, 'src/components/ShiftCloseWizard.jsx'), 'utf8')
     assert.match(wiz, /Approved cash advances/)
     assert.match(wiz, /does not run payroll/)
+  })
+
+  it('stamped line_kind separates wash, detailing, ppf, and merch', () => {
+    assert.equal(catalogLineKind({ itemType: 'service', payCategory: 'wash', slug: 'express' }), 'service')
+    assert.equal(catalogLineKind({ itemType: 'service', payCategory: 'package', slug: 'premium-pack' }), 'package')
+    assert.equal(catalogLineKind({ itemType: 'service', payCategory: 'general', slug: 'ceramic-coating' }), 'detailing')
+    assert.equal(catalogLineKind({ itemType: 'service', payCategory: 'ppf', slug: 'paint-protection-film' }), 'ppf')
+    assert.equal(catalogLineKind({ itemType: 'product', payCategory: 'merch' }), 'merch')
+
+    assert.equal(isCeramicCompensationLine({ line_kind: 'detailing', pay_category: 'general' }), true)
+    assert.equal(isCeramicCompensationLine({ line_kind: 'service', name: 'detailing wash' }), false)
+    assert.equal(isWashEligibleLine({ line_kind: 'package' }), true)
+    assert.equal(isWashEligibleLine({ line_kind: 'detailing' }), false)
+    assert.equal(isWashEligibleLine({ line_kind: 'ppf' }), false)
+    assert.equal(
+      washPoolAmountMinor({
+        sale_line_items: [
+          { line_kind: 'service', line_total_minor: 20000 },
+          { line_kind: 'detailing', line_total_minor: 800000 },
+          { line_kind: 'merch', line_total_minor: 15000 },
+        ],
+      }),
+      20000,
+    )
+  })
+
+  it('finance kind rollup keeps each paid bucket', () => {
+    const rows = rollupLineKinds([
+      { line_kind: 'service', amount_minor: 10000 },
+      { line_kind: 'service', amount_minor: 5000 },
+      { line_kind: 'detailing', amount_minor: 85000 },
+      { line_kind: 'merch', amount_minor: 0 },
+    ])
+    assert.equal(rows.find((r) => r.line_kind === 'service').amount_minor, 15000)
+    assert.equal(rows.find((r) => r.line_kind === 'detailing').amount_minor, 85000)
+    assert.equal(rows.find((r) => r.line_kind === 'package').amount_minor, 0)
+    assert.equal(rows.find((r) => r.line_kind === 'detailing').share, 85)
+  })
+
+  it('Branch Admin can post counter expenses but cannot edit finance books', () => {
+    const ba = { role: ROLES.ADMIN, branch_slug: 'bacoor' }
+    assert.equal(canWriteFinance(ba), true)
+    assert.equal(canEditFinanceBooks(ba), false)
+    assert.equal(canEditFinanceBooks({ role: ROLES.SUPER_ADMIN }), true)
+    const sql = readFileSync(join(root, 'supabase/migrations/20260923120000_sale_line_kind_payment_allowlist.sql'), 'utf8')
+    assert.match(sql, /Payment method is not enabled in POS settings/)
+    assert.match(sql, /finance_daily_line_kind/)
+    assert.match(sql, /line_kind/)
+  })
+
+  it('FinancePage gates books edits with canEditFinanceBooks, not counter write', () => {
+    const finance = readFileSync(join(root, 'src/pages/FinancePage.jsx'), 'utf8')
+    assert.match(finance, /canEditFinanceBooks/)
+    assert.doesNotMatch(finance, /canWriteFinance/)
+    const overview = readFileSync(join(root, 'src/pages/finance/FinanceOverviewTab.jsx'), 'utf8')
+    assert.match(overview, /Paid by kind/)
+    assert.match(overview, /kindRows/)
   })
 })

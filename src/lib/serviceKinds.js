@@ -73,6 +73,24 @@ export function serviceKindFromPayCategory(payCategory) {
   return CATEGORY_TO_KIND[key] || 'service'
 }
 
+/**
+ * Money kind stored on sale_line_items.line_kind.
+ * Detailing slugs stay detailing even if pay_category was left on general.
+ * PPF is its own kind: a floor job, not a wash-pool package and not a detailing split.
+ */
+export function catalogLineKind({ itemType, payCategory, slug } = {}) {
+  const type = String(itemType || '').toLowerCase()
+  const cat = String(payCategory || '').toLowerCase()
+  const s = String(slug || '').toLowerCase()
+  if (type === 'product') return 'merch'
+  if (s === 'ceramic-coating' || s === 'paint-maintenance' || s === 'nano-ceramic-tint' || cat === 'detailing') {
+    return 'detailing'
+  }
+  if (cat === 'ppf' || s === 'paint-protection-film' || s.includes('ppf')) return 'ppf'
+  if (cat === 'package') return 'package'
+  return 'service'
+}
+
 export function isDetailingPayCategory(payCategory) {
   return serviceKindFromPayCategory(payCategory) === 'detailing'
 }
