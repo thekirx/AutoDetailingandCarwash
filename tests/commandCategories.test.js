@@ -97,7 +97,7 @@ describe('command category IA', () => {
   it('queue page has no Wash/Detail family switcher', () => {
     const page = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
     assert.doesNotMatch(page, /aria-label="Service family"/)
-    assert.match(page, /Detailing lives on Bookings/)
+    assert.match(page, /Detailing jobs belong on Bookings/)
     assert.match(page, /kinds=\{\['service', 'package'\]\}/)
   })
 

@@ -1,0 +1,51 @@
+---
+description: Hakum principal workflow — graphify + Archify for money/queue/payroll architecture evidence; finish until verified.
+alwaysApply: true
+---
+
+# Hakum · Archify in the principal workflow
+
+This repo already mandates **graphify** before code exploration. **Archify** is the diagram layer for the same principal full-stack bar.
+
+## Triggers (read `archify` skill and deliver HTML)
+
+Use Archify (validate → deliver → visual-check) when documenting or designing:
+
+- Money triangle: POS → End of shift → Finance accept → floor payroll
+- Queue `QUEUE_STATUS_TRANSITIONS` / wash–detail lifecycle
+- Booking → attendance → TL → BA → SA role paths (shop-day FLOPS)
+- Finance kind / drawer / payroll contract dataflow
+- Supabase RPC sequences for shift-close reopen / payroll confirm
+- Any Mermaid in `docs/` that should become a showcase artifact
+
+## Conventions
+
+- Spec + HTML live under `docs/architecture/` (create if missing)
+- Name files by concern: e.g. `money-path.workflow.json` + `money-path.workflow.html`
+- Prefer `workflow`, `sequence`, `lifecycle`, `dataflow`, or `architecture` types from the Archify skill
+- Ground nodes in graphify evidence (`graphify query "…"`) — do not invent RPCs or pages
+- After code changes that alter those paths: `graphify update .`; refresh Archify only when the diagram claim changed
+
+## Finish bar
+
+Do not call architecture docs “done” without Archify `deliver` exit 0 (and note visual-check status honestly). Production ops blockers (customer reminder BrandTxt IP / Auth SMTP) stay documented separately — never diagram them as closed without host proof. **No owner daily SMS** — outbound customer reminders only; Finance accept uses web push.
+
+## SMS policy (always)
+
+- BusyBee: outbound customer status/reminders only · **no inbound replies**
+- **No owner daily close SMS** (legacy `ENABLE_OWNER_SMS=1` QA-only)
+- Never treat owner handset env as a readiness gate
+
+## CLI (global skill install)
+
+```bash
+node "$HOME/.agents/skills/archify/bin/archify.mjs" doctor
+node "$HOME/.agents/skills/archify/bin/archify.mjs" validate <type> <spec.json> --quality showcase --json
+node "$HOME/.agents/skills/archify/bin/archify.mjs" deliver <type> <spec.json> <out.html> --quality showcase --json
+```
+
+On Windows PowerShell, use `$env:USERPROFILE\.agents\skills\archify\bin\archify.mjs`.
+
+## Optional: Jev browser agent
+
+Exploratory UI agent (not CI): see [docs/qa/JEV-BROWSER-AGENT.md](../../docs/qa/JEV-BROWSER-AGENT.md). Keep FLOPS/money-path on Puppeteer.

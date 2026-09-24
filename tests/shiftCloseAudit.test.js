@@ -113,6 +113,7 @@ describe('shift close audit', () => {
     assert.match(sql, /Only Super Admin may reopen an accepted close/)
     assert.match(sql, /Only accepted reports can be reopened/)
     assert.match(sql, /v_status = 'locked'/)
+    assert.match(sql, /char_length\(v_note\) < 3/)
     const page = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), '../src/pages/finance/FinanceShiftCloseTab.jsx'),
       'utf8',

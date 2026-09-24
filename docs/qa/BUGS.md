@@ -5,8 +5,8 @@
 | ID | Severity | Area | Problem | Evidence | Status | Fix |
 |----|----------|------|---------|----------|--------|-----|
 | BUG-001 | Medium | Ops / deploy | Browser Playwright/UI E2E missing historically | `SYSTEM_GAPS.md` #3 | Open → addressed by `scripts/e2e-ui-p0.mjs` | Phase C harness |
-| BUG-002 | High | SMS / prod | Vercel egress IP not on BrandTxt whitelist | `docs/OPS/BUSYBEE-PRODUCTION.md` VERCEL-SMS-IP | Open (ops) | Whitelist static IPs |
-| BUG-003 | Medium | SMS / ops | Owner SMS phone was unset | Local `.env` + BossMich.phone=`09625294043`; live `notify_sent sent=1` 2026-09-07 | Mitigated (local/QA) | Still set on **Vercel** + whitelist Vercel IPs |
+| BUG-002 | High | SMS / prod | BrandTxt Unauthorized IP (ErrorCode 11) | Egress `180.191.244.237` 2026-09-24; old whitelist `180.190.249.189` stale | **Open (ops)** | BrandTxt whitelist current office IP + Vercel Static IPs; prove with `npm run sms:egress` |
+| BUG-003 | Low | SMS / ops | Owner daily SMS phone | Local QA historically | **Closed (policy)** | Product: **no owner SMS**; outbound reminders only; Finance accept → web push |
 | BUG-004 | Medium | Inventory | Sunday chemical recon data incomplete | CHEM-RECON; QA seeded 1 line 2026-09-07 | Mitigated (QA) | Ops still needs weekly BA→SA recon habit |
 | BUG-005 | Low | SMS | Legacy `post_service_completed` rows stuck `pending` (no writer in current code) | 19 orphans cancelled 2026-09-07; pending count **0** | **Closed** | Marked `cancelled`; live status SMS uses `booking_status` |
 | BUG-006 | Low | CRM | Duplicate active customer rows historically shared phone `09625294043` | Pre-E2E query | Mitigated | Archive dups in `e2e-real-customer-status-sms.mjs` |

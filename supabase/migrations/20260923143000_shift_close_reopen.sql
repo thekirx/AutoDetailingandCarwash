@@ -1,5 +1,6 @@
 -- Super Admin may send an accepted close back to rejected so Branch Admin can
 -- resubmit the drawer. Locked days stay sealed. Payroll already confirmed is not voided.
+-- Reject/reopen notes must be at least 3 characters (matches Finance UI).
 
 create or replace function public.review_shift_close(payload jsonb)
 returns jsonb
@@ -37,10 +38,10 @@ begin
     raise exception using errcode = '42501',
       message = 'Only Super Admin may reopen an accepted close';
   end if;
-  if v_action = 'reject' and v_note is null then
+  if v_action = 'reject' and (v_note is null or char_length(v_note) < 3) then
     raise exception 'Reject requires a review note';
   end if;
-  if v_action = 'reopen' and v_note is null then
+  if v_action = 'reopen' and (v_note is null or char_length(v_note) < 3) then
     raise exception 'Reopen requires a review note';
   end if;
 

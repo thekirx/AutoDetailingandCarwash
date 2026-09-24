@@ -147,7 +147,7 @@ describe('Queue is wash-only; detailing is Bookings', () => {
     const src = read('src/pages/OperationsPages.jsx')
     assert.match(src, /queueFamilyForProfile/)
     assert.doesNotMatch(src, /aria-label="Service family"/)
-    assert.match(src, /Detailing lives on Bookings/)
+    assert.match(src, /Detailing jobs belong on Bookings/)
   })
 })
 

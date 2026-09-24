@@ -1,15 +1,15 @@
 # BusyBee (BrandTxt) — production SMS
 
-**Outbound only.** Hakum sends SMS; we do **not** receive replies or run an inbox. BrandTxt is a send API + DLR status.
+**Outbound only · customer reminders / status only.** Hakum sends SMS; we do **not** receive replies or run an inbox. **No owner daily close SMS** in product (Finance accept notifies SA/ASA via **web push**). Legacy `ENABLE_OWNER_SMS=1` is QA-only.
 
 | Piece | What it is | What it is not |
 |-------|------------|----------------|
-| `BUSYBEE_SENDER_ID` (`HAKUM`) | Approved **From** label on the handset | Not the owner’s phone; not a reply address |
-| `OWNER_SMS_PHONE` | **Destination** handset for the daily close report (after Finance accept). Falls back to active BossMich `phone` | Not the SenderId; not required for queue/customer SMS |
-| BrandTxt **IP whitelist** | Allows our **server** (office / Vercel egress) to call `SendSMS` | Not related to replies; not the SenderId approval |
+| `BUSYBEE_SENDER_ID` (`HAKUM`) | Approved **From** label on the handset | Not a reply address; not owner phone |
+| BrandTxt **IP whitelist** | Allows our **server** egress to call `SendSMS` / Balance | Not related to replies |
+| `OWNER_SMS_PHONE` | Legacy / unused in product default | Not required |
 
 **API base:** `https://app.brandtxt.io`  
-**Endpoints:** `POST/GET /api/v2/Balance`, `POST /api/v2/SendSMS` (v3 SendSMS also supported)  
+**Endpoints:** `POST/GET /api/v2/Balance`, `POST /api/v2/SendSMS`  
 **Swagger:** https://app.brandtxt.io/swagger/index.html
 
 ## App env (server-only — Vercel + local `.env`)
@@ -19,72 +19,61 @@
 | `BUSYBEE_API_BASE_URL` | `https://app.brandtxt.io` |
 | `BUSYBEE_API_KEY` | From BrandTxt portal |
 | `BUSYBEE_CLIENT_ID` | From BrandTxt portal |
-| `BUSYBEE_SENDER_ID` | `HAKUM` (approved SenderId — already verified IsApproved/IsActive) |
-| `OWNER_SMS_PHONE` | Owner mobile that **receives** the daily close SMS (optional; falls back to BossMich staff phone) |
+| `BUSYBEE_SENDER_ID` | `HAKUM` (approved SenderId) |
+| `ENABLE_OWNER_SMS` | **Do not set** in production |
 
 Never use `VITE_*` for BusyBee keys.
 
-## Code paths
+## Code paths (customer reminders)
 
 | Flow | Module |
 |------|--------|
 | Queue / booking status SMS | `server/notifyBooking.mjs` → `busybeeSendSms` |
+| Lifecycle / visit milestones / self_test | `server/lifecycleSms.mjs` |
+| Paint-maintenance reminder rules | `server/paintMaintenanceNotify.mjs` + Notifications ReminderRules |
 | CRM / marketing broadcast | `server/notificationBroadcastApi.mjs` |
-| Owner daily report after Finance accept | `server/notifyShiftClose.mjs` |
-| Lifecycle / birthday | `server/lifecycleSms.mjs`, `server/birthdayGreetings.mjs` |
-| Staff balance / test send API | `server/busybeeApi.mjs` → `/api/notifications?operation=busybee` |
+| Birthday greetings | `server/birthdayGreetings.mjs` |
+| Finance accept | `server/notifyShiftClose.mjs` → **web push only** |
 
 Shop-wide gate: `app_settings.sms_notifications.enabled` must be `true`.
 
-**Current ops posture (2026-09-07):** BrandTxt whitelist for office egress **`180.190.249.189`**. Shop SMS gate **ON**. **QA owner phone wired for testing:** `OWNER_SMS_PHONE=09625294043` (local `.env`) and live BossMich.phone=`09625294043`. Live accept notify proof: `SEND_LIVE_OWNER_SMS=1 npm run e2e:shift-close-money` → `money.owner_sms.notify_sent sent=1` (normalized to `639625294043`). Default e2e is dry (no SMS spam). **Still open:** set the same env on **Vercel** + whitelist Vercel static egress. Toggle shop gate via CRM → SMS or:
+## Permanent live checklist (IP whitelist)
 
-```bash
-node scripts/set-sms-shop-gate.mjs off
-node scripts/set-sms-shop-gate.mjs on
-```
+BrandTxt ErrorCode **11** = `Unauthorized IP address`. Until the calling egress IP is whitelisted, **no** customer reminder can send (Balance and SendSMS both fail).
 
-**Verified live (2026-09-03 Asia/Manila):**
+### Verified 2026-09-24 (this machine)
 
 | Check | Result |
 |-------|--------|
-| Egress IP | `180.190.249.189` (matches whitelist notice) |
-| Balance | `ErrorCode: 0` |
-| SenderId `HAKUM` | `IsApproved: 1`, `IsActive: true` |
-| Submit to `639625294043` | API Success; at least one MessageId later **`Status: DELIVRD`** (`11ae48f5-6a23-4788-b78d-5af984065a97`) |
-| Submit with raw `09625294043` (no 63 normalize) | MessageId `ee1d9443-…` → **`Status: FAILED`** — always normalize to `63…` |
-| Owner handset | Owner reported **no visible SMS** despite DELIVRD — check Spam/Promotions, Dual SIM, blocked senders; escalate to BrandTxt with MessageIds if still empty |
+| Shop SMS gate | **ON** (`sms_notifications.enabled=true`) |
+| Code / normalize `09625294043` → `639625294043` | **OK** |
+| Unit seams (`tests/busybeeReminderSms.test.js`) | **PASS** |
+| Current office/dev egress | **`180.191.244.237`** |
+| BrandTxt Balance / SendSMS | **FAIL ErrorCode 11** — IP not whitelisted |
+| Previously documented office IP | `180.190.249.189` (stale — do not rely on it) |
+| Handset live DELIVRD to `09625294043` | **BLOCKED** until BrandTxt adds `180.191.244.237` |
+| Vercel project Static IPs (this CLI account) | **NOT VISIBLE** — Hakum project is on another Vercel team; enable Static IPs there and whitelist those IPs too |
 
-Production (Vercel) still needs **static egress IPs** whitelisted separately.
+### Ops actions (required for permanent live)
+
+1. **BrandTxt portal:** whitelist **`180.191.244.237`** (current office/dev) for API key used by Hakum.  
+2. Re-run: `node scripts/check-busybee-egress.mjs` then  
+   `SEND_TEST_SMS=1 TEST_SMS_PHONE=09625294043 node scripts/check-busybee-egress.mjs`  
+   Expect `ok: true` and a MessageId; poll until DLR `DELIVRD`.  
+3. **Vercel (Hakum team):** enable [Static IPs](https://vercel.com/docs/networking/static-ips) (Pro/Enterprise, ~$100/mo per project + private data transfer). Copy the fixed egress IP pair(s) per region, whitelist **those** on BrandTxt (office IP alone is not enough for production serverless).  
+4. Redeploy after env confirm (`BUSYBEE_*` server-only).  
+5. Prove prod: hit a real booking status / reminder from the deployed custom domain.
+
+**No bypass:** BrandTxt IP allowlisting cannot be skipped from the app. See ready-to-send email: [`BUSYBEE-BRANDTXT-REQUEST.md`](./BUSYBEE-BRANDTXT-REQUEST.md). Policy module: `src/lib/busybeeEgressPlan.js`.
+
+Office IP **drifts** — if ErrorCode 11 returns, run `check-busybee-egress.mjs` and update BrandTxt with the new `egressIp`.
 
 ## Local verification
 
 ```bash
-node scripts/smoke-busybee.mjs
+node scripts/check-busybee-egress.mjs
+SEND_TEST_SMS=1 TEST_SMS_PHONE=09625294043 node scripts/check-busybee-egress.mjs
 SEND_TEST_SMS=1 TEST_SMS_PHONE=09625294043 node scripts/smoke-busybee.mjs
-SEND_LIVE_OWNER_SMS=1 npm run e2e:shift-close-money
 node scripts/qa-sms-shop-gate.mjs
+node scripts/set-sms-shop-gate.mjs on
 ```
-
-## IP whitelisting (outbound API calls)
-
-BrandTxt gates **who may call SendSMS**, by source IP of the HTTP request from our app — not SMS replies, not SenderId.
-
-Provide:
-
-1. **Dev/office IP** — for local `npm run dev` and scripts (done: `180.190.249.189`)
-2. **Vercel production** — enable [Vercel Static IPs](https://vercel.com/docs/security/static-ip) (Pro+) and send fixed egress IPs to BrandTxt, or ask BrandTxt for key-only auth if they offer it
-
-Until Vercel egress IPs are whitelisted, **production** outbound SMS fails even when SenderId `HAKUM` is approved and env keys are correct. Office/local can still send.
-
-
-## Vercel `OWNER_SMS_PHONE` (ops runbook)
-
-Hakum production (`auto-detailingand-carwash.vercel.app`) is **not** linked under the current CLI context `jcuadys-projects` (account `jcuady`). Set env in the **Hakum** Vercel team/project:
-
-1. Vercel → Project → Settings → Environment Variables  
-2. Add `OWNER_SMS_PHONE` = `09625294043` (or real owner) for **Production** (+ Preview if needed)  
-3. Confirm `BUSYBEE_*` already present (server-only, not `VITE_*`)  
-4. Redeploy so the serverless runtime picks up the var  
-5. BrandTxt: whitelist Vercel **static** egress IPs (Pro+ Static IPs) — office IP alone is not enough  
-
-Local/office already proven: BossMich.phone + `.env` + `SEND_LIVE_OWNER_SMS=1 npm run e2e:shift-close-money` → `sent=1`.

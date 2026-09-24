@@ -1,0 +1,38 @@
+Hi Dexter,
+
+Thank you again for whitelisting 180.190.249.189 under the HAKUM account on Aug 31.
+
+Our office/dev outbound IP has changed (Globe Telecom — Bacoor area). From the same integration machine, api.ipify.org and our BrandTxt Balance/SendSMS calls now show:
+
+  Current egress IP: 180.191.244.237
+
+Balance and SendSMS both return ErrorCode 11 (Unauthorized IP address) from this IP.
+
+Please whitelist 180.191.244.237 under HAKUM (Sender ID: HAKUM) so we can resume testing.
+
+You may keep or remove 180.190.249.189 — it is no longer our live office egress. We only need 180.191.244.237 active for development right now.
+
+Still using:
+- https://app.brandtxt.io
+- POST/GET /api/v2/Balance
+- POST /api/v2/SendSMS
+- Mobile format: 63XXXXXXXXXX (no leading 0)
+
+### SMS use cases (updated)
+Outbound only — we do not receive replies or run an SMS inbox:
+- Queue / detailing booking status updates to customers
+- Staff-initiated CRM / marketing / reminder broadcasts to customers
+
+Note: we are no longer sending an owner daily sales summary by SMS after end-of-shift. That path stays in-app (web push) for our team.
+
+### Production (Vercel + custom domain)
+Our live app will run on Vercel serverless with a custom domain. Default Vercel outbound IPs are not fixed, so API-key auth alone cannot replace IP whitelisting on our side.
+
+We will enable Vercel Static IPs (fixed egress) on the Hakum project and reply in this thread with those IP addresses once provisioned — same HAKUM account / Sender ID. Please confirm you can add those production IPs when we send them.
+
+Please confirm once 180.191.244.237 is whitelisted. We will retest SendSMS immediately and report results.
+
+Thanks,
+Malcolm Joaquin Cuady (Joax)
+Hakum Auto Care
+jcuady@gmail.com

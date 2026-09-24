@@ -1,0 +1,199 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hakum Full Shop-Day Lifecycle",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/shop-day-flops.workflow.html",
+    "views": [
+      {
+        "id": "customer-floor",
+        "label": "Customer to bay",
+        "focus": ["cust_book", "sales_board", "crew_clock", "tl_queue"],
+        "note": "Customer book/portal, Sales detailing board, crew clock-in, TL wash queue."
+      },
+      {
+        "id": "money",
+        "label": "Money path",
+        "focus": ["ba_pos", "ba_eos", "sa_accept", "close_books"],
+        "note": "POS pay → End of shift → Finance accept → floor payroll + P&L."
+      },
+      {
+        "id": "roles",
+        "label": "Role guards",
+        "focus": ["tl_queue", "ba_pos", "sa_accept", "close_books"],
+        "note": "TL never POS; SA/ASA accept+payroll; Investor reads P&L only."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "customer", "label": "Customer" },
+    { "id": "floor", "label": "Crew · TL · Sales" },
+    { "id": "branch", "label": "Branch Admin" },
+    { "id": "leadership", "label": "SA · ASA · Investor" }
+  ],
+  "phases": [
+    { "id": "intake", "label": "Intake", "fromCol": 0, "toCol": 2 },
+    { "id": "service", "label": "Bay + checkout", "fromCol": 3, "toCol": 3, "variant": "emphasis" },
+    { "id": "close", "label": "Close + books", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "money_triangle", "label": "Money triangle", "lane": "leadership", "fromCol": 4, "toCol": 5, "variant": "emphasis" }
+  ],
+  "mainPath": [
+    "cust_book",
+    "sales_board",
+    "crew_clock",
+    "tl_queue",
+    "ba_pos",
+    "ba_eos",
+    "sa_accept",
+    "close_books"
+  ],
+  "nodes": [
+    {
+      "id": "cust_book",
+      "lane": "customer",
+      "col": 0,
+      "type": "external",
+      "label": "Book / Portal",
+      "sublabel": "public + account",
+      "width": 120
+    },
+    {
+      "id": "sales_board",
+      "lane": "floor",
+      "col": 1,
+      "type": "frontend",
+      "label": "Sales Board",
+      "sublabel": "detailing jobs",
+      "tag": "Sales",
+      "width": 120
+    },
+    {
+      "id": "crew_clock",
+      "lane": "floor",
+      "col": 2,
+      "type": "backend",
+      "label": "Crew Clock",
+      "sublabel": "geo attendance",
+      "tag": "Crew · TL",
+      "width": 120
+    },
+    {
+      "id": "tl_queue",
+      "lane": "floor",
+      "col": 3,
+      "type": "backend",
+      "label": "TL Wash Queue",
+      "sublabel": "Final Check · cancel",
+      "tag": "TL",
+      "width": 120
+    },
+    {
+      "id": "ba_pos",
+      "lane": "branch",
+      "col": 3,
+      "type": "backend",
+      "label": "POS Pay",
+      "sublabel": "complete_pos_sale",
+      "tag": "BA",
+      "width": 120
+    },
+    {
+      "id": "ba_eos",
+      "lane": "branch",
+      "col": 4,
+      "type": "messagebus",
+      "label": "End of Shift",
+      "sublabel": "drawer attest",
+      "tag": "BA",
+      "width": 120
+    },
+    {
+      "id": "sa_accept",
+      "lane": "leadership",
+      "col": 4,
+      "type": "security",
+      "label": "Finance Accept",
+      "sublabel": "review_shift_close",
+      "tag": "SA · ASA",
+      "width": 120
+    },
+    {
+      "id": "close_books",
+      "lane": "leadership",
+      "col": 5,
+      "type": "database",
+      "label": "Payroll + P&L",
+      "sublabel": "run_payroll · paid POS",
+      "tag": "SA · Investor",
+      "width": 128
+    }
+  ],
+  "edges": [
+    { "id": "e-book-sales", "from": "cust_book", "to": "sales_board", "label": "detailing" },
+    { "id": "e-sales-clock", "from": "sales_board", "to": "crew_clock", "label": "Manila day" },
+    {
+      "id": "e-clock-queue",
+      "from": "crew_clock",
+      "to": "tl_queue",
+      "label": "assignable",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-queue-pos",
+      "from": "tl_queue",
+      "to": "ba_pos",
+      "label": "send_to_payment",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-sales-pos",
+      "from": "sales_board",
+      "to": "ba_pos",
+      "label": "board → POS",
+      "variant": "dashed"
+    },
+    { "id": "e-pos-eos", "from": "ba_pos", "to": "ba_eos", "label": "paid tickets" },
+    {
+      "id": "e-eos-accept",
+      "from": "ba_eos",
+      "to": "sa_accept",
+      "label": "attest",
+      "variant": "security"
+    },
+    {
+      "id": "e-accept-books",
+      "from": "sa_accept",
+      "to": "close_books",
+      "label": "pending floor",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-pos-books",
+      "from": "ba_pos",
+      "to": "close_books",
+      "label": "P&L = paid POS",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "All daily roles",
+      "items": [
+        "Customer · Sales · Crew · TL · Branch Admin · SA/ASA · Investor",
+        "SA/ASA: floor payroll confirm · Investor: Finance P&L read only"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Guards (by design)",
+      "items": [
+        "TL: no POS/Finance · Investor: no payroll · SA: no floor-clock",
+        "Ops open: BrandTxt IP · OWNER_SMS · Auth SMTP"
+      ]
+    }
+  ]
+}

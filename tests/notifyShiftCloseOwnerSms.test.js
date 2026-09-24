@@ -2,12 +2,17 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { buildOwnerDailySmsFromClose, buildShiftCloseAcceptCopy } from '../server/notifyShiftClose.mjs'
+import {
+  buildOwnerDailySmsFromClose,
+  buildShiftCloseAcceptCopy,
+  isOwnerSmsEnabled,
+} from '../server/notifyShiftClose.mjs'
 
 const copy = buildShiftCloseAcceptCopy({ branch: 'bacoor', businessDate: '2026-08-27', closeId: 'c1' })
 assert.match(copy.title, /bacoor/i)
 assert.match(copy.body, /Confirm floor payroll/i)
 
+// Helper stays for optional ENABLE_OWNER_SMS=1 QA only — product default is no owner SMS.
 const sms = buildOwnerDailySmsFromClose({
   branch: 'bacoor',
   businessDate: '2026-08-27',
@@ -30,18 +35,21 @@ const sms = buildOwnerDailySmsFromClose({
 })
 assert.match(sms, /BACOOR SALES REPORT/)
 assert.match(sms, /Car Wash Sales/)
-assert.match(sms, /Tint Sales/)
-assert.match(sms, /Carwash Salary/)
+
+assert.equal(isOwnerSmsEnabled(), false, 'owner SMS off unless ENABLE_OWNER_SMS=1')
+
+const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../server/notifyShiftClose.mjs'), 'utf8')
+assert.match(src, /owner_sms_disabled/)
+assert.match(src, /ENABLE_OWNER_SMS/)
 
 const fin = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), '../src/pages/finance/FinanceShiftCloseTab.jsx'),
   'utf8',
 )
 assert.match(fin, /\/api\/notify-shift-close/)
-assert.match(fin, /no_owner_phone/)
-assert.match(fin, /OWNER_SMS_PHONE/)
-assert.match(fin, /ownerSms\?\.error/)
-assert.match(fin, /toast\.warning/)
-assert.match(fin, /toast\.success\(`Owner SMS sent/)
+// Finance must not nag operators to configure OWNER_SMS — outbound reminders only, no owner daily SMS.
+assert.doesNotMatch(fin, /set OWNER_SMS_PHONE/)
+assert.doesNotMatch(fin, /Owner SMS skipped/)
+assert.doesNotMatch(fin, /Owner SMS sent/)
 
-console.log('notifyShiftClose owner SMS: ok')
+console.log('notifyShiftClose owner SMS policy: ok')

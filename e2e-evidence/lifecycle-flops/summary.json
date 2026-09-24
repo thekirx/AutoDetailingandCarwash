@@ -1,0 +1,141 @@
+{
+  "ok": true,
+  "passed": 23,
+  "total": 23,
+  "steps": [
+    {
+      "ok": true,
+      "name": "tl.login",
+      "detail": "team_lead bacoor"
+    },
+    {
+      "ok": true,
+      "name": "catalog",
+      "detail": "wash Full Care Package · detailing Paint Maintenance"
+    },
+    {
+      "ok": true,
+      "name": "C1.customer.book",
+      "detail": "07e26157-3a49-4cd9-ad7e-8883885abb3d pending"
+    },
+    {
+      "ok": true,
+      "name": "C1.tl.confirm_booking",
+      "detail": "confirmed"
+    },
+    {
+      "ok": true,
+      "name": "B1.tl.booking_to_waiting",
+      "detail": "waiting"
+    },
+    {
+      "ok": true,
+      "name": "A1.crew.attendance",
+      "detail": "Crew One present 2026-09-24"
+    },
+    {
+      "ok": true,
+      "name": "W1.admin.pos_paid",
+      "detail": "reuse e4a5ff67-7351-4a99-9113-8ed0c841455c 450000 minor"
+    },
+    {
+      "ok": true,
+      "name": "W2.tl.cancel",
+      "detail": "0c847509-504e-4476-b176-50b10793716c"
+    },
+    {
+      "ok": true,
+      "name": "W3.sa.redo_then_cancel",
+      "detail": "6ab795ee-2a5a-48e4-a926-d8fcccdfb556"
+    },
+    {
+      "ok": true,
+      "name": "F1.sql.kind_sum",
+      "detail": "bacoor 2026-09-24 900000 minor"
+    },
+    {
+      "ok": true,
+      "name": "E1.close.already_matches",
+      "detail": "193d3ea6-1d5d-41e8-8455-7e88dd1a3c5c 900000"
+    },
+    {
+      "ok": true,
+      "name": "F1.close.matches_paid",
+      "detail": "900000"
+    },
+    {
+      "ok": true,
+      "name": "P1.payroll.already_confirmed",
+      "detail": "275826f1-a2a1-4757-930b-df6c438935d3 157500 · extra sale noted (Overlapping floor payroll run already exists for bacoor)"
+    },
+    {
+      "ok": true,
+      "name": "ui.01.public_book",
+      "detail": "screenshot"
+    },
+    {
+      "ok": true,
+      "name": "ui.02.tl_bookings",
+      "detail": "screenshot"
+    },
+    {
+      "ok": true,
+      "name": "ui.03.attendance",
+      "detail": "screenshot"
+    },
+    {
+      "ok": true,
+      "name": "ui.04.tl_queue",
+      "detail": "screenshot"
+    },
+    {
+      "ok": true,
+      "name": "R1.tl.pos_denied",
+      "detail": "http://127.0.0.1:5174/operations/access-denied"
+    },
+    {
+      "ok": true,
+      "name": "ui.05.ba_pos",
+      "detail": "screenshot"
+    },
+    {
+      "ok": true,
+      "name": "ui.09.finance_today",
+      "detail": "kind 900000"
+    },
+    {
+      "ok": true,
+      "name": "ui.10.payroll",
+      "detail": "screenshot"
+    },
+    {
+      "ok": true,
+      "name": "R1.investor.payroll_denied",
+      "detail": "http://127.0.0.1:5174/operations/access-denied"
+    },
+    {
+      "ok": true,
+      "name": "Rec.frames",
+      "detail": "4 jpgs · total events 4"
+    }
+  ],
+  "report": {
+    "today": "2026-09-24",
+    "branch": "bacoor",
+    "plates": {
+      "book": "NKA09244",
+      "wash": "NKA09241",
+      "cancel": "NKA09242",
+      "redo": "NKA09243"
+    },
+    "sale_id": "e4a5ff67-7351-4a99-9113-8ed0c841455c",
+    "kind_sum_minor": 900000,
+    "wash_minor": 450000,
+    "close_id": "193d3ea6-1d5d-41e8-8455-7e88dd1a3c5c",
+    "drawer_minor": 900000,
+    "payroll_id": "275826f1-a2a1-4757-930b-df6c438935d3",
+    "payroll_payout_minor": 157500,
+    "frames": 4
+  },
+  "at": "2026-09-24T09:24:27.438Z"
+}

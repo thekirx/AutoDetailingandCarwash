@@ -1,6 +1,9 @@
 /**
- * Finance accepted end-of-shift → SA / ASA finance_write push (+ optional inbox)
- * and owner daily SMS via BusyBee using formatBacoorReportText.
+ * Finance accepted end-of-shift → SA / ASA finance_write push (+ optional inbox).
+ *
+ * SMS policy (product): BusyBee is outbound-only for customer reminders / status —
+ * no inbound replies, and **no owner daily close SMS** unless ENABLE_OWNER_SMS=1
+ * (legacy QA opt-in only).
  */
 import { createClient } from '@supabase/supabase-js'
 import { formatBacoorReportText } from '../src/lib/bacoorDailyReport.js'
@@ -12,6 +15,11 @@ function admin() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+}
+
+/** Owner daily SMS is off by default. Opt in only with ENABLE_OWNER_SMS=1. */
+export function isOwnerSmsEnabled() {
+  return String(process.env.ENABLE_OWNER_SMS || '').trim() === '1'
 }
 
 export function buildShiftCloseAcceptCopy({ branch = '', businessDate = '', closeId = '' } = {}) {
@@ -31,7 +39,7 @@ function formatMoneyMinor(n) {
   return `₱${Math.round((Number(n) || 0) / 100).toLocaleString('en-PH')}`
 }
 
-/** Build owner SMS body from accepted close submitted snapshot. */
+/** Build owner SMS body from accepted close submitted snapshot (legacy / ENABLE_OWNER_SMS only). */
 export function buildOwnerDailySmsFromClose({ branch, businessDate, submitted } = {}) {
   const report = {
     ...(submitted && typeof submitted === 'object' ? submitted : {}),
@@ -103,6 +111,11 @@ export async function notifyShiftCloseAccepted(input = {}) {
     } catch (err) {
       push = { error: String(err.message || err) }
     }
+  }
+
+  // Product default: no owner SMS. Push covers SA/ASA; BusyBee is for customer reminders only.
+  if (!isOwnerSmsEnabled()) {
+    return { targets: userIds.length, push, copy, ownerSms: { sent: 0, skipped: 'owner_sms_disabled' } }
   }
 
   let ownerSms = { sent: 0 }

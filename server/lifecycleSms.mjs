@@ -162,7 +162,11 @@ export async function sendLifecycleSms(db, { kind, eventType = kind, customerId,
     phone: target, message, eventType, bookingId, customerId,
     status: sms.status, providerResponse: sms.providerResponse,
   })
-  return sms
+  return {
+    ...sms,
+    errorKind: sms.errorKind || null,
+    errorCode: sms.errorCode ?? null,
+  }
 }
 
 /** After a visit completes: fire the 4th / 10th milestone SMS when reached. */

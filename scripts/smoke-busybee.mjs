@@ -7,7 +7,7 @@
  * Never send MobileNumbers as 09… — use 63… (normalizePhMobile). 09… can return FAILED.
  */
 import { readFileSync, existsSync } from 'node:fs'
-import { busybeeBalance, busybeeSendSms, normalizePhMobile } from '../server/busybee.mjs'
+import { busybeeBalance, busybeeSendSms, normalizePhMobile, busybeeErrorKind } from '../server/busybee.mjs'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -57,13 +57,15 @@ if (process.env.SEND_TEST_SMS !== '1' || !process.env.TEST_SMS_PHONE) {
 const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19)
 const sent = await busybeeSendSms({
   phone: process.env.TEST_SMS_PHONE,
-  message: `Hakum Auto Care handset check ${stamp}. If you receive this, reply YES.`,
+  message: `Hakum Auto Care handset check ${stamp}. Outbound reminder test — no reply needed.`,
 })
 console.log('send', {
   ok: sent.ok,
   status: sent.status,
   messageId: sent.messageId,
   path: sent.path,
+  errorCode: sent.errorCode ?? null,
+  errorKind: sent.errorKind || null,
   mobile: normalizePhMobile(process.env.TEST_SMS_PHONE),
   providerResponse: String(sent.providerResponse || '').slice(0, 400),
 })
@@ -86,7 +88,19 @@ if (sent.messageId) {
   }
 }
 
-if (!sent.ok) process.exit(1)
+if (!sent.ok) {
+  console.log(JSON.stringify({
+    ok: false,
+    apiAccepted: false,
+    errorCode: sent.errorCode ?? null,
+    errorKind: sent.errorKind || busybeeErrorKind(sent.providerResponse || ''),
+    messageId: sent.messageId || null,
+    note: sent.errorKind === 'unauthorized_ip' || /Unauthorized IP/i.test(sent.providerResponse || '')
+      ? 'BrandTxt ErrorCode 11 — whitelist this machine egress IP (npm run sms:egress).'
+      : 'SendSMS rejected — see providerResponse.',
+  }, null, 2))
+  process.exit(1)
+}
 
 const delivered = String(dlr?.status || '').toUpperCase() === 'DELIVRD'
 const failed = String(dlr?.status || '').toUpperCase() === 'FAILED'

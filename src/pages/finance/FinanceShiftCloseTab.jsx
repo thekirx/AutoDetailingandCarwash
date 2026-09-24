@@ -146,16 +146,12 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
               }),
             })
             const notifyBody = await notifyRes.json().catch(() => null)
-            // ponytail: distinct severity so Finance hears notify outcome (a11y: not silent)
-            const ownerSms = notifyBody?.notify?.ownerSms
-            if (ownerSms?.skipped === 'no_owner_phone') {
-              toast.warning('Owner SMS skipped — set OWNER_SMS_PHONE or BossMich phone')
-            } else if (ownerSms?.error) {
-              toast.warning(`Owner SMS failed — ${String(ownerSms.error).slice(0, 120)}`)
-            } else if (Number(ownerSms?.sent) > 0) {
-              toast.success(`Owner SMS sent (${ownerSms.sent})`)
-            } else if (!notifyRes.ok) {
-              toast.warning('Owner SMS notify request failed')
+            // Owner daily SMS is intentionally off (outbound customer reminders only).
+            // Push notify failure is still worth surfacing; do not nag about owner handset env.
+            if (!notifyRes.ok) {
+              toast.warning('Floor-pay notify request failed (push may be delayed)')
+            } else if (notifyBody?.notify?.push?.error) {
+              toast.warning(`Floor-pay push — ${String(notifyBody.notify.push.error).slice(0, 120)}`)
             }
           }
         } catch {

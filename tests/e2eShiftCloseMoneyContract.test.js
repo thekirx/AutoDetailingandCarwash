@@ -2,7 +2,7 @@
  * Seams (BUG-007 residual + CHEM-RECON + owner SMS):
  * 1) BA RPC submit_shift_close on QA sandbox business_date
  * 2) Boss RPC review_shift_close accept → status accepted
- * 3) Owner SMS phone resolve (+ optional live send via SEND_LIVE_OWNER_SMS=1)
+ * 3) Owner SMS disabled by default (ENABLE_OWNER_SMS opt-in only)
  * 4) Pending floor queue + hard gate unlock for that sandbox day
  * 5) Boss run_payroll confirm with sale claim + sandbox cleanup
  * 6) Approved chem recon + at least one recon line
@@ -36,9 +36,9 @@ describe('BUG-007 shift-close money RPC contract', () => {
       assert.match(src, new RegExp(name.replace(/\./g, '\\.')), `missing ${name}`)
     }
     assert.match(src, /listOwnerSmsPhones/)
-    assert.match(src, /money\.owner_sms\.phone_(sources|gap)/)
-    assert.match(src, /money\.owner_sms\.notify_(skip|sent|dry)/)
-    assert.match(src, /SEND_LIVE_OWNER_SMS/)
+    assert.match(src, /money\.owner_sms\.phone_sources/)
+    assert.match(src, /money\.owner_sms\.notify_(skip|sent)/)
+    assert.match(src, /owner_sms_disabled|ENABLE_OWNER_SMS/)
     assert.match(src, /notifyShiftCloseAccepted/)
     assert.match(src, /submit_shift_close/)
     assert.match(src, /review_shift_close/)

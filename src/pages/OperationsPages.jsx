@@ -1093,7 +1093,7 @@ function OperationsQueueBoardPage() {
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
-            </label>
+                </label>
             <p className="bk-table-page-range tabular-nums">
               {tableSlice.from}-{tableSlice.to} of {tableSlice.total}
             </p>
@@ -1118,9 +1118,9 @@ function OperationsQueueBoardPage() {
               >
                 <ChevronRight size={16} strokeWidth={2} />
               </Button>
+          </div>
             </div>
           </div>
-        </div>
         </div>
       ) : (
       <div

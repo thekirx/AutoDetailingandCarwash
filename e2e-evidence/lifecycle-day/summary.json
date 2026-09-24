@@ -1,0 +1,81 @@
+{
+  "ok": true,
+  "passed": 12,
+  "total": 12,
+  "steps": [
+    {
+      "ok": true,
+      "name": "tl.login",
+      "detail": "team_lead bacoor"
+    },
+    {
+      "ok": true,
+      "name": "catalog",
+      "detail": "wash Full Care Package · detailing Paint Maintenance"
+    },
+    {
+      "ok": true,
+      "name": "customer.book",
+      "detail": "a73c5695-b942-4cb9-9b95-46e2f5bd4917 pending"
+    },
+    {
+      "ok": true,
+      "name": "tl.confirm_booking",
+      "detail": "confirmed"
+    },
+    {
+      "ok": true,
+      "name": "crew.attendance",
+      "detail": "Crew One present 2026-09-23"
+    },
+    {
+      "ok": true,
+      "name": "tl.wash_to_final_check",
+      "detail": "043a7491-4364-4e37-b09d-8983dac4404c"
+    },
+    {
+      "ok": true,
+      "name": "admin.pos_paid",
+      "detail": "3ac9467c-488f-493e-a329-db6bb8753682 ₱4500 handoff ok"
+    },
+    {
+      "ok": true,
+      "name": "tl.cancel",
+      "detail": "87efa187-fe55-4372-91af-ae29873eb285"
+    },
+    {
+      "ok": true,
+      "name": "tl.redo_then_cancel",
+      "detail": "8a5e51f8-66b4-47fb-b1c6-3bca0980ea16"
+    },
+    {
+      "ok": true,
+      "name": "finance.today",
+      "detail": "bacoor 2026-09-23 450100 minor"
+    },
+    {
+      "ok": true,
+      "name": "finance.accept_close",
+      "detail": "fe49d6fb-b7f9-4979-9ef1-7305a1c17ef4"
+    },
+    {
+      "ok": true,
+      "name": "payroll.confirm",
+      "detail": "payout 157535"
+    }
+  ],
+  "report": {
+    "today": "2026-09-23",
+    "branch": "bacoor",
+    "plates": {
+      "book": "NKA9234",
+      "wash": "NKA9231",
+      "cancel": "NKA9232",
+      "redo": "NKA9233"
+    },
+    "sale_id": "3ac9467c-488f-493e-a329-db6bb8753682",
+    "kind_sum_minor": 450100,
+    "wash_minor": 450000
+  },
+  "at": "2026-09-23T14:50:15.194Z"
+}

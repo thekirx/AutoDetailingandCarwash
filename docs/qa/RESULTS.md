@@ -1,3 +1,35 @@
+## Latest principal completion (2026-09-24)
+
+| Field | Value |
+|-------|-------|
+| `npm test` | **1269/1269** |
+| `npx eslint .` | PASS exit 0 |
+| `npm run build` | PASS exit 0 |
+| `npm audit --omit=dev` | **0** vulnerabilities |
+| `e2e:integrity` | PASS |
+| Push e2e | PASS |
+| FLOPS | **23/23** (artifact) |
+| Soft-launch | **READY_WITH_OPS_BLOCKERS** |
+| Audit | [`../SYSTEM_AUDIT.md`](../SYSTEM_AUDIT.md) · [`PROJECT_STATUS.md`](../../PROJECT_STATUS.md) |
+
+---
+
+## Latest FLOPS shop-day (2026-09-24)
+
+| Field | Value |
+|-------|-------|
+| `node --test` money/queue scoped | **100/100** (`tmp-flops-unit.txt`) |
+| `npm run build` | PASS exit 0 |
+| `npm run e2e:lifecycle-flops` | **23/23** (`e2e-evidence/lifecycle-flops/summary.json`) |
+| `npm run e2e:money-path` | **21/21** |
+| `npm run e2e:ui-p0` | **9/9** |
+| Kind sum = drawer | **900000** minor Bacoor |
+| Payroll confirmed | **157500** (first sale; overlap blocks 2nd run) |
+| Soft-launch | **READY_WITH_OPS_BLOCKERS** + payroll overlap note |
+| Sign-off | [`BRANCH-DAY-SIGN-OFF.md`](./BRANCH-DAY-SIGN-OFF.md) |
+
+---
+
 ## Latest unit (2026-09-14 money-path leftovers)
 
 | Field | Value |

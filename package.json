@@ -25,7 +25,12 @@
     "e2e:ui-money": "node scripts/e2e-ui-money.mjs",
     "e2e:money-path": "node scripts/e2e-money-path-ui.mjs",
     "e2e:role-qa": "node scripts/e2e-role-qa.mjs",
-    "e2e:responsive": "node scripts/responsive-validation.mjs"
+    "e2e:lifecycle-flops": "node scripts/e2e-lifecycle-flops.mjs",
+    "e2e:responsive": "node scripts/responsive-validation.mjs",
+    "archify": "node scripts/archify.mjs",
+    "sms:egress": "node scripts/check-busybee-egress.mjs",
+    "sms:handset": "node scripts/smoke-busybee.mjs",
+    "ops:daily-ops": "node scripts/ops-admin-daily-ops.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

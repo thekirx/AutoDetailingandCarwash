@@ -93,7 +93,7 @@ function account(id) {
 async function asUser(id) {
   const acct = account(id)
   const client = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } })
-  const { data, error } = await client.auth.signInWithPassword({ email: acct.email, password: acct.password })
+  const { error } = await client.auth.signInWithPassword({ email: acct.email, password: acct.password })
   if (error) throw new Error(`${id} login: ${error.message}`)
   return client
 }

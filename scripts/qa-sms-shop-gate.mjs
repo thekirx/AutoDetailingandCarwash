@@ -42,6 +42,12 @@ console.log(JSON.stringify({
   status: result.status,
   messageId: result.messageId || null,
   path: result.path || null,
+  errorCode: result.errorCode ?? null,
+  errorKind: result.errorKind || null,
 }, null, 2))
+
+if (result.errorKind === 'unauthorized_ip') {
+  console.error('BLOCKED: BrandTxt Unauthorized IP — whitelist this machine egress (see scripts/check-busybee-egress.mjs)')
+}
 
 if (!result.ok || result.status !== 'sent') process.exit(1)

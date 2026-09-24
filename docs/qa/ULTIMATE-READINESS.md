@@ -29,6 +29,22 @@ flowchart LR
 
 ---
 
+## Gate FLOPS — Soft-launch shop day
+
+**Runbook:** [`SHOP-DAY-RUNBOOK.md`](./SHOP-DAY-RUNBOOK.md) · **Evidence index:** [`MONEY-PATH-EVIDENCE-INDEX.md`](./MONEY-PATH-EVIDENCE-INDEX.md) · **Sign-off:** [`BRANCH-DAY-SIGN-OFF.md`](./BRANCH-DAY-SIGN-OFF.md)
+
+| # | Check | Command | Status |
+|---|--------|---------|--------|
+| F.1 | Unified mutating lifecycle + screenshots + recording | `npm run e2e:lifecycle-flops` | [x] 2026-09-24 23/23 |
+| F.2 | Paid-by-kind SQL = Finance UI for QA day | FLOPS + `execute_sql` | [x] kind=drawer=900000 |
+| F.3 | Accepted close drawer = paid kind sum | FLOPS E1/F1 | [x] |
+| F.4 | Floor payroll confirmed for that window | FLOPS P1 | [x] 157500 · overlap blocks 2nd run |
+| F.5 | TL POS deny + Investor payroll deny | FLOPS R1 | [x] Lane closed |
+
+Soft-launch shop-day ready requires F.1–F.5 exit 0 with fresh artifacts. Production SMS/SMTP remains Gate 7 / Gate 10.
+
+---
+
 ## 1 — Auth / session / RBAC
 
 | # | Check | Command | Status |
@@ -58,7 +74,7 @@ flowchart LR
 | 3.1 | Queue logic unit | covered by `npm test` | [x] |
 | 3.2 | Live queue | `node scripts/e2e-queue-part3.mjs` | [x] |
 | 3.3 | POS units + live | `npm test` + `e2e-pos-part2` | [x] |
-| 3.4 | POS handoff smoke | `node scripts/smoke-pos-handoff.mjs` | [ ] not in orchestrator |
+| 3.4 | POS handoff smoke | `node scripts/smoke-pos-handoff.mjs` | [x] 2026-09-24 exit 0 |
 | 3.5 | Status SMS DLR (opt-in) | `SEND_LIVE_SMS=1 …e2e-real-customer-status-sms.mjs` | [x] proven earlier this campaign (21/21, DELIVRD); skipped in last orch (`SEND_LIVE_SMS` unset) |
 | 3.6 | UI queue + POS pages authed | `e2e-ui-p0` | [x] |
 | 3.7 | Ops cutover slice | `npm run e2e:cutover` | [x] |
@@ -91,7 +107,7 @@ flowchart LR
 | # | Check | Command | Status |
 |---|--------|---------|--------|
 | 6.1 | Stock helpers | covered by `npm test` | [x] |
-| 6.2 | Data integrity | `npm run e2e:integrity` | [ ] not in orchestrator |
+| 6.2 | Data integrity | `npm run e2e:integrity` | [x] 2026-09-24 PASS |
 | 6.3 | CHEM-RECON | Manual / seed | [ ] |
 
 ---
@@ -102,9 +118,9 @@ flowchart LR
 |---|--------|---------|--------|
 | 7.1 | SMS gate unit | covered by `npm test` | [x] |
 | 7.2 | BusyBee balance (no send) | `smoke-busybee` soft-fail in orch | [~] soft-pass only (Windows crash exit on smoke; non-blocking) |
-| 7.3 | Push wiring | `node scripts/e2e-push-notifications.mjs` | [ ] |
-| 7.4 | Vercel BrandTxt IP | Ops | [ ] |
-| 7.5 | OWNER_SMS_PHONE on Vercel | Ops | [ ] |
+| 7.3 | Push wiring | `node scripts/e2e-push-notifications.mjs` | [x] 2026-09-24 PASS |
+| 7.4 | Vercel BrandTxt IP (customer outbound reminders) | Ops | [ ] **BLOCKED** — office egress now `180.191.244.237` (ErrorCode 11); old `180.190.249.189` stale; Vercel Static IPs still required |
+| 7.5 | Owner daily SMS / `OWNER_SMS_PHONE` | Product policy | [x] **N/A** — disabled; push only (`owner_sms_disabled`) |
 
 ---
 
@@ -188,10 +204,10 @@ Living log: [`RESULTS.md`](./RESULTS.md)
 
 ### Residual risks (do not bury)
 
-1. **VERCEL-SMS-IP** — prod SMS may 403 until egress IPs whitelisted.
-2. **OWNER_SMS_PHONE** — cutover WARN: env not set.
-3. **Auth SMTP** — unverified this campaign.
-4. **BUG-007 residual** — UI opens EoS/finance; **submit+accept proven** via RPC; full browser→payroll end-to-end still not proven.
+1. **VERCEL-SMS-IP / office egress** — BrandTxt ErrorCode **11** on **`180.191.244.237`** (2026-09-24). Paste [`docs/OPS/brandtxt-dexter-followup.txt`](../OPS/brandtxt-dexter-followup.txt) to Dexter; Static IPs: [`docs/OPS/VERCEL-STATIC-IPS.md`](../OPS/VERCEL-STATIC-IPS.md). Tracker: [`docs/OPS/ADMIN-DAILY-OPS-TRACKER.md`](../OPS/ADMIN-DAILY-OPS-TRACKER.md).
+2. ~~**OWNER_SMS_PHONE**~~ — **N/A** — owner daily SMS disabled; Finance accept uses web push.
+3. **Auth SMTP** — [`docs/OPS/AUTH-SMTP-PROOF.md`](../OPS/AUTH-SMTP-PROOF.md) (project `lybxhpzzqqyqswvuwpxv`). Admin UI: **no redesign** — [`docs/qa/ADMIN-FRICTION-LOG.md`](./ADMIN-FRICTION-LOG.md).
+4. **BUG-007 residual** — FLOPS 2026-09-24 exercised browser role path through POS/EoS/finance/payroll evidence; keep money-path e2e as regression.
 5. **CHEM-RECON** — QA recon seeded; production recon approval workflow still pending.
 6. **BusyBee smoke** — soft-fail Windows crash exit.
 7. **Book page** — compact touch targets (CONDITIONAL).
@@ -206,4 +222,4 @@ npm run test:readiness
 
 ---
 
-**Continue?** Not yet 100%. Pick next: BrandTxt IP whitelist, `OWNER_SMS_PHONE` env + real owner SMS DLR, Auth SMTP proof, and (if required) a full browser money→payroll pack.
+**Continue?** Not yet 100% messaging. Next: BrandTxt IP whitelist for **customer outbound reminders**, Auth SMTP proof if needed. Owner SMS is intentionally out of scope.

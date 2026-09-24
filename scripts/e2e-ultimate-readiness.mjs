@@ -157,9 +157,21 @@ if (!aborted && needPreview) {
         })
         if (!money) aborted = true
       }
+      if (!aborted && process.env.SKIP_FLOPS !== '1') {
+        const flops = run({
+          id: 'FLOPS',
+          label: 'e2e-lifecycle-flops (shop-day)',
+          cmd: isWin ? ['npm.cmd', 'run', 'e2e:lifecycle-flops'] : ['npm', 'run', 'e2e:lifecycle-flops'],
+          critical: true,
+        })
+        if (!flops) aborted = true
+      } else if (process.env.SKIP_FLOPS === '1') {
+        results.push({ id: 'FLOPS', label: 'e2e-lifecycle-flops (shop-day)', ok: true, skipped: true })
+      }
     } else {
       results.push({ id: 'UI', label: 'e2e-ui-p0', ok: true, skipped: true })
       results.push({ id: 'UI2', label: 'e2e-ui-money (BUG-007)', ok: true, skipped: true })
+      results.push({ id: 'FLOPS', label: 'e2e-lifecycle-flops (shop-day)', ok: true, skipped: true })
     }
 
     if (!aborted && !skipResponsive) {

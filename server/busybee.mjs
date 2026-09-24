@@ -42,6 +42,27 @@ export function normalizePhMobile(phone) {
   return digits
 }
 
+/**
+ * Classify BrandTxt / BusyBee JSON for ops (customer reminder SMS).
+ * ErrorCode 11 = egress IP not on BrandTxt whitelist — permanent live blocker until fixed.
+ */
+export function busybeeErrorKind(providerResponse) {
+  let json = providerResponse
+  if (typeof providerResponse === 'string') {
+    try {
+      json = JSON.parse(providerResponse)
+    } catch {
+      return /unauthorized\s*ip/i.test(providerResponse) ? 'unauthorized_ip' : 'unknown'
+    }
+  }
+  const code = Number(json?.ErrorCode ?? json?.errorCode)
+  if (code === 0) return 'ok'
+  if (code === 11) return 'unauthorized_ip'
+  if (code === 429) return 'rate_limited'
+  if (Number.isFinite(code)) return 'provider'
+  return 'unknown'
+}
+
 export async function busybeeBalance() {
   const { apiKey, clientId, baseUrl } = cfg()
   if (!apiKey || !clientId) throw new Error('BusyBee credentials missing')
@@ -185,10 +206,14 @@ export async function busybeeSendSms({ phone, message }) {
         messageId: json?.Data?.[0]?.MessageId || json?.data?.[0]?.messageId || null,
         httpStatus: res.status,
         path: attempt.path,
+        errorCode: errorCode == null ? null : Number(errorCode),
+        errorKind: busybeeErrorKind(text),
       }
       if (ok) return last
+      // Unauthorized IP will fail every path — stop early with a clear kind.
+      if (last.errorKind === 'unauthorized_ip') return last
     } catch (err) {
-      last = { ok: false, status: 'failed', providerResponse: String(err.message || err) }
+      last = { ok: false, status: 'failed', providerResponse: String(err.message || err), errorKind: 'unknown' }
     }
   }
   return last

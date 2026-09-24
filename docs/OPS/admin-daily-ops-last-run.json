@@ -1,0 +1,32 @@
+{
+  "at": "2026-09-24T13:45:36.971Z",
+  "redesignRequired": false,
+  "artifactsOk": true,
+  "checks": {
+    "followupHasCurrentIp": true,
+    "followupFromMalcolm": true,
+    "followupNoOwnerDailySms": true,
+    "frictionNoRedesignGate": true,
+    "smtpHasProjectRef": true,
+    "vercelDocumentsMissingLink": true
+  },
+  "brandTxt": {
+    "followupReady": true,
+    "egressOk": false,
+    "egressIp": "180.191.244.237",
+    "errorCode": 11,
+    "errorKind": "unauthorized_ip",
+    "blocker": "Unauthorized IP — ask BrandTxt to whitelist 180.191.244.237 (and Vercel static egress for production).",
+    "humanMustSendGmail": true
+  },
+  "vercelStaticIps": {
+    "hakumVisibleOnThisCli": false,
+    "runbook": "docs/OPS/VERCEL-STATIC-IPS.md"
+  },
+  "authSmtp": {
+    "status": "OPEN",
+    "runbook": "docs/OPS/AUTH-SMTP-PROOF.md",
+    "projectRef": "lybxhpzzqqyqswvuwpxv"
+  },
+  "frictionLog": "docs/qa/ADMIN-FRICTION-LOG.md"
+}

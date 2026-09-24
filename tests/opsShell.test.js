@@ -52,7 +52,7 @@ describe('ops shell adoption — settings + payroll', () => {
     const page = read('src/pages/settings/PayrollSettingsPage.jsx')
     assert.match(page, /OpsPageShell/)
     assert.match(page, /\/operations\/settings/)
-    assert.match(page, /\/operations\/payroll\?tab=rules/)
+    assert.match(page, /\/operations\/payroll\?tab=run/)
   })
 
   it('Payroll page uses ops shell, guide, and shadcn tab list — not planner-v2-tabs', () => {

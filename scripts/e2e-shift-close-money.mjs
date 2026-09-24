@@ -148,45 +148,34 @@ assert(row?.status === 'accepted', `expected accepted, got ${row?.status}`)
 assert(row.business_date === QA_DATE, `sandbox date ${row.business_date}`)
 pass('money.rpc.status_accepted', `${row.branch} ${row.business_date}`)
 
-// ── money.owner_sms (resolve always; live send only if SEND_LIVE_OWNER_SMS=1) ─
+// ── money.owner_sms — product default: disabled (outbound customer reminders only)
 {
   const phones = await listOwnerSmsPhones(admin)
   assert(Array.isArray(phones), 'listOwnerSmsPhones failed')
-  if (!phones.length) {
-    pass(
-      'money.owner_sms.phone_gap',
-      'OWNER_SMS_PHONE unset and BossMich.phone null — accept SMS would skip (ops)',
-    )
-  } else {
-    pass('money.owner_sms.phone_sources', phones.map((p) => `${String(p).slice(0, 4)}…`).join(','))
-  }
+  pass(
+    'money.owner_sms.phone_sources',
+    phones.length ? phones.map((p) => `${String(p).slice(0, 4)}…`).join(',') : 'none (unused)',
+  )
 
-  // ponytail: default e2e must not burn BusyBee credits / spam the test handset
-  if (process.env.SEND_LIVE_OWNER_SMS === '1') {
-    assert(phones.length > 0, 'SEND_LIVE_OWNER_SMS=1 but no owner phone sources')
-    const notify = await notifyShiftCloseAccepted({
-      branch: QA_BRANCH,
-      businessDate: QA_DATE,
-      closeId: submitId,
-      actorId: bossAuth.user?.id || null,
-    })
-    assert(notify?.ownerSms, `notify missing ownerSms: ${JSON.stringify(notify)}`)
-    if (notify.ownerSms.skipped === 'no_owner_phone') {
-      assert(false, 'live send requested but skipped no_owner_phone')
-    }
+  const notify = await notifyShiftCloseAccepted({
+    branch: QA_BRANCH,
+    businessDate: QA_DATE,
+    closeId: submitId,
+    actorId: bossAuth.user?.id || null,
+  })
+  assert(notify?.ownerSms, `notify missing ownerSms: ${JSON.stringify(notify)}`)
+
+  if (process.env.ENABLE_OWNER_SMS === '1' && process.env.SEND_LIVE_OWNER_SMS === '1') {
+    assert(phones.length > 0, 'ENABLE_OWNER_SMS+SEND_LIVE_OWNER_SMS but no phone sources')
     assert(Number(notify.ownerSms.sent) > 0, `live owner SMS not sent: ${JSON.stringify(notify.ownerSms)}`)
     pass('money.owner_sms.notify_sent', `sent=${notify.ownerSms.sent}`)
-  } else if (!phones.length) {
-    const notify = await notifyShiftCloseAccepted({
-      branch: QA_BRANCH,
-      businessDate: QA_DATE,
-      closeId: submitId,
-      actorId: bossAuth.user?.id || null,
-    })
-    assert(notify?.ownerSms?.skipped === 'no_owner_phone', JSON.stringify(notify?.ownerSms))
-    pass('money.owner_sms.notify_skip', 'no_owner_phone')
   } else {
-    pass('money.owner_sms.notify_dry', 'phones ready; set SEND_LIVE_OWNER_SMS=1 to send')
+    assert(
+      notify.ownerSms.skipped === 'owner_sms_disabled' || Number(notify.ownerSms.sent) === 0,
+      `expected owner SMS off: ${JSON.stringify(notify.ownerSms)}`,
+    )
+    // Product: no owner SMS. ENABLE_OWNER_SMS=1 is legacy QA only.
+    pass('money.owner_sms.notify_skip', notify.ownerSms.skipped || 'disabled')
   }
 }
 
