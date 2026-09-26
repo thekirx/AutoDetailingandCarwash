@@ -10,17 +10,17 @@ import {
 import { isHeroLogoMoment } from '../../../lib/homeHero'
 import { fetchHomeStats, STAT_BASE, STATIC_STATS, withBase } from '../../../lib/homeStats'
 
-import heroPoster from '../../../assets/hero/bredesign-hero-poster.webp'
+import heroPoster from '../../../assets/hero/hakum-desktop-poster.webp'
 import portrait1080Av1 from '../../../assets/hero/bredesign-hero-portrait-1080.av1.mp4'
 import portrait1080H264 from '../../../assets/hero/bredesign-hero-portrait-1080.h264.mp4'
 import portrait720Av1 from '../../../assets/hero/bredesign-hero-portrait-720.av1.mp4'
 import portraitPoster from '../../../assets/hero/bredesign-hero-portrait-poster.webp'
-import hero1080Av1 from '../../../assets/hero/bredesign-hero-1080.av1.mp4'
-import hero1080H264 from '../../../assets/hero/bredesign-hero-1080.h264.mp4'
-import hero1440Av1 from '../../../assets/hero/bredesign-hero-1440.av1.mp4'
-import hero2160Av1 from '../../../assets/hero/bredesign-hero-2160.av1.mp4'
-import hero720Av1 from '../../../assets/hero/bredesign-hero-720.av1.mp4'
-import hero720H264 from '../../../assets/hero/bredesign-hero-720.h264.mp4'
+import hero1080Av1 from '../../../assets/hero/hakum-desktop-1080.av1.mp4'
+import hero1080H264 from '../../../assets/hero/hakum-desktop-1080.h264.mp4'
+import hero1440Av1 from '../../../assets/hero/hakum-desktop-1440.av1.mp4'
+import hero2160Av1 from '../../../assets/hero/hakum-desktop-2160.av1.mp4'
+import hero720Av1 from '../../../assets/hero/hakum-desktop-720.av1.mp4'
+import hero720H264 from '../../../assets/hero/hakum-desktop-720.h264.mp4'
 
 /* Two of these count, two do not.
    - Years and team size are claims about the business; no table holds them.
@@ -126,12 +126,11 @@ export default function BdHero() {
   const [tier] = useState(currentHeroTier)
   const [orientation] = useState(currentHeroOrientation)
   const isPortrait = orientation === 'portrait'
-  const markVariant = isPortrait ? 'mobile' : 'bredesign'
+  const markVariant = isPortrait ? 'mobile' : 'hakum-desktop'
   const poster = isPortrait ? portraitPoster : heroPoster
   const av1Src = isPortrait ? PORTRAIT_AV1_BY_TIER[portraitTierFor(tier)] : AV1_BY_TIER[tier]
   const h264Src = isPortrait ? portrait1080H264 : H264_BY_TIER[h264TierFor(tier)]
-  /* Let the opening logo have its moment, then keep the headline over the
-     closing mark so the brand and its promise appear together. */
+  /* The supplied desktop clip has a logo and wordmark at both ends. */
   const [logoMoment, setLogoMoment] = useState(true)
   /* The mark logic only makes sense while the clip is running. A video that is
      paused sits at 0, which is inside the opening mark window, so keying the
@@ -143,6 +142,7 @@ export default function BdHero() {
   const [revealed, setRevealed] = useState(false)
   const videoRef = useRef(null)
   const wasMark = useRef(true)
+  const lastTime = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -158,13 +158,12 @@ export default function BdHero() {
     const node = videoRef.current
     if (!node) return undefined
 
-    // Recomputed from the current time on every tick, so a loop restart needs
-    // no special case — the new time simply reads as inside the opening window.
+    // A loop restart begins a fresh logo moment, even after a manual reveal.
     const sync = () => {
-      const mark = isHeroLogoMoment(markVariant, node.currentTime) && node.currentTime < (isPortrait ? 0 : 1.6)
-      // A fresh mark window takes the frame back from a manual reveal.
-      if (mark && !wasMark.current) setRevealed(false)
+      const mark = isHeroLogoMoment(markVariant, node.currentTime)
+      if (mark && (!wasMark.current || node.currentTime < lastTime.current)) setRevealed(false)
       wasMark.current = mark
+      lastTime.current = node.currentTime
       setLogoMoment(mark)
     }
     const onPlay = () => setPlaying(true)
@@ -190,7 +189,7 @@ export default function BdHero() {
       node.removeEventListener('pause', onStop)
       node.removeEventListener('ended', onStop)
     }
-  }, [videoFailed, isPortrait, markVariant])
+  }, [videoFailed, markVariant])
 
   /* Hidden only while the clip is actually running and on the mark, and only
      when the reader has not asked for it back. Anything else shows the copy. */

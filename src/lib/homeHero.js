@@ -7,6 +7,9 @@ export const HERO_MOBILE_MAX_WIDTH = 800
  *     by ~4.2s; the closing mark starts coming up at ~13.3s and stays to the end.
  *   mobile-hero.mp4  (13.07s) — no opening mark; the closing mark reads clearly
  *     from ~9.3s and stays to the end.
+ *   HERODESKTOP.mp4 (16.40s) — supplied desktop cut. Its opening brand sequence
+ *     holds through timecode 00:04:11, and the closing sequence begins at
+ *     00:14:12 (30 fps timecode).
  *   bredesign-hero-*.mp4 (16.40s) — opening mark to ~0.8s, closing mark from ~15.0s.
  *     Same timings across all four cuts; only resolution and codec differ.
  *
@@ -16,6 +19,8 @@ export const HERO_MOBILE_MAX_WIDTH = 800
 const HERO_LOGO_WINDOWS = {
   desktop: { opensUntil: 5, closesFrom: 13.65 },
   mobile: { opensUntil: 0, closesFrom: 9.2 },
+  // Supplied HERODESKTOP.mp4: the provided marks are seconds:frames at 30 fps.
+  'hakum-desktop': { opensUntil: 4 + 11 / 30, closesFrom: 14 + 12 / 30 },
   /* bredesign-hero-*.mp4 (16.40s) — measured at 5fps off the encode: the
      opening mark holds from the first frame and has faded by 0.8s, the frame
      stays black until footage cuts in at 1.8s, and the closing mark starts

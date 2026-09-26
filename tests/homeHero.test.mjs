@@ -20,6 +20,13 @@ test('desktop content waits five seconds and clears again for the closing logo',
   assert.equal(homeHero.isHeroLogoMoment?.('desktop', 13.7), true)
 })
 
+test('supplied desktop hero holds copy during both brand sequences', () => {
+  assert.equal(homeHero.isHeroLogoMoment('hakum-desktop', 4.3), true)
+  assert.equal(homeHero.isHeroLogoMoment('hakum-desktop', 4 + 11 / 30), false)
+  assert.equal(homeHero.isHeroLogoMoment('hakum-desktop', 14.39), false)
+  assert.equal(homeHero.isHeroLogoMoment('hakum-desktop', 14.4), true)
+})
+
 test('mobile overlay clears only for its closing logo reveal', () => {
   assert.equal(homeHero.isHeroLogoMoment?.('mobile', 0), false)
   assert.equal(homeHero.isHeroLogoMoment?.('mobile', 9), false)

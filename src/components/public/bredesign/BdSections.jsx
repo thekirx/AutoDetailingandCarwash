@@ -70,9 +70,8 @@ export function BdServices() {
       <div className="bd-shell">
         <div className="bd-head bd-reveal">
           <div>
-            <p className="bd-eyebrow">Our services</p>
             <h2 className="bd-skew">
-              What we <em>do</em> <span className="bd-services-heading-copy">- four core services. Open any one for the full picture</span>
+              What we <em>do</em> — Four core services. Open any one for the full picture — what it is, what we use, and what it costs you to skip it.
             </h2>
           </div>
         </div>
