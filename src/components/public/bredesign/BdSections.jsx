@@ -39,13 +39,7 @@ export function BdOrigin() {
           <h2>
             {ORIGIN.headline.join(' ')} <em>{ORIGIN.headlineAccent}</em>
           </h2>
-          <div className="bd-origin-text">
-            {ORIGIN.paragraphs.map((copy, i) => (
-              <p className={i === 0 ? 'bd-origin-lead' : 'bd-origin-body'} key={copy.slice(0, 24)}>
-                {copy}
-              </p>
-            ))}
-          </div>
+          <p className="bd-origin-text bd-origin-lead">{ORIGIN.paragraphs.join(' ')}</p>
         </div>
       </div>
     </section>
@@ -78,13 +72,9 @@ export function BdServices() {
           <div>
             <p className="bd-eyebrow">Our services</p>
             <h2 className="bd-skew">
-              What we <em>do.</em>
+              What we <em>do</em> <span className="bd-services-heading-copy">- four core services. Open any one for the full picture</span>
             </h2>
           </div>
-          <p>
-            Four core services. Open any one for the full picture — what it is, what we use, and what
-            it costs you to skip it.
-          </p>
         </div>
         <div className="bd-service-grid bd-reveal">
           {SERVICES.map((service) => (
@@ -269,9 +259,9 @@ export function BdBook() {
         <div className="bd-reveal">
           <p className="bd-eyebrow bd-eyebrow-light">Pamper &amp; protect</p>
           <h2 className="bd-skew">
-            Book your
-            <br />
-            car in.
+            <span>Pamper it.</span>
+            <span className="bd-book-outline">Protect it.</span>
+            <span>Book your car in.</span>
           </h2>
           <p>
             Tell us the vehicle and how you drive it. We will tell you honestly which of the four it

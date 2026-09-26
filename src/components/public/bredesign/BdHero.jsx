@@ -130,9 +130,8 @@ export default function BdHero() {
   const poster = isPortrait ? portraitPoster : heroPoster
   const av1Src = isPortrait ? PORTRAIT_AV1_BY_TIER[portraitTierFor(tier)] : AV1_BY_TIER[tier]
   const h264Src = isPortrait ? portrait1080H264 : H264_BY_TIER[h264TierFor(tier)]
-  /* The clip opens and closes on the Hakum mark. The overlay copy clears while
-     the mark is on screen so the two never share the frame, and comes back a
-     beat after it goes — the same treatment the shipping hero uses. */
+  /* Let the opening logo have its moment, then keep the headline over the
+     closing mark so the brand and its promise appear together. */
   const [logoMoment, setLogoMoment] = useState(true)
   /* The mark logic only makes sense while the clip is running. A video that is
      paused sits at 0, which is inside the opening mark window, so keying the
@@ -162,7 +161,7 @@ export default function BdHero() {
     // Recomputed from the current time on every tick, so a loop restart needs
     // no special case — the new time simply reads as inside the opening window.
     const sync = () => {
-      const mark = isHeroLogoMoment(markVariant, node.currentTime)
+      const mark = isHeroLogoMoment(markVariant, node.currentTime) && node.currentTime < (isPortrait ? 0 : 1.6)
       // A fresh mark window takes the frame back from a manual reveal.
       if (mark && !wasMark.current) setRevealed(false)
       wasMark.current = mark
@@ -191,7 +190,7 @@ export default function BdHero() {
       node.removeEventListener('pause', onStop)
       node.removeEventListener('ended', onStop)
     }
-  }, [videoFailed, markVariant])
+  }, [videoFailed, isPortrait, markVariant])
 
   /* Hidden only while the clip is actually running and on the mark, and only
      when the reader has not asked for it back. Anything else shows the copy. */

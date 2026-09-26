@@ -9,7 +9,7 @@
    rewrites `new URL(...)` when the path is a static string, so a template
    literal here would ship the source path and every image would 404. */
 export const IMAGES = {
-  ppf: new URL('../../../assets/services/paint-protection-film.webp', import.meta.url).href,
+  ppf: new URL('../../../assets/services/ppf-clearpro-card.webp', import.meta.url).href,
   /* The three frames of the install collage above, cut apart so each can carry
      one card on the PPF page. */
   ppfEdge: new URL('../../../assets/services/ppf-film-edge.webp', import.meta.url).href,
@@ -86,7 +86,7 @@ export const SERVICES = [
     cta: 'Why PPF',
     to: '/services/ppf',
     image: IMAGES.ppf,
-    alt: 'Paint protection film installed on a vehicle at Hakum Auto Care',
+    alt: 'ClearPro paint protection film being smoothed onto a vehicle',
   },
   {
     number: '02',
