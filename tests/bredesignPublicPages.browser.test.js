@@ -76,6 +76,32 @@ describe('BreDESIGN public page fallbacks', () => {
     })
   })
 
+  it('keeps all four centered stats in one row across screen sizes', async () => {
+    for (const width of [1440, 768, 390, 320]) {
+      await page.setViewport({ width, height: 900 })
+      await page.goto(`${PREVIEW_ORIGIN}/home`, { waitUntil: 'networkidle0' })
+      const layout = await page.evaluate(() => {
+        const cards = [...document.querySelectorAll('.bd-stat')]
+        return {
+          labels: cards.map((card) => card.querySelector('.bd-stat-label').textContent.trim()),
+          rows: new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top))).size,
+          centered: cards.every((card) => {
+            const box = card.getBoundingClientRect()
+            const value = card.querySelector('.bd-stat-value')
+            const number = value.getBoundingClientRect()
+            return Math.abs((box.left + box.right) / 2 - (number.left + number.right) / 2) < 1
+              && value.scrollWidth <= value.clientWidth
+              && card.querySelector('.bd-stat-label').scrollWidth <= card.querySelector('.bd-stat-label').clientWidth
+          }),
+        }
+      })
+      assert.deepEqual(layout.labels, ['Team members', 'Years combined', 'Vehicles cared for', 'Satisfied clients'])
+      assert.equal(layout.rows, 1, `stats wrap at ${width}px`)
+      assert.equal(layout.centered, true, `stats overflow or lose center at ${width}px`)
+    }
+    await page.setViewport({ width: 1440, height: 900 })
+  })
+
   it('sets the story on white above the storefront with a one-line title on desktop and stacks the story on phone', async () => {
     for (const viewport of [
       { width: 1440, height: 900, layout: 'plate' },
@@ -97,6 +123,7 @@ describe('BreDESIGN public page fallbacks', () => {
         const header = document.querySelector('.public-header')?.getBoundingClientRect()
         const title = document.querySelector('.bd-origin h2')
         return {
+          storyParagraphs: document.querySelectorAll('.bd-origin-copy > .bd-origin-text').length,
           photoWidth: photo.width,
           photoSrc: document.querySelector('.bd-origin-photo').currentSrc,
           sectionBackground: getComputedStyle(document.querySelector('.bd-origin-frame')).backgroundColor,
@@ -114,6 +141,8 @@ describe('BreDESIGN public page fallbacks', () => {
         }
       })
 
+      assert.equal(layout.storyParagraphs, 1, `story splits into blocks at ${viewport.width}px`)
+
       if (viewport.layout === 'plate') {
         /* Desktop is a white section: navy story first, then the storefront
            crop whole at its native 2000x858 shape closing the section. */
@@ -127,7 +156,7 @@ describe('BreDESIGN public page fallbacks', () => {
       } else {
         assert.match(layout.photoSrc, /hakum-story-clean-cars/, 'phone does not keep the full poster')
         assert.ok(layout.photoHeight >= viewport.width * 0.7, 'mobile storefront photo is too short')
-        assert.ok(layout.copyTop >= layout.photoBottom + 24, 'mobile story does not begin below photo')
+        assert.ok(layout.copyTop >= layout.photoBottom + 12, 'mobile story does not begin below photo')
       }
       assert.equal(layout.horizontalOverflow, false, `story causes horizontal overflow at ${viewport.width}px`)
     }

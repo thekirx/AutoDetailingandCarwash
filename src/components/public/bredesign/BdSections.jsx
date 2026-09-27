@@ -39,13 +39,7 @@ export function BdOrigin() {
           <h2>
             {ORIGIN.headline.join(' ')} <em>{ORIGIN.headlineAccent}</em>
           </h2>
-          <div className="bd-origin-text">
-            {ORIGIN.paragraphs.map((copy, i) => (
-              <p className={i === 0 ? 'bd-origin-lead' : 'bd-origin-body'} key={copy.slice(0, 24)}>
-                {copy}
-              </p>
-            ))}
-          </div>
+          <p className="bd-origin-text">{ORIGIN.paragraphs.join(' ')}</p>
         </div>
       </div>
     </section>

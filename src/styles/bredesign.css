@@ -288,21 +288,20 @@
 }
 .bredesign .bd-stats-in {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 28px 20px;
-  padding: clamp(30px, 3.4vw, 44px) 0 clamp(34px, 4vw, 54px);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(4px, 1vw, 20px);
+  padding: clamp(18px, 2.5vw, 32px) 0 clamp(22px, 3vw, 38px);
+  text-align: center;
 }
-@media (min-width: 780px) {
-  .bredesign .bd-stats-in {
-    grid-template-columns: repeat(4, 1fr);
-  }
+.bredesign .bd-stat {
+  min-width: 0;
 }
 .bredesign .bd-stat-value {
   display: block;
   font-family: var(--bd-display);
   font-style: italic;
   font-weight: 800;
-  font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+  font-size: clamp(10.5px, 3.5vw, 2.5rem);
   line-height: 1;
   letter-spacing: -0.02em;
   color: var(--bd-paper);
@@ -310,12 +309,26 @@
 }
 .bredesign .bd-stat-label {
   display: block;
-  margin-top: 10px;
-  font-size: 9.5px;
+  margin-top: 7px;
+  font-size: clamp(7px, 0.9vw, 10px);
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--bd-ink-3);
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .bredesign .bd-stat-label {
+    font-size: clamp(7px, 1.9vw, 9px);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+}
+@media (max-width: 350px) {
+  .bredesign .bd-stat-label {
+    white-space: normal;
+    line-height: 1.2;
+  }
 }
 
 /* ==== Origin ============================================================= */
@@ -329,6 +342,7 @@
   container-type: inline-size;
   background: var(--bd-navy);
   --bd-origin-copy-offset: clamp(96px, 7cqw, 112px);
+  scroll-margin-top: 89px;
 }
 .bredesign .bd-origin-frame {
   position: relative;
@@ -387,27 +401,13 @@
   color: var(--bd-accent);
 }
 .bredesign .bd-origin-text {
-  display: grid;
-  gap: 26px;
-  margin-top: 30px;
-}
-.bredesign .bd-origin-lead {
   color: #fff;
-  font-size: clamp(20px, 1.65cqw, 25px);
-  font-weight: 700;
-  line-height: 1.48;
+  max-width: 110ch;
+  margin-top: clamp(10px, 1.2cqw, 18px);
+  font-size: clamp(16px, 1.4cqw, 20px);
+  font-weight: 600;
+  line-height: 1.45;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
-}
-.bredesign .bd-origin-body {
-  color: rgba(255, 255, 255, 0.88);
-  font-size: clamp(17px, 1.35cqw, 20px);
-  line-height: 1.7;
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
-}
-@container (max-width: 980px) {
-  .bredesign .bd-origin-text {
-    gap: 16px;
-  }
 }
 /* Desktop: the section turns white to continue the photo's own white sky.
    The title and story sit in navy ink first, and the storefront, cropped just
@@ -419,7 +419,7 @@
     background: #fff;
     display: flex;
     flex-direction: column;
-    padding: clamp(72px, 6cqw, 104px) 0 0;
+    padding: clamp(16px, 2cqw, 30px) 0 0;
   }
   .bredesign .bd-origin-frame::before {
     content: none;
@@ -427,7 +427,7 @@
   .bredesign .bd-origin-picture {
     display: block;
     order: 2;
-    margin-top: clamp(24px, 3cqw, 48px);
+    margin-top: clamp(20px, 2cqw, 28px);
   }
   .bredesign .bd-origin-photo {
     position: static;
@@ -436,6 +436,7 @@
   }
   .bredesign .bd-origin-eyebrow {
     color: var(--bd-blue-mid);
+    margin-bottom: 8px;
   }
   .bredesign .bd-origin h2 {
     color: var(--bd-navy);
@@ -446,27 +447,13 @@
   .bredesign .bd-origin h2 em {
     color: var(--bd-blue-mid);
   }
-  .bredesign .bd-origin-lead {
+  .bredesign .bd-origin-text {
     color: var(--bd-navy);
-  }
-  .bredesign .bd-origin-body {
-    color: rgba(2, 10, 49, 0.76);
   }
   .bredesign .bd-origin-eyebrow,
   .bredesign .bd-origin h2,
-  .bredesign .bd-origin-lead,
-  .bredesign .bd-origin-body {
+  .bredesign .bd-origin-text {
     text-shadow: none;
-  }
-  .bredesign .bd-origin-text {
-    margin-top: clamp(24px, 2.4cqw, 40px);
-  }
-}
-@container (min-width: 981px) {
-  .bredesign .bd-origin-text {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    gap: clamp(32px, 5cqw, 88px);
-    align-items: start;
   }
 }
 /* Phone: show the storefront as its own panel, then place the complete story
@@ -474,7 +461,7 @@
 @container (max-width: 640px) {
   .bredesign .bd-origin-frame {
     --bd-origin-mobile-photo-height: clamp(320px, 92cqw, 380px);
-    padding: calc(var(--bd-origin-mobile-photo-height) + 32px) 0 42px;
+    padding: calc(var(--bd-origin-mobile-photo-height) + 16px) 0 24px;
   }
   .bredesign .bd-origin-photo {
     inset: 0 0 auto;
@@ -491,21 +478,20 @@
     );
   }
   .bredesign .bd-origin h2 {
-    margin-top: 12px;
+    margin-top: 8px;
     font-size: 12cqw;
     line-height: 0.88;
   }
   .bredesign .bd-origin-text {
     max-width: none;
-    margin-top: 22px;
-    gap: 16px;
+    margin-top: 14px;
+    font-size: clamp(15px, 4cqw, 17px);
+    line-height: 1.48;
   }
-  .bredesign .bd-origin-lead {
-    font-size: 18px;
-    line-height: 1.5;
-  }
-  .bredesign .bd-origin-body {
-    font-size: 15px;
+}
+@media (max-width: 500px) {
+  .bredesign .bd-origin {
+    scroll-margin-top: 77px;
   }
 }
 /* Anything on the page that is not yet signed off says so, rather than
@@ -530,6 +516,11 @@
 .bredesign .bd-services h2 em {
   font-style: italic;
   color: var(--bd-accent);
+}
+@media (max-width: 350px) {
+  .bredesign .bd-services .bd-head h2 {
+    font-size: 27px;
+  }
 }
 .bredesign .bd-service-grid {
   display: grid;
