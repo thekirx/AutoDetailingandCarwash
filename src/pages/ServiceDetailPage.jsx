@@ -87,14 +87,21 @@ function WashServiceRail() {
 }
 
 function WashReviews() {
+  const rail = useLoopRail(WASH_REVIEWS.length)
   return (
     <section className="bd-service-reviews"><div className="bd-shell">
-      <p className="bd-eyebrow">Google reviews</p><h2>What customers say about the clean.</h2>
-      <div className="bd-service-review-grid">{WASH_REVIEWS.map((review) => (
-        <a key={review.name} data-service-review href={review.href} target="_blank" rel="noreferrer noopener">
-          <span>★★★★★</span><blockquote>“{review.quote}”</blockquote><strong>{review.name}</strong><small>{review.branch} branch · Google review ↗</small>
-        </a>
-      ))}</div>
+      <div className="bd-service-reviews-head">
+        <div><p className="bd-eyebrow">Google reviews</p><h2>What customers say about the clean.</h2></div>
+        <LoopArrows rail={rail} label="review" />
+      </div>
+      <div className="bd-service-review-rail" ref={rail.trackRef} data-wash-review-rail data-looping="true" role="region" aria-label="Customer reviews">
+        {loopSlides(WASH_REVIEWS, rail.copies).map(({ item: review, copy, key }) => (
+          <a key={key} data-service-review={copy ? undefined : ''} href={review.href} target="_blank" rel="noreferrer noopener" aria-hidden={copy || undefined} tabIndex={copy ? -1 : undefined}>
+            <span aria-hidden="true">★★★★★</span><blockquote>“{review.quote}”</blockquote><strong>{review.name}</strong><small>{review.branch} branch · Google review ↗</small>
+          </a>
+        ))}
+      </div>
+      <LoopBar rail={rail} />
     </div></section>
   )
 }

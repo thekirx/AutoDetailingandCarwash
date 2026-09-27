@@ -172,6 +172,8 @@ describe('BreDESIGN public page fallbacks', () => {
       services: [...document.querySelectorAll('[data-wash-service-card] h2, [data-wash-service-card] h3')]
         .map((item) => item.textContent.trim()),
       reviews: [...document.querySelectorAll('[data-service-review]')].map((item) => item.textContent),
+      reviewRail: document.querySelector('[data-wash-review-rail]')?.getAttribute('data-looping'),
+      reviewCopies: document.querySelector('[data-wash-review-rail]')?.children.length,
       dialog: Boolean(document.querySelector('[data-wash-modal]')),
       actions: [...document.querySelectorAll('[data-wash-service-card] a')].map((link) => new URL(link.href).pathname),
       /* Scoped past the site header: its Book now button belongs to every
@@ -210,12 +212,52 @@ describe('BreDESIGN public page fallbacks', () => {
     assert.equal(result.bookLinks, 0)
     assert.equal(result.headerBookLinks, 1)
     assert.ok(result.reviews.some((review) => /Paul Russel Sandoval/.test(review)))
+    assert.equal(result.reviewRail, 'true')
+    assert.ok(result.reviewCopies > result.reviews.length)
     assert.ok(result.reviews.every((review) => /wash|clean|buffing/i.test(review)))
     assert.ok(result.reviews.every((review) => !/ceramic coating/i.test(review)))
     assert.equal(result.galleryPages, 2)
     assert.equal(new Set(result.galleryPhotos).size, 8)
     assert.equal(result.galleryUsesHomeRail, true)
     assert.equal(result.mobileComingSoon, 'Coming soon')
+  })
+
+  it('wraps wash reviews in both directions without page overflow', async () => {
+    for (const width of [1440, 390]) {
+      await page.setViewport({ width, height: 900 })
+      await page.goto(`${PREVIEW_ORIGIN}/services/wash-detailing`, { waitUntil: 'networkidle0' })
+      const leadingReview = () => page.evaluate(() => {
+        const rail = document.querySelector('[data-wash-review-rail]')
+        const left = rail.getBoundingClientRect().left
+        return [...rail.children].reduce((closest, card) =>
+          Math.abs(card.getBoundingClientRect().left - left) < Math.abs(closest.getBoundingClientRect().left - left) ? card : closest,
+        ).querySelector('strong').textContent
+      })
+
+      assert.equal(await leadingReview(), 'Marryel Joan Macaraig')
+      await page.click('button[aria-label="Previous review"]')
+      await page.waitForFunction(() => {
+        const rail = document.querySelector('[data-wash-review-rail]')
+        const left = rail.getBoundingClientRect().left
+        const first = [...rail.children].reduce((closest, card) =>
+          Math.abs(card.getBoundingClientRect().left - left) < Math.abs(closest.getBoundingClientRect().left - left) ? card : closest,
+        )
+        return first.querySelector('strong').textContent === 'Ailyn De Leon'
+      })
+      assert.equal(await leadingReview(), 'Ailyn De Leon', `previous review does not wrap at ${width}px`)
+      await page.click('button[aria-label="Next review"]')
+      await page.waitForFunction(() => {
+        const rail = document.querySelector('[data-wash-review-rail]')
+        const left = rail.getBoundingClientRect().left
+        const first = [...rail.children].reduce((closest, card) =>
+          Math.abs(card.getBoundingClientRect().left - left) < Math.abs(closest.getBoundingClientRect().left - left) ? card : closest,
+        )
+        return first.querySelector('strong').textContent === 'Marryel Joan Macaraig'
+      })
+      assert.equal(await leadingReview(), 'Marryel Joan Macaraig', `next review does not wrap at ${width}px`)
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+    }
+    await page.setViewport({ width: 1440, height: 900 })
   })
 
   it('labels tint benefits and pulses both ceramic warranty messages', async () => {
