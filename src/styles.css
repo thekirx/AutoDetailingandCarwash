@@ -83,7 +83,8 @@ button { cursor: pointer; }
 .header-inner { height:88px; display:flex; align-items:center; justify-content:space-between; gap:28px; }
 .wordmark { display:block; width:124px; height:70px; overflow:hidden; flex:0 0 auto; color:inherit; text-decoration:none; }
 .wordmark-image { display:block; width:100%; height:100%; object-fit:contain; transform:scale(1.4); }
-.desktop-nav { display:flex; gap:clamp(20px,2.8vw,60px); margin-left:auto; }
+/* Link spacing grows with the screen: ~44px at 1101px (the narrowest desktop bar, where it must still clear the account buttons), 88px at 1440px, capped at 128px on very wide screens. */
+.desktop-nav { display:flex; gap:clamp(40px,calc(13vw - 99px),128px); margin-left:auto; }
 .desktop-nav a { color:rgba(255,255,255,.78); text-decoration:none; text-transform:uppercase; letter-spacing:.12em; font-size:11px; font-weight:700; white-space:nowrap; }
 .desktop-nav a:hover,.desktop-nav a.active { color:#fff; }
 .header-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
@@ -1982,6 +1983,204 @@ button.header-auth:focus-visible,.menu-button:focus-visible { outline:2px solid 
   .lq-board-customer .lq-stat { padding: 0.65rem 0.35rem; text-align: center; }
   .lq-board-customer .lq-stat-label { font-size: 0.53rem; letter-spacing: 0.04em; }
   .lq-board-customer .lq-stat-num { font-size: 1.9rem; }
+}
+
+/* Customer board, status first: one plain answer ("Short line right now."),
+   a busy meter, the three stages with what each one means, then contact.
+   Every size is tied to the window's height as well as its width, so the
+   whole board fits on one screen from a short laptop to a phone. */
+.lq-board-customer .lq-board-hero {
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+}
+.lq-board-customer .lq-board-media::after {
+  background:
+    linear-gradient(90deg, rgba(2, 7, 25, 0.96) 0%, rgba(2, 7, 25, 0.82) 45%, rgba(2, 7, 25, 0.3) 100%),
+    linear-gradient(0deg, rgba(2, 10, 49, 0.7), transparent 60%);
+}
+.lq-board-customer .lq-status {
+  max-width: 56rem;
+  padding: clamp(1rem, 4vh, 3rem) clamp(1.1rem, 4vw, 3rem) clamp(0.75rem, 2.4vh, 1.75rem);
+}
+.lq-board-customer .lq-board-title {
+  font-size: clamp(1.9rem, min(6.4vw, 8.2vh), 4.75rem);
+  line-height: 0.95;
+}
+.lq-status-detail {
+  margin: clamp(0.4rem, 1.4vh, 0.9rem) 0 0;
+  max-width: 42ch;
+  color: #fff;
+  font-size: clamp(0.95rem, min(1.8vw, 2.4vh), 1.25rem);
+  line-height: 1.4;
+}
+.lq-meter {
+  max-width: 24rem;
+  margin-top: clamp(0.6rem, 2vh, 1.25rem);
+  color: #5bd48f;
+}
+.lq-meter-moderate { color: #f2b84b; }
+.lq-meter-busy { color: #f87171; }
+.lq-meter-track {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.lq-meter-track i {
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(157, 180, 255, 0.2);
+}
+.lq-meter-track i.is-on { background: currentColor; }
+.lq-meter-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+  font-family: var(--font-public-body);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-public-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(241, 241, 241, 0.6);
+}
+.lq-meter-scale strong { color: currentColor; }
+.lq-board-customer .lq-status .lq-board-nav { margin-top: clamp(0.2rem, 1vh, 0.6rem); }
+
+.lq-board-customer .lq-stages {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: clamp(0.75rem, 2vh, 1.25rem);
+}
+.lq-board-customer .lq-stages .lq-stat-sub {
+  margin-top: 0.35rem;
+  font-size: clamp(0.75rem, min(1.2vw, 1.8vh), 0.875rem);
+  line-height: 1.35;
+}
+
+.lq-contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem 1.5rem;
+  margin-top: clamp(0.75rem, 2vh, 1.25rem);
+  padding: clamp(0.85rem, 2.2vh, 1.35rem) clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid rgba(157, 180, 255, 0.18);
+  background: rgba(2, 7, 25, 0.55);
+}
+.lq-contact-branch {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.lq-contact-branch strong {
+  font-family: var(--font-public-body);
+  font-size: 1rem;
+  font-weight: 700;
+}
+.lq-contact-branch span {
+  color: rgba(241, 241, 241, 0.68);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.lq-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+.lq-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  color: #fff;
+  font-family: var(--font-public-body);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.lq-action:hover { background: rgba(255, 255, 255, 0.1); }
+.lq-action:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.lq-action-primary { background: #0a3ad6; border-color: #0a3ad6; }
+/* A flex item drops a leading space, so the gap before the longer wording is
+   a margin. */
+.lq-action-more { margin-left: 0.4em; }
+.lq-action-primary:hover { background: #1f4ff0; }
+.lq-contact-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: rgba(241, 241, 241, 0.55);
+  font-size: 0.8125rem;
+}
+@media (max-width: 760px) {
+  .lq-contact { grid-template-columns: 1fr; }
+  .lq-contact-actions { justify-content: stretch; }
+  .lq-action { flex: 1 1 auto; }
+}
+/* Small phones: the three actions share one row as Book / Directions / Call;
+   the call button still dials the branch's number. */
+@media (max-width: 480px) {
+  .lq-action { padding: 0 0.8rem; }
+  .lq-action-more { display: none; }
+}
+@media (max-width: 560px) {
+  /* One header row on a phone: the phone shows the time already, so the
+     clock chip goes and the Live chip sits beside the logo. */
+  .lq-board-customer .lq-board-top { flex-wrap: nowrap; }
+  .lq-board-customer .lq-board-meta { width: auto; }
+  .lq-board-customer .lq-chip:not(.lq-chip-live) { display: none; }
+  .lq-board-customer .lq-chip-live { flex: none; min-width: 0; }
+  .lq-board-customer .lq-status { padding: 1rem 1.1rem 0.75rem; }
+  .lq-board-customer .lq-board-title { font-size: clamp(1.7rem, min(9vw, 6vh), 2.6rem); }
+  .lq-board-customer .lq-stages { gap: 0.4rem; }
+  .lq-board-customer .lq-stages .lq-stat { text-align: left; padding: 0.6rem 0.6rem 0.7rem; }
+  .lq-board-customer .lq-stages .lq-stat-label { font-size: 0.6rem; letter-spacing: 0.06em; }
+  .lq-board-customer .lq-stages .lq-stat-sub { font-size: 0.7rem; }
+  .lq-contact-branch span { font-size: 0.8125rem; }
+  .lq-contact-note { font-size: 0.75rem; }
+}
+/* Short windows (a laptop with the browser's bars, a phone on its side): the
+   stage notes give way first so the counts and contact stay on screen. */
+@media (max-height: 620px), (max-width: 560px) and (max-height: 700px) {
+  .lq-board-customer .lq-stages .lq-stat-sub,
+  .lq-contact-note { display: none; }
+  .lq-board-customer .lq-board-top .lq-chip { padding-block: 0.4rem; }
+  .lq-board-customer .lq-brand-mark { width: 60px; }
+}
+
+/* Very short windows (a phone on its side): everything tightens so the line,
+   the three counts and the contact buttons still share one screen. */
+@media (max-height: 460px) {
+  .lq-board-customer { padding-top: 0.5rem; }
+  .lq-board-customer .lq-chip:not(.lq-chip-live) { display: none; }
+  .lq-board-customer .lq-chip-live { padding: 0.35rem 0.75rem; }
+  .lq-board-customer .lq-chip-live .lq-chip-label { display: none; }
+  .lq-board-customer .lq-chip-live .lq-chip-value { margin-top: 0; }
+  .lq-board-customer .lq-brand-mark { width: 48px; }
+  .lq-board-customer .lq-board-hero { margin-top: 0.5rem; }
+  .lq-board-customer .lq-status { padding: 0.6rem 1.1rem 0.4rem; }
+  .lq-board-customer .lq-board-title { font-size: clamp(1.4rem, 7vh, 2.2rem); }
+  .lq-board-customer .lq-status .lq-text-link { min-height: 2rem; }
+  .lq-board-customer .lq-stages { margin-top: 0.5rem; }
+  .lq-board-customer .lq-stages .lq-stat { padding: 0.45rem 0.7rem; }
+  .lq-board-customer .lq-stat-num { font-size: 1.8rem; }
+  .lq-contact { margin-top: 0.5rem; padding: 0.6rem 1rem; grid-template-columns: minmax(0, 1fr) auto; }
+  .lq-contact-branch span { display: none; }
+  .lq-contact-actions .lq-action { flex: none; }
+  .lq-action-more { display: none; }
+  /* The headline already names the level; the bar alone carries it here. */
+  .lq-meter-scale { display: none; }
+}
+/* The narrowest phones: Book / Directions / Call still fit on one row. */
+@media (max-width: 360px) {
+  .lq-action { padding: 0 0.6rem; letter-spacing: 0.06em; font-size: 0.6875rem; }
+  .lq-contact-actions { gap: 0.4rem; }
 }
 
 /* ── Shop TV landscape board (public, no account) ── */
