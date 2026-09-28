@@ -35,7 +35,6 @@
 .capp-queue-personal { order: 1; }
 .capp-queue-counts { order: 2; }
 .capp-section[aria-label="Other branches"] { order: 3; }
-@media (min-width: 860px) { .capp-booking-summary { bottom: 1rem; } }
 @media (max-width: 380px) {
   .capp-service-photo { width: 3.25rem; height: 3.8rem; }
   .capp-booking-refined .capp-price { max-width: 6rem; font-size: .65rem; }
@@ -96,12 +95,20 @@
 @media (min-width: 860px) {
   .capp-account-home .capp-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .capp-account-home .capp-home-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .capp-account-home .capp-loyalty-home {
-    grid-template-columns: minmax(12rem, 1fr) minmax(0, 1.7fr);
-    align-items: center;
-    column-gap: 2rem;
+  /* Title, then the stamps, as on the phone. The card is as wide as the
+     page, so all fifteen stamps run in one row across it instead of a
+     phone-sized block of five left on one side. */
+  .capp-account-home .capp-loyalty-home .capp-stamps {
+    max-width: none;
+    grid-template-columns: repeat(15, minmax(0, 1fr));
+    gap: clamp(0.35rem, 0.9vw, 0.9rem);
   }
-  .capp-account-home .capp-loyalty-link { grid-column: 1 / -1; }
+  .capp-account-home .capp-loyalty-home .capp-stamp {
+    width: min(100%, 5.5rem);
+  }
+  .capp-account-home .capp-loyalty-home .capp-stamp-number {
+    font-size: clamp(0.58rem, 0.75vw, 0.8rem);
+  }
 }
 .capp-account-home .capp-loyalty-home .capp-stamp-gift {
   background: #020a31;

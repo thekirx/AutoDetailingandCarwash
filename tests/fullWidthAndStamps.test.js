@@ -19,7 +19,8 @@ describe('one fluid page width', () => {
   it('is used by both site containers and the account page', () => {
     assert.match(styles, /\.public-shell \{ width:var\(--site-shell\); margin-inline:auto; \}/)
     assert.match(bredesign, /--bd-shell: var\(--site-shell\);/)
-    assert.match(app, /width: var\(--site-shell, calc\(100% - 3rem\)\);/)
+    // The account app runs full width; its content sits on the site shell.
+    assert.match(app, /--capp-gutter: max\(1\.5rem, calc\(\(100% - var\(--site-shell, calc\(100% - 3rem\)\)\) \/ 2\)\);/)
     assert.doesNotMatch(bredesign, /--bd-shell: min\(/)
     assert.doesNotMatch(styles, /\.public-shell\{width:min\(100% - 32px,1240px\)\}/)
   })

@@ -1816,7 +1816,11 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   background: var(--capp-bg, #060c24);
 }
 
-/* ---------- Desktop / laptop: landing header + wide dark app (dock becomes an inline tab row) ---------- */
+/* ---------- Desktop / laptop: the phone app, under the landing header ----------
+   Same full-width photo header, same first card lifting over its seam, same
+   floating tab bar at the foot of the screen. Content runs on the site shell.
+   The landing header already carries the lockup, bell and account, so the
+   app header drops its own copies. */
 @media (min-width: 860px) {
   .account-route .account-web-header {
     display: block !important;
@@ -1829,73 +1833,54 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   }
 
   .capp {
+    --capp-gutter: max(1.5rem, calc((100% - var(--site-shell, calc(100% - 3rem))) / 2));
     min-height: auto;
   }
 
+  /* Fills the screen under the landing header, so a short page never ends
+     on the shell's navy. */
   .capp-stage {
-    width: var(--site-shell, calc(100% - 3rem));
-    margin: 0 auto;
-    min-height: auto;
-    padding: 1.25rem 0 3rem;
-    background: transparent;
+    min-height: calc(100svh - 88px - env(safe-area-inset-top, 0px));
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
   }
 
   .capp .account-dock,
   .capp-dock {
-    position: static;
-    order: -1;
-    width: min(34rem, 100%);
-    margin: 0 0 1rem;
-    transform: none;
-    box-shadow: none;
-    backdrop-filter: none;
-    background: var(--capp-surface);
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    width: min(32rem, calc(100% - 2rem));
   }
 
   .capp-dock-item {
-    flex-direction: row;
-    gap: 0.45rem;
-    min-height: 2.75rem;
-    font-size: 0.8rem;
+    min-height: 3.3rem;
+    font-size: 0.72rem;
   }
 
-  .capp-hero {
-    padding: 1.5rem 1.75rem 1.1rem;
-    border: 1px solid var(--capp-line);
-    border-radius: 1.5rem;
-    background:
-      radial-gradient(ellipse 70% 80% at 100% 0%, rgba(59, 123, 255, 0.28), transparent 60%),
-      var(--capp-surface);
+  .capp-hero,
+  .capp-top {
+    padding: 1.6rem var(--capp-gutter) 4.4rem;
   }
 
-  /* Landing header already carries the lockup on desktop web. */
-  .capp-brand {
+  .capp-top {
+    padding-top: 2.2rem;
+    padding-bottom: 3.8rem;
+  }
+
+  .capp-brand,
+  .capp-web-actions {
     display: none;
   }
 
   .capp-hero h1 {
-    font-size: clamp(1.8rem, 2.6vw, 2.2rem);
+    font-size: clamp(2.6rem, 4.2vw, 4rem);
   }
 
   .capp-hero-sub {
-    max-width: 46ch;
-    font-size: 0.95rem;
-  }
-
-  .capp-icon-row {
-    display: none !important;
-  }
-
-  .capp-web-actions {
-    display: flex;
-  }
-
-  .capp-top {
-    padding: 0.5rem 0.25rem 0.4rem;
+    max-width: 60ch;
+    font-size: 1.05rem;
   }
 
   .capp-top h1 {
-    font-size: 1.5rem;
+    font-size: clamp(1.9rem, 3vw, 2.6rem);
   }
 
   .capp-top p {
@@ -1903,7 +1888,7 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   }
 
   .capp-scroll {
-    padding: 1rem 0 0;
+    padding: 0.9rem var(--capp-gutter) 0.35rem;
   }
 
   .capp-actions {
@@ -2288,10 +2273,8 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
    Both headers take it: .capp-hero on home, .capp-top on queue / book / blog.
    Without this the tab bar switches visual language between tabs.
 
-   Phone / PWA only. From 860px the app sits under the public landing header,
-   where .capp-hero is already its own card and .capp-top is nearly bare, so
-   the still would be undoing a layout rather than lifting one. */
-@media (max-width: 859px) {
+   Every width: desktop follows the phone (approved 2026-09-29). */
+@media all {
   .capp-hero,
   .capp-top {
     position: relative;
@@ -2429,11 +2412,15 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
    The structural move. Five cards of equal weight answer nothing; a waiting
    customer wants one thing, so the first card lifts over the header seam and
    nothing else competes with it. */
-@media (max-width: 859px) {
+.capp-scroll > :first-child {
+  position: relative;
+  z-index: 2;
+  margin-top: -2.1rem;
+}
+
+@media (min-width: 860px) {
   .capp-scroll > :first-child {
-    position: relative;
-    z-index: 2;
-    margin-top: -2.1rem;
+    margin-top: -2.4rem;
   }
 }
 
@@ -2516,53 +2503,4 @@ form.capp-section > .capp-sect > h2::before {
   text-transform: uppercase;
   letter-spacing: -0.005em;
   line-height: 1.12;
-}
-
-/* ---------- 9. The header on desktop web -------------------------------
-   Gating the still to phones left the desktop app looking untouched, which is
-   not what was approved — the point was that the app stops opening on a flat
-   rectangle. Desktop keeps its own shape: .capp-hero is a rounded card under
-   the public landing header, so the still fills the card rather than the top
-   of the screen, and .capp-top, which is a bare title row there, takes a rule
-   and the display face instead of a photograph it has no room for. */
-@media (min-width: 860px) {
-  .capp-hero {
-    color: #fff;
-    background:
-      linear-gradient(110deg, rgba(2, 10, 49, 0.92) 30%, rgba(2, 10, 49, 0.55)),
-      var(--capp-hero-still) 50% 40% / cover no-repeat,
-      #020a31;
-  }
-
-  .capp-hero .capp-greet,
-  .capp-hero .capp-hero-sub {
-    color: #d3dbf5;
-  }
-
-  .capp-hero .capp-weather {
-    color: #fff;
-  }
-
-  .capp-hero h1,
-  .capp-hero .capp-greet,
-  .capp-hero .capp-hero-sub,
-  .capp-hero .capp-weather {
-    text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
-  }
-
-  /* The title row carries the eyebrow rule instead, so the page still reads as
-     part of the same system without a photograph behind two lines of text. */
-  .capp-top-copy h1 {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-  }
-
-  .capp-top-copy h1::before {
-    content: '';
-    flex: none;
-    width: 1.5rem;
-    height: 3px;
-    background: var(--capp-accent);
-  }
 }

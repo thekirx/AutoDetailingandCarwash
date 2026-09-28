@@ -118,7 +118,7 @@ describe('customer app frame', () => {
     assert.match(publicCss, /\.public-header \.capp-inbox-badge[^}]*color:#052699/)
   })
 
-  it('ships dark app tokens, inline desktop tab row, landscape dock, safe areas, reduced motion', () => {
+  it('ships dark app tokens, floating desktop tab bar, landscape dock, safe areas, reduced motion', () => {
     const css = read('src/styles-customer-app.css')
     const tokens = read('src/design-tokens.css')
     assert.match(tokens, /--capp-navy:\s*var\(--color-brand-primary\)/)
@@ -127,7 +127,8 @@ describe('customer app frame', () => {
     assert.match(css, /--capp-accent:/)
     assert.match(css, /min-width: 860px/)
     assert.doesNotMatch(css, /width: min\(430px/)
-    assert.match(css, /min-width: 860px[\s\S]*\.capp-dock \{[\s\S]*position: static/)
+    // Desktop keeps the phone's floating tab bar at the foot of the screen.
+    assert.doesNotMatch(css, /\.capp-dock \{[^}]*position: static/)
     assert.match(css, /account-web-header/)
     assert.match(css, /orientation: landscape/)
     assert.match(css, /max-height: 520px/)
@@ -172,7 +173,7 @@ describe('customer app frame', () => {
     const home = read('src/pages/CustomerAccountPage.jsx')
     const css = read('src/styles-customer-app.css')
     assert.match(home, /capp-icon-row account-mobile-only/)
-    assert.match(css, /min-width: 860px[\s\S]*\.capp-icon-row[\s\S]*display:\s*none/)
+    assert.match(css, /min-width: 860px[\s\S]*\.capp \.account-mobile-only \{\s*display:\s*none/)
   })
 
   it('customer auth uses the dark app variant; ops login keeps the default shell', () => {
