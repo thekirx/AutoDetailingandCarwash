@@ -28,6 +28,7 @@ import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
 import { resolveFinanceTab } from '../src/lib/financeData.js'
 import { currentPostedPayoutMinor } from '../src/lib/payroll.js'
 import { canSwitchQueueFamily, queueFamilyForProfile, QUEUE_FAMILY_WASH } from '../src/lib/queueFamilies.js'
+import { SERVICES, WASH_SERVICES } from '../src/components/public/bredesign/content.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(root, p), 'utf8')
@@ -245,12 +246,20 @@ describe('ASA CRM and content follow grants', () => {
 })
 
 describe('Public catalog names match homepage', () => {
-  it('loads live inventory services on /services and PPF titles from ppfPackages', () => {
+  it('shows the three protection services followed by every wash service in a two-row rail', () => {
     const page = read('src/pages/PublicPages.jsx')
-    assert.match(page, /fetchPublicCatalogServices/)
-    assert.match(page, /buildPublicServiceOverview/)
-    assert.doesNotMatch(page, /Premium car wash/)
-    assert.doesNotMatch(page, /Essential gloss/)
+    assert.match(page, /import \{ SERVICES, WASH_SERVICES \}/)
+    assert.match(page, /useLoopRail\(SERVICE_COLUMNS\.length\)/)
+    assert.match(page, /if \(index % 2 === 0\) columns\.push\(\[\]\)/)
+    const items = [...SERVICES.filter((item) => item.to !== '/services/wash-detailing'), ...WASH_SERVICES]
+    assert.equal(items.length, 14)
+    assert.deepEqual(items.slice(0, 3).map((item) => item.title), [
+      'Paint Protection Film', 'Ceramic Coating', 'Nano Ceramic Tint',
+    ])
+    assert.equal(items.some((item) => item.title === 'Premium Wash & Detailing'), false)
+    assert.equal(items[8].id, 'full-exterior-detailing')
+    assert.match(items[8].image, /full-exterior-detailing\.webp$/)
+    assert.equal(items[13].id, 'mobile-detailing')
     const catalog = read('src/lib/publicCatalog.js')
     assert.match(catalog, /from\('services'\)/)
     assert.match(catalog, /PPF_PACKAGES/)

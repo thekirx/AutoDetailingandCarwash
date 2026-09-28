@@ -14,6 +14,7 @@ export const WASH_CARD_SERVICE_SLUG = {
   'glass-detailing': 'glass-detailing',
   'interior-detailing': 'interior-detailing',
   'engine-wash': 'engine-wash',
+  'full-exterior-detailing': 'full-exterior-detailing',
 }
 
 let pending = null

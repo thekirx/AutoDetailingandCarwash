@@ -3627,6 +3627,7 @@
 .bredesign .bd-service-reviews { padding: clamp(72px, 9vw, 128px) 0; background: var(--bd-navy); }
 .bredesign .bd-wash-services-head { display:flex; align-items:end; justify-content:space-between; gap:24px; }
 .bredesign .bd-wash-services h2,
+.bredesign .bd-services-head h2,
 .bredesign .bd-service-reviews h2 { margin-top:14px; font-size:clamp(2rem, 4.6vw, 4rem); line-height:.95; }
 .bredesign .bd-wash-service-rail { --slide: clamp(270px, 29vw, 390px); display:grid; grid-auto-flow:column; grid-auto-columns:var(--slide); gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; margin-top:40px; }
 .bredesign .bd-wash-service-card { position:relative; overflow:hidden; scroll-snap-align:start; border:1px solid var(--bd-rule); border-radius:14px; background:var(--bd-navy-2); }
@@ -4325,4 +4326,68 @@
     border-radius: 34px;
     padding: 42px 14px 16px;
   }
+}
+
+/* /services: one two-row carousel. Each column stacks two cards; the columns
+   slide together and wrap (useLoopRail). */
+.bredesign .bd-services-head { display:flex; align-items:end; justify-content:space-between; gap:24px; }
+.bredesign .bd-services-rail {
+  --col: clamp(260px, 27vw, 420px);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--col);
+  gap: 16px;
+  margin-top: clamp(24px, 3vw, 40px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.bredesign .bd-services-rail::-webkit-scrollbar { display: none; }
+.bredesign .bd-services-col {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 16px;
+  scroll-snap-align: start;
+}
+.bredesign .bd-services-col .bd-card { min-height: clamp(280px, 24vw, 360px); }
+.bredesign .bd-services-col .bd-card.is-soon { cursor: default; }
+.bredesign .bd-services-col .bd-card.is-soon:hover { transform: none; border-color: var(--bd-rule); }
+.bredesign .bd-services-soon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: var(--bd-paper);
+  color: var(--bd-navy);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.bredesign .bd-card-body p.bd-services-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--bd-paper);
+  font-family: var(--bd-display);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1;
+}
+.bredesign .bd-services-price span {
+  font-family: var(--bd-body);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bd-ink-3);
+}
+@media (max-width: 620px) {
+  .bredesign .bd-services-head { align-items: start; flex-direction: column; }
+  .bredesign .bd-services-rail { --col: 82%; }
 }

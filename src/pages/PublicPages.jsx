@@ -4,42 +4,15 @@ import { Link } from 'react-router-dom'
 import { usePublicBranches, branchCityName, branchLabel, fetchPublicBranchHours } from '../lib/branches'
 import { MAIN_LINE, branchDirections, branchPhone, buildHomeBranchCards } from '../lib/homeBranches'
 import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
-import {
-  buildPublicServiceOverview,
-  fetchPublicCatalogServices,
-  marketingKeyForServiceSlug,
-  publicServiceDestination,
-} from '../lib/publicCatalog'
+import { SERVICES, WASH_SERVICES } from '../components/public/bredesign/content'
+import { useLoopRail, loopSlides } from '../components/public/bredesign/useLoopRail'
+import { LoopArrows, LoopBar } from '../components/public/bredesign/LoopRail'
+import { formatStartingPrice, useStartingPrices, WASH_CARD_SERVICE_SLUG } from '../lib/serviceStartingPrices'
 import { usePageMeta } from '../lib/pageMeta'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import { ContactChannels, ContactCollab, ContactSocials } from './ContactPage'
 import useReveal from '../components/public/bredesign/useReveal'
 
-// Photos are looked up by the service's canonical marketing key so a card
-// without artwork simply falls back to the icon.
-const serviceImages = import.meta.glob('../assets/services/*.{webp,jpg,jpeg,png}', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-})
-// Accepts one filename or a preference list; the first file present wins.
-const serviceImage = (files) =>
-  [files].flat().reduce((hit, file) => hit ?? serviceImages[`../assets/services/${file}`], undefined)
-
-// Live catalog keys that have artwork; a key with no entry renders the icon.
-const SERVICE_PHOTOS = {
-  carwash: 'carwash.webp',
-  'interior-detailing': 'interior-detailing.webp',
-  'paint-correction': 'paint-correction.webp',
-  'ceramic-coating': 'ceramic.webp',
-  'ceramic-tint': 'ceramic-tint.webp',
-  'paint-protection-film': 'paint-protection-film.webp',
-  detailing: 'detailing.webp',
-  'glass-detailing': 'glass-detailing.webp',
-  'engine-wash': 'engine-wash.webp',
-}
-
-const photoForService = (slug) => serviceImage(SERVICE_PHOTOS[marketingKeyForServiceSlug(slug)] || [])
 
 const FALLBACK_VISIBLE_BRANCHES = buildHomeBranchCards([]).map((branch) => ({
   ...branch,
@@ -47,41 +20,67 @@ const FALLBACK_VISIBLE_BRANCHES = buildHomeBranchCards([]).map((branch) => ({
   is_active: !branch.isComingSoon,
 }))
 
+/* /services: the three protection services first (each opening its own page),
+   then every wash & detailing service by name. The home page's "Premium Wash &
+   Detailing" card is left out here: it only groups the wash services, which are
+   all listed individually, so it would repeat them. One two-row carousel: each
+   column holds a card on top and one below, and the arrows slide both rows. */
+const SERVICE_ITEMS = [
+  ...SERVICES.filter((item) => item.to !== '/services/wash-detailing').map((item) => ({
+    ...item,
+    key: item.to,
+    kind: 'main',
+    available: true,
+  })),
+  ...WASH_SERVICES.map((item) => ({ ...item, key: item.id, kind: 'wash' })),
+]
+
+const SERVICE_COLUMNS = SERVICE_ITEMS.reduce((columns, item, index) => {
+  if (index % 2 === 0) columns.push([])
+  columns[columns.length - 1].push({ ...item, number: String(index + 1).padStart(2, '0') })
+  return columns
+}, [])
+
+function ServiceRailCard({ item, price, hidden }) {
+  const body = (
+    <>
+      {item.image ? <img src={item.image} alt={hidden ? '' : item.alt} loading="lazy" decoding="async" /> : null}
+      <span className="bd-card-num" aria-hidden="true">{item.number}</span>
+      {item.available ? null : <span className="bd-services-soon">Coming soon</span>}
+      <div className="bd-card-body">
+        <h2>{item.title}</h2>
+        <p>{item.copy}</p>
+        {price ? (
+          <p className="bd-services-price">
+            <span>Starts at</span> {formatStartingPrice(price)}
+          </p>
+        ) : null}
+        <span className="bd-card-go">
+          {item.kind === 'main' ? 'Explore this service' : item.available ? 'View live queue' : 'Coming soon'}
+          {item.available ? <ArrowRight size={14} aria-hidden="true" /> : null}
+        </span>
+      </div>
+    </>
+  )
+  const className = `bd-card${item.image ? '' : ' is-plain'}`
+  if (!item.available) return <div className={`${className} is-soon`}>{body}</div>
+  return (
+    <Link className={className} to={item.kind === 'main' ? item.to : '/queue'} tabIndex={hidden ? -1 : undefined}>
+      {body}
+    </Link>
+  )
+}
+
 export function ServicesPage() {
-  const [serviceItems, setServiceItems] = useState(() => buildPublicServiceOverview([]))
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
+  const rail = useLoopRail(SERVICE_COLUMNS.length)
+  const prices = useStartingPrices()
 
   usePageMeta({
     title: 'Services',
     description:
-      'Every service Hakum Auto Care offers, straight from the live catalog — the same menu you see when you book at the bay.',
+      'Paint protection film, ceramic coating, nano ceramic tint, and every Hakum wash and detailing service in one place.',
     path: '/services',
   })
-
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setLoadError('')
-    fetchPublicCatalogServices()
-      .then((rows) => {
-        if (cancelled) return
-        setServiceItems(buildPublicServiceOverview(rows))
-      })
-      .catch(() => {
-        if (cancelled) return
-        // Marketing pages keep their approved catalog when the live inventory
-        // is temporarily unreachable. Booking still validates against live data.
-        setLoadError('')
-        setServiceItems(buildPublicServiceOverview([]))
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useReveal()
 
@@ -96,65 +95,34 @@ export function ServicesPage() {
             <em>every pass.</em>
           </>
         }
-        copy="Every service we run, read straight from the live catalog — the same menu you see when you book, and when you check out at the bay."
+        copy="Paint protection, coating and tint first, then every wash and detailing service we run at the bay."
       />
-      <section id="catalog">
+      <section id="catalog" aria-labelledby="catalog-title">
         <div className="bd-shell">
-          <p className="bd-catalog-note">
-            Names and order come from the live catalog. Where a service has a written description it is
-            shown; otherwise the inventory description is used.
-          </p>
-
-          {loadError ? (
-            <p className="bd-state is-error" role="alert">
-              {loadError}
-            </p>
-          ) : null}
-
-          {loading && !serviceItems.length ? (
-            <p className="bd-state">Loading services…</p>
-          ) : (
-            <div className="bd-catalog bd-reveal">
-              {serviceItems.map((item, i) => {
-                const image = photoForService(item.slug)
-                const destination = publicServiceDestination(item)
-                const actionLabel = destination.to === '/queue'
-                  ? 'View live queue'
-                  : destination.to.startsWith('/services/')
-                    ? 'Explore this service'
-                    : 'Book this service'
-                return (
-                  <Link
-                    className={`bd-card${image ? '' : ' is-plain'}`}
-                    key={item.id || item.slug}
-                    to={destination.to}
-                    state={destination.state}
-                  >
-                    {image ? (
-                      <img src={image} alt={`${item.title} at Hakum Auto Care`} loading="lazy" decoding="async" />
-                    ) : null}
-                    <span className="bd-card-num" aria-hidden="true">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <div className="bd-card-body">
-                      <h2>{item.title}</h2>
-                      <p>{item.copy}</p>
-                      <span className="bd-card-go">
-                        {actionLabel} <ArrowRight size={14} aria-hidden="true" />
-                      </span>
-                    </div>
-                  </Link>
-                )
-              })}
+          <div className="bd-services-head">
+            <div>
+              <p className="bd-eyebrow">All services</p>
+              <h2 id="catalog-title">Choose the care your car needs.</h2>
             </div>
-          )}
-
-          {!loading && !serviceItems.length && !loadError ? (
-            <p className="bd-state">No active services are listed yet.</p>
-          ) : null}
+            <LoopArrows rail={rail} label="services" />
+          </div>
+          <div className="bd-services-rail" ref={rail.trackRef} data-looping="true" role="region" aria-label="Services">
+            {loopSlides(SERVICE_COLUMNS, rail.copies).map(({ item: column, copy, key }) => (
+              <div className="bd-services-col" key={key} aria-hidden={copy || undefined}>
+                {column.map((item) => (
+                  <ServiceRailCard
+                    key={item.key}
+                    item={item}
+                    hidden={copy}
+                    price={item.kind === 'wash' ? prices[WASH_CARD_SERVICE_SLUG[item.id]] : null}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+          <LoopBar rail={rail} />
         </div>
       </section>
-
     </>
   )
 }
