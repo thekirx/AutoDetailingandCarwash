@@ -20,7 +20,6 @@ const PartnershipsPage = lazy(() => import('./pages/PartnershipsPage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
 const EventSharePage = lazy(() => import('./pages/EventSharePage'))
-const BlogPage = lazy(() => import('./pages/BlogPage'))
 const BlogPostPage = lazy(() => import('./pages/BlogPostPage'))
 const CustomerBlogPage = lazy(() => import('./pages/CustomerBlogPage'))
 const CustomerEventsPage = lazy(() => import('./pages/CustomerEventsPage'))
@@ -137,7 +136,7 @@ export default function App() {
           <Route path="/complaints" element={<ComplaintsPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:slug" element={<EventSharePage />} />
-          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog" element={<Navigate to="/events#blog" replace />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/f/:slug" element={<PublicFormPage />} />
           <Route path="/terms" element={<TermsPage />} />

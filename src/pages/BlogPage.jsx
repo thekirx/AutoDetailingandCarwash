@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import useReveal from '../components/public/bredesign/useReveal'
 
-export default function BlogPage() {
+export function BlogListSection() {
   const [posts, setPosts] = useState([])
   const [error, setError] = useState('')
 
@@ -16,28 +16,19 @@ export default function BlogPage() {
       .eq('status', 'published')
       .order('published_at', { ascending: false })
       .then(({ data, error: e }) => {
-        if (e) setError(e.message)
+        if (e) setError('Stories are temporarily unavailable. Please check back soon.')
         setPosts(data || [])
       })
   }, [])
 
-  useReveal()
-
   return (
-    <>
-      <BdPageHero
-        eyebrow="From the bay"
-        title={
-          <>
-            Hakum
-            <br />
-            <em>Blog.</em>
-          </>
-        }
-        copy="Detailing craft, ceramic care, and branch stories — written for drivers who care how a finish ages."
-      />
-      <section id="posts">
-        <div className="bd-shell bd-catalog">
+      <section id="blog" className="bd-community-blog">
+        <div className="bd-shell">
+          <div className="bd-head bd-reveal">
+            <div><p className="bd-eyebrow">From the bay</p><h2 className="bd-skew">Latest stories.</h2></div>
+            <p>Detailing craft, ceramic care, and branch stories for drivers who care how a finish ages.</p>
+          </div>
+          <div className="bd-catalog">
           {error ? (
             <p className="bd-state is-error" role="alert">
               {error}
@@ -68,8 +59,22 @@ export default function BlogPage() {
               </div>
             </article>
           ))}
+          </div>
         </div>
       </section>
+  )
+}
+
+export default function BlogPage() {
+  useReveal()
+  return (
+    <>
+      <BdPageHero
+        eyebrow="From the bay"
+        title={<>Hakum<br /><em>Blog.</em></>}
+        copy="Detailing craft, ceramic care, and branch stories — written for drivers who care how a finish ages."
+      />
+      <BlogListSection />
     </>
   )
 }

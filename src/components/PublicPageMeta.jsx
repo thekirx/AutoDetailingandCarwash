@@ -14,7 +14,7 @@ const PAGE_META = {
   '/partnerships': { title: 'Brand Collabs', description: 'Collaborate with Hakum Auto Care on products, events, content, and distribution.' },
   '/contact': { title: 'Contact', description: 'Contact Hakum Auto Care for bookings, services, and branch questions.' },
   '/complaints': { title: 'Complaints', description: 'Submit a complaint or feedback to Hakum Auto Care.' },
-  '/events': { title: 'Events', description: 'Hakum Auto Care events and registrations.' },
+  '/events': { title: 'Events & Blog', description: 'Hakum Auto Care events, registrations, car care stories, and blog posts.' },
   '/terms': { title: 'Terms of Service', description: 'Terms of Service for Hakum Auto Care.' },
   '/privacy': { title: 'Privacy Policy', description: 'Privacy Policy for Hakum Auto Care.' },
   '/cookies': { title: 'Cookie Policy', description: 'Cookie Policy for Hakum Auto Care.' },

@@ -99,6 +99,17 @@ export default function ContactPage() {
         </Link>
       </div>
 
+      <div className="public-shell contact-collab">
+        <div>
+          <p className="bd-eyebrow">Work with Hakum</p>
+          <h2>Brand collaborations.</h2>
+          <p>Have a product, event, or content idea? Tell us what you have in mind.</p>
+        </div>
+        <Link className="bd-btn bd-btn-primary" to="/partnerships">
+          Explore brand collabs <ArrowUpRight size={17} aria-hidden="true" />
+        </Link>
+      </div>
+
       <div className="public-shell contact-split">
         <div className="contact-block">
           <h2 className="contact-block-title">Visit a branch</h2>

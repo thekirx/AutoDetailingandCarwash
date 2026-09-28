@@ -2,9 +2,7 @@ export const PUBLIC_NAV_ITEMS = [
   ['Main', '/home'],
   ['Services', '/services'],
   ['Branch', '/branches'],
-  ['Brand Collabs', '/partnerships'],
-  ['Events', '/events'],
-  ['Blog', '/blog'],
+  ['Events & Blog', '/events'],
   ['Live Queue', '/queue'],
   ['Contact', '/contact'],
 ]

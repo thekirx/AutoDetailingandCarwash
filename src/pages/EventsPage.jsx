@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 import { submitPublicInquiry } from '@/lib/publicInquiryApi'
 import FormLegalNotice from '@/components/FormLegalNotice'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import useReveal from '../components/public/bredesign/useReveal'
+import { BlogListSection } from './BlogPage'
 
 export default function EventsPage() {
+  const { hash } = useLocation()
   const [events, setEvents] = useState([])
   const [error, setError] = useState('')
   const [registerFor, setRegisterFor] = useState(null)
@@ -22,7 +24,7 @@ export default function EventsPage() {
       .eq('is_published', true)
       .order('starts_at')
       .then(({ data, error: e }) => {
-        if (e) setError(e.message)
+        if (e) setError('Events are temporarily unavailable. Please check back soon.')
         setEvents(data || [])
       })
   }, [])
@@ -58,22 +60,32 @@ export default function EventsPage() {
   }
 
   useReveal()
+  useEffect(() => {
+    if (hash !== '#blog') return undefined
+    const frame = requestAnimationFrame(() => document.getElementById('blog')?.scrollIntoView())
+    return () => cancelAnimationFrame(frame)
+  }, [hash])
 
   return (
     <>
       <BdPageHero
-        eyebrow="Community"
+        eyebrow="Community & stories"
         title={
           <>
             Events
             <br />
-            <em>&amp; meets.</em>
+            <em>&amp; blog.</em>
           </>
         }
-        copy="Promotions, branch days, and car meets from Hakum Auto Care."
+        copy="Explore Hakum events, car meets, detailing tips, and stories from the bay."
       />
-      <section id="events-list">
-        <div className="bd-shell bd-event-stack">
+      <section id="events-list" className="bd-community-events">
+        <div className="bd-shell">
+          <div className="bd-head bd-reveal">
+            <div><p className="bd-eyebrow">Community</p><h2 className="bd-skew">Events &amp; meets.</h2></div>
+            <p>Promotions, branch days, and car meets from Hakum Auto Care.</p>
+          </div>
+          <div className="bd-event-stack">
           {error ? (
             <p className="bd-state is-error" role="alert">
               {error}
@@ -126,6 +138,7 @@ export default function EventsPage() {
               </article>
             )
           })}
+          </div>
         </div>
         {registerFor && (
           <form onSubmit={register} className="public-shell booking-form" style={{ marginTop: 40, maxWidth: 480 }}>
@@ -146,12 +159,8 @@ export default function EventsPage() {
             <button type="button" className="dark-link" onClick={() => setRegisterFor(null)}>Cancel</button>
           </form>
         )}
-        <div className="public-shell" style={{ marginTop: 48 }}>
-          <Link className="dark-link" to="/blog">Blog</Link>
-          {' · '}
-          <Link className="dark-link" to="/">Back home</Link>
-        </div>
       </section>
+      <BlogListSection />
     </>
   )
 }

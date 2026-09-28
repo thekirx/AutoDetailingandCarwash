@@ -2522,6 +2522,10 @@
 
 /* ==== Events list ======================================================== */
 
+.bredesign .bd-community-events { background: var(--bd-navy); }
+.bredesign .bd-community-blog { background: var(--bd-navy-2); scroll-margin-top: 90px; }
+.bredesign .bd-community-blog .bd-post { background: var(--bd-navy); }
+
 .bredesign .bd-event-stack {
   display: grid;
   gap: 18px;
@@ -2738,6 +2742,24 @@
 }
 .bredesign .contact-branch:hover {
   border-color: var(--bd-accent);
+}
+.bredesign .contact-collab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 20px;
+  padding: clamp(24px, 3vw, 40px);
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  box-shadow: var(--bd-lit);
+}
+.bredesign .contact-collab h2 { margin-top: 12px; font-size: clamp(1.6rem, 3vw, 2.6rem); }
+.bredesign .contact-collab p:last-child { margin-top: 10px; font-size: 15px; line-height: 1.6; }
+.bredesign .contact-collab .bd-btn { flex: none; }
+@media (max-width: 680px) {
+  .bredesign .contact-collab { display: grid; }
+  .bredesign .contact-collab .bd-btn { justify-self: start; }
 }
 
 /* ==== Dark form vocabulary ==============================================

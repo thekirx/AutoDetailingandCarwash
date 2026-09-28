@@ -314,6 +314,7 @@ export default function PublicLayout() {
               <Mail />
               Contact form
             </Link>
+            <Link to="/partnerships">Brand collabs</Link>
             <Link to="/complaints">Submit a complaint</Link>
             <span>
               <MapPin />
