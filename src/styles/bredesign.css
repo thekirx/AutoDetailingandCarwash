@@ -81,9 +81,11 @@
   align-items: center;
   gap: 10px;
   font-family: var(--bd-body);
-  font-size: 10px;
+  /* Readable, not just decorative: at 10px with 0.19em tracking the labels
+     were hard to make out, so they are larger with the tracking pulled in. */
+  font-size: clamp(12px, 0.95vw, 14px);
   font-weight: 800;
-  letter-spacing: 0.19em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--bd-accent);
 }
@@ -91,8 +93,8 @@
    starts without needing a divider across the whole page. */
 .bredesign .bd-eyebrow::before {
   content: '';
-  width: 22px;
-  height: 1px;
+  width: 28px;
+  height: 2px;
   background: currentColor;
   flex: none;
 }
