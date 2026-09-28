@@ -3505,6 +3505,10 @@
 .bredesign .bd-wash-service-card p { color:var(--bd-ink-2); font-size:14px; line-height:1.6; }
 .bredesign .bd-wash-service-card strong { color:#54df93; font-size:13px; }
 .bredesign .bd-wash-service-card .bd-btn { justify-self:start; margin-top:6px; }
+/* "Starts at ₱…", read live from the catalog: the label in the site's small
+   label style, the amount in the display face used for every other figure. */
+.bredesign .bd-wash-service-card p.bd-wash-price { display:flex; align-items:baseline; gap:8px; margin:0; color:var(--bd-paper); font-family:var(--bd-display); font-style:italic; font-weight:800; font-size:24px; line-height:1; letter-spacing:-0.01em; }
+.bredesign .bd-wash-service-card p.bd-wash-price span { font-family:var(--bd-body); font-style:normal; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--bd-ink-3); }
 .bredesign .bd-wash-unavailable { color:var(--bd-ink-3); font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
 .bredesign .bd-wash-service-card[data-package='mobile-detailing'] > img { filter:brightness(.48) saturate(.72); }
 .bredesign .bd-wash-coming-badge {

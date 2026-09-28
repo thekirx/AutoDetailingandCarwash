@@ -12,6 +12,7 @@ import { CeramicSection, PpfInformationSection } from '../components/public/home
 import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
 import { SERVICE_DETAIL_CONTENT } from '../data/serviceDetailContent'
 import { usePageMeta } from '../lib/pageMeta'
+import { WASH_CARD_SERVICE_SLUG, formatStartingPrice, useStartingPrices } from '../lib/serviceStartingPrices'
 
 /* The colour mark, not the monochrome one used in the logo marquee: this is a
    partner credit rather than a row in a wall of suppliers. */
@@ -62,6 +63,7 @@ const WASH_REVIEWS = [
 
 function WashServiceRail() {
   const rail = useLoopRail(WASH_SERVICES.length)
+  const prices = useStartingPrices()
   return (
     <section className="bd-wash-services" aria-labelledby="wash-services-title">
       <div className="bd-shell">
@@ -74,7 +76,14 @@ function WashServiceRail() {
             <article className="bd-wash-service-card" data-wash-service-card data-package={item.id} key={key} aria-hidden={copy || undefined}>
               {item.image ? <img src={item.image} alt={copy ? '' : item.alt} loading="lazy" /> : <div className="bd-wash-coming">Coming soon</div>}
               {!item.available ? <span className="bd-wash-coming-badge">Coming soon</span> : null}
-              <div><h3>{item.title}</h3><p>{item.copy}</p><strong>✓ {item.benefit}</strong>
+              <div><h3>{item.title}</h3><p>{item.copy}</p>
+                {/* Live from the catalog; a card with no priced service shows none. */}
+                {prices[WASH_CARD_SERVICE_SLUG[item.id]] ? (
+                  <p className="bd-wash-price">
+                    <span>Starts at</span> {formatStartingPrice(prices[WASH_CARD_SERVICE_SLUG[item.id]])}
+                  </p>
+                ) : null}
+                <strong>✓ {item.benefit}</strong>
                 {item.available ? <Link className="bd-btn bd-btn-primary" to="/queue">View live queue</Link> : <span className="bd-wash-unavailable">Coming soon</span>}
               </div>
             </article>
