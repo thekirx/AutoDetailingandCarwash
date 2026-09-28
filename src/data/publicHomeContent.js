@@ -98,7 +98,9 @@ export const featuredServices = [
 export const ceramicSection = {
   eyebrow: 'Ceramic Coating Packages',
   title: 'SHINE BEYOND LIMITS.',
-  copy: 'Choose the level of lasting gloss and paint protection that fits how you drive, park, and care for your vehicle.',
+  techTitle: 'Ceramic coating with a titanium hardening catalyst',
+  techCopy: 'To create a durable, glossy finish. It helps protect your car’s paint and makes everyday cleaning easier.',
+  copy:'Choose the level of lasting gloss and paint protection that fits how you drive, park, and care for your vehicle.',
 }
 
 export const ceramicPackages = [

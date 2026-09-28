@@ -288,10 +288,16 @@ function BranchSiteCard({ branch, hours = [] }) {
         </dd>
         <dt>Phone</dt>
         <dd>
-          <a className="bd-site-tel" href={phone.href}>
-            {phone.display}
-          </a>
-          {ownPhone ? null : <span className="bd-site-tel-note"> · main line</span>}
+          {comingSoon ? (
+            'Coming soon'
+          ) : (
+            <>
+              <a className="bd-site-tel" href={phone.href}>
+                {phone.display}
+              </a>
+              {ownPhone ? null : <span className="bd-site-tel-note"> · main line</span>}
+            </>
+          )}
         </dd>
       </dl>
 

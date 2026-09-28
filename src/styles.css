@@ -248,6 +248,11 @@ button.header-auth:focus-visible,.menu-button:focus-visible { outline:2px solid 
 .ceramic-intro>p { margin:0 0 24px; color:#052699; font-size:clamp(24px,2.05vw,34px); font-weight:700; letter-spacing:-.01em; line-height:1.2; }
 .ceramic-intro h2 { margin:0; color:#303030; font-family:var(--font-public-display); font-size:clamp(3rem,18cqi,6rem); font-weight:var(--font-weight-public-display); line-height:var(--leading-public-display); letter-spacing:var(--tracking-public-display); text-transform:uppercase; }
 .ceramic-intro h2 span { display:block; }
+/* What the coating is, straight under the headline: a label-style title in the
+   eyebrow blue, then one plain line. The package pitch follows below it. */
+.coating-section .ceramic-intro .ceramic-intro-tech { max-width:380px; margin:30px 0 0; color:#052699; font-family:var(--font-public-body); font-size:clamp(13px,0.95vw,15px); font-weight:800; letter-spacing:.1em; line-height:1.4; text-transform:uppercase; }
+.coating-section .ceramic-intro .ceramic-intro-tech-copy { max-width:380px; margin:10px 0 0; color:#303030; font-family:var(--font-public-body); font-weight:500; font-size:clamp(16px,1.15vw,18px); line-height:1.55; }
+.ceramic-intro .ceramic-intro-tech-copy + div { margin-top:22px; }
 .ceramic-intro>div { max-width:340px; margin-top:38px; color:#474747; font-family:var(--font-public-body); font-size:clamp(16px,1.15vw,18px); line-height:1.55; }
 .ceramic-package-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
 .ceramic-package-panel { position:relative; min-width:0; min-height:clamp(580px,45vw,720px); overflow:hidden; background:#020a31; }

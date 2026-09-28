@@ -1,12 +1,13 @@
-/* The shared line from the Contact page. A branch card shows it, labelled as
-   the main line, until that branch has a number of its own below. */
+/* The shared line from the Contact page. A branch card falls back to it,
+   labelled as the main line, only if a branch has no number of its own below. */
 export const MAIN_LINE = { display: '0915 629 6096', href: 'tel:+639156296096' }
 
-/* Each branch's own number, keyed by slug. Left null until the owner confirms
-   the number; a guessed number would send customers to a stranger. */
+/* Each branch's own number, keyed by slug, as confirmed by the owner. Bacoor
+   answers on the same line as the main number. A branch still to open shows
+   "Coming soon" instead of a number. */
 const BRANCH_PHONES = {
-  bacoor: null,
-  batangas: null,
+  bacoor: { display: '0915 629 6096', href: 'tel:+639156296096' },
+  batangas: { display: '0956 007 1028', href: 'tel:+639560071028' },
 }
 
 export function branchPhone(slug) {

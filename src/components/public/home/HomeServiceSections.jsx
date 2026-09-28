@@ -23,6 +23,8 @@ export function CeramicSection() {
         <div className="ceramic-intro" data-motion="heading">
           <p>{ceramicSection.eyebrow}</p>
           <h2>{ceramicSection.title.split(' ').map((word) => <span key={word}>{word}</span>)}</h2>
+          <h3 className="ceramic-intro-tech">{ceramicSection.techTitle}</h3>
+          <p className="ceramic-intro-tech-copy">{ceramicSection.techCopy}</p>
           <div>{ceramicSection.copy}</div>
         </div>
         <div className="ceramic-package-grid" data-motion="cards">
