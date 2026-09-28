@@ -2581,19 +2581,46 @@
   align-items: center;
   gap: 10px;
 }
-.bredesign .bd-site-map {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 10px;
+/* Directions: one button per maps app, under a hairline. */
+.bredesign .bd-site-directions {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--bd-rule);
+}
+.bredesign .bd-site-directions > p {
+  margin: 0 0 10px;
+  font-size: 9.5px;
   font-weight: 800;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: var(--bd-accent);
-  text-decoration: none;
+  color: var(--bd-ink-3);
 }
-.bredesign .bd-site-map:hover {
-  text-decoration: underline;
+.bredesign .bd-site-directions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.bredesign .bd-map-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid var(--bd-rule);
+  border-radius: 12px;
+  background: var(--bd-navy-3);
+  color: var(--bd-paper);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 140ms ease;
+}
+.bredesign .bd-map-btn:hover {
+  border-color: var(--bd-accent);
+}
+.bredesign .bd-map-btn:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 2px;
 }
 .bredesign .bd-site-tel {
   color: var(--bd-accent);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { usePublicBranches, branchCityName, branchLabel, fetchPublicBranchHours } from '../lib/branches'
 import { MAIN_LINE, branchPhone, buildHomeBranchCards } from '../lib/homeBranches'
@@ -166,7 +166,7 @@ export function BranchesPage() {
 
   usePageMeta({
     title: 'Branches',
-    description: 'Find Hakum Auto Care branches across Cavite and Batangas. Book a visit or open the live queue.',
+    description: 'Find Hakum Auto Care branches across Cavite and Batangas. Get directions, call, or open the live queue.',
     path: '/branches',
   })
 
@@ -205,10 +205,7 @@ export function BranchesPage() {
         copy={`Premium care across ${branchLabel(visibleBranches.length)}. Comfortable spaces, and teams who take pride in the details.`}
       >
         <nav className="bd-cta-row bd-page-hero-links" aria-label="Quick links">
-          <Link className="bd-btn bd-btn-primary" to="/book">
-            Book a service
-          </Link>
-          <Link className="bd-btn bd-btn-quiet" to="/queue">
+          <Link className="bd-btn bd-btn-primary" to="/queue">
             Live queue
           </Link>
         </nav>
@@ -255,12 +252,34 @@ export function BranchesPage() {
   )
 }
 
+function GoogleMapsMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path fill="#EA4335" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Z" />
+      <circle cx="12" cy="9" r="2.6" fill="#fff" />
+    </svg>
+  )
+}
+
+function WazeMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path fill="#33CCFF" d="M12 3C7 3 3.5 6.3 3.5 10.6c0 1.9.7 3.3 1.6 4.3-.4 1.3-1.3 2.2-2.1 2.6 1.6.6 3.5.3 4.6-.4 1.3.6 2.8.9 4.4.9 5 0 8.5-3.3 8.5-7.4S17 3 12 3Z" />
+      <circle cx="9" cy="10" r="1.1" fill="#fff" />
+      <circle cx="15" cy="10" r="1.1" fill="#fff" />
+      <circle cx="8" cy="20" r="1.8" fill="#fff" stroke="#33CCFF" strokeWidth="1.4" />
+      <circle cx="16" cy="20" r="1.8" fill="#fff" stroke="#33CCFF" strokeWidth="1.4" />
+    </svg>
+  )
+}
+
 function BranchSiteCard({ branch, hours = [] }) {
   const comingSoon = Boolean(branch.coming_soon)
-  const mapsUrl =
-    branch.latitude != null && branch.longitude != null
-      ? `https://www.openstreetmap.org/?mlat=${branch.latitude}&mlon=${branch.longitude}#map=16/${branch.latitude}/${branch.longitude}`
-      : null
+  const hasPin = branch.latitude != null && branch.longitude != null
+  const pin = hasPin ? `${branch.latitude},${branch.longitude}` : ''
+  // Both links hand off to the installed app on a phone.
+  const googleMapsUrl = hasPin ? `https://www.google.com/maps/search/?api=1&query=${pin}` : null
+  const wazeUrl = hasPin ? `https://waze.com/ul?ll=${pin}&navigate=yes` : null
   const summary = hours.length ? formatHoursSummary(hours) : null
   // openNowLabel reads the live hours, so the badge is a fact rather than a
   // static label; a branch with no hours on file says so instead of guessing.
@@ -308,10 +327,7 @@ function BranchSiteCard({ branch, hours = [] }) {
           </Link>
         ) : (
           <>
-            <Link className="bd-btn bd-btn-primary" to={`/book?branch=${encodeURIComponent(branch.slug)}`}>
-              Book a service at this branch
-            </Link>
-            <a className="bd-btn bd-btn-quiet" href={phone.href}>
+            <a className="bd-btn bd-btn-primary" href={phone.href}>
               Call branch
             </a>
             <Link className="bd-btn bd-btn-quiet" to={`/queue/${branch.slug}`}>
@@ -319,12 +335,25 @@ function BranchSiteCard({ branch, hours = [] }) {
             </Link>
           </>
         )}
-        {mapsUrl ? (
-          <a className="bd-site-map" href={mapsUrl} target="_blank" rel="noreferrer noopener">
-            Open in maps <ArrowUpRight size={13} aria-hidden="true" />
-          </a>
-        ) : null}
       </div>
+
+      {hasPin ? (
+        <div className="bd-site-directions">
+          <p>Get directions</p>
+          <div>
+            <a className="bd-map-btn" href={googleMapsUrl} target="_blank" rel="noreferrer noopener">
+              <GoogleMapsMark />
+              Google Maps
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+            <a className="bd-map-btn" href={wazeUrl} target="_blank" rel="noreferrer noopener">
+              <WazeMark />
+              Waze
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          </div>
+        </div>
+      ) : null}
     </article>
   )
 }
