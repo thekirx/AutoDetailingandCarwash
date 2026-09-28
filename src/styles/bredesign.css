@@ -589,28 +589,37 @@
     color: var(--bd-blue-mid);
     text-shadow: none;
   }
-  /* The copy stops being the positioning box, so the title can be placed
-     against the whole section, on the photo. */
+  /* The whole story (label, title, the two columns under it) sits on the foot
+     of the photo. A navy fade rises behind it from the bottom edge so the
+     paragraphs read on the road; the sign and roof above stay clear. */
   .bredesign .bd-origin-copy {
-    position: static;
-  }
-  /* A transform would make the copy the positioning box again, so on this
-     layout the reveal fades without the slide. */
-  .bredesign .bd-origin-copy.bd-reveal {
-    transform: none;
-  }
-  .bredesign .bd-origin h2 {
     position: absolute;
     z-index: 3;
-    left: 50%;
-    bottom: calc(15cqw - 30px);
-    width: var(--bd-shell);
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    margin: 0;
+    padding: clamp(90px, 9cqw, 160px) calc((100% - var(--bd-shell)) / 2) clamp(26px, 3cqw, 48px);
+    background: linear-gradient(
+      180deg,
+      rgba(2, 10, 49, 0) 0%,
+      rgba(2, 10, 49, 0.72) 32%,
+      rgba(2, 10, 49, 0.92) 100%
+    );
+  }
+  .bredesign .bd-origin-eyebrow {
+    color: var(--bd-accent);
+  }
+  .bredesign .bd-origin h2 {
     color: #fff;
-    text-shadow: 0 2px 6px rgba(2, 10, 49, 0.85), 0 6px 30px rgba(2, 10, 49, 0.85);
+    text-shadow: 0 2px 6px rgba(2, 10, 49, 0.6);
   }
   .bredesign .bd-origin h2 em {
     color: var(--bd-accent);
+  }
+  .bredesign .bd-origin-text {
+    color: rgba(255, 255, 255, 0.92);
   }
 }
 /* Phone: the photo is the panel at the top of the section, so the figures
