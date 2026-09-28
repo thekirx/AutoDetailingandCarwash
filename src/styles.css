@@ -1470,22 +1470,29 @@ button.header-auth:focus-visible,.menu-button:focus-visible { outline:2px solid 
   width: clamp(74px, 10vw, 92px);
   height: auto;
 }
+/* Set like the rest of the site: the name in the display face used for every
+   title (the branch name below it included), the tagline in the same small
+   label style as "Live queue". The old wide-tracked bold body type matched
+   nothing else on the page. */
 .lq-brand-copy {
   display: grid;
-  gap: 0.22rem;
-  font-family: var(--font-public-body);
+  gap: 0.3rem;
   text-transform: uppercase;
 }
 .lq-brand-copy strong {
-  font-size: clamp(1rem, 2vw, 1.35rem);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1;
+  font-family: var(--font-public-display);
+  font-style: italic;
+  font-weight: 800;
+  font-size: clamp(1.05rem, 2vw, 1.4rem);
+  letter-spacing: var(--tracking-public-display);
+  line-height: 0.9;
 }
 .lq-brand-copy small {
-  font-size: 0.54rem;
-  font-weight: 700;
-  letter-spacing: 0.3em;
+  font-family: var(--font-public-body);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-public-label);
+  letter-spacing: 0.2em;
+  color: rgba(241, 241, 241, 0.78);
 }
 .lq-board-meta {
   display: flex;
