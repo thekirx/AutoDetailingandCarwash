@@ -265,8 +265,8 @@
      just below the fold. */
   box-sizing: border-box;
   min-height: 100svh;
-  /* Across the bottom of the playing video: the paragraph with the buttons
-     under it on the left, the headline on the right. */
+  /* The headline in the upper right of the playing video; the paragraph
+     with the buttons under it at the bottom left. */
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: 1fr auto auto;
@@ -276,9 +276,8 @@
 }
 .bredesign .bd-hero h1 {
   grid-column: 2;
-  grid-row: 2 / span 2;
+  grid-row: 1;
   justify-self: end;
-  /* Its top lines up with the top of the paragraph on the left. */
   align-self: start;
   margin-top: 0;
   font-size: clamp(2.2rem, 5.6vw, 5.6rem);
@@ -293,14 +292,14 @@
   grid-column: 1;
   grid-row: 3;
   justify-self: start;
-  margin-top: clamp(20px, 2.2vw, 30px);
-  gap: 14px;
+  margin-top: clamp(18px, 2vw, 26px);
+  gap: 12px;
 }
-/* Larger than the site's standard button: these are the first thing to press. */
+/* A touch larger than the site's standard button, not a poster-sized one. */
 .bredesign .bd-hero-cta .bd-btn {
-  min-height: 56px;
-  padding: 0 34px;
-  font-size: 12px;
+  min-height: 48px;
+  padding: 0 26px;
+  font-size: 11px;
 }
 .bredesign .bd-hero-lede {
   grid-column: 1;
@@ -308,32 +307,35 @@
   margin: 0;
   max-width: 56ch;
   color: rgba(241, 241, 237, 0.9);
-  font-size: clamp(17px, 1.45vw, 21px);
-  line-height: 1.55;
+  font-size: clamp(15px, 1.15vw, 17px);
+  line-height: 1.6;
   text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
 }
-/* Phone: one column. The headline stays on the right, above the paragraph
-   and the buttons on the left. */
+/* Phone: one column. The headline sits at the top right, clear of the
+   portrait clip's Hakum mark in the middle of the frame; the paragraph and
+   buttons sit at the foot. */
 @media (max-width: 760px) {
   .bredesign .bd-hero-in {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 1fr auto auto auto;
-    row-gap: 20px;
+    grid-template-rows: 1fr auto auto;
+    row-gap: 16px;
   }
   .bredesign .bd-hero h1 {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
+    margin-top: 8px;
   }
   .bredesign .bd-hero-lede {
-    grid-row: 3;
+    grid-row: 2;
+    font-size: 15px;
   }
   .bredesign .bd-hero-cta {
-    grid-row: 4;
+    grid-row: 3;
     margin-top: 0;
   }
   .bredesign .bd-hero-cta .bd-btn {
-    min-height: 52px;
-    padding: 0 26px;
+    min-height: 46px;
+    padding: 0 22px;
   }
 }
 
@@ -596,11 +598,11 @@
   .bredesign .bd-origin-stats .bd-stat-value {
     color: var(--bd-navy);
     text-shadow: none;
-    font-size: clamp(30px, 4.5cqw, 66px);
+    font-size: clamp(28px, 4cqw, 58px);
   }
   .bredesign .bd-origin-stats .bd-stat-label {
     margin-top: 6px;
-    font-size: clamp(12px, 1.05cqw, 15px);
+    font-size: clamp(11.5px, 0.98cqw, 14px);
   }
   .bredesign .bd-origin-stats .bd-stat-label {
     color: var(--bd-blue-mid);
@@ -745,8 +747,23 @@
     padding-bottom: 6px;
   }
 }
-/* Wide screens: the description runs on one line beside the heading. Below
-   1400px there is not room for both, so it wraps as above. */
+/* Laptops and tablets (700–1399px): there is not room for the heading and
+   the description side by side, so the description takes its own line under
+   the heading, still one line, its size following the window so it never
+   wraps (about 12px at 700px, 15px from roughly 850px up). */
+@media (min-width: 700px) and (max-width: 1399px) {
+  .bredesign .bd-services .bd-head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .bredesign .bd-services .bd-head > p {
+    max-width: none;
+    white-space: nowrap;
+    font-size: min(15px, 1.76vw);
+    padding-bottom: 0;
+  }
+}
+/* Wide screens: the description runs on one line beside the heading. */
 @media (min-width: 1400px) {
   .bredesign .bd-services .bd-head {
     grid-template-columns: auto minmax(0, 1fr);

@@ -150,10 +150,13 @@ describe('BreDESIGN public page fallbacks', () => {
         /* Desktop is a white section: navy story first, then the storefront
            crop whole at its native 2000x858 shape closing the section. */
         assert.equal(layout.sectionBackground, 'rgb(255, 255, 255)', 'desktop story is not on white')
-        assert.equal(layout.titleColor, 'rgb(2, 10, 49)', 'desktop title is not navy ink')
+        /* Design B: the title sits in white on the storefront photo. */
+        assert.equal(layout.titleColor, 'rgb(255, 255, 255)', 'desktop title is not white on the photo')
         assert.match(layout.photoSrc, /hakum-story-storefront-crop/, 'desktop does not use the storefront crop')
         assert.ok(Math.abs(layout.photoHeight - (layout.photoWidth * 858) / 2000) <= 2, 'desktop photo is cropped')
-        assert.ok(layout.copyBottom <= layout.photoTop, `desktop story overlaps the photo at ${viewport.width}px`)
+        /* 20px of slack: the story fades in from 18px low, and may still be
+           on its way when this runs. */
+        assert.ok(layout.copyTop >= layout.photoTop && layout.copyBottom <= layout.photoBottom + 20, `desktop story is not on the photo at ${viewport.width}px`)
         assert.equal(layout.titleLines, 1, `desktop title wraps at ${viewport.width}px`)
         assert.equal(layout.titleOverflows, false, `desktop title is clipped at ${viewport.width}px`)
       } else {
