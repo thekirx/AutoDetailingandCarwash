@@ -236,7 +236,7 @@ test('PPF and Ceramic benefit cards keep the approved claims and use claim-speci
     'ceramic-tesla-application.jpg',
     'ceramic-tesla-gloss.jpg',
     'ceramic-tesla-finish.jpg',
-    'mg-poster.webp',
+    'ceramic-uv-chemical-resistance-byd.jpg',
   ])
   assert.deepEqual(SERVICE_POINT_CARDS.ppf.map((card) => fileName(card.image)), [
     'mini-cooper-poster.webp',
