@@ -377,8 +377,8 @@ export const SERVICE_POINT_CARDS = {
     {
       title: 'UV & chemical resistance',
       copy: 'Blocks UV fade and repels bird droppings, tree sap and acid rain.',
-      image: '/content/ceramic-uv-chemical-resistance.jpg',
-      alt: 'A Hakum technician applying ceramic coating to a white vehicle mirror',
+      image: '/content/ceramic-uv-chemical-resistance-byd.jpg',
+      alt: 'A white BYD in the Hakum Auto Care detailing bay',
     },
   ],
   tint: [
