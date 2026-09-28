@@ -123,7 +123,8 @@ describe('BreDESIGN public page fallbacks', () => {
         const header = document.querySelector('.public-header')?.getBoundingClientRect()
         const title = document.querySelector('.bd-origin h2')
         return {
-          storyParagraphs: document.querySelectorAll('.bd-origin-copy > .bd-origin-text').length,
+          storyParagraphs: document.querySelectorAll('.bd-origin-texts > .bd-origin-text').length,
+          storyColumns: new Set([...document.querySelectorAll('.bd-origin-text')].map((p) => Math.round(p.getBoundingClientRect().top))).size,
           photoWidth: photo.width,
           photoSrc: document.querySelector('.bd-origin-photo').currentSrc,
           sectionBackground: getComputedStyle(document.querySelector('.bd-origin-frame')).backgroundColor,
@@ -141,7 +142,9 @@ describe('BreDESIGN public page fallbacks', () => {
         }
       })
 
-      assert.equal(layout.storyParagraphs, 1, `story splits into blocks at ${viewport.width}px`)
+      assert.equal(layout.storyParagraphs, 2, `story is not two blocks at ${viewport.width}px`)
+      /* Side by side on desktop (one row), stacked on phone (two rows). */
+      assert.equal(layout.storyColumns, viewport.layout === 'plate' ? 1 : 2, `story columns wrong at ${viewport.width}px`)
 
       if (viewport.layout === 'plate') {
         /* Desktop is a white section: navy story first, then the storefront

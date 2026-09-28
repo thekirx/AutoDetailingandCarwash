@@ -497,7 +497,19 @@
   .bredesign .bd-origin-picture {
     display: block;
     order: 2;
-    margin-top: clamp(20px, 2cqw, 28px);
+    /* At least 20px: the story's reveal starts 18px low, and it must not
+       touch the photo while it slides in. */
+    margin-top: clamp(20px, 1.6cqw, 24px);
+  }
+  /* The story in two columns: half the height of one wide block, so the photo
+     comes up sooner and the white band shrinks. */
+  .bredesign .bd-origin-texts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(24px, 3.2cqw, 56px);
+  }
+  .bredesign .bd-origin-texts .bd-origin-text {
+    max-width: none;
   }
   .bredesign .bd-origin-photo {
     position: static;
@@ -530,7 +542,7 @@
      2000 x 858), above the bright road. */
   .bredesign .bd-origin-stats {
     top: auto;
-    bottom: calc(24.5cqw - 41px);
+    bottom: calc(17cqw - 41px);
   }
 }
 /* The figures float in front of the storefront photo: no band, no box, just
@@ -550,11 +562,15 @@
 }
 .bredesign .bd-origin-stats .bd-stat-value {
   color: #fff;
-  text-shadow: 0 2px 6px rgba(2, 10, 49, 0.75), 0 6px 28px rgba(2, 10, 49, 0.85);
+  text-shadow: 0 2px 4px rgba(2, 10, 49, 0.9), 0 4px 16px rgba(2, 10, 49, 0.9), 0 8px 36px rgba(2, 10, 49, 0.8);
 }
+/* The labels land on the red blur of the passing car: larger, heavier white
+   with a tight dark edge so every word stays legible on it. */
 .bredesign .bd-origin-stats .bd-stat-label {
   color: #fff;
-  text-shadow: 0 1px 4px rgba(2, 10, 49, 0.9), 0 2px 14px rgba(2, 10, 49, 0.9);
+  font-size: clamp(11px, 1cqw, 14px);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 3px rgba(2, 10, 49, 1), 0 1px 6px rgba(2, 10, 49, 0.95), 0 2px 18px rgba(2, 10, 49, 0.9);
 }
 /* Phone: the photo is the panel at the top of the section, so the figures
    float on its lower half, above where the story begins. */
@@ -624,16 +640,31 @@
   font-style: italic;
   color: var(--bd-accent);
 }
+/* The description sits right beside the heading, not out at the far edge, so
+   the two read as one line of thought. */
 @media (min-width: 900px) {
   .bredesign .bd-services .bd-head {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 440px);
+    grid-template-columns: auto minmax(280px, 440px);
+    justify-content: start;
     align-items: end;
-    gap: clamp(32px, 5vw, 88px);
+    gap: clamp(28px, 3vw, 48px);
   }
   .bredesign .bd-services .bd-head > p {
-    justify-self: end;
     max-width: 44ch;
-    padding-bottom: 4px;
+    padding-bottom: 6px;
+  }
+}
+/* Wide screens: the description runs on one line beside the heading. Below
+   1400px there is not room for both, so it wraps as above. */
+@media (min-width: 1400px) {
+  .bredesign .bd-services .bd-head {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 28px;
+  }
+  .bredesign .bd-services .bd-head > p {
+    max-width: none;
+    white-space: nowrap;
+    font-size: clamp(13px, 0.95vw, 15px);
   }
 }
 @media (max-width: 350px) {

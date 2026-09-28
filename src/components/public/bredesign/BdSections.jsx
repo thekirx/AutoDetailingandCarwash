@@ -22,6 +22,15 @@ function Lede({ parts }) {
   )
 }
 
+/* The story as two columns of similar length: the founding and the work on the
+   left, the name and the promise on the right. The words are unchanged; only
+   the break moves, to the sentence that starts on the name. */
+function storyColumns(paragraphs) {
+  const story = paragraphs.join(' ')
+  const at = story.indexOf('The name ')
+  return at > 0 ? [story.slice(0, at).trim(), story.slice(at)] : paragraphs
+}
+
 /* On phone the storefront photo comes first and the story follows on navy. On
    desktop the section is white: the story comes first and the storefront crop
    closes it (the order is set in bredesign.css). */
@@ -40,7 +49,15 @@ export function BdOrigin() {
           <h2>
             {ORIGIN.headline.join(' ')} <em>{ORIGIN.headlineAccent}</em>
           </h2>
-          <p className="bd-origin-text">{ORIGIN.paragraphs.join(' ')}</p>
+          {/* Two paragraphs side by side on desktop, so the story reads in two
+              short blocks instead of one wide one. */}
+          <div className="bd-origin-texts">
+            {storyColumns(ORIGIN.paragraphs).map((paragraph) => (
+              <p className="bd-origin-text" key={paragraph.slice(0, 24)}>
+                {paragraph}
+              </p>
+            ))}
+          </div>
         </div>
         {/* The figures sit on the foot of the storefront photo on desktop, and
             follow the story as their own band on phone. */}
