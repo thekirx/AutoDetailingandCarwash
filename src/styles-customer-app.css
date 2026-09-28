@@ -1479,19 +1479,22 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
 
 .capp-stamps {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.55rem;
+  grid-template-columns: repeat(5, minmax(0, 4rem));
+  justify-items: center;
+  gap: 0.7rem 0.85rem;
   margin: 0;
   padding: 0.15rem 0 0;
   list-style: none;
 }
 
+/* Round tokens, like a paper stamp card. Fluid up to 4rem so five fit a phone row. */
 .capp-stamp {
   position: relative;
   display: grid;
   place-items: center;
-  height: 3.5rem;
-  border-radius: 0.35rem;
+  width: min(100%, 4rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
   border: 1px solid var(--capp-line-strong);
   background: transparent;
   color: var(--capp-steel);
@@ -1522,18 +1525,20 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
 }
 
 .capp-stamps.is-compact {
+  grid-template-columns: repeat(5, minmax(0, 2.75rem));
   gap: 0.35rem;
 }
 
 .capp-stamps.is-compact .capp-stamp {
-  height: 2.75rem;
+  width: min(100%, 2.75rem);
 }
 
 .capp-stamps { max-width: 36rem; width: 100%; }
 .capp-stamp-mark {
   display: block;
-  width: 2.1rem;
-  height: 1.5rem;
+  width: 48%;
+  height: 34%;
+  margin-top: -12%;
   background: currentColor;
   mask: url('/branding/hakum-mark-blue.png') center / 150% auto no-repeat;
   opacity: 0.35;
@@ -1541,11 +1546,23 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
 .capp-stamp.is-on .capp-stamp-mark { opacity: 1; }
 .capp-stamp-number {
   position: absolute;
-  bottom: 0.15rem;
-  left: 0.3rem;
-  font: 600 0.55rem/1.2 var(--font-body, sans-serif);
+  bottom: 14%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font: 600 0.58rem/1 var(--font-body, sans-serif);
 }
-.capp-stamp-gift { position: absolute; top: 0.25rem; right: 0.25rem; }
+/* Gift badge sits on the rim, outside the circle's clip of the mark. */
+.capp-stamp-gift {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+  box-sizing: content-box;
+  padding: 0.2rem;
+  border-radius: 50%;
+  border: 1px solid rgba(201, 162, 39, 0.7);
+  background: var(--capp-surface, #020a31);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .capp-stamp:nth-child(3n),
@@ -1816,7 +1833,7 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
   }
 
   .capp-stage {
-    width: min(1120px, calc(100% - 3rem));
+    width: var(--site-shell, calc(100% - 3rem));
     margin: 0 auto;
     min-height: auto;
     padding: 1.25rem 0 3rem;

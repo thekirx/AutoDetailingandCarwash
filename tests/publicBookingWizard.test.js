@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { branchDirections } from '../src/lib/homeBranches.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (file) => readFileSync(join(root, file), 'utf8')
@@ -56,7 +57,22 @@ describe('/branches page', () => {
 
   it('offers Google Maps and Waze directions instead of OpenStreetMap', () => {
     assert.doesNotMatch(branches, /openstreetmap/)
-    assert.match(branches, /https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=\$\{pin\}/)
-    assert.match(branches, /https:\/\/waze\.com\/ul\?ll=\$\{pin\}&navigate=yes/)
+    assert.match(branches, /branchDirections\(branch\)/)
+    assert.match(branches, /href=\{directions\.google\}/)
+    assert.match(branches, /href=\{directions\.waze\}/)
+  })
+
+  it('points directions at each shop\'s real Google listing and pin', () => {
+    assert.deepEqual(branchDirections({ slug: 'bacoor', latitude: 14.459, longitude: 120.929 }), {
+      google: 'https://www.google.com/maps?cid=38179785010672017',
+      waze: 'https://waze.com/ul?ll=14.4075665,120.977126&navigate=yes',
+    })
+    assert.deepEqual(branchDirections({ slug: 'batangas', latitude: 13.7563, longitude: 121.0583 }), {
+      google: 'https://www.google.com/maps?cid=9079854389115198830',
+      waze: 'https://waze.com/ul?ll=13.7762991,121.0664943&navigate=yes',
+    })
+    assert.equal(branchDirections({ slug: 'new-site', latitude: 14.1, longitude: 121.2 }).google,
+      'https://www.google.com/maps/search/?api=1&query=14.1,121.2')
+    assert.equal(branchDirections({ slug: 'new-site' }), null)
   })
 })

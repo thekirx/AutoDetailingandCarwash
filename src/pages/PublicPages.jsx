@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { usePublicBranches, branchCityName, branchLabel, fetchPublicBranchHours } from '../lib/branches'
-import { MAIN_LINE, branchPhone, buildHomeBranchCards } from '../lib/homeBranches'
+import { MAIN_LINE, branchDirections, branchPhone, buildHomeBranchCards } from '../lib/homeBranches'
 import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
 import {
   buildPublicServiceOverview,
@@ -275,11 +275,8 @@ function WazeMark() {
 
 function BranchSiteCard({ branch, hours = [] }) {
   const comingSoon = Boolean(branch.coming_soon)
-  const hasPin = branch.latitude != null && branch.longitude != null
-  const pin = hasPin ? `${branch.latitude},${branch.longitude}` : ''
   // Both links hand off to the installed app on a phone.
-  const googleMapsUrl = hasPin ? `https://www.google.com/maps/search/?api=1&query=${pin}` : null
-  const wazeUrl = hasPin ? `https://waze.com/ul?ll=${pin}&navigate=yes` : null
+  const directions = comingSoon ? null : branchDirections(branch)
   const summary = hours.length ? formatHoursSummary(hours) : null
   // openNowLabel reads the live hours, so the badge is a fact rather than a
   // static label; a branch with no hours on file says so instead of guessing.
@@ -337,16 +334,16 @@ function BranchSiteCard({ branch, hours = [] }) {
         )}
       </div>
 
-      {hasPin ? (
+      {directions ? (
         <div className="bd-site-directions">
           <p>Get directions</p>
           <div>
-            <a className="bd-map-btn" href={googleMapsUrl} target="_blank" rel="noreferrer noopener">
+            <a className="bd-map-btn" href={directions.google} target="_blank" rel="noreferrer noopener">
               <GoogleMapsMark />
               Google Maps
               <span className="sr-only"> (opens in a new tab)</span>
             </a>
-            <a className="bd-map-btn" href={wazeUrl} target="_blank" rel="noreferrer noopener">
+            <a className="bd-map-btn" href={directions.waze} target="_blank" rel="noreferrer noopener">
               <WazeMark />
               Waze
               <span className="sr-only"> (opens in a new tab)</span>

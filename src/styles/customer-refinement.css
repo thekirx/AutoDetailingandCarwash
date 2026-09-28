@@ -103,3 +103,6 @@
   }
   .capp-account-home .capp-loyalty-link { grid-column: 1 / -1; }
 }
+.capp-account-home .capp-loyalty-home .capp-stamp-gift {
+  background: #020a31;
+}
