@@ -163,7 +163,17 @@ export default function BdHero() {
      resize would swap the file mid-play for a window drag, so the tier is
      chosen once — a dragged window is not worth restarting the clip. */
   const [tier] = useState(currentHeroTier)
-  const [orientation] = useState(currentHeroOrientation)
+  /* Orientation is different: turning a phone or tablet, or a page that
+     loaded wide and was then narrowed, must swap to the other cut, or the
+     phone keeps playing the desktop clip. */
+  const [orientation, setOrientation] = useState(currentHeroOrientation)
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined
+    const query = window.matchMedia('(orientation: portrait)')
+    const update = () => setOrientation(currentHeroOrientation())
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
   const isPortrait = orientation === 'portrait'
   const poster = isPortrait ? portraitPoster : heroPoster
   const av1Src = isPortrait ? PORTRAIT_AV1_BY_TIER[portraitTierFor(tier)] : AV1_BY_TIER[tier]
@@ -196,12 +206,15 @@ export default function BdHero() {
       node.removeEventListener('pause', onStop)
       node.removeEventListener('ended', onStop)
     }
-  }, [videoFailed])
+  }, [videoFailed, orientation])
 
   return (
     <section className="bd-hero" id="top">
       {!videoFailed ? (
         <video
+          /* A changed <source> is ignored by a playing video; a new key
+             mounts a fresh element that loads the other cut. */
+          key={orientation}
           ref={videoRef}
           className="bd-hero-media bd-hero-video"
           autoPlay

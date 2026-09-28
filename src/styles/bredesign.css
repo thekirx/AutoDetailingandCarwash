@@ -311,31 +311,62 @@
   line-height: 1.6;
   text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
 }
-/* Phone: one column. The headline sits at the top right, clear of the
-   portrait clip's Hakum mark in the middle of the frame; the paragraph and
-   buttons sit at the foot. */
-@media (max-width: 760px) {
+/* Phone and portrait tablet: hook, paragraph and buttons in one stack at the
+   foot of the frame. The middle of the portrait clip (its Hakum mark) stays
+   clear, and both buttons sit where a thumb reaches them. */
+@media (max-width: 760px), (max-width: 1100px) and (orientation: portrait) {
   .bredesign .bd-hero-in {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 1fr auto auto;
-    row-gap: 16px;
+    grid-template-rows: 1fr auto auto auto;
+    row-gap: 0;
+    padding-bottom: max(28px, calc(env(safe-area-inset-bottom) + 20px));
   }
   .bredesign .bd-hero h1 {
     grid-column: 1;
-    grid-row: 1;
-    margin-top: 8px;
+    grid-row: 2;
+    justify-self: start;
+    align-self: end;
+    margin: 0;
+    text-align: left;
+    /* "Clean cars" is the widest line; 10.4vw keeps it on one line at 320px. */
+    font-size: min(10.4vw, 96px);
+    line-height: 0.9;
+    text-shadow: 0 2px 22px rgba(2, 10, 49, 0.7);
   }
   .bredesign .bd-hero-lede {
-    grid-row: 2;
-    font-size: 15px;
+    grid-column: 1;
+    grid-row: 3;
+    max-width: 46ch;
+    margin-top: clamp(14px, 2.4vw, 22px);
+    font-size: clamp(15px, 2.3vw, 19px);
+    line-height: 1.5;
   }
   .bredesign .bd-hero-cta {
-    grid-row: 3;
-    margin-top: 0;
+    grid-column: 1;
+    grid-row: 4;
+    justify-self: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    max-width: 560px;
+    margin-top: clamp(18px, 3vw, 28px);
   }
   .bredesign .bd-hero-cta .bd-btn {
-    min-height: 46px;
-    padding: 0 22px;
+    min-height: 52px;
+    padding: 0 12px;
+    font-size: clamp(11px, 1.6vw, 13px);
+    justify-content: center;
+    white-space: nowrap;
+  }
+  /* The grade deepens earlier so the taller copy block sits on dark ground. */
+  .bredesign .bd-hero::after {
+    background: linear-gradient(
+      180deg,
+      rgba(2, 10, 49, 0.5) 0%,
+      rgba(2, 10, 49, 0.3) 34%,
+      rgba(2, 10, 49, 0.82) 62%,
+      rgba(2, 10, 49, 0.97) 100%
+    );
   }
 }
 
@@ -660,15 +691,35 @@
     color: var(--bd-blue-mid);
   }
 }
-/* Phone: the photo is the panel at the top of the section, so the figures
-   float on its lower half, above where the story begins. */
+/* Phone: the figures come off the storefront photo so the sign and shop stay
+   clear. They start at the foot of the photo and run down onto navy, above the
+   story, under the same eyebrow as "The Hakum story". */
 @container (max-width: 640px) {
   .bredesign .bd-origin-stats {
-    top: calc(var(--bd-origin-mobile-photo-height) - 180px);
+    position: static;
+    order: 0;
+    margin: 0 0 44px;
+  }
+  .bredesign .bd-origin-copy {
+    order: 1;
+  }
+  .bredesign .bd-origin-stats .bd-stats-in {
+    padding-top: 34px;
+    row-gap: 26px;
   }
   .bredesign .bd-stats-title {
-    color: #fff;
-    text-shadow: 0 1px 6px rgba(2, 10, 49, 0.95);
+    color: var(--bd-accent);
+    text-shadow: none;
+    margin-bottom: 14px;
+  }
+  .bredesign .bd-origin-stats .bd-stat-value {
+    text-shadow: none;
+    font-size: clamp(28px, 8.4cqw, 50px);
+  }
+  .bredesign .bd-origin-stats .bd-stat-label {
+    color: rgba(241, 241, 237, 0.78);
+    text-shadow: none;
+    margin-top: 8px;
   }
 }
 /* Phone: show the storefront as its own panel, then place the complete story
@@ -676,7 +727,11 @@
 @container (max-width: 640px) {
   .bredesign .bd-origin-frame {
     --bd-origin-mobile-photo-height: clamp(320px, 92cqw, 380px);
-    padding: calc(var(--bd-origin-mobile-photo-height) + 16px) 0 24px;
+    /* A column, so the figures (after the story in the markup) can be
+       ordered first, right under the photo. */
+    display: flex;
+    flex-direction: column;
+    padding: calc(var(--bd-origin-mobile-photo-height) - 8px) 0 24px;
   }
   .bredesign .bd-origin-photo {
     inset: 0 0 auto;
