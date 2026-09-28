@@ -641,19 +641,18 @@
     color: rgba(255, 255, 255, 0.92);
   }
 }
-/* The figures' own label, centred over the four of them. */
-/* The figures' label sits just over the first figure. It is taken out of
-   the flow so "26" stays level with the other three. */
+/* The figures' label sits above the first figure, on the shell's left edge
+   like every other section eyebrow ("The Hakum story", "Our services"). It is
+   taken out of the flow so "26" stays level with the other three. */
 .bredesign .bd-stats .bd-stat:first-child {
   position: relative;
 }
 .bredesign .bd-stats-title {
   position: absolute;
   left: 0;
-  right: 0;
   bottom: 100%;
   margin: 0 0 6px;
-  justify-content: center;
+  justify-content: flex-start;
   white-space: nowrap;
 }
 @container (min-width: 641px) {
