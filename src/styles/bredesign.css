@@ -405,7 +405,7 @@
   max-width: 110ch;
   margin-top: clamp(10px, 1.2cqw, 18px);
   font-size: clamp(16px, 1.4cqw, 20px);
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.45;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
 }
