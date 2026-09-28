@@ -3,6 +3,7 @@ import { ArrowRight, ArrowUpRight, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { SERVICE_DETAIL_CONTENT } from '../../../data/serviceDetailContent'
+import { BdStats } from './BdHero'
 import BdVideoModal from './BdVideoModal'
 import { LoopArrows, LoopBar } from './LoopRail'
 import { loopSlides, useLoopRail } from './useLoopRail'
@@ -41,6 +42,9 @@ export function BdOrigin() {
           </h2>
           <p className="bd-origin-text">{ORIGIN.paragraphs.join(' ')}</p>
         </div>
+        {/* The figures sit on the foot of the storefront photo on desktop, and
+            follow the story as their own band on phone. */}
+        <BdStats className="bd-origin-stats" />
       </div>
     </section>
   )

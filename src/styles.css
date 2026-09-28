@@ -87,6 +87,14 @@ button { cursor: pointer; }
 .desktop-nav a { color:rgba(255,255,255,.78); text-decoration:none; text-transform:uppercase; letter-spacing:.12em; font-size:11px; font-weight:700; white-space:nowrap; }
 .desktop-nav a:hover,.desktop-nav a.active { color:#fff; }
 .header-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+/* Links sit in the true centre of the bar: the logo and the account buttons
+   take equal side columns, so the nav does not drift toward the heavier side.
+   Only where the desktop links show; below 1100px the bar is logo + menu. */
+@media (min-width:1101px) {
+  .header-inner { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); }
+  .desktop-nav { margin-left:0; justify-self:center; }
+  .header-actions { justify-self:end; }
+}
 .header-auth { display:inline-flex; align-items:center; min-height:44px; padding:12px 14px; text-decoration:none; text-transform:uppercase; font-size:11px; letter-spacing:.12em; font-weight:800; transition:color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast); }
 .header-signin { color:#fff; border:1px solid rgba(255,255,255,.45); }
 .header-signin:hover { background:rgba(255,255,255,.1); }
@@ -1912,6 +1920,56 @@ button.header-auth:focus-visible,.menu-button:focus-visible { outline:2px solid 
   .lq-stat-row { gap: 0.65rem; }
   .lq-stat { padding: 1rem 0.9rem; }
   .lq-stat-num { font-size: 2.2rem; }
+}
+
+/* Customer board: every count on the first screen. The photo band (and its
+   looping slides) is sized off the screen height rather than a fixed 34rem, so
+   Waiting / In progress / Final check / Active total sit above the fold on a
+   short laptop and on a phone with browser bars. The TV board is untouched. */
+.lq-board-customer {
+  padding-top: clamp(0.9rem, 2.5vh, 1.5rem);
+}
+.lq-board-customer .lq-board-hero {
+  min-height: clamp(9rem, 26vh, 18rem);
+  margin-top: clamp(0.75rem, 2vh, 1.25rem);
+}
+.lq-board-customer .lq-board-intro {
+  max-width: 48rem;
+  padding: clamp(1rem, 3.2vh, 1.75rem) clamp(1.25rem, 4vw, 3rem);
+}
+.lq-board-customer .lq-kicker {
+  margin-bottom: 0.6rem;
+}
+.lq-board-customer .lq-board-title {
+  font-size: clamp(1.75rem, min(5vw, 6vh), 3rem);
+}
+.lq-board-customer .lq-board-address {
+  margin-top: 0.5rem;
+}
+.lq-board-customer .lq-board-nav {
+  margin-top: 0.4rem;
+}
+.lq-board-customer .lq-stat-row-hero {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: clamp(0.75rem, 2vh, 1.25rem);
+}
+.lq-board-customer .lq-stat {
+  padding: clamp(0.7rem, 1.8vh, 1rem) 1rem;
+}
+.lq-board-customer .lq-stat-num {
+  font-size: clamp(2rem, min(8vw, 7.5vh), 4rem);
+}
+@media (max-width: 560px) {
+  .lq-board-customer .lq-brand-mark { width: 62px; }
+  .lq-board-customer .lq-board-top { gap: 0.6rem; }
+  .lq-board-customer .lq-chip { padding: 0.5rem 0.75rem; border-radius: 0.75rem; }
+  .lq-board-customer .lq-chip-value { margin-top: 0.2rem; font-size: 1rem; }
+  .lq-board-customer .lq-board-intro { padding: 1.1rem 1.1rem 0.6rem; }
+  .lq-board-customer .lq-text-link { min-height: 2.5rem; }
+  .lq-board-customer .lq-stat-row-hero { gap: 0.4rem; }
+  .lq-board-customer .lq-stat { padding: 0.65rem 0.35rem; text-align: center; }
+  .lq-board-customer .lq-stat-label { font-size: 0.53rem; letter-spacing: 0.04em; }
+  .lq-board-customer .lq-stat-num { font-size: 1.9rem; }
 }
 
 /* ── Shop TV landscape board (public, no account) ── */

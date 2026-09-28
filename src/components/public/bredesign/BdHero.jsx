@@ -7,7 +7,6 @@ import {
   h264TierFor,
   portraitTierFor,
 } from '../../../lib/heroTier'
-import { isHeroLogoMoment } from '../../../lib/homeHero'
 import { fetchHomeStats, STAT_BASE, STATIC_STATS, withBase } from '../../../lib/homeStats'
 
 import heroPoster from '../../../assets/hero/hakum-desktop-poster.webp'
@@ -117,32 +116,11 @@ function CountUp({ value, suffix }) {
   )
 }
 
-export default function BdHero() {
-  const [videoFailed, setVideoFailed] = useState(false)
+/* The four figures, on their own band. They used to sit at the foot of the
+   hero; the hero is now the video and its copy alone, and the figures follow
+   the Hakum story instead, where they back up what the story says. */
+export function BdStats({ className = '' }) {
   const [live, setLive] = useState({ servicesDone: null, returningClients: null })
-  /* Sized to the pixels this screen can actually draw, then held. Re-picking on
-     resize would swap the file mid-play for a window drag, so the tier is
-     chosen once — a dragged window is not worth restarting the clip. */
-  const [tier] = useState(currentHeroTier)
-  const [orientation] = useState(currentHeroOrientation)
-  const isPortrait = orientation === 'portrait'
-  const markVariant = isPortrait ? 'mobile' : 'hakum-desktop'
-  const poster = isPortrait ? portraitPoster : heroPoster
-  const av1Src = isPortrait ? PORTRAIT_AV1_BY_TIER[portraitTierFor(tier)] : AV1_BY_TIER[tier]
-  const h264Src = isPortrait ? portrait1080H264 : H264_BY_TIER[h264TierFor(tier)]
-  /* The supplied desktop clip has a logo and wordmark at both ends. */
-  const [logoMoment, setLogoMoment] = useState(true)
-  /* The mark logic only makes sense while the clip is running. A video that is
-     paused sits at 0, which is inside the opening mark window, so keying the
-     copy on the mark alone hides the headline permanently the moment autoplay
-     is refused — which Safari does by default on many machines. */
-  const [playing, setPlaying] = useState(false)
-  /* Tapping the hero brings the copy back even mid-mark. It is cleared when the
-     next mark window opens, so the mark still gets the frame to itself. */
-  const [revealed, setRevealed] = useState(false)
-  const videoRef = useRef(null)
-  const wasMark = useRef(true)
-  const lastTime = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -154,27 +132,47 @@ export default function BdHero() {
     }
   }, [])
 
+  return (
+    <section className={`bd-stats bd-stats-band ${className}`.trim()} aria-label="Hakum in numbers">
+      <div className="bd-shell bd-stats-in">
+        {buildStats(live).map((stat) => (
+          <div className="bd-stat" key={stat.label}>
+            <CountUp value={stat.value} suffix={stat.suffix} />
+            <span className="bd-stat-label">{stat.label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+export default function BdHero() {
+  const [videoFailed, setVideoFailed] = useState(false)
+  /* Sized to the pixels this screen can actually draw, then held. Re-picking on
+     resize would swap the file mid-play for a window drag, so the tier is
+     chosen once — a dragged window is not worth restarting the clip. */
+  const [tier] = useState(currentHeroTier)
+  const [orientation] = useState(currentHeroOrientation)
+  const isPortrait = orientation === 'portrait'
+  const poster = isPortrait ? portraitPoster : heroPoster
+  const av1Src = isPortrait ? PORTRAIT_AV1_BY_TIER[portraitTierFor(tier)] : AV1_BY_TIER[tier]
+  const h264Src = isPortrait ? portrait1080H264 : H264_BY_TIER[h264TierFor(tier)]
+  /* Only the poster swap follows playback now. The copy used to step aside
+     while the clip showed its Hakum mark; it sits at the foot of the frame and
+     no longer covers the mark, so it stays up the whole time. */
+  const [playing, setPlaying] = useState(false)
+  const videoRef = useRef(null)
+
   useEffect(() => {
     const node = videoRef.current
     if (!node) return undefined
 
-    // A loop restart begins a fresh logo moment, even after a manual reveal.
-    const sync = () => {
-      const mark = isHeroLogoMoment(markVariant, node.currentTime)
-      if (mark && (!wasMark.current || node.currentTime < lastTime.current)) setRevealed(false)
-      wasMark.current = mark
-      lastTime.current = node.currentTime
-      setLogoMoment(mark)
-    }
     const onPlay = () => setPlaying(true)
     const onStop = () => setPlaying(false)
 
-    node.addEventListener('timeupdate', sync)
-    node.addEventListener('seeked', sync)
     node.addEventListener('playing', onPlay)
     node.addEventListener('pause', onStop)
     node.addEventListener('ended', onStop)
-    sync()
 
     // Autoplay can be refused — Safari's per-site setting, Low Power Mode, a
     // reduced-motion preference. Asking explicitly and ignoring the rejection
@@ -183,36 +181,14 @@ export default function BdHero() {
     if (attempt && typeof attempt.catch === 'function') attempt.catch(() => setPlaying(false))
 
     return () => {
-      node.removeEventListener('timeupdate', sync)
-      node.removeEventListener('seeked', sync)
       node.removeEventListener('playing', onPlay)
       node.removeEventListener('pause', onStop)
       node.removeEventListener('ended', onStop)
     }
-  }, [videoFailed, markVariant])
-
-  /* Hidden only while the clip is actually running and on the mark, and only
-     when the reader has not asked for it back. Anything else shows the copy. */
-  const copyHidden = !videoFailed && playing && logoMoment && !revealed
-
-  const revealCopy = () => {
-    setRevealed(true)
-    const node = videoRef.current
-    if (node && node.paused) {
-      const attempt = node.play()
-      if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {})
-    }
-  }
+  }, [videoFailed])
 
   return (
-    <section
-      className="bd-hero"
-      id="top"
-      /* Tap or click anywhere on the hero brings the copy back. Not a button:
-         the whole backdrop is the target, and the copy underneath keeps its own
-         focusable links, so nothing here is reachable only by pointer. */
-      onPointerDown={revealCopy}
-    >
+    <section className="bd-hero" id="top">
       {!videoFailed ? (
         <video
           ref={videoRef}
@@ -241,22 +217,12 @@ export default function BdHero() {
         aria-hidden="true"
       />
 
-      <div
-        className={`bd-shell bd-hero-in${copyHidden ? ' is-logo-moment' : ''}`}
-        aria-hidden={copyHidden || undefined}
-      >
+      <div className="bd-shell bd-hero-in">
         <h1>
-          Give your car
+          Clean cars
           <br />
-          the <em>pampering</em>
-          <br />
-          it deserves
+          <em>matter</em>
         </h1>
-        <p className="bd-hero-lede">
-          From ceramic coating to paint protection film, our team approaches every vehicle the same
-          way: like it matters. That means showroom-level attention to every panel, every time — not
-          just for the cars that look brand new, but for every vehicle that comes through our doors.
-        </p>
         <div className="bd-cta-row bd-hero-cta">
           <Link className="bd-btn bd-btn-primary" to="/services">
             See what we do
@@ -265,17 +231,11 @@ export default function BdHero() {
             Our story
           </a>
         </div>
-      </div>
-
-      <div className="bd-stats">
-        <div className="bd-shell bd-stats-in">
-          {buildStats(live).map((stat) => (
-            <div className="bd-stat" key={stat.label}>
-              <CountUp value={stat.value} suffix={stat.suffix} />
-              <span className="bd-stat-label">{stat.label}</span>
-            </div>
-          ))}
-        </div>
+        <p className="bd-hero-lede">
+          From ceramic coating to paint protection film, our team approaches every vehicle the same
+          way: like it matters. That means showroom-level attention to every panel, every time — not
+          just for the cars that look brand new, but for every vehicle that comes through our doors.
+        </p>
       </div>
     </section>
   )

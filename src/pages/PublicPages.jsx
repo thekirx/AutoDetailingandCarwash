@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { usePublicBranches, branchCityName, branchLabel, fetchPublicBranchHours } from '../lib/branches'
-import { buildHomeBranchCards } from '../lib/homeBranches'
+import { MAIN_LINE, branchPhone, buildHomeBranchCards } from '../lib/homeBranches'
 import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
 import {
   buildPublicServiceOverview,
@@ -12,6 +12,7 @@ import {
 } from '../lib/publicCatalog'
 import { usePageMeta } from '../lib/pageMeta'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
+import { ContactChannels, ContactCollab, ContactSocials } from './ContactPage'
 import useReveal from '../components/public/bredesign/useReveal'
 
 // Photos are looked up by the service's canonical marketing key so a card
@@ -233,6 +234,23 @@ export function BranchesPage() {
           ) : null}
         </div>
       </section>
+
+      {/* Contact left the navigation, so its details live here, next to the
+          branches customers are trying to reach. */}
+      <section className="contact-page bd-branch-contact" id="contact" aria-labelledby="branch-contact-title">
+        <div className="public-shell bd-branch-contact-head">
+          <p className="bd-eyebrow">Talk to Hakum</p>
+          <h2 id="branch-contact-title">
+            Contact <em>us.</em>
+          </h2>
+          <p className="contact-lede">Call the branch you are visiting, or reach the main team below.</p>
+        </div>
+        <ContactChannels />
+        <ContactCollab />
+        <div className="public-shell contact-split">
+          <ContactSocials />
+        </div>
+      </section>
     </>
   )
 }
@@ -248,6 +266,8 @@ function BranchSiteCard({ branch, hours = [] }) {
   // static label; a branch with no hours on file says so instead of guessing.
   const badge = comingSoon ? 'Coming soon' : hours.length ? openNowLabel(hours) : 'Hours to be confirmed'
   const tone = comingSoon ? 'soon' : hours.length && /open/i.test(badge) ? 'open' : 'shut'
+  const ownPhone = branchPhone(branch.slug)
+  const phone = ownPhone || MAIN_LINE
 
   return (
     <article className="bd-site">
@@ -266,6 +286,13 @@ function BranchSiteCard({ branch, hours = [] }) {
         <dd>
           {comingSoon ? 'Opening soon — ask us for updates' : summary || 'Queue times vary by branch load'}
         </dd>
+        <dt>Phone</dt>
+        <dd>
+          <a className="bd-site-tel" href={phone.href}>
+            {phone.display}
+          </a>
+          {ownPhone ? null : <span className="bd-site-tel-note"> · main line</span>}
+        </dd>
       </dl>
 
       <div className="bd-site-actions">
@@ -275,9 +302,12 @@ function BranchSiteCard({ branch, hours = [] }) {
           </Link>
         ) : (
           <>
-            <Link className="bd-btn bd-btn-primary" to="/book">
-              Book this branch
+            <Link className="bd-btn bd-btn-primary" to={`/book?branch=${encodeURIComponent(branch.slug)}`}>
+              Book a service at this branch
             </Link>
+            <a className="bd-btn bd-btn-quiet" href={phone.href}>
+              Call branch
+            </a>
             <Link className="bd-btn bd-btn-quiet" to={`/queue/${branch.slug}`}>
               Live queue
             </Link>

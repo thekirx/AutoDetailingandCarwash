@@ -254,29 +254,85 @@
 .bredesign .bd-hero-in {
   position: relative;
   z-index: 1;
-  padding: clamp(102px, calc(15vw - 18px), 192px) 0 clamp(62px, calc(5vw + 18px), 90px);
+  /* Kept close under the bar: the old 192px top left a band of empty footage
+     between the navigation and the headline. */
+  padding: clamp(92px, calc(7vw + 20px), 121px) 0 clamp(62px, calc(5vw + 18px), 90px);
+  /* mockheroA: the headline alone, with the video given the whole first
+     screen. The clip covers its box, so a full-height box keeps the close
+     framing the hero had when its copy made it this tall; the stats start
+     just below the fold. */
+  box-sizing: border-box;
+  min-height: 100svh;
+  /* Across the bottom of the playing video: the paragraph with the buttons
+     under it on the left, the headline on the right. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 1fr auto auto;
+  column-gap: clamp(24px, 4vw, 64px);
+  align-items: end;
+  padding-bottom: clamp(28px, 4vw, 56px);
 }
 .bredesign .bd-hero h1 {
-  margin-top: 22px;
-  /* Sized off the viewport so it fills the screen it is on, and capped only
-     where a line would otherwise outrun the eye — which is ultra-wide, not
-     desktop. */
-  font-size: clamp(2.1rem, 7.4vw, 7.4rem);
-  line-height: 0.86;
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  justify-self: end;
+  /* Its top lines up with the top of the paragraph on the left. */
+  align-self: start;
+  margin-top: 0;
+  font-size: clamp(2.2rem, 5.6vw, 5.6rem);
+  line-height: 0.9;
+  text-align: right;
 }
 .bredesign .bd-hero h1 em {
   font-style: italic;
   color: var(--bd-accent);
 }
-.bredesign .bd-hero-lede {
-  margin-top: 24px;
-  max-width: 58ch;
-  color: rgba(241, 241, 237, 0.84);
-  font-size: clamp(15px, 1.5vw, 19px);
-  line-height: 1.6;
-}
 .bredesign .bd-hero-cta {
-  margin-top: 30px;
+  grid-column: 1;
+  grid-row: 3;
+  justify-self: start;
+  margin-top: clamp(20px, 2.2vw, 30px);
+  gap: 14px;
+}
+/* Larger than the site's standard button: these are the first thing to press. */
+.bredesign .bd-hero-cta .bd-btn {
+  min-height: 56px;
+  padding: 0 34px;
+  font-size: 12px;
+}
+.bredesign .bd-hero-lede {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
+  max-width: 56ch;
+  color: rgba(241, 241, 237, 0.9);
+  font-size: clamp(17px, 1.45vw, 21px);
+  line-height: 1.55;
+  text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
+}
+/* Phone: one column. The headline stays on the right, above the paragraph
+   and the buttons on the left. */
+@media (max-width: 760px) {
+  .bredesign .bd-hero-in {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1fr auto auto auto;
+    row-gap: 20px;
+  }
+  .bredesign .bd-hero h1 {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .bredesign .bd-hero-lede {
+    grid-row: 3;
+  }
+  .bredesign .bd-hero-cta {
+    grid-row: 4;
+    margin-top: 0;
+  }
+  .bredesign .bd-hero-cta .bd-btn {
+    min-height: 52px;
+    padding: 0 26px;
+  }
 }
 
 /* Stats sit inside the hero, on the darkest part of the grade. No rule above
@@ -285,6 +341,11 @@
 .bredesign .bd-stats {
   position: relative;
   z-index: 1;
+}
+/* The figures' own band, after the Hakum story. */
+.bredesign .bd-stats-band {
+  background: var(--bd-navy);
+  padding-block: clamp(20px, 3vw, 44px);
 }
 .bredesign .bd-stats-in {
   display: grid;
@@ -301,7 +362,7 @@
   font-family: var(--bd-display);
   font-style: italic;
   font-weight: 800;
-  font-size: clamp(10.5px, 3.5vw, 2.5rem);
+  font-size: clamp(22px, 3.75vw, 3.4rem);
   line-height: 1;
   letter-spacing: -0.02em;
   color: var(--bd-paper);
@@ -309,19 +370,28 @@
 }
 .bredesign .bd-stat-label {
   display: block;
-  margin-top: 7px;
-  font-size: clamp(7px, 0.9vw, 10px);
+  margin-top: 10px;
+  font-size: clamp(9px, 0.9vw, 12.5px);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--bd-ink-3);
   white-space: nowrap;
 }
-@media (max-width: 600px) {
+/* Below 760px four columns leave each figure a quarter of a phone, too narrow
+   for "15,032+" at a readable size, so the stats pair up two by two. */
+@media (max-width: 760px) {
+  .bredesign .bd-stats-in {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 12px;
+  }
+  .bredesign .bd-stat-value {
+    font-size: clamp(26px, 7.7vw, 40px);
+  }
   .bredesign .bd-stat-label {
-    font-size: clamp(7px, 1.9vw, 9px);
-    letter-spacing: 0;
-    text-transform: none;
+    margin-top: 6px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
   }
 }
 @media (max-width: 350px) {
@@ -454,6 +524,43 @@
   .bredesign .bd-origin h2,
   .bredesign .bd-origin-text {
     text-shadow: none;
+  }
+  /* Desktop: the figures float on the dark shopfront just under the HAKUM
+     sign, about a third of the way down the photo (the photo is 42.9cqw tall,
+     2000 x 858), above the bright road. */
+  .bredesign .bd-origin-stats {
+    top: auto;
+    bottom: calc(24.5cqw - 41px);
+  }
+}
+/* The figures float in front of the storefront photo: no band, no box, just
+   the numbers on the picture with a shadow strong enough to read on the road
+   and the shopfront. */
+.bredesign .bd-origin-stats {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding-block: 0;
+  background: none;
+  pointer-events: none;
+}
+.bredesign .bd-origin-stats .bd-stats-in {
+  padding-block: 0;
+}
+.bredesign .bd-origin-stats .bd-stat-value {
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(2, 10, 49, 0.75), 0 6px 28px rgba(2, 10, 49, 0.85);
+}
+.bredesign .bd-origin-stats .bd-stat-label {
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(2, 10, 49, 0.9), 0 2px 14px rgba(2, 10, 49, 0.9);
+}
+/* Phone: the photo is the panel at the top of the section, so the figures
+   float on its lower half, above where the story begins. */
+@container (max-width: 640px) {
+  .bredesign .bd-origin-stats {
+    top: calc(var(--bd-origin-mobile-photo-height) - 150px);
   }
 }
 /* Phone: show the storefront as its own panel, then place the complete story
@@ -2126,7 +2233,7 @@
   margin-top: 22px;
   max-width: 54ch;
   color: rgba(241, 241, 237, 0.84);
-  font-size: clamp(15px, 1.4vw, 16.5px);
+  font-size: clamp(16px, 1.5vw, 18.5px);
   line-height: 1.65;
 }
 .bredesign .bd-page-hero.is-scroll-animated .bd-page-hero-media {
@@ -2348,6 +2455,34 @@
 }
 .bredesign .bd-site-map:hover {
   text-decoration: underline;
+}
+.bredesign .bd-site-tel {
+  color: var(--bd-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.bredesign .bd-site-tel-note {
+  color: var(--bd-ink-3);
+}
+/* Contact block under the branch cards (it moved here from /contact). */
+.bredesign .bd-branch-contact {
+  padding-bottom: var(--bd-section);
+  border-top: 1px solid var(--bd-rule);
+}
+.bredesign .bd-branch-contact-head {
+  padding-top: var(--bd-section);
+}
+.bredesign .bd-branch-contact-head h2 {
+  margin-top: 12px;
+  font-size: clamp(2rem, 4.4vw, 3.4rem);
+  line-height: 0.95;
+}
+.bredesign .bd-branch-contact-head h2 em {
+  color: var(--bd-accent);
+}
+.bredesign .bd-branch-contact-head .contact-lede {
+  margin-top: 14px;
+  font-size: 16px;
 }
 
 /* ==== Partnerships ======================================================

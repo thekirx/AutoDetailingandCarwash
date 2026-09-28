@@ -76,8 +76,8 @@ describe('BreDESIGN public page fallbacks', () => {
     })
   })
 
-  it('keeps all four centered stats in one row across screen sizes', async () => {
-    for (const width of [1440, 768, 390, 320]) {
+  it('keeps the four centered stats in one row on wide screens and two by two on phones', async () => {
+    for (const [width, expectedRows] of [[1440, 1], [768, 1], [390, 2], [320, 2]]) {
       await page.setViewport({ width, height: 900 })
       await page.goto(`${PREVIEW_ORIGIN}/home`, { waitUntil: 'networkidle0' })
       const layout = await page.evaluate(() => {
@@ -96,7 +96,7 @@ describe('BreDESIGN public page fallbacks', () => {
         }
       })
       assert.deepEqual(layout.labels, ['Team members', 'Years combined', 'Vehicles cared for', 'Satisfied clients'])
-      assert.equal(layout.rows, 1, `stats wrap at ${width}px`)
+      assert.equal(layout.rows, expectedRows, `stats should sit in ${expectedRows} row(s) at ${width}px`)
       assert.equal(layout.centered, true, `stats overflow or lose center at ${width}px`)
     }
     await page.setViewport({ width: 1440, height: 900 })

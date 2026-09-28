@@ -1,3 +1,18 @@
+/* The shared line from the Contact page. A branch card shows it, labelled as
+   the main line, until that branch has a number of its own below. */
+export const MAIN_LINE = { display: '0915 629 6096', href: 'tel:+639156296096' }
+
+/* Each branch's own number, keyed by slug. Left null until the owner confirms
+   the number; a guessed number would send customers to a stranger. */
+const BRANCH_PHONES = {
+  bacoor: null,
+  batangas: null,
+}
+
+export function branchPhone(slug) {
+  return BRANCH_PHONES[slug] || null
+}
+
 const FALLBACK_BRANCHES = [
   { slug: 'bacoor', name: 'Bacoor', address: 'RFC Molino', href: '/branches' },
   { slug: 'batangas', name: 'Batangas', address: 'PNP Batangas', href: '/branches' },
