@@ -586,19 +586,12 @@
   .bredesign .bd-origin-picture {
     margin-top: clamp(6px, 0.8cqw, 12px);
   }
-  /* Room for the label over the first figure, and nothing more. */
   .bredesign .bd-origin-frame {
-    padding-top: clamp(26px, 2.2cqw, 34px);
+    padding-top: clamp(12px, 1.4cqw, 22px);
   }
-  /* Larger figures, capped so "15,032+" still fits its quarter of the row. */
   .bredesign .bd-origin-stats .bd-stat-value {
     color: var(--bd-navy);
     text-shadow: none;
-    font-size: clamp(30px, 4.5cqw, 66px);
-  }
-  .bredesign .bd-origin-stats .bd-stat-label {
-    margin-top: 6px;
-    font-size: clamp(12px, 1.05cqw, 15px);
   }
   .bredesign .bd-origin-stats .bd-stat-label {
     color: var(--bd-blue-mid);
@@ -638,19 +631,10 @@
   }
 }
 /* The figures' own label, centred over the four of them. */
-/* The figures' label sits just over the first figure. It is taken out of
-   the flow so "26" stays level with the other three. */
-.bredesign .bd-stats .bd-stat:first-child {
-  position: relative;
-}
 .bredesign .bd-stats-title {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
-  margin: 0 0 6px;
+  width: var(--bd-shell);
+  margin: 0 auto clamp(12px, 1.4cqw, 20px);
   justify-content: center;
-  white-space: nowrap;
 }
 @container (min-width: 641px) {
   .bredesign .bd-stats-title {

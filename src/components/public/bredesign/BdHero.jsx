@@ -138,16 +138,14 @@ export function BdStats({ className = '', title = null }) {
       aria-label={title ? undefined : 'Hakum in numbers'}
       aria-labelledby={title ? 'bd-stats-title' : undefined}
     >
+      {title ? (
+        <p className="bd-eyebrow bd-stats-title" id="bd-stats-title">
+          {title}
+        </p>
+      ) : null}
       <div className="bd-shell bd-stats-in">
-        {buildStats(live).map((stat, index) => (
+        {buildStats(live).map((stat) => (
           <div className="bd-stat" key={stat.label}>
-            {/* The label sits over the first figure rather than on a row of
-                its own, so it costs no extra height. */}
-            {title && index === 0 ? (
-              <p className="bd-eyebrow bd-stats-title" id="bd-stats-title">
-                {title}
-              </p>
-            ) : null}
             <CountUp value={stat.value} suffix={stat.suffix} />
             <span className="bd-stat-label">{stat.label}</span>
           </div>
