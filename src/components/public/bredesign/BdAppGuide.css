@@ -1,0 +1,340 @@
+/* "Get our app now" walkthrough. The popup is portalled to <body>, outside the
+   .bredesign scope, so it carries the site's navy system itself. */
+.hk-guide-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(1, 6, 31, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.hk-guide {
+  position: fixed;
+  z-index: 91;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(1000px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+  overflow: hidden;
+  border: 1px solid #3d51a0;
+  border-radius: 24px;
+  background: #08133f;
+  color: #f1f1ed;
+  font-family: var(--font-body);
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6);
+  outline: none;
+}
+
+.hk-guide-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #3d51a0;
+  border-radius: 50%;
+  background: rgba(2, 10, 49, 0.6);
+  color: #f1f1ed;
+  cursor: pointer;
+}
+
+.hk-guide-copy {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: clamp(28px, 4vw, 48px) clamp(22px, 4vw, 50px);
+}
+
+.hk-guide-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 26px;
+}
+
+.hk-guide-progress i {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: #16255c;
+  transition: background 0.2s ease;
+}
+
+.hk-guide-progress i.is-on {
+  background: #9db4ff;
+}
+
+.hk-guide-count {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8e99c6;
+}
+
+.hk-guide-title {
+  margin: 12px 0 16px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: italic;
+  font-size: clamp(34px, 4.6vw, 54px);
+  line-height: 0.95;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  color: #f1f1ed;
+}
+
+.hk-guide-title em {
+  display: block;
+  font-style: italic;
+  color: #9db4ff;
+}
+
+.hk-guide-body {
+  margin: 0 0 14px;
+  font-size: clamp(15px, 1.3vw, 17px);
+  line-height: 1.5;
+  color: rgba(241, 241, 237, 0.82);
+}
+
+.hk-guide-points {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hk-guide-points li {
+  position: relative;
+  padding: 8px 0 8px 26px;
+  font-size: 15px;
+  color: rgba(241, 241, 237, 0.82);
+}
+
+.hk-guide-points li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #9db4ff;
+}
+
+.hk-guide-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.hk-guide-tabs button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid #3d51a0;
+  border-radius: 999px;
+  background: transparent;
+  color: #f1f1ed;
+  font: 700 11px var(--font-body);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.hk-guide-tabs button.is-on {
+  border-color: #f1f1ed;
+  background: #f1f1ed;
+  color: #052699;
+}
+
+.hk-guide-install ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: hk-step;
+}
+
+.hk-guide-install li {
+  counter-increment: hk-step;
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #16255c;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.hk-guide-install li::before {
+  content: counter(hk-step, decimal-leading-zero);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 800;
+  color: #9db4ff;
+}
+
+.hk-guide-tip {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #8e99c6;
+}
+
+.hk-guide-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 26px;
+}
+
+.hk-guide-end {
+  display: flex;
+  gap: 10px;
+}
+
+.hk-guide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1px solid rgba(241, 241, 237, 0.4);
+  border-radius: 999px;
+  background: transparent;
+  color: #f1f1ed;
+  font: 700 11px var(--font-body);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.hk-guide-btn.is-primary {
+  border-color: #052699;
+  background: #052699;
+}
+
+.hk-guide-skip {
+  border: 0;
+  background: none;
+  color: #8e99c6;
+  font: 500 13px var(--font-body);
+  cursor: pointer;
+}
+
+.hk-guide-visual {
+  display: grid;
+  place-items: center;
+  padding: 36px 24px;
+  background: radial-gradient(ellipse at 50% 30%, rgba(45, 89, 211, 0.45), transparent 70%), #050d2c;
+}
+
+/* A plain bezel around the real screen; the status strip clears the notch. */
+.hk-guide-phone {
+  position: relative;
+  width: min(270px, 100%);
+  aspect-ratio: 390 / 844;
+  padding: 10px;
+  border-radius: 44px;
+  background: linear-gradient(145deg, #d8d6d0, #8d8b86);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+}
+
+.hk-guide-phone::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  z-index: 1;
+  width: 30%;
+  height: 22px;
+  border-radius: 20px;
+  background: #000;
+  transform: translateX(-50%);
+}
+
+.hk-guide-phone img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding-top: 5.6%;
+  border-radius: 34px;
+  object-fit: cover;
+  object-position: top;
+  background: #1b2350;
+}
+
+/* Phone: one column, the screen shrinks to a strip above the words. */
+@media (max-width: 760px) {
+  .hk-guide {
+    top: auto;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 100vw;
+    max-height: 92dvh;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    border-radius: 24px 24px 0 0;
+    border-bottom: 0;
+  }
+
+  .hk-guide-visual {
+    order: -1;
+    padding: 18px 16px 0;
+    max-height: 34dvh;
+    overflow: hidden;
+    align-items: start;
+  }
+
+  .hk-guide-phone {
+    width: 150px;
+    border-radius: 28px;
+    padding: 6px;
+  }
+
+  .hk-guide-phone::before {
+    top: 12px;
+    height: 14px;
+  }
+
+  .hk-guide-phone img {
+    border-radius: 22px;
+  }
+
+  .hk-guide-copy {
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .hk-guide-progress {
+    margin-bottom: 16px;
+  }
+
+  .hk-guide-foot {
+    padding-top: 18px;
+  }
+
+  /* Last step: Sign in / Create account take their own full-width row. */
+  .hk-guide-foot {
+    flex-wrap: wrap;
+  }
+
+  .hk-guide-end {
+    flex: 1 1 100%;
+  }
+
+  .hk-guide-end .hk-guide-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 0 14px;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hk-guide-progress i {
+    transition: none;
+  }
+}

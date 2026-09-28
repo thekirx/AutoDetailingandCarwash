@@ -118,7 +118,7 @@ describe('customer app frame', () => {
     assert.match(publicCss, /\.public-header \.capp-inbox-badge[^}]*color:#052699/)
   })
 
-  it('ships dark app tokens, floating desktop tab bar, landscape dock, safe areas, reduced motion', () => {
+  it('ships dark app tokens, desktop pill tab row, landscape dock, safe areas, reduced motion', () => {
     const css = read('src/styles-customer-app.css')
     const tokens = read('src/design-tokens.css')
     assert.match(tokens, /--capp-navy:\s*var\(--color-brand-primary\)/)
@@ -127,8 +127,8 @@ describe('customer app frame', () => {
     assert.match(css, /--capp-accent:/)
     assert.match(css, /min-width: 860px/)
     assert.doesNotMatch(css, /width: min\(430px/)
-    // Desktop keeps the phone's floating tab bar at the foot of the screen.
-    assert.doesNotMatch(css, /\.capp-dock \{[^}]*position: static/)
+    // Desktop (option C): the tabs become a pill row under the page hero.
+    assert.match(css, /Desktop web: editorial[\s\S]*\.capp-dock \{[\s\S]*position: static[\s\S]*order: 1/)
     assert.match(css, /account-web-header/)
     assert.match(css, /orientation: landscape/)
     assert.match(css, /max-height: 520px/)
@@ -159,10 +159,12 @@ describe('customer app frame', () => {
     assert.match(css, /\.capp-btn-fill \{[\s\S]*color:\s*var\(--capp-btn-ink\)/)
   })
 
-  it('shows Add a car from home empty state and garage deep-link', () => {
+  it('keeps Add a car inside My cars; home only links there', () => {
     const home = read('src/pages/CustomerAccountPage.jsx')
     const more = read('src/pages/CustomerMorePage.jsx')
-    assert.match(home, /Add a car/)
+    assert.doesNotMatch(home, /Add a car/)
+    assert.match(home, /title="My cars"/)
+    assert.match(home, /Add your first car/)
     assert.match(home, /tab=garage&add=1/)
     assert.match(more, /startAdding/)
     assert.match(more, /params\.get\('add'\) === '1'/)

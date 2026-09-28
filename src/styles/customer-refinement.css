@@ -93,6 +93,8 @@
   outline-offset: 4px;
 }
 @media (min-width: 860px) {
+  /* Desktop has no floating tab bar, so the booking bar rides the bottom edge. */
+  .capp-booking-summary { bottom: 1rem; }
   .capp-account-home .capp-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .capp-account-home .capp-home-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   /* Title, then the stamps, as on the phone. The card is as wide as the

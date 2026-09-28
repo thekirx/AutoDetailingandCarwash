@@ -37,8 +37,9 @@ describe('BreDESIGN homepage fallback sections', () => {
 
   it('shows the real stamp-card rewards model instead of obsolete membership points', async () => {
     const appCopy = await page.$eval('#app-preview', (section) => section.textContent.replace(/\s+/g, ' ').trim())
-    assert.match(appCopy, /Loyalty program/i)
-    assert.match(appCopy, /6\/10 stamps/i)
+    // The phone shows a capture of the real app home screen (15-stamp card).
+    const shot = await page.$eval('#app-preview .bd-app-shot img', (img) => img.getAttribute('src'))
+    assert.match(shot, /app-guide\/home/)
     assert.match(appCopy, /Stamp rewards/i)
     assert.doesNotMatch(appCopy, /points/i)
   })
