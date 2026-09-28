@@ -254,7 +254,7 @@
 .bredesign .bd-hero-in {
   position: relative;
   z-index: 1;
-  padding: clamp(120px, 15vw, 210px) 0 clamp(44px, 5vw, 72px);
+  padding: clamp(102px, calc(15vw - 18px), 192px) 0 clamp(62px, calc(5vw + 18px), 90px);
 }
 .bredesign .bd-hero h1 {
   margin-top: 22px;
@@ -1975,7 +1975,6 @@
    the marketing pages and nothing else. */
 
 /* Pills, so the header CTAs match the buttons on the page below them. */
-.bredesign .header-book,
 .bredesign .header-auth {
   border-radius: 999px;
 }

@@ -7,12 +7,11 @@ test('primary navigation removes the standalone Packages destination', () => {
   assert.deepEqual(
     PUBLIC_NAV_ITEMS.map(([label, path]) => `${label}:${path}`),
     [
-      'Main:/home',
+      'Home:/home',
       'Services:/services',
       'Branch:/branches',
-      'Events & Blog:/events',
       'Live Queue:/queue',
-      'Contact:/contact',
+      'Events & Blogs:/events',
     ],
   )
 })

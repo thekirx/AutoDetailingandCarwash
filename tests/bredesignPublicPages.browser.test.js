@@ -176,10 +176,8 @@ describe('BreDESIGN public page fallbacks', () => {
       reviewCopies: document.querySelector('[data-wash-review-rail]')?.children.length,
       dialog: Boolean(document.querySelector('[data-wash-modal]')),
       actions: [...document.querySelectorAll('[data-wash-service-card] a')].map((link) => new URL(link.href).pathname),
-      /* Scoped past the site header: its Book now button belongs to every
-         page and still books the services that are bookable. What this
-         page must not carry is a booking CTA of its own, because wash and
-         detailing are walk-in and the queue is the call to action. */
+      /* Wash and detailing are walk-in, so this page and its header should
+         direct visitors to the live queue instead of a booking CTA. */
       bookLinks: [...document.querySelectorAll('a')]
         .filter((link) => !link.closest('header, .public-header'))
         .filter((link) => new URL(link.href).pathname === '/book').length,
@@ -210,7 +208,7 @@ describe('BreDESIGN public page fallbacks', () => {
     assert.ok(result.actions.length > 0)
     assert.ok(result.actions.every((path) => path === '/queue'))
     assert.equal(result.bookLinks, 0)
-    assert.equal(result.headerBookLinks, 1)
+    assert.equal(result.headerBookLinks, 0)
     assert.ok(result.reviews.some((review) => /Paul Russel Sandoval/.test(review)))
     assert.equal(result.reviewRail, 'true')
     assert.ok(result.reviewCopies > result.reviews.length)

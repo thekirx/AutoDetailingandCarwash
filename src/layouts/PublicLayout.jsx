@@ -91,9 +91,6 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
               </Link>
             </>
           )}
-          <Link className="header-book" to="/book">
-            Book now <ArrowUpRight size={16} />
-          </Link>
         </div>
         <button
           type="button"
@@ -129,9 +126,6 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
               <Link to="/signup">Sign up</Link>
             </>
           )}
-          <Link className="mobile-book" to="/book">
-            Book now <ArrowUpRight size={17} />
-          </Link>
         </nav>
       )}
       {isCustomer ? (

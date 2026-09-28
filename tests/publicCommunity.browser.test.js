@@ -19,18 +19,29 @@ describe('public community and contact navigation', () => {
     await page.goto(`${ORIGIN}/events`, { waitUntil: 'networkidle0' })
     const content = await page.evaluate(() => ({
       nav: [...document.querySelectorAll('nav[aria-label="Primary navigation"] a')].map((link) => link.textContent.trim()),
+      auth: [...document.querySelectorAll('.header-actions a')].map((link) => link.textContent.trim()),
       title: document.querySelector('h1')?.textContent.replace(/\s+/g, ' ').trim(),
       events: document.querySelector('#events-list h2')?.textContent.trim(),
       blog: document.querySelector('#blog h2')?.textContent.trim(),
       rawError: [...document.querySelectorAll('[role="alert"]')].some((item) => /TypeError|Failed to fetch/i.test(item.textContent)),
     }))
-    assert.ok(content.nav.includes('Events & Blog'))
+    assert.deepEqual(content.nav, ['Home', 'Services', 'Branch', 'Live Queue', 'Events & Blogs'])
+    assert.deepEqual(content.auth, ['Sign in', 'Sign up'])
     assert.ok(!content.nav.includes('Brand Collabs'))
-    assert.ok(!content.nav.includes('Blog'))
+    assert.ok(!content.nav.includes('Contact'))
     assert.match(content.title, /Events\s*&\s*blog/i)
     assert.match(content.events, /Events & meets/i)
     assert.match(content.blog, /Latest stories/i)
     assert.equal(content.rawError, false)
+  })
+
+  it('uses the same order in the phone menu without a Book now link', async () => {
+    await page.setViewport({ width: 390, height: 844 })
+    await page.goto(`${ORIGIN}/home`, { waitUntil: 'networkidle0' })
+    await page.click('button[aria-label="Open menu"]')
+    const links = await page.$$eval('#mobile-navigation a', (items) => items.map((item) => item.textContent.trim()))
+    assert.deepEqual(links, ['Home', 'Services', 'Branch', 'Live Queue', 'Events & Blogs', 'Sign in', 'Sign up'])
+    await page.setViewport({ width: 1440, height: 900 })
   })
 
   it('keeps old Blog links pointed at the blog section', async () => {

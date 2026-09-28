@@ -1,10 +1,9 @@
 export const PUBLIC_NAV_ITEMS = [
-  ['Main', '/home'],
+  ['Home', '/home'],
   ['Services', '/services'],
   ['Branch', '/branches'],
-  ['Events & Blog', '/events'],
   ['Live Queue', '/queue'],
-  ['Contact', '/contact'],
+  ['Events & Blogs', '/events'],
 ]
 
 export const LEGACY_MARKETING_REDIRECTS = {
