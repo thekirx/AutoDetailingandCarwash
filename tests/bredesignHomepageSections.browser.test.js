@@ -57,6 +57,30 @@ describe('BreDESIGN homepage fallback sections', () => {
     assert.equal(result.tiktokHref, 'https://www.tiktok.com/@hakum_autocare')
   })
 
+  it('places the services description beside its heading on wide screens', async () => {
+    for (const width of [1440, 1024, 768, 390]) {
+      await page.setViewport({ width, height: 900 })
+      const layout = await page.evaluate(() => {
+        const title = document.querySelector('#services .bd-head h2').getBoundingClientRect()
+        const description = document.querySelector('#services .bd-head > p').getBoundingClientRect()
+        return {
+          titleRight: title.right,
+          titleBottom: title.bottom,
+          descriptionLeft: description.left,
+          descriptionTop: description.top,
+          overflow: document.documentElement.scrollWidth > innerWidth,
+        }
+      })
+      if (width >= 900) {
+        assert.ok(layout.descriptionLeft >= layout.titleRight, `description is not beside the heading at ${width}px`)
+      } else {
+        assert.ok(layout.descriptionTop >= layout.titleBottom, `description overlaps the heading at ${width}px`)
+      }
+      assert.equal(layout.overflow, false, `horizontal overflow at ${width}px`)
+    }
+    await page.setViewport({ width: 1440, height: 900 })
+  })
+
   it('presents every photo and video as a scrollable collage of playable pages', async () => {
     const heading = await page.$eval('#photos h2', (node) => node.textContent.replace(/\s+/g, ' ').trim())
     /* Copies of the pages sit either side of the real ones so the rail can

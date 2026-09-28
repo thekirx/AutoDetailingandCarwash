@@ -1,32 +1,8 @@
 import { useEffect, useRef } from 'react'
 
-/**
- * A marquee you can grab.
- *
- * A CSS animation can only drift. This runs the position itself so the strip
- * can do the three things a physical object would: hold still while pressed,
- * follow the finger exactly while dragged, and carry the speed of a flick
- * before easing back to its resting drift.
- *
- * The track holds the same run twice, so wrapping is a modulo of half its
- * width — at any offset the second copy is exactly where the first would have
- * been, and the seam never shows.
- *
- * Position lives in a ref rather than state: this updates every frame, and
- * re-rendering React sixty times a second to move one transform would be the
- * most expensive way to do the cheapest thing.
- */
-
-/* Tuned down from a first pass that read as fast: a logo wall should look like
-   it is barely moving, and the reader should notice the marks rather than the
-   motion. Measured at the section, the old values reached ~1100 px/s simply
-   from scrolling it into view — the scroll impulse, not the drift, was the
-   problem, so the ceiling and the boost come down hardest. */
-const BASE_VELOCITY = 20 // px/sec of resting drift
-const MAX_VELOCITY = 820 // a hard flick should not become a blur
-const DECAY_TAU = 0.7 // seconds to settle back toward the drift
-const DIRECTION = 1 // 1 moves the logos left-to-right; -1 reverses it
-const SCROLL_BOOST = 0.55 // page-scroll pixels translated into a short velocity impulse
+/* Two identical logo runs move left at one steady speed and wrap seamlessly.
+   Dragging lets visitors inspect a mark; page scrolling never changes the speed. */
+const SPEED = 64 // pixels per second; every supplier passes through the viewport
 
 export default function useMarquee() {
   const viewportRef = useRef(null)
@@ -38,21 +14,18 @@ export default function useMarquee() {
     if (!viewport || !track) return undefined
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-    let base = reduced.matches ? 0 : BASE_VELOCITY * DIRECTION
+    let speed = reduced.matches ? 0 : SPEED
     const onPreference = () => {
-      base = reduced.matches ? 0 : BASE_VELOCITY * DIRECTION
+      speed = reduced.matches ? 0 : SPEED
     }
     reduced.addEventListener('change', onPreference)
 
     let offset = 0
-    let velocity = base
     let half = track.scrollWidth / 2
     let dragging = false
     let hovering = false
     let pointerId = null
     let lastX = 0
-    let lastAt = 0
-    let lastScrollY = window.scrollY
     let frame = 0
     let previous = performance.now()
 
@@ -68,10 +41,7 @@ export default function useMarquee() {
       previous = now // must not jump the strip on return
 
       if (!dragging && !hovering) {
-        offset += velocity * dt
-        // Exponential approach rather than a linear ramp, so a flick bleeds off
-        // quickly at first and then settles, the way a spun object does.
-        velocity += (base - velocity) * (1 - Math.exp(-dt / DECAY_TAU))
+        offset -= speed * dt
       }
 
       // Wrap into [-half, 0) whichever way it is travelling. The double modulo
@@ -88,30 +58,20 @@ export default function useMarquee() {
       dragging = true
       pointerId = event.pointerId
       lastX = event.clientX
-      lastAt = performance.now()
-      velocity = 0
       viewport.setPointerCapture?.(pointerId)
       viewport.classList.add('is-grabbing')
     }
 
     const onMove = (event) => {
       if (!dragging || event.pointerId !== pointerId) return
-      const now = performance.now()
       const dx = event.clientX - lastX
-      const dt = (now - lastAt) / 1000
       offset += dx
-      // Sampled per move rather than averaged over the whole drag, so the
-      // release speed reflects the last flick and not a slow start.
-      if (dt > 0) velocity = Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, dx / dt))
       lastX = event.clientX
-      lastAt = now
     }
 
     const onUp = (event) => {
       if (!dragging || (pointerId !== null && event.pointerId !== pointerId)) return
       dragging = false
-      // A press that never moved should not fling on release.
-      if (performance.now() - lastAt > 120) velocity = base
       viewport.releasePointerCapture?.(pointerId)
       pointerId = null
       viewport.classList.remove('is-grabbing')
@@ -125,18 +85,6 @@ export default function useMarquee() {
       hovering = false
     }
 
-    const onScroll = () => {
-      const nextScrollY = window.scrollY
-      const delta = nextScrollY - lastScrollY
-      lastScrollY = nextScrollY
-      if (dragging || hovering || reduced.matches || delta === 0) return
-
-      velocity = Math.max(
-        -MAX_VELOCITY,
-        Math.min(MAX_VELOCITY, velocity + delta * SCROLL_BOOST),
-      )
-    }
-
     viewport.addEventListener('pointerdown', onDown)
     viewport.addEventListener('pointermove', onMove)
     viewport.addEventListener('pointerup', onUp)
@@ -144,7 +92,6 @@ export default function useMarquee() {
     viewport.addEventListener('pointerleave', onUp)
     viewport.addEventListener('mouseenter', onMouseEnter)
     viewport.addEventListener('mouseleave', onMouseLeave)
-    window.addEventListener('scroll', onScroll, { passive: true })
 
     return () => {
       cancelAnimationFrame(frame)
@@ -157,7 +104,6 @@ export default function useMarquee() {
       viewport.removeEventListener('pointerleave', onUp)
       viewport.removeEventListener('mouseenter', onMouseEnter)
       viewport.removeEventListener('mouseleave', onMouseLeave)
-      window.removeEventListener('scroll', onScroll)
     }
   }, [])
 

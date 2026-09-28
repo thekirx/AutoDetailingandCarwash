@@ -517,6 +517,18 @@
   font-style: italic;
   color: var(--bd-accent);
 }
+@media (min-width: 900px) {
+  .bredesign .bd-services .bd-head {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 440px);
+    align-items: end;
+    gap: clamp(32px, 5vw, 88px);
+  }
+  .bredesign .bd-services .bd-head > p {
+    justify-self: end;
+    max-width: 44ch;
+    padding-bottom: 4px;
+  }
+}
 @media (max-width: 350px) {
   .bredesign .bd-services .bd-head h2 {
     font-size: 27px;
@@ -2888,10 +2900,8 @@
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
-/* Position is driven per frame by useMarquee, not by a keyframe: a CSS
-   animation cannot be grabbed, scrubbed, or handed the speed of a flick.
-   pan-y keeps vertical page scrolling with the browser while horizontal
-   gestures come to the strip. */
+/* useMarquee keeps a steady loop while allowing visitors to drag the strip.
+   pan-y leaves vertical page scrolling with the browser. */
 .bredesign .bd-marquee-track {
   display: flex;
   width: max-content;

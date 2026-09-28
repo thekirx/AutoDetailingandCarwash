@@ -98,7 +98,7 @@ describe('BreDESIGN brand logo marquee', () => {
     await page.mouse.move(0, 0)
   })
 
-  it('temporarily moves faster after the visitor scrolls', async () => {
+  it('keeps looping at the same pace when the visitor scrolls', async () => {
     const trackX = () => page.$eval('.bd-marquee-track', (track) => {
       const matrix = new DOMMatrixReadOnly(getComputedStyle(track).transform)
       return matrix.m41
@@ -110,13 +110,14 @@ describe('BreDESIGN brand logo marquee', () => {
       return Math.abs(end - start)
     }
 
-    const restingDistance = await distanceOver(180)
+    const restingDistance = await distanceOver(300)
     await page.evaluate(() => window.scrollBy({ top: 700, behavior: 'instant' }))
-    const boostedDistance = await distanceOver(180)
+    const scrolledDistance = await distanceOver(300)
 
     assert.ok(
-      boostedDistance > restingDistance * 2,
-      `expected scroll boost above ${restingDistance * 2}px, received ${boostedDistance}px`,
+      Math.abs(scrolledDistance - restingDistance) < restingDistance * 0.3,
+      `expected a steady loop after scrolling, measured ${restingDistance}px then ${scrolledDistance}px`,
     )
+    assert.equal(await page.$$eval('.bd-marquee-run:first-child .bd-brand', (brands) => brands.length), 8)
   })
 })
