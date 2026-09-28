@@ -61,7 +61,7 @@ export function BdOrigin() {
         </div>
         {/* The figures sit on the foot of the storefront photo on desktop, and
             follow the story as their own band on phone. */}
-        <BdStats className="bd-origin-stats" />
+        <BdStats className="bd-origin-stats" title="Hakum in numbers" />
       </div>
     </section>
   )

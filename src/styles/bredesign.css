@@ -579,7 +579,15 @@
   .bredesign .bd-origin-stats {
     position: static;
     order: 1;
-    margin-top: clamp(22px, 2.4cqw, 40px);
+    margin-top: 0;
+  }
+  /* Tighter white sky: the copy now sits on the photo, so the figures need
+     only a small gap above the roofline. */
+  .bredesign .bd-origin-picture {
+    margin-top: clamp(6px, 0.8cqw, 12px);
+  }
+  .bredesign .bd-origin-frame {
+    padding-top: clamp(12px, 1.4cqw, 22px);
   }
   .bredesign .bd-origin-stats .bd-stat-value {
     color: var(--bd-navy);
@@ -622,11 +630,26 @@
     color: rgba(255, 255, 255, 0.92);
   }
 }
+/* The figures' own label, centred over the four of them. */
+.bredesign .bd-stats-title {
+  width: var(--bd-shell);
+  margin: 0 auto clamp(12px, 1.4cqw, 20px);
+  justify-content: center;
+}
+@container (min-width: 641px) {
+  .bredesign .bd-stats-title {
+    color: var(--bd-blue-mid);
+  }
+}
 /* Phone: the photo is the panel at the top of the section, so the figures
    float on its lower half, above where the story begins. */
 @container (max-width: 640px) {
   .bredesign .bd-origin-stats {
-    top: calc(var(--bd-origin-mobile-photo-height) - 150px);
+    top: calc(var(--bd-origin-mobile-photo-height) - 180px);
+  }
+  .bredesign .bd-stats-title {
+    color: #fff;
+    text-shadow: 0 1px 6px rgba(2, 10, 49, 0.95);
   }
 }
 /* Phone: show the storefront as its own panel, then place the complete story

@@ -119,7 +119,7 @@ function CountUp({ value, suffix }) {
 /* The four figures, on their own band. They used to sit at the foot of the
    hero; the hero is now the video and its copy alone, and the figures follow
    the Hakum story instead, where they back up what the story says. */
-export function BdStats({ className = '' }) {
+export function BdStats({ className = '', title = null }) {
   const [live, setLive] = useState({ servicesDone: null, returningClients: null })
 
   useEffect(() => {
@@ -133,7 +133,16 @@ export function BdStats({ className = '' }) {
   }, [])
 
   return (
-    <section className={`bd-stats bd-stats-band ${className}`.trim()} aria-label="Hakum in numbers">
+    <section
+      className={`bd-stats bd-stats-band ${className}`.trim()}
+      aria-label={title ? undefined : 'Hakum in numbers'}
+      aria-labelledby={title ? 'bd-stats-title' : undefined}
+    >
+      {title ? (
+        <p className="bd-eyebrow bd-stats-title" id="bd-stats-title">
+          {title}
+        </p>
+      ) : null}
       <div className="bd-shell bd-stats-in">
         {buildStats(live).map((stat) => (
           <div className="bd-stat" key={stat.label}>
