@@ -598,7 +598,7 @@
   .bredesign .bd-origin-stats .bd-stat-value {
     color: var(--bd-navy);
     text-shadow: none;
-    font-size: clamp(28px, 4cqw, 58px);
+    font-size: clamp(28px, 3.8cqw, 54px);
   }
   .bredesign .bd-origin-stats .bd-stat-label {
     margin-top: 6px;
