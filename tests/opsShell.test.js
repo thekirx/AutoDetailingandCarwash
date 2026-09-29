@@ -174,7 +174,7 @@ describe('ops shell adoption — CRM, memberships, reviews', () => {
     assert.match(page, /OpsTabList/)
     assert.match(page, /const CRM_SHELL_TABS = Object\.freeze\(\[/)
     assert.match(page, /resolveOpsTab/)
-    assert.match(page, /canViewQueueOperations/)
+    assert.match(page, /canAccessQueuePage/)
     assert.match(page, /value="notes"/)
 
     for (const id of ['directory', 'groups', 'insights', 'sms']) {

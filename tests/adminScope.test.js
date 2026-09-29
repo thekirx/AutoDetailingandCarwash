@@ -35,7 +35,7 @@ describe('Admin capability matrix', () => {
     assert.equal(allowRoute(p, 'finance'), false)
     assert.equal(allowRoute(p, 'crm'), false)
     assert.equal(allowRoute(p, 'memberships'), false)
-    assert.equal(allowRoute(p, 'queue'), true)
+    assert.equal(allowRoute(p, 'queue'), false)
     assert.equal(allowRoute(p, 'cars'), false)
     assert.equal(allowRoute(p, 'reports'), false)
     assert.equal(canAccessReports(p), false)
@@ -55,7 +55,6 @@ describe('Admin capability matrix', () => {
       getOperationsNav(p).map((i) => i.to),
       [
         '/operations/dashboard',
-        '/operations/queue',
         '/operations/bookings',
         '/operations/attendance',
         '/operations/pos',

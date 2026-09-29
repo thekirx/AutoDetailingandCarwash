@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { Contact, MessageSquare, Pencil, Plus, Search, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessCrm, canWriteFinance, canViewQueueOperations, getBranchScopeList, isAdmin } from '@/auth/permissions'
+import { canAccessCrm, canWriteFinance, canAccessQueuePage, getBranchScopeList, isAdmin } from '@/auth/permissions'
 import { listBranches, listMembershipTiers } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope, chunkIds, collectPaged } from '@/lib/crmInsights'
@@ -736,7 +736,7 @@ export default function CrmPage() {
                     <div className="flex items-center gap-3">
                       <span className="tabular-nums text-muted-foreground">{formatMoney(b.final_price_minor)}</span>
                       <Badge variant="secondary">{b.status}</Badge>
-                      {canViewQueueOperations(profile) && (
+                      {canAccessQueuePage(profile) && (
                         <Button asChild size="sm" variant="ghost">
                           <Link to={`/operations/queue/${b.id}`}>Ticket</Link>
                         </Button>

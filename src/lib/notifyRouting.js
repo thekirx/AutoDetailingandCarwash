@@ -13,13 +13,13 @@ const BOOKING_ROLES = [R.ADMIN, R.TEAM_LEAD, R.OPERATIONS_LEAD, R.SUPER_ADMIN, R
 export const GLOBAL_NOTIFY_ROLES = [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.OPERATIONS_LEAD, R.MARKETING]
 
 export const NOTIFY_EVENTS = {
-  booking_new: { roles: BOOKING_ROLES, urls: ['/operations/bookings', '/operations/queue'] },
-  booking_floor: { roles: BOOKING_ROLES, urls: ['/operations/queue', '/operations/bookings'] },
-  booking_payment: { roles: BOOKING_ROLES, urls: ['/operations/pos', '/operations/queue', '/operations/bookings'] },
-  crew_assigned: { roles: [R.STAFF, R.DETAILER, R.TEAM_LEAD, R.ADMIN], urls: ['/operations/my-tasks', '/operations/queue'] },
+  booking_new: { roles: BOOKING_ROLES, urls: ['/operations/bookings', '/operations/queue', '/operations/dashboard'] },
+  booking_floor: { roles: BOOKING_ROLES, urls: ['/operations/queue', '/operations/bookings', '/operations/dashboard'] },
+  booking_payment: { roles: BOOKING_ROLES, urls: ['/operations/pos', '/operations/queue', '/operations/bookings', '/operations/dashboard'] },
+  crew_assigned: { roles: [R.STAFF, R.DETAILER, R.TEAM_LEAD, R.ADMIN], urls: ['/operations/my-tasks', '/operations/queue', '/operations/dashboard'] },
   shift_submitted: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], grant: 'finance_view', urls: ['/operations/finance?tab=shift-close'] },
-  shift_accepted: { roles: [R.ADMIN, R.OPERATIONS_LEAD, R.TEAM_LEAD, R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/pos', '/operations/queue'] },
-  shift_rejected: { roles: [R.ADMIN, R.OPERATIONS_LEAD, R.TEAM_LEAD, R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/pos', '/operations/queue'] },
+  shift_accepted: { roles: [R.ADMIN, R.OPERATIONS_LEAD, R.TEAM_LEAD, R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/pos', '/operations/queue', '/operations/dashboard'] },
+  shift_rejected: { roles: [R.ADMIN, R.OPERATIONS_LEAD, R.TEAM_LEAD, R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/pos', '/operations/queue', '/operations/dashboard'] },
   floor_pay_ready: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], grant: 'finance_write', urls: ['/operations/payroll'] },
   payroll_confirmed: { roles: EMPLOYEES, urls: ['/operations/my-pay'] },
   cash_advance_submitted: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], grant: 'finance_write', urls: ['/operations/payroll?tab=cash-advance'] },

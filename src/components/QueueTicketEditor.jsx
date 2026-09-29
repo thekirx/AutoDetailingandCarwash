@@ -12,7 +12,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
-import { canAccessPos, canMarkFailedQa, canModifyBookingServicePrice, canOverrideQueueStatus, canPushFinalCheckToPayment, canViewRedoLane } from '../auth/permissions'
+import { canAccessPos, canMarkFailedQa, canAddQueueService, canModifyBookingServicePrice, canOverrideQueueStatus, canPushFinalCheckToPayment, canViewRedoLane } from '../auth/permissions'
 import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
 import { PRICING_SIZES } from '../lib/servicePricing'
 import { filterPosBayCatalog } from '../lib/serviceKinds'
@@ -300,7 +300,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   })
   const overrideTargets = canOverrideQueueStatus(profile) ? getAdminOverrideTargets(ticket.status) : []
   const canAddService =
-    showEditActions && canEditServicePrice && ['waiting', 'in_progress'].includes(ticket.status)
+    showEditActions && canAddQueueService(profile) && ['waiting', 'in_progress'].includes(ticket.status)
   const visitTotalMinor = visitLines.reduce(
     (sum, line) => sum + Number(line.final_price_minor ?? line.base_price_minor ?? 0),
     0,
@@ -651,9 +651,9 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
         <Panel title="Services on this visit" icon={Layers} className={variant === 'modal' ? 'queue-ticket-services' : 'order-4'}>
           <p className="mb-3 text-sm text-muted-foreground">
             Line items billed for this car today.
-            {canEditServicePrice
-              ? ' Add another service here if the customer upsels on the floor.'
-              : ' Additional services must be added by Sales.'}
+            {canAddQueueService(profile)
+              ? ' Add another service here if the customer upsells on the floor.'
+              : ' Only Super Admin, Assistant Super Admin, Team Lead and Operations Lead can add services.'}
           </p>
           <div className="grid gap-2">
             {visitLines.map((line) => (

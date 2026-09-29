@@ -77,10 +77,10 @@ describe('Password email reset offer (PUB-2)', () => {
   })
 })
 
-describe('CRM ticket link uses queue view capability (OPS-H4)', () => {
-  it('CrmPage gates Ticket with canViewQueueOperations', () => {
+describe('CRM ticket link uses queue page capability (OPS-H4)', () => {
+  it('CrmPage gates Ticket with canAccessQueuePage', () => {
     const src = readFileSync(join(root, 'src/pages/CrmPage.jsx'), 'utf8')
-    assert.match(src, /canViewQueueOperations/)
+    assert.match(src, /canAccessQueuePage/)
     assert.doesNotMatch(src, /profile\?\.role === 'BossMich' \|\| profile\?\.role === 'team_lead' \|\| profile\?\.role === 'admin'/)
   })
 })

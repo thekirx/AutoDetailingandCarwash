@@ -117,7 +117,7 @@ describe('RBAC Part 1 matrix', () => {
     )
   })
 
-  it('Admin keeps planning capability; Command nav includes Floor + queues + POS + ops tools', () => {
+  it('Admin keeps planning capability; Command nav includes Floor + POS + ops tools (no Queue)', () => {
     const p = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor', 'imus'] }
     assert.equal(canViewPlanning(p), true)
     assert.equal(canEditPlanning(p), true)
@@ -128,7 +128,6 @@ describe('RBAC Part 1 matrix', () => {
       getOperationsNav(p).map((i) => i.to),
       [
         '/operations/dashboard',
-        '/operations/queue',
         '/operations/bookings',
         '/operations/attendance',
         '/operations/pos',
@@ -188,7 +187,8 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(dock.some((i) => i.to === '/operations/queue/new'))
     assert.ok(dock.some((i) => i.to === '/operations/attendance'))
     assert.ok(dock.some((i) => i.to === '/operations/bookings'))
-    assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 3)
+    assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 2)
+    assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).some((i) => i.to === '/operations/queue'), false)
   })
 
   it('Command nav never links a page the role cannot open', () => {
