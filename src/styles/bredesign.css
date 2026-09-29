@@ -265,11 +265,11 @@
      just below the fold. */
   box-sizing: border-box;
   min-height: 100svh;
-  /* One stack in the upper left of the playing video: the headline, the
-     paragraph under it, then the buttons, at every width. */
+  /* The headline in the upper left of the playing video; the paragraph and
+     the buttons under it in the lower left, at every width. */
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto 1fr auto auto;
   align-items: start;
   padding-bottom: clamp(28px, 4vw, 56px);
 }
@@ -289,7 +289,7 @@
 }
 .bredesign .bd-hero-cta {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 4;
   justify-self: start;
   margin-top: clamp(18px, 2vw, 26px);
   gap: 12px;
@@ -300,11 +300,11 @@
   padding: 0 26px;
   font-size: 11px;
 }
-/* Directly under the headline, on the same left edge. */
+/* In the lower left, directly above the buttons. */
 .bredesign .bd-hero-lede {
   grid-column: 1;
-  grid-row: 2;
-  margin: clamp(16px, 1.8vw, 24px) 0 0;
+  grid-row: 3;
+  margin: 0;
   max-width: 56ch;
   color: rgba(241, 241, 237, 0.92);
   font-size: clamp(15px, 1.15vw, 17px);
@@ -324,7 +324,6 @@
   }
   .bredesign .bd-hero-lede {
     max-width: 46ch;
-    margin-top: clamp(14px, 2.4vw, 22px);
     font-size: clamp(15px, 2.3vw, 19px);
     line-height: 1.5;
   }
@@ -342,30 +341,31 @@
     justify-content: center;
     white-space: nowrap;
   }
-  /* Dark behind the copy at the top, open over the clip's Hakum mark and
-     the rest of the frame below it. */
+  /* Dark at the top for the hook and deepest at the foot for the paragraph
+     and buttons; the clip's Hakum mark in the middle stays clear. */
   .bredesign .bd-hero::after {
     background: linear-gradient(
       180deg,
-      rgba(2, 10, 49, 0.92) 0%,
-      rgba(2, 10, 49, 0.8) 38%,
-      rgba(2, 10, 49, 0.3) 62%,
-      rgba(2, 10, 49, 0.55) 100%
+      rgba(2, 10, 49, 0.78) 0%,
+      rgba(2, 10, 49, 0.3) 22%,
+      rgba(2, 10, 49, 0.24) 42%,
+      rgba(2, 10, 49, 0.84) 64%,
+      rgba(2, 10, 49, 0.97) 100%
     );
   }
 }
-/* Desktop: the copy sits at the top, so the grade is darkest there, and a
-   left-to-right wash keeps the paragraph readable over bright footage. */
+/* Desktop: dark at the top for the hook and at the foot for the paragraph
+   and buttons, with a left-to-right wash behind the lower-left copy. */
 @media (min-width: 761px) and (orientation: landscape), (min-width: 1101px) {
   .bredesign .bd-hero::after {
     background:
-      linear-gradient(90deg, rgba(2, 10, 49, 0.55) 0%, rgba(2, 10, 49, 0) 55%),
+      linear-gradient(90deg, rgba(2, 10, 49, 0.45) 0%, rgba(2, 10, 49, 0) 55%),
       linear-gradient(
         180deg,
-        rgba(2, 10, 49, 0.82) 0%,
-        rgba(2, 10, 49, 0.55) 45%,
-        rgba(2, 10, 49, 0.3) 70%,
-        rgba(2, 10, 49, 0.85) 100%
+        rgba(2, 10, 49, 0.72) 0%,
+        rgba(2, 10, 49, 0.32) 32%,
+        rgba(2, 10, 49, 0.4) 56%,
+        rgba(2, 10, 49, 0.94) 100%
       );
   }
 }
