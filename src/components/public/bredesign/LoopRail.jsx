@@ -23,3 +23,21 @@ export function LoopBar({ rail }) {
     </div>
   )
 }
+
+/* Large arrows on the rail's own edges, for a mouse that has no swipe to reach
+   for. The header arrows scroll out of view once the reader is down among the
+   cards; these stay beside them. They repeat the header arrows, so they are
+   kept out of the tab order and hidden from assistive tech. */
+export function LoopStage({ rail, children }) {
+  return (
+    <div className="bd-loop-stage">
+      {children}
+      <button type="button" className="bd-loop-side is-prev" onClick={rail.prev} tabIndex={-1} aria-hidden="true">
+        <ArrowLeft size={22} aria-hidden="true" />
+      </button>
+      <button type="button" className="bd-loop-side is-next" onClick={rail.next} tabIndex={-1} aria-hidden="true">
+        <ArrowRight size={22} aria-hidden="true" />
+      </button>
+    </div>
+  )
+}

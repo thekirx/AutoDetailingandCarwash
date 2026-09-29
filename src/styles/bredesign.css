@@ -265,24 +265,23 @@
      just below the fold. */
   box-sizing: border-box;
   min-height: 100svh;
-  /* The headline in the upper right of the playing video; the paragraph
-     with the buttons under it at the bottom left. */
+  /* The headline in the upper left of the playing video; the paragraph sits
+     on top of the buttons at the foot of the frame, at every width. */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: 1fr auto auto;
-  column-gap: clamp(24px, 4vw, 64px);
-  align-items: end;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto;
+  align-items: start;
   padding-bottom: clamp(28px, 4vw, 56px);
 }
 .bredesign .bd-hero h1 {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 1;
-  justify-self: end;
-  align-self: start;
-  margin-top: 0;
+  justify-self: start;
+  margin: 0;
   font-size: clamp(2.2rem, 5.6vw, 5.6rem);
   line-height: 0.9;
-  text-align: right;
+  text-align: left;
+  text-shadow: 0 2px 22px rgba(2, 10, 49, 0.7);
 }
 .bredesign .bd-hero h1 em {
   font-style: italic;
@@ -290,9 +289,9 @@
 }
 .bredesign .bd-hero-cta {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 4;
   justify-self: start;
-  margin-top: clamp(18px, 2vw, 26px);
+  align-self: end;
   gap: 12px;
 }
 /* A touch larger than the site's standard button, not a poster-sized one. */
@@ -301,55 +300,40 @@
   padding: 0 26px;
   font-size: 11px;
 }
+/* Directly above the buttons, on the same left edge. */
 .bredesign .bd-hero-lede {
   grid-column: 1;
-  grid-row: 2;
-  margin: 0;
+  grid-row: 3;
+  margin: 0 0 clamp(16px, 1.8vw, 24px);
   max-width: 56ch;
-  color: rgba(241, 241, 237, 0.9);
+  color: rgba(241, 241, 237, 0.92);
   font-size: clamp(15px, 1.15vw, 17px);
   line-height: 1.6;
   text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
 }
-/* Phone and portrait tablet: hook, paragraph and buttons in one stack at the
-   foot of the frame. The middle of the portrait clip (its Hakum mark) stays
-   clear, and both buttons sit where a thumb reaches them. */
+/* Phone and portrait tablet: the headline and paragraph stay at the top,
+   sized to the screen. The buttons stay at the foot of the frame, where a
+   thumb reaches them. */
 @media (max-width: 760px), (max-width: 1100px) and (orientation: portrait) {
   .bredesign .bd-hero-in {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 1fr auto auto auto;
-    row-gap: 0;
     padding-bottom: max(28px, calc(env(safe-area-inset-bottom) + 20px));
   }
+  /* "Clean cars" is the widest line; 10.4vw keeps it on one line at 320px. */
   .bredesign .bd-hero h1 {
-    grid-column: 1;
-    grid-row: 2;
-    justify-self: start;
-    align-self: end;
-    margin: 0;
-    text-align: left;
-    /* "Clean cars" is the widest line; 10.4vw keeps it on one line at 320px. */
     font-size: min(10.4vw, 96px);
-    line-height: 0.9;
-    text-shadow: 0 2px 22px rgba(2, 10, 49, 0.7);
   }
   .bredesign .bd-hero-lede {
-    grid-column: 1;
-    grid-row: 3;
     max-width: 46ch;
-    margin-top: clamp(14px, 2.4vw, 22px);
+    margin-bottom: clamp(16px, 3vw, 26px);
     font-size: clamp(15px, 2.3vw, 19px);
     line-height: 1.5;
   }
   .bredesign .bd-hero-cta {
-    grid-column: 1;
-    grid-row: 4;
     justify-self: stretch;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
     max-width: 560px;
-    margin-top: clamp(18px, 3vw, 28px);
   }
   .bredesign .bd-hero-cta .bd-btn {
     min-height: 52px;
@@ -358,14 +342,29 @@
     justify-content: center;
     white-space: nowrap;
   }
-  /* The grade deepens earlier so the taller copy block sits on dark ground. */
+  /* Dark at the top for the hook and deepest at the foot for the paragraph
+     and buttons; the clip's Hakum mark in the middle stays clear. */
   .bredesign .bd-hero::after {
     background: linear-gradient(
       180deg,
-      rgba(2, 10, 49, 0.5) 0%,
-      rgba(2, 10, 49, 0.3) 34%,
-      rgba(2, 10, 49, 0.82) 62%,
+      rgba(2, 10, 49, 0.78) 0%,
+      rgba(2, 10, 49, 0.3) 22%,
+      rgba(2, 10, 49, 0.24) 42%,
+      rgba(2, 10, 49, 0.84) 64%,
       rgba(2, 10, 49, 0.97) 100%
+    );
+  }
+}
+/* Desktop: dark at the top for the hook and at the foot for the paragraph
+   and buttons. */
+@media (min-width: 761px) and (orientation: landscape), (min-width: 1101px) {
+  .bredesign .bd-hero::after {
+    background: linear-gradient(
+      180deg,
+      rgba(2, 10, 49, 0.72) 0%,
+      rgba(2, 10, 49, 0.32) 32%,
+      rgba(2, 10, 49, 0.4) 56%,
+      rgba(2, 10, 49, 0.94) 100%
     );
   }
 }
@@ -605,6 +604,9 @@
   color: #fff;
   font-size: clamp(11px, 1cqw, 14px);
   letter-spacing: 0.1em;
+  /* "Years experience combined" may take two lines on narrow screens. */
+  white-space: normal;
+  line-height: 1.25;
   text-shadow: 0 0 3px rgba(2, 10, 49, 1), 0 1px 6px rgba(2, 10, 49, 0.95), 0 2px 18px rgba(2, 10, 49, 0.9);
 }
 /* mockstoryA (desktop): the two swap places. The figures sit in navy ink on
@@ -625,11 +627,12 @@
   .bredesign .bd-origin-frame {
     padding-top: clamp(26px, 2.2cqw, 34px);
   }
-  /* Larger figures, capped so "15,032+" still fits its quarter of the row. */
+  /* In the accent of the story title's last word ("love."), a step smaller
+     than before so the row sits quieter above the storefront. */
   .bredesign .bd-origin-stats .bd-stat-value {
-    color: var(--bd-navy);
+    color: var(--bd-accent);
     text-shadow: none;
-    font-size: clamp(28px, 3.8cqw, 54px);
+    font-size: clamp(24px, 3.1cqw, 44px);
   }
   .bredesign .bd-origin-stats .bd-stat-label {
     margin-top: 6px;
@@ -713,9 +716,11 @@
     margin-bottom: 14px;
   }
   .bredesign .bd-origin-stats .bd-stat-value {
+    color: var(--bd-accent);
     text-shadow: none;
-    font-size: clamp(28px, 8.4cqw, 50px);
+    font-size: clamp(24px, 7.2cqw, 42px);
   }
+
   .bredesign .bd-origin-stats .bd-stat-label {
     color: rgba(241, 241, 237, 0.78);
     text-shadow: none;
@@ -1772,6 +1777,53 @@
 }
 @media (hover: none) and (pointer: coarse) {
   .bredesign .bd-loop-arrows {
+    display: none;
+  }
+}
+/* Arrows on the rail's own edges (LoopStage), centred on the cards and half
+   out into the page margin so they cover as little of a card as possible.
+   Mouse and trackpad only: a touch screen swipes. */
+.bredesign .bd-loop-stage {
+  position: relative;
+}
+.bredesign .bd-loop-side {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid rgba(241, 241, 237, 0.4);
+  border-radius: 50%;
+  background: rgba(2, 10, 49, 0.82);
+  color: var(--bd-paper);
+  box-shadow: 0 8px 26px rgba(2, 10, 49, 0.55);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+.bredesign .bd-loop-side.is-prev {
+  left: -26px;
+}
+/* Cards with the photo on top: centre the arrows on the photos so they stay
+   clear of the service names. */
+.bredesign .bd-wash-services .bd-loop-side {
+  top: 25%;
+}
+.bredesign .bd-loop-side.is-next {
+  right: -26px;
+}
+.bredesign .bd-loop-side:hover {
+  border-color: var(--bd-accent);
+  background: var(--bd-blue);
+  color: #fff;
+  transform: translateY(-50%) scale(1.06);
+}
+@media (hover: none) and (pointer: coarse), (max-width: 760px) {
+  .bredesign .bd-loop-side {
     display: none;
   }
 }
@@ -3684,18 +3736,24 @@
 .bredesign .bd-services-head h2,
 .bredesign .bd-service-reviews h2 { margin-top:14px; font-size:clamp(2rem, 4.6vw, 4rem); line-height:.95; }
 .bredesign .bd-wash-service-rail { --slide: clamp(270px, 29vw, 390px); display:grid; grid-auto-flow:column; grid-auto-columns:var(--slide); gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; margin-top:40px; }
-.bredesign .bd-wash-service-card { position:relative; overflow:hidden; scroll-snap-align:start; border:1px solid var(--bd-rule); border-radius:14px; background:var(--bd-navy-2); }
+.bredesign .bd-wash-service-card { position:relative; overflow:hidden; scroll-snap-align:start; display:flex; flex-direction:column; border:1px solid var(--bd-rule); border-radius:14px; background:var(--bd-navy-2); }
 .bredesign .bd-wash-service-card > img,
 .bredesign .bd-wash-coming { display:block; width:100%; aspect-ratio:4/3; object-fit:cover; }
 .bredesign .bd-wash-coming { display:grid; place-items:center; background:var(--bd-blue); color:#fff; font-family:var(--bd-display); font-size:24px; text-transform:uppercase; }
-.bredesign .bd-wash-service-card > div:last-child { display:grid; gap:14px; padding:22px; }
+.bredesign .bd-wash-service-card > div:last-child { display:flex; flex-direction:column; gap:14px; flex:1; padding:22px; }
+/* The price, the benefit and the buttons are anchored to the foot of the card
+   as one block, so they sit at the same height on every card however long the
+   copy above them runs. */
+.bredesign .bd-wash-service-card .bd-wash-service-body > p.bd-wash-price { margin-top:auto; padding-top:6px; }
+.bredesign .bd-wash-actions { display:flex; flex-wrap:wrap; gap:8px; padding-top:6px; }
+.bredesign .bd-wash-actions .bd-btn { flex:1 1 0; min-height:44px; padding:0 12px; font-size:10px; justify-content:center; white-space:nowrap; }
 .bredesign .bd-wash-service-card h3 { font-size:22px; line-height:1; }
 .bredesign .bd-wash-service-card p { color:var(--bd-ink-2); font-size:14px; line-height:1.6; }
 .bredesign .bd-wash-service-card strong { color:#54df93; font-size:13px; }
-.bredesign .bd-wash-service-card .bd-btn { justify-self:start; margin-top:6px; }
 /* "Starts at ₱…", read live from the catalog: the label in the site's small
    label style, the amount in the display face used for every other figure. */
-.bredesign .bd-wash-service-card p.bd-wash-price { display:flex; align-items:baseline; gap:8px; margin:0; color:var(--bd-paper); font-family:var(--bd-display); font-style:italic; font-weight:800; font-size:24px; line-height:1; letter-spacing:-0.01em; }
+.bredesign .bd-wash-service-card p.bd-wash-price { display:flex; align-items:baseline; gap:8px; margin:0; color:var(--bd-paper); font-family:var(--bd-display); font-style:italic; font-weight:800; font-size:18px; line-height:1; letter-spacing:-0.01em; min-height:18px; }
+.bredesign .bd-wash-service-card p.bd-wash-price.is-tbd b { font-family:var(--bd-body); font-style:normal; font-size:12px; font-weight:700; letter-spacing:.04em; color:var(--bd-ink-2); }
 .bredesign .bd-wash-service-card p.bd-wash-price span { font-family:var(--bd-body); font-style:normal; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--bd-ink-3); }
 .bredesign .bd-wash-unavailable { color:var(--bd-ink-3); font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
 .bredesign .bd-wash-service-card[data-package='mobile-detailing'] > img { filter:brightness(.48) saturate(.72); }
@@ -4325,7 +4383,48 @@
   gap: 16px;
   scroll-snap-align: start;
 }
-.bredesign .bd-services-col .bd-card { min-height: clamp(280px, 24vw, 360px); }
+/* Every card shares one frame: the number and the name at the top; the copy,
+   the price and the buttons at the foot, each on a fixed line so all sixteen
+   cards line up across both rows. */
+.bredesign .bd-services-col .bd-card {
+  justify-content: space-between;
+  min-height: clamp(380px, 28vw, 420px);
+}
+.bredesign .bd-services-col .bd-card.is-static:hover { transform: none; }
+.bredesign .bd-services-col .bd-card.is-static:hover > img { transform: none; }
+.bredesign .bd-services-col .bd-card:not(.is-plain)::after {
+  background: linear-gradient(
+    to bottom,
+    rgba(2, 10, 49, 0.82) 0%,
+    rgba(2, 10, 49, 0.28) 24%,
+    rgba(2, 10, 49, 0.3) 38%,
+    rgba(2, 10, 49, 0.9) 60%,
+    rgba(2, 10, 49, 0.97) 100%
+  );
+}
+.bredesign .bd-card-top {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 14px 22px 0 14px;
+}
+.bredesign .bd-card-top .bd-card-num { position: static; }
+.bredesign .bd-card-top h2 {
+  padding-left: 8px;
+  font-size: 1.2rem;
+  line-height: 1.05;
+  text-shadow: 0 2px 14px rgba(2, 10, 49, 0.8);
+}
+.bredesign .bd-services-col .bd-card-body {
+  display: flex;
+  flex-direction: column;
+}
+/* The body is anchored to the foot of the card with the price and buttons
+   last, so those sit at the same height on every card in a row; a longer
+   blurb grows upward into the photo instead of pushing them down. */
+.bredesign .bd-services-col .bd-card-body > p:first-child { margin-top: 0; }
 .bredesign .bd-services-col .bd-card.is-soon { cursor: default; }
 .bredesign .bd-services-col .bd-card.is-soon:hover { transform: none; border-color: var(--bd-rule); }
 .bredesign .bd-services-soon {
@@ -4346,22 +4445,48 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-top: 12px;
+  min-height: 18px;
+  margin-top: 14px;
   color: var(--bd-paper);
   font-family: var(--bd-display);
   font-style: italic;
   font-weight: 800;
-  font-size: 20px;
+  font-size: 16px;
   line-height: 1;
 }
 .bredesign .bd-services-price span {
   font-family: var(--bd-body);
   font-style: normal;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--bd-ink-3);
+}
+/* The placeholder until a price is published: same line, quieter type. */
+.bredesign .bd-services-price.is-tbd b {
+  font-family: var(--bd-body);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--bd-ink-2);
+}
+.bredesign .bd-services-col .bd-card-go { margin-top: 16px; min-height: 40px; }
+.bredesign .bd-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  min-height: 40px;
+}
+.bredesign .bd-card-actions .bd-btn {
+  flex: 1 1 0;
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 10px;
+  justify-content: center;
+  white-space: nowrap;
 }
 @media (max-width: 620px) {
   .bredesign .bd-services-head { align-items: start; flex-direction: column; }

@@ -6,7 +6,7 @@ import { MAIN_LINE, branchDirections, branchPhone, buildHomeBranchCards } from '
 import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
 import { SERVICES, WASH_SERVICES } from '../components/public/bredesign/content'
 import { useLoopRail, loopSlides } from '../components/public/bredesign/useLoopRail'
-import { LoopArrows, LoopBar } from '../components/public/bredesign/LoopRail'
+import { LoopArrows, LoopBar, LoopStage } from '../components/public/bredesign/LoopRail'
 import { formatStartingPrice, useStartingPrices, WASH_CARD_SERVICE_SLUG } from '../lib/serviceStartingPrices'
 import { usePageMeta } from '../lib/pageMeta'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
@@ -41,33 +41,67 @@ const SERVICE_COLUMNS = SERVICE_ITEMS.reduce((columns, item, index) => {
   return columns
 }, [])
 
+/* Every card has the same shape so the two rows line up: number, then the
+   name at the top; the copy, the price and the buttons at the foot, each on a
+   fixed line. A service with no published price holds the price line with a
+   placeholder. Wash cards carry two buttons (book it, or check the queue), so
+   they are not one big link; the protection cards open their own page. */
 function ServiceRailCard({ item, price, hidden }) {
-  const body = (
+  const tab = hidden ? -1 : undefined
+  const head = (
     <>
       {item.image ? <img src={item.image} alt={hidden ? '' : item.alt} loading="lazy" decoding="async" /> : null}
-      <span className="bd-card-num" aria-hidden="true">{item.number}</span>
-      {item.available ? null : <span className="bd-services-soon">Coming soon</span>}
-      <div className="bd-card-body">
+      <div className="bd-card-top">
+        <span className="bd-card-num" aria-hidden="true">{item.number}</span>
         <h2>{item.title}</h2>
-        <p>{item.copy}</p>
-        {price ? (
-          <p className="bd-services-price">
-            <span>Starts at</span> {formatStartingPrice(price)}
-          </p>
-        ) : null}
-        <span className="bd-card-go">
-          {item.kind === 'main' ? 'Explore this service' : item.available ? 'View live queue' : 'Coming soon'}
-          {item.available ? <ArrowRight size={14} aria-hidden="true" /> : null}
-        </span>
       </div>
+      {item.available ? null : <span className="bd-services-soon">Coming soon</span>}
     </>
   )
+  const priceLine = (
+    <p className={`bd-services-price${price ? '' : ' is-tbd'}`}>
+      <span>Starts at</span> {price ? formatStartingPrice(price) : <b>Price to follow</b>}
+    </p>
+  )
   const className = `bd-card${item.image ? '' : ' is-plain'}`
-  if (!item.available) return <div className={`${className} is-soon`}>{body}</div>
+
+  if (item.kind === 'main') {
+    return (
+      <Link className={className} to={item.to} tabIndex={tab}>
+        {head}
+        <div className="bd-card-body">
+          <p>{item.copy}</p>
+          {priceLine}
+          <span className="bd-card-go">
+            Explore this service <ArrowRight size={14} aria-hidden="true" />
+          </span>
+        </div>
+      </Link>
+    )
+  }
+
   return (
-    <Link className={className} to={item.kind === 'main' ? item.to : '/queue'} tabIndex={hidden ? -1 : undefined}>
-      {body}
-    </Link>
+    <div className={`${className} is-static${item.available ? '' : ' is-soon'}`}>
+      {head}
+      <div className="bd-card-body">
+        <p>{item.copy}</p>
+        {priceLine}
+        <div className="bd-card-actions">
+          {item.available ? (
+            <>
+              <Link className="bd-btn bd-btn-primary" to="/book" tabIndex={tab}>
+                Book this service
+              </Link>
+              <Link className="bd-btn bd-btn-quiet" to="/queue" tabIndex={tab}>
+                View live queue
+              </Link>
+            </>
+          ) : (
+            <span className="bd-card-go">Coming soon</span>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -106,6 +140,7 @@ export function ServicesPage() {
             </div>
             <LoopArrows rail={rail} label="services" />
           </div>
+          <LoopStage rail={rail}>
           <div className="bd-services-rail" ref={rail.trackRef} data-looping="true" role="region" aria-label="Services">
             {loopSlides(SERVICE_COLUMNS, rail.copies).map(({ item: column, copy, key }) => (
               <div className="bd-services-col" key={key} aria-hidden={copy || undefined}>
@@ -120,6 +155,7 @@ export function ServicesPage() {
               </div>
             ))}
           </div>
+          </LoopStage>
           <LoopBar rail={rail} />
         </div>
       </section>

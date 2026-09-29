@@ -27,13 +27,13 @@ import hero720H264 from '../../../assets/hero/hakum-desktop-720.h264.mp4'
      existed, plus everything the database has recorded since. */
 function buildStats(live) {
   return [
-    { value: STATIC_STATS.team, suffix: '', label: 'Team members' },
-    { value: STATIC_STATS.years, suffix: '+', label: 'Years combined' },
     {
       value: withBase(STAT_BASE.services, live.servicesDone),
       suffix: '+',
       label: 'Vehicles cared for',
     },
+    { value: STATIC_STATS.team, suffix: '', label: 'Team members' },
+    { value: STATIC_STATS.years, suffix: '+', label: 'Years experience combined' },
     {
       value: withBase(STAT_BASE.clients, live.returningClients),
       suffix: '+',

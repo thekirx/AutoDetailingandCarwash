@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { Play } from 'lucide-react'
 
 import BdVideoModal from './BdVideoModal'
-import { LoopArrows, LoopBar } from './LoopRail'
+import { LoopArrows, LoopBar, LoopStage } from './LoopRail'
 import { loopSlides, useLoopRail } from './useLoopRail'
 
 /* Real installation clips for one service, as a wrap-around rail of posters.
@@ -31,6 +31,7 @@ export default function ServiceProofSection({ serviceId, serviceName, proof }) {
           <LoopArrows rail={rail} label="video" />
         </div>
 
+        <LoopStage rail={rail}>
         <div className="bd-proof-rail" ref={rail.trackRef}>
           {loopSlides(clips, rail.copies).map(({ item: clip, copy, key }) => {
             const [title, ...detail] = clip.caption.split(' · ')
@@ -61,6 +62,7 @@ export default function ServiceProofSection({ serviceId, serviceName, proof }) {
             )
           })}
         </div>
+        </LoopStage>
         <LoopBar rail={rail} />
       </div>
       <BdVideoModal clip={activeClip} onClose={close} />

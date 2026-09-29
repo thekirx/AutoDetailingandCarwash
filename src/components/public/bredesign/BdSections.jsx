@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { SERVICE_DETAIL_CONTENT } from '../../../data/serviceDetailContent'
 import { BdStats } from './BdHero'
 import BdVideoModal from './BdVideoModal'
-import { LoopArrows, LoopBar } from './LoopRail'
+import { LoopArrows, LoopBar, LoopStage } from './LoopRail'
 import { loopSlides, useLoopRail } from './useLoopRail'
 import WhyIcon from './WhyIcon'
 import { GALLERY_EXTRA_CLIPS, GALLERY_PAGES, ORIGIN, SERVICES, WHY_SECTIONS } from './content'
@@ -221,6 +221,7 @@ export function BdPhotos() {
           <LoopArrows rail={rail} label="gallery page" />
         </div>
 
+        <LoopStage rail={rail}>
         <div className="bd-gallery-rail" ref={rail.trackRef}>
           {loopSlides(pages, rail.copies).map(({ item: page, copy, key }) => (
             <div
@@ -270,6 +271,7 @@ export function BdPhotos() {
             </div>
           ))}
         </div>
+        </LoopStage>
         <LoopBar rail={rail} />
       </div>
       <BdVideoModal clip={activeClip} onClose={closeClip} />

@@ -1,4 +1,4 @@
-import { LoopArrows, LoopBar } from './LoopRail'
+import { LoopArrows, LoopBar, LoopStage } from './LoopRail'
 import { loopSlides, useLoopRail } from './useLoopRail'
 
 /* Google reviews, on the homepage directly under the photo and video gallery.
@@ -175,6 +175,7 @@ export default function BdReviews() {
           </div>
         </div>
 
+        <LoopStage rail={rail}>
         <div className="bd-reviews-rail" ref={rail.trackRef}>
           {loopSlides(REVIEWS, rail.copies).map(({ item: review, copy, key }) => (
             <a
@@ -213,6 +214,7 @@ export default function BdReviews() {
             </a>
           ))}
         </div>
+        </LoopStage>
         <LoopBar rail={rail} />
       </div>
     </section>

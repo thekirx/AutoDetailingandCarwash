@@ -95,7 +95,7 @@ describe('BreDESIGN public page fallbacks', () => {
           }),
         }
       })
-      assert.deepEqual(layout.labels, ['Team members', 'Years combined', 'Vehicles cared for', 'Satisfied clients'])
+      assert.deepEqual(layout.labels, ['Vehicles cared for', 'Team members', 'Years experience combined', 'Satisfied clients'])
       assert.equal(layout.rows, expectedRows, `stats should sit in ${expectedRows} row(s) at ${width}px`)
       assert.equal(layout.centered, true, `stats overflow or lose center at ${width}px`)
     }
