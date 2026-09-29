@@ -265,19 +265,19 @@
      just below the fold. */
   box-sizing: border-box;
   min-height: 100svh;
-  /* The headline in the upper left of the playing video; the paragraph and
-     the buttons under it in the lower left, at every width. */
+  /* The headline, the paragraph under it and the buttons all sit together
+     in the lower left of the playing video, at every width. */
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: 1fr auto auto auto;
   align-items: start;
   padding-bottom: clamp(28px, 4vw, 56px);
 }
 .bredesign .bd-hero h1 {
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 2;
   justify-self: start;
-  margin: 0;
+  margin: 0 0 clamp(14px, 1.6vw, 22px);
   font-size: clamp(2.2rem, 5.6vw, 5.6rem);
   line-height: 0.9;
   text-align: left;
@@ -300,7 +300,7 @@
   padding: 0 26px;
   font-size: 11px;
 }
-/* In the lower left, directly above the buttons. */
+/* In the lower left, between the headline and the buttons. */
 .bredesign .bd-hero-lede {
   grid-column: 1;
   grid-row: 3;
@@ -696,6 +696,17 @@
     color: var(--bd-blue-mid);
   }
 }
+/* The figures and their labels drop a little under "Hakum in numbers"; the
+   title keeps its place, so its gap grows by the same amount. */
+.bredesign .bd-origin-stats {
+  --bd-stats-drop: clamp(10px, 1.2vw, 18px);
+}
+.bredesign .bd-origin-stats .bd-stats-in {
+  padding-top: var(--bd-stats-drop);
+}
+.bredesign .bd-origin-stats .bd-stats-title {
+  margin-bottom: calc(6px + var(--bd-stats-drop));
+}
 /* Phone: the figures come off the storefront photo so the sign and shop stay
    clear. They start at the foot of the photo and run down onto navy, above the
    story, under the same eyebrow as "The Hakum story". */
@@ -709,13 +720,13 @@
     order: 1;
   }
   .bredesign .bd-origin-stats .bd-stats-in {
-    padding-top: 34px;
+    padding-top: calc(34px + var(--bd-stats-drop));
     row-gap: 26px;
   }
-  .bredesign .bd-stats-title {
+  .bredesign .bd-origin-stats .bd-stats-title {
     color: var(--bd-accent);
     text-shadow: none;
-    margin-bottom: 14px;
+    margin-bottom: calc(14px + var(--bd-stats-drop));
   }
   .bredesign .bd-origin-stats .bd-stat-value {
     color: var(--bd-blue-mid);
@@ -808,20 +819,21 @@
     padding-bottom: 6px;
   }
 }
-/* Laptops and tablets (700–1399px): there is not room for the heading and
-   the description side by side, so the description takes its own line under
-   the heading, still one line, its size following the window so it never
-   wraps (about 12px at 700px, 15px from roughly 850px up). */
+/* Laptops and tablets (700–1399px): the description stays beside the
+   heading, set in two balanced lines instead of one. */
 @media (min-width: 700px) and (max-width: 1399px) {
   .bredesign .bd-services .bd-head {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-content: start;
+    align-items: end;
+    gap: clamp(18px, 2.4vw, 32px);
   }
   .bredesign .bd-services .bd-head > p {
-    max-width: none;
-    white-space: nowrap;
-    font-size: min(15px, 1.76vw);
-    padding-bottom: 0;
+    max-width: 72ch;
+    font-size: clamp(12px, 1.3vw, 15px);
+    line-height: 1.5;
+    text-wrap: balance;
+    padding-bottom: 6px;
   }
 }
 /* Wide screens: the description runs on one line beside the heading. */
