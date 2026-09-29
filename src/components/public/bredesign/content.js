@@ -37,6 +37,7 @@ export const IMAGES = {
   washGlassCoating: new URL('../../../assets/services/wash-detailing/glass-coating.webp', import.meta.url).href,
   washGlassDetailing: new URL('../../../assets/services/wash-detailing/glass-detailing.webp', import.meta.url).href,
   washInteriorDeepCleaning: new URL('../../../assets/services/wash-detailing/interior-deep-cleaning.webp', import.meta.url).href,
+  washFullExteriorDetailing: new URL('../../../assets/services/wash-detailing/full-exterior-detailing.webp', import.meta.url).href,
   washBactozero: new URL('../../../assets/services/wash-detailing/bactozero.webp', import.meta.url).href,
   washMobileDetailing: new URL('../../../assets/services/wash-detailing/mobile-detailing.webp', import.meta.url).href,
   washBlackTrims: new URL('../../../assets/services/wash-detailing/black-trims-restoration.webp', import.meta.url).href,
@@ -168,6 +169,15 @@ export const WASH_SERVICES = [
     benefit: 'A cleaner cabin in one day',
     image: IMAGES.washInteriorDeepCleaning,
     alt: 'A Hakum technician deep cleaning the lower cabin of a vehicle',
+    available: true,
+  },
+  {
+    id: 'full-exterior-detailing',
+    title: 'Full Exterior Detailing',
+    copy: "Deep exterior care designed to restore your vehicle's finish, cleanliness, and overall appearance.",
+    benefit: 'A restored exterior finish',
+    image: IMAGES.washFullExteriorDetailing,
+    alt: 'Water spraying across the front of a black Jetour at Hakum Auto Care',
     available: true,
   },
   {

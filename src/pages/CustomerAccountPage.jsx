@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Cake, CalendarDays, CalendarPlus, Car, Plus, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
+import { Cake, CalendarDays, CalendarPlus, Car, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatMoney } from '@/queue/queueApi'
 import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
@@ -46,6 +46,40 @@ function formatVisitDate(iso) {
   } catch {
     return ''
   }
+}
+
+/* Desktop hero line: "Your car is …" finished from the visit's current stage. */
+const STAGE_PHRASES = {
+  booked: 'booked in',
+  waiting: 'in the queue',
+  intake: 'checked in',
+  'in progress': 'in progress',
+  checking: 'being checked',
+  'final checking': 'being checked',
+  releasing: 'almost ready',
+  payment: 'ready for payment',
+  'for payment': 'ready for payment',
+  completed: 'done',
+}
+
+function stagePhrase(visit) {
+  const label = String(visit?.visit?.label || visit?.status || '').toLowerCase()
+  return STAGE_PHRASES[label] || label || 'booked in'
+}
+
+const NUMBER_WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+  'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty']
+
+function numberWord(n) {
+  return NUMBER_WORDS[n] || String(n)
+}
+
+/* Desktop loyalty headline, e.g. "Six down. Nine to go." */
+function stampHeadline(completed = 0, slots = 10) {
+  const left = Math.max(0, slots - completed)
+  if (completed <= 0) return ['Your first stamp', 'is one visit away.']
+  if (left === 0) return ['Card full.', 'Claim your reward.']
+  return [`${numberWord(completed)} down.`, `${numberWord(left).toLowerCase()} to go.`]
 }
 
 const ACTIVITY_TABS = [
@@ -228,6 +262,46 @@ export default function CustomerAccountPage() {
               </Link>
             </div>
           </div>
+          {/* Desktop: the hero is the visit, like the site's own page heroes —
+              the title on the left, the live ticket on the right. */}
+          <div className="capp-hero-desk">
+            <div className="capp-hero-desk-copy">
+              <p className="capp-desk-eyebrow">
+                {greeting()}, {firstName || 'there'}
+              </p>
+              <h1 className="capp-desk-title">
+                {activeVisit ? 'Your car is' : 'Ready when'}
+                <em>{activeVisit ? `${stagePhrase(activeVisit)}.` : 'you are.'}</em>
+              </h1>
+              <p className="capp-desk-lede">
+                {activeVisit
+                  ? `${activeVisit.service_name || 'Your service'} on the ${[activeVisit.vehicle_make, activeVisit.vehicle_model].filter(Boolean).join(' ') || activeVisit.vehicle_plate || 'car'}. We move it along the board as the team works.`
+                  : 'Book a service and follow your car on the floor, live, from any screen.'}
+              </p>
+              <div className="capp-desk-actions">
+                {activeVisit ? (
+                  <>
+                    <Link className="capp-btn capp-btn-fill" to={customerQueuePath(activeVisit.branch)}>
+                      View live queue
+                    </Link>
+                    <Link className="capp-btn capp-btn-ghost" to={CUSTOMER_BOOK_PATH}>
+                      Book another service
+                    </Link>
+                  </>
+                ) : (
+                  <Link className="capp-btn capp-btn-fill" to={CUSTOMER_BOOK_PATH}>
+                    <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />
+                    Book a service
+                  </Link>
+                )}
+              </div>
+            </div>
+            {activeVisit ? (
+              <div className="capp-hero-desk-ticket">
+                <ActiveVisitCard visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
+              </div>
+            ) : null}
+          </div>
         </header>
       }
     >
@@ -245,8 +319,19 @@ export default function CustomerAccountPage() {
           <Skeleton />
         </div>
       ) : activeVisit ? (
-        <ActiveVisitCard visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
-      ) : null}
+        <ActiveVisitCard className="capp-phone-only" visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
+      ) : (
+        <div className="capp-empty capp-span capp-home-action capp-phone-only">
+          <strong>No active visit</strong>
+          Book a service to track your car on the floor.
+          <div className="capp-empty-actions">
+            <Link className="capp-btn capp-btn-fill" to={CUSTOMER_BOOK_PATH}>
+              <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />
+              Book a service
+            </Link>
+          </div>
+        </div>
+      )}
 
       {dueMaintenance.length ? (
         <div className="capp-card capp-span" role="status">
@@ -270,12 +355,14 @@ export default function CustomerAccountPage() {
         </div>
       ) : null}
 
-      <div className={`capp-tiles capp-span${!activeVisit ? ' capp-home-quick' : ''}`}>
-        <Tile icon={CalendarPlus} title="Book a service" sub="Schedule your visit" to={CUSTOMER_BOOK_PATH} />
+      <div className={`capp-tiles capp-span capp-phone-only${!activeVisit ? ' capp-home-quick' : ''}`}>
+        {activeVisit ? <Tile icon={CalendarPlus} title="Book a service" sub="Schedule your visit" to={CUSTOMER_BOOK_PATH} /> : null}
+        {/* Adding a car lives inside My cars; with none saved, the tile opens
+            straight on the add form. */}
         <Tile
-          icon={vehicles.length ? Car : Plus}
-          title={vehicles.length ? 'My cars' : 'Add a car'}
-          sub={vehicles.length ? `${vehicles.length} saved` : 'Save a plate'}
+          icon={Car}
+          title="My cars"
+          sub={vehicles.length ? `${vehicles.length} saved` : 'Add your first car'}
           to={vehicles.length ? `${CUSTOMER_MORE_PATH}?tab=garage` : `${CUSTOMER_MORE_PATH}?tab=garage&add=1`}
         />
         <Tile icon={CalendarDays} title="Events" sub="Meets and promos" to="/account/events" />
@@ -291,6 +378,11 @@ export default function CustomerAccountPage() {
               {loyalty.pointsEnabled !== false ? (
                 <p className="capp-meta">{loyalty.loyaltyPoints ?? 0} points</p>
               ) : null}
+              <p className="capp-desk-section-title" aria-hidden="true">
+                {stampHeadline(loyalty.completed ?? 0, loyalty.cardSlots ?? 10)[0]}{' '}
+                <em>{stampHeadline(loyalty.completed ?? 0, loyalty.cardSlots ?? 10)[1]}</em>
+              </p>
+
             </div>
           </div>
           <StampTrack
@@ -307,6 +399,36 @@ export default function CustomerAccountPage() {
           <p className="capp-meta">Rewards and perks</p>
         </Link>
       )}
+
+      {/* Desktop: the garage gets its own section, as on the site's pages.
+          Adding a car still happens inside My cars. */}
+      <section className="capp-desk-garage capp-span" aria-label="Your garage">
+        <div className="capp-desk-head">
+          <div>
+            <p className="capp-eyebrow">Your garage</p>
+            <h2 className="capp-desk-section-title">
+              {vehicles.length ? `${vehicles.length} ${vehicles.length === 1 ? 'car' : 'cars'}` : 'No cars'}{' '}
+              <em>{vehicles.length ? 'saved.' : 'yet.'}</em>
+            </h2>
+          </div>
+          <Link className="capp-btn capp-btn-ghost" to={vehicles.length ? `${CUSTOMER_MORE_PATH}?tab=garage` : `${CUSTOMER_MORE_PATH}?tab=garage&add=1`}>
+            Open My cars
+          </Link>
+        </div>
+        {vehicles.length ? (
+          <div className="capp-desk-cars">
+            {vehicles.slice(0, 4).map((v) => (
+              <Link key={v.id} className="capp-desk-car" to={`${CUSTOMER_BOOK_PATH}?vehicle=${v.id}`}>
+                <strong className="capp-plate">{v.plate_number}</strong>
+                <span>{[v.vehicle_make, v.vehicle_model, v.vehicle_year].filter(Boolean).join(' · ') || 'Saved car'}</span>
+                <em>Book this car →</em>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="capp-meta">Save a plate in My cars so booking and queue tracking are one tap.</p>
+        )}
+      </section>
 
       <section className="capp-section" aria-label="Live queue">
         <SectionHead

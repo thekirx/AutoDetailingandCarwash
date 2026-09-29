@@ -6,12 +6,13 @@ import ServiceFaqSection from '../components/public/bredesign/ServiceFaqSection'
 import ServiceProofSection from '../components/public/bredesign/ServiceProofSection'
 import useReveal from '../components/public/bredesign/useReveal'
 import { IMAGES, SERVICE_POINT_CARDS, WASH_GALLERY_PAGES, WASH_SERVICES, WHY_SECTIONS } from '../components/public/bredesign/content'
-import { LoopArrows, LoopBar } from '../components/public/bredesign/LoopRail'
+import { LoopArrows, LoopBar, LoopStage } from '../components/public/bredesign/LoopRail'
 import { loopSlides, useLoopRail } from '../components/public/bredesign/useLoopRail'
 import { CeramicSection, PpfInformationSection } from '../components/public/home/HomeServiceSections'
 import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
 import { SERVICE_DETAIL_CONTENT } from '../data/serviceDetailContent'
 import { usePageMeta } from '../lib/pageMeta'
+import { WASH_CARD_SERVICE_SLUG, formatStartingPrice, useStartingPrices } from '../lib/serviceStartingPrices'
 
 /* The colour mark, not the monochrome one used in the logo marquee: this is a
    partner credit rather than a row in a wall of suppliers. */
@@ -62,6 +63,7 @@ const WASH_REVIEWS = [
 
 function WashServiceRail() {
   const rail = useLoopRail(WASH_SERVICES.length)
+  const prices = useStartingPrices()
   return (
     <section className="bd-wash-services" aria-labelledby="wash-services-title">
       <div className="bd-shell">
@@ -69,17 +71,37 @@ function WashServiceRail() {
           <div><p className="bd-eyebrow">Premium wash & detailing</p><h2 id="wash-services-title">Choose the care your car needs.</h2></div>
           <LoopArrows rail={rail} label="wash service" />
         </div>
+        <LoopStage rail={rail}>
         <div className="bd-wash-service-rail" ref={rail.trackRef} data-wash-service-rail data-looping="true">
           {loopSlides(WASH_SERVICES, rail.copies).map(({ item, copy, key }) => (
             <article className="bd-wash-service-card" data-wash-service-card data-package={item.id} key={key} aria-hidden={copy || undefined}>
               {item.image ? <img src={item.image} alt={copy ? '' : item.alt} loading="lazy" /> : <div className="bd-wash-coming">Coming soon</div>}
               {!item.available ? <span className="bd-wash-coming-badge">Coming soon</span> : null}
-              <div><h3>{item.title}</h3><p>{item.copy}</p><strong>✓ {item.benefit}</strong>
-                {item.available ? <Link className="bd-btn bd-btn-primary" to="/queue">View live queue</Link> : <span className="bd-wash-unavailable">Coming soon</span>}
+              {/* One frame for every card: name, copy, price, benefit, then the
+                  button pinned to the foot, so all of them line up. A card with
+                  no priced service holds the price line with a placeholder. */}
+              <div className="bd-wash-service-body"><h3>{item.title}</h3><p>{item.copy}</p>
+                {prices[WASH_CARD_SERVICE_SLUG[item.id]] ? (
+                  <p className="bd-wash-price">
+                    <span>Starts at</span> {formatStartingPrice(prices[WASH_CARD_SERVICE_SLUG[item.id]])}
+                  </p>
+                ) : (
+                  <p className="bd-wash-price is-tbd">
+                    <span>Starts at</span> <b>Price to follow</b>
+                  </p>
+                )}
+                <strong>✓ {item.benefit}</strong>
+                {/* Wash & detailing is walk-in: no booking ahead, only the queue. */}
+                {item.available ? (
+                  <div className="bd-wash-actions">
+                    <Link className="bd-btn bd-btn-primary" to="/queue" tabIndex={copy ? -1 : undefined}>View live queue</Link>
+                  </div>
+                ) : <div className="bd-wash-actions"><span className="bd-wash-unavailable">Coming soon</span></div>}
               </div>
             </article>
           ))}
         </div>
+        </LoopStage>
         <LoopBar rail={rail} />
       </div>
     </section>
@@ -94,6 +116,7 @@ function WashReviews() {
         <div><p className="bd-eyebrow">Google reviews</p><h2>What customers say about the clean.</h2></div>
         <LoopArrows rail={rail} label="review" />
       </div>
+      <LoopStage rail={rail}>
       <div className="bd-service-review-rail" ref={rail.trackRef} data-wash-review-rail data-looping="true" role="region" aria-label="Customer reviews">
         {loopSlides(WASH_REVIEWS, rail.copies).map(({ item: review, copy, key }) => (
           <a key={key} data-service-review={copy ? undefined : ''} href={review.href} target="_blank" rel="noreferrer noopener" aria-hidden={copy || undefined} tabIndex={copy ? -1 : undefined}>
@@ -101,6 +124,7 @@ function WashReviews() {
           </a>
         ))}
       </div>
+      </LoopStage>
       <LoopBar rail={rail} />
     </div></section>
   )
@@ -119,6 +143,7 @@ function WashGallery() {
           <p>8 photos · Wash &amp; detailing</p>
           <LoopArrows rail={rail} label="wash gallery page" />
         </div>
+        <LoopStage rail={rail}>
         <div className="bd-gallery-rail" ref={rail.trackRef} data-wash-gallery-rail>
           {loopSlides(WASH_GALLERY_PAGES, rail.copies).map(({ item: page, copy, key }) => (
             <div
@@ -141,6 +166,7 @@ function WashGallery() {
             </div>
           ))}
         </div>
+        </LoopStage>
         <LoopBar rail={rail} />
       </div>
     </section>

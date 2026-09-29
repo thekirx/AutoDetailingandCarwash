@@ -37,8 +37,9 @@ describe('BreDESIGN homepage fallback sections', () => {
 
   it('shows the real stamp-card rewards model instead of obsolete membership points', async () => {
     const appCopy = await page.$eval('#app-preview', (section) => section.textContent.replace(/\s+/g, ' ').trim())
-    assert.match(appCopy, /Loyalty program/i)
-    assert.match(appCopy, /6\/10 stamps/i)
+    // The phone shows a capture of the real app home screen (15-stamp card).
+    const shot = await page.$eval('#app-preview .bd-app-shot img', (img) => img.getAttribute('src'))
+    assert.match(shot, /app-guide\/home/)
     assert.match(appCopy, /Stamp rewards/i)
     assert.doesNotMatch(appCopy, /points/i)
   })
@@ -57,8 +58,8 @@ describe('BreDESIGN homepage fallback sections', () => {
     assert.equal(result.tiktokHref, 'https://www.tiktok.com/@hakum_autocare')
   })
 
-  it('places the services description beside its heading on wide screens', async () => {
-    for (const width of [1440, 1024, 768, 390]) {
+  it('keeps the services description on one line: beside the heading from 1400px, under it below that', async () => {
+    for (const width of [1920, 1440, 1024, 768, 390]) {
       await page.setViewport({ width, height: 900 })
       const layout = await page.evaluate(() => {
         const title = document.querySelector('#services .bd-head h2').getBoundingClientRect()
@@ -68,14 +69,18 @@ describe('BreDESIGN homepage fallback sections', () => {
           titleBottom: title.bottom,
           descriptionLeft: description.left,
           descriptionTop: description.top,
+          descriptionLines: Math.round(
+            description.height / parseFloat(getComputedStyle(document.querySelector('#services .bd-head > p')).lineHeight),
+          ),
           overflow: document.documentElement.scrollWidth > innerWidth,
         }
       })
-      if (width >= 900) {
+      if (width >= 1400) {
         assert.ok(layout.descriptionLeft >= layout.titleRight, `description is not beside the heading at ${width}px`)
       } else {
         assert.ok(layout.descriptionTop >= layout.titleBottom, `description overlaps the heading at ${width}px`)
       }
+      if (width >= 700) assert.equal(layout.descriptionLines, 1, `description wraps at ${width}px`)
       assert.equal(layout.overflow, false, `horizontal overflow at ${width}px`)
     }
     await page.setViewport({ width: 1440, height: 900 })

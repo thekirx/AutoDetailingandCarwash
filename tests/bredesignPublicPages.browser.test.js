@@ -76,8 +76,8 @@ describe('BreDESIGN public page fallbacks', () => {
     })
   })
 
-  it('keeps all four centered stats in one row across screen sizes', async () => {
-    for (const width of [1440, 768, 390, 320]) {
+  it('keeps the four centered stats in one row on wide screens and two by two on phones', async () => {
+    for (const [width, expectedRows] of [[1440, 1], [768, 1], [390, 2], [320, 2]]) {
       await page.setViewport({ width, height: 900 })
       await page.goto(`${PREVIEW_ORIGIN}/home`, { waitUntil: 'networkidle0' })
       const layout = await page.evaluate(() => {
@@ -95,8 +95,8 @@ describe('BreDESIGN public page fallbacks', () => {
           }),
         }
       })
-      assert.deepEqual(layout.labels, ['Team members', 'Years combined', 'Vehicles cared for', 'Satisfied clients'])
-      assert.equal(layout.rows, 1, `stats wrap at ${width}px`)
+      assert.deepEqual(layout.labels, ['Vehicles cared for', 'Team members', 'Years experience combined', 'Satisfied clients'])
+      assert.equal(layout.rows, expectedRows, `stats should sit in ${expectedRows} row(s) at ${width}px`)
       assert.equal(layout.centered, true, `stats overflow or lose center at ${width}px`)
     }
     await page.setViewport({ width: 1440, height: 900 })
@@ -123,7 +123,8 @@ describe('BreDESIGN public page fallbacks', () => {
         const header = document.querySelector('.public-header')?.getBoundingClientRect()
         const title = document.querySelector('.bd-origin h2')
         return {
-          storyParagraphs: document.querySelectorAll('.bd-origin-copy > .bd-origin-text').length,
+          storyParagraphs: document.querySelectorAll('.bd-origin-texts > .bd-origin-text').length,
+          storyColumns: new Set([...document.querySelectorAll('.bd-origin-text')].map((p) => Math.round(p.getBoundingClientRect().top))).size,
           photoWidth: photo.width,
           photoSrc: document.querySelector('.bd-origin-photo').currentSrc,
           sectionBackground: getComputedStyle(document.querySelector('.bd-origin-frame')).backgroundColor,
@@ -141,16 +142,21 @@ describe('BreDESIGN public page fallbacks', () => {
         }
       })
 
-      assert.equal(layout.storyParagraphs, 1, `story splits into blocks at ${viewport.width}px`)
+      assert.equal(layout.storyParagraphs, 2, `story is not two blocks at ${viewport.width}px`)
+      /* Side by side on desktop (one row), stacked on phone (two rows). */
+      assert.equal(layout.storyColumns, viewport.layout === 'plate' ? 1 : 2, `story columns wrong at ${viewport.width}px`)
 
       if (viewport.layout === 'plate') {
         /* Desktop is a white section: navy story first, then the storefront
            crop whole at its native 2000x858 shape closing the section. */
         assert.equal(layout.sectionBackground, 'rgb(255, 255, 255)', 'desktop story is not on white')
-        assert.equal(layout.titleColor, 'rgb(2, 10, 49)', 'desktop title is not navy ink')
+        /* Design B: the title sits in white on the storefront photo. */
+        assert.equal(layout.titleColor, 'rgb(255, 255, 255)', 'desktop title is not white on the photo')
         assert.match(layout.photoSrc, /hakum-story-storefront-crop/, 'desktop does not use the storefront crop')
         assert.ok(Math.abs(layout.photoHeight - (layout.photoWidth * 858) / 2000) <= 2, 'desktop photo is cropped')
-        assert.ok(layout.copyBottom <= layout.photoTop, `desktop story overlaps the photo at ${viewport.width}px`)
+        /* 20px of slack: the story fades in from 18px low, and may still be
+           on its way when this runs. */
+        assert.ok(layout.copyTop >= layout.photoTop && layout.copyBottom <= layout.photoBottom + 20, `desktop story is not on the photo at ${viewport.width}px`)
         assert.equal(layout.titleLines, 1, `desktop title wraps at ${viewport.width}px`)
         assert.equal(layout.titleOverflows, false, `desktop title is clipped at ${viewport.width}px`)
       } else {

@@ -66,7 +66,7 @@ describe('failed QA and visit stamps are wired', () => {
     const kpi = readFileSync(join(root, 'src/pages/KpiPage.jsx'), 'utf8')
     assert.match(kpi, /failedQaInRange/)
     assert.match(kpi, /finishedForAverage/)
-    const migration = readFileSync(join(root, 'supabase/migrations/20260928180000_visit_stamp.sql'), 'utf8')
+    const migration = readFileSync(join(root, 'supabase/migrations/20260929090000_visit_stamp.sql'), 'utf8')
     assert.match(migration, /award_visit_stamp/)
     assert.match(migration, /loyalty_stamps = c\.loyalty_stamps \+ 1/)
   })

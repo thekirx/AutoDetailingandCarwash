@@ -215,6 +215,8 @@ export default function PublicLayout() {
   /* A service page closes on its own booking section, so the footer pitch
      keeps the line but drops its "Book a service" button there. */
   const serviceDetailRoute = /^\/services\/[^/]+/.test(pathname)
+  /* The branch page drops it too (client request). */
+  const hideFooterBook = serviceDetailRoute || pathname === '/branches' || pathname.startsWith('/branches/')
 
   return (
     <div
@@ -239,7 +241,7 @@ export default function PublicLayout() {
               <i>Protect it.</i>
             </h2>
           </div>
-          {serviceDetailRoute ? null : (
+          {hideFooterBook ? null : (
             <Link to="/book">
               Book a service <ArrowRight />
             </Link>

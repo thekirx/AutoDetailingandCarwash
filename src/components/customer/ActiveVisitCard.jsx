@@ -7,7 +7,7 @@ import { Badge } from './CustomerUi'
 import VisitProgress from './VisitProgress'
 
 /** Home "Active visit" card. `visit` (one active booking from /api/customer-portal) drives every field. */
-export default function ActiveVisitCard({ visit, branchName }) {
+export default function ActiveVisitCard({ visit, branchName, className = '' }) {
   const car = [visit.vehicle_make, visit.vehicle_model].filter(Boolean).join(' ')
   const detailing = visit.kind === 'detailing' || isBookingBoardService(visit.services || visit)
   const kind = detailing ? 'detailing' : 'service'
@@ -17,7 +17,7 @@ export default function ActiveVisitCard({ visit, branchName }) {
   const statusLabel = progress.label || visit.status
 
   return (
-    <article className="capp-card capp-span" aria-label="Active visit">
+    <article className={`capp-card capp-span ${className}`.trim()} aria-label="Active visit">
       <div className="capp-card-row">
         <div className="min-w-0">
           <p className="capp-eyebrow">Active visit</p>

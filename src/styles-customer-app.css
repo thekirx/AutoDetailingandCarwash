@@ -1611,19 +1611,22 @@ html.dark .capp-pin-error {
 
 .capp-stamps {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.55rem;
+  grid-template-columns: repeat(5, minmax(0, 4rem));
+  justify-items: center;
+  gap: 0.7rem 0.85rem;
   margin: 0;
   padding: 0.15rem 0 0;
   list-style: none;
 }
 
+/* Round tokens, like a paper stamp card. Fluid up to 4rem so five fit a phone row. */
 .capp-stamp {
   position: relative;
   display: grid;
   place-items: center;
-  height: 3.5rem;
-  border-radius: 0.35rem;
+  width: min(100%, 4rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
   border: 1px solid var(--capp-line-strong);
   background: transparent;
   color: var(--capp-steel);
@@ -1654,18 +1657,20 @@ html.dark .capp-pin-error {
 }
 
 .capp-stamps.is-compact {
+  grid-template-columns: repeat(5, minmax(0, 2.75rem));
   gap: 0.35rem;
 }
 
 .capp-stamps.is-compact .capp-stamp {
-  height: 2.75rem;
+  width: min(100%, 2.75rem);
 }
 
 .capp-stamps { max-width: 36rem; width: 100%; }
 .capp-stamp-mark {
   display: block;
-  width: 2.1rem;
-  height: 1.5rem;
+  width: 48%;
+  height: 34%;
+  margin-top: -12%;
   background: currentColor;
   mask: url('/branding/hakum-mark-blue.png') center / 150% auto no-repeat;
   opacity: 0.35;
@@ -1673,11 +1678,23 @@ html.dark .capp-pin-error {
 .capp-stamp.is-on .capp-stamp-mark { opacity: 1; }
 .capp-stamp-number {
   position: absolute;
-  bottom: 0.15rem;
-  left: 0.3rem;
-  font: 600 0.55rem/1.2 var(--font-body, sans-serif);
+  bottom: 14%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font: 600 0.58rem/1 var(--font-body, sans-serif);
 }
-.capp-stamp-gift { position: absolute; top: 0.25rem; right: 0.25rem; }
+/* Gift badge sits on the rim, outside the circle's clip of the mark. */
+.capp-stamp-gift {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+  box-sizing: content-box;
+  padding: 0.2rem;
+  border-radius: 50%;
+  border: 1px solid rgba(201, 162, 39, 0.7);
+  background: var(--capp-surface, #020a31);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .capp-stamp:nth-child(3n),
@@ -1931,108 +1948,9 @@ html.dark .capp-pin-error {
   background: var(--capp-bg, #060c24);
 }
 
-/* ---------- Desktop / laptop: landing header + wide dark app (dock becomes an inline tab row) ---------- */
-@media (min-width: 860px) {
-  .account-route .account-web-header {
-    display: block !important;
-  }
-
-  .account-route .app-shell-main {
-    min-height: calc(100svh - 5.5rem);
-    /* Clear fixed landing header */
-    padding-top: calc(88px + env(safe-area-inset-top, 0px));
-  }
-
-  .capp {
-    min-height: auto;
-  }
-
-  .capp-stage {
-    width: min(1120px, calc(100% - 3rem));
-    margin: 0 auto;
-    min-height: auto;
-    padding: 1.25rem 0 3rem;
-    background: transparent;
-  }
-
-  .capp .account-dock,
-  .capp-dock {
-    position: static;
-    order: -1;
-    width: min(34rem, 100%);
-    margin: 0 0 1rem;
-    transform: none;
-    box-shadow: none;
-    backdrop-filter: none;
-    background: var(--capp-surface);
-  }
-
-  .capp-dock-item {
-    flex-direction: row;
-    gap: 0.45rem;
-    min-height: 2.75rem;
-    font-size: 0.8rem;
-  }
-
-  .capp-hero {
-    padding: 1.5rem 1.75rem 1.1rem;
-    border: 1px solid var(--capp-line);
-    border-radius: 1.5rem;
-    background:
-      radial-gradient(ellipse 70% 80% at 100% 0%, rgba(59, 123, 255, 0.28), transparent 60%),
-      var(--capp-surface);
-  }
-
-  /* Landing header already carries the lockup on desktop web. */
-  .capp-brand {
-    display: none;
-  }
-
-  .capp-hero h1 {
-    font-size: clamp(1.8rem, 2.6vw, 2.2rem);
-  }
-
-  .capp-hero-sub {
-    max-width: 46ch;
-    font-size: 0.95rem;
-  }
-
-  .capp-icon-row {
-    display: none !important;
-  }
-
-  .capp-web-actions {
-    display: flex;
-  }
-
-  .capp-top {
-    padding: 0.5rem 0.25rem 0.4rem;
-  }
-
-  .capp-top h1 {
-    font-size: 1.5rem;
-  }
-
-  .capp-top p {
-    white-space: normal;
-  }
-
-  .capp-scroll {
-    padding: 1rem 0 0;
-  }
-
-  .capp-actions {
-    max-width: 28rem;
-  }
-
-  .capp .account-desktop-only {
-    display: flex !important;
-  }
-
-  .capp .account-mobile-only {
-    display: none !important;
-  }
-}
+/* ---------- Desktop / laptop ----------
+   Desktop has its own layout (option C, approved 2026-09-29): see
+   "Desktop web: editorial" at the end of this file. */
 
 @media (min-width: 1024px) {
   .capp-scroll.is-cols {
@@ -2403,10 +2321,8 @@ html.dark .capp-pin-error {
    Both headers take it: .capp-hero on home, .capp-top on queue / book / blog.
    Without this the tab bar switches visual language between tabs.
 
-   Phone / PWA only. From 860px the app sits under the public landing header,
-   where .capp-hero is already its own card and .capp-top is nearly bare, so
-   the still would be undoing a layout rather than lifting one. */
-@media (max-width: 859px) {
+   Every width: desktop follows the phone (approved 2026-09-29). */
+@media all {
   .capp-hero,
   .capp-top {
     position: relative;
@@ -2549,13 +2465,12 @@ html.dark .capp-pin-error {
    The structural move. Five cards of equal weight answer nothing; a waiting
    customer wants one thing, so the first card lifts over the header seam and
    nothing else competes with it. */
-@media (max-width: 859px) {
-  .capp-scroll > :first-child {
-    position: relative;
-    z-index: 2;
-    margin-top: -2.1rem;
-  }
+.capp-scroll > :first-child {
+  position: relative;
+  z-index: 2;
+  margin-top: -2.1rem;
 }
+
 
 .capp-scroll > :first-child.capp-card,
 .capp-scroll > :first-child.capp-empty {
@@ -2638,29 +2553,96 @@ form.capp-section > .capp-sect > h2::before {
   line-height: 1.12;
 }
 
-/* ---------- 9. The header on desktop web -------------------------------
-   Gating the still to phones left the desktop app looking untouched, which is
-   not what was approved — the point was that the app stops opening on a flat
-   rectangle. Desktop keeps its own shape: .capp-hero is a rounded card under
-   the public landing header, so the still fills the card rather than the top
-   of the screen, and .capp-top, which is a bare title row there, takes a rule
-   and the display face instead of a photograph it has no room for. */
+/* ==========================================================================
+   Desktop web: editorial (option C, approved 2026-09-29)
+
+   Desktop fits the desktop and reads like the rest of hakumautocare.com: the
+   site's navy, a page hero with the eyebrow + two-line display title, the app
+   tabs as a pill row under it, then full-width titled sections. The phone app
+   is untouched; everything below is gated at 860px.
+   ========================================================================== */
+
+/* Desktop-only pieces are hidden on the phone. */
+.capp-hero-desk,
+.capp-desk-section-title,
+.capp-desk-garage {
+  display: none;
+}
+
 @media (min-width: 860px) {
-  .capp-hero {
-    color: #fff;
+  .account-route .account-web-header {
+    display: block !important;
+  }
+
+  .account-route .app-shell-main {
+    min-height: calc(100svh - 5.5rem);
+    padding-top: calc(88px + env(safe-area-inset-top, 0px));
+    background: #020a31;
+  }
+
+  /* The site's navy system, through the app's own tokens. */
+  .capp {
+    --capp-bg: #020a31;
+    --capp-surface: #08133f;
+    --capp-surface-2: #0d1b52;
+    --capp-line: #16255c;
+    --capp-line-strong: #3d51a0;
+    --capp-ink: #f1f1ed;
+    --capp-steel: #8e99c6;
+    --capp-accent: #9db4ff;
+    --capp-accent-soft: rgba(157, 180, 255, 0.14);
+    --capp-btn: #052699;
+    --capp-btn-ink: #ffffff;
+    --capp-on-accent: #cfe0ff;
+    --capp-glow: transparent;
+    --capp-shadow: none;
+    --capp-radius: 0.9rem;
+    --capp-radius-sm: 0.6rem;
+    --capp-gutter: max(1.5rem, calc((100% - var(--site-shell, calc(100% - 3rem))) / 2));
+    min-height: auto;
+    color-scheme: dark;
+  }
+
+  .capp-stage {
+    min-height: calc(100svh - 88px - env(safe-area-inset-top, 0px));
+    padding-bottom: 4.5rem;
+    background: var(--capp-bg);
+  }
+
+  .capp-phone-only,
+  .capp-hero-bar,
+  .capp-brand,
+  .capp-web-actions,
+  .capp .account-mobile-only {
+    display: none !important;
+  }
+
+  .capp .account-desktop-only {
+    display: flex !important;
+  }
+
+  /* ---- Page hero: photo, eyebrow, two-line title ---- */
+  .capp-hero,
+  .capp-top {
+    order: 0;
+    border: 0;
+    border-radius: 0;
     background:
-      linear-gradient(110deg, rgba(2, 10, 49, 0.92) 30%, rgba(2, 10, 49, 0.55)),
+      linear-gradient(180deg, rgba(2, 10, 49, 0.55), rgba(2, 10, 49, 0.72) 60%, #020a31),
       var(--capp-hero-still) 50% 40% / cover no-repeat,
       #020a31;
+    padding: clamp(3.5rem, 6vw, 5.5rem) var(--capp-gutter) clamp(3rem, 5vw, 4.5rem);
   }
 
-  .capp-hero .capp-greet,
-  .capp-hero .capp-hero-sub {
-    color: #d3dbf5;
+  .capp-hero-desk {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 34rem);
+    gap: clamp(2rem, 4vw, 3.5rem);
+    align-items: end;
   }
 
-  .capp-hero .capp-weather {
-    color: #fff;
+  .capp-hero-desk:not(:has(.capp-hero-desk-ticket)) {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .capp-hero .capp-weather-line {
@@ -2668,26 +2650,316 @@ form.capp-section > .capp-sect > h2::before {
     font-weight: 500;
   }
 
-  .capp-hero h1,
-  .capp-hero .capp-greet,
-  .capp-hero .capp-hero-sub,
-  .capp-hero .capp-weather {
-    text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
-  }
-
-  /* The title row carries the eyebrow rule instead, so the page still reads as
-     part of the same system without a photograph behind two lines of text. */
-  .capp-top-copy h1 {
+  .capp-desk-eyebrow,
+  .capp .capp-eyebrow {
     display: flex;
     align-items: center;
     gap: 0.65rem;
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #9db4ff;
+  }
+
+  .capp-desk-eyebrow::before {
+    content: '';
+    width: 1.75rem;
+    height: 2px;
+    background: currentColor;
+  }
+
+  .capp-desk-title {
+    margin: 1.1rem 0 0;
+    font-family: var(--capp-display);
+    font-weight: 800;
+    font-style: italic;
+    font-size: clamp(3.2rem, 6.2vw, 6.25rem);
+    line-height: 0.92;
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+    color: #f1f1ed;
+  }
+
+  .capp-desk-title em,
+  .capp-desk-section-title em {
+    display: block;
+    font-style: italic;
+    color: #9db4ff;
+  }
+
+  .capp-desk-lede {
+    max-width: 48ch;
+    margin: 1.4rem 0 1.8rem;
+    font-size: 1.05rem;
+    line-height: 1.55;
+    color: rgba(241, 241, 237, 0.82);
+  }
+
+  .capp-desk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  /* The live ticket sits in the hero as a glass panel. */
+  .capp-hero-desk-ticket .capp-card {
+    margin: 0;
+    border: 1px solid rgba(157, 180, 255, 0.28);
+    background: rgba(8, 19, 63, 0.72);
+    backdrop-filter: blur(10px);
+    box-shadow: none;
+  }
+
+  .capp-hero-desk-ticket .capp-title {
+    font-size: 1.5rem;
+  }
+
+  .capp-top {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.25rem;
+  }
+
+  .capp-top h1 {
+    font-size: clamp(2.6rem, 5vw, 4.6rem);
+    line-height: 0.95;
+    color: #f1f1ed;
   }
 
   .capp-top-copy h1::before {
-    content: '';
+    content: none;
+  }
+
+  .capp-top p {
+    margin-top: 0.6rem;
+    font-size: 1.05rem;
+    color: rgba(241, 241, 237, 0.82);
+    white-space: normal;
+  }
+
+  /* ---- The app tabs: a pill row under the hero, like the site's filters ---- */
+  .capp .account-dock,
+  .capp-dock {
+    position: static;
+    order: 1;
+    display: flex !important;
+    gap: 0.5rem;
+    width: auto;
+    margin: 0;
+    padding: 0.9rem var(--capp-gutter);
+    transform: none;
+    border: 0;
+    border-top: 1px solid var(--capp-line);
+    border-bottom: 1px solid var(--capp-line);
+    border-radius: 0;
+    background: #020a31;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .capp-dock-item {
     flex: none;
-    width: 1.5rem;
-    height: 3px;
-    background: var(--capp-accent);
+    flex-direction: row;
+    gap: 0.45rem;
+    min-height: 2.6rem;
+    padding: 0 1.2rem;
+    border: 1px solid var(--capp-line);
+    border-radius: 999px;
+    font-size: 0.74rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #f1f1ed;
+  }
+
+  .capp-dock-item-primary {
+    border-color: #052699;
+    background: #052699;
+  }
+
+  .capp-scroll {
+    order: 2;
+    gap: 1.25rem;
+    padding: clamp(2.5rem, 4vw, 3.75rem) var(--capp-gutter) 0;
+  }
+
+  .capp-scroll > :first-child {
+    margin-top: 0;
+  }
+
+  /* ---- Sections: eyebrow + display title, like the site ---- */
+  .capp-desk-section-title {
+    display: block;
+    margin: 0.8rem 0 0;
+    font-family: var(--capp-display);
+    font-weight: 800;
+    font-style: italic;
+    font-size: clamp(2.2rem, 3.8vw, 3.6rem);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #f1f1ed;
+  }
+
+  .capp-account-home .capp-loyalty-home .capp-title,
+  .capp-account-home .capp-loyalty-home .capp-meta {
+    display: none;
+  }
+
+  .capp-account-home .capp-loyalty-home {
+    padding: clamp(1.75rem, 3vw, 2.5rem);
+    gap: 1.75rem;
+    border-color: var(--capp-line);
+    background: #08133f;
+  }
+
+  .capp-desk-garage {
+    display: block;
+    padding-top: 1rem;
+  }
+
+  .capp-desk-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .capp-desk-cars {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .capp-desk-car {
+    display: grid;
+    gap: 0.3rem;
+    padding: 1.3rem 1.4rem;
+    border: 1px solid var(--capp-line);
+    border-radius: var(--capp-radius);
+    background: #08133f;
+    color: #f1f1ed;
+    text-decoration: none;
+    transition: border-color 0.18s ease;
+  }
+
+  .capp-desk-car:hover {
+    border-color: var(--capp-line-strong);
+  }
+
+  .capp-desk-car .capp-plate {
+    font-size: 1.35rem;
+  }
+
+  .capp-desk-car span {
+    font-size: 0.85rem;
+    color: var(--capp-steel);
+  }
+
+  .capp-desk-car em {
+    margin-top: 0.4rem;
+    font-style: normal;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #9db4ff;
+  }
+
+  .capp-account-home .capp-section,
+  .capp-account-home .capp-note,
+  .capp-account-home .capp-card {
+    border-color: var(--capp-line);
+  }
+
+  .capp-account-home .capp-section[aria-label='Live queue'],
+  .capp-account-home .capp-note {
+    padding: 1.6rem 1.75rem;
+    border: 1px solid var(--capp-line);
+    border-radius: var(--capp-radius);
+    background: #08133f;
+  }
+
+  .capp-account-home .capp-note {
+    border-color: rgba(231, 201, 118, 0.45);
+    background: linear-gradient(135deg, rgba(231, 201, 118, 0.12), transparent 60%), #08133f;
+    color: #f1f1ed;
+  }
+
+  .capp-account-home .capp-note strong {
+    font-family: var(--capp-display);
+    font-style: italic;
+    text-transform: uppercase;
+    font-size: 1.3rem;
+  }
+
+  .capp-account-home .capp-note p {
+    color: var(--capp-steel);
+  }
+
+  .capp-select,
+  .capp-field input,
+  .capp-field textarea {
+    border-color: #5a6bc0;
+    background: #050d2e;
+    color: #f1f1ed;
+  }
+}
+
+@media (min-width: 860px) {
+  /* Beats the app's own ".capp-hero h1" size. */
+  .capp-hero .capp-desk-title {
+    font-size: clamp(3.2rem, 6.2vw, 6.25rem);
+    line-height: 0.92;
+  }
+
+  /* The hero already carries "View live queue". */
+  .capp-hero-desk-ticket .capp-btn {
+    display: none;
+  }
+
+  .capp-desk-actions .capp-btn,
+  .capp-desk-head .capp-btn {
+    min-height: 3rem;
+    padding: 0 1.5rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .capp-desk-garage .capp-desk-section-title em {
+    display: inline;
+  }
+
+  .capp-pill-btn.is-active {
+    border-color: #052699;
+    background: #052699;
+    color: #fff;
+  }
+
+  .capp-account-home .capp-sect > h2 {
+    font-family: var(--capp-display);
+    font-style: italic;
+    text-transform: uppercase;
+    font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  }
+
+  .capp-account-home .capp-sect > h2 small {
+    font-family: var(--font-body);
+    font-style: normal;
+    text-transform: none;
+    font-size: 0.85rem;
+  }
+}
+
+@media (min-width: 860px) and (max-width: 1099px) {
+  .capp-hero-desk {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .capp-desk-cars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

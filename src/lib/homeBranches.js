@@ -1,3 +1,43 @@
+/* The shared line from the Contact page. A branch card falls back to it,
+   labelled as the main line, only if a branch has no number of its own below. */
+export const MAIN_LINE = { display: '0915 629 6096', href: 'tel:+639156296096' }
+
+/* Each branch's own number, keyed by slug, as confirmed by the owner. Bacoor
+   answers on the same line as the main number. A branch still to open shows
+   "Coming soon" instead of a number. */
+const BRANCH_PHONES = {
+  bacoor: { display: '0915 629 6096', href: 'tel:+639156296096' },
+  batangas: { display: '0956 007 1028', href: 'tel:+639560071028' },
+}
+
+export function branchPhone(slug) {
+  return BRANCH_PHONES[slug] || null
+}
+
+/* Each shop's own Google Maps listing (cid) and its pin, read off that listing
+   on 2026-09-28. The coordinates in the branches table are rough (the Bacoor
+   pin sat ~7 km away, Batangas on the city centre), so directions use these.
+   A branch not listed here falls back to its table coordinates. */
+const BRANCH_MAP_LISTINGS = {
+  bacoor: { cid: '38179785010672017', lat: 14.4075665, lng: 120.977126 },
+  batangas: { cid: '9079854389115198830', lat: 13.7762991, lng: 121.0664943 },
+}
+
+export function branchDirections(branch = {}) {
+  const listing = BRANCH_MAP_LISTINGS[branch.slug]
+  const lat = listing?.lat ?? branch.latitude
+  const lng = listing?.lng ?? branch.longitude
+  if (lat == null || lng == null) return null
+  const pin = `${lat},${lng}`
+  return {
+    // The cid opens the shop's listing (name, photos, reviews), not a bare pin.
+    google: listing
+      ? `https://www.google.com/maps?cid=${listing.cid}`
+      : `https://www.google.com/maps/search/?api=1&query=${pin}`,
+    waze: `https://waze.com/ul?ll=${pin}&navigate=yes`,
+  }
+}
+
 const FALLBACK_BRANCHES = [
   { slug: 'bacoor', name: 'Bacoor', address: 'RFC Molino', href: '/branches' },
   { slug: 'batangas', name: 'Batangas', address: 'PNP Batangas', href: '/branches' },

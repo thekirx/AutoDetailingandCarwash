@@ -64,6 +64,9 @@
   --section-space-md: clamp(6rem, 10vw, 8.125rem);
   --section-space-lg: clamp(6.5rem, 11vw, 8.75rem);
   --content-max-width: 77.5rem;
+  /* One page width for the whole public site: fluid, no maximum. Side margins
+     grow from 12px on a phone to 48px on a wide screen. */
+  --site-shell: calc(100% - clamp(24px, 5vw, 96px));
   --content-gutter: clamp(1rem, 4vw, 3rem);
 
   /* Shape lock — --shape-* avoids collision with shadcn @theme --radius-* */
