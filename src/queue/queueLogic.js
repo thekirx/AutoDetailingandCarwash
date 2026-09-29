@@ -398,25 +398,28 @@ const ADMIN_OVERRIDE_FROM_STATUSES = new Set([...ACTIVE_QUEUE_STATUSES, 'for_pay
 export function getAdminOverrideTargets(status) {
   const s = String(status || '')
   if (!ADMIN_OVERRIDE_FROM_STATUSES.has(s)) return []
-  return ADMIN_OVERRIDE_TARGET_STATUSES.filter((target) => target !== s)
+  // Only back to an earlier lane: moving a car forward is the Team Lead's job.
+  const at = ADMIN_OVERRIDE_TARGET_STATUSES.indexOf(s)
+  if (at === -1) return [...ADMIN_OVERRIDE_TARGET_STATUSES]
+  return ADMIN_OVERRIDE_TARGET_STATUSES.slice(0, at)
 }
 
 /**
  * Which TL/editor ticket buttons are enabled for the current status.
  * @param {string} status
- * @param {{ canManageQueue?: boolean, canViewRedoLane?: boolean, canSeePayment?: boolean, canFailQa?: boolean }} caps
+ * @param {{ canManageQueue?: boolean, canViewRedoLane?: boolean, canPushToPayment?: boolean, canFailQa?: boolean }} caps
  */
 export function getQueueTicketActionFlags(
   status,
-  { canManageQueue = false, canViewRedoLane: seeRedo = false, canSeePayment = false, canFailQa = false } = {},
+  { canManageQueue = false, canViewRedoLane: seeRedo = false, canPushToPayment = false, canFailQa = false } = {},
 ) {
   const s = String(status || '')
   const edit = Boolean(canManageQueue)
   return {
     canStart: edit && (s === 'waiting' || (seeRedo && s === 'redo')),
     canFinalCheck: edit && s === 'in_progress',
-    /** Admin / SA / ASA only — TL never sends to payment. */
-    canSendToPayment: edit && Boolean(canSeePayment) && s === 'final_checking',
+    /** Team Lead only: a car that passed final check goes on to payment (POS). */
+    canSendToPayment: edit && Boolean(canPushToPayment) && s === 'final_checking',
     canMarkRedo: edit && seeRedo && REDO_FROM_STATUSES.includes(s),
     /** TL + SA + ASA: send wash/pkg back from final_checking via redo path. */
     canMarkFailedQa: edit && Boolean(canFailQa) && s === 'final_checking',

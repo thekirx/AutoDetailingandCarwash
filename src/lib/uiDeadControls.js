@@ -19,9 +19,9 @@ export function finalCheckActionLabel(canOpenPos) {
   return canOpenPos ? 'Final check' : 'Final check'
 }
 
-/** Payment handoff CTA: TL hands off to branch Admin / ASA POS — not a cashier role. */
-export function sendToPaymentActionLabel(canOpenPos) {
-  return canOpenPos ? 'Retry send to payment' : 'Send to payment (Admin / ASA)'
+/** Payment handoff CTA: the TL hands a checked car to Admin / Super Admin at POS. */
+export function sendToPaymentActionLabel() {
+  return 'Send to payment'
 }
 
 /** Prefill /book from marketing Link state (PPF packages, service cards). */

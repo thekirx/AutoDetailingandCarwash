@@ -1,0 +1,27 @@
+/* New ticket wizard (ops): step rail, review list, back/next bar. */
+.hakum-new-ticket .ntw { display: grid; gap: 14px; max-width: 880px; }
+.hakum-new-ticket .ntw-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.hakum-new-ticket .ntw-step-btn { display: flex; width: 100%; min-height: 48px; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); color: var(--muted-foreground); font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; }
+.hakum-new-ticket .ntw-step-num { display: inline-flex; flex: none; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 999px; background: var(--muted); color: var(--foreground); font-size: 12px; font-weight: 700; }
+.hakum-new-ticket .ntw-step-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hakum-new-ticket .ntw-step.is-current .ntw-step-btn { border-color: var(--primary); color: var(--foreground); box-shadow: 0 0 0 1px var(--primary) inset; }
+.hakum-new-ticket .ntw-step.is-current .ntw-step-num { background: var(--primary); color: var(--primary-foreground); }
+.hakum-new-ticket .ntw-step.is-done .ntw-step-num { background: rgba(16, 185, 129, 0.14); color: #047857; }
+.dark .hakum-new-ticket .ntw-step.is-done .ntw-step-num { color: #6ee7b7; }
+.hakum-new-ticket .ntw-review { display: grid; margin: 0; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.hakum-new-ticket .ntw-review-row { display: grid; grid-template-columns: minmax(96px, 150px) minmax(0, 1fr) auto; align-items: baseline; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--border); }
+.hakum-new-ticket .ntw-review-row:first-child { border-top: 0; }
+.hakum-new-ticket .ntw-review-row dt { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-foreground); }
+.hakum-new-ticket .ntw-review-row dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: var(--foreground); font-weight: 600; }
+.hakum-new-ticket .ntw-review-edit { border: 0; background: none; padding: 4px 6px; color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; }
+.hakum-new-ticket .ntw-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px; }
+.hakum-new-ticket .ntw-back, .hakum-new-ticket .ntw-next { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 6px; padding: 0 22px; border-radius: 16px; font-size: 15px; font-weight: 600; }
+.hakum-new-ticket .ntw-back { border: 1px solid var(--border); background: transparent; color: var(--foreground); }
+.hakum-new-ticket .ntw-next { margin-left: auto; border: 0; background: var(--primary); color: var(--primary-foreground); box-shadow: 0 8px 20px rgba(5, 38, 153, 0.28); }
+.hakum-new-ticket .ntw-next:disabled { cursor: wait; opacity: 0.6; }
+@media (max-width: 560px) {
+  .hakum-new-ticket .ntw-step-btn { flex-direction: column; justify-content: center; gap: 4px; padding: 8px 4px; text-align: center; font-size: 11px; }
+  .hakum-new-ticket .ntw-review-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .hakum-new-ticket .ntw-review-row dd { grid-column: 1 / -1; grid-row: 2; }
+  .hakum-new-ticket .ntw-nav .ntw-next { flex: 1; }
+}

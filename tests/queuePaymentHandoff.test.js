@@ -62,11 +62,14 @@ describe('Queue payment handoff contract', () => {
     assert.match(sql, /set status = 'for_payment'/)
   })
 
-  it('TL UI keeps payment as Admin/ASA action', async () => {
+  it('only the TL sends a final-checked car to payment; Admin / SA collect at POS', async () => {
     const editor = await readFile(projectFile('src/components/QueueTicketEditor.jsx'), 'utf8')
     const controls = await readFile(projectFile('src/lib/uiDeadControls.js'), 'utf8')
-    assert.match(controls, /Send to payment \(Admin \/ ASA\)/)
-    assert.match(editor, /Branch Admin sends it to payment/)
+    const perms = await readFile(projectFile('src/auth/permissions.js'), 'utf8')
+    assert.match(controls, /'Send to payment'/)
+    assert.match(perms, /canPushFinalCheckToPayment[\s\S]*ROLES\.TEAM_LEAD/)
+    assert.match(editor, /canPushFinalCheckToPayment\(profile\)/)
+    assert.match(editor, /Admin and Super Admin collect it at POS/)
     assert.doesNotMatch(editor, /Cashier opens POS/)
   })
 

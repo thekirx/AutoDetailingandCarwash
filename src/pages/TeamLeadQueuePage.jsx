@@ -167,10 +167,13 @@ function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage, isFif
                 {formatDuration(totalMins)}
               </p>
             </div>
-            <div>
-              <p className="qmgr-meta-label">Customer</p>
-              <p className="qmgr-meta-value truncate">{ticket.customer_name || '—'}</p>
-            </div>
+          </div>
+
+          <div className="qmgr-meta-block">
+            <p className="qmgr-meta-label">Notes</p>
+            <p className={`qmgr-notes ${ticket.notes ? '' : 'text-muted-foreground'}`}>
+              {ticket.notes || 'No notes'}
+            </p>
           </div>
 
           <div className="qmgr-meta-block">
@@ -651,5 +654,5 @@ const QUEUE_BOARD_SELECT_MIN = `
   vehicle_plate, vehicle_make, vehicle_model, vehicle_type, service_name, service_sla_minutes,
   base_price_minor, final_price_minor, assigned_staff_name, created_at, visit_group_id,
   service_pay_category, waiting_at, in_progress_at, final_checking_at, for_payment_at,
-  actual_start, actual_end
+  actual_start, actual_end, notes
 `

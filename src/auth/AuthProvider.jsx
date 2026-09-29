@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { shouldReloadProfile } from '../lib/session'
 import {
@@ -21,6 +21,11 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
+  // Whose profile is already on screen; lets a repeat SIGNED_IN refresh quietly.
+  const loadedUserIdRef = useRef(null)
+  useEffect(() => {
+    loadedUserIdRef.current = profile?.id || null
+  }, [profile?.id])
   const [loading, setLoading] = useState(true)
 
   const loadProfile = useCallback(async (user, { quiet = false } = {}) => {
@@ -143,6 +148,17 @@ export function AuthProvider({ children }) {
         setSession(null)
         setProfile(null)
         setLoading(false)
+        return
+      }
+
+      // Supabase re-emits SIGNED_IN when the tab regains focus. For the user
+      // already on screen that is not a new sign-in: refresh the profile in
+      // the background instead of blanking the app (which wiped open forms).
+      if (event === 'SIGNED_IN' && nextSession?.user?.id && nextSession.user.id === loadedUserIdRef.current) {
+        setSession(nextSession)
+        loadProfile(nextSession.user, { quiet: true }).catch((err) => {
+          console.warn('[auth] profile refresh failed', err?.message || err)
+        })
         return
       }
 

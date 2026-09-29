@@ -259,9 +259,13 @@ function FloorAppShell({
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black tracking-[0.06em] sm:tracking-[0.14em]">{brand.title}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {profile?.full_name || brand.fallbackName} ·{' '}
-                <span className="font-semibold tracking-wide text-primary uppercase">{branch}</span>
+              {/* The name gives way first so the branch is always readable. */}
+              <p className="flex min-w-0 text-xs text-muted-foreground">
+                <span className="truncate">{profile?.full_name || brand.fallbackName}</span>
+                <span className="shrink-0 whitespace-pre">
+                  {' · '}
+                  <span className="font-semibold tracking-wide text-primary uppercase">{branch}</span>
+                </span>
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1">

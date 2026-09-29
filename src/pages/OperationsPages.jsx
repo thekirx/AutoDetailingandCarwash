@@ -23,6 +23,7 @@ import { listVehicleSizes } from '../lib/adminApi'
 import { resolveServicePriceMinor } from '../lib/servicePricing'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import ServiceKindPicker from '../components/ServiceKindPicker'
+import './NewTicketWizard.css'
 import {
   filterTicketsByFamily,
   queueFamilyForProfile,
@@ -82,7 +83,7 @@ import {
   BOOKING_TABLE_DEFAULT_PAGE_SIZE,
   BOOKING_TABLE_PAGE_SIZES,
   QUEUE_LANE_PAGE_SIZE,
-  bookingVehicleText,
+  bookingCarText,
   paginateBookingTableRows,
   paginateRows,
 } from '../lib/bookingTable'
@@ -797,7 +798,7 @@ function OperationsQueueBoardPage() {
       const ai = boardStatuses.indexOf(a.status)
       const bi = boardStatuses.indexOf(b.status)
       if (ai !== bi) return ai - bi
-      return String(a.customer_name || '').localeCompare(String(b.customer_name || ''), undefined, { sensitivity: 'base' })
+      return Number(a.queue_number || 0) - Number(b.queue_number || 0)
     })
   }, [boardTickets, boardStatuses, focusLane, grouped])
   const tableSlice = paginateBookingTableRows(tableSource, { page: tablePage, pageSize: tablePageSize })
@@ -1004,7 +1005,7 @@ function OperationsQueueBoardPage() {
           <Table className="bk-data-grid">
             <TableHeader>
               <TableRow>
-                <TableHead>Customer</TableHead>
+                <TableHead>Plate</TableHead>
                 <TableHead>Vehicle</TableHead>
                 <TableHead className="q-col-service">Service</TableHead>
                 <TableHead>Lane</TableHead>
@@ -1033,10 +1034,10 @@ function OperationsQueueBoardPage() {
                     }}
                   >
                     <TableCell>
-                      <div className="font-semibold text-foreground">{ticket.customer_name}</div>
+                      <div className="font-semibold uppercase tabular-nums text-foreground">{ticket.vehicle_plate || 'No plate'}</div>
                       <div className="text-xs text-muted-foreground">{ticket.customer_phone || 'No phone'}</div>
                     </TableCell>
-                    <TableCell className="text-foreground">{bookingVehicleText(ticket)}</TableCell>
+                    <TableCell className="text-foreground">{bookingCarText(ticket) || '—'}</TableCell>
                     <TableCell className="q-col-service font-medium text-primary">{ticket.service_name || '—'}</TableCell>
                     <TableCell>
                       <StatusBadge status={ticket.status} label={statusShortLabel(ticket.status)} />
@@ -1237,11 +1238,21 @@ export function QueueTicketPage() {
   )
 }
 
+/* The New ticket form as four short steps. */
+const NEW_TICKET_STEPS = [
+  { key: 'vehicle', label: 'Vehicle', title: 'Vehicle', icon: CarFront },
+  { key: 'customer', label: 'Customer', title: 'Customer contact', icon: UserPlus },
+  { key: 'services', label: 'Services', title: 'Services & price', icon: ClipboardList },
+  { key: 'review', label: 'Review', title: 'Review & create', icon: BadgeCheck },
+]
+
 export function NewQueueTicketPage() {
   const navigate = useNavigate()
   const { user, profile, canManageQueue } = useAuth()
   const assignedBranch = getBranchScope(profile)
-  const scopeList = getBranchScopeList(profile)
+  // A TL's scope is a fresh array each call; memoized so the load effect
+  // below does not re-run (and refetch) on every render.
+  const scopeList = useMemo(() => getBranchScopeList(profile), [profile])
   const canChooseBranch = canOverrideQueueBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
   const [services, setServices] = useState([])
   const [branches, setBranches] = useState([])
@@ -1411,16 +1422,62 @@ export function NewQueueTicketPage() {
   const parsedFormPrice = Number(String(form.final_price).replace(/,/g, '').trim())
   const showFormLowPriceWarning = Number.isFinite(parsedFormPrice) && parsedFormPrice > 0 && parsedFormPrice < 50
 
+  const [step, setStep] = useState(0)
+  const lastStep = NEW_TICKET_STEPS.length - 1
+  const selectedServiceNames = (form.service_ids || [])
+    .map((id) => services.find((s) => s.id === id)?.name)
+    .filter(Boolean)
+  const branchLabel = canChooseBranch
+    ? branches.find((b) => b.slug === form.branch)?.name || form.branch
+    : assignedBranch
+  const sizeLabel = vehicleTypeOptions.find((o) => o.value === form.vehicle_type)?.label || form.vehicle_type
+
+  /* Each step checks only its own fields, so a TL finds out what is missing
+     on the screen where it is typed rather than at the very end. */
+  const stepError = (index) => {
+    const key = NEW_TICKET_STEPS[index]?.key
+    if (key === 'vehicle') return plateValidationError(form.vehicle_plate) || ''
+    if (key === 'customer') {
+      const phoneDigits = String(form.customer_phone || '').replace(/\D/g, '')
+      return phoneDigits.length < 10 ? 'Phone number is required (at least 10 digits).' : ''
+    }
+    if (key === 'services') {
+      if (!form.service_ids?.length) return 'Select at least one service or package.'
+      if (!(Number.isFinite(parsedFormPrice) && parsedFormPrice > 0)) return 'Enter the final price in pesos.'
+      if (canChooseBranch && !form.branch) return 'Choose a branch.'
+    }
+    return ''
+  }
+  const goTo = (index) => {
+    // Jumping ahead is allowed only past steps that are already complete.
+    for (let i = 0; i < index; i += 1) {
+      const problem = stepError(i)
+      if (problem) {
+        setError(problem)
+        setStep(i)
+        return
+      }
+    }
+    setError('')
+    setStep(index)
+  }
+
   const submit = async (event) => {
     event.preventDefault()
+    if (step < lastStep) {
+      goTo(step + 1)
+      return
+    }
     setSubmitting(true)
     setError('')
     try {
-      const phoneDigits = String(form.customer_phone || '').replace(/\D/g, '')
-      if (phoneDigits.length < 10) throw new Error('Phone number is required (at least 10 digits).')
-      const plateError = plateValidationError(form.vehicle_plate)
-      if (plateError) throw new Error(plateError)
-      if (!form.service_ids?.length) throw new Error('Select at least one service or package.')
+      for (let i = 0; i < lastStep; i += 1) {
+        const problem = stepError(i)
+        if (problem) {
+          setStep(i)
+          throw new Error(problem)
+        }
+      }
       if (showFormLowPriceWarning && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) {
         setSubmitting(false)
         return
@@ -1447,110 +1504,198 @@ export function NewQueueTicketPage() {
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (loading) return <LoadingPanel />
 
+  const stepKey = NEW_TICKET_STEPS[step].key
+  const customerName = `${form.customer_first_name || ''} ${form.customer_last_name || ''}`.trim()
+
   return (
     <OpsPageShell
       className="hakum-new-ticket"
       eyebrow="Create Queue Ticket"
       title="Add vehicle to queue"
-      description="Required: LTO plate, conduction sticker, or temporary / TOP; phone; and at least one Service or Package. Detailing jobs belong on Bookings. Name is optional for fast walk-ins."
+      description="Four quick steps: vehicle, customer, services, then review. Detailing jobs belong on Bookings."
     >
-      {error && <p className="floor-alert floor-alert-error">{error}</p>}
-      <div>
-        <Panel title="Ticket Form" icon={Plus}>
-          <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase suggest-field">
-              Plate / sticker *
-              <input
-                value={form.vehicle_plate}
-                onChange={update('vehicle_plate')}
-                required
-                autoFocus
-                autoCapitalize="characters"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="ABC 1234 · CS 123456 · TMP 1234"
-                className="floor-control"
-                aria-autocomplete="list"
-                aria-expanded={plateSuggestions.length > 0}
-                aria-invalid={Boolean(form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate) && !plateSuggestions.length)}
-              />
-              {plateSuggestions.length > 0 ? (
-                <ul className="suggest-list" role="listbox">
-                  {plateSuggestions.map((row) => (
-                    <li key={row.vehicle_id || row.id}>
-                      <button
-                        type="button"
-                        className="suggest-option"
-                        onMouseDown={(event) => {
-                          event.preventDefault()
-                          pickPlateSuggestion(row)
-                        }}
-                      >
-                        {row.plate_number}
-                        {row.customer_name ? ` · ${row.customer_name}` : ''}
-                        {row.vehicle_make ? ` · ${[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ')}` : ''}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </label>
-            <p className="sm:col-span-2 text-xs text-muted-foreground">{PLATE_FIELD_HINT}. Matches appear after 3 characters.</p>
-            {form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate) && !plateSuggestions.length ? (
-              <p className="sm:col-span-2 floor-alert floor-alert-error" role="alert">
-                {plateValidationError(form.vehicle_plate)}
-              </p>
-            ) : plateKindLabel(form.vehicle_plate) ? (
-              <p className="sm:col-span-2 text-xs font-semibold text-muted-foreground">{plateKindLabel(form.vehicle_plate)}</p>
+      <div className="ntw">
+        <ol className="ntw-steps" aria-label="New ticket steps">
+          {NEW_TICKET_STEPS.map((item, index) => {
+            const state = index === step ? 'current' : index < step ? 'done' : 'todo'
+            return (
+              <li key={item.key} className={`ntw-step is-${state}`}>
+                <button
+                  type="button"
+                  className="ntw-step-btn"
+                  onClick={() => goTo(index)}
+                  disabled={submitting}
+                  aria-current={state === 'current' ? 'step' : undefined}
+                >
+                  <span className="ntw-step-num" aria-hidden>
+                    {state === 'done' ? <CheckCircle2 size={16} /> : index + 1}
+                  </span>
+                  <span className="ntw-step-label">{item.label}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ol>
+
+        {error && <p className="floor-alert floor-alert-error" role="alert">{error}</p>}
+
+        <Panel title={`${step + 1} · ${NEW_TICKET_STEPS[step].title}`} icon={NEW_TICKET_STEPS[step].icon}>
+          <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2" noValidate>
+            {stepKey === 'vehicle' ? (
+              <>
+                <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase suggest-field">
+                  Plate / sticker *
+                  <input
+                    value={form.vehicle_plate}
+                    onChange={update('vehicle_plate')}
+                    autoFocus
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="ABC 1234 · CS 123456 · TMP 1234"
+                    className="floor-control"
+                    aria-autocomplete="list"
+                    aria-expanded={plateSuggestions.length > 0}
+                    aria-invalid={Boolean(form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate) && !plateSuggestions.length)}
+                  />
+                  {plateSuggestions.length > 0 ? (
+                    <ul className="suggest-list" role="listbox">
+                      {plateSuggestions.map((row) => (
+                        <li key={row.vehicle_id || row.id}>
+                          <button
+                            type="button"
+                            className="suggest-option"
+                            onMouseDown={(event) => {
+                              event.preventDefault()
+                              pickPlateSuggestion(row)
+                            }}
+                          >
+                            {row.plate_number}
+                            {row.customer_name ? ` · ${row.customer_name}` : ''}
+                            {row.vehicle_make ? ` · ${[row.vehicle_make, row.vehicle_model].filter(Boolean).join(' ')}` : ''}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </label>
+                <p className="sm:col-span-2 text-xs text-muted-foreground">{PLATE_FIELD_HINT}. Matches appear after 3 characters.</p>
+                {form.vehicle_plate.trim() && plateValidationError(form.vehicle_plate) && !plateSuggestions.length ? (
+                  <p className="sm:col-span-2 floor-alert floor-alert-error" role="alert">
+                    {plateValidationError(form.vehicle_plate)}
+                  </p>
+                ) : plateKindLabel(form.vehicle_plate) ? (
+                  <p className="sm:col-span-2 text-xs font-semibold text-muted-foreground">{plateKindLabel(form.vehicle_plate)}</p>
+                ) : null}
+                {plateLookupState === 'found' || plateLookupState === 'not_found' ? (
+                  <p className={`sm:col-span-2 floor-alert ${plateLookupState === 'found' ? 'floor-alert-ok' : 'floor-alert-warn'}`}>
+                    {getPlateLookupStatus(form.vehicle_plate, plateLookupState === 'found')}
+                  </p>
+                ) : plateLookupState === 'loading' ? (
+                  <p className="sm:col-span-2 floor-alert">Checking plate number...</p>
+                ) : null}
+                <VehicleMakeModelFields
+                  make={form.vehicle_make}
+                  model={form.vehicle_model}
+                  onMakeChange={setMake}
+                  onModelChange={setModel}
+                  onSizeSuggest={applyCatalogSize}
+                  variant="floor"
+                />
+                <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
+                <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
+                <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                  Car size (pricing)
+                  <select value={form.vehicle_type} onChange={updateVehicleType} className="floor-control">
+                    {vehicleTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </>
             ) : null}
-            {plateLookupState === 'found' || plateLookupState === 'not_found' ? (
-              <p className={`sm:col-span-2 floor-alert ${plateLookupState === 'found' ? 'floor-alert-ok' : 'floor-alert-warn'}`}>
-                {plateLookupState === 'found' ? getPlateLookupStatus(form.vehicle_plate, true) : getPlateLookupStatus(form.vehicle_plate, false)}
-              </p>
-            ) : plateLookupState === 'loading' ? (
-              <p className="sm:col-span-2 floor-alert">Checking plate number...</p>
+
+            {stepKey === 'customer' ? (
+              <>
+                <FormField label="Phone number *" value={form.customer_phone} onChange={update('customer_phone')} type="tel" />
+                <FormField label="Email (optional)" value={form.customer_email} onChange={update('customer_email')} type="email" />
+                <FormField label="First name (optional)" value={form.customer_first_name} onChange={update('customer_first_name')} />
+                <FormField label="Last name (optional)" value={form.customer_last_name} onChange={update('customer_last_name')} />
+                <p className="sm:col-span-2 text-xs text-muted-foreground">No name yet? Ticket shows as Walk-in · plate. CRM can fill the name later.</p>
+              </>
             ) : null}
-            <FormField label="Phone number *" value={form.customer_phone} onChange={update('customer_phone')} required />
-            {form.customer_phone.trim() && String(form.customer_phone).replace(/\D/g, '').length < 10 ? (
-              <p className="sm:col-span-2 floor-alert floor-alert-error" role="alert">
-                Phone number is required (at least 10 digits).
-              </p>
+
+            {stepKey === 'services' ? (
+              <>
+                <ServiceKindPicker
+                  services={services}
+                  selectedIds={form.service_ids}
+                  vehicleType={form.vehicle_type}
+                  onChange={updateServiceIds}
+                  disabled={submitting}
+                  kinds={['service', 'package']}
+                />
+                {canChooseBranch ? (
+                  <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                    Branch
+                    <select value={form.branch} onChange={update('branch')} className="floor-control">
+                      {branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}
+                    </select>
+                  </label>
+                ) : null}
+                <FormField label="Final Price in Pesos *" value={form.final_price} onChange={update('final_price')} type="number" min="0" step="0.01" />
+                {showFormLowPriceWarning && <p className="sm:col-span-2 floor-alert floor-alert-warn">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
+                <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                  Notes
+                  <textarea value={form.notes} onChange={update('notes')} className="floor-control floor-control-area" />
+                </label>
+              </>
             ) : null}
-            <FormField label="Email (optional)" value={form.customer_email} onChange={update('customer_email')} type="email" />
-            <FormField label="First name (optional)" value={form.customer_first_name} onChange={update('customer_first_name')} />
-            <FormField label="Last name (optional)" value={form.customer_last_name} onChange={update('customer_last_name')} />
-            <p className="sm:col-span-2 text-xs text-muted-foreground">No name yet? Ticket shows as Walk-in · plate. CRM can fill the name later.</p>
-            <VehicleMakeModelFields
-              make={form.vehicle_make}
-              model={form.vehicle_model}
-              onMakeChange={setMake}
-              onModelChange={setModel}
-              onSizeSuggest={applyCatalogSize}
-              variant="floor"
-            />
-            <FormField label="Year" value={form.vehicle_year} onChange={update('vehicle_year')} type="number" min="1886" max="2200" />
-            <FormField label="Color" value={form.vehicle_color} onChange={update('vehicle_color')} />
-            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-              Car size (pricing)
-              <select value={form.vehicle_type} onChange={updateVehicleType} className="floor-control">
-                {vehicleTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+
+            {stepKey === 'review' ? (
+              <dl className="ntw-review sm:col-span-2">
+                {[
+                  ['Plate', form.vehicle_plate || '—', 0],
+                  ['Vehicle', [form.vehicle_year, form.vehicle_make, form.vehicle_model, form.vehicle_color].filter(Boolean).join(' ') || '—', 0],
+                  ['Car size', sizeLabel || '—', 0],
+                  ['Phone', form.customer_phone || '—', 1],
+                  ['Name', customerName || 'Walk-in', 1],
+                  ['Email', form.customer_email || '—', 1],
+                  ['Services', selectedServiceNames.join(', ') || '—', 2],
+                  ['Branch', branchLabel || '—', 2],
+                  ['Final price', form.final_price ? `₱${Number(parsedFormPrice || 0).toLocaleString()}` : '—', 2],
+                  ['Notes', form.notes || '—', 2],
+                ].map(([label, value, editStep]) => (
+                  <div key={label} className="ntw-review-row">
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                    <button type="button" className="ntw-review-edit" onClick={() => setStep(editStep)}>Edit</button>
+                  </div>
                 ))}
-              </select>
-            </label>
-            <ServiceKindPicker
-              services={services}
-              selectedIds={form.service_ids}
-              vehicleType={form.vehicle_type}
-              onChange={updateServiceIds}
-              disabled={submitting}
-              kinds={['service', 'package']}
-            />
-            {canChooseBranch && <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Branch<select value={form.branch} onChange={update('branch')} required className="floor-control">{branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}</select></label>}
-            <FormField label="Final Price in Pesos" value={form.final_price} onChange={update('final_price')} type="number" min="0" step="0.01" required />
-            {showFormLowPriceWarning && <p className="floor-alert floor-alert-warn">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
-            <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Notes<textarea value={form.notes} onChange={update('notes')} className="floor-control floor-control-area" /></label>
-            <button disabled={submitting} className="floor-touch-btn sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-base font-semibold text-primary-foreground shadow-[0_8px_20px_rgba(5,38,153,0.28)] transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-primary/90 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60">{submitting ? <LoaderCircle className="animate-spin" size={18} aria-hidden /> : <Plus size={18} aria-hidden />}Create Queue Ticket</button>
+              </dl>
+            ) : null}
+
+            <div className="ntw-nav sm:col-span-2">
+              {step > 0 ? (
+                <button type="button" className="ntw-back floor-touch-btn" onClick={() => { setError(''); setStep(step - 1) }} disabled={submitting}>
+                  <ChevronLeft size={18} aria-hidden />
+                  Back
+                </button>
+              ) : <span />}
+              <button type="submit" disabled={submitting} className="ntw-next floor-touch-btn">
+                {step < lastStep ? (
+                  <>
+                    Next
+                    <ChevronRight size={18} aria-hidden />
+                  </>
+                ) : (
+                  <>
+                    {submitting ? <LoaderCircle className="animate-spin" size={18} aria-hidden /> : <Plus size={18} aria-hidden />}
+                    Create Queue Ticket
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </Panel>
       </div>

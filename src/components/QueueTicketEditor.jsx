@@ -12,7 +12,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
-import { canAccessPos, canMarkFailedQa, canModifyBookingServicePrice, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane } from '../auth/permissions'
+import { canAccessPos, canMarkFailedQa, canModifyBookingServicePrice, canOverrideQueueStatus, canPushFinalCheckToPayment, canViewRedoLane } from '../auth/permissions'
 import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
 import { PRICING_SIZES } from '../lib/servicePricing'
 import { filterPosBayCatalog } from '../lib/serviceKinds'
@@ -290,12 +290,12 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const showEditActions = showQueueTicketEditActions(canManageQueue)
   const showRedoBtn = showQueueRedoAction(canViewRedoLane(profile))
   const canOpenPos = canAccessPos(profile)
-  const canSeePayment = canSeeForPaymentLane(profile)
+  const canPushToPayment = canPushFinalCheckToPayment(profile)
   const showFailedQa = canMarkFailedQa(profile)
   const actions = getQueueTicketActionFlags(ticket.status, {
     canManageQueue,
     canViewRedoLane: showRedoBtn,
-    canSeePayment,
+    canPushToPayment,
     canFailQa: showFailedQa,
   })
   const overrideTargets = canOverrideQueueStatus(profile) ? getAdminOverrideTargets(ticket.status) : []
@@ -514,7 +514,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   >
                     {finalCheckActionLabel(canOpenPos)}
                   </ActionButton>
-                  {canSeePayment ? (
+                  {canPushToPayment ? (
                     <ActionButton
                       tone="secondary"
                       disabled={!actions.canSendToPayment}
@@ -522,7 +522,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                       onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}
                     >
                       <Send size={17} aria-hidden />
-                      {sendToPaymentActionLabel(canOpenPos)}
+                      {sendToPaymentActionLabel()}
                     </ActionButton>
                   ) : null}
                   {showRedoBtn ? (
@@ -562,13 +562,13 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   </button>
                 ) : null}
               </div>
-              {canSeePayment ? (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Payment collection stays on POS after Send to payment.
+              {canPushToPayment ? (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Once the car passes final check, send it to payment. Admin and Super Admin collect it at POS.
                 </p>
               ) : (
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Final check keeps the car on your board. Branch Admin sends it to payment / POS.
+                  Only the Team Lead sends a checked car to payment. Admin and Super Admin collect it at POS.
                 </p>
               )}
             </Panel>

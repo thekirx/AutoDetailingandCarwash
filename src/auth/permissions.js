@@ -605,6 +605,11 @@ export function canMarkFailedQa(profile) {
   return profile?.role === ROLES.TEAM_LEAD
 }
 
+/** Only the Team Lead moves a ticket out of Final Checking; Admin / SA then collect it at POS. */
+export function canPushFinalCheckToPayment(profile) {
+  return profile?.role === ROLES.TEAM_LEAD
+}
+
 /** Legacy TL port: Team Lead never sees the For Payment lane; console tier does. */
 export function canSeeForPaymentLane(profile) {
   return isAdmin(profile) || isOperationsLead(profile)

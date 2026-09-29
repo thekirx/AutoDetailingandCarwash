@@ -17,9 +17,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const editor = readFileSync(join(root, 'src/components/QueueTicketEditor.jsx'), 'utf8')
 const api = readFileSync(join(root, 'src/queue/queueApi.js'), 'utf8')
 
-const TL = { canManageQueue: true, canViewRedoLane: false, canSeePayment: false }
-const SA = { canManageQueue: true, canViewRedoLane: true, canSeePayment: true }
-const VIEWER = { canManageQueue: false, canViewRedoLane: false, canSeePayment: false }
+const TL = { canManageQueue: true, canViewRedoLane: false, canPushToPayment: true }
+const SA = { canManageQueue: true, canViewRedoLane: true, canPushToPayment: false }
+const VIEWER = { canManageQueue: false, canViewRedoLane: false, canPushToPayment: false }
 
 describe('TL queue status transitions (principal scenarios)', () => {
   it('allows floor path waiting → in_progress → final_checking + cancel', () => {
@@ -64,21 +64,21 @@ describe('TL queue status transitions (principal scenarios)', () => {
     })
   })
 
-  it('TL final_checking: Cancel only (Admin sends to payment)', () => {
+  it('TL final_checking: Send to payment + Cancel', () => {
     const f = getQueueTicketActionFlags('final_checking', TL)
     assert.deepEqual(f, {
       canStart: false,
       canFinalCheck: false,
-      canSendToPayment: false,
+      canSendToPayment: true,
       canMarkRedo: false,
       canMarkFailedQa: false,
       canCancel: true,
     })
   })
 
-  it('Admin final_checking: Send to payment + Cancel', () => {
-    const f = getQueueTicketActionFlags('final_checking', { ...TL, canSeePayment: true })
-    assert.equal(f.canSendToPayment, true)
+  it('SA final_checking: no Send to payment (only the TL pushes it on)', () => {
+    const f = getQueueTicketActionFlags('final_checking', SA)
+    assert.equal(f.canSendToPayment, false)
     assert.equal(f.canCancel, true)
   })
 

@@ -47,7 +47,9 @@ describe('role-based queue lanes and overrides', () => {
 
   it('admin override targets exclude the current status and closed tickets', () => {
     assert.deepEqual(getAdminOverrideTargets('for_payment'), ['waiting', 'in_progress', 'final_checking'])
-    assert.deepEqual(getAdminOverrideTargets('in_progress'), ['waiting', 'final_checking'])
+    assert.deepEqual(getAdminOverrideTargets('in_progress'), ['waiting'])
+    assert.deepEqual(getAdminOverrideTargets('final_checking'), ['waiting', 'in_progress'])
+    assert.deepEqual(getAdminOverrideTargets('waiting'), [])
     assert.deepEqual(getAdminOverrideTargets('completed'), [])
     assert.deepEqual(getAdminOverrideTargets(''), [])
   })

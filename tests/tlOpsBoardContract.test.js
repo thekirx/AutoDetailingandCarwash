@@ -40,7 +40,7 @@ describe('TL ops contract — cancel, payment gate, form bookings', () => {
     assert.equal(validateCancellationReason('Customer cannot wait any longer').ok, true)
   })
 
-  it('TL action flags: cancel yes, send-to-payment never; final check stays on floor', () => {
+  it('TL action flags: cancel yes; only the TL sends a final-checked car to payment', () => {
     const waiting = getQueueTicketActionFlags('waiting', { canManageQueue: true })
     assert.equal(waiting.canStart, true)
     assert.equal(waiting.canCancel, true)
@@ -48,16 +48,17 @@ describe('TL ops contract — cancel, payment gate, form bookings', () => {
 
     const checking = getQueueTicketActionFlags('final_checking', {
       canManageQueue: true,
-      canSeePayment: false,
+      canPushToPayment: false,
     })
     assert.equal(checking.canSendToPayment, false)
     assert.equal(checking.canCancel, true)
 
-    const adminPay = getQueueTicketActionFlags('final_checking', {
+    const tlPay = getQueueTicketActionFlags('final_checking', {
       canManageQueue: true,
-      canSeePayment: true,
+      canPushToPayment: true,
     })
-    assert.equal(adminPay.canSendToPayment, true)
+    assert.equal(tlPay.canSendToPayment, true)
+    assert.equal(getQueueTicketActionFlags('in_progress', { canManageQueue: true, canPushToPayment: true }).canSendToPayment, false)
 
     assert.equal(finalCheckActionLabel(false), 'Final check')
   })

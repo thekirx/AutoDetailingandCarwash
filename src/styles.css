@@ -4047,6 +4047,10 @@ html:has(.tv-board) {
 }
 .qmgr-list {
   display: grid;
+  /* Rows size to each card. Without these, the fixed-height list stretched
+     closed cards and squeezed open ones, cutting off their details. */
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 0.45rem;
   flex: 1 1 auto;
   min-height: 0;
@@ -4121,6 +4125,7 @@ html:has(.tv-board) {
   border-top: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
   padding-top: 0.65rem;
 }
+.qmgr-notes { margin: 0; font-size: 0.85rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 .qmgr-meta-label {
   margin: 0 0 0.25rem;
   font-size: 0.62rem;
@@ -4204,6 +4209,13 @@ html:has(.tv-board) {
 }
 @media (min-width: 1100px) {
   .qmgr { max-width: 52rem; }
+}
+/* Phones and short screens: the filters leave the fixed board too little
+   room, so the whole page scrolls and the car list takes its full height. */
+@media (max-width: 767px), (max-height: 820px) {
+  .floor-main:has(.qmgr) { overflow-y: auto; }
+  .qmgr { height: auto; flex: none; }
+  .qmgr-list { flex: none; overflow: visible; }
 }
 
 /* Brand / model suggest (floor + booking) */
@@ -7161,8 +7173,8 @@ a.planner-ticket:active {
   gap: 0.75rem;
   grid-template-areas:
     "identity"
-    "actions"
     "crew"
+    "actions"
     "services"
     "price";
 }
