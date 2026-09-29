@@ -78,7 +78,7 @@ function WashServiceRail() {
               {item.image ? <img src={item.image} alt={copy ? '' : item.alt} loading="lazy" /> : <div className="bd-wash-coming">Coming soon</div>}
               {!item.available ? <span className="bd-wash-coming-badge">Coming soon</span> : null}
               {/* One frame for every card: name, copy, price, benefit, then the
-                  buttons pinned to the foot, so all of them line up. A card with
+                  button pinned to the foot, so all of them line up. A card with
                   no priced service holds the price line with a placeholder. */}
               <div className="bd-wash-service-body"><h3>{item.title}</h3><p>{item.copy}</p>
                 {prices[WASH_CARD_SERVICE_SLUG[item.id]] ? (
@@ -91,10 +91,10 @@ function WashServiceRail() {
                   </p>
                 )}
                 <strong>✓ {item.benefit}</strong>
+                {/* Wash & detailing is walk-in: no booking ahead, only the queue. */}
                 {item.available ? (
                   <div className="bd-wash-actions">
-                    <Link className="bd-btn bd-btn-primary" to="/book" tabIndex={copy ? -1 : undefined}>Book this service</Link>
-                    <Link className="bd-btn bd-btn-quiet" to="/queue" tabIndex={copy ? -1 : undefined}>View live queue</Link>
+                    <Link className="bd-btn bd-btn-primary" to="/queue" tabIndex={copy ? -1 : undefined}>View live queue</Link>
                   </div>
                 ) : <div className="bd-wash-actions"><span className="bd-wash-unavailable">Coming soon</span></div>}
               </div>

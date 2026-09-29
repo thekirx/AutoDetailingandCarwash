@@ -265,11 +265,11 @@
      just below the fold. */
   box-sizing: border-box;
   min-height: 100svh;
-  /* The headline in the upper left of the playing video; the paragraph sits
-     on top of the buttons at the foot of the frame, at every width. */
+  /* One stack in the upper left of the playing video: the headline, the
+     paragraph under it, then the buttons, at every width. */
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto auto auto 1fr;
   align-items: start;
   padding-bottom: clamp(28px, 4vw, 56px);
 }
@@ -289,9 +289,9 @@
 }
 .bredesign .bd-hero-cta {
   grid-column: 1;
-  grid-row: 4;
+  grid-row: 3;
   justify-self: start;
-  align-self: end;
+  margin-top: clamp(18px, 2vw, 26px);
   gap: 12px;
 }
 /* A touch larger than the site's standard button, not a poster-sized one. */
@@ -300,11 +300,11 @@
   padding: 0 26px;
   font-size: 11px;
 }
-/* Directly above the buttons, on the same left edge. */
+/* Directly under the headline, on the same left edge. */
 .bredesign .bd-hero-lede {
   grid-column: 1;
-  grid-row: 3;
-  margin: 0 0 clamp(16px, 1.8vw, 24px);
+  grid-row: 2;
+  margin: clamp(16px, 1.8vw, 24px) 0 0;
   max-width: 56ch;
   color: rgba(241, 241, 237, 0.92);
   font-size: clamp(15px, 1.15vw, 17px);
@@ -324,7 +324,7 @@
   }
   .bredesign .bd-hero-lede {
     max-width: 46ch;
-    margin-bottom: clamp(16px, 3vw, 26px);
+    margin-top: clamp(14px, 2.4vw, 22px);
     font-size: clamp(15px, 2.3vw, 19px);
     line-height: 1.5;
   }
@@ -342,30 +342,31 @@
     justify-content: center;
     white-space: nowrap;
   }
-  /* Dark at the top for the hook and deepest at the foot for the paragraph
-     and buttons; the clip's Hakum mark in the middle stays clear. */
+  /* Dark behind the copy at the top, open over the clip's Hakum mark and
+     the rest of the frame below it. */
   .bredesign .bd-hero::after {
     background: linear-gradient(
       180deg,
-      rgba(2, 10, 49, 0.78) 0%,
-      rgba(2, 10, 49, 0.3) 22%,
-      rgba(2, 10, 49, 0.24) 42%,
-      rgba(2, 10, 49, 0.84) 64%,
-      rgba(2, 10, 49, 0.97) 100%
+      rgba(2, 10, 49, 0.92) 0%,
+      rgba(2, 10, 49, 0.8) 38%,
+      rgba(2, 10, 49, 0.3) 62%,
+      rgba(2, 10, 49, 0.55) 100%
     );
   }
 }
-/* Desktop: dark at the top for the hook and at the foot for the paragraph
-   and buttons. */
+/* Desktop: the copy sits at the top, so the grade is darkest there, and a
+   left-to-right wash keeps the paragraph readable over bright footage. */
 @media (min-width: 761px) and (orientation: landscape), (min-width: 1101px) {
   .bredesign .bd-hero::after {
-    background: linear-gradient(
-      180deg,
-      rgba(2, 10, 49, 0.72) 0%,
-      rgba(2, 10, 49, 0.32) 32%,
-      rgba(2, 10, 49, 0.4) 56%,
-      rgba(2, 10, 49, 0.94) 100%
-    );
+    background:
+      linear-gradient(90deg, rgba(2, 10, 49, 0.55) 0%, rgba(2, 10, 49, 0) 55%),
+      linear-gradient(
+        180deg,
+        rgba(2, 10, 49, 0.82) 0%,
+        rgba(2, 10, 49, 0.55) 45%,
+        rgba(2, 10, 49, 0.3) 70%,
+        rgba(2, 10, 49, 0.85) 100%
+      );
   }
 }
 
@@ -627,10 +628,11 @@
   .bredesign .bd-origin-frame {
     padding-top: clamp(26px, 2.2cqw, 34px);
   }
-  /* In the accent of the story title's last word ("love."), a step smaller
-     than before so the row sits quieter above the storefront. */
+  /* In the deep brand blue #062699 on the white band, a step smaller than
+     before so the row sits quieter above the storefront. The phone band is
+     navy, where this blue would disappear, so it keeps --bd-blue-mid. */
   .bredesign .bd-origin-stats .bd-stat-value {
-    color: var(--bd-accent);
+    color: #062699;
     text-shadow: none;
     font-size: clamp(24px, 3.1cqw, 44px);
   }
@@ -716,7 +718,7 @@
     margin-bottom: 14px;
   }
   .bredesign .bd-origin-stats .bd-stat-value {
-    color: var(--bd-accent);
+    color: var(--bd-blue-mid);
     text-shadow: none;
     font-size: clamp(24px, 7.2cqw, 42px);
   }
@@ -1780,8 +1782,8 @@
     display: none;
   }
 }
-/* Arrows on the rail's own edges (LoopStage), centred on the cards and half
-   out into the page margin so they cover as little of a card as possible.
+/* Arrows on the rail's own edges (LoopStage), centred on the cards and set
+   just inside them so no page edge or overflow can clip them.
    Mouse and trackpad only: a touch screen swipes. */
 .bredesign .bd-loop-stage {
   position: relative;
@@ -1795,18 +1797,18 @@
   width: 52px;
   height: 52px;
   padding: 0;
-  border: 1px solid rgba(241, 241, 237, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.85);
   border-radius: 50%;
-  background: rgba(2, 10, 49, 0.82);
-  color: var(--bd-paper);
-  box-shadow: 0 8px 26px rgba(2, 10, 49, 0.55);
+  background: var(--bd-blue);
+  color: #fff;
+  box-shadow: 0 8px 26px rgba(2, 10, 49, 0.6);
   backdrop-filter: blur(8px);
   cursor: pointer;
   transform: translateY(-50%);
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 .bredesign .bd-loop-side.is-prev {
-  left: -26px;
+  left: 12px;
 }
 /* Cards with the photo on top: centre the arrows on the photos so they stay
    clear of the service names. */
@@ -1814,13 +1816,13 @@
   top: 25%;
 }
 .bredesign .bd-loop-side.is-next {
-  right: -26px;
+  right: 12px;
 }
 .bredesign .bd-loop-side:hover {
-  border-color: var(--bd-accent);
-  background: var(--bd-blue);
+  border-color: #fff;
+  background: var(--bd-blue-mid);
   color: #fff;
-  transform: translateY(-50%) scale(1.06);
+  transform: translateY(-50%) scale(1.08);
 }
 @media (hover: none) and (pointer: coarse), (max-width: 760px) {
   .bredesign .bd-loop-side {
@@ -4472,7 +4474,7 @@
   letter-spacing: 0.04em;
   color: var(--bd-ink-2);
 }
-.bredesign .bd-services-col .bd-card-go { margin-top: 16px; min-height: 40px; }
+.bredesign .bd-card-actions .bd-card-go { margin-top: 0; align-self: center; }
 .bredesign .bd-card-actions {
   display: flex;
   flex-wrap: wrap;

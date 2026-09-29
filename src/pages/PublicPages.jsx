@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { usePublicBranches, branchCityName, branchLabel, fetchPublicBranchHours } from '../lib/branches'
 import { MAIN_LINE, branchDirections, branchPhone, buildHomeBranchCards } from '../lib/homeBranches'
@@ -44,62 +43,46 @@ const SERVICE_COLUMNS = SERVICE_ITEMS.reduce((columns, item, index) => {
 /* Every card has the same shape so the two rows line up: number, then the
    name at the top; the copy, the price and the buttons at the foot, each on a
    fixed line. A service with no published price holds the price line with a
-   placeholder. Wash cards carry two buttons (book it, or check the queue), so
-   they are not one big link; the protection cards open their own page. */
+   placeholder. Only the protection services (PPF, ceramic coating, tint) can
+   be booked ahead; every wash & detailing service is walk-in, so those cards
+   point at the live queue instead. */
 function ServiceRailCard({ item, price, hidden }) {
   const tab = hidden ? -1 : undefined
-  const head = (
-    <>
+  const className = `bd-card is-static${item.image ? '' : ' is-plain'}${item.available ? '' : ' is-soon'}`
+  let actions = <span className="bd-card-go">Coming soon</span>
+  if (item.kind === 'main') {
+    actions = (
+      <>
+        <Link className="bd-btn bd-btn-primary" to="/book" tabIndex={tab}>
+          Book this service
+        </Link>
+        <Link className="bd-btn bd-btn-quiet" to={item.to} tabIndex={tab}>
+          Explore this service
+        </Link>
+      </>
+    )
+  } else if (item.available) {
+    actions = (
+      <Link className="bd-btn bd-btn-quiet" to="/queue" tabIndex={tab}>
+        View live queue
+      </Link>
+    )
+  }
+
+  return (
+    <div className={className}>
       {item.image ? <img src={item.image} alt={hidden ? '' : item.alt} loading="lazy" decoding="async" /> : null}
       <div className="bd-card-top">
         <span className="bd-card-num" aria-hidden="true">{item.number}</span>
         <h2>{item.title}</h2>
       </div>
       {item.available ? null : <span className="bd-services-soon">Coming soon</span>}
-    </>
-  )
-  const priceLine = (
-    <p className={`bd-services-price${price ? '' : ' is-tbd'}`}>
-      <span>Starts at</span> {price ? formatStartingPrice(price) : <b>Price to follow</b>}
-    </p>
-  )
-  const className = `bd-card${item.image ? '' : ' is-plain'}`
-
-  if (item.kind === 'main') {
-    return (
-      <Link className={className} to={item.to} tabIndex={tab}>
-        {head}
-        <div className="bd-card-body">
-          <p>{item.copy}</p>
-          {priceLine}
-          <span className="bd-card-go">
-            Explore this service <ArrowRight size={14} aria-hidden="true" />
-          </span>
-        </div>
-      </Link>
-    )
-  }
-
-  return (
-    <div className={`${className} is-static${item.available ? '' : ' is-soon'}`}>
-      {head}
       <div className="bd-card-body">
         <p>{item.copy}</p>
-        {priceLine}
-        <div className="bd-card-actions">
-          {item.available ? (
-            <>
-              <Link className="bd-btn bd-btn-primary" to="/book" tabIndex={tab}>
-                Book this service
-              </Link>
-              <Link className="bd-btn bd-btn-quiet" to="/queue" tabIndex={tab}>
-                View live queue
-              </Link>
-            </>
-          ) : (
-            <span className="bd-card-go">Coming soon</span>
-          )}
-        </div>
+        <p className={`bd-services-price${price ? '' : ' is-tbd'}`}>
+          <span>Starts at</span> {price ? formatStartingPrice(price) : <b>Price to follow</b>}
+        </p>
+        <div className="bd-card-actions">{actions}</div>
       </div>
     </div>
   )
