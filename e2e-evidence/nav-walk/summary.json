@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "base": "http://127.0.0.1:5175",
+  "passed": 92,
+  "total": 92,
+  "failed": [],
+  "backendFindings": [],
+  "evidence": "e2e-evidence/nav-walk",
+  "at": "2026-09-27T03:30:39.006Z"
+}

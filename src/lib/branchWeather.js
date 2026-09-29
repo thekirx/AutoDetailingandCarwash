@@ -30,6 +30,22 @@ export function weatherLabelFromCode(code) {
   return WMO[n] || (n >= 50 && n < 70 ? 'Rain' : n >= 80 && n < 90 ? 'Showers' : 'Weather')
 }
 
+/** One line under the temperature. Empty when the code is unknown. */
+export function weatherForecastLine(code) {
+  if (code == null || code === '') return ''
+  const n = Number(code)
+  if (!Number.isFinite(n)) return ''
+  if (n <= 1) return "It's sunny today."
+  if (n === 2) return "It's partly cloudy today."
+  if (n === 3) return "It's cloudy today."
+  if (n === 45 || n === 48) return "It's foggy today."
+  if (n >= 51 && n <= 67) return "It's raining today."
+  if (n >= 71 && n <= 77) return "It's snowing today."
+  if (n >= 80 && n <= 82) return 'Showers today.'
+  if (n >= 95) return 'Storms today — take it easy on the road.'
+  return ''
+}
+
 export function weatherCacheKey(lat, lng) {
   return `hakum-wx:${Number(lat).toFixed(3)},${Number(lng).toFixed(3)}`
 }
@@ -69,6 +85,7 @@ export async function fetchBranchWeather(lat, lng, { fetchImpl = fetch, now = Da
   const data = {
     tempC: Math.round(temp),
     label: weatherLabelFromCode(code),
+    line: weatherForecastLine(code),
   }
   try {
     store?.setItem(key, JSON.stringify({ at: now, data }))

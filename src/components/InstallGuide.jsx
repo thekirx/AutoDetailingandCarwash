@@ -4,6 +4,7 @@ import {
   dismissInstallGuide,
   getInstallPlatform,
   getInstallSteps,
+  shouldAutoOpenInstallGuide,
   wasInstallDismissed,
 } from '@/lib/installApp'
 import { Button } from '@/components/ui/button'
@@ -122,12 +123,14 @@ export default function InstallGuide({
       /* ignore */
     }
     const t = window.setTimeout(() => {
+      let promptBusy = false
       try {
-        if (localStorage.getItem('hakum-prompt-busy') === '1') return
+        promptBusy = localStorage.getItem('hakum-prompt-busy') === '1'
       } catch {
         /* ignore */
       }
-      setOpen(true)
+      const dialogOpen = Boolean(document.querySelector('[role="dialog"]'))
+      if (shouldAutoOpenInstallGuide({ promptBusy, dialogOpen })) setOpen(true)
     }, 5200)
     return () => window.clearTimeout(t)
   }, [autoPopup, variant, platform])

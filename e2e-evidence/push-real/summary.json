@@ -1,0 +1,621 @@
+{
+  "ok": true,
+  "base": "http://127.0.0.1:5176",
+  "passed": 48,
+  "total": 48,
+  "results": [
+    {
+      "browser": "chrome",
+      "persona": "customer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "chrome",
+      "persona": "boss",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "chrome",
+      "persona": "asa",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "admin",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "chrome",
+      "persona": "opslead",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "tl",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "chrome",
+      "persona": "crew1",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "investor",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "sales",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "detailer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "marketing",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "video",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "event": {
+        "browser": "chrome",
+        "plate": "PUSHQACH",
+        "customerPush": {
+          "sent": 4,
+          "pruned": 0,
+          "subscriptions": 4
+        },
+        "opsPush": {
+          "sent": 5,
+          "pruned": 0,
+          "subscriptions": 5
+        },
+        "opsTargets": 6
+      }
+    },
+    {
+      "browser": "edge",
+      "persona": "customer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "edge",
+      "persona": "boss",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "edge",
+      "persona": "asa",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com"
+    },
+    {
+      "browser": "edge",
+      "persona": "admin",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "edge",
+      "persona": "opslead",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com"
+    },
+    {
+      "browser": "edge",
+      "persona": "tl",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "edge",
+      "persona": "crew1",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com"
+    },
+    {
+      "browser": "edge",
+      "persona": "investor",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com"
+    },
+    {
+      "browser": "edge",
+      "persona": "sales",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com"
+    },
+    {
+      "browser": "edge",
+      "persona": "detailer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com"
+    },
+    {
+      "browser": "edge",
+      "persona": "marketing",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com"
+    },
+    {
+      "browser": "edge",
+      "persona": "video",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:wns2-bl2p.notify.windows.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "wns2-bl2p.notify.windows.com"
+    },
+    {
+      "event": {
+        "browser": "edge",
+        "plate": "PUSHQAED",
+        "customerPush": {
+          "sent": 5,
+          "pruned": 0,
+          "subscriptions": 5
+        },
+        "opsPush": {
+          "sent": 10,
+          "pruned": 0,
+          "subscriptions": 10
+        },
+        "opsTargets": 6
+      }
+    },
+    {
+      "browser": "brave",
+      "persona": "customer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "brave",
+      "persona": "boss",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "brave",
+      "persona": "asa",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "brave",
+      "persona": "admin",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "brave",
+      "persona": "opslead",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "brave",
+      "persona": "tl",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "brave",
+      "persona": "crew1",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "brave",
+      "persona": "investor",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "brave",
+      "persona": "sales",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "brave",
+      "persona": "detailer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "brave",
+      "persona": "marketing",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "brave",
+      "persona": "video",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "event": {
+        "browser": "brave",
+        "plate": "PUSHQABR",
+        "customerPush": {
+          "sent": 6,
+          "pruned": 0,
+          "subscriptions": 6
+        },
+        "opsPush": {
+          "sent": 15,
+          "pruned": 0,
+          "subscriptions": 15
+        },
+        "opsTargets": 6
+      }
+    },
+    {
+      "browser": "firefox",
+      "persona": "customer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "firefox",
+      "persona": "boss",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "firefox",
+      "persona": "asa",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com"
+    },
+    {
+      "browser": "firefox",
+      "persona": "admin",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "firefox",
+      "persona": "opslead",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com"
+    },
+    {
+      "browser": "firefox",
+      "persona": "tl",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com",
+      "businessEvent": "displayed"
+    },
+    {
+      "browser": "firefox",
+      "persona": "crew1",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com"
+    },
+    {
+      "browser": "firefox",
+      "persona": "investor",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com"
+    },
+    {
+      "browser": "firefox",
+      "persona": "sales",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com"
+    },
+    {
+      "browser": "firefox",
+      "persona": "detailer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com"
+    },
+    {
+      "browser": "firefox",
+      "persona": "marketing",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com"
+    },
+    {
+      "browser": "firefox",
+      "persona": "video",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:updates.push.services.mozilla.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "updates.push.services.mozilla.com"
+    },
+    {
+      "event": {
+        "browser": "firefox",
+        "plate": "PUSHQAFI",
+        "customerPush": {
+          "sent": 7,
+          "pruned": 0,
+          "subscriptions": 7
+        },
+        "opsPush": {
+          "sent": 20,
+          "pruned": 0,
+          "subscriptions": 20
+        },
+        "opsTargets": 6
+      }
+    }
+  ],
+  "at": "2026-09-27T15:00:25.295Z"
+}

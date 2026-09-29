@@ -1,0 +1,618 @@
+{
+  "ok": true,
+  "base": "http://127.0.0.1:5176",
+  "passed": 12,
+  "total": 12,
+  "results": [
+    {
+      "browser": "chrome",
+      "persona": "customer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "boss",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "asa",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "admin",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "opslead",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "tl",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "crew1",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "investor",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "sales",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "detailer",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "marketing",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "browser": "chrome",
+      "persona": "video",
+      "ok": true,
+      "steps": [
+        "login",
+        "subscribed:fcm.googleapis.com",
+        "selfTest:displayed"
+      ],
+      "endpointHost": "fcm.googleapis.com"
+    },
+    {
+      "audit": {
+        "browser": "chrome",
+        "rows": [
+          {
+            "event": "booking waiting (wash, Bacoor) → customer + Bacoor floor + global ops",
+            "ok": true,
+            "fired": {
+              "targets": 6,
+              "push": {
+                "sent": 4,
+                "pruned": 0,
+                "subscriptions": 4
+              }
+            },
+            "recipients": {
+              "customer": {
+                "shown": "In the queue",
+                "url": "/account/queue",
+                "landed": "/account/queue"
+              },
+              "boss": {
+                "shown": "New queue ticket",
+                "url": "/operations/queue",
+                "landed": "/operations/queue"
+              },
+              "asa": {
+                "shown": "New queue ticket",
+                "url": "/operations/queue",
+                "landed": "/operations/queue"
+              },
+              "admin": {
+                "shown": "New queue ticket",
+                "url": "/operations/queue",
+                "landed": "/operations/queue"
+              },
+              "opslead": {
+                "shown": "New queue ticket",
+                "url": "/operations/queue",
+                "landed": "/operations/queue"
+              },
+              "tl": {
+                "shown": "New queue ticket",
+                "url": "/operations/queue",
+                "landed": "/operations/queue"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 7,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "booking-c85485ca-9333-4619-ba4b-3880b1260770-waiting"
+            }
+          },
+          {
+            "event": "TL assigns crew1 to the car → only crew1 (My tasks)",
+            "ok": true,
+            "fired": {
+              "targets": 1,
+              "push": {
+                "sent": 1,
+                "pruned": 0,
+                "subscriptions": 1
+              }
+            },
+            "recipients": {
+              "crew1": {
+                "shown": "New car assigned",
+                "url": "/operations/my-tasks",
+                "landed": "/operations/my-tasks"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 1,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "crew-c85485ca-9333-4619-ba4b-3880b1260770"
+            }
+          },
+          {
+            "event": "BA submits end of shift → SA + ASA (finance_view) on Finance · shift close",
+            "ok": true,
+            "fired": {
+              "targets": 2,
+              "push": {
+                "sent": 2,
+                "pruned": 0,
+                "subscriptions": 2
+              }
+            },
+            "recipients": {
+              "boss": {
+                "shown": "End of shift to review · Bacoor",
+                "url": "/operations/finance?tab=shift-close",
+                "landed": "/operations/finance"
+              },
+              "asa": {
+                "shown": "End of shift to review · Bacoor",
+                "url": "/operations/finance?tab=shift-close",
+                "landed": "/operations/finance"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 2,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "shift-submitted-cf4b90f2-111e-4c23-8fca-4683484808fd"
+            }
+          },
+          {
+            "event": "ASA accepts end of shift → SA floor pay (Payroll) + BA \"accepted\" (POS)",
+            "ok": true,
+            "fired": {
+              "targets": 1,
+              "push": {
+                "sent": 1,
+                "pruned": 0,
+                "subscriptions": 1
+              }
+            },
+            "recipients": {
+              "boss": {
+                "shown": "Floor pay ready · Bacoor",
+                "url": "/operations/payroll",
+                "landed": "/operations/payroll"
+              },
+              "admin": {
+                "shown": "End of shift accepted · Bacoor",
+                "url": "/operations/pos",
+                "landed": "/operations/pos"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 2,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "(shift_close:|shift-accepted-)cf4b90f2-111e-4c23-8fca-4683484808fd"
+            }
+          },
+          {
+            "event": "ASA rejects another end of shift → BA \"sent back\" with note (POS)",
+            "ok": true,
+            "fired": {
+              "targets": null,
+              "push": null
+            },
+            "recipients": {
+              "admin": {
+                "shown": "End of shift sent back · Bacoor",
+                "url": "/operations/pos",
+                "landed": "/operations/pos"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 1,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "shift-rejected-17dc9772-de5f-443e-83cf-f7b9c51a6b36"
+            }
+          },
+          {
+            "event": "SA confirms payroll → each payee (crew1, TL, detailer) on My pay",
+            "ok": true,
+            "fired": {
+              "targets": 3,
+              "push": {
+                "sent": 3,
+                "pruned": 0,
+                "subscriptions": 3
+              }
+            },
+            "recipients": {
+              "crew1": {
+                "shown": "Pay posted",
+                "url": "/operations/my-pay",
+                "landed": "/operations/my-pay"
+              },
+              "tl": {
+                "shown": "Pay posted",
+                "url": "/operations/my-pay",
+                "landed": "/operations/my-pay"
+              },
+              "detailer": {
+                "shown": "Pay posted",
+                "url": "/operations/my-pay",
+                "landed": "/operations/my-pay"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 3,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "payroll-f67a6362-956c-4587-a454-a7a12a441de8"
+            }
+          },
+          {
+            "event": "crew1 requests cash advance → SA (ASA has no finance_write) on Payroll · cash advance",
+            "ok": true,
+            "fired": {
+              "targets": 1,
+              "push": {
+                "sent": 1,
+                "pruned": 0,
+                "subscriptions": 1
+              }
+            },
+            "recipients": {
+              "boss": {
+                "shown": "Cash advance request",
+                "url": "/operations/payroll?tab=cash-advance",
+                "landed": "/operations/payroll"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 1,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "ca-req-a6d1e78f-d6ca-404a-be42-39fe1a892813"
+            }
+          },
+          {
+            "event": "SA approves cash advance → crew1 on My pay",
+            "ok": true,
+            "fired": {
+              "targets": 1,
+              "push": {
+                "sent": 1,
+                "pruned": 0,
+                "subscriptions": 1
+              }
+            },
+            "recipients": {
+              "crew1": {
+                "shown": "Cash advance approved",
+                "url": "/operations/my-pay",
+                "landed": "/operations/my-pay"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 1,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "ca-done-a6d1e78f-d6ca-404a-be42-39fe1a892813"
+            }
+          },
+          {
+            "event": "public partnership inquiry → SA + ASA (inquiries) on Inquiries",
+            "ok": true,
+            "fired": {
+              "targets": null,
+              "push": null
+            },
+            "recipients": {
+              "boss": {
+                "shown": "New partnership inquiry",
+                "url": "/operations/inquiries",
+                "landed": "/operations/inquiries"
+              },
+              "asa": {
+                "shown": "New partnership inquiry",
+                "url": "/operations/inquiries",
+                "landed": "/operations/inquiries"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 2,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "inquiry-aa341db7-5089-4313-8302-e20cee4dd02d"
+            }
+          },
+          {
+            "event": "customer review at Bacoor → SA + ASA + Ops Lead + Bacoor BA on Reviews",
+            "ok": true,
+            "fired": {
+              "targets": 5,
+              "push": {
+                "sent": 4,
+                "pruned": 0,
+                "subscriptions": 4
+              }
+            },
+            "recipients": {
+              "boss": {
+                "shown": "New review · 2★",
+                "url": "/operations/reviews",
+                "landed": "/operations/reviews"
+              },
+              "asa": {
+                "shown": "New review · 2★",
+                "url": "/operations/reviews",
+                "landed": "/operations/reviews"
+              },
+              "opslead": {
+                "shown": "New review · 2★",
+                "url": "/operations/reviews",
+                "landed": "/operations/reviews"
+              },
+              "admin": {
+                "shown": "New review · 2★",
+                "url": "/operations/reviews",
+                "landed": "/operations/reviews"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 5,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "review-4511a060-de59-430f-9616-98434237125b"
+            }
+          },
+          {
+            "event": "staff complaint form (Bacoor) → SA + ASA + Bacoor BA on Planning · forms",
+            "ok": true,
+            "fired": {
+              "targets": 4,
+              "push": {
+                "sent": 3,
+                "pruned": 0,
+                "subscriptions": 3
+              }
+            },
+            "recipients": {
+              "asa": {
+                "shown": "New complaint",
+                "url": "/operations/planning?tab=forms",
+                "landed": "/operations/planning"
+              },
+              "admin": {
+                "shown": "New complaint",
+                "url": "/operations/planning?tab=forms",
+                "landed": "/operations/planning"
+              },
+              "boss": {
+                "shown": "New complaint",
+                "url": "/operations/planning?tab=forms",
+                "landed": "/operations/planning"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 4,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "ops-complaint-533cbff5-561a-42b3-9fff-20b1393b1385"
+            }
+          },
+          {
+            "event": "SA rings a POS sale at Bacoor → ASA + Bacoor BA on POS (actor excluded)",
+            "ok": true,
+            "fired": {
+              "targets": 3,
+              "push": {
+                "sent": 2,
+                "pruned": 0,
+                "subscriptions": 2
+              }
+            },
+            "recipients": {
+              "asa": {
+                "shown": "POS sale",
+                "url": "/operations/pos",
+                "landed": "/operations/pos"
+              },
+              "admin": {
+                "shown": "POS sale",
+                "url": "/operations/pos",
+                "landed": "/operations/pos"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 3,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "pos-sale-2368ab81-3fa2-4066-993b-d51f1bef4f95"
+            }
+          },
+          {
+            "event": "SA creates an Ops Lab board → ASA + BA + Ops Lead on Roadmap",
+            "ok": true,
+            "fired": {
+              "targets": 4,
+              "push": {
+                "sent": 3,
+                "pruned": 0,
+                "subscriptions": 3
+              }
+            },
+            "recipients": {
+              "asa": {
+                "shown": "New brainstorm",
+                "url": "/operations/roadmap?board=11191825-68df-40a9-a220-938e57823622",
+                "landed": "/operations/roadmap"
+              },
+              "admin": {
+                "shown": "New brainstorm",
+                "url": "/operations/roadmap?board=11191825-68df-40a9-a220-938e57823622",
+                "landed": "/operations/roadmap"
+              },
+              "opslead": {
+                "shown": "New brainstorm",
+                "url": "/operations/roadmap?board=11191825-68df-40a9-a220-938e57823622",
+                "landed": "/operations/roadmap"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 4,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "11191825-68df-40a9-a220-938e57823622"
+            }
+          },
+          {
+            "event": "planner card assigned to marketing, crew1, video → each on a page they can open",
+            "ok": true,
+            "fired": {
+              "targets": 3,
+              "push": {
+                "sent": 3,
+                "pruned": 0,
+                "subscriptions": 3
+              }
+            },
+            "recipients": {
+              "marketing": {
+                "shown": "Planner task assigned",
+                "url": "/operations/planning",
+                "landed": "/operations/planning"
+              },
+              "crew1": {
+                "shown": "Planner task assigned",
+                "url": "/operations/my-tasks",
+                "landed": "/operations/my-tasks"
+              },
+              "video": {
+                "shown": "Planner task assigned",
+                "url": "/operations/my-tasks",
+                "landed": "/operations/my-tasks"
+              }
+            },
+            "leaks": [],
+            "inbox": {
+              "rows": 3,
+              "missing": [],
+              "forbidden": [],
+              "otherBranch": 0,
+              "tag": "plan-card:17c37fdc-5ad1-4184-8152-9ab5d905349c"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "at": "2026-09-27T14:30:43.241Z"
+}

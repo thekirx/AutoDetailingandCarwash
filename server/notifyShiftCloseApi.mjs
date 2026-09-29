@@ -1,10 +1,10 @@
 /**
- * POST /api/notify-shift-close — web push after Finance accepts end of shift.
- * Body: { branch, business_date, close_id }
+ * POST /api/notify-shift-close — web push after Finance accepts (floor pay + submitter) or rejects (submitter) end of shift.
+ * Body: { branch, business_date, close_id, action? }
  */
 import { createClient } from '@supabase/supabase-js'
 import { canReviewShiftClose } from '../src/lib/shiftClose.js'
-import { notifyShiftCloseAccepted } from './notifyShiftClose.mjs'
+import { notifyShiftCloseAccepted, notifyShiftCloseRejected } from './notifyShiftClose.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 
 function admin() {
@@ -49,7 +49,7 @@ export async function handleNotifyShiftCloseRequest(req, res) {
 
     let notify = null
     try {
-      notify = await notifyShiftCloseAccepted({
+      notify = await (body.action === 'reject' ? notifyShiftCloseRejected : notifyShiftCloseAccepted)({
         branch,
         businessDate,
         closeId,

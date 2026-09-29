@@ -1,13 +1,16 @@
 {
   "ok": true,
-  "campaign": "principal-completion-qa-2026-09-24",
-  "finished": "2026-09-24T12:00:00.000Z",
-  "passed": 1269,
+  "campaign": "principal-daily-ops-verify-2026-09-26",
+  "finished": "2026-09-26T13:40:00.000Z",
+  "head": "59c27e0",
+  "passed": 1284,
   "failed": 0,
-  "notes": "npm test 1269/1269; eslint 0; build 0; audit 0 vulns; integrity PASS; push PASS; FLOPS 23/23 artifact; soft-launch READY_WITH_OPS_BLOCKERS; SMS/SMTP still OPEN",
+  "flops": "25/25",
+  "notes": "git ff to 59c27e0; npm test 1284/1284; eslint 0; build 0; integrity PASS; handoff PASS; ops:daily-ops 0; sms:egress ErrorCode 11; FLOPS 25/25 kind=drawer=450000 payroll=157500; soft-launch READY_WITH_OPS_BLOCKERS; SMS/SMTP/Static IPs OPEN; owner SMS N/A",
   "artifacts": {
     "systemAudit": "docs/SYSTEM_AUDIT.md",
     "projectStatus": "PROJECT_STATUS.md",
+    "progress": "docs/qa/PRINCIPAL-PROGRESS.md",
     "flops": "e2e-evidence/lifecycle-flops/summary.json",
     "signOff": "docs/qa/BRANCH-DAY-SIGN-OFF.md"
   }

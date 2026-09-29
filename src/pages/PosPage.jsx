@@ -43,6 +43,7 @@ import { PAYMENT_METHODS } from '@/lib/paymentMethods'
 import { normalizePosSettings, DEFAULT_POS_EXPENSE_KINDS } from '@/lib/posSettings'
 import { accumulatePosCategoryTotals, emptyPosCategoryTotals, MERCH_FAMILIES, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
 import { getAccessTokenFresh } from '@/lib/authToken'
+import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { collectPaged } from '@/lib/crmInsights'
 import {
   DEFAULT_COMPENSATION_RULES,
@@ -1318,7 +1319,7 @@ export default function PosPage() {
       return
     }
     setShiftSubmitting(true)
-    const { error } = await supabase.rpc('submit_shift_close', {
+    const { data: closed, error } = await supabase.rpc('submit_shift_close', {
       payload: {
         branch,
         business_date: getLocalCalendarDate(),
@@ -1332,6 +1333,7 @@ export default function PosPage() {
     if (error) toast.error(error.message)
     else {
       toast.success('End of shift submitted for review')
+      notifyOpsEvent('shift_submitted', closed?.id)
       setDailyReportOpen(false)
       setShiftCloseMode(false)
     }

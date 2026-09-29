@@ -58,6 +58,7 @@ import {
   labelFinanceBranch,
 } from '@/lib/financeCorporate'
 import { collectPaged } from '@/lib/crmInsights'
+import { salesCompareWindow } from '@/lib/salesSummary'
 import { formatMoney } from '@/queue/queueApi'
 import FinanceFilters from './finance/FinanceFilters'
 import FinanceOverviewTab from './finance/FinanceOverviewTab'
@@ -135,6 +136,9 @@ export default function FinancePage() {
   const [plRows, setPlRows] = useState([])
   const [priorPlRows, setPriorPlRows] = useState([])
   const [expenses, setExpenses] = useState([])
+  const [saleRows, setSaleRows] = useState([])
+  const [priorSaleRows, setPriorSaleRows] = useState([])
+  const [salesWindow, setSalesWindow] = useState(null)
   const [lastPaidHint, setLastPaidHint] = useState(null)
   const [shiftCloseCount, setShiftCloseCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -270,7 +274,26 @@ export default function FinancePage() {
         .lte('business_date', queryRange.end)
       shiftCountQ = scopeBranch(shiftCountQ, profile, branchFilter)
 
-      const [branchRows, cats, sales, pl, kindRes, expRows, prior, vendorRes, lastPaidRes, shiftCountRes] = await Promise.all([
+      const saleNow = new Date()
+      const saleRange = { start: queryRange.start, end: queryRange.end }
+      const saleCompare = salesCompareWindow(datePreset, saleRange, saleNow)
+      const fetchSaleRows = (fromIso, toIso) =>
+        collectPaged(async (from, to) => {
+          let q = supabase
+            .from('sales')
+            .select('id, branch, occurred_at, status, total_minor, discount_minor, payment_method')
+            .in('status', ['paid', 'refunded'])
+            .gte('occurred_at', fromIso)
+            .lte('occurred_at', toIso)
+            .order('occurred_at', { ascending: false })
+            .range(from, to)
+          q = scopeBranch(q, profile, branchFilter)
+          const { data, error } = await q
+          if (error) throw error
+          return data || []
+        }, 1000)
+
+      const [branchRows, cats, sales, pl, kindRes, expRows, prior, vendorRes, lastPaidRes, shiftCountRes, curSales, prevSales] = await Promise.all([
         listBranches(),
         supabase.from('expense_categories').select('id, name, is_chemical, kind').order('name'),
         salesQ,
@@ -293,6 +316,8 @@ export default function FinancePage() {
         supabase.from('vendors').select('id, name, is_active').eq('is_active', true).order('name'),
         lastPaidQ,
         shiftCountQ,
+        fetchSaleRows(startIso, endIso),
+        saleCompare ? fetchSaleRows(saleCompare.startIso, saleCompare.endIso) : Promise.resolve([]),
       ])
       if (cats.error) throw cats.error
       if (sales.error) throw sales.error
@@ -308,6 +333,9 @@ export default function FinancePage() {
       setPlRows(pl.data || [])
       setPriorPlRows(prior.data || [])
       setExpenses(expRows)
+      setSaleRows(curSales)
+      setPriorSaleRows(prevSales)
+      setSalesWindow({ preset: datePreset, range: saleRange, now: saleNow, compare: saleCompare })
       setLastPaidHint(lastPaidRes.error ? null : lastPaidRes.data?.[0] || null)
       setShiftCloseCount(shiftCountRes.error ? 0 : shiftCountRes.count || 0)
     } catch (err) {
@@ -550,6 +578,14 @@ export default function FinancePage() {
             loading={loading}
             onNavigate={setTab}
             lastPaidHint={lastPaidHint}
+            saleRows={saleRows}
+            priorSaleRows={priorSaleRows}
+            salesWindow={salesWindow}
+            expenses={expenses}
+            categories={categories}
+            period={datePreset}
+            branchName={branchName}
+            onPeriodChange={(next) => patchSearch({ period: next })}
           />
         </TabsContent>
 
@@ -638,6 +674,12 @@ export default function FinancePage() {
             loading={loading}
             profile={profile}
             branchFilter={branchFilter}
+            saleRows={saleRows}
+            priorSaleRows={priorSaleRows}
+            salesWindow={salesWindow}
+            period={datePreset}
+            branchName={branchName}
+            onPeriodChange={(next) => patchSearch({ period: next })}
           />
         </TabsContent>
       </Tabs>

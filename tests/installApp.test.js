@@ -1,6 +1,20 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { iosPushBlocked } from '../src/lib/installApp.js'
+import { iosPushBlocked, shouldAutoOpenInstallGuide } from '../src/lib/installApp.js'
+
+describe('install guide auto-popup', () => {
+  it('never stacks on top of another open dialog (e.g. Account → push toggle)', () => {
+    assert.equal(shouldAutoOpenInstallGuide({ promptBusy: false, dialogOpen: true }), false)
+  })
+
+  it('waits while the push prompt is busy', () => {
+    assert.equal(shouldAutoOpenInstallGuide({ promptBusy: true, dialogOpen: false }), false)
+  })
+
+  it('opens when nothing else is on screen', () => {
+    assert.equal(shouldAutoOpenInstallGuide({ promptBusy: false, dialogOpen: false }), true)
+  })
+})
 
 const IPHONE_SAFARI =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'

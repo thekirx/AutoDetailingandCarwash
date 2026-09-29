@@ -125,7 +125,7 @@ describe('P0 residual fixes (full-system 2026-08-01)', () => {
     assert.match(src, /finance\?tab=reports/)
     assert.match(src, /canAccessReports/)
     const fin = readFileSync(join(root, 'src/pages/finance/FinanceReportsTab.jsx'), 'utf8')
-    assert.match(fin, /aggregateBestSellers/)
+    assert.match(fin, /topItems\(lineRows/)
     assert.match(fin, /scopeBranch/)
     assert.match(fin, /toast\.error/)
   })

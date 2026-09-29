@@ -5,8 +5,9 @@
 **Bug register:** [`BUGS.md`](./BUGS.md)  
 **Rule:** Do not mark `[x]` without exit **0** (or signed manual proof) from **this campaign**.
 
-Last readiness run: **2026-09-13T16:02:59.235Z** (ok=true passed=14 failed=0)
-Artifact: [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./readiness-dashboard.html) · [`RESULTS.md`](./RESULTS.md)
+Last readiness campaign stamp: **2026-09-26** principal daily-ops verify (FLOPS 25/25 + unit 1284/1284; full orch **not** re-run).  
+Prior orch artifact: **2026-09-13T16:02:59.235Z** (ok=true) — see [`RESULTS.md`](./RESULTS.md). Soft-launch evidence: [`BRANCH-DAY-SIGN-OFF.md`](./BRANCH-DAY-SIGN-OFF.md).
+Artifact: [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./readiness-dashboard.html) · [`RESULTS.md`](./RESULTS.md) · [`PRINCIPAL-PROGRESS.md`](./PRINCIPAL-PROGRESS.md)
 
 ```mermaid
 flowchart LR
@@ -35,10 +36,10 @@ flowchart LR
 
 | # | Check | Command | Status |
 |---|--------|---------|--------|
-| F.1 | Unified mutating lifecycle + screenshots + recording | `npm run e2e:lifecycle-flops` | [x] 2026-09-24 23/23 |
-| F.2 | Paid-by-kind SQL = Finance UI for QA day | FLOPS + `execute_sql` | [x] kind=drawer=900000 |
+| F.1 | Unified mutating lifecycle + screenshots + recording | `npm run e2e:lifecycle-flops` | [x] 2026-09-26 **25/25** |
+| F.2 | Paid-by-kind SQL = Finance UI for QA day | FLOPS + `execute_sql` | [x] kind=drawer=**450000** (2026-09-26) |
 | F.3 | Accepted close drawer = paid kind sum | FLOPS E1/F1 | [x] |
-| F.4 | Floor payroll confirmed for that window | FLOPS P1 | [x] 157500 · overlap blocks 2nd run |
+| F.4 | Floor payroll confirmed for that window | FLOPS P1 | [x] **157500** · run `79f0a932-…` |
 | F.5 | TL POS deny + Investor payroll deny | FLOPS R1 | [x] Lane closed |
 
 Soft-launch shop-day ready requires F.1–F.5 exit 0 with fresh artifacts. Production SMS/SMTP remains Gate 7 / Gate 10.

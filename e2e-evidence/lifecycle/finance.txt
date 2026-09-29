@@ -1,0 +1,227 @@
+ADMIN CONSOLE
+
+FLOOR
+Floor Board
+Queue
+Bookings
+Attendance
+KPI
+COUNTER
+POS
+Inventory
+CUSTOMERS
+CRM
+Reviews
+Memberships
+BOOKS
+Finance
+Payroll
+WORK
+Planner
+Ops Lab
+History
+Notifications
+COMPANY
+People
+Branches
+Cars
+Content
+Audit
+Data Center
+Inquiries
+Settings
+
+BossMich
+
+Super Admin · All branches
+
+bossmich@hakumautocare.com
+
+Account
+Sign out
+Toggle Sidebar
+Ops
+/
+Finance
+
+Operations · cost · profit · stock
+
+Search
+⌘K
+9+
+
+BOOKS · HAKUM AUTO CARE
+
+Dashboard
+
+Business overview for the selected window · 1–31 Aug 2026 · All branches
+
+NET PROFIT
+
+₱2,850
+
+Can edit
+How Finance works
+Income from POS, expenses from bills, shift closes before payroll. Open a step if you are new to books.
+Show guide
+
+REPORTING WINDOW
+
+1–31 Aug 2026
+
+BRANCH
+All branches
+Hakum Auto Care Bacoor
+Hakum Auto Care Batangas
+Hakum Auto Care Dasmarinas
+Corporate (HQ)
+PERIOD
+Today
+Yesterday
+This week
+Last 7 days
+Last 30 days
+This month
+Last month
+Last 3 months
+Last 6 months
+This year
+Custom
+FROM
+TO
+COMPARE
+None
+Previous period
+Previous year
+Refresh
+
+Crew pay is not in this statement until Payroll confirms a run. Open Payroll — this page does not set commission %.
+
+Open Payroll
+
+Paid POS in this window has no accepted shift close. Floor payroll stays locked until End of shift is submitted and accepted.
+
+Open POS
+Dashboard
+Sales
+Bills & expenses
+Profit and loss
+Shift reviews
+More
+
+Proof: income = paid POS sales · expenses = paid/posted only · source view finance_daily_pl. End of shift attestation does not rewrite these totals.
+
+INCOME
+
+₱2,850
+
+POS paid
+
+EXPENSES
+
+₱0
+
+Paid + posted
+
+NET PROFIT
+
+₱2,850
+
+100% margin
+
+MARGIN
+
+100%
+
+Net ÷ income
+
+PAID TICKETS
+
+2
+
+1 branch
+
+AVG TICKET
+
+₱1,425
+
+100% cash
+
+Paid by kind
+
+Services, packages, detailing, PPF, and merch from paid sale lines · 1–31 Aug 2026. Uses the branch and date filters above. End of shift does not change these amounts.
+
+Kind	Share of paid lines	Paid
+Services	
+100%
+	₱2,850
+Sales
+Bills & expenses
+Profit and loss
+Export overview
+CSV
+Excel
+PDF
+Cash flow
+
+Income, expenses, and net by day · 1–31 Aug 2026
+
+1 day
+Expenses
+Income
+Net
+8/8
+₱0
+₱750
+₱2k
+₱2k
+₱3k
+Revenue by branch
+
+POS paid sales in the window
+
+₱0
+₱750
+₱2k
+₱2k
+₱3k
+HakumAuto CareBacoor
+Payment mix
+
+Cash · GCash · Card
+
+Cash
+100%
+₱2,850
+Where spend goes
+
+Top expense categories
+
+Full P&L
+
+No posted expenses
+
+Paid and posted bills land here by category.
+
+Open bills
+Owner watchlist
+
+What to check before the next ops call
+
+Cash is 100% of sales — reconcile till vs GCash/card before shift close.
+Strongest POS day in window: 2026-08-08. Staff that day pattern on busy weeks.
+2 paid tickets · watch average ticket in Sales when running promos.
+
+Expense ratio 0% · Peak day 2026-08-08
+
+Recent POS days
+
+Latest sales days in the window
+
+Date	Branch	Sales	Paid
+2026-08-08	Hakum Auto Care Bacoor	₱2,850	2
+Go to
+
+Jump to an operations page
+
+Hakum Auto Care Bacoor

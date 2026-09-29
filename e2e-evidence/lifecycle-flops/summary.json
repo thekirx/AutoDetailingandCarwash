@@ -1,7 +1,7 @@
 {
   "ok": true,
-  "passed": 23,
-  "total": 23,
+  "passed": 25,
+  "total": 25,
   "steps": [
     {
       "ok": true,
@@ -16,7 +16,7 @@
     {
       "ok": true,
       "name": "C1.customer.book",
-      "detail": "07e26157-3a49-4cd9-ad7e-8883885abb3d pending"
+      "detail": "92bd7653-d0bc-4241-bcc0-4bdc94f8172a pending"
     },
     {
       "ok": true,
@@ -31,42 +31,52 @@
     {
       "ok": true,
       "name": "A1.crew.attendance",
-      "detail": "Crew One present 2026-09-24"
+      "detail": "Crew One present 2026-09-27"
+    },
+    {
+      "ok": true,
+      "name": "W1.tl.wash_to_final_check",
+      "detail": "b4280f1a-ab71-4c13-bdfe-27780a4f383f"
     },
     {
       "ok": true,
       "name": "W1.admin.pos_paid",
-      "detail": "reuse e4a5ff67-7351-4a99-9113-8ed0c841455c 450000 minor"
+      "detail": "e9f42420-2486-4768-a21d-9c86c6b0ed73 450000 minor"
     },
     {
       "ok": true,
       "name": "W2.tl.cancel",
-      "detail": "0c847509-504e-4476-b176-50b10793716c"
+      "detail": "205d103d-04a2-492e-a9c6-bbd52e119547"
     },
     {
       "ok": true,
       "name": "W3.sa.redo_then_cancel",
-      "detail": "6ab795ee-2a5a-48e4-a926-d8fcccdfb556"
+      "detail": "867c055c-bbe6-4505-ae95-95344d0a21d7"
     },
     {
       "ok": true,
       "name": "F1.sql.kind_sum",
-      "detail": "bacoor 2026-09-24 900000 minor"
+      "detail": "bacoor 2026-09-27 450000 minor"
     },
     {
       "ok": true,
-      "name": "E1.close.already_matches",
-      "detail": "193d3ea6-1d5d-41e8-8455-7e88dd1a3c5c 900000"
+      "name": "E1.ba.submit_close",
+      "detail": "32fe4048-5607-4ef0-b9b3-73edfa76f8bb"
+    },
+    {
+      "ok": true,
+      "name": "F1.sa.accept_close",
+      "detail": "32fe4048-5607-4ef0-b9b3-73edfa76f8bb"
     },
     {
       "ok": true,
       "name": "F1.close.matches_paid",
-      "detail": "900000"
+      "detail": "450000"
     },
     {
       "ok": true,
-      "name": "P1.payroll.already_confirmed",
-      "detail": "275826f1-a2a1-4757-930b-df6c438935d3 157500 · extra sale noted (Overlapping floor payroll run already exists for bacoor)"
+      "name": "P1.payroll.confirm",
+      "detail": "dff2b66c-f96b-4862-88fb-0b9996a3840d payout 157500"
     },
     {
       "ok": true,
@@ -91,7 +101,7 @@
     {
       "ok": true,
       "name": "R1.tl.pos_denied",
-      "detail": "http://127.0.0.1:5174/operations/access-denied"
+      "detail": "http://127.0.0.1:5175/operations/access-denied"
     },
     {
       "ok": true,
@@ -101,7 +111,7 @@
     {
       "ok": true,
       "name": "ui.09.finance_today",
-      "detail": "kind 900000"
+      "detail": "kind 450000"
     },
     {
       "ok": true,
@@ -111,31 +121,31 @@
     {
       "ok": true,
       "name": "R1.investor.payroll_denied",
-      "detail": "http://127.0.0.1:5174/operations/access-denied"
+      "detail": "http://127.0.0.1:5175/operations/access-denied"
     },
     {
       "ok": true,
       "name": "Rec.frames",
-      "detail": "4 jpgs · total events 4"
+      "detail": "2 jpgs · total events 2"
     }
   ],
   "report": {
-    "today": "2026-09-24",
+    "today": "2026-09-27",
     "branch": "bacoor",
     "plates": {
-      "book": "NKA09244",
-      "wash": "NKA09241",
-      "cancel": "NKA09242",
-      "redo": "NKA09243"
+      "book": "NKA09274",
+      "wash": "NKA09271",
+      "cancel": "NKA09272",
+      "redo": "NKA09273"
     },
-    "sale_id": "e4a5ff67-7351-4a99-9113-8ed0c841455c",
-    "kind_sum_minor": 900000,
+    "sale_id": "e9f42420-2486-4768-a21d-9c86c6b0ed73",
+    "kind_sum_minor": 450000,
     "wash_minor": 450000,
-    "close_id": "193d3ea6-1d5d-41e8-8455-7e88dd1a3c5c",
-    "drawer_minor": 900000,
-    "payroll_id": "275826f1-a2a1-4757-930b-df6c438935d3",
+    "close_id": "32fe4048-5607-4ef0-b9b3-73edfa76f8bb",
+    "drawer_minor": 450000,
+    "payroll_id": "dff2b66c-f96b-4862-88fb-0b9996a3840d",
     "payroll_payout_minor": 157500,
-    "frames": 4
+    "frames": 2
   },
-  "at": "2026-09-24T09:24:27.438Z"
+  "at": "2026-09-27T03:22:26.841Z"
 }

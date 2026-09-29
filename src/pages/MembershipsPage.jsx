@@ -18,6 +18,7 @@ import {
   updateLoyaltyProgramSettings,
   updateMembershipTier,
   updateServiceLoyaltyWeight,
+  updateServicePointsAward,
 } from '@/lib/adminApi'
 import { LOYALTY_PAY_CATEGORIES } from '@/lib/loyaltyLogic'
 import { formatMoney } from '@/queue/queueApi'
@@ -113,6 +114,7 @@ export default function MembershipsPage() {
   const [editingTier, setEditingTier] = useState(null)
   const [editingMilestone, setEditingMilestone] = useState(null)
   const [weightDrafts, setWeightDrafts] = useState({})
+  const [pointsDrafts, setPointsDrafts] = useState({})
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -132,6 +134,7 @@ export default function MembershipsPage() {
     setCustomers(customerRows)
     setActiveMemberships(membershipRows)
     setWeightDrafts(Object.fromEntries(serviceRows.map((s) => [s.id, String(s.loyalty_weight ?? 1)])))
+    setPointsDrafts(Object.fromEntries(serviceRows.map((s) => [s.id, String(s.points_award ?? 0)])))
   }, [])
 
   useEffect(() => {
@@ -269,6 +272,7 @@ export default function MembershipsPage() {
     }
     try {
       await updateServiceLoyaltyWeight(serviceId, weightDrafts[serviceId])
+      await updateServicePointsAward(serviceId, pointsDrafts[serviceId])
       toast.success('Service score updated')
       await load()
     } catch (err) {
@@ -570,7 +574,7 @@ export default function MembershipsPage() {
               <CardTitle>Service loyalty scores</CardTitle>
               <CardDescription>
                 {superAdmin
-                  ? 'Set how many stamp points each service earns per unit. Combined with Program earn mode (all weighted vs wash-only categories).'
+                  ? 'Stamp score is the loyalty card. Visit points are the customer balance: carwash 1, express 2, tint and other detailing 3, ceramic 5, PPF 10. Change any row.'
                   : 'Only Super Admin (BossMich) can edit scores. You can review current weights below.'}
               </CardDescription>
             </CardHeader>
@@ -582,6 +586,7 @@ export default function MembershipsPage() {
                     <TableHead>Category</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Loyalty score</TableHead>
+                    <TableHead>Visit points</TableHead>
                     {superAdmin ? <TableHead className="text-right">Save</TableHead> : null}
                   </TableRow>
                 </TableHeader>
@@ -603,6 +608,19 @@ export default function MembershipsPage() {
                           onChange={(e) => setWeightDrafts((d) => ({ ...d, [row.id]: e.target.value }))}
                         />
                       </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="1000"
+                          className="w-24"
+                          aria-label={`Visit points for ${row.name}`}
+                          disabled={!superAdmin}
+                          readOnly={!superAdmin}
+                          value={pointsDrafts[row.id] ?? '0'}
+                          onChange={(e) => setPointsDrafts((d) => ({ ...d, [row.id]: e.target.value }))}
+                        />
+                      </TableCell>
                       {superAdmin ? (
                         <TableCell className="text-right">
                           <Button size="sm" variant="outline" onClick={() => saveServiceWeight(row.id)}>Save</Button>
@@ -612,7 +630,7 @@ export default function MembershipsPage() {
                   ))}
                   {!services.length && (
                     <TableRow>
-                      <TableCell colSpan={superAdmin ? 5 : 4} className="text-muted-foreground">
+                      <TableCell colSpan={superAdmin ? 6 : 5} className="text-muted-foreground">
                         No active services — add services first.
                       </TableCell>
                     </TableRow>

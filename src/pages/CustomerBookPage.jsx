@@ -8,6 +8,8 @@ import { getAccessTokenFresh } from '@/lib/authToken'
 import { fetchPortal } from '@/lib/customerPortalClient'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor, normalizePricingSize } from '@/lib/servicePricing'
 import { filterFloorDetailingServices } from '@/lib/serviceKinds'
+import { packagesForService, bookedDetailingServiceId } from '@/lib/detailingPackages'
+import { pointsLabel } from '@/lib/loyaltyPoints'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
 import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import { usePageMeta } from '@/lib/pageMeta'
@@ -51,6 +53,7 @@ const EMPTY_FORM = {
   vehicle_model: '',
   vehicle_type: 'medium',
   service_id: '',
+  package_id: '',
   branch: '',
 }
 
@@ -62,6 +65,7 @@ export default function CustomerBookPage() {
   const { profile: authProfile, user } = useAuth()
   const [portal, setPortal] = useState(null)
   const [services, setServices] = useState([])
+  const [catalog, setCatalog] = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -79,7 +83,7 @@ export default function CustomerBookPage() {
       fetchPortal().catch(() => null),
       supabase
         .from('services')
-        .select('id, name, description, slug, pay_category, price_minor, service_size_prices(size_slug, price_minor)')
+        .select('id, name, description, slug, pay_category, price_minor, points_award, parent_service_id, service_size_prices(size_slug, price_minor)')
         .eq('is_active', true)
         .order('display_order'),
     ]).then(([data, svc]) => {
@@ -91,12 +95,12 @@ export default function CustomerBookPage() {
       const wantedVehicle = params.get('vehicle')
       const wantedPlate = String(params.get('plate') || '').trim()
       const wantedService = String(params.get('service') || '').toLowerCase()
-      const detailing = filterFloorDetailingServices(
-        (svc.data || []).map((row) => ({
-          ...row,
-          size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
-        })),
-      )
+      const rows = (svc.data || []).map((row) => ({
+        ...row,
+        size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+      }))
+      setCatalog(rows)
+      const detailing = filterFloorDetailingServices(rows.filter((row) => !row.parent_service_id))
       setServices(detailing)
       const pickById = (data?.vehicles || []).find((v) => v.id === wantedVehicle)
       const pickByPlate = wantedPlate
@@ -145,6 +149,15 @@ export default function CustomerBookPage() {
   }
 
   const selected = services.find((s) => s.id === form.service_id)
+  const packages = packagesForService(catalog, form.service_id)
+  const selectedPackage = packages.find((p) => p.id === form.package_id) || null
+  const quote = selectedPackage?.price_minor > 0
+    ? formatPeso(selectedPackage.price_minor)
+    : selectedPackage
+      ? 'Ask for price'
+      : selected
+        ? formatPeso(resolveServicePriceMinor(selected, form.vehicle_type))
+        : ''
   const sizeLabel = PRICING_SIZES.find((s) => s.slug === form.vehicle_type)?.label || form.vehicle_type
   const branchRow = branches.find((b) => b.slug === form.branch)
 
@@ -159,6 +172,10 @@ export default function CustomerBookPage() {
       setError('Pick a service first.')
       return
     }
+    if (packages.length && !form.package_id) {
+      setError('Pick a package for this service.')
+      return
+    }
     setBusy(true)
     setError('')
     try {
@@ -168,7 +185,11 @@ export default function CustomerBookPage() {
       const res = await fetch('/api/public-book', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ ...form, scheduled_start: `${day}T${time}` }),
+        body: JSON.stringify({
+        ...form,
+        service_id: bookedDetailingServiceId(form.service_id, form.package_id, packages),
+        scheduled_start: `${day}T${time}`,
+      }),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || 'Booking failed')
@@ -225,12 +246,13 @@ export default function CustomerBookPage() {
                   role="radio"
                   aria-checked={active}
                   className={`capp-service${active ? ' is-active' : ''}`}
-                  onClick={() => set('service_id', s.id)}
+                  onClick={() => setForm((f) => ({ ...f, service_id: s.id, package_id: '' }))}
                 >
                   {SERVICE_PHOTOS[s.slug] ? <img className="capp-service-photo" src={SERVICE_PHOTOS[s.slug]} alt="" loading="lazy" /> : null}
                   <span className="capp-row-body">
                     <strong>{s.name}</strong>
                     {s.description ? <em>{s.description}</em> : null}
+                    {s.points_award > 0 ? <em>Earn {pointsLabel(s.points_award)}</em> : null}
                   </span>
                   <span className="capp-price">
                     {active ? sizeLabel : 'From'}
@@ -242,6 +264,36 @@ export default function CustomerBookPage() {
             {!services.length ? <div className="capp-empty">No detailing services are open for booking right now.</div> : null}
           </div>
         )}
+
+        {packages.length ? (
+          <div className="capp-sect">
+            <h2>Choose a package</h2>
+            <div className="capp-list" role="radiogroup" aria-label="Package">
+              {packages.map((pkg) => {
+                const active = pkg.id === form.package_id
+                return (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    className={`capp-service${active ? ' is-active' : ''}`}
+                    onClick={() => set('package_id', pkg.id)}
+                  >
+                    <span className="capp-row-body">
+                      <strong>{pkg.name}</strong>
+                      {pkg.description ? <em>{pkg.description}</em> : null}
+                      {pkg.points_award > 0 ? <em>Earn {pointsLabel(pkg.points_award)}</em> : null}
+                    </span>
+                    <span className="capp-price">
+                      {pkg.price_minor > 0 ? <b>{formatPeso(pkg.price_minor)}</b> : <b>Ask for price</b>}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
 
         <div className="capp-sect">
           <h2>Your car</h2>
@@ -289,7 +341,7 @@ export default function CustomerBookPage() {
           </label>
           {selected ? (
             <p className="capp-meta">
-              {selected.name} for {sizeLabel}: <b>{formatPeso(resolveServicePriceMinor(selected, form.vehicle_type))}</b>
+              {selected.name}{selectedPackage ? ` · ${selectedPackage.name}` : ''} for {sizeLabel}: <b>{quote}</b>
             </p>
           ) : null}
         </div>
@@ -349,7 +401,7 @@ export default function CustomerBookPage() {
         ) : null}
 
         <div className="capp-booking-summary">
-          {selected ? <div className="capp-booking-recap"><span><small>Selected service · {sizeLabel}</small><strong>{selected.name}</strong></span><b>{formatPeso(resolveServicePriceMinor(selected, form.vehicle_type))}</b></div> : null}
+          {selected ? <div className="capp-booking-recap"><span><small>Selected service · {sizeLabel}</small><strong>{selected.name}{selectedPackage ? ` · ${selectedPackage.name}` : ''}</strong></span><b>{quote}</b></div> : null}
         <button type="submit" className="capp-btn capp-btn-accent capp-btn-block" disabled={busy || loading}>
           {busy ? 'Submitting…' : 'Request booking'}
           <ArrowRight size={16} strokeWidth={2} aria-hidden />

@@ -155,7 +155,7 @@ describe('C1 provision roles + C10 compensation', () => {
     assert.match(financeReports, /\.select\('id'\)/)
     assert.match(financeReports, /eq\('status', 'paid'\)/)
     assert.match(financeReports, /collectInChunks/)
-    assert.match(financeReports, /aggregateBestSellers/)
+    assert.match(financeReports, /topItems\(lineRows/)
     assert.match(financeReports, /\.order\('id'/)
     assert.doesNotMatch(financeReports, /\.limit\(1000\)/)
     assert.match(queueApi, /\.order\('in_progress_at'/)

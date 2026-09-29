@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { getAccessTokenFresh } from '../lib/authToken'
+import { notifyOpsEvent } from '../lib/opsEventNotify'
 import {
   aggregateDailySalesSummary,
   canCancelQueueStatus,
@@ -27,7 +28,7 @@ import {
 } from './queueLogic'
 import { writeAudit } from '../lib/audit'
 import { aggregateBestSellers, collectInChunks, collectPaged } from '../lib/crmInsights'
-import { splitFloorBoardLanes, sumFloorLaneCounts } from '../lib/floorBoardLanes'
+import { mergeTimelineFailedQa, splitFloorBoardLanes, sumFloorLaneCounts } from '../lib/floorBoardLanes'
 import {
   aggregateCarSizePerSale,
   aggregateChemicalUsageByWeek,
@@ -41,11 +42,12 @@ import { isBookingBoardService, isSameDayQueueKind, isTicketOnTodayFloor } from 
 import { aggregateSalesFinancials } from '../lib/paymentMethods'
 import { buildAdminRoster } from '../lib/floorBoardRoster'
 import {
+  aggregateByService,
   averageCycleMinutes,
   averageWaitMinutes,
-  bookingCycleMinutes,
   bookingWaitMinutes,
   failedQaCount,
+  finishedForAverage,
   uniqueBookingsById,
 } from '../lib/kpiPart8'
 import {
@@ -407,7 +409,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
   }
 
   const periodSelect =
-    'id, branch, status, queue_number, customer_name, vehicle_plate, vehicle_make, vehicle_model, service_id, final_price_minor, price_minor, waiting_at, in_progress_at, final_checking_at, for_payment_at, completed_at, cancelled_at, redo_at, created_at, notes, services(name, pay_category)'
+    'id, branch, status, queue_number, customer_name, vehicle_plate, vehicle_make, vehicle_model, service_id, visit_group_id, final_price_minor, price_minor, waiting_at, in_progress_at, final_checking_at, for_payment_at, completed_at, cancelled_at, redo_at, created_at, notes, services(name, pay_category)'
 
   const salesSelect =
     'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, vehicle_type, queue_number, services(name, pay_category))'
@@ -419,7 +421,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     .in('role', ['marketing', 'video_editor', 'admin', 'assistant_super_admin', 'team_lead'])
   adminStaffQuery = scopedStaffQuery(adminStaffQuery, branchScope)
 
-  const [completedRows, cancelledRows, redoRows, startedRows, salesRaw, expenseRaw, adminStaffRes] = await Promise.all([
+  const [completedRows, cancelledRows, redoRows, startedRows, finishedRows, salesRaw, expenseRaw, adminStaffRes] = await Promise.all([
     collectScoped(() =>
       scopedQuery(
         supabase
@@ -475,6 +477,18 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     collectScoped(() =>
       scopedQuery(
         supabase
+          .from('bookings')
+          .select(periodSelect)
+          .eq('is_archived', false)
+          .not('in_progress_at', 'is', null)
+          .or(`and(for_payment_at.gte."${startIso}",for_payment_at.lte."${endIso}"),and(completed_at.gte."${startIso}",completed_at.lte."${endIso}")`)
+          .order('id', { ascending: true }),
+        branchScope,
+      ),
+    ),
+    collectScoped(() =>
+      scopedQuery(
+        supabase
           .from('sales')
           .select(salesSelect)
           .eq('status', 'paid')
@@ -509,6 +523,8 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     vehicle_plate: row.vehicle_plate,
     vehicle_make: row.vehicle_make,
     vehicle_model: row.vehicle_model,
+    service_id: row.service_id,
+    visit_group_id: row.visit_group_id || null,
     service_name: row.services?.name || null,
     service_pay_category: row.services?.pay_category || null,
     final_price_minor: row.final_price_minor ?? row.price_minor,
@@ -526,7 +542,8 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
   const completedJobs = (completedRows || []).map(toJob)
   const cancelledJobs = (cancelledRows || []).map(toJob)
   const redoJobs = (redoRows || []).map(toJob)
-  const startedJobs = (startedRows || []).map(toJob)
+  const startedJobs = uniqueBookingsById((startedRows || []).map(toJob))
+  const finishedJobs = uniqueBookingsById((finishedRows || []).map(toJob))
   const salesRows = (salesRaw || []).map((row) => ({
     ...row,
     vehicle_type: row.bookings?.vehicle_type || null,
@@ -549,32 +566,39 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     net_minor: (Number(salesFinancials.total_sales_minor) || 0) - expense_minor,
   }
 
-  const cycleSample = uniqueBookingsById([
-    ...completedJobs,
-    ...startedJobs.filter((j) => j.for_payment_at || j.completed_at || j.final_checking_at),
-  ])
+  const rangeStartMs = new Date(startIso).getTime()
+  const rangeEndMs = new Date(endIso).getTime()
+  const cycleSample = finishedForAverage(finishedJobs, rangeStartMs, rangeEndMs)
   const avg = averageCycleMinutes(cycleSample)
   const avgWait = averageWaitMinutes(startedJobs)
   const waitSampleN = startedJobs
     .map(bookingWaitMinutes)
     .filter((n) => Number.isFinite(n) && n >= 0).length
-  const cycleSampleN = cycleSample
-    .map(bookingCycleMinutes)
-    .filter((n) => Number.isFinite(n) && n >= 0).length
+  const cycleSampleN = cycleSample.length
+  const serviceNames = Object.fromEntries(
+    finishedJobs.filter((row) => row.service_id && row.service_name).map((row) => [row.service_id, row.service_name]),
+  )
+  const byService = aggregateByService(cycleSample, serviceNames)
   const kpi = {
     avg_wait_minutes: avgWait == null ? null : Math.round(avgWait),
     wait_sample_n: waitSampleN,
     avg_service_minutes: avg == null ? null : Math.round(avg),
     cycle_sample_n: cycleSampleN,
+    avg_by_service: byService,
     failed_qa_count: failedQaCount(redoJobs),
+    failed_qa_services: failedQaCount(redoJobs.filter((row) => row.service_pay_category !== 'detailing')),
+    failed_qa_detailing: failedQaCount(redoJobs.filter((row) => row.service_pay_category === 'detailing')),
     cancelled_count: cancelledJobs.length,
   }
 
   const periodJobs = [...completedJobs.slice(0, 40), ...cancelledJobs.slice(0, 20)]
-  const laneCountsByFamily = splitFloorBoardLanes({
-    activeQueue: snapshot.activeQueue || [],
-    periodJobs,
-  })
+  const laneCountsByFamily = mergeTimelineFailedQa(
+    splitFloorBoardLanes({
+      activeQueue: snapshot.activeQueue || [],
+      periodJobs,
+    }),
+    { activeQueue: snapshot.activeQueue || [], failedQaJobs: redoJobs },
+  )
 
   // Phase 7: car size / best sellers / chemical usage (recon or stub)
   let bestSellers = []
@@ -725,7 +749,7 @@ export async function fetchTicket(bookingId, profile) {
 export async function fetchServices() {
   const services = await supabase
     .from('services')
-    .select('id, name, slug, price_minor, duration_minutes, pay_category, service_size_prices(size_slug, price_minor)')
+    .select('id, name, slug, price_minor, duration_minutes, pay_category, parent_service_id, service_size_prices(size_slug, price_minor)')
     .eq('is_active', true)
     .eq('is_archived', false)
     .order('display_order')
@@ -1500,6 +1524,7 @@ export async function assignStaff(ticket, staffIds) {
     console.error('Unable to sync queue assignments', error)
     throw formatQueueActionError(error)
   }
+  if (ids.length) notifyOpsEvent('crew_assigned', ticket.booking_id)
   // Legacy: assigning crew on waiting auto-promotes to in_progress.
   if (ids.length && ticket?.status === 'waiting') {
     await updateTicketStatus(ticket, 'in_progress')

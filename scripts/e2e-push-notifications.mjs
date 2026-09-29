@@ -8,8 +8,10 @@ import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'node:crypto'
 import { readFileSync, existsSync } from 'node:fs'
 import { handlePushSubscribeRequest } from '../server/pushApi.mjs'
-import { notifyBookingStatus, buildOpsPushTargets } from '../server/notifyBooking.mjs'
-import { resolvePushTargets, sendWebPushToUsers } from '../server/webPush.mjs'
+import { notifyBookingStatus, buildOpsNotifyRule } from '../server/notifyBooking.mjs'
+import { resolveStaffRecipients, sendWebPushToUsers } from '../server/webPush.mjs'
+import { notifyShiftCloseAccepted } from '../server/notifyShiftClose.mjs'
+import { NOTIFY_EVENTS } from '../src/lib/notifyRouting.js'
 import webpush from 'web-push'
 
 if (existsSync('.env')) {
@@ -135,11 +137,10 @@ try {
 
   // 3) Fan-out resolve
   const branch = users.admin.branch || users.tl.branch || 'bacoor'
-  const targets = buildOpsPushTargets({ branch })
-  const resolved = await resolvePushTargets(targets)
+  const resolved = (await resolveStaffRecipients(admin, buildOpsNotifyRule({ branch }, 'waiting'))).map((r) => r.id)
   assert(resolved.includes(users.admin.id), 'admin in branch fan-out')
   assert(resolved.includes(users.tl.id), 'team_lead in branch fan-out')
-  assert(resolved.includes(users.staff.id), 'staff in branch fan-out')
+  assert(!resolved.includes(users.staff.id), 'crew must not get booking fan-out (no bookings/POS access)')
   assert(resolved.includes(users.boss.id), 'BossMich in global fan-out')
   assert(!resolved.includes(users.customer.id), 'customer must not be in ops fan-out')
   results.push(`resolve.ops: ${resolved.length} users`)
@@ -194,6 +195,15 @@ try {
 
   results.push(`notify.waiting: customer+ops inbox ok (branch=${branch})`)
 
+  // 6) Finance accept → SA/ASA push (no owner SMS)
+  const floorPayIds = (await resolveStaffRecipients(admin, NOTIFY_EVENTS.floor_pay_ready)).map((r) => r.id)
+  assert(floorPayIds.includes(users.boss.id), 'BossMich in floor-pay push fan-out')
+  assert(!floorPayIds.includes(users.admin.id) && !floorPayIds.includes(users.staff.id), 'floor-pay push is SA/ASA only')
+  const accept = await notifyShiftCloseAccepted({ branch, businessDate: new Date().toISOString().slice(0, 10), closeId: `e2e-${stamp}` })
+  assert(accept.targets >= 1 && !accept.push?.error, `shift-close push: ${JSON.stringify(accept.push)}`)
+  assert(accept.ownerSms?.skipped === 'owner_sms_disabled', `owner SMS must be off: ${JSON.stringify(accept.ownerSms)}`)
+  results.push(`shiftClose.accept: targets=${accept.targets} subs=${accept.push?.subscriptions ?? 0} ownerSms=off`)
+
   console.log(JSON.stringify({ ok: true, results }, null, 2))
 } catch (err) {
   console.error('E2E FAILED:', err.message)
@@ -204,5 +214,5 @@ try {
     await admin.from('push_subscriptions').delete().in('endpoint', endpoints)
   }
   await admin.from('user_notifications').delete().like('body', '%E2EPUSH%')
-  await admin.from('user_notifications').delete().eq('tag', `e2e-${stamp}`)
+  await admin.from('user_notifications').delete().in('tag', [`e2e-${stamp}`, `shift_close:e2e-${stamp}`])
 }

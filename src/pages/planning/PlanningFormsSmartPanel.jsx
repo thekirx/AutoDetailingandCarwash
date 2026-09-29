@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
+import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { listBranches } from '@/lib/adminApi'
 import {
   DEFAULT_FORM_LOGO,
@@ -519,6 +520,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     if (error) toast.error(error.message)
     else {
       await notifyComplaintIfNeeded(activeForm, submitPayload, inserted?.id)
+      if (activeForm.kind === 'cash_advance') notifyOpsEvent('cash_advance_submitted', inserted?.id)
       toast.success(planCardId ? 'Submitted and added to Tasks' : 'Submission saved')
       setPayload({})
       load()

@@ -5,6 +5,7 @@ import { getBranchScopeList } from '@/auth/permissions'
 import { writeAudit } from '@/lib/audit'
 import { approvedCaForCloseDay } from '@/lib/bacoorDailyReport'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { cashAdvanceInBranchScope } from '@/lib/posSale'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
@@ -122,6 +123,7 @@ export default function PayrollCashAdvancesPanel({
       return
     }
     toast.success(`Cash advance ${status === 'resolved' ? 'approved' : 'declined'}`)
+    notifyOpsEvent('cash_advance_resolved', row.id)
     writeAudit({
       action: 'payroll.cash_advance',
       entityType: 'ops_form_submission',

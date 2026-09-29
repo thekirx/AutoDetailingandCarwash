@@ -47,6 +47,8 @@ function emptyForm(catalogScope = 'all') {
     size_prices: emptySizePriceForm(''),
     size_enabled: { small: true, medium: true, large: true, extra_large: true },
     included_service_ids: [],
+    points_award: '',
+    parent_service_id: '',
   }
 }
 
@@ -168,6 +170,8 @@ function formFromService(row) {
     size_enabled,
     included_service_ids: row.included_service_ids || [],
     pay_category: row.pay_category || 'general',
+    points_award: row.points_award == null ? '' : String(row.points_award),
+    parent_service_id: row.parent_service_id || '',
   }
 }
 
@@ -253,6 +257,8 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
         salary_pct: editing.salary_pct,
         duration_minutes: editing.duration_minutes,
         sla_minutes: editing.sla_minutes,
+        points_award: editing.points_award,
+        parent_service_id: editing.parent_service_id,
         included_service_ids:
           serviceKindFromPayCategory(editing.pay_category) === 'package'
             ? editing.included_service_ids || []
@@ -422,6 +428,42 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                 placeholder="Red in queue/KPI if over"
               />
             </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="svc-points">Points earned</Label>
+              <Input
+                id="svc-points"
+                type="number"
+                min="0"
+                max="1000"
+                className="min-h-11"
+                value={form.points_award}
+                onChange={(e) => setForm({ ...form, points_award: e.target.value })}
+                placeholder="Blank uses the shop default"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Package of</Label>
+              <Select
+                value={form.parent_service_id || 'none'}
+                onValueChange={(parent_service_id) =>
+                  setForm({
+                    ...form,
+                    parent_service_id: parent_service_id === 'none' ? '' : parent_service_id,
+                    pay_category: parent_service_id === 'none' ? form.pay_category : 'detailing',
+                  })
+                }
+              >
+                <SelectTrigger className="min-h-11"><SelectValue placeholder="Not a package" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not a package</SelectItem>
+                  {services
+                    .filter((row) => !row.parent_service_id && (row.pay_category === 'detailing' || ['ceramic-coating', 'paint-maintenance', 'nano-ceramic-tint', 'paint-protection-film'].includes(row.slug)))
+                    .map((row) => (
+                      <SelectItem key={row.id} value={row.id}>{row.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="md:col-span-2 flex flex-col gap-2">
               <Label>Description</Label>
               <Input
@@ -498,6 +540,12 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                       <TableCell>
                         <div className="font-medium">{s.name}</div>
                         <div className="text-xs text-muted-foreground">{s.slug}</div>
+                        {s.parent_service_id ? (
+                          <div className="mt-1 text-[10px] text-muted-foreground">Package of {nameById[s.parent_service_id] || 'service'}</div>
+                        ) : null}
+                        {s.points_award > 0 ? (
+                          <div className="text-[10px] text-muted-foreground">{s.points_award} points</div>
+                        ) : null}
                         {kind === 'package' && includes.length ? (
                           <div className="mt-1 text-[10px] text-muted-foreground">Includes: {includes.join(' · ')}</div>
                         ) : null}
@@ -635,6 +683,42 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                     onChange={(e) => setEditing({ ...editing, sla_minutes: e.target.value })}
                     placeholder="Optional"
                   />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="edit-points">Points earned</Label>
+                  <Input
+                    id="edit-points"
+                    type="number"
+                    min="0"
+                    max="1000"
+                    className="min-h-11"
+                    value={editing.points_award ?? ''}
+                    onChange={(e) => setEditing({ ...editing, points_award: e.target.value })}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>Package of</Label>
+                  <Select
+                    value={editing.parent_service_id || 'none'}
+                    onValueChange={(parent_service_id) =>
+                      setEditing({
+                        ...editing,
+                        parent_service_id: parent_service_id === 'none' ? '' : parent_service_id,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="min-h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not a package</SelectItem>
+                      {services
+                        .filter((row) => row.id !== editing.id && !row.parent_service_id)
+                        .map((row) => (
+                          <SelectItem key={row.id} value={row.id}>{row.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="flex flex-col gap-2">

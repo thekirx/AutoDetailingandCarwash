@@ -305,7 +305,7 @@ describe('Finance Reports is the books reports surface', () => {
     assert.match(redirect, /finance\?tab=reports/)
     assert.match(redirect, /canAccessReports|canAccessFinance/)
     const tab = read('src/pages/finance/FinanceReportsTab.jsx')
-    assert.match(tab, /aggregateBestSellers/)
+    assert.match(tab, /topItems\(lineRows/)
     assert.match(tab, /rollupPl/)
     assert.match(tab, /scopeBranch/)
     assert.match(tab, /occurred_at/)

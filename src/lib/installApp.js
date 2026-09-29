@@ -31,6 +31,11 @@ export function iosPushBlocked({
   return true
 }
 
+/** One prompt at a time: skip the timed install popup if the push prompt or any dialog is already open. */
+export function shouldAutoOpenInstallGuide({ promptBusy = false, dialogOpen = false } = {}) {
+  return !promptBusy && !dialogOpen
+}
+
 export function isAndroidDevice() {
   if (typeof navigator === 'undefined') return false
   return /Android/i.test(navigator.userAgent || '')

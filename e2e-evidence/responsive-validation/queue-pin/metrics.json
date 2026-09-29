@@ -1,0 +1,214 @@
+{
+  "report": [
+    {
+      "viewport": "mobile-375",
+      "overflow": 0,
+      "buttons": [
+        {
+          "text": "Update location",
+          "w": 181,
+          "h": 45,
+          "font": "16px"
+        },
+        {
+          "text": "Move pin",
+          "w": 104,
+          "h": 47,
+          "font": "16px"
+        }
+      ],
+      "status": "Nearest branch · 1.6 km from your pin",
+      "statusFont": "16px",
+      "branch": "Bacoor",
+      "homeNote": "",
+      "path": "/account/queue?branch=bacoor"
+    },
+    {
+      "viewport": "mobile-393",
+      "overflow": 0,
+      "buttons": [
+        {
+          "text": "Update location",
+          "w": 181,
+          "h": 45,
+          "font": "16px"
+        },
+        {
+          "text": "Move pin",
+          "w": 104,
+          "h": 47,
+          "font": "16px"
+        }
+      ],
+      "status": "Nearest branch · 1.6 km from your pin",
+      "statusFont": "16px",
+      "branch": "Bacoor",
+      "homeNote": "",
+      "path": "/account/queue?branch=bacoor"
+    },
+    {
+      "viewport": "tablet-768",
+      "overflow": 0,
+      "buttons": [
+        {
+          "text": "Update location",
+          "w": 181,
+          "h": 47,
+          "font": "16px"
+        },
+        {
+          "text": "Move pin",
+          "w": 104,
+          "h": 47,
+          "font": "16px"
+        }
+      ],
+      "status": "Nearest branch · 1.6 km from your pin",
+      "statusFont": "16px",
+      "branch": "Bacoor",
+      "homeNote": "",
+      "path": "/account/queue?branch=bacoor"
+    },
+    {
+      "viewport": "desktop-1440",
+      "overflow": 0,
+      "buttons": [
+        {
+          "text": "Update location",
+          "w": 181,
+          "h": 47,
+          "font": "16px"
+        },
+        {
+          "text": "Move pin",
+          "w": 104,
+          "h": 47,
+          "font": "16px"
+        }
+      ],
+      "status": "Nearest branch · 1.6 km from your pin",
+      "statusFont": "16px",
+      "branch": "Bacoor",
+      "homeNote": "",
+      "path": "/account/queue?branch=bacoor"
+    },
+    {
+      "viewport": "landscape-667",
+      "overflow": 0,
+      "buttons": [
+        {
+          "text": "Update location",
+          "w": 181,
+          "h": 47,
+          "font": "16px"
+        },
+        {
+          "text": "Move pin",
+          "w": 104,
+          "h": 47,
+          "font": "16px"
+        }
+      ],
+      "status": "Nearest branch · 1.6 km from your pin",
+      "statusFont": "16px",
+      "branch": "Bacoor",
+      "homeNote": "",
+      "path": "/account/queue?branch=bacoor"
+    }
+  ],
+  "before": {
+    "overflow": 0,
+    "buttons": [
+      {
+        "text": "Update location",
+        "w": 181,
+        "h": 45,
+        "font": "16px"
+      },
+      {
+        "text": "Move pin",
+        "w": 104,
+        "h": 47,
+        "font": "16px"
+      }
+    ],
+    "status": "Finding the closest branch…",
+    "statusFont": "16px",
+    "branch": "Branch",
+    "homeNote": "",
+    "path": "/account/queue"
+  },
+  "after": {
+    "overflow": 0,
+    "buttons": [
+      {
+        "text": "Update location",
+        "w": 181,
+        "h": 45,
+        "font": "16px"
+      },
+      {
+        "text": "Move pin",
+        "w": 104,
+        "h": 47,
+        "font": "16px"
+      }
+    ],
+    "status": "Nearest branch · 1 m from your pin",
+    "statusFont": "16px",
+    "branch": "Batangas",
+    "homeNote": "",
+    "path": "/account/queue?branch=batangas"
+  },
+  "dialog": {
+    "w": 358,
+    "left": 16,
+    "right": 374,
+    "fits": true,
+    "buttons": [
+      {
+        "text": "Use my location",
+        "h": 44,
+        "font": "16px"
+      },
+      {
+        "text": "Use this pin",
+        "h": 45,
+        "font": "16px"
+      },
+      {
+        "text": "Close",
+        "h": 44,
+        "font": "16px"
+      }
+    ]
+  },
+  "home": {
+    "overflow": 0,
+    "buttons": [
+      {
+        "text": "Update location",
+        "w": 181,
+        "h": 47,
+        "font": "16px"
+      },
+      {
+        "text": "Move pin",
+        "w": 104,
+        "h": 47,
+        "font": "16px"
+      },
+      {
+        "text": "Show nearest",
+        "w": 337,
+        "h": 47,
+        "font": "16px"
+      }
+    ],
+    "status": "Nearest branch · 1 m from your pin",
+    "statusFont": "16px",
+    "branch": "",
+    "homeNote": "Nearest branch · 1 m from your pin",
+    "path": "/account"
+  }
+}

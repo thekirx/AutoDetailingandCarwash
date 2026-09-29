@@ -8,7 +8,7 @@ import { buildPosNotifyCopy } from '../server/notifyPos.mjs'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('POS Super Admin notify + audit seam', () => {
-  it('builds inbox copy for walk-in sale, expense, and cash advance', () => {
+  it('builds inbox copy for walk-in sale and expense (cash advances notify from Payroll)', () => {
     const sale = buildPosNotifyCopy({
       event: 'sale',
       branch: 'bacoor',
@@ -30,17 +30,7 @@ describe('POS Super Admin notify + audit seam', () => {
     })
     assert.equal(exp.kind, 'pos_expense')
     assert.match(exp.body, /ice/)
-
-    const ca = buildPosNotifyCopy({
-      event: 'cash_advance',
-      branch: 'bacoor',
-      amountMinor: 50000,
-      title: 'Darel',
-      status: 'resolved',
-      entityId: 'ca-1',
-    })
-    assert.equal(ca.kind, 'pos_cash_advance')
-    assert.match(ca.title, /approved/i)
+    assert.equal(exp.url, '/operations/pos?tab=expenses')
   })
 
   it('gateway, vite, and vercel expose notify-pos', () => {

@@ -18,21 +18,41 @@ export function haversineKm(a, b) {
 }
 
 function coordsForBranch(row) {
-  if (row?.latitude != null && row?.longitude != null) {
-    return { lat: Number(row.latitude), lng: Number(row.longitude), label: row.name }
+  const rawLat = row?.latitude
+  const rawLng = row?.longitude
+  if (rawLat != null && rawLat !== '' && rawLng != null && rawLng !== '') {
+    const lat = Number(rawLat)
+    const lng = Number(rawLng)
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng, label: row.name }
   }
   return BRANCH_GEO[row?.slug] || null
 }
 
+function originCoords(userCoords) {
+  const lat = Number(userCoords?.lat)
+  const lng = Number(userCoords?.lng)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  return { lat, lng }
+}
+
+/** Distance from a pin to one branch, or null when either side has no coordinates. */
+export function branchDistanceKm(userCoords, row) {
+  const origin = originCoords(userCoords)
+  const geo = coordsForBranch(row)
+  if (!origin || !geo) return null
+  return haversineKm(origin, geo)
+}
+
 /** @returns {{ slug: string, distanceKm: number, name?: string } | null} */
 export function nearestBranchSlug(userCoords, branches = []) {
-  if (!userCoords?.lat || !userCoords?.lng) return null
+  const origin = originCoords(userCoords)
+  if (!origin) return null
   let best = null
   for (const row of branches) {
     if (row.coming_soon || row.is_active === false) continue
     const geo = coordsForBranch(row)
     if (!geo) continue
-    const distanceKm = haversineKm(userCoords, geo)
+    const distanceKm = haversineKm(origin, geo)
     if (!best || distanceKm < best.distanceKm) {
       best = { slug: row.slug, distanceKm, name: row.name || geo.label }
     }

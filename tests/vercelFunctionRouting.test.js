@@ -21,6 +21,7 @@ const expected = {
   '/api/notify-pos': '/api/notifications?operation=notify-pos',
   '/api/notify-shift-close': '/api/notifications?operation=notify-shift-close',
   '/api/notify-ops-lab': '/api/notifications?operation=notify-ops-lab',
+  '/api/notify-ops-event': '/api/notifications?operation=notify-ops-event',
   '/api/notification-broadcast': '/api/notifications?operation=notification-broadcast',
   '/api/notification-broadcast-kinds': '/api/notifications?operation=notification-broadcast-kinds',
   '/api/notification-templates': '/api/notifications?operation=notification-templates',
@@ -101,13 +102,14 @@ describe('Vercel API rewrite contract', () => {
     assert.equal(readGatewayOperation({ url: destination.pathname + destination.search }), null)
   })
 
-  it('contains exactly seven deployable JavaScript function entrypoints', () => {
+  it('contains exactly eight deployable JavaScript function entrypoints', () => {
     const files = readdirSync(new URL('../api/', import.meta.url))
       .filter((file) => file.endsWith('.js'))
       .sort()
 
     assert.deepEqual(files, [
       'bookings.js',
+      'busybee-relay.js',
       'customer.js',
       'data-center.js',
       'finance.js',

@@ -1,6 +1,6 @@
 import { Sparkles } from 'lucide-react'
 import queueHeroPoster from '../assets/hero/bredesign-hero-poster.webp'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { CUSTOMER_QUEUE_PATH } from '../lib/liveQueuePath'
@@ -9,6 +9,7 @@ import { getAccessTokenFresh } from '../lib/authToken'
 import { supabase } from '../lib/supabase'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor } from '../lib/servicePricing'
 import { filterFloorDetailingServices } from '../lib/serviceKinds'
+import { bookedDetailingServiceId, packagesForService } from '../lib/detailingPackages'
 import { applyPublicBookPrefill, matchServiceIdByPrefillName } from '../lib/uiDeadControls'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import FormLegalNotice from '../components/FormLegalNotice'
@@ -98,7 +99,7 @@ export function QueuePage() {
 export function BookingPage() {
   const location = useLocation()
   const { branches, loading: branchesLoading, error: branchesError } = usePublicBranches()
-  const [services, setServices] = useState([])
+  const [catalog, setCatalog] = useState([])
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
   const [plateHint, setPlateHint] = useState('')
@@ -114,8 +115,14 @@ export function BookingPage() {
     vehicle_type: 'medium',
     scheduled_start: '',
     service_id: '',
+    package_id: '',
     branch: '',
   })
+  const services = useMemo(
+    () => filterFloorDetailingServices(catalog.filter((row) => !row.parent_service_id)),
+    [catalog],
+  )
+  const packages = packagesForService(catalog, form.service_id)
 
   useEffect(() => {
     const prefilled = applyPublicBookPrefill({}, location.state)
@@ -127,7 +134,7 @@ export function BookingPage() {
   useEffect(() => {
     supabase
       .from('services')
-      .select('id, name, slug, pay_category, price_minor, service_size_prices(size_slug, price_minor)')
+      .select('id, name, description, slug, pay_category, price_minor, points_award, parent_service_id, service_size_prices(size_slug, price_minor)')
       .eq('is_active', true)
       .order('display_order')
       .then(({ data, error: e }) => {
@@ -135,16 +142,15 @@ export function BookingPage() {
           setError(e.message)
           return
         }
-        const rows = filterFloorDetailingServices(
-          (data || []).map((row) => ({
-            ...row,
-            size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
-          })),
-        )
-        setServices(rows)
+        const rows = (data || []).map((row) => ({
+          ...row,
+          size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
+        }))
+        const parents = filterFloorDetailingServices(rows.filter((row) => !row.parent_service_id))
+        setCatalog(rows)
         setForm((f) => {
-          if (f.service_id && rows.some((s) => s.id === f.service_id)) return f
-          const matched = matchServiceIdByPrefillName(rows, prefServiceName)
+          if (f.service_id && parents.some((s) => s.id === f.service_id)) return f
+          const matched = matchServiceIdByPrefillName(parents, prefServiceName)
           return matched ? { ...f, service_id: matched } : { ...f, service_id: '' }
         })
       })
@@ -193,6 +199,8 @@ export function BookingPage() {
     setStatus('loading')
     setError('')
     try {
+      const service_id = bookedDetailingServiceId(form.service_id, form.package_id, packages)
+      if (!service_id) throw new Error(packages.length ? 'Pick a package for this service.' : 'Pick a service first.')
       const plateError = plateValidationError(form.vehicle_plate)
       if (plateError) throw new Error(plateError)
       const headers = { 'Content-Type': 'application/json' }
@@ -210,7 +218,7 @@ export function BookingPage() {
           vehicle_model: form.vehicle_model,
           vehicle_type: form.vehicle_type,
           scheduled_start: form.scheduled_start,
-          service_id: form.service_id,
+          service_id,
           branch: form.branch,
         }),
       })
@@ -307,7 +315,11 @@ export function BookingPage() {
           <label className="booking-span-2">Preferred date & time<input required type="datetime-local" value={form.scheduled_start} onChange={update('scheduled_start')} /></label>
           <label className="booking-span-2">
             Service
-            <select required value={form.service_id} onChange={update('service_id')}>
+            <select
+              required
+              value={form.service_id}
+              onChange={(event) => setForm((current) => ({ ...current, service_id: event.target.value, package_id: '' }))}
+            >
               <option value="">Select service</option>
               {services.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -322,6 +334,19 @@ export function BookingPage() {
               </span>
             ) : null}
           </label>
+          {packages.length ? (
+            <label className="booking-span-2">
+              Package
+              <select required value={form.package_id} onChange={update('package_id')}>
+                <option value="">Select package</option>
+                {packages.map((pkg) => (
+                  <option key={pkg.id} value={pkg.id}>
+                    {pkg.name}{pkg.price_minor > 0 ? ` · ${formatPeso(pkg.price_minor)}` : ' · Ask for price'}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className="booking-span-2">
             Branch
             <select required value={form.branch} onChange={update('branch')} disabled={branchesLoading}>

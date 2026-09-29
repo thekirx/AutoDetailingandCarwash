@@ -11,7 +11,7 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title || 'Hakum Auto Care', {
       body: data.body,
       icon: data.icon || '/apple-touch-icon.png',
-      badge: '/favicon.png',
+      badge: '/push-badge.png',
       tag: data.tag || 'hakum',
       renotify: true,
       // Chrome: must be user-visible; requireInteraction keeps important alerts on screen

@@ -9,7 +9,9 @@ import { smsNotificationsEnabledFromSetting } from '../src/lib/smsNotificationsT
 import { busybeeSendSms } from './busybee.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { applyPaintMaintenanceOnComplete } from './paintMaintenanceSchedule.mjs'
-import { resolvePushTargets, sendWebPushToUsers } from './webPush.mjs'
+import { NOTIFY_EVENTS, bookingOpsEvent, branchLabel } from '../src/lib/notifyRouting.js'
+import { isBookingBoardRow } from '../src/lib/serviceKinds.js'
+import { notifyRecipients, resolveStaffRecipients, sendWebPushToUsers } from './webPush.mjs'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -23,21 +25,19 @@ const STATUS_COPY = {
     kind: 'booking_received',
     title: 'Booking received',
     sms: (b) =>
-      `Hakum: We got your ${b.service_name || 'service'} for ${b.vehicle_plate || 'your vehicle'} at ${b.branch}. We will confirm soon.`,
-    body: (b) => `We received your ${b.service_name || 'service'} request at ${b.branch}. We will confirm shortly.`,
+      `Hakum: We got your ${b.service_name || 'service'} for ${b.vehicle_plate || 'your vehicle'} at ${b.branch_name || b.branch}. We will confirm soon.`,
+    body: (b) => `We received your ${b.service_name || 'service'} request at ${b.branch_name || b.branch}. We will confirm shortly.`,
     opsTitle: 'New booking',
-    opsBody: (b) => `${b.customer_name || 'Customer'} · ${b.vehicle_plate || '—'} · ${b.service_name || 'service'} @ ${b.branch}`,
-    opsUrl: '/operations/bookings',
+    opsBody: (b) => `${b.customer_name || 'Customer'} · ${b.vehicle_plate || '—'} · ${b.service_name || 'service'} @ ${b.branch_name || b.branch}`,
   },
   confirmed: {
     kind: 'booking_confirm',
     title: 'Booking confirmed',
     sms: (b) =>
-      `Hakum: ${b.service_name || 'Service'} CONFIRMED for ${b.vehicle_plate || 'your vehicle'} at ${b.branch}${b.scheduled_start ? `, ${new Date(b.scheduled_start).toLocaleString('en-PH')}` : ''}. See you!`,
-    body: (b) => `Your ${b.service_name || 'service'} is confirmed at ${b.branch}.`,
+      `Hakum: ${b.service_name || 'Service'} CONFIRMED for ${b.vehicle_plate || 'your vehicle'} at ${b.branch_name || b.branch}${b.scheduled_start ? `, ${new Date(b.scheduled_start).toLocaleString('en-PH')}` : ''}. See you!`,
+    body: (b) => `Your ${b.service_name || 'service'} is confirmed at ${b.branch_name || b.branch}.`,
     opsTitle: 'Booking confirmed',
-    opsBody: (b) => `${b.vehicle_plate || 'Ticket'} · ${b.service_name || 'service'} confirmed @ ${b.branch}`,
-    opsUrl: '/operations/bookings',
+    opsBody: (b) => `${b.vehicle_plate || 'Ticket'} · ${b.service_name || 'service'} confirmed @ ${b.branch_name || b.branch}`,
   },
   in_progress: {
     kind: 'booking_status',
@@ -46,18 +46,16 @@ const STATUS_COPY = {
       `Hakum: Working on your ${b.service_name || 'service'} for ${b.vehicle_plate || 'your car'} now.`,
     body: (b) => `Our team is working on your ${b.service_name || 'service'} for ${b.vehicle_plate || 'your vehicle'}.`,
     opsTitle: 'In progress',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} · ${b.service_name || 'service'} in progress @ ${b.branch}`,
-    opsUrl: '/operations/queue',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} · ${b.service_name || 'service'} in progress @ ${b.branch_name || b.branch}`,
   },
   waiting: {
     kind: 'booking_status',
     title: 'In the queue',
     sms: (b) =>
-      `Hakum: ${b.vehicle_plate || 'Your vehicle'} checked in for ${b.service_name || 'service'} at ${b.branch}. You are in queue.`,
-    body: (b) => `${b.vehicle_plate || 'Your vehicle'} is checked in for ${b.service_name || 'service'} at ${b.branch}.`,
+      `Hakum: ${b.vehicle_plate || 'Your vehicle'} checked in for ${b.service_name || 'service'} at ${b.branch_name || b.branch}. You are in queue.`,
+    body: (b) => `${b.vehicle_plate || 'Your vehicle'} is checked in for ${b.service_name || 'service'} at ${b.branch_name || b.branch}.`,
     opsTitle: 'New queue ticket',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} · ${b.service_name || 'service'} waiting @ ${b.branch}`,
-    opsUrl: '/operations/queue',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} · ${b.service_name || 'service'} waiting @ ${b.branch_name || b.branch}`,
   },
   final_checking: {
     kind: 'booking_status',
@@ -66,18 +64,16 @@ const STATUS_COPY = {
       `Hakum: ${b.vehicle_plate || 'Your vehicle'} (${b.service_name || 'service'}) is on final QC. Almost ready.`,
     body: (b) => `${b.vehicle_plate || 'Your vehicle'} (${b.service_name || 'service'}) is on final QC.`,
     opsTitle: 'Final checking',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} final check @ ${b.branch}`,
-    opsUrl: '/operations/queue',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} final check @ ${b.branch_name || b.branch}`,
   },
   for_releasing: {
     kind: 'booking_status',
     title: 'Ready for release',
     sms: (b) =>
-      `Hakum: ${b.vehicle_plate || 'Your vehicle'} (${b.service_name || 'service'}) is ready for release at ${b.branch}.`,
+      `Hakum: ${b.vehicle_plate || 'Your vehicle'} (${b.service_name || 'service'}) is ready for release at ${b.branch_name || b.branch}.`,
     body: (b) => `${b.vehicle_plate || 'Your vehicle'} (${b.service_name || 'service'}) is ready for release.`,
     opsTitle: 'For releasing',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} releasing @ ${b.branch}`,
-    opsUrl: '/operations/bookings',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} releasing @ ${b.branch_name || b.branch}`,
   },
   for_payment: {
     kind: 'booking_status',
@@ -86,8 +82,7 @@ const STATUS_COPY = {
       `Hakum: ${b.vehicle_plate || 'Your vehicle'} (${b.service_name || 'service'}) is ready — please proceed to payment.`,
     body: (b) => `Your ${b.service_name || 'service'} visit is ready for payment at the counter.`,
     opsTitle: 'Ready for payment',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} → POS @ ${b.branch}`,
-    opsUrl: '/operations/pos',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} → POS @ ${b.branch_name || b.branch}`,
   },
   completed: {
     kind: 'booking_status',
@@ -96,29 +91,26 @@ const STATUS_COPY = {
       `Hakum: ${b.service_name || 'Service'} for ${b.vehicle_plate || 'your car'} is done. Thank you! Book: hakumautocare.com/book`,
     body: (b) => `Your ${b.service_name || 'service'} is complete. Thank you!`,
     opsTitle: 'Visit completed',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} completed @ ${b.branch}`,
-    opsUrl: '/operations/queue',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} completed @ ${b.branch_name || b.branch}`,
   },
   cancelled: {
     kind: 'booking_status',
     title: 'Booking cancelled',
     sms: (b) =>
-      `Hakum: Your ${b.service_name || 'service'} at ${b.branch} was cancelled. Rebook anytime.`,
-    body: (b) => `Your ${b.service_name || 'service'} booking at ${b.branch} was cancelled.`,
+      `Hakum: Your ${b.service_name || 'service'} at ${b.branch_name || b.branch} was cancelled. Rebook anytime.`,
+    body: (b) => `Your ${b.service_name || 'service'} booking at ${b.branch_name || b.branch} was cancelled.`,
     opsTitle: 'Booking cancelled',
-    opsBody: (b) => `${b.vehicle_plate || 'Ticket'} cancelled @ ${b.branch}`,
-    opsUrl: '/operations/bookings',
+    opsBody: (b) => `${b.vehicle_plate || 'Ticket'} cancelled @ ${b.branch_name || b.branch}`,
   },
   redo: {
     kind: 'booking_status',
     title: 'We are redoing your service',
     sms: (b) =>
-      `Hakum: Sorry — redoing ${b.service_name || 'service'} on ${b.vehicle_plate || 'your car'} at ${b.branch}. We will update you.`,
+      `Hakum: Sorry — redoing ${b.service_name || 'service'} on ${b.vehicle_plate || 'your car'} at ${b.branch_name || b.branch}. We will update you.`,
     body: (b) =>
-      `We are sorry. We are redoing ${b.service_name || 'service'} on ${b.vehicle_plate || 'your vehicle'} at ${b.branch}.`,
+      `We are sorry. We are redoing ${b.service_name || 'service'} on ${b.vehicle_plate || 'your vehicle'} at ${b.branch_name || b.branch}.`,
     opsTitle: 'Redo on floor',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} redo @ ${b.branch}`,
-    opsUrl: '/operations/queue',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} redo @ ${b.branch_name || b.branch}`,
   },
   photos_ready: {
     kind: 'booking_photos',
@@ -127,8 +119,7 @@ const STATUS_COPY = {
       `Hakum: Photos for ${b.vehicle_plate || 'your vehicle'} (${b.service_name || 'service'}) are ready in the Hakum app.`,
     body: (b) => `Progress photos for ${b.vehicle_plate || 'your vehicle'} (${b.service_name || 'service'}) are ready in the app.`,
     opsTitle: 'Progress photos sent',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} photos @ ${b.branch}`,
-    opsUrl: '/operations/bookings',
+    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} photos @ ${b.branch_name || b.branch}`,
   },
 }
 
@@ -139,25 +130,22 @@ export function shortServiceLabel(name, fallback = 'service') {
   return `${raw.slice(0, 25)}…`
 }
 
-async function hydrateBookingForNotify(db, booking) {
+export async function hydrateBookingForNotify(db, booking) {
   if (!booking) return booking
-  const existing = booking.service_name || booking.services?.name
-  if (existing) {
-    return { ...booking, service_name: shortServiceLabel(existing) }
-  }
-  if (!booking.service_id) {
-    return { ...booking, service_name: shortServiceLabel(null) }
-  }
-  const { data } = await db
-    .from('services')
-    .select('name, slug, pay_category')
-    .eq('id', booking.service_id)
-    .maybeSingle()
-  if (!data) return { ...booking, service_name: shortServiceLabel(null) }
+  const [svc, br] = await Promise.all([
+    !booking.services && booking.service_id
+      ? db.from('services').select('name, slug, pay_category').eq('id', booking.service_id).maybeSingle()
+      : { data: null },
+    !booking.branch_name && booking.branch
+      ? db.from('branches').select('name').eq('slug', booking.branch).maybeSingle()
+      : { data: null },
+  ])
+  const services = booking.services || svc?.data || undefined
   return {
     ...booking,
-    services: data,
-    service_name: shortServiceLabel(data.name),
+    ...(services ? { services } : {}),
+    branch_name: booking.branch_name || branchLabel(br?.data?.name, booking.branch),
+    service_name: shortServiceLabel(booking.service_name || services?.name),
   }
 }
 
@@ -191,16 +179,13 @@ export function buildBookingNotifyPayload(booking, status, templates = null) {
 }
 
 /**
- * Ops fan-out targets: branch staff + Super Admin (all branches).
- * BossMich often has null branch_slug — never filter them by branch.
+ * Ops fan-out rule: branch admin / TL (+ detailer on detailing jobs) of the booking's branch,
+ * plus SA / ASA / Ops Lead everywhere. Crew hear about their own cars via crew_assigned.
  */
-export function buildOpsPushTargets(booking) {
-  const branch = booking?.branch
-  if (!branch) return [{ roles: ['BossMich'] }]
-  return [
-    { roles: ['admin', 'team_lead', 'staff'], branchId: branch },
-    { roles: ['BossMich', 'assistant_super_admin'] },
-  ]
+export function buildOpsNotifyRule(booking, status = booking?.status) {
+  const rule = NOTIFY_EVENTS[bookingOpsEvent(status)]
+  const roles = isBookingBoardRow(booking) ? rule.roles : rule.roles.filter((r) => r !== 'detailer')
+  return { ...rule, roles, branch: booking?.branch || null }
 }
 
 export function buildOpsNotifyCopy(booking, status, templates = null) {
@@ -211,11 +196,13 @@ export function buildOpsNotifyCopy(booking, status, templates = null) {
   if (templates && !templateEnabled(templates, tplKey)) return null
   const tpl = templates?.[tplKey]
   const vars = bookingNotifyVars(booking)
+  const { urls } = NOTIFY_EVENTS[bookingOpsEvent(key)]
   return {
     kind: `ops_${copy.kind}`,
     title: applyTemplateText(tpl?.title, vars, copy.opsTitle || copy.title),
     body: applyTemplateText(tpl?.body, vars, copy.opsBody(booking)),
-    url: copy.opsUrl || '/operations',
+    url: urls[0],
+    urls,
     tag: `ops-booking-${booking.id}-${key}`,
   }
 }
@@ -357,24 +344,8 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
   const opsCopy = buildOpsNotifyCopy(hydrated, status, templates)
   if (opsCopy) {
     try {
-      const opsIds = await resolvePushTargets(buildOpsPushTargets(hydrated))
-      const withoutCustomer = opsIds.filter((id) => id !== payload.userId)
-      result.ops = {
-        targets: withoutCustomer.length,
-        inbox: await writeInbox(db, withoutCustomer, opsCopy),
-      }
-      if (withoutCustomer.length) {
-        result.ops.push = await sendWebPushToUsers({
-          userIds: withoutCustomer,
-          title: opsCopy.title,
-          body: opsCopy.body,
-          url: opsCopy.url,
-          tag: opsCopy.tag,
-          kind: opsCopy.kind,
-        })
-      } else {
-        result.ops.push = { sent: 0, pruned: 0, subscriptions: 0 }
-      }
+      const recipients = await resolveStaffRecipients(db, { ...buildOpsNotifyRule(hydrated, status), excludeId: payload.userId })
+      result.ops = await notifyRecipients(db, recipients, opsCopy)
     } catch (err) {
       result.ops = { error: String(err.message || err) }
     }

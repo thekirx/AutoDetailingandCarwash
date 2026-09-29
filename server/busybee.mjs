@@ -119,11 +119,16 @@ export async function busybeeBalance() {
   return tryParse(res, await res.text())
 }
 
+/** `relay` when BUSYBEE_RELAY_URL is set (fixed egress); otherwise `direct` BrandTxt. */
+export function resolveBusybeeSendMode() {
+  return process.env.BUSYBEE_RELAY_URL?.trim() ? 'relay' : 'direct'
+}
+
 /**
- * Send one SMS via BusyBee. Tries v3 POST then v2 POST (PascalCase + camelCase).
+ * Send one SMS directly to BrandTxt (caller must have a whitelisted egress IP).
  * @returns {{ ok: boolean, status: string, providerResponse: string, messageId?: string }}
  */
-export async function busybeeSendSms({ phone, message }) {
+export async function busybeeSendSmsDirect({ phone, message }) {
   const { apiKey, clientId, senderId, baseUrl } = cfg()
   if (!apiKey || !clientId) {
     return { ok: false, status: 'skipped', providerResponse: 'BusyBee credentials not configured' }
@@ -217,4 +222,64 @@ export async function busybeeSendSms({ phone, message }) {
     }
   }
   return last
+}
+
+async function busybeeSendSmsViaRelay({ phone, message }) {
+  const url = process.env.BUSYBEE_RELAY_URL?.trim()
+  const secret = process.env.BUSYBEE_RELAY_SECRET || ''
+  if (!url) {
+    return { ok: false, status: 'failed', providerResponse: 'BUSYBEE_RELAY_URL missing', path: 'relay' }
+  }
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'HakumAutoCare/1.0',
+      },
+      body: JSON.stringify({ phone, message, secret }),
+      signal: AbortSignal.timeout(25000),
+    })
+    const text = await res.text()
+    let json = null
+    try {
+      json = JSON.parse(text)
+    } catch {
+      return {
+        ok: false,
+        status: 'failed',
+        providerResponse: text.slice(0, 500),
+        path: 'relay',
+        httpStatus: res.status,
+      }
+    }
+    return {
+      ok: Boolean(json?.ok),
+      status: json?.status || (json?.ok ? 'sent' : 'failed'),
+      providerResponse: json?.providerResponse || text.slice(0, 1500),
+      messageId: json?.messageId || null,
+      path: 'relay',
+      httpStatus: res.status,
+      errorCode: json?.errorCode ?? null,
+      errorKind: json?.errorKind || busybeeErrorKind(json?.providerResponse || text),
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      status: 'failed',
+      providerResponse: String(err.message || err),
+      path: 'relay',
+      errorKind: 'unknown',
+    }
+  }
+}
+
+/**
+ * Send one SMS via BusyBee — relay (fixed egress) or direct BrandTxt.
+ * @returns {{ ok: boolean, status: string, providerResponse: string, messageId?: string }}
+ */
+export async function busybeeSendSms(args) {
+  if (resolveBusybeeSendMode() === 'relay') return busybeeSendSmsViaRelay(args)
+  return busybeeSendSmsDirect(args)
 }

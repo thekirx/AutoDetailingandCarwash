@@ -15,7 +15,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { canAccessPos, canMarkFailedQa, canModifyBookingServicePrice, canOverrideQueueStatus, canSeeForPaymentLane, canViewRedoLane } from '../auth/permissions'
 import { finalCheckActionLabel, sendToPaymentActionLabel, showQueueRedoAction, showQueueTicketEditActions } from '../lib/uiDeadControls'
 import { PRICING_SIZES } from '../lib/servicePricing'
-import { filterPosBayCatalog, serviceKindFromPayCategory } from '../lib/serviceKinds'
+import { filterPosBayCatalog } from '../lib/serviceKinds'
 import CancellationReasonDialog from './CancellationReasonDialog'
 import CustomerNotesPanel from './CustomerNotesPanel'
 import { supabase } from '../lib/supabase'
@@ -291,8 +291,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const showRedoBtn = showQueueRedoAction(canViewRedoLane(profile))
   const canOpenPos = canAccessPos(profile)
   const canSeePayment = canSeeForPaymentLane(profile)
-  const ticketKind = serviceKindFromPayCategory(ticket.service_pay_category || ticket.pay_category)
-  const showFailedQa = canMarkFailedQa(profile) && ticketKind !== 'detailing'
+  const showFailedQa = canMarkFailedQa(profile)
   const actions = getQueueTicketActionFlags(ticket.status, {
     canManageQueue,
     canViewRedoLane: showRedoBtn,

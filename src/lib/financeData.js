@@ -184,6 +184,7 @@ export const DATE_PRESETS = [
   { value: 'last_30', label: 'Last 30 days' },
   { value: 'month', label: 'This month' },
   { value: 'last_month', label: 'Last month' },
+  { value: 'quarter', label: 'This quarter' },
   { value: '3mo', label: 'Last 3 months' },
   { value: '6mo', label: 'Last 6 months' },
   { value: 'year', label: 'This year' },
@@ -306,6 +307,12 @@ export function financeRange(preset, customStart, customEnd, now = new Date()) {
   if (preset === 'last_month') {
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const end = new Date(now.getFullYear(), now.getMonth(), 0)
+    return { start: toManilaDay(start), end: toManilaDay(end) }
+  }
+  if (preset === 'quarter') {
+    const q = Math.floor(now.getMonth() / 3) * 3
+    const start = new Date(now.getFullYear(), q, 1)
+    const end = new Date(now.getFullYear(), q + 3, 0)
     return { start: toManilaDay(start), end: toManilaDay(end) }
   }
   if (preset === 'year') {

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { buildBookingNotifyPayload, buildOpsNotifyCopy, buildOpsPushTargets } from '../server/notifyBooking.mjs'
+import { buildBookingNotifyPayload, buildOpsNotifyCopy, buildOpsNotifyRule } from '../server/notifyBooking.mjs'
 import { normalizePhMobile } from '../server/busybee.mjs'
 
 assert.equal(normalizePhMobile('09171234567'), '639171234567')
@@ -62,11 +62,15 @@ const custom = buildBookingNotifyPayload(booking, 'pending', {
 assert.equal(custom.title, 'Got it Ana')
 assert.equal(custom.sms, 'SMS ABC1234')
 
-const opsTargets = buildOpsPushTargets(booking)
-assert.equal(opsTargets.length, 2)
-assert.deepEqual(opsTargets[0].roles, ['admin', 'team_lead', 'staff'])
-assert.equal(opsTargets[0].branchId, 'bacoor')
-assert.deepEqual(opsTargets[1].roles, ['BossMich', 'assistant_super_admin'])
+const opsRule = buildOpsNotifyRule(booking, 'waiting')
+assert.equal(opsRule.branch, 'bacoor')
+assert.deepEqual(opsRule.roles, ['admin', 'team_lead', 'operations_lead', 'BossMich', 'assistant_super_admin'])
+const detailRule = buildOpsNotifyRule({ ...booking, services: { slug: 'ceramic-coating', pay_category: 'detailing' } }, 'confirmed')
+assert.ok(detailRule.roles.includes('detailer'))
+
+const named = buildBookingNotifyPayload({ ...booking, branch_name: 'Bacoor' }, 'waiting')
+assert.match(named.body, /at Bacoor\./)
+assert.match(named.sms, /at Bacoor\./)
 
 const opsCopy = buildOpsNotifyCopy(booking, 'waiting')
 assert.equal(opsCopy.url, '/operations/queue')

@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "passed": 7,
+  "total": 7,
+  "notes": [
+    {
+      "ok": true,
+      "name": "public.book",
+      "detail": "http://127.0.0.1:5174/book"
+    },
+    {
+      "ok": true,
+      "name": "customer.book",
+      "detail": "http://127.0.0.1:5174/account/book"
+    },
+    {
+      "ok": true,
+      "name": "crew.attendance",
+      "detail": "clock visible"
+    },
+    {
+      "ok": true,
+      "name": "tl.queue",
+      "detail": "board open"
+    },
+    {
+      "ok": true,
+      "name": "tl.bookings",
+      "detail": "http://127.0.0.1:5174/operations/bookings"
+    },
+    {
+      "ok": true,
+      "name": "finance.paid_by_kind",
+      "detail": "August window shows Services ₱2,850, matching paid POS"
+    },
+    {
+      "ok": true,
+      "name": "payroll.run",
+      "detail": "confirm copy visible"
+    }
+  ],
+  "console": [],
+  "withheld": [
+    "Did not submit a public booking (creates a live request and can SMS).",
+    "Did not clock in (geofence and attendance rows are live pay inputs).",
+    "Did not move a queue car (status changes SMS the customer).",
+    "Did not take a POS payment or confirm payroll (those write the books)."
+  ],
+  "evidence": "e2e-evidence/lifecycle",
+  "at": "2026-09-23T14:33:34.327Z"
+}

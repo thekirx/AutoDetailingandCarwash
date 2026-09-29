@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  aggregateByService,
   averageCycleMinutes,
   averageWaitMinutes,
   bookingWaitMinutes,
   failedQaCount,
+  failedQaInRange,
+  finishedForAverage,
   totalWaitMinutes,
   uniqueBookingsById,
 } from '../src/lib/kpiPart8.js'
@@ -61,5 +64,56 @@ describe('averageWaitMinutes (owner floor KPI)', () => {
     const uniq = uniqueBookingsById(dup)
     assert.equal(uniq.length, 2)
     assert.equal(Math.round(averageCycleMinutes(uniq)), 60)
+  })
+
+  it('keeps failed QA after the job leaves redo, once per visit', () => {
+    const rows = [
+      { id: 'a', visit_group_id: 'v1', status: 'for_payment', redo_at: '2026-09-28T02:00:00.000Z' },
+      { id: 'b', visit_group_id: 'v1', status: 'completed', redo_at: '2026-09-28T02:00:00.000Z' },
+      { id: 'c', status: 'completed', redo_at: '2026-09-28T03:00:00.000Z', service_pay_category: 'detailing' },
+    ]
+    assert.equal(failedQaCount(rows), 2)
+    const start = new Date('2026-09-28T00:00:00.000Z').getTime()
+    const end = new Date('2026-09-28T23:59:59.000Z').getTime()
+    assert.equal(failedQaInRange(rows, start, end), 2)
+    assert.equal(
+      failedQaInRange([{ id: 'old', status: 'completed', redo_at: '2026-09-01T00:00:00.000Z' }], start, end),
+      0,
+    )
+  })
+
+  it('averages only jobs that finished in the range, per service', () => {
+    const start = new Date('2026-09-28T00:00:00.000Z').getTime()
+    const end = new Date('2026-09-28T23:59:59.000Z').getTime()
+    const rows = [
+      {
+        id: 'started-earlier',
+        service_id: 'ceramic',
+        status: 'completed',
+        in_progress_at: '2026-09-27T02:00:00.000Z',
+        for_payment_at: '2026-09-28T04:00:00.000Z',
+      },
+      {
+        id: 'same-day',
+        service_id: 'wash',
+        status: 'for_payment',
+        in_progress_at: '2026-09-28T01:00:00.000Z',
+        for_payment_at: '2026-09-28T02:00:00.000Z',
+      },
+      {
+        id: 'not-finished',
+        service_id: 'wash',
+        status: 'in_progress',
+        in_progress_at: '2026-09-28T05:00:00.000Z',
+      },
+    ]
+    const finished = finishedForAverage(rows, start, end)
+    assert.deepEqual(finished.map((row) => row.id), ['started-earlier', 'same-day'])
+    const byService = aggregateByService(finished, { ceramic: 'Ceramic', wash: 'Wash' })
+    const ceramic = byService.find((row) => row.service_id === 'ceramic')
+    const wash = byService.find((row) => row.service_id === 'wash')
+    assert.equal(ceramic.avg_min, 26 * 60)
+    assert.equal(wash.avg_min, 60)
+    assert.equal(Math.round(averageCycleMinutes(finished)), Math.round((26 * 60 + 60) / 2))
   })
 })

@@ -55,6 +55,7 @@ import {
 } from '@/queue/queueLogic'
 import { assignStaff, fetchPresentAssignableStaff, fetchServices } from '@/queue/queueApi'
 import { filterFloorDetailingServices, isBookingBoardRow } from '@/lib/serviceKinds'
+import { bookedDetailingServiceId, packagesForService, splitBookedService } from '@/lib/detailingPackages'
 import {
   COMPLETION_OUTCOMES,
   bookingCalendarEventPropGetter,
@@ -118,6 +119,7 @@ const emptyBooking = {
   branch: '',
   scheduled_start: '',
   service_id: '',
+  package_id: '',
   vehicle_plate: '',
   vehicle_make: '',
   vehicle_model: '',
@@ -802,12 +804,14 @@ export default function BookingBoardPage() {
   function openEdit(booking) {
     setEditing(booking)
     setCustomerLookup({ loading: false, error: '', match: booking?.customer_id ? { id: booking.customer_id } : null })
+    const split = splitBookedService(services, booking.service_id)
     setForm({
       customer_name: booking.customer_name || '',
       customer_phone: booking.customer_phone || '',
       branch: booking.branch || '',
       scheduled_start: booking.scheduled_start ? booking.scheduled_start.slice(0, 16) : '',
-      service_id: booking.service_id || '',
+      service_id: split.serviceId,
+      package_id: split.packageId,
       vehicle_plate: booking.vehicle_plate || '',
       vehicle_make: booking.vehicle_make || '',
       vehicle_model: booking.vehicle_model || '',
@@ -829,13 +833,15 @@ export default function BookingBoardPage() {
     if (editing ? !canEdit : !canCreate) return
     const make = form.vehicle_make.trim()
     const model = form.vehicle_model.trim()
-    const serviceId = form.service_id
-    if (!serviceId) {
-      toast.error('Pick a detailing service.')
+    const parentId = form.service_id
+    const packages = packagesForService(services, parentId)
+    const serviceId = bookedDetailingServiceId(parentId, form.package_id, packages)
+    if (!parentId || !formServices.some((s) => s.id === parentId)) {
+      toast.error('Pick a detailing service: Ceramic, Paint Maintenance, Tint, or PPF.')
       return
     }
-    if (!formServices.some((s) => s.id === serviceId)) {
-      toast.error('Pick a detailing service: Ceramic, Paint Maintenance, Tint, or PPF.')
+    if (!serviceId) {
+      toast.error('Pick a package for this service.')
       return
     }
     if (!make || !model) {
@@ -1397,6 +1403,7 @@ export default function BookingBoardPage() {
                   setForm((f) => ({
                     ...f,
                     service_id,
+                    package_id: '',
                     price_pesos: minor ? String(minor / 100) : f.price_pesos,
                   }))
                 }}
@@ -1417,6 +1424,35 @@ export default function BookingBoardPage() {
                 </p>
               ) : null}
             </div>
+            {packagesForService(services, form.service_id).length ? (
+              <div className="flex flex-col gap-2">
+                <Label>Package</Label>
+                <Select
+                  value={form.package_id || undefined}
+                  onValueChange={(package_id) => {
+                    const pkg = packagesForService(services, form.service_id).find((row) => row.id === package_id)
+                    const pesos = pkg && Number(pkg.price_minor) > 0 ? String(Number(pkg.price_minor) / 100) : ''
+                    setForm((f) => ({
+                      ...f,
+                      package_id,
+                      price_pesos: pesos || f.price_pesos,
+                    }))
+                  }}
+                  items={packagesForService(services, form.service_id).map((row) => ({ value: row.id, label: row.name }))}
+                >
+                  <SelectTrigger className="cursor-pointer" aria-label="Package">
+                    <SelectValue placeholder="Select package" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {packagesForService(services, form.service_id).map((row) => (
+                      <SelectItem key={row.id} value={row.id}>
+                        {row.name}{Number(row.price_minor) > 0 ? '' : ' · Ask for price'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             <div className="flex flex-col gap-2">
               <Label htmlFor="bk-start">Scheduled start</Label>
               <Input id="bk-start" type="datetime-local" required value={form.scheduled_start} onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />

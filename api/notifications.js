@@ -7,6 +7,7 @@ import { handleNotifyPlannerRequest } from '../server/notifyPlannerApi.mjs'
 import { handleNotifyPosRequest } from '../server/notifyPosApi.mjs'
 import { handleNotifyShiftCloseRequest } from '../server/notifyShiftCloseApi.mjs'
 import { handleNotifyOpsLabRequest } from '../server/notifyOpsRoadmapApi.mjs'
+import { handleNotifyOpsEventRequest } from '../server/notifyOpsEventApi.mjs'
 import { handlePushSubscribeRequest, handleSendPushRequest } from '../server/pushApi.mjs'
 import { handleNotificationSettingsRequest } from '../server/notificationSettingsApi.mjs'
 import { handleNotificationBroadcastRequest } from '../server/notificationBroadcastApi.mjs'
@@ -23,6 +24,7 @@ export const operations = Object.freeze({
   'notify-pos': handleNotifyPosRequest,
   'notify-shift-close': handleNotifyShiftCloseRequest,
   'notify-ops-lab': handleNotifyOpsLabRequest,
+  'notify-ops-event': handleNotifyOpsEventRequest,
   'push-subscribe': handlePushSubscribeRequest,
   'send-push': handleSendPushRequest,
   'notification-settings': handleNotificationSettingsRequest,

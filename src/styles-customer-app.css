@@ -150,13 +150,59 @@ html.dark .capp-brand-logo--dark {
 
 .capp-weather {
   margin: 0;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--capp-ink);
+  white-space: normal;
+  max-width: 100%;
+}
+
+.capp-weather-now {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
   white-space: nowrap;
+}
+
+.capp-weather-line {
+  font-weight: 500;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  max-width: 28ch;
+}
+
+.capp-thumbs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.capp-thumb {
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.85rem 0.5rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--capp-line, rgba(5, 38, 153, 0.18));
+  background: #fff;
+  color: var(--capp-ink);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.capp-thumb.is-on,
+.capp-thumb:focus-visible {
+  border-color: #052699;
+  color: #052699;
+  outline: 2px solid #052699;
+  outline-offset: 2px;
 }
 
 .capp-weather-temp {
@@ -1214,6 +1260,92 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
 .capp-select:focus {
   outline: 2px solid var(--capp-accent);
   outline-offset: 1px;
+}
+
+.capp-branch-card {
+  align-items: flex-start;
+}
+
+.capp-branch-card .capp-row-icon {
+  margin-top: 0.15rem;
+}
+
+.capp-pin {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--capp-line);
+  min-width: 0;
+}
+
+.capp-pin-status {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--capp-ink);
+}
+
+.capp-pin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.capp-pin .capp-btn {
+  min-height: 44px;
+  font-size: 1rem;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.capp-pin .capp-btn:focus-visible {
+  outline: 2px solid var(--capp-accent);
+  outline-offset: 2px;
+}
+
+.capp-pin-nearest {
+  flex: 1 1 100%;
+}
+
+.capp-pin-error {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: #9b1c1c;
+}
+
+html.dark .capp-pin-error {
+  color: #ffb4b4;
+}
+
+.capp-pin-dialog {
+  max-height: min(85dvh, 40rem);
+  overflow-y: auto;
+}
+
+.capp-pin-dialog .capp-btn {
+  width: 100%;
+  min-height: 44px;
+  font-size: 1rem;
+}
+
+.capp-pin-dialog .capp-btn:focus-visible {
+  outline: 2px solid var(--capp-accent);
+  outline-offset: 2px;
+}
+
+.capp-pin-dialog [data-slot="dialog-close"] {
+  width: 44px;
+  height: 44px;
+}
+
+.capp-pin-dialog .leaflet-bar a {
+  width: 44px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  font-size: 1.125rem !important;
 }
 
 .capp-field input::placeholder,
@@ -2307,6 +2439,11 @@ html.dark .capp-btn-accent:hover:not(:disabled) {
     color: #fff;
   }
 
+  .capp-hero .capp-weather-line {
+    color: #d3dbf5;
+    font-weight: 500;
+  }
+
   .capp-hero h1,
   .capp-hero .capp-greet,
   .capp-hero .capp-hero-sub,
@@ -2524,6 +2661,11 @@ form.capp-section > .capp-sect > h2::before {
 
   .capp-hero .capp-weather {
     color: #fff;
+  }
+
+  .capp-hero .capp-weather-line {
+    color: #d3dbf5;
+    font-weight: 500;
   }
 
   .capp-hero h1,

@@ -1,6 +1,6 @@
 /**
- * POST /api/notify-pos — SA/ASA/BA inbox after POS sale, expense, or cash-advance decision.
- * Body: { event, branch, amount_minor?, title?, status?, entity_id? }
+ * POST /api/notify-pos — SA/ASA/BA inbox after POS sale or expense.
+ * Body: { event, branch, amount_minor?, title?, entity_id? }
  */
 import { createClient } from '@supabase/supabase-js'
 import { canAccessPos } from '../src/auth/permissions.js'
@@ -14,7 +14,7 @@ function admin() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-const EVENTS = new Set(['sale', 'expense', 'cash_advance'])
+const EVENTS = new Set(['sale', 'expense'])
 
 export async function handleNotifyPosRequest(req, res) {
   setCors(res, 'POST, OPTIONS')
@@ -54,8 +54,8 @@ export async function handleNotifyPosRequest(req, res) {
         branch,
         amountMinor: Number(body.amount_minor) || 0,
         title: body.title || '',
-        status: body.status || '',
         entityId: body.entity_id || '',
+        actorId: staff.id,
       })
     } catch (err) {
       notify = { error: String(err.message || err) }

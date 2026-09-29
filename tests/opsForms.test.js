@@ -18,10 +18,8 @@ import {
   validatePayload,
   withLiveBranchOptions,
 } from '../src/lib/opsForms.js'
-import {
-  buildComplaintNotifyCopy,
-  buildComplaintPushTargets,
-} from '../server/notifyOpsForm.mjs'
+import { buildComplaintNotifyCopy } from '../server/notifyOpsForm.mjs'
+import { NOTIFY_EVENTS, planStaffRecipients } from '../src/lib/notifyRouting.js'
 
 describe('opsForms smart builder', () => {
   it('lists fixed company kinds plus detailing CRUD kind', () => {
@@ -92,10 +90,15 @@ describe('opsForms smart builder', () => {
 
 describe('complaint notify targets', () => {
   it('targets SA + ASA globally and branch admin by branch', () => {
-    const targets = buildComplaintPushTargets('bacoor')
-    assert.deepEqual(targets[0].roles, ['BossMich', 'assistant_super_admin'])
-    assert.equal(targets[1].roles[0], 'admin')
-    assert.equal(targets[1].branchId, 'bacoor')
+    const people = [
+      { id: 'sa', role: 'BossMich' },
+      { id: 'asa', role: 'assistant_super_admin' },
+      { id: 'ba-bacoor', role: 'admin', branch_slug: 'bacoor' },
+      { id: 'ba-batangas', role: 'admin', branch_slug: 'batangas' },
+      { id: 'tl', role: 'team_lead', branch_slug: 'bacoor' },
+    ]
+    const got = planStaffRecipients(people, { ...NOTIFY_EVENTS.complaint, branch: 'bacoor' }).map((r) => r.id)
+    assert.deepEqual(got, ['sa', 'asa', 'ba-bacoor'])
     const copy = buildComplaintNotifyCopy({
       payload: { customer_name: 'Ana', branch: 'bacoor', category: 'Damage' },
       submissionId: 'sub-1',

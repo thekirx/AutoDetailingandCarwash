@@ -12,6 +12,21 @@ export function visitReviewAxesForKind(kind) {
   return VISIT_REVIEW_AXES.filter((axis) => axis.id === 'overall' || axis.id === 'app' || axis.id === floor)
 }
 
+/** Thumbs replace the star form. Up is a 5, down is a 1, on every stored axis. */
+export function buildThumbReview(vote, comment = '') {
+  const score = vote === 'up' ? 5 : vote === 'down' ? 1 : null
+  if (!score) return null
+  const note = String(comment || '').trim() || null
+  return {
+    vote,
+    overall_rating: score,
+    app_rating: score,
+    service_rating: score,
+    detailing_rating: score,
+    comment: note,
+  }
+}
+
 export function starScore(value) {
   const n = Number(value)
   if (!Number.isInteger(n) || n < 1 || n > 5) return null

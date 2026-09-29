@@ -410,7 +410,7 @@ export function bookingNotifyVars(booking = {}) {
     name: booking.customer_name || 'Customer',
     plate: booking.vehicle_plate || 'your vehicle',
     service,
-    branch: booking.branch || 'Hakum',
+    branch: booking.branch_name || booking.branch || 'Hakum',
     when,
   }
 }

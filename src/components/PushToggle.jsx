@@ -109,8 +109,7 @@ export default function PushToggle({
   async function turnOn() {
     setBusy(true)
     try {
-      const token = await sessionToken()
-      await enablePush(token)
+      await enablePush(sessionToken)
       toast.success('Alerts on — you will get visit updates')
       await refresh()
       setOpen(false)
@@ -196,7 +195,7 @@ export default function PushToggle({
           <button type="button" className="capp-btn capp-btn-ghost" onClick={() => setOpen(true)}>
             How
           </button>
-          <PushModal open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
+          <PushModal ops={ops} open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
         </div>
       )
     }
@@ -206,7 +205,7 @@ export default function PushToggle({
           <Smartphone className="size-4 shrink-0" aria-hidden />
           <span className="text-left leading-snug">{tip}</span>
         </button>
-        <PushModal open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
+        <PushModal ops={ops} open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
       </>
     )
   }
@@ -244,7 +243,7 @@ export default function PushToggle({
             {busy ? 'Sending…' : 'Send test push'}
           </button>
         ) : null}
-        <PushModal open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
+        <PushModal ops={ops} open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
       </div>
     )
   }
@@ -268,12 +267,12 @@ export default function PushToggle({
         ) : null}
       </div>
 
-      <PushModal open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
+      <PushModal ops={ops} open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
     </div>
   )
 }
 
-function PushModal({ open, onOpenChange, busy, status, reason, onEnable, onDismiss }) {
+function PushModal({ ops = false, open, onOpenChange, busy, status, reason, onEnable, onDismiss }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="push-modal max-w-md gap-0 overflow-hidden p-0 sm:max-w-md" showCloseButton={false}>
@@ -283,9 +282,11 @@ function PushModal({ open, onOpenChange, busy, status, reason, onEnable, onDismi
           </span>
           <DialogHeader className="gap-2 text-left">
             <p className="text-[10px] font-extrabold tracking-[0.22em] text-white/60 uppercase">Hakum alerts</p>
-            <DialogTitle className="text-2xl font-bold text-white">Never miss your car</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-white">{ops ? 'Stay on top of the floor' : 'Never miss your car'}</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-white/75">
-              Queue updates, payment ready, and finish notices — delivered on this device.
+              {ops
+                ? 'New bookings, queue changes, and shift-close approvals — delivered on this device.'
+                : 'Queue updates, payment ready, and finish notices — delivered on this device.'}
             </DialogDescription>
           </DialogHeader>
         </div>

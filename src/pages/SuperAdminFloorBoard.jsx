@@ -159,9 +159,9 @@ function StatTile({ label, value, hint, tone = 'default', onNavigate, breakdown 
   )
 }
 
-function Section({ title, eyebrow, children, action }) {
+function Section({ id, title, eyebrow, children, action }) {
   return (
-    <section className="mt-6 sm:mt-8">
+    <section id={id} className="mt-6 scroll-mt-24 sm:mt-8">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div>
           {eyebrow ? (
@@ -303,8 +303,8 @@ export default function SuperAdminFloorBoard() {
               : id === 'final_checking' || id === 'for_payment'
                 ? 'amber'
                 : 'default',
-        hint: 'Live',
-        onClick: () => openFamilyLane(family, id),
+        hint: id === 'redo' ? 'In timeline' : 'Live',
+        onClick: () => (id === 'redo' ? document.getElementById('failed-qa')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) : openFamilyLane(family, id)),
       })),
       ...timelineStatuses.map((row) => ({
         ...row,
@@ -329,7 +329,9 @@ export default function SuperAdminFloorBoard() {
               hint={tile.hint}
               onNavigate={tile.onClick}
               breakdown={
-                tile.hint === 'Live'
+                tile.id === 'redo'
+                  ? `${count} visit${count === 1 ? '' : 's'} failed QA in this timeline for ${meta.title}. The count stays after the job moves to payment or completion. One visit counts once.`
+                  : tile.hint === 'Live'
                   ? `${count} ticket${count === 1 ? '' : 's'} live in ${label} for ${meta.title}. Opens the live ${meta.title} queue lane.`
                   : `${count} ticket${count === 1 ? '' : 's'} counted in ${label} for the selected timeline (${branchLabel}). Opens History filtered to this status.`
               }
@@ -439,20 +441,21 @@ export default function SuperAdminFloorBoard() {
       <LaneStrip family="detailing" />
 
       <Section
+        id="failed-qa"
         eyebrow="Quality"
-        title="Services Failed QA"
+        title="Failed QA"
         action={
           <button
             type="button"
             onClick={() => openFamilyLane('wash', 'redo')}
             className="text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            Open failed QA lane
+            Open wash redo lane
           </button>
         }
       >
         <p className="mb-3 text-xs text-muted-foreground">
-          Jobs sent back from Final Checking in this timeline. Each one counts against the crew that ran the service.
+          Services, packages, and detailing. Services Failed QA and Detailing Failed QA stay in the count after the visit moves to payment or completion. One visit counts once, even when the ticket has several lines.
         </p>
         {failedQaJobs.length ? (
           <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -483,7 +486,7 @@ export default function SuperAdminFloorBoard() {
           </ul>
         ) : (
           <p className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            No services failed QA in this timeline.
+            No services, packages, or detailing failed QA in this timeline.
           </p>
         )}
       </Section>
@@ -667,16 +670,19 @@ export default function SuperAdminFloorBoard() {
             }
             breakdown={
               kpi.cycle_sample_n
-                ? `Average minutes from in_progress_at to for_payment_at (else completed_at / final_checking_at).\nSample: ${kpi.cycle_sample_n} ticket${kpi.cycle_sample_n === 1 ? '' : 's'} with start and finish stamps.`
-                : 'No tickets in this timeline have both a start and finish stamp, so average service time cannot be computed.'
+                ? `Average minutes from in_progress_at to the finish stamp (for_payment_at, else completed_at).\nJobs that finished in this timeline, including detailing that started earlier.\nSample: ${kpi.cycle_sample_n} ticket${kpi.cycle_sample_n === 1 ? '' : 's'}.\n${(kpi.avg_by_service || [])
+                    .filter((row) => row.avg_min != null)
+                    .map((row) => `${row.name}: ${formatMinutes(row.avg_min)} · ${row.count}`)
+                    .join('\n')}`
+                : 'No tickets finished in this timeline with both a start and a finish stamp, so average service time cannot be computed.'
             }
           />
           <StatTile
             label="Failed QA"
             value={kpi.failed_qa_count ?? 0}
             tone="rose"
-            hint="Sent to redo in timeline"
-            breakdown={`Count of jobs sent to redo / failed QA in the selected timeline (${branchLabel}).\nValue: ${kpi.failed_qa_count ?? 0}`}
+            hint={`${kpi.failed_qa_services ?? 0} services · ${kpi.failed_qa_detailing ?? 0} detailing`}
+            breakdown={`Failed QA stays on the visit after it leaves redo.\nServices & packages: ${kpi.failed_qa_services ?? 0}\nDetailing: ${kpi.failed_qa_detailing ?? 0}\nVisits: ${kpi.failed_qa_count ?? 0}`}
           />
         </div>
       </Section>

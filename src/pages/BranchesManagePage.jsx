@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { Building2, Pencil, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canCreateBranches, canManageBranches } from '@/auth/permissions'
-import { archiveBranch, createBranch, listBranches, listBranchOperatingHours, saveBranchOperatingHours, updateBranch } from '@/lib/adminApi'
+import { archiveBranch, createBranch, listBranches, listBranchOperatingHours, saveBranchOperatingHours, setBranchGoogleReviewUrl, updateBranch } from '@/lib/adminApi'
 import { filterBranchesForProfile } from '@/queue/queueLogic'
 import { branchStatusLabel } from '@/lib/branches'
 import { liveQueuePath, shopTvPath } from '@/lib/liveQueuePath'
@@ -32,6 +32,7 @@ const empty = {
   latitude: null,
   longitude: null,
   status: 'active',
+  google_review_url: '',
 }
 
 function statusFromRow(row) {
@@ -78,12 +79,14 @@ export default function BranchesManagePage() {
       if (editingSlug) {
         await updateBranch({ slug: editingSlug, ...payload })
         await saveBranchOperatingHours(editingSlug, hours)
+        if (canCreate) await setBranchGoogleReviewUrl(editingSlug, form.google_review_url)
         toast.success('Branch updated')
         setEditingSlug(null)
       } else {
         if (!canCreate) throw new Error('Only Super Admin can open new company sites.')
         await createBranch(payload)
         await saveBranchOperatingHours(payload.slug, hours.length ? hours : defaultWeekHours(payload.slug))
+        if (form.google_review_url) await setBranchGoogleReviewUrl(payload.slug, form.google_review_url)
         setLaunch({ slug: payload.slug, name: payload.name, status: form.status })
         toast.success(
           form.status === 'coming_soon'
@@ -111,6 +114,7 @@ export default function BranchesManagePage() {
       latitude: row.latitude,
       longitude: row.longitude,
       status: statusFromRow(row),
+      google_review_url: row.google_review_url || '',
     })
     try {
       const week = await listBranchOperatingHours(row.slug)
@@ -278,6 +282,23 @@ export default function BranchesManagePage() {
                   placeholder="Filled from search or pin — editable"
                 />
               </div>
+
+              {canCreate ? (
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <Label htmlFor="b-review">Google review link</Label>
+                  <Input
+                    id="b-review"
+                    type="url"
+                    inputMode="url"
+                    value={form.google_review_url}
+                    onChange={(e) => setForm((f) => ({ ...f, google_review_url: e.target.value }))}
+                    placeholder="https://share.google/…"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A thumbs up on the customer&apos;s visit opens this page. One link per branch.
+                  </p>
+                </div>
+              ) : null}
 
               <fieldset className="flex flex-col gap-3 rounded-xl border border-border p-3">
                 <Legend>Operating hours</Legend>

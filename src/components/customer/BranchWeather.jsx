@@ -24,8 +24,11 @@ export default function BranchWeather({ branch, className = '' }) {
 
   return (
     <p className={`capp-weather ${className}`.trim()} aria-live="polite">
-      <span className="capp-weather-temp">{wx.tempC}°</span>
-      <span>{wx.label}</span>
+      <span className="capp-weather-now">
+        <span className="capp-weather-temp">{wx.tempC}°</span>
+        <span>{wx.label}</span>
+      </span>
+      {wx.line ? <span className="capp-weather-line">{wx.line}</span> : null}
     </p>
   )
 }

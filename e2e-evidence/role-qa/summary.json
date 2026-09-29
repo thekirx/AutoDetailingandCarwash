@@ -1,8 +1,8 @@
 {
   "ok": true,
-  "passed": 53,
-  "total": 53,
+  "passed": 54,
+  "total": 54,
   "failed": [],
   "evidence": "e2e-evidence/role-qa",
-  "at": "2026-09-13T15:05:29.293Z"
+  "at": "2026-09-27T03:01:52.144Z"
 }

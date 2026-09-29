@@ -92,6 +92,13 @@ describe('financeRange', () => {
     assert.equal(r.end, '2026-08-31')
   })
 
+  it('quarter covers the current calendar quarter', () => {
+    const r = financeRange('quarter', '', '', FIXED_NOW)
+    assert.equal(r.start, '2026-07-01')
+    assert.equal(r.end, '2026-09-30')
+    assert.ok(DATE_PRESETS.some((p) => p.value === 'quarter'))
+  })
+
   it('year covers Jan 1 to Dec 31', () => {
     const r = financeRange('year', '', '', FIXED_NOW)
     assert.equal(r.start, '2026-01-01')

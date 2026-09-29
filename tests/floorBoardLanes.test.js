@@ -7,6 +7,7 @@ import {
   DETAILING_FLOOR_LIVE_STATUSES,
   WASH_FLOOR_LIVE_STATUSES,
   floorLaneLabel,
+  mergeTimelineFailedQa,
   splitFloorBoardLanes,
 } from '../src/lib/floorBoardLanes.js'
 
@@ -31,6 +32,7 @@ describe('floor board lanes by family', () => {
     assert.equal(floorLaneLabel('for_releasing', 'detailing'), 'For releasing')
     assert.equal(floorLaneLabel('completed', 'detailing'), 'Completed')
     assert.equal(floorLaneLabel('cancelled', 'detailing'), 'Cancelled')
+    assert.equal(floorLaneLabel('redo', 'detailing'), 'Detailing Failed QA')
   })
 
   it('splits live and timeline counts into services/packages vs detailing', () => {
@@ -92,5 +94,28 @@ describe('floor board lanes by family', () => {
     assert.equal(floorLaneLabel('waiting', 'detailing'), 'Vehicle intake')
     assert.match(api, /family:\s*['"]detailing['"]/)
     assert.match(api, /laneCountsByFamily/)
+    assert.match(api, /mergeTimelineFailedQa/)
+    assert.match(api, /finishedForAverage/)
+  })
+
+  it('counts failed QA after the ticket has moved to payment, once per visit', () => {
+    const lanes = splitFloorBoardLanes({
+      activeQueue: [
+        { booking_id: 'pay', visit_group_id: 'v1', status: 'for_payment', redo_at: '2026-09-28T02:00:00.000Z', service_pay_category: 'wash' },
+      ],
+      periodJobs: [],
+    })
+    const merged = mergeTimelineFailedQa(lanes, {
+      activeQueue: [
+        { booking_id: 'pay', visit_group_id: 'v1', status: 'for_payment', redo_at: '2026-09-28T02:00:00.000Z', service_pay_category: 'wash' },
+      ],
+      failedQaJobs: [
+        { booking_id: 'pay', visit_group_id: 'v1', status: 'for_payment', redo_at: '2026-09-28T02:00:00.000Z', service_pay_category: 'wash' },
+        { booking_id: 'line', visit_group_id: 'v1', status: 'completed', redo_at: '2026-09-28T02:00:00.000Z', service_pay_category: 'package' },
+        { booking_id: 'detail', status: 'completed', redo_at: '2026-09-28T03:00:00.000Z', service_pay_category: 'detailing' },
+      ],
+    })
+    assert.equal(merged.wash.redo, 1)
+    assert.equal(merged.detailing.redo, 1)
   })
 })

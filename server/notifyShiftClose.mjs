@@ -7,8 +7,10 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { formatBacoorReportText } from '../src/lib/bacoorDailyReport.js'
+import { NOTIFY_EVENTS } from '../src/lib/notifyRouting.js'
 import { busybeeSendSms } from './busybee.mjs'
-import { sendWebPushToUsers } from './webPush.mjs'
+import { branchName, notifyStaffEvent } from './notifyOpsEvent.mjs'
+import { notifyRecipients, resolveStaffRecipients } from './webPush.mjs'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -52,27 +54,6 @@ export function buildOwnerDailySmsFromClose({ branch, businessDate, submitted } 
   return text.length > 1400 ? `${text.slice(0, 1390)}\n…` : text
 }
 
-/** SA + ASA with finance_write — same fan-out as money contract. */
-export async function resolveFloorPayNotifyUserIds(db, { excludeUserId = null } = {}) {
-  const ids = new Set()
-  const { data: rows, error } = await db
-    .from('staff_profiles')
-    .select('id, role, permission_grants')
-    .eq('is_active', true)
-    .in('role', ['BossMich', 'assistant_super_admin'])
-  if (error) throw error
-  for (const row of rows || []) {
-    if (excludeUserId && row.id === excludeUserId) continue
-    if (row.role === 'BossMich') {
-      ids.add(row.id)
-      continue
-    }
-    const grants = row.permission_grants || {}
-    if (grants.finance_write) ids.add(row.id)
-  }
-  return [...ids]
-}
-
 async function resolveOwnerSmsPhones(db) {
   const envPhone = String(process.env.OWNER_SMS_PHONE || process.env.HAKUM_OWNER_PHONE || '').trim()
   const phones = new Set()
@@ -93,29 +74,34 @@ export async function listOwnerSmsPhones(db = null) {
   return resolveOwnerSmsPhones(db || admin())
 }
 
+/** The BA / Ops Lead who submitted hears Finance's decision — read from the row, not the caller. */
+export async function notifySubmitterReviewed(db, { closeId, actorId } = {}) {
+  if (!closeId) return null
+  const { data: close } = await db.from('shift_close_reports').select('submitted_by, branch, business_date, status, review_note').eq('id', closeId).maybeSingle()
+  const event = { accepted: 'shift_accepted', rejected: 'shift_rejected' }[close?.status]
+  if (!close?.submitted_by || !event) return null
+  return notifyStaffEvent(
+    db,
+    event,
+    { closeId, branchName: await branchName(db, close.branch), businessDate: close.business_date, note: close.review_note },
+    { ids: [close.submitted_by], excludeId: actorId || null },
+  )
+}
+
+export async function notifyShiftCloseRejected(input = {}) {
+  return { submitter: await notifySubmitterReviewed(admin(), input) }
+}
+
 export async function notifyShiftCloseAccepted(input = {}) {
-  const copy = buildShiftCloseAcceptCopy(input)
   const db = admin()
-  const userIds = await resolveFloorPayNotifyUserIds(db, { excludeUserId: input.actorId || null })
-  let push = { sent: 0 }
-  if (userIds.length) {
-    try {
-      push = await sendWebPushToUsers({
-        userIds,
-        title: copy.title,
-        body: copy.body,
-        url: copy.url,
-        tag: copy.tag,
-        kind: copy.kind,
-      })
-    } catch (err) {
-      push = { error: String(err.message || err) }
-    }
-  }
+  const copy = buildShiftCloseAcceptCopy({ ...input, branch: (await branchName(db, input.branch)) || input.branch })
+  const recipients = await resolveStaffRecipients(db, { ...NOTIFY_EVENTS.floor_pay_ready, excludeId: input.actorId || null })
+  const { targets, inbox, push } = await notifyRecipients(db, recipients, copy)
+  const submitter = await notifySubmitterReviewed(db, input).catch((err) => ({ error: String(err.message || err) }))
 
   // Product default: no owner SMS. Push covers SA/ASA; BusyBee is for customer reminders only.
   if (!isOwnerSmsEnabled()) {
-    return { targets: userIds.length, push, copy, ownerSms: { sent: 0, skipped: 'owner_sms_disabled' } }
+    return { targets, inbox, push, copy, submitter, ownerSms: { sent: 0, skipped: 'owner_sms_disabled' } }
   }
 
   let ownerSms = { sent: 0 }
@@ -151,5 +137,5 @@ export async function notifyShiftCloseAccepted(input = {}) {
     ownerSms = { sent: 0, error: String(err.message || err) }
   }
 
-  return { targets: userIds.length, push, copy, ownerSms }
+  return { targets, inbox, push, copy, submitter, ownerSms }
 }

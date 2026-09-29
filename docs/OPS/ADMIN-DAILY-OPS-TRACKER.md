@@ -5,13 +5,14 @@
 
 ## Checklist
 
-| # | Item | Repo artifact | Status 2026-09-24 |
+| # | Item | Repo artifact | Status 2026-09-26 |
 |---|------|---------------|-------------------|
-| 1 | BrandTxt Dexter follow-up | [`brandtxt-dexter-followup.txt`](./brandtxt-dexter-followup.txt) + [`BUSYBEE-BRANDTXT-REQUEST.md`](./BUSYBEE-BRANDTXT-REQUEST.md) | **READY TO SEND** — Malcolm: paste into the existing Gmail thread to Dexter and Send |
-| 1b | Prove `sms:egress` after whitelist | `npm run sms:egress` / `SEND_TEST_SMS=1 …` | **BLOCKED** — ErrorCode 11 on `180.191.244.237` until Dexter whitelists |
-| 2 | Vercel Static IPs | [`VERCEL-STATIC-IPS.md`](./VERCEL-STATIC-IPS.md) | **BLOCKED** — Hakum project not on this CLI Vercel account; no `.vercel/` link |
-| 3 | Auth SMTP proof | [`AUTH-SMTP-PROOF.md`](./AUTH-SMTP-PROOF.md) | **OPEN** — project `lybxhpzzqqyqswvuwpxv`; Hakum not on linked Supabase MCP org |
-| 4 | BA/SA friction log | [`../qa/ADMIN-FRICTION-LOG.md`](../qa/ADMIN-FRICTION-LOG.md) | **OPEN for entries** — seeded with FLOPS notes; no redesign until repeated High/Blocker |
+| 1 | BrandTxt Dexter follow-up | [`brandtxt-dexter-followup.txt`](./brandtxt-dexter-followup.txt) + [`BUSYBEE-BRANDTXT-REQUEST.md`](./BUSYBEE-BRANDTXT-REQUEST.md) | **READY TO SEND** — Malcolm: paste into Gmail thread to Dexter and Send |
+| 1b | Prove `sms:egress` after whitelist | `npm run sms:egress` | **BLOCKED** — ErrorCode 11 on `180.191.244.237` (fresh this campaign) |
+| 2 | Vercel Static IPs | [`VERCEL-STATIC-IPS.md`](./VERCEL-STATIC-IPS.md) | **BLOCKED** — Hakum not on this CLI Vercel account |
+| 3 | Auth SMTP proof | [`AUTH-SMTP-PROOF.md`](./AUTH-SMTP-PROOF.md) | **OPEN** — project `lybxhpzzqqyqswvuwpxv` |
+| 4 | BA/SA friction log | [`../qa/ADMIN-FRICTION-LOG.md`](../qa/ADMIN-FRICTION-LOG.md) | **OPEN for entries** |
+| 5 | Soft-launch FLOPS | [`../qa/BRANCH-DAY-SIGN-OFF.md`](../qa/BRANCH-DAY-SIGN-OFF.md) | **MET** — 25/25 on 2026-09-26 |
 
 ## Human send steps (BrandTxt)
 

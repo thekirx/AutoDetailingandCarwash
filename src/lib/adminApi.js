@@ -18,9 +18,17 @@ import {
 } from './opsValidation'
 
 import { createTtlCache } from './coalesceReload'
+import { defaultPointsAward } from './loyaltyPoints'
 
 const branchesCache = createTtlCache(90_000)
 const servicesCache = createTtlCache(90_000)
+
+function parsePointsAward(value, service) {
+  if (value === '' || value == null) return defaultPointsAward(service || {})
+  const n = Math.floor(Number(value))
+  if (!Number.isFinite(n) || n < 0 || n > 1000) throw new Error('Points must be a whole number from 0 to 1000.')
+  return n
+}
 
 function mapDbError(error, fallback = 'Request failed.') {
   const msg = error?.message || fallback
@@ -55,7 +63,7 @@ export async function listBranches({ includeArchived = false } = {}) {
 
   let q = supabase
     .from('branches')
-    .select('id, slug, name, code, address, latitude, longitude, coming_soon, is_active, is_archived')
+    .select('id, slug, name, code, address, latitude, longitude, coming_soon, is_active, is_archived, google_review_url')
     .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
@@ -457,7 +465,7 @@ export async function listServices({ includeArchived = false } = {}) {
   let q = supabase
     .from('services')
     .select(
-      'id, name, slug, description, price_minor, duration_minutes, sla_minutes, pay_category, salary_pct, is_active, is_archived, display_order, loyalty_weight, included_service_ids, service_size_prices(size_slug, price_minor)',
+      'id, name, slug, description, price_minor, duration_minutes, sla_minutes, pay_category, salary_pct, is_active, is_archived, display_order, loyalty_weight, points_award, parent_service_id, included_service_ids, service_size_prices(size_slug, price_minor)',
     )
     .order('display_order')
   if (!includeArchived) q = q.eq('is_archived', false)
@@ -522,6 +530,8 @@ export async function createService(payload) {
     is_active: true,
     is_archived: false,
     salary_pct: parseOptionalSalaryPct(payload.salary_pct),
+    points_award: parsePointsAward(payload.points_award, payload),
+    parent_service_id: payload.parent_service_id || null,
   }
   if (Array.isArray(payload.included_service_ids)) {
     row.included_service_ids = payload.included_service_ids.filter(Boolean)
@@ -564,6 +574,8 @@ export async function updateService(id, payload) {
     updated_at: new Date().toISOString(),
     salary_pct: parseOptionalSalaryPct(payload.salary_pct),
   }
+  if (payload.points_award !== undefined) patch.points_award = parsePointsAward(payload.points_award, payload)
+  if (payload.parent_service_id !== undefined) patch.parent_service_id = payload.parent_service_id || null
   if (payload.is_active === undefined) delete patch.is_active
   if (Array.isArray(payload.included_service_ids)) {
     patch.included_service_ids = payload.included_service_ids.filter(Boolean)
@@ -827,6 +839,38 @@ export async function getLoyaltyProgramSettings() {
   const { data, error } = await supabase.from('loyalty_program_settings').select('*').eq('id', 1).maybeSingle()
   if (error) throw mapDbError(error)
   return { ...DEFAULT_LOYALTY_SETTINGS, ...(data || {}) }
+}
+
+export async function updateServicePointsAward(id, points) {
+  if (!id) throw new Error('Service id is required.')
+  const points_award = parsePointsAward(points, {})
+  const { data, error } = await supabase
+    .from('services')
+    .update({ points_award, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id, name, points_award')
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  if (!data) throw new Error('Service not found.')
+  servicesCache.clear()
+  await writeAudit({
+    action: 'update',
+    entityType: 'service',
+    entityId: id,
+    summary: `Set visit points for ${data.name} to ${points_award}`,
+    meta: { points_award },
+  })
+  return data
+}
+
+export async function setBranchGoogleReviewUrl(slug, url) {
+  if (!slug) throw new Error('Branch slug is required.')
+  const { error } = await supabase.rpc('set_branch_google_review_url', {
+    input_slug: slug,
+    input_url: String(url || '').trim(),
+  })
+  if (error) throw mapDbError(error)
+  branchesCache.clear()
 }
 
 export async function updateLoyaltyProgramSettings(input) {

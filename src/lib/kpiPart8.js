@@ -48,9 +48,56 @@ export function uniqueBookingsById(rows = []) {
   return [...map.values()]
 }
 
-/** Failed QA = tickets that entered redo (redo_at set) in the sample. */
+function stampMs(iso) {
+  const ms = iso ? new Date(iso).getTime() : NaN
+  return Number.isFinite(ms) ? ms : null
+}
+
+/** Later of payment or completion — the moment the service actually finished. */
+export function cycleFinishMs(booking) {
+  const stamps = [stampMs(booking?.for_payment_at), stampMs(booking?.completed_at)].filter((n) => n != null)
+  if (!stamps.length) return stampMs(booking?.final_checking_at)
+  return Math.max(...stamps)
+}
+
+export function inTimeRange(ms, startMs, endMs) {
+  return ms != null && ms >= startMs && ms <= endMs
+}
+
+/**
+ * Failed QA stays on the ticket after it leaves redo (payment, release, done).
+ * One count per visit, so a multi-line package or detailing job is not counted once per line.
+ */
 export function failedQaCount(bookings = []) {
-  return bookings.filter((b) => b?.redo_at || String(b?.status || '') === 'redo').length
+  const seen = new Set()
+  let n = 0
+  for (const row of bookings || []) {
+    if (!row?.redo_at && String(row?.status || '') !== 'redo') continue
+    const key = row.visit_group_id || row.booking_id || row.id || null
+    if (key) {
+      if (seen.has(key)) continue
+      seen.add(key)
+    }
+    n += 1
+  }
+  return n
+}
+
+/** Failed QA whose redo stamp falls in the dashboard range, whatever the status is now. */
+export function failedQaInRange(bookings = [], startMs, endMs) {
+  return failedQaCount(
+    (bookings || []).filter((row) => inTimeRange(stampMs(row?.redo_at), startMs, endMs)),
+  )
+}
+
+/** Jobs whose service finished inside the range, with a real start→finish duration. */
+export function finishedForAverage(bookings = [], startMs, endMs) {
+  return uniqueBookingsById(
+    (bookings || []).filter((row) => {
+      if (String(row?.status || '') === 'cancelled') return false
+      return inTimeRange(cycleFinishMs(row), startMs, endMs) && bookingCycleMinutes(row) != null
+    }),
+  )
 }
 
 function hoverBlock(label, lines) {
@@ -92,6 +139,7 @@ export function kpiStatHover(bookings = [], { salesTotal = 0, complaintsCount = 
     ]),
     failedQa: hoverBlock('Failed QA', [
       { label: 'Redo tickets', value: String(failed) },
+      { label: 'After payment', value: 'Still counted' },
       { label: 'Share of range', value: shareLine(failed, n) },
     ]),
     complaints: hoverBlock('Complaints', [

@@ -8,11 +8,19 @@ import { isBookingBoardService } from '../src/lib/serviceKinds.js'
 import { maintenanceNeedsOpsAttention } from '../src/lib/paintMaintenance.js'
 import { isValidCustomerPlate, plateValidationError, safeVehiclePhotoUrl } from '../src/lib/customerAuth.js'
 import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
+import { buildThumbReview } from '../src/lib/serviceReviews.js'
 import { CUSTOMER_ACTIVE_VISIT_STATUSES } from '../src/lib/customerPortalActive.js'
 import { prepareGaragePlateChange } from '../src/lib/customerGarage.js'
 import { inferPhPricingSize } from '../src/lib/phVehicleSizes.js'
 import { normalizePricingSize } from '../src/lib/servicePricing.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { branchName, notifyStaffEvent } from './notifyOpsEvent.mjs'
+
+async function googleReviewUrl(admin, slug) {
+  if (!slug) return null
+  const { data } = await admin.from('branches').select('google_review_url').eq('slug', slug).maybeSingle()
+  return data?.google_review_url || null
+}
 
 function resolveGarageSize(body) {
   const raw = String(body?.vehicle_type || '').trim()
@@ -58,10 +66,10 @@ export async function loadCustomerPortal({ accessToken }) {
 
   const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow, maint] =
     await Promise.all([
-      admin.from('branches').select('slug, name, address, is_active, latitude, longitude').eq('is_active', true).eq('is_archived', false).order('name'),
+      admin.from('branches').select('slug, name, address, is_active, latitude, longitude, google_review_url').eq('is_active', true).eq('is_archived', false).order('name'),
       admin
         .from('bookings')
-        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, final_price_minor, scheduled_start, created_at, customer_name, service_id, services(name, slug, pay_category)')
+        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, final_price_minor, scheduled_start, created_at, customer_name, service_id, visit_group_id, for_payment_at, completed_at, services(name, slug, pay_category)')
         .eq('customer_id', userId)
         .order('created_at', { ascending: false })
         .limit(40),
@@ -74,7 +82,7 @@ export async function loadCustomerPortal({ accessToken }) {
         .limit(40),
       admin
         .from('bookings')
-        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, final_price_minor, queue_number, service_id, services(name, slug, pay_category)')
+        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, final_price_minor, queue_number, service_id, visit_group_id, for_payment_at, completed_at, services(name, slug, pay_category)')
         .eq('customer_id', userId)
         .in('status', CUSTOMER_ACTIVE_VISIT_STATUSES)
         .order('scheduled_start', { ascending: true }),
@@ -466,10 +474,19 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const bookingId = String(body.booking_id || '').trim()
     if (!bookingId) throw Object.assign(new Error('booking_id required.'), { status: 400 })
 
-    const overall = Number(body.overall_rating)
-    const app = Number(body.app_rating)
-    const service = body.service_rating == null || body.service_rating === '' ? null : Number(body.service_rating)
-    const detailing = body.detailing_rating == null || body.detailing_rating === '' ? null : Number(body.detailing_rating)
+    const thumb = body.vote === 'up' || body.vote === 'down' ? buildThumbReview(body.vote, body.comment) : null
+    const overall = thumb ? thumb.overall_rating : Number(body.overall_rating)
+    const app = thumb ? thumb.app_rating : Number(body.app_rating)
+    const service = thumb
+      ? thumb.service_rating
+      : body.service_rating == null || body.service_rating === ''
+        ? null
+        : Number(body.service_rating)
+    const detailing = thumb
+      ? thumb.detailing_rating
+      : body.detailing_rating == null || body.detailing_rating === ''
+        ? null
+        : Number(body.detailing_rating)
     const score = (n) => Number.isInteger(n) && n >= 1 && n <= 5
     if (!score(overall) || !score(app)) {
       throw Object.assign(new Error('Rate customer experience and the app (1-5).'), { status: 400 })
@@ -499,7 +516,8 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       .select('id')
       .eq('booking_id', bookingId)
       .maybeSingle()
-    if (existing?.id) return { ok: true, already: true, id: existing.id }
+    const google_review_url = body.vote === 'up' ? await googleReviewUrl(admin, booking.branch) : null
+    if (existing?.id) return { ok: true, already: true, id: existing.id, google_review_url }
 
     const { data: profile } = await admin.from('customers').select('full_name').eq('id', userId).maybeSingle()
     const { data, error } = await admin
@@ -521,7 +539,18 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       if (error.code === '23505') return { ok: true, already: true }
       throw Object.assign(new Error(error.message), { status: 400 })
     }
-    return { ok: true, id: data?.id }
+    try {
+      await notifyStaffEvent(admin, 'review', {
+        id: data?.id,
+        rating: overall,
+        name: profile?.full_name || booking.customer_name,
+        branchName: await branchName(admin, booking.branch),
+        comment: body.comment,
+      }, { branch: booking.branch || null })
+    } catch {
+      /* ponytail: review is saved; staff alert is best-effort */
+    }
+    return { ok: true, id: data?.id, google_review_url }
   }
 
   throw Object.assign(new Error('Unknown action.'), { status: 400 })

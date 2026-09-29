@@ -100,7 +100,8 @@ async function subscribeWithKey(reg, publicKey) {
   return sub
 }
 
-export async function enablePush(accessToken) {
+/** @param {string | (() => Promise<string>)} tokenOrGetter — pass a getter from click handlers so the prompt is asked first. */
+export async function enablePush(tokenOrGetter) {
   if (!pushSupported()) {
     const reason = pushUnsupportedReason()
     if (reason === 'ios-install') {
@@ -110,10 +111,13 @@ export async function enablePush(accessToken) {
   }
   const publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
   if (!publicKey) throw new Error('VAPID public key missing.')
-  if (!accessToken) throw new Error('Sign in required.')
+  if (!tokenOrGetter) throw new Error('Sign in required.')
 
-  // Chrome only shows the permission prompt from a user gesture; if already granted, no prompt.
-  const permission = await Notification.requestPermission()
+  // Firefox and Safari drop the prompt unless it is requested inside the click — no await may come before this.
+  const permissionAsked = Notification.requestPermission()
+  const accessToken = typeof tokenOrGetter === 'function' ? await tokenOrGetter() : tokenOrGetter
+  if (!accessToken) throw new Error('Sign in required.')
+  const permission = await permissionAsked
   if (permission !== 'granted') throw new Error('Notification permission blocked.')
 
   const reg = await waitForServiceWorker()

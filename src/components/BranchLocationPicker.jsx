@@ -149,7 +149,7 @@ export default function BranchLocationPicker({ latitude, longitude, address, onC
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="City, mall, barangay, street…"
-            className="pl-9"
+            className="pl-9 text-base"
             autoComplete="off"
           />
           {searching ? <Loader2 className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" /> : null}
@@ -159,7 +159,7 @@ export default function BranchLocationPicker({ latitude, longitude, address, onC
                 <li key={hit.id}>
                   <button
                     type="button"
-                    className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm hover:bg-muted"
+                    className="flex min-h-11 w-full items-start gap-2 px-3 py-2.5 text-left text-base hover:bg-muted"
                     onClick={() => pickHit(hit)}
                   >
                     <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -173,7 +173,7 @@ export default function BranchLocationPicker({ latitude, longitude, address, onC
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={useMyLocation} disabled={locating}>
+        <Button type="button" variant="outline" className="min-h-11 px-4 text-base" onClick={useMyLocation} disabled={locating}>
           <Crosshair className="mr-1.5 size-4" />
           {locating ? 'Locating…' : 'Use my location'}
         </Button>

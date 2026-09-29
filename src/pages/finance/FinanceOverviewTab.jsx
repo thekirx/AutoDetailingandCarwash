@@ -34,10 +34,9 @@ import {
   rollupLineKinds,
   rollupPl,
   salesByBranch,
-  shareOfTotal,
-  sumMinor,
   topExpenseCategories,
 } from '@/lib/financeData'
+import { laborMinor, laborPct, rollupSales, salesByLocation, vsPrior } from '@/lib/salesSummary'
 import {
   FinanceEmpty,
   FinanceMetricCell,
@@ -45,6 +44,7 @@ import {
   FinancePanel,
   FinanceTabSkeleton,
 } from './FinanceChrome'
+import { DeltaChip, SalesLocationsTable, SalesPeriodBar } from './FinanceSalesBlocks'
 
 const pesoTick = (v) => {
   const n = Number(v) || 0
@@ -65,16 +65,6 @@ const cashflowConfig = {
   net: { label: 'Net', color: '#0f766e' },
 }
 
-const branchConfig = {
-  sales: { label: 'Sales', color: 'var(--color-brand-primary)' },
-}
-
-const paymentConfig = {
-  cash: { label: 'Cash', color: 'var(--color-surface-cinematic)' },
-  gcash: { label: 'GCash', color: '#0ea5e9' },
-  card: { label: 'Card', color: '#94a3b8' },
-}
-
 const expenseConfig = {
   amount: { label: 'Spend', color: '#b91c1c' },
 }
@@ -90,7 +80,24 @@ export default function FinanceOverviewTab({
   loading,
   onNavigate,
   lastPaidHint = null,
+  saleRows = [],
+  priorSaleRows = [],
+  salesWindow = null,
+  expenses = [],
+  categories = [],
+  period,
+  branchName,
+  onPeriodChange,
 }) {
+  const sales = useMemo(() => rollupSales(saleRows), [saleRows])
+  const priorSales = useMemo(() => rollupSales(priorSaleRows), [priorSaleRows])
+  const labor = useMemo(() => laborMinor(expenses, categories), [expenses, categories])
+  const locations = useMemo(() => {
+    const byBranch = {}
+    for (const r of saleRows) byBranch[r.branch] ??= laborMinor(expenses, categories, r.branch)
+    return salesByLocation(saleRows, priorSaleRows, byBranch)
+  }, [saleRows, priorSaleRows, expenses, categories])
+  const laborShare = laborPct(labor, sales.netMinor)
   const pl = useMemo(() => rollupPl(plRows), [plRows])
   const prior = useMemo(() => rollupPl(priorPlRows), [priorPlRows])
   const comparing = Boolean(compareRange)
@@ -108,50 +115,6 @@ export default function FinanceOverviewTab({
       }),
     [salesRows, plRows, lastPaidHint, range],
   )
-
-  const branchChart = useMemo(
-    () =>
-      byBranch.map((b) => ({
-        branch: branchOptions.find((x) => x.slug === b.branch)?.name || b.branch,
-        sales: b.total_sales_minor / 100,
-        sales_minor: b.total_sales_minor,
-        paid_count: b.paid_count,
-      })),
-    [byBranch, branchOptions],
-  )
-
-  const paymentStack = useMemo(() => {
-    const cash = sumMinor(salesRows, 'cash_sales_minor')
-    const gcash = sumMinor(salesRows, 'gcash_sales_minor')
-    const card = sumMinor(salesRows, 'card_sales_minor')
-    const total = cash + gcash + card
-    if (total <= 0) return []
-    return [
-      {
-        label: 'Mix',
-        cash: cash / 100,
-        gcash: gcash / 100,
-        card: card / 100,
-        cash_minor: cash,
-        gcash_minor: gcash,
-        card_minor: card,
-      },
-    ]
-  }, [salesRows])
-
-  const paymentRows = useMemo(() => {
-    const cash = sumMinor(salesRows, 'cash_sales_minor')
-    const gcash = sumMinor(salesRows, 'gcash_sales_minor')
-    const card = sumMinor(salesRows, 'card_sales_minor')
-    const total = cash + gcash + card
-    return [
-      { name: 'Cash', minor: cash, color: paymentConfig.cash.color },
-      { name: 'GCash', minor: gcash, color: paymentConfig.gcash.color },
-      { name: 'Card', minor: card, color: paymentConfig.card.color },
-    ]
-      .filter((r) => r.minor > 0)
-      .map((r) => ({ ...r, ...shareOfTotal(r.minor, total) }))
-  }, [salesRows])
 
   const recentSales = useMemo(() => {
     return [...(salesRows || [])]
@@ -200,6 +163,49 @@ export default function FinanceOverviewTab({
 
   return (
     <div className="finance-dash flex flex-col gap-5">
+      <SalesPeriodBar
+        period={period}
+        onPeriodChange={onPeriodChange}
+        salesWindow={salesWindow}
+        branchName={branchName}
+      />
+      <FinanceMetricStrip label="Sales">
+        <FinanceMetricCell
+          label="Gross sales"
+          value={formatMoney(sales.grossMinor)}
+          hint={<DeltaChip pct={vsPrior(sales.grossMinor, priorSales.grossMinor)} />}
+        />
+        <FinanceMetricCell
+          label="Transactions"
+          value={sales.count.toLocaleString('en-PH')}
+          hint={<DeltaChip pct={vsPrior(sales.count, priorSales.count)} />}
+        />
+        <FinanceMetricCell
+          label="Labor % of net sales"
+          value={laborShare == null ? 'N/A' : `${laborShare}%`}
+          hint="Posted crew pay ÷ net sales"
+        />
+        <FinanceMetricCell
+          label="Average sale"
+          value={formatMoney(sales.avgMinor)}
+          hint={<DeltaChip pct={vsPrior(sales.avgMinor, priorSales.avgMinor)} />}
+        />
+        <FinanceMetricCell
+          label="Discounts & comps"
+          value={formatMoney(sales.discountsMinor)}
+          hint={<DeltaChip pct={vsPrior(sales.discountsMinor, priorSales.discountsMinor)} />}
+        />
+        <FinanceMetricCell
+          label="Net sales"
+          value={formatMoney(sales.netMinor)}
+          hint={<DeltaChip pct={vsPrior(sales.netMinor, priorSales.netMinor)} />}
+        />
+      </FinanceMetricStrip>
+
+      <FinancePanel title="Locations" description="Net sales, transactions, and labor by branch, compared with the prior period">
+        <SalesLocationsTable rows={locations} branchOptions={branchOptions} />
+      </FinancePanel>
+
       <p className="text-xs text-muted-foreground" data-testid="finance-proof-provenance">
         Proof: income = paid POS sales · expenses = paid/posted only · source view{' '}
         <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.7rem]">finance_daily_pl</code>
@@ -397,98 +403,6 @@ export default function FinanceOverviewTab({
           />
         )}
       </FinancePanel>
-
-      <div className="finance-dash-split">
-        <FinancePanel title="Revenue by branch" description="POS paid sales in the window" bodyClassName="finance-chart-mid">
-          {branchChart.length > 0 ? (
-            <ChartContainer config={branchConfig} className="h-full w-full aspect-auto">
-              <BarChart
-                accessibilityLayer
-                data={branchChart}
-                layout="vertical"
-                margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
-              >
-                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={pesoTick} />
-                <YAxis
-                  type="category"
-                  dataKey="branch"
-                  width={88}
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11 }}
-                />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value) => (
-                        <span className="tabular-nums font-medium">
-                          {formatMoney(Math.round(Number(value) * 100))}
-                        </span>
-                      )}
-                    />
-                  }
-                />
-                <Bar dataKey="sales" fill="var(--color-sales)" radius={[0, 2, 2, 0]} maxBarSize={28} />
-              </BarChart>
-            </ChartContainer>
-          ) : (
-            <FinanceEmpty title="No branch sales" body="Paid tickets in this window will rank branches here." />
-          )}
-        </FinancePanel>
-
-        <FinancePanel title="Payment mix" description="Cash · GCash · Card" bodyClassName="finance-chart-mid">
-          {paymentStack.length > 0 ? (
-            <div className="flex h-full flex-col gap-4">
-              <ChartContainer config={paymentConfig} className="min-h-[88px] w-full aspect-auto flex-none">
-                <BarChart
-                  accessibilityLayer
-                  data={paymentStack}
-                  layout="vertical"
-                  margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
-                  stackOffset="expand"
-                >
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="label" hide />
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value, name) => (
-                          <span className="tabular-nums font-medium">
-                            {formatMoney(Math.round(Number(value) * 100))}
-                            <span className="text-muted-foreground font-normal">
-                              {' '}
-                              · {paymentConfig[name]?.label || name}
-                            </span>
-                          </span>
-                        )}
-                      />
-                    }
-                  />
-                  <Bar dataKey="cash" stackId="a" fill="var(--color-cash)" />
-                  <Bar dataKey="gcash" stackId="a" fill="var(--color-gcash)" />
-                  <Bar dataKey="card" stackId="a" fill="var(--color-card)" radius={[0, 2, 2, 0]} />
-                </BarChart>
-              </ChartContainer>
-              <ul className="finance-mix-legend">
-                {paymentRows.map((r) => (
-                  <li key={r.name}>
-                    <span className="finance-mix-swatch" style={{ background: r.color }} aria-hidden />
-                    <span>{r.name}</span>
-                    <span className="tabular-nums text-muted-foreground">{r.percent}%</span>
-                    <span className="tabular-nums font-medium">{formatMoney(r.minor)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <FinanceEmpty
-              title="No payments recorded"
-              body="Paid sale methods show as a share bar with pesos beside each method."
-            />
-          )}
-        </FinancePanel>
-      </div>
 
       <div className="finance-dash-split">
         <FinancePanel

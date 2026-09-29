@@ -3,6 +3,7 @@
  * Wash = Services & Packages (same-day). Detailing = multi-day pipeline.
  */
 
+import { failedQaCount } from './kpiPart8.js'
 import {
   QUEUE_FAMILY_DETAILING,
   QUEUE_FAMILY_WASH,
@@ -24,6 +25,7 @@ export const DETAILING_FLOOR_LIVE_STATUSES = Object.freeze([
   'waiting',
   'in_progress',
   'final_checking',
+  'redo',
   'for_releasing',
   'for_payment',
 ])
@@ -43,14 +45,14 @@ export const FLOOR_BOARD_FAMILY_META = Object.freeze({
     id: QUEUE_FAMILY_WASH,
     eyebrow: 'Bay status',
     title: 'Services & Packages',
-    hint: 'Same-day wash and package jobs. Waiting through For Payment — including Services Failed QA — are live now; Completed and Cancelled follow the timeline.',
+    hint: 'Same-day wash and package jobs. Waiting through For Payment are live. Services Failed QA stays in the count after the job moves to payment or completion.',
     liveStatuses: WASH_FLOOR_LIVE_STATUSES,
   },
   detailing: {
     id: QUEUE_FAMILY_DETAILING,
     eyebrow: 'Detailing pipeline',
     title: 'Detailing Services',
-    hint: 'Multi-day ceramic, tint, PPF, and paint maintenance. Assign through For payment are live; Completed and Cancelled follow the timeline.',
+    hint: 'Multi-day ceramic, tint, PPF, and paint maintenance. Assign through For payment are live. Detailing Failed QA stays in the count after the job moves on.',
     liveStatuses: DETAILING_FLOOR_LIVE_STATUSES,
   },
 })
@@ -74,6 +76,7 @@ export function floorLaneLabel(status, family = QUEUE_FAMILY_WASH) {
   const key = String(status || '')
   const want = parseQueueFamilyParam(family)
   if (want === QUEUE_FAMILY_DETAILING) {
+    if (key === 'redo') return 'Detailing Failed QA'
     return detailingBoardStatusLabel(key) || WASH_FLOOR_LANE_LABELS[key] || key
   }
   return WASH_FLOOR_LANE_LABELS[key] || key
@@ -117,6 +120,25 @@ export function splitFloorBoardLanes({ activeQueue = [], periodJobs = [] } = {})
   }
 
   return { wash, detailing }
+}
+
+/**
+ * Lane "Failed QA" keeps jobs that already left redo for payment or completion.
+ * Live redo tickets and timeline redo_at rows are one visit each.
+ */
+export function mergeTimelineFailedQa(lanes, { activeQueue = [], failedQaJobs = [] } = {}) {
+  const next = {
+    wash: { ...lanes.wash },
+    detailing: { ...lanes.detailing },
+  }
+  for (const family of [QUEUE_FAMILY_WASH, QUEUE_FAMILY_DETAILING]) {
+    const live = filterTicketsByFamily(activeQueue, family).filter(
+      (row) => row?.status === 'redo' || row?.redo_at,
+    )
+    const timeline = filterTicketsByFamily(failedQaJobs, family)
+    next[family].redo = failedQaCount([...live, ...timeline])
+  }
+  return next
 }
 
 export function sumFloorLaneCounts(byFamily = {}) {

@@ -4,8 +4,11 @@ import { Car, MapPin } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import { Badge, QueueStats, Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
 import VisitProgress from '@/components/customer/VisitProgress'
+import CustomerPinControl from '@/components/customer/CustomerPinControl'
 import { usePublicBranches } from '@/lib/branches'
+import { branchDistanceKm } from '@/lib/branchGeo'
 import { fetchPortal } from '@/lib/customerPortalClient'
+import { formatDistanceKm, loadCustomerPin, resolveCustomerQueueBranch } from '@/lib/customerLocation'
 import { CUSTOMER_QUEUE_PATH, queueCountsFromRow } from '@/lib/liveQueuePath'
 import { usePageMeta } from '@/lib/pageMeta'
 import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
@@ -20,6 +23,7 @@ export default function CustomerQueuePage() {
   const { branches, loading: branchesLoading, error: branchesError } = usePublicBranches()
   const { countsBySlug, loading, error, updatedAt, reload } = usePublicQueueCounts()
   const [myCars, setMyCars] = useState(null)
+  const [pin, setPin] = useState(() => loadCustomerPin())
 
   useEffect(() => {
     let cancelled = false
@@ -35,10 +39,16 @@ export default function CustomerQueuePage() {
     }
   }, [])
 
-  const selectedSlug = useMemo(() => {
-    if (wanted && branches.some((b) => b.slug === wanted)) return wanted
-    return branches[0]?.slug || ''
-  }, [wanted, branches])
+  const resolved = useMemo(
+    () => resolveCustomerQueueBranch({ wanted, pin, branches }),
+    [wanted, pin, branches],
+  )
+  const selectedSlug = resolved.slug
+
+  useEffect(() => {
+    if (wanted || resolved.source !== 'nearest' || !resolved.slug) return
+    setParams({ branch: resolved.slug }, { replace: true })
+  }, [wanted, resolved.source, resolved.slug, setParams])
 
   const selectedBranch = branches.find((b) => b.slug === selectedSlug) || null
 
@@ -60,24 +70,35 @@ export default function CustomerQueuePage() {
 
   return (
     <CustomerAppFrame title="Live queue" subtitle="Real-time view of the current queue." backTo="/account" cols>
-      <label className="capp-row is-static capp-span" style={{ cursor: 'default' }}>
+      <div className="capp-row is-static capp-branch-card capp-span">
         <span className="capp-row-icon" aria-hidden>
           <MapPin size={18} strokeWidth={1.75} />
         </span>
-        <span className="capp-row-body">
+        <div className="capp-row-body">
           <strong>{selectedBranch ? branchShortName(selectedBranch.name) : 'Branch'}</strong>
           <em>{selectedBranch?.address || 'Pick a branch to plan your arrival.'}</em>
           {branchesLoading && !branches.length ? null : (
             <select className="capp-select mt-2" aria-label="Branch" value={selectedSlug} onChange={(e) => selectBranch(e.target.value)}>
-              {branches.map((b) => (
-                <option key={b.slug} value={b.slug}>
-                  {b.name}
-                </option>
-              ))}
+              {branches.map((b) => {
+                const km = pin ? branchDistanceKm(pin, b) : null
+                const away = km == null ? '' : ` · ${formatDistanceKm(km)}`
+                return (
+                  <option key={b.slug} value={b.slug}>
+                    {b.name}{away}
+                  </option>
+                )
+              })}
             </select>
           )}
-        </span>
-      </label>
+          <CustomerPinControl
+            branches={branches}
+            currentSlug={selectedSlug}
+            pin={pin}
+            onPin={setPin}
+            onChoose={selectBranch}
+          />
+        </div>
+      </div>
 
       {branchesError || error ? (
         <div className="capp-empty capp-span" role="alert">

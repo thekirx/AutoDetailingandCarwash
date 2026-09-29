@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-24T13:45:36.971Z",
+  "at": "2026-09-26T13:34:16.047Z",
   "redesignRequired": false,
   "artifactsOk": true,
   "checks": {
@@ -16,7 +16,7 @@
     "egressIp": "180.191.244.237",
     "errorCode": 11,
     "errorKind": "unauthorized_ip",
-    "blocker": "Unauthorized IP — ask BrandTxt to whitelist 180.191.244.237 (and Vercel static egress for production).",
+    "blocker": "Unauthorized IP — ask BrandTxt to whitelist 180.191.244.237 before customer reminders can send.",
     "humanMustSendGmail": true
   },
   "vercelStaticIps": {

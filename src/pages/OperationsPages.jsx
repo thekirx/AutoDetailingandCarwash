@@ -361,7 +361,7 @@ function ScopedFloorDashboard() {
     [visibleQueue, timingWarnings],
   )
   const failedQaTickets = useMemo(
-    () => visibleQueue.filter((ticket) => ticket.status === 'redo'),
+    () => visibleQueue.filter((ticket) => ticket.status === 'redo' || ticket.redo_at),
     [visibleQueue],
   )
   const salesSummary = salesBoard.summary || {

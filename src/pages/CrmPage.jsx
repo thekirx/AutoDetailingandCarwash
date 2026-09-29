@@ -388,7 +388,7 @@ export default function CrmPage() {
     if (canWriteFinance(profile)) {
       supabase
         .from('expense_categories')
-        .select('id, name, kind, is_active')
+        .select('id, name, kind')
         .order('name')
         .then(({ data, error }) => {
           if (!error) setExpenseCats(data || [])
@@ -576,12 +576,11 @@ export default function CrmPage() {
                     const { error } = await supabase.from('expense_categories').insert({
                       name,
                       kind: newExpenseCat.kind || 'general',
-                      is_active: true,
                     })
                     if (error) return toast.error(error.message)
                     toast.success('Category created')
                     setNewExpenseCat({ name: '', kind: 'general' })
-                    const { data } = await supabase.from('expense_categories').select('id, name, kind, is_active').order('name')
+                    const { data } = await supabase.from('expense_categories').select('id, name, kind').order('name')
                     setExpenseCats(data || [])
                   }}
                 >
@@ -607,7 +606,7 @@ export default function CrmPage() {
                 </form>
                 <ul className="text-sm text-muted-foreground">
                   {expenseCats.map((c) => (
-                    <li key={c.id}>{c.name} · {c.kind}{c.is_active ? '' : ' (off)'}</li>
+                    <li key={c.id}>{c.name} · {c.kind}</li>
                   ))}
                 </ul>
               </CardContent>

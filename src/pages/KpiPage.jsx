@@ -5,7 +5,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canAccessInquiries, canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { applyBranchScope, collectPaged, resolveKpiRpcBranch } from '@/lib/crmInsights'
-import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaCount, kpiStatHover } from '@/lib/kpiPart8'
+import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaInRange, finishedForAverage, inTimeRange, kpiStatHover } from '@/lib/kpiPart8'
 import { isOverSla } from '@/lib/ownerRevisionsPhase7'
 import { opsTabSearchParams, resolveOpsTab } from '@/lib/opsShell'
 import { supabase } from '@/lib/supabase'
@@ -61,6 +61,7 @@ export default function KpiPage() {
   const visibleTabs = KPI_SHELL_TABS.filter((t) => allowedTabs.includes(t.id))
   const [crewRows, setCrewRows] = useState([])
   const [bookings, setBookings] = useState([])
+  const [metricRows, setMetricRows] = useState([])
   const [sales, setSales] = useState([])
   const [complaints, setComplaints] = useState([])
   const [services, setServices] = useState([])
@@ -155,6 +156,26 @@ export default function KpiPage() {
       }, 1000)
       setBookings(bookingRows)
 
+      const metricSelect =
+        'id, branch, service_id, visit_group_id, status, waiting_at, in_progress_at, for_payment_at, completed_at, final_checking_at, final_price_minor, redo_at'
+      const outcomeRows = await collectPaged(async (from, to) => {
+        let bq = supabase
+          .from('bookings')
+          .select(metricSelect)
+          .eq('is_archived', false)
+          .or(
+            `and(redo_at.gte."${startIso}",redo_at.lte."${endIso}"),and(for_payment_at.gte."${startIso}",for_payment_at.lte."${endIso}"),and(completed_at.gte."${startIso}",completed_at.lte."${endIso}"),and(in_progress_at.gte."${startIso}",in_progress_at.lte."${endIso}")`,
+          )
+          .order('id', { ascending: true })
+          .range(from, to)
+        bq = applyBranchScope(bq, branchScope)
+        if (serviceFilter !== 'all') bq = bq.eq('service_id', serviceFilter)
+        const { data, error } = await bq
+        if (error) throw error
+        return data || []
+      }, 1000)
+      setMetricRows(outcomeRows)
+
       const saleRows = await collectPaged(async (from, to) => {
         let sq = supabase
           .from('sales')
@@ -210,12 +231,22 @@ export default function KpiPage() {
     () => Object.fromEntries(services.map((s) => [s.id, s.sla_minutes])),
     [services],
   )
-  const avgCycle = useMemo(() => averageCycleMinutes(bookings), [bookings])
-  const avgWait = useMemo(() => averageWaitMinutes(bookings), [bookings])
+  const rangeStartMs = useMemo(() => new Date(`${range.start}T00:00:00+08:00`).getTime(), [range.start])
+  const rangeEndMs = useMemo(() => new Date(`${range.end}T23:59:59.999+08:00`).getTime(), [range.end])
+  const finishedRows = useMemo(
+    () => finishedForAverage(metricRows, rangeStartMs, rangeEndMs),
+    [metricRows, rangeStartMs, rangeEndMs],
+  )
+  const startedRows = useMemo(
+    () => metricRows.filter((row) => inTimeRange(row?.in_progress_at ? new Date(row.in_progress_at).getTime() : null, rangeStartMs, rangeEndMs)),
+    [metricRows, rangeStartMs, rangeEndMs],
+  )
+  const avgCycle = useMemo(() => averageCycleMinutes(finishedRows), [finishedRows])
+  const avgWait = useMemo(() => averageWaitMinutes(startedRows), [startedRows])
   const cancelCount = useMemo(() => bookings.filter((b) => b.status === 'cancelled').length, [bookings])
-  const failedQa = useMemo(() => failedQaCount(bookings), [bookings])
+  const failedQa = useMemo(() => failedQaInRange(metricRows, rangeStartMs, rangeEndMs), [metricRows, rangeStartMs, rangeEndMs])
   const branchCompare = useMemo(() => compareBranchesByCompleted(bookings), [bookings])
-  const byService = useMemo(() => aggregateByService(bookings, serviceNames), [bookings, serviceNames])
+  const byService = useMemo(() => aggregateByService(finishedRows, serviceNames), [finishedRows, serviceNames])
   const salesTotal = sales.reduce((s, r) => s + Number(r.total_minor || 0), 0)
   const hover = useMemo(
     () => kpiStatHover(bookings, { salesTotal, complaintsCount: complaints.length }),
@@ -303,11 +334,27 @@ export default function KpiPage() {
       <TooltipProvider delay={120}>
         <div className="flex flex-col gap-4">
           <div className="kpi-board">
-            <Stat label="Avg cycle (min)" value={avgCycle == null ? '—' : Math.round(avgCycle)} lines={hover.cycle.lines} hero />
+            <Stat
+              label="Avg cycle (min)"
+              value={avgCycle == null ? '—' : Math.round(avgCycle)}
+              lines={[
+                { label: 'What', value: 'in_progress → payment/complete' },
+                { label: 'Tickets timed', value: String(finishedRows.length) },
+                { label: 'Which jobs', value: 'Finished in this range' },
+              ]}
+              hero
+            />
             <div className="kpi-strip">
               <Stat label="Avg wait (min)" value={avgWait == null ? '—' : Math.round(avgWait)} lines={hover.wait.lines} />
               <Stat label="Cancelled" value={cancelCount} lines={hover.cancelled.lines} />
-              <Stat label="Failed QA" value={failedQa} lines={hover.failedQa.lines} />
+              <Stat
+                label="Failed QA"
+                value={failedQa}
+                lines={[
+                  { label: 'Redo tickets', value: String(failedQa) },
+                  { label: 'After payment', value: 'Still counted' },
+                ]}
+              />
             </div>
           </div>
           <div className="kpi-secondary">
@@ -376,7 +423,10 @@ export default function KpiPage() {
 
         <TabsContent value="service" className="mt-4">
           <Card>
-            <CardHeader><CardTitle>Per service</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Per service</CardTitle>
+              <CardDescription>Average minutes for jobs that finished in this range, one row per service.</CardDescription>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>

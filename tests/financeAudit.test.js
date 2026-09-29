@@ -75,7 +75,8 @@ describe('finance audit', () => {
     assert.match(src, /downloadExcel/)
     assert.match(src, /printAsPdf/)
     assert.match(src, /Where spend goes|expenseBars/)
-    assert.match(src, /Revenue by branch|branchChart/)
+    assert.match(src, /title="Locations"/)
+    assert.match(src, /salesByLocation/)
   })
 
   it('6–7 Finance page still hosts shift-close and expense-reports tabs', () => {

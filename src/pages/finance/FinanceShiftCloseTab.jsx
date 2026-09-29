@@ -128,7 +128,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
     else {
       toast.success(`Shift close ${data?.status || action}`)
       setReviewNote('')
-      if (action === 'accept' && selected) {
+      if ((action === 'accept' || action === 'reject') && selected) {
         try {
           const { data: sessionData } = await supabase.auth.getSession()
           const token = sessionData?.session?.access_token
@@ -143,13 +143,14 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                 branch: selected.branch,
                 business_date: selected.business_date,
                 close_id: selected.id,
+                action,
               }),
             })
             const notifyBody = await notifyRes.json().catch(() => null)
             // Owner daily SMS is intentionally off (outbound customer reminders only).
             // Push notify failure is still worth surfacing; do not nag about owner handset env.
             if (!notifyRes.ok) {
-              toast.warning('Floor-pay notify request failed (push may be delayed)')
+              toast.warning('Shift-close notify request failed (push may be delayed)')
             } else if (notifyBody?.notify?.push?.error) {
               toast.warning(`Floor-pay push — ${String(notifyBody.notify.push.error).slice(0, 120)}`)
             }

@@ -185,8 +185,8 @@ describe('request.md money + POS + Bacoor', () => {
 
   it('finance hover percent is a real share, not a hardcoded 50', () => {
     assert.deepEqual(shareOfTotal(2500, 10000), { value: 2500, percent: 25 })
-    const finance = read('src/pages/finance/FinanceOverviewTab.jsx')
-    assert.match(finance, /shareOfTotal/)
+    const finance = read('src/pages/finance/FinanceReportsTab.jsx')
+    assert.match(finance, /paymentTypes\(sales\)/)
   })
 
   it('Bacoor close text matches the paper sections with known amounts', () => {
@@ -298,8 +298,8 @@ describe('request.md reviews + garage', () => {
     const reviews = read('src/pages/ReviewsPage.jsx')
     const css = read('src/styles-customer-app.css')
     const app = read('src/App.jsx')
-    assert.match(home, /buildCompletedVisitReview/)
-    assert.match(home, /visitReviewAxesForKind/)
+    assert.match(home, /buildThumbReview/)
+    assert.match(home, /capp-thumb/)
     assert.match(reviews, /VISIT_REVIEW_AXES/)
     assert.match(css, /min-width: 44px/)
     assert.match(app, /path="reviews"/)

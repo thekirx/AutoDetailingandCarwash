@@ -1,21 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Cake, CalendarDays, CalendarPlus, Car, Plus, Receipt, Star, Wrench } from 'lucide-react'
+import { Cake, CalendarDays, CalendarPlus, Car, Plus, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatMoney } from '@/queue/queueApi'
 import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
 import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
 import { supabase } from '@/lib/supabase'
 import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH } from '@/lib/customerAccountNav'
+import CustomerPinControl from '@/components/customer/CustomerPinControl'
+import { branchDistanceKm } from '@/lib/branchGeo'
 import { branchLabel, fetchPortal, greeting, initials, portalAction } from '@/lib/customerPortalClient'
-import { buildCompletedVisitReview, visitReviewAxesForKind } from '@/lib/serviceReviews'
+import { formatDistanceKm, loadCustomerPin, resolveCustomerQueueBranch } from '@/lib/customerLocation'
+import { buildThumbReview } from '@/lib/serviceReviews'
+import { latestFinishedVisit, latestReviewableVisit, reviewDelayRemainingMs } from '@/lib/visitReviewDelay'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import NotificationBell from '@/components/NotificationBell'
 import ActiveVisitCard from '@/components/customer/ActiveVisitCard'
 import BranchWeather from '@/components/customer/BranchWeather'
 import StampTrack from '@/components/customer/StampTrack'
 import { Badge, Pills, QueueStats, Row, SectionHead, Skeleton, Tile } from '@/components/customer/CustomerUi'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -25,9 +28,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
-function latestCompletedVisit(history = []) {
-  return (history || []).find((row) => row?.status === 'completed') || null
-}
+const EMPTY_LIST = []
 
 function formatWhen(iso) {
   if (!iso) return '-'
@@ -56,19 +57,21 @@ export default function CustomerAccountPage() {
   const { profile: authProfile, user, session, loading: authLoading } = useAuth()
   const [data, setData] = useState(null)
   const [selectedBranch, setSelectedBranch] = useState('')
+  const [pin, setPin] = useState(() => loadCustomerPin())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('history')
   const [ratingOpen, setRatingOpen] = useState(false)
-  const [ratingScores, setRatingScores] = useState({ overall: 0, app: 0, service: 0, detailing: 0 })
+  const [ratingVote, setRatingVote] = useState('')
   const [ratingComment, setRatingComment] = useState('')
   const [ratingSaving, setRatingSaving] = useState(false)
   const [ratingDone, setRatingDone] = useState(false)
+  const [reviewNow, setReviewNow] = useState(() => Date.now())
   const { countsBySlug } = usePublicQueueCounts()
 
-  const branches = data?.branches || []
-  const bookings = data?.bookings || []
-  const history = data?.history || []
+  const branches = data?.branches || EMPTY_LIST
+  const bookings = data?.bookings || EMPTY_LIST
+  const history = data?.history || EMPTY_LIST
   const purchases = data?.purchases || []
   const vehicles = data?.vehicles || []
   const loyalty = data?.loyalty
@@ -81,7 +84,7 @@ export default function CustomerAccountPage() {
     try {
       const next = await fetchPortal()
       setData(next)
-      const latest = latestCompletedVisit(next.history)
+      const latest = latestFinishedVisit([...(next.history || []), ...(next.bookings || [])])
       if (latest?.id) {
         const { data: existing } = await supabase.from('service_reviews').select('id').eq('booking_id', latest.id).maybeSingle()
         setRatingDone(Boolean(existing))
@@ -91,7 +94,8 @@ export default function CustomerAccountPage() {
       setSelectedBranch((current) => {
         const list = next.branches || []
         if (current && list.some((b) => b.slug === current)) return current
-        return ''
+        const resolved = resolveCustomerQueueBranch({ pin: loadCustomerPin(), branches: list })
+        return resolved.source === 'nearest' ? resolved.slug : ''
       })
     } catch (err) {
       setError(err.message)
@@ -110,9 +114,8 @@ export default function CustomerAccountPage() {
   const fullName = data?.profile?.full_name || authProfile?.full_name || ''
   const firstName = fullName.split(' ')[0] || ''
   const activeVisit = bookings[0]
-  const reviewVisit = latestCompletedVisit(history)
-  const reviewKind = reviewVisit?.kind === 'detailing' ? 'detailing' : 'service'
-  const reviewAxes = visitReviewAxesForKind(reviewKind)
+  const reviewVisit = latestReviewableVisit([...history, ...bookings], reviewNow)
+  const reviewBranch = branches.find((b) => b.slug === reviewVisit?.branch)
   const weatherBranch =
     branches.find((b) => b.slug === selectedBranch) ||
     branches.find((b) => b.slug === activeVisit?.branch) ||
@@ -121,6 +124,23 @@ export default function CustomerAccountPage() {
     if (!loyalty || loyalty.stampsEnabled === false) return 'Rewards and perks'
     return `${loyalty.completed ?? 0}/${loyalty.cardSlots ?? 10} stamps`
   }, [loyalty])
+  const nearestSlug = useMemo(() => {
+    if (!pin) return ''
+    const resolved = resolveCustomerQueueBranch({ pin, branches })
+    return resolved.source === 'nearest' ? resolved.slug : ''
+  }, [pin, branches])
+
+  useEffect(() => {
+    const remaining = reviewDelayRemainingMs([...history, ...bookings], reviewNow)
+    if (remaining == null) return undefined
+    const id = window.setTimeout(() => setReviewNow(Date.now()), remaining + 250)
+    return () => window.clearTimeout(id)
+  }, [history, bookings, reviewNow])
+
+  useEffect(() => {
+    if (selectedBranch || !nearestSlug) return
+    setSelectedBranch(nearestSlug)
+  }, [selectedBranch, nearestSlug])
 
   if (authLoading) {
     return (
@@ -138,15 +158,24 @@ export default function CustomerAccountPage() {
     return <Navigate to="/signin" replace />
   }
 
-  async function submitReview() {
-    const scores = buildCompletedVisitReview(ratingScores, ratingComment, { kind: reviewKind })
+  async function submitReview(vote) {
+    const scores = buildThumbReview(vote, ratingComment)
     if (!scores || !reviewVisit?.id) return
+    setRatingVote(vote)
     setRatingSaving(true)
     try {
       const body = await portalAction('submit-review', { booking_id: reviewVisit.id, ...scores })
       setRatingDone(true)
       setRatingOpen(false)
-      toast.success(body.already ? 'Already rated this visit' : 'Thanks for the review')
+      const link = body.google_review_url || reviewBranch?.google_review_url || ''
+      if (vote === 'up' && link) {
+        window.open(link, '_blank', 'noopener,noreferrer')
+        toast.success('Thanks — Google reviews is open so you can share it there.')
+      } else if (vote === 'up') {
+        toast.success('Thanks. This branch has no Google review link yet.')
+      } else {
+        toast.success(body.already ? 'Already rated this visit' : 'Thanks — we will look into it.')
+      }
     } catch (err) {
       toast.error(err.message || 'Could not submit review')
     } finally {
@@ -217,22 +246,7 @@ export default function CustomerAccountPage() {
         </div>
       ) : activeVisit ? (
         <ActiveVisitCard visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
-      ) : (
-        <div className="capp-empty capp-span capp-home-action">
-          <strong>No active visit</strong>
-          Book a service to track your car on the floor.
-          <div className="capp-empty-actions">
-            <Link className="capp-btn capp-btn-fill" to={CUSTOMER_BOOK_PATH}>
-              <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />
-              Book a service
-            </Link>
-            <Link className="capp-btn capp-btn-ghost" to={`${CUSTOMER_MORE_PATH}?tab=garage&add=1`}>
-              <Plus size={16} strokeWidth={1.75} aria-hidden />
-              Add a car
-            </Link>
-          </div>
-        </div>
-      )}
+      ) : null}
 
       {dueMaintenance.length ? (
         <div className="capp-card capp-span" role="status">
@@ -257,7 +271,7 @@ export default function CustomerAccountPage() {
       ) : null}
 
       <div className={`capp-tiles capp-span${!activeVisit ? ' capp-home-quick' : ''}`}>
-        {activeVisit ? <Tile icon={CalendarPlus} title="Book a service" sub="Schedule your visit" to={CUSTOMER_BOOK_PATH} /> : null}
+        <Tile icon={CalendarPlus} title="Book a service" sub="Schedule your visit" to={CUSTOMER_BOOK_PATH} />
         <Tile
           icon={vehicles.length ? Car : Plus}
           title={vehicles.length ? 'My cars' : 'Add a car'}
@@ -274,6 +288,9 @@ export default function CustomerAccountPage() {
               <p className="capp-eyebrow">Loyalty</p>
               <h2 className="capp-title">Loyalty program</h2>
               <p className="capp-meta">{stampsLine}</p>
+              {loyalty.pointsEnabled !== false ? (
+                <p className="capp-meta">{loyalty.loyaltyPoints ?? 0} points</p>
+              ) : null}
             </div>
           </div>
           <StampTrack
@@ -292,7 +309,11 @@ export default function CustomerAccountPage() {
       )}
 
       <section className="capp-section" aria-label="Live queue">
-        <SectionHead title="Live queue" note={selectedBranch ? branchLabel(branches, selectedBranch) : 'Choose a branch'} to={selectedBranch ? queueHref : undefined} />
+        <SectionHead
+          title="Live queue"
+          note={selectedBranch ? (nearestSlug === selectedBranch ? 'Nearest to you' : branchLabel(branches, selectedBranch)) : 'Choose a branch'}
+          to={selectedBranch ? queueHref : undefined}
+        />
         <label className="capp-field">
           <span>Branch</span>
           <select
@@ -301,14 +322,25 @@ export default function CustomerAccountPage() {
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
           >
-            <option value="">Select a branch first</option>
-            {branches.map((b) => (
-              <option key={b.slug} value={b.slug}>
-                {b.name}
-              </option>
-            ))}
+            {pin ? null : <option value="">Select a branch first</option>}
+            {branches.map((b) => {
+              const km = pin ? branchDistanceKm(pin, b) : null
+              const away = km == null ? '' : ` · ${formatDistanceKm(km)}`
+              return (
+                <option key={b.slug} value={b.slug}>
+                  {b.name}{away}
+                </option>
+              )
+            })}
           </select>
         </label>
+        <CustomerPinControl
+          branches={branches}
+          currentSlug={selectedBranch}
+          pin={pin}
+          onPin={setPin}
+          onChoose={setSelectedBranch}
+        />
         {selectedBranch ? (
           <QueueStats counts={selectedCounts} />
         ) : (
@@ -357,46 +389,37 @@ export default function CustomerAccountPage() {
           <Dialog open={ratingOpen} onOpenChange={setRatingOpen}>
             <DialogContent className="capp sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Rate your visit</DialogTitle>
+                <DialogTitle>How was your visit?</DialogTitle>
                 <DialogDescription>
                   {formatVisitDate(reviewVisit.scheduled_start || reviewVisit.created_at)}
                   {reviewVisit.service_name ? ` · ${reviewVisit.service_name}` : ''}
                 </DialogDescription>
               </DialogHeader>
-              {reviewAxes.map((axis) => {
-                const label = axis.customerLabel || axis.label
-                return (
-                  <div key={axis.id} className="capp-rate">
-                    <p className="capp-rate-label">{label}</p>
-                    <div className="capp-rate-stars" role="group" aria-label={label}>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          className={n <= (ratingScores[axis.id] || 0) ? 'is-on' : ''}
-                          aria-label={`${label} ${n} of 5`}
-                          aria-pressed={n === ratingScores[axis.id]}
-                          onClick={() => setRatingScores((s) => ({ ...s, [axis.id]: n }))}
-                        >
-                          <Star size={22} fill={n <= (ratingScores[axis.id] || 0) ? 'currentColor' : 'none'} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
+              <div className="capp-thumbs" role="group" aria-label="How was your visit?">
+                <button
+                  type="button"
+                  className={`capp-thumb${ratingVote === 'up' ? ' is-on' : ''}`}
+                  disabled={ratingSaving}
+                  onClick={() => submitReview('up')}
+                >
+                  <ThumbsUp size={22} strokeWidth={1.75} aria-hidden />
+                  Thumbs up
+                </button>
+                <button
+                  type="button"
+                  className={`capp-thumb${ratingVote === 'down' ? ' is-on' : ''}`}
+                  disabled={ratingSaving}
+                  onClick={() => submitReview('down')}
+                >
+                  <ThumbsDown size={22} strokeWidth={1.75} aria-hidden />
+                  Thumbs down
+                </button>
+              </div>
               <label className="capp-field">
-                <span>Comment (optional)</span>
-                <textarea rows={2} value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} />
+                <span>Note (optional)</span>
+                <textarea rows={2} value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Tell us what stood out" />
               </label>
-              <Button
-                type="button"
-                className="min-h-11 w-full"
-                disabled={!buildCompletedVisitReview(ratingScores, ratingComment, { kind: reviewKind }) || ratingSaving}
-                onClick={submitReview}
-              >
-                {ratingSaving ? 'Sending…' : 'Submit review'}
-              </Button>
+              <p className="capp-meta">A thumbs up opens this branch&apos;s Google review page.</p>
             </DialogContent>
           </Dialog>
         </section>

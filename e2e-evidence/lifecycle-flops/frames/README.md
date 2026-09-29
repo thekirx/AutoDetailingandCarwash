@@ -1,6 +1,6 @@
 # FLOPS recording frames
 
-Captured 4 CDP screencast frames (kept up to 120 JPEGs).
+Captured 2 CDP screencast frames (kept up to 120 JPEGs).
 Stitch with ffmpeg if available:
 
 ```

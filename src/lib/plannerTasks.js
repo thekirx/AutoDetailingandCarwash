@@ -1,6 +1,7 @@
 /** Task list filters + flatten. Interface for Planner Tasks / Review. */
 
 import { getLocalCalendarDate } from './localCalendarDate.js'
+import { NOTIFY_EVENTS } from './notifyRouting.js'
 
 export function flattenPlannerCards(board) {
   const lists = [...(board?.plan_lists || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
@@ -167,11 +168,13 @@ export function toggleStaffId(ids, staffId) {
 
 export function buildPlannerAssignNotify({ title, cardId } = {}) {
   const name = String(title || '').trim() || 'Planner task'
+  const { urls } = NOTIFY_EVENTS.planner_task
   return {
     kind: 'planner_task',
     title: 'Planner task assigned',
     body: name,
-    url: '/operations/my-tasks',
+    url: urls[0],
+    urls,
     tag: cardId ? `plan-card:${cardId}` : 'plan-card',
   }
 }

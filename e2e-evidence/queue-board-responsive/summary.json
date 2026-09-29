@@ -1,0 +1,80 @@
+{
+  "fails": 0,
+  "results": [
+    {
+      "viewport": "mobile-375",
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "overflowX": 0,
+      "boardScrollWidth": 343,
+      "boardClientWidth": 343,
+      "boardOverflow": 0,
+      "boardHeight": 785.640625,
+      "hasChips": false,
+      "laneCount": 5,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": "mobile-375.png"
+    },
+    {
+      "viewport": "mobile-landscape",
+      "scrollWidth": 667,
+      "clientWidth": 667,
+      "overflowX": 0,
+      "boardScrollWidth": 619,
+      "boardClientWidth": 619,
+      "boardOverflow": 0,
+      "boardHeight": 255,
+      "hasChips": false,
+      "laneCount": 5,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": "mobile-landscape.png"
+    },
+    {
+      "viewport": "tablet-768",
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "overflowX": 0,
+      "boardScrollWidth": 472,
+      "boardClientWidth": 472,
+      "boardOverflow": 0,
+      "boardHeight": 785.640625,
+      "hasChips": false,
+      "laneCount": 5,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": "tablet-768.png"
+    },
+    {
+      "viewport": "laptop-1280",
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "overflowX": 0,
+      "boardScrollWidth": 968,
+      "boardClientWidth": 968,
+      "boardOverflow": 0,
+      "boardHeight": 544,
+      "hasChips": false,
+      "laneCount": 5,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": "laptop-1280.png"
+    },
+    {
+      "viewport": "desktop-1440",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowX": 0,
+      "boardScrollWidth": 1128,
+      "boardClientWidth": 1128,
+      "boardOverflow": 0,
+      "boardHeight": 612,
+      "hasChips": false,
+      "laneCount": 5,
+      "issues": [],
+      "verdict": "PASS",
+      "shot": "desktop-1440.png"
+    }
+  ]
+}

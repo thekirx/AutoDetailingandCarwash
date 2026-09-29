@@ -1,4 +1,4 @@
-/** Finance Reports tab: sales, ops, retention, shift closes, best sellers — same filter window as Finance. */
+/** Finance Reports tab: Square-style sales summary, payment types, top items, then ops, retention, shift closes. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Download, Users, Wrench, ShoppingCart, ClipboardCheck, Trophy } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
@@ -7,12 +7,15 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import { supabase } from '@/lib/supabase'
 import { canAccessInquiries } from '@/auth/permissions'
-import { aggregateBestSellers, collectInChunks, collectPaged } from '@/lib/crmInsights'
+import { collectInChunks, collectPaged } from '@/lib/crmInsights'
+import { grossByMonth, paymentTypes, rollupSales, topItems, vsPrior } from '@/lib/salesSummary'
 import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
 import {
@@ -34,9 +37,18 @@ import {
   FinancePanel,
   FinanceTabSkeleton,
 } from './FinanceChrome'
+import { DeltaChip, PaymentTypesList, SalesPeriodBar, TopItemsTable } from './FinanceSalesBlocks'
 
-const bestSellerConfig = {
-  total: { label: 'Sales (₱)', color: 'hsl(var(--primary))' },
+const monthConfig = {
+  current: { label: 'This year', color: 'var(--color-brand-primary)' },
+  prior: { label: 'Last year', color: '#94a3b8' },
+}
+
+const pesoTick = (v) => {
+  const n = Number(v) || 0
+  if (Math.abs(n) >= 1_000_000) return `₱${(n / 1_000_000).toFixed(1)}M`
+  if (Math.abs(n) >= 1_000) return `₱${(n / 1_000).toFixed(0)}k`
+  return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: 0 })}`
 }
 
 export default function FinanceReportsTab({
@@ -47,6 +59,12 @@ export default function FinanceReportsTab({
   loading,
   profile,
   branchFilter,
+  saleRows = [],
+  priorSaleRows = [],
+  salesWindow = null,
+  period,
+  branchName,
+  onPeriodChange,
 }) {
   // Complaints are readable by Super Admin / Assistant Super Admin only; for anyone
   // else RLS silently returns 0, so skip the query rather than show a false zero.
@@ -55,7 +73,7 @@ export default function FinanceReportsTab({
   const [retention, setRetention] = useState([])
   const [retentionSummary, setRetentionSummary] = useState({ fresh: 0, returning: 0, loyal: 0, total: 0 })
   const [shiftCloses, setShiftCloses] = useState([])
-  const [bestSellers, setBestSellers] = useState([])
+  const [topItemRows, setTopItemRows] = useState([])
   const [sellersLoading, setSellersLoading] = useState(true)
 
   const load = useCallback(async () => {
@@ -160,10 +178,10 @@ export default function FinanceReportsTab({
             return data || []
           })
         : []
-      setBestSellers(aggregateBestSellers(lineRows, 8))
+      setTopItemRows(topItems(lineRows, 10))
     } catch (err) {
       toast.error(err.message)
-      setBestSellers([])
+      setTopItemRows([])
     } finally {
       setSellersLoading(false)
     }
@@ -278,12 +296,22 @@ export default function FinanceReportsTab({
     [],
   )
 
-  const bestSellerColumns = useMemo(
+  const topItemColumns = useMemo(
     () => [
-      { key: 'name', label: 'SKU / service' },
-      { key: 'total', label: 'Sales (₱)', value: (r) => formatMoney(Math.round(Number(r.total || 0) * 100)) },
+      { key: 'name', label: 'Item' },
+      { key: 'count', label: 'Count' },
+      { key: 'grossMinor', label: 'Gross', value: (r) => formatMoney(r.grossMinor) },
     ],
     [],
+  )
+
+  const sales = useMemo(() => rollupSales(saleRows), [saleRows])
+  const priorSales = useMemo(() => rollupSales(priorSaleRows), [priorSaleRows])
+  const payTypes = useMemo(() => paymentTypes(sales), [sales])
+  const showYearChart = salesWindow?.preset === 'year'
+  const monthSeries = useMemo(
+    () => (showYearChart ? grossByMonth(saleRows, priorSaleRows, salesWindow.now) : []),
+    [showYearChart, saleRows, priorSaleRows, salesWindow],
   )
 
   const subtitle = formatFinanceWindow(range.start, range.end)
@@ -292,6 +320,99 @@ export default function FinanceReportsTab({
 
   return (
     <div className="finance-dash flex flex-col gap-5">
+      <SalesPeriodBar
+        period={period}
+        onPeriodChange={onPeriodChange}
+        salesWindow={salesWindow}
+        branchName={branchName}
+      />
+      <FinancePanel title="Sales summary" description="Paid and refunded POS tickets. Gross includes discounts given.">
+        <FinanceMetricStrip label="Sales summary">
+          <FinanceMetricCell
+            label="Gross sales"
+            value={formatMoney(sales.grossMinor)}
+            hint={<DeltaChip pct={vsPrior(sales.grossMinor, priorSales.grossMinor)} />}
+          />
+          <FinanceMetricCell
+            label="Sales"
+            value={sales.count.toLocaleString('en-PH')}
+            hint={<DeltaChip pct={vsPrior(sales.count, priorSales.count)} />}
+          />
+          <FinanceMetricCell
+            label="Average sale"
+            value={formatMoney(sales.avgMinor)}
+            hint={<DeltaChip pct={vsPrior(sales.avgMinor, priorSales.avgMinor)} />}
+          />
+          <FinanceMetricCell
+            label="Net sales"
+            value={formatMoney(sales.netMinor)}
+            hint={<DeltaChip pct={vsPrior(sales.netMinor, priorSales.netMinor)} />}
+          />
+          <FinanceMetricCell
+            label="Returns & refunds"
+            value={formatMoney(sales.refundsMinor)}
+            hint={sales.refundsMinor ? <DeltaChip pct={vsPrior(sales.refundsMinor, priorSales.refundsMinor)} /> : 'No refund flow in POS yet'}
+            tone="muted"
+          />
+          <FinanceMetricCell
+            label="Discounts & comps"
+            value={formatMoney(sales.discountsMinor)}
+            hint={<DeltaChip pct={vsPrior(sales.discountsMinor, priorSales.discountsMinor)} />}
+            tone="muted"
+          />
+        </FinanceMetricStrip>
+      </FinancePanel>
+
+      {showYearChart ? (
+        <FinancePanel title="Gross sales by month" description="This year compared with the same months last year" bodyClassName="finance-chart-tall">
+          {sales.grossMinor > 0 || priorSales.grossMinor > 0 ? (
+            <ChartContainer config={monthConfig} className="h-full w-full aspect-auto">
+              <BarChart accessibilityLayer data={monthSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                <YAxis tickLine={false} axisLine={false} width={52} tickFormatter={pesoTick} />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value, name) => (
+                        <span className="tabular-nums font-medium">
+                          {formatMoney(Math.round(Number(value) * 100))}
+                          <span className="text-muted-foreground font-normal"> {monthConfig[name]?.label || name}</span>
+                        </span>
+                      )}
+                    />
+                  }
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="prior" fill="var(--color-prior)" radius={[2, 2, 0, 0]} maxBarSize={22} />
+                <Bar dataKey="current" fill="var(--color-current)" radius={[2, 2, 0, 0]} maxBarSize={22} />
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <FinanceEmpty title="No sales this year yet" body="Paid POS tickets fill each month as they close." />
+          )}
+        </FinancePanel>
+      ) : null}
+
+      <div className="finance-dash-split">
+        <ReportSection
+          icon={<Trophy aria-hidden />}
+          title="Top items"
+          description={sellersLoading ? 'Loading paid line items…' : `By gross from paid sales · ${subtitle}`}
+          onCsv={() => downloadCsv(topItemRows, topItemColumns, `hakum-top-items-${range.start}-to-${range.end}.csv`)}
+        >
+          {sellersLoading ? (
+            <FinanceEmpty title="Loading top items" />
+          ) : (
+            <TopItemsTable items={topItemRows} />
+          )}
+        </ReportSection>
+
+        <FinancePanel title="Sales by payment type" description="Paid tickets only. No card or wallet fees are recorded.">
+          <PaymentTypesList types={payTypes} collectedMinor={sales.collectedMinor} />
+        </FinancePanel>
+      </div>
+
       <p className="text-xs text-muted-foreground" data-testid="finance-reports-provenance">
         Export proof: sales &amp; P&amp;L from paid POS / paid-posted expenses · shift closes = accepted/locked
         attestation only (not crew pay). Window {formatFinanceWindow(range?.start, range?.end)}.
@@ -308,42 +429,6 @@ export default function FinanceReportsTab({
         <FinanceMetricCell label="Shift closes" value={String(shiftCloses.length)} hint="Accepted / locked" tone="muted" />
         <FinanceMetricCell label="Customers" value={String(retentionSummary.total)} hint={`${retentionSummary.loyal} loyal`} tone="up" />
       </FinanceMetricStrip>
-
-      <ReportSection
-        icon={<Trophy aria-hidden />}
-        title="Best sellers"
-        description={
-          sellersLoading
-            ? 'Loading paid line items…'
-            : `${bestSellers.length} top SKUs from paid sales · ${subtitle}`
-        }
-        onCsv={() => downloadCsv(bestSellers, bestSellerColumns, `hakum-best-sellers-${range.start}-to-${range.end}.csv`)}
-      >
-        {bestSellers.length ? (
-          <ChartContainer config={bestSellerConfig} className="finance-chart-mid aspect-auto h-[280px] w-full">
-            <BarChart accessibilityLayer data={bestSellers} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} angle={-18} textAnchor="end" height={64} interval={0} tick={{ fontSize: 10 }} />
-              <YAxis tickLine={false} axisLine={false} width={48} tickFormatter={(v) => `₱${Number(v).toLocaleString('en-PH')}`} />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value) => (
-                      <span className="tabular-nums font-medium">{formatMoney(Math.round(Number(value) * 100))}</span>
-                    )}
-                  />
-                }
-              />
-              <Bar dataKey="total" fill="var(--color-total)" radius={[2, 2, 0, 0]} maxBarSize={36} />
-            </BarChart>
-          </ChartContainer>
-        ) : (
-          <FinanceEmpty
-            title={sellersLoading ? 'Loading best sellers' : 'No paid line items'}
-            body="Paid POS lines in this window rank here by peso total."
-          />
-        )}
-      </ReportSection>
 
       <ReportSection
         icon={<ClipboardCheck aria-hidden />}

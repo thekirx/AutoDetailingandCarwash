@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { fetchBranchWeather, weatherLabelFromCode } from '../src/lib/branchWeather.js'
+import { fetchBranchWeather, weatherForecastLine, weatherLabelFromCode } from '../src/lib/branchWeather.js'
 
 describe('branch weather', () => {
   it('maps WMO codes and caches Open-Meteo current temp', async () => {
@@ -21,7 +21,11 @@ describe('branch weather', () => {
     }
     const first = await fetchBranchWeather(14.459, 120.929, { fetchImpl, now: 1, storage: fakeStore })
     const second = await fetchBranchWeather(14.459, 120.929, { fetchImpl, now: 2, storage: fakeStore })
-    assert.deepEqual(first, { tempC: 29, label: 'Partly cloudy' })
+    assert.equal(weatherForecastLine(0), "It's sunny today.")
+    assert.equal(weatherForecastLine(3), "It's cloudy today.")
+    assert.equal(weatherForecastLine(61), "It's raining today.")
+    assert.equal(weatherForecastLine(null), '')
+    assert.deepEqual(first, { tempC: 29, label: 'Partly cloudy', line: "It's partly cloudy today." })
     assert.deepEqual(second, first)
     assert.equal(calls, 1)
   })

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
+import { notifyStaffEvent } from './notifyOpsEvent.mjs'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -128,8 +129,18 @@ export async function handlePublicInquiryRequest(req, res) {
     const { table, row, error: invalid } = build(body)
     if (invalid) return json(res, 400, { error: invalid })
 
-    const { error } = await admin().from(table).insert(row)
+    const db = admin()
+    const { data: saved, error } = await db.from(table).insert(row).select('id').single()
     if (error) return json(res, 500, { error: 'We could not send that just now. Please try again.' })
+
+    const kind = text(body.kind)
+    if (kind === 'partnership' || kind === 'complaint') {
+      try {
+        await notifyStaffEvent(db, 'inquiry', { id: saved.id, kind, name: row.name || row.customer_name, category: row.category, branch: row.branch, city: row.city })
+      } catch {
+        /* ponytail: submission is saved; staff alert is best-effort */
+      }
+    }
 
     return json(res, 200, { ok: true })
   } catch (err) {

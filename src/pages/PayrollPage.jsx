@@ -33,6 +33,7 @@ import {
 } from '@/lib/compensation'
 import { collectPaged } from '@/lib/crmInsights'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import {
   PAYROLL_RUN_KINDS,
   FIXED_SALARY_BOOKS_BRANCH,
@@ -563,6 +564,7 @@ export default function PayrollPage() {
       return
     }
     toast.success(`Payroll confirmed · ${formatMoney(data?.total_payout_minor || preview.total_payout_minor)}`)
+    notifyOpsEvent('payroll_confirmed', data?.run_id)
     setPreview(null)
     setStep(0)
     setNotes('')

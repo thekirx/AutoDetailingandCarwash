@@ -45,6 +45,8 @@ describe('serviceKinds', () => {
     assert.equal(isBookingBoardService({ slug: 'express-wash-package', pay_category: 'package' }), false)
     // Legacy ppf package category is bay/package — not Bookings board.
     assert.equal(isBookingBoardService({ slug: 'custom-ppf-bundle', pay_category: 'ppf' }), false)
+    assert.equal(isBookingBoardService({ slug: 'ceramic-coating-premium', pay_category: 'detailing' }), true)
+    assert.equal(isBookingBoardService({ slug: 'ppf-basic', pay_category: 'detailing' }), true)
   })
 
   it('filters and searches catalog rows by kind', () => {
