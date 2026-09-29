@@ -13,7 +13,8 @@ import {
 export { phoneLoginEmail }
 
 /** Queue walk-in provision: SA / Admin / ASA / Team Lead (TL forced to own branch at ticket create). */
-export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin', 'team_lead'])
+// Queue (SA / ASA / TL / Operations Lead) plus Branch Admin, who registers customers at POS and CRM.
+export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin', 'team_lead', 'operations_lead'])
 
 function randomTempPassword() {
   return `Hakum-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}!`
@@ -40,7 +41,7 @@ async function assertQueueEditor(admin, accessToken) {
 
   if (staffError) throw staffError
   if (!staff || !QUEUE_PROVISION_ROLES.has(staff.role)) {
-    throw Object.assign(new Error('Only Admin, Super Admin, Assistant Super Admin, or Team Lead can provision customer accounts.'), { status: 403 })
+    throw Object.assign(new Error('Only Admin, Super Admin, Assistant Super Admin, Team Lead, or Operations Lead can provision customer accounts.'), { status: 403 })
   }
   return { user: userData.user, staff }
 }

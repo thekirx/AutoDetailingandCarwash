@@ -148,6 +148,7 @@ describe('provision-customer includes Team Lead (TL-C2)', () => {
   it('allows team_lead in QUEUE_PROVISION_ROLES', () => {
     assert.equal(QUEUE_PROVISION_ROLES.has('team_lead'), true)
     assert.equal(QUEUE_PROVISION_ROLES.has('BossMich'), true)
+    assert.equal(QUEUE_PROVISION_ROLES.has('operations_lead'), true)
   })
 })
 
