@@ -106,10 +106,6 @@ function attachHakumApis(server) {
     const { handlePosAnnounceRequest } = await import('./server/posAnnounceApi.mjs')
     return handlePosAnnounceRequest(req, res)
   })
-  mount('/api/notify-shift-close', async (req, res) => {
-    const { handleNotifyShiftCloseRequest } = await import('./server/notifyShiftCloseApi.mjs')
-    return handleNotifyShiftCloseRequest(req, res)
-  })
   mount('/api/notify-ops-lab', async (req, res) => {
     const { handleNotifyOpsLabRequest } = await import('./server/notifyOpsRoadmapApi.mjs')
     return handleNotifyOpsLabRequest(req, res)

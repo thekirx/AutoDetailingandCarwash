@@ -19,7 +19,7 @@
     "e2e:integrity": "node scripts/e2e-data-integrity.mjs",
     "e2e:request": "node scripts/e2e-request-brief.mjs",
     "e2e:cutover": "node scripts/e2e-ops-cutover.mjs",
-    "e2e:shift-close-money": "node scripts/e2e-shift-close-money.mjs",
+    "e2e:daily-sheet-money": "node scripts/e2e-daily-sheet-money.mjs",
     "e2e:ui-p0": "node scripts/e2e-ui-p0.mjs",
     "e2e:ui-money": "node scripts/e2e-ui-money.mjs",
     "e2e:money-path": "node scripts/e2e-money-path-ui.mjs",

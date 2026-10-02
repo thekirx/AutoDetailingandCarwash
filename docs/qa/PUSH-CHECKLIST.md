@@ -71,7 +71,7 @@ If a toast is missing: check the phone's notification settings for Hakum/Chrome,
 ## Notes and limits
 
 - Staff event alerts (crew assigned, Daily Sheet submit / review, cash advance request) are sent by `POST /api/notify-ops-event` right after the action succeeds in the app. The server re-checks who is allowed and picks recipients from the database; if the phone that did the action loses signal at that exact moment, that one alert is skipped (the action itself is saved).
-- The ASA (Luci, `assistant@hakumautocare.com`) has every grant on since 2026-09-29, including `finance_write`, so she gets shift submissions and floor-pay / cash-advance alerts like the Super Admin. An ASA on default grants (`finance_write` off) sees shift submissions only.
+- The ASA (Luci, `assistant@hakumautocare.com`) has every grant on since 2026-09-29, including `finance_write`, so she gets Daily Sheet submissions like the Super Admin. Daily Sheet submissions need `finance_view`, which is on by default for every ASA.
 - DB function `resolve_ops_lab_notify_user_ids` is no longer called (Ops Lab now uses the shared recipient planner); left in place, safe to drop later.
 - `scripts/e2e-push-notifications.mjs` and the browser matrix send real pushes to every device subscribed as the demo customer — phones signed in as the demo customer will show "E2E probe" / "In the queue · PUSHQA…" toasts while those scripts run.
 - Test bookings created by the audit are archived (bookings are soft-deleted by the `bookings_soft_delete` trigger), not physically removed.

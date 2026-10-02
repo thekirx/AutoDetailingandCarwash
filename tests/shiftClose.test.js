@@ -6,18 +6,7 @@ import { describe, it } from 'node:test'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  canReviewShiftClose,
-  canSubmitShiftClose,
-  datetimeLocalToIso,
-  moneySnapshotFromReport,
-  parsePesosToMinor,
-  shiftCloseDiffRows,
-  shiftCloseFieldLabel,
-  toDatetimeLocalValue,
-  validateShiftCloseSubmit,
-  SHIFT_CLOSE_FIELD_LABELS,
-} from '../src/lib/shiftClose.js'
+import { moneySnapshotFromReport, parsePesosToMinor, shiftCloseDiffRows, shiftCloseFieldLabel, SHIFT_CLOSE_FIELD_LABELS } from '../src/lib/shiftClose.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -27,28 +16,6 @@ describe('shift close money helpers', () => {
     assert.equal(parsePesosToMinor('0'), 0)
     assert.equal(parsePesosToMinor('-1'), null)
     assert.equal(parsePesosToMinor('abc'), null)
-  })
-
-  it('requires override reason when submitted ≠ baseline', () => {
-    const baseline = moneySnapshotFromReport({ total_gcash_minor: 10000 })
-    const submitted = { ...baseline, total_gcash_minor: 12000 }
-    const bad = validateShiftCloseSubmit({
-      baseline,
-      submitted,
-      reasons: {},
-      fieldConfig: [{ field_key: 'total_gcash_minor', allow_override: true, is_active: true }],
-    })
-    assert.equal(bad.ok, false)
-    assert.ok(bad.errors.total_gcash_minor)
-
-    const good = validateShiftCloseSubmit({
-      baseline,
-      submitted,
-      reasons: { total_gcash_minor: 'Counted drawer twice' },
-      fieldConfig: [{ field_key: 'total_gcash_minor', allow_override: true, is_active: true }],
-    })
-    assert.equal(good.ok, true)
-    assert.equal(good.overrideReasons.total_gcash_minor, 'Counted drawer twice')
   })
 
   it('cash left and CA collected are first-class override money keys', () => {
@@ -76,38 +43,6 @@ describe('shift close money helpers', () => {
     ])
     assert.equal(rows.length, 1)
     assert.equal(rows[0].delta_minor, 100)
-  })
-})
-
-describe('shift close RBAC helpers', () => {
-  it('BA/SA/ASA(pos) submit; SA and ASA finance_view review', () => {
-    assert.equal(canSubmitShiftClose({ role: 'admin' }), true)
-    assert.equal(canSubmitShiftClose({ role: 'BossMich' }), true)
-    assert.equal(canSubmitShiftClose({ role: 'staff' }), false)
-    assert.equal(
-      canSubmitShiftClose({ role: 'assistant_super_admin', permission_grants: { pos: true } }),
-      true,
-    )
-    assert.equal(
-      canSubmitShiftClose({ role: 'assistant_super_admin', permission_grants: { pos: false, finance_write: false } }),
-      false,
-    )
-    assert.equal(canReviewShiftClose({ role: 'BossMich' }), true)
-    assert.equal(
-      canReviewShiftClose({ role: 'assistant_super_admin', permission_grants: { finance_view: true } }),
-      true,
-    )
-    assert.equal(
-      canReviewShiftClose({ role: 'assistant_super_admin', permission_grants: { finance_view: false } }),
-      false,
-    )
-  })
-
-  it('datetime-local helpers round-trip', () => {
-    const local = toDatetimeLocalValue(new Date('2026-08-21T20:15:00'))
-    assert.match(local, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
-    assert.ok(datetimeLocalToIso(local))
-    assert.equal(datetimeLocalToIso(''), null)
   })
 })
 

@@ -6,12 +6,7 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  enrichCashAdvancePayload,
-  filterCeramicExpensesForSales,
-  floorPayrollCoversDay,
-  saleBusinessDate,
-} from '../src/lib/payroll.js'
+import { enrichCashAdvancePayload, floorPayrollCoversDay, saleBusinessDate } from '../src/lib/payroll.js'
 import { getLocalCalendarDate } from '../src/lib/localCalendarDate.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -55,30 +50,6 @@ describe('saleBusinessDate · Manila not UTC slice', () => {
   })
 })
 
-describe('ceramic expenses follow sale day, not expense created_at', () => {
-  it('keeps drafts whose sale is in the loaded POS set even if created later', () => {
-    const sales = [
-      { id: 'sale-a', branch: 'imus', occurred_at: '2026-08-20T10:00:00+08:00', status: 'paid' },
-    ]
-    const expenses = [
-      {
-        description: 'ceramic:sale-a:detailer',
-        total_minor: 95000,
-        branch: 'imus',
-        created_at: '2026-08-25T12:00:00+08:00',
-      },
-      {
-        description: 'ceramic:sale-other:crew',
-        total_minor: 10000,
-        branch: 'imus',
-        created_at: '2026-08-20T12:00:00+08:00',
-      },
-    ]
-    const kept = filterCeramicExpensesForSales(expenses, sales)
-    assert.equal(kept.length, 1)
-    assert.equal(kept[0].description, 'ceramic:sale-a:detailer')
-  })
-})
 
 describe('cash advance staff bind', () => {
   it('stamps staff_id from profile when missing', () => {

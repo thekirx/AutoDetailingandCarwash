@@ -17,7 +17,6 @@
     { "source": "/api/notify-planner", "destination": "/api/notifications?operation=notify-planner" },
     { "source": "/api/notify-pos", "destination": "/api/notifications?operation=notify-pos" },
     { "source": "/api/pos-announce", "destination": "/api/notifications?operation=pos-announce" },
-    { "source": "/api/notify-shift-close", "destination": "/api/notifications?operation=notify-shift-close" },
     { "source": "/api/notify-ops-lab", "destination": "/api/notifications?operation=notify-ops-lab" },
     { "source": "/api/notify-ops-event", "destination": "/api/notifications?operation=notify-ops-event" },
     { "source": "/api/notification-settings", "destination": "/api/notifications?operation=notification-settings" },

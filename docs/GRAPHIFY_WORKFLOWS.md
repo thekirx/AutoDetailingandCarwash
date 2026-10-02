@@ -122,7 +122,7 @@ Not PostgREST. Session/service as each handler already does.
 | /api/booking-status | Staff status + SMS |
 | /api/maintenance-schedules | Paint maintenance |
 | /api/push-subscribe, /api/send-push | Web push |
-| /api/notify-booking, notify-ops-form, notify-planner, notify-pos, notify-shift-close, notify-ops-lab | In-app/push/SMS |
+| /api/notify-booking, notify-ops-form, notify-planner, notify-pos, notify-ops-event, notify-ops-lab | In-app/push/SMS |
 | /api/lifecycle-sms | Customer lifecycle SMS |
 | /api/busybee | BrandTxt / BusyBee |
 | /api/notification-settings, notification-broadcast, notification-broadcast-kinds, notification-templates | Comms admin |

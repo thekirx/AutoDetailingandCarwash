@@ -3,7 +3,7 @@
  *   BASE_URL=http://127.0.0.1:5174 npm run e2e:lifecycle-flops
  *
  * Safety: unique plates per Manila day; cancel leftover QA FLOPS tickets; max-price wash;
- * provision customer before handoff; reopen accepted close if drawer drifts; never void payroll.
+ * provision customer before handoff; Daily Sheet is read-only (today's sheet is live BA data).
  */
 import { createClient } from '@supabase/supabase-js'
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
@@ -13,12 +13,7 @@ import puppeteer from 'puppeteer'
 import { OPS_DEMO_ACCOUNTS } from '../src/lib/demoAccounts.js'
 import { isBookingBoardService, isSameDayQueueKind } from '../src/lib/serviceKinds.js'
 import { buildPosSalePayload } from '../src/lib/posSale.js'
-import {
-  buildPayrollPreview,
-  buildRunPayrollPayload,
-  floorConfirmBlockedByPendingCloses,
-  payrollBlocksConfirm,
-} from '../src/lib/payroll.js'
+import { summarizeSheetSales } from '../src/lib/dailySheet.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = join(root, 'e2e-evidence', 'lifecycle-flops')
@@ -238,15 +233,6 @@ try {
     .maybeSingle()
   if (crewErr || !crew) throw new Error(crewErr?.message || 'no bay crew on the team lead branch')
 
-  const { data: already, error: attErr } = await boss.client
-    .from('staff_attendance')
-    .select('staff_id, status, staff_profiles(full_name, role)')
-    .eq('attendance_date', today)
-    .eq('branch_slug', tlProfile.branch_slug)
-    .in('status', ['present', 'late'])
-  if (attErr) throw new Error(attErr.message)
-  const others = (already || []).filter((row) => row.staff_id !== crew.id)
-
   const clock = `${today}T09:00:00+08:00`
   const { error: ovErr } = await boss.client.from('staff_attendance').upsert(
     {
@@ -397,181 +383,33 @@ try {
   }
   pass('F1.sql.kind_sum', `${tlProfile.branch_slug} ${today} ${kindSum} minor`)
 
-  const baseline = {
-    square_sales_minor: kindSum,
-    cash_sales_minor: kindSum,
-    total_gcash_minor: 0,
-    credit_card_minor: 0,
-    total_expenses_minor: 0,
-    ca_collected_minor: 0,
-    downpayments_minor: 0,
-    total_cash_left_minor: kindSum,
-  }
-
-  const { data: existingClose } = await boss.client
-    .from('shift_close_reports')
-    .select('id, status, submitted')
-    .eq('branch', tlProfile.branch_slug)
-    .eq('business_date', today)
-    .in('status', ['accepted', 'locked', 'submitted', 'rejected'])
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  let closeId = existingClose?.id || null
-  if (existingClose?.status === 'locked') {
-    throw new Error(`close ${existingClose.id} is locked — cannot FLOPS resubmit`)
-  }
-  if (existingClose?.status === 'accepted') {
-    const submitted = Number(existingClose.submitted?.square_sales_minor || 0)
-    if (submitted !== kindSum) {
-      const { error: reopenErr } = await boss.client.rpc('review_shift_close', {
-        payload: { id: closeId, action: 'reopen', review_note: 'FLOPS drawer must match paid POS' },
-      })
-      if (reopenErr) throw new Error(reopenErr.message)
-      pass('E1.sa.reopen', closeId)
-    } else {
-      pass('E1.close.already_matches', `${closeId} ${submitted}`)
-    }
-  }
-
-  if (!existingClose || existingClose.status !== 'accepted' || Number(existingClose.submitted?.square_sales_minor || 0) !== kindSum) {
-    const { data: closeRow, error: closeErr } = await admin.client.rpc('submit_shift_close', {
-      payload: {
-        branch: tlProfile.branch_slug,
-        business_date: today,
-        shift_ended_at: new Date().toISOString(),
-        pos_baseline: baseline,
-        submitted: baseline,
-        override_reasons: {},
-      },
-    })
-    if (closeErr) throw new Error(closeErr.message)
-    closeId = closeRow.id
-    pass('E1.ba.submit_close', closeId)
-    const { error: reviewErr } = await boss.client.rpc('review_shift_close', {
-      payload: { id: closeId, action: 'accept', review_note: 'FLOPS accept matches paid POS' },
-    })
-    if (reviewErr) throw new Error(reviewErr.message)
-    pass('F1.sa.accept_close', closeId)
-  }
-
-  const { data: closeCheck, error: closeCheckErr } = await boss.client
-    .from('shift_close_reports')
-    .select('id, status, submitted, pos_baseline')
-    .eq('id', closeId)
-    .single()
-  if (closeCheckErr) throw new Error(closeCheckErr.message)
-  const drawer = Number(closeCheck.submitted?.square_sales_minor)
-  if (closeCheck.status !== 'accepted' || drawer !== kindSum) {
-    throw new Error(`close ${closeCheck.status} drawer ${drawer} != kind ${kindSum}`)
-  }
-  pass('F1.close.matches_paid', `${drawer}`)
-
-  const { data: rulesRow } = await boss.client.from('compensation_settings').select('*').limit(1).maybeSingle()
+  // Daily Sheet stays read-only here: today's sheet is the Branch Admin's live data.
+  // The save → submit → approve → reopen write path runs on a sandbox date in e2e-daily-sheet-money.mjs.
   const { data: salesToday, error: salesErr } = await boss.client
     .from('sales')
-    .select('id, branch, status, total_minor, occurred_at, created_at, sale_line_items(line_total_minor, line_kind, item_type, name)')
+    .select('id, branch, status, total_minor, discount_minor, payment_method, occurred_at, sale_line_items(item_type, line_total_minor, name)')
     .eq('branch', tlProfile.branch_slug)
-    .eq('status', 'paid')
+    .in('status', ['paid', 'refunded'])
     .gte('occurred_at', `${today}T00:00:00+08:00`)
-    .lte('occurred_at', `${today}T23:59:59+08:00`)
+    .lte('occurred_at', `${today}T23:59:59.999+08:00`)
   if (salesErr) throw new Error(salesErr.message)
-  const { data: attRows } = await boss.client
-    .from('staff_attendance')
-    .select('staff_id, branch_slug, attendance_date, status, staff_profiles(id, full_name, role)')
-    .eq('attendance_date', today)
-    .eq('branch_slug', tlProfile.branch_slug)
-    .in('status', ['present', 'late'])
-  const attendance = (attRows || []).map((row) => ({
-    staff_id: row.staff_id,
-    id: row.staff_id,
-    full_name: row.staff_profiles?.full_name,
-    role: row.staff_profiles?.role,
-    branch_slug: row.branch_slug,
-    attendance_date: row.attendance_date,
-    attendance_status: row.status,
-    status: row.status,
-  }))
-  const preview = buildPayrollPreview({
-    period: { start: today, end: today },
-    rules: rulesRow || {},
-    sales: salesToday || [],
-    attendance,
-    runKind: 'floor',
-    frequency: 'daily',
-  })
-  const closeGate = floorConfirmBlockedByPendingCloses({
-    pendingFloorOptional: rulesRow?.pending_floor_optional === false,
-    runKind: 'floor',
-    branch: tlProfile.branch_slug,
-    periodStart: today,
-    periodEnd: today,
-    closes: [{ branch: tlProfile.branch_slug, business_date: today, status: 'accepted' }],
-  })
-  const block = payrollBlocksConfirm(preview)
-  if (closeGate.blocked) throw new Error(closeGate.reason)
-  if (block.blocked) throw new Error(block.reason)
-  const proofIds = new Set((preview.proof || []).map((row) => row.sale_id))
-  if (saleId && !proofIds.has(String(saleId))) throw new Error('QA sale is missing from payroll proof')
-
-  const { data: existingRun } = await boss.client
-    .from('payroll_runs')
-    .select('id, status, total_payout_minor, notes, period_start, period_end')
-    .eq('branch', tlProfile.branch_slug)
-    .eq('period_start', today)
-    .eq('period_end', today)
-    .in('status', ['confirmed', 'paid'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  let payrollId = existingRun?.id || null
-  let payrollPayout = existingRun ? Number(existingRun.total_payout_minor) : null
-  const previewPayout = Number(preview.total_payout_minor || 0)
-  const payerIds = [...new Set((preview.lines || []).filter((row) => row.pay_minor > 0).map((row) => row.staff_id))]
-  const needsMorePay = existingRun && previewPayout > payrollPayout + 100
-  if (existingRun && !needsMorePay) {
-    pass('P1.payroll.already_confirmed', `${existingRun.id} ${payrollPayout}`)
-  } else if (others.length && !existingRun) {
-    pass('P1.payroll.proof', `sale in proof · confirm withheld · ${others.length} other present`)
-  } else if (payerIds.length && payerIds.some((id) => id !== crew.id) && !existingRun) {
-    pass('P1.payroll.proof', 'sale in proof · confirm withheld · preview pays non-QA crew')
-  } else if (!existingRun || needsMorePay) {
-    const payrollPayload = buildRunPayrollPayload({
-      preview,
-      branch: tlProfile.branch_slug,
-      frequency: 'daily',
-      runKind: 'floor',
-      notes: NOTES,
-    })
-    const { data: run, error: runErr } = await boss.client.rpc('run_payroll', { payload: payrollPayload })
-    if (runErr) {
-      if (existingRun && /already|duplicate|covered|exists/i.test(runErr.message)) {
-        pass('P1.payroll.already_confirmed', `${existingRun.id} ${payrollPayout} · extra sale noted (${runErr.message})`)
-      } else {
-        throw new Error(runErr.message)
-      }
-    } else {
-      payrollId = run?.id || run?.run_id || null
-      payrollPayout = Number(run?.total_payout_minor ?? preview.total_payout_minor)
-      if (!payrollId) {
-        const { data: justRun } = await boss.client
-          .from('payroll_runs')
-          .select('id, total_payout_minor')
-          .eq('branch', tlProfile.branch_slug)
-          .eq('period_start', today)
-          .eq('period_end', today)
-          .eq('notes', NOTES)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        payrollId = justRun?.id || null
-        if (justRun) payrollPayout = Number(justRun.total_payout_minor)
-      }
-      pass('P1.payroll.confirm', `${payrollId} payout ${payrollPayout}`)
-    }
+  const sheetSales = summarizeSheetSales(salesToday || [])
+  if (saleId && !(salesToday || []).some((s) => String(s.id) === String(saleId))) {
+    throw new Error('QA sale is missing from the Daily Sheet sales')
   }
+  if (sheetSales.netMinor < washTicket.final_price_minor) {
+    throw new Error(`Daily Sheet net ${sheetSales.netMinor} is below the QA sale ${washTicket.final_price_minor}`)
+  }
+  pass('E1.sheet.sales_include_qa_sale', `net ${sheetSales.netMinor} · ${sheetSales.count} paid`)
+
+  const { data: sheetRow, error: sheetErr } = await admin.client
+    .from('daily_sheets')
+    .select('id, status')
+    .eq('branch', tlProfile.branch_slug)
+    .eq('business_date', today)
+    .maybeSingle()
+  if (sheetErr) throw new Error(sheetErr.message)
+  pass('E1.sheet.ba_reads_today', sheetRow ? `${sheetRow.id} ${sheetRow.status}` : 'not started yet')
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -691,10 +529,9 @@ try {
     sale_id: saleId || null,
     kind_sum_minor: kindSum,
     wash_minor: washTicket?.final_price_minor ?? null,
-    close_id: closeId,
-    drawer_minor: drawer,
-    payroll_id: payrollId,
-    payroll_payout_minor: payrollPayout,
+    sheet_net_minor: sheetSales.netMinor,
+    sheet_id: sheetRow?.id || null,
+    sheet_status: sheetRow?.status || null,
     frames: Math.min(frameCount, 120),
   }
 } catch (err) {

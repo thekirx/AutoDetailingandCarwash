@@ -25,7 +25,6 @@ import {
 } from '../src/auth/permissions.js'
 import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
 import { resolveFinanceTab } from '../src/lib/financeData.js'
-import { currentPostedPayoutMinor } from '../src/lib/payroll.js'
 import { canSwitchQueueFamily, queueFamilyForProfile, QUEUE_FAMILY_WASH } from '../src/lib/queueFamilies.js'
 import { SERVICES, WASH_SERVICES } from '../src/components/public/bredesign/content.js'
 
@@ -79,18 +78,6 @@ describe('Finance P&L chrome', () => {
   })
 })
 
-describe('My pay current payout', () => {
-  it('sums every line on the latest posted run, not the first row', () => {
-    const lines = [
-      { amount_minor: 400, payroll_runs: { status: 'confirmed', period_start: '2026-08-11', period_end: '2026-08-17', confirmed_at: '2026-08-18T01:00:00Z' } },
-      { amount_minor: 600, payroll_runs: { status: 'confirmed', period_start: '2026-08-11', period_end: '2026-08-17', confirmed_at: '2026-08-18T01:00:00Z' } },
-      { amount_minor: 9000, payroll_runs: { status: 'confirmed', period_start: '2026-08-04', period_end: '2026-08-10', confirmed_at: '2026-08-11T01:00:00Z' } },
-    ]
-    const current = currentPostedPayoutMinor(lines)
-    assert.equal(current.amountMinor, 1000)
-    assert.equal(current.periodStart, '2026-08-11')
-  })
-})
 
 describe('Ceramic package book CTA', () => {
   it('books Ceramic Coating with the package name, same prefill as PPF', () => {

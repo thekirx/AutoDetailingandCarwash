@@ -5,26 +5,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { buildCeramicCompensationExpenses } from '../src/lib/compensation.js'
-import {
-  applyCashAdvanceDeductions,
-  buildPayrollPreview,
-  floorConfirmBlockedByPendingCloses,
-  netPayrollLinesMinor,
-  payrollBlocksConfirm,
-  posProofTotalsByBranchDay,
-} from '../src/lib/payroll.js'
-import { rollupPl } from '../src/lib/financeData.js'
-import {
-  AUDIT_DAY,
-  AUDIT_RULES,
-  BACOOR,
-  IMUS,
-  buildCashAdvances,
-  buildPlRows,
-  buildShiftCloses,
-  buildShopDayAttendance,
-  buildShopDaySales,
-} from '../src/lib/auditFixtures.js'
+import { buildPayrollPreview } from '../src/lib/payroll.js'
+import { AUDIT_DAY, AUDIT_RULES, BACOOR, IMUS, buildShopDayAttendance, buildShopDaySales } from '../src/lib/auditFixtures.js'
 
 const attendance = buildShopDayAttendance()
 const sales = buildShopDaySales()
@@ -103,21 +85,6 @@ describe('payroll audit', () => {
     )
   })
 
-  it('6 CA deduct is manual and reduces net', () => {
-    const base = buildPayrollPreview({
-      period: { start: AUDIT_DAY, end: AUDIT_DAY },
-      rules: AUDIT_RULES,
-      sales: washSales,
-      attendance,
-      runKind: 'floor',
-    })
-    const before = netPayrollLinesMinor(base.lines)
-    const withCa = applyCashAdvanceDeductions(base.lines, buildCashAdvances())
-    const after = netPayrollLinesMinor(withCa)
-    assert.equal(after, before - 50_000)
-    assert.ok(withCa.some((l) => /cash advance/i.test(l.label || l.kind || '')))
-  })
-
   it('7 multi-branch wash pools stay isolated', () => {
     const preview = buildPayrollPreview({
       period: { start: AUDIT_DAY, end: AUDIT_DAY },
@@ -164,45 +131,4 @@ describe('payroll audit', () => {
     assert.equal(preview.lines.some((l) => l.staff_id === 'det-imus' && l.kind === 'wash_pool'), false)
   })
 
-  it('9 pending floor hard gate blocks without accepted close', () => {
-    const blocked = floorConfirmBlockedByPendingCloses({
-      pendingFloorOptional: false,
-      runKind: 'floor',
-      branch: BACOOR,
-      periodStart: AUDIT_DAY,
-      periodEnd: AUDIT_DAY,
-      closes: [],
-    })
-    assert.equal(blocked.blocked, true)
-    const ok = floorConfirmBlockedByPendingCloses({
-      pendingFloorOptional: false,
-      runKind: 'floor',
-      branch: BACOOR,
-      periodStart: AUDIT_DAY,
-      periodEnd: AUDIT_DAY,
-      closes: buildShiftCloses(),
-    })
-    assert.equal(ok.blocked, false)
-  })
-
-  it('10 POS proof totals match P&L income (no close fiction)', () => {
-    const proof = posProofTotalsByBranchDay(sales)
-    const bacoorProof = proof.get?.(`${BACOOR}|${AUDIT_DAY}`) ?? proof[`${BACOOR}|${AUDIT_DAY}`]
-    // Map or plain — normalize
-    let bacoorMinor = 0
-    let imusMinor = 0
-    if (proof instanceof Map) {
-      bacoorMinor = Number(proof.get(`${BACOOR}|${AUDIT_DAY}`)) || 0
-      imusMinor = Number(proof.get(`${IMUS}|${AUDIT_DAY}`)) || 0
-    } else {
-      bacoorMinor = Number(bacoorProof) || 0
-    }
-    const pl = rollupPl(buildPlRows(sales, []))
-    assert.equal(pl.income, 1_700_000)
-    if (proof instanceof Map) {
-      assert.equal(bacoorMinor + imusMinor, 1_700_000)
-    }
-    // Empty lines do not trip assignee gate; non-empty missing assignee does
-    assert.equal(payrollBlocksConfirm({ lines: [{ pay_minor: 100, staff_id: 'x' }] }).blocked, false)
-  })
 })

@@ -12,7 +12,7 @@ import {
   findPostedCompensationExpense,
   buildCompensationPostPlan,
 } from '../src/lib/compensation.js'
-import { approvedCaForCloseDay, buildBacoorDailyReport } from '../src/lib/bacoorDailyReport.js'
+import { buildBacoorDailyReport } from '../src/lib/bacoorDailyReport.js'
 import { topCustomersBySpend, insightsToCsv } from '../src/lib/crmInsightsExport.js'
 import { DETAILING_BOARD_STATUSES, detailingBoardStatusLabel } from '../src/lib/detailingBoardStatuses.js'
 
@@ -185,20 +185,6 @@ describe('bacoor report + crm export', () => {
     assert.equal(report.car_wash_sales_minor, 1078000)
     assert.equal(report.refreshment_sales_minor, 62000)
     assert.equal(report.carwash_salary_minor, 377300)
-  })
-
-  it('counts cash advances on the approve day, not the submit day', () => {
-    const overnight = {
-      status: 'resolved',
-      created_at: '2026-08-15T22:10:00+08:00',
-      resolved_at: '2026-08-16T09:05:00+08:00',
-    }
-    assert.equal(approvedCaForCloseDay(overnight, '2026-08-16'), true)
-    assert.equal(approvedCaForCloseDay(overnight, '2026-08-15'), false)
-    assert.equal(
-      approvedCaForCloseDay({ status: 'new', created_at: '2026-08-16T08:00:00+08:00' }, '2026-08-16'),
-      false,
-    )
   })
 
   it('exports top customers csv', () => {

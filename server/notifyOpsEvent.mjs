@@ -2,13 +2,13 @@
  * Daily-ops events the client can't target itself: the server loads the record, checks the caller,
  * and derives recipients (assigned crew, payees, requester, SA/ASA finance) from the DB.
  */
-import { canAccessPos, canEditQueueOperations } from '../src/auth/permissions.js'
+import { canEditQueueOperations } from '../src/auth/permissions.js'
 import { canEditDailySheet, canReviewDailySheet } from '../src/lib/dailySheet.js'
 import { NOTIFY_EVENTS, branchLabel } from '../src/lib/notifyRouting.js'
 import { hydrateBookingForNotify } from './notifyBooking.mjs'
 import { notifyRecipients, resolveStaffRecipients } from './webPush.mjs'
 
-export const OPS_EVENTS = ['crew_assigned', 'shift_submitted', 'sheet_submitted', 'sheet_reviewed', 'cash_advance_submitted']
+export const OPS_EVENTS = ['crew_assigned', 'sheet_submitted', 'sheet_reviewed', 'cash_advance_submitted']
 
 /** Replayed calls for old records are ignored. */
 const FRESH_MS = 10 * 60_000
@@ -23,13 +23,6 @@ export function buildOpsEventCopy(event, c = {}) {
         title: 'New car assigned',
         body: `${c.queueNumber ? `Q${c.queueNumber} · ` : ''}${c.plate || 'Vehicle'} · ${c.service || 'service'} @ ${c.branchName || 'Hakum'}`,
         tag: `crew-${c.bookingId}`,
-      }
-    case 'shift_submitted':
-      return {
-        kind: 'shift_submitted',
-        title: `End of shift to review · ${c.branchName || 'branch'}`,
-        body: `${c.submitter || 'Branch admin'} submitted ${c.businessDate || 'today'}. Review and accept in Finance.`,
-        tag: `shift-submitted-${c.closeId}`,
       }
     case 'sheet_submitted': {
       const off = Number(c.overShortMinor) || 0
@@ -48,20 +41,6 @@ export function buildOpsEventCopy(event, c = {}) {
           ? `${c.businessDate || 'Today'}: approved — release pay to the crew.`
           : `${c.businessDate || 'Today'}: ${c.note || 'please fix and submit again'}`,
         tag: `sheet-reviewed-${c.sheetId}`,
-      }
-    case 'shift_accepted':
-      return {
-        kind: 'shift_accepted',
-        title: `End of shift accepted · ${c.branchName || 'branch'}`,
-        body: `Finance accepted your close for ${c.businessDate || 'today'}.`,
-        tag: `shift-accepted-${c.closeId}`,
-      }
-    case 'shift_rejected':
-      return {
-        kind: 'shift_rejected',
-        title: `End of shift sent back · ${c.branchName || 'branch'}`,
-        body: `Finance: ${c.note || 'please review and resubmit'} (${c.businessDate || 'today'}).`,
-        tag: `shift-rejected-${c.closeId}`,
       }
     case 'cash_advance_submitted':
       return {
@@ -93,7 +72,7 @@ export function buildOpsEventCopy(event, c = {}) {
   }
 }
 
-/** Server-side events (inquiry, review, shift_accepted): rule from NOTIFY_EVENTS plus branch / ids / excludeId. */
+/** Server-side events (inquiry, review): rule from NOTIFY_EVENTS plus branch / ids / excludeId. */
 export async function notifyStaffEvent(db, event, ctx, extra = {}) {
   const copy = buildOpsEventCopy(event, ctx)
   const recipients = await resolveStaffRecipients(db, { ...NOTIFY_EVENTS[event], ...extra })
@@ -130,17 +109,6 @@ const LOADERS = {
     return {
       rule: { ...NOTIFY_EVENTS.crew_assigned, ids: latest.map((r) => r.staff_id), excludeId: actor.id },
       ctx: { bookingId: id, plate: b.vehicle_plate, service: b.service_name, branchName: b.branch_name, queueNumber: b.queue_number },
-    }
-  },
-
-  async shift_submitted(db, id, actor) {
-    if (!canAccessPos(actor)) return deny
-    const { data: close } = await db.from('shift_close_reports').select('id, branch, business_date, status, submitted_by, submitted_at').eq('id', id).maybeSingle()
-    if (!close) return gone
-    if (close.submitted_by !== actor.id || close.status !== 'submitted' || !fresh(close.submitted_at)) return deny
-    return {
-      rule: { ...NOTIFY_EVENTS.shift_submitted, branch: close.branch, excludeId: actor.id },
-      ctx: { closeId: id, branchName: await branchName(db, close.branch), businessDate: close.business_date, submitter: actor.full_name },
     }
   },
 

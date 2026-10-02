@@ -71,7 +71,6 @@ export default [
       'scripts/e2e-lifecycle-day.mjs',
       'scripts/e2e-lifecycle-day-close.mjs',
       'scripts/e2e-lifecycle-walk.mjs',
-      'scripts/e2e-shift-close-reopen.mjs',
       'scripts/probe-queue-board-overflow.mjs',
       'scripts/probe-shop-tv.mjs',
       'scripts/_pos-deep-shots.mjs',

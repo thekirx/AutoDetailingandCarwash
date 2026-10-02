@@ -7,26 +7,7 @@
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import {
-  PAYOUT_FREQUENCIES,
-  PAYROLL_WIZARD_STEPS,
-  FIXED_SALARY_BOOKS_BRANCH,
-  addPayrollCommission,
-  adjustPayrollLine,
-  buildPayrollPreview,
-  groupPayrollLinesByStaff,
-  ownPayTotalMinor,
-  payrollBlocksConfirm,
-  payrollPeriodRange,
-  payrollWizardSteps,
-  prorateMonthlyPackageMinor,
-  rebuildWashPoolLines,
-  removeStaffFromPayrollPreview,
-  resolveFixedSalaryBranch,
-} from '../src/lib/payroll.js'
+import { FIXED_SALARY_BOOKS_BRANCH, buildPayrollPreview, prorateMonthlyPackageMinor } from '../src/lib/payroll.js'
 import {
   normalizeCompensationSettings,
   toCompensationSettingsRow,
@@ -39,49 +20,6 @@ import {
   getStaffDock,
 } from '../src/auth/permissions.js'
 import { canEditDailySheet, canReviewDailySheet } from '../src/lib/dailySheet.js'
-
-const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-
-describe('payroll period range', () => {
-  it('daily / weekly / biweekly / monthly / custom use Manila calendar literals', () => {
-    assert.deepEqual(PAYOUT_FREQUENCIES, [
-      'daily',
-      'weekly',
-      'biweekly',
-      'semimonthly',
-      'monthly',
-      'custom',
-    ])
-    assert.deepEqual(payrollPeriodRange('daily', '2026-08-19'), {
-      start: '2026-08-19',
-      end: '2026-08-19',
-    })
-    assert.deepEqual(payrollPeriodRange('weekly', '2026-08-19'), {
-      start: '2026-08-17',
-      end: '2026-08-23',
-    })
-    assert.deepEqual(payrollPeriodRange('biweekly', '2026-08-19'), {
-      start: '2026-08-17',
-      end: '2026-08-30',
-    })
-    assert.deepEqual(payrollPeriodRange('semimonthly', '2026-08-10'), {
-      start: '2026-08-01',
-      end: '2026-08-15',
-    })
-    assert.deepEqual(payrollPeriodRange('semimonthly', '2026-08-20'), {
-      start: '2026-08-16',
-      end: '2026-08-31',
-    })
-    assert.deepEqual(payrollPeriodRange('monthly', '2026-08-19'), {
-      start: '2026-08-01',
-      end: '2026-08-31',
-    })
-    assert.deepEqual(payrollPeriodRange('custom', '2026-08-19', { start: '2026-08-01', end: '2026-08-15' }), {
-      start: '2026-08-01',
-      end: '2026-08-15',
-    })
-  })
-})
 
 describe('payroll preview from POS + attendance', () => {
   const ty = { id: 'staff-ty', full_name: 'Ty', role: 'staff', branch_slug: 'bacoor' }
@@ -132,74 +70,6 @@ describe('payroll preview from POS + attendance', () => {
     assert.equal(wash[0].pay_minor, 17500)
   })
 
-  it('attributes ceramic crew share to present roster and blocks unpaid assignee', () => {
-    const withCrew = buildPayrollPreview({
-      period: { start: '2026-08-19', end: '2026-08-19' },
-      rules: { wash_pool_pct: 35 },
-      sales: [
-        {
-          id: 'sale-cer',
-          branch: 'bacoor',
-          status: 'paid',
-          total_minor: 200000,
-          occurred_at: '2026-08-19T12:00:00+08:00',
-          sale_line_items: [{ line_total_minor: 200000, pay_category: 'detailing' }],
-        },
-      ],
-      attendance: [{ ...ty, attendance_date: '2026-08-19', status: 'present' }],
-      ceramicExpenses: [
-        { description: 'ceramic:sale-cer:crew', total_minor: 40000, branch: 'bacoor', expense_kind: 'salary_carwash' },
-      ],
-    })
-    const crew = withCrew.lines.find((l) => l.kind === 'ceramic_crew')
-    assert.equal(crew.staff_id, 'staff-ty')
-    assert.equal(crew.pay_minor, 40000)
-    assert.equal(crew.source_sale_id, 'sale-cer')
-
-    const orphan = buildPayrollPreview({
-      period: { start: '2026-08-19', end: '2026-08-19' },
-      rules: { wash_pool_pct: 35 },
-      sales: [],
-      attendance: [],
-      ceramicExpenses: [
-        { description: 'ceramic:sale-x:detailer', total_minor: 10000, branch: 'bacoor', expense_kind: 'salary_detailer' },
-      ],
-    })
-    assert.equal(orphan.lines[0].missing_assignee, true)
-    assert.equal(payrollBlocksConfirm(orphan).blocked, true)
-  })
-
-  it('lets SA adjust a line and rebuild wash pool at a new commission %', () => {
-    const preview = buildPayrollPreview({
-      period: { start: '2026-08-19', end: '2026-08-19' },
-      rules: { wash_pool_pct: 35 },
-      sales: [
-        {
-          id: 'sale-wash',
-          branch: 'bacoor',
-          status: 'paid',
-          total_minor: 100000,
-          occurred_at: '2026-08-19T10:00:00+08:00',
-        },
-      ],
-      attendance: [{ ...ty, attendance_date: '2026-08-19', status: 'present' }],
-    })
-    const key = preview.lines[0].key
-    const bumped = adjustPayrollLine(preview.lines, key, 20000)
-    assert.equal(bumped.find((l) => l.key === key).pay_minor, 20000)
-    const rebuilt = rebuildWashPoolLines(preview, 50)
-    assert.equal(rebuilt.lines[0].pay_minor, 50000)
-    assert.equal(rebuilt.rules.wash_pool_pct, 50)
-  })
-
-  it('own pay totals a staff row and ignores Super Admin viewing', () => {
-    const lines = [
-      { staff_id: 'staff-ty', pay_minor: 17500 },
-      { staff_id: 'staff-jen', pay_minor: 17500 },
-    ]
-    assert.equal(ownPayTotalMinor(lines, 'staff-ty'), 17500)
-    assert.equal(ownPayTotalMinor(lines, 'staff-missing'), 0)
-  })
 })
 
 describe('payroll compensation settings persist frequency', () => {
@@ -324,58 +194,5 @@ describe('monthly salary proration + dual run kinds', () => {
     assert.equal(line.pay_minor, Math.round((3_000_000 * 12) / 52))
   })
 
-  it('fixed wizard steps are period → people → extras → review', () => {
-    assert.deepEqual(
-      payrollWizardSteps('fixed').map((s) => s.id),
-      ['period', 'people', 'extras', 'review'],
-    )
-    assert.equal(resolveFixedSalaryBranch({}), FIXED_SALARY_BOOKS_BRANCH)
-  })
-
-  it('groups employees and supports commission + skip', () => {
-    const pkgLine = {
-      key: 'package_fixed:staff-ba:hq:package:1',
-      kind: 'package_fixed',
-      staff_id: 'staff-ba',
-      staff_name: 'BA',
-      branch: 'hq',
-      pay_minor: 1500000,
-      amount_minor: 1500000,
-      direction: 'add',
-      label: 'Monthly salary',
-    }
-    let lines = [pkgLine]
-    lines = addPayrollCommission(lines, {
-      staff: { id: 'staff-ba', full_name: 'BA' },
-      label: 'Sales commission',
-      amountMinor: 50000,
-    })
-    const groups = groupPayrollLinesByStaff(lines)
-    assert.equal(groups.length, 1)
-    assert.equal(groups[0].salary_minor, 1500000)
-    assert.equal(groups[0].commission_minor, 50000)
-    assert.equal(groups[0].total_minor, 1550000)
-    const trimmed = removeStaffFromPayrollPreview(lines, 'staff-ba')
-    assert.equal(trimmed.length, 0)
-  })
 })
 
-describe('payroll wizard + RPC wiring', () => {
-  it('run_payroll migration history stays; the Daily Sheet migration revokes it from clients', () => {
-    assert.deepEqual(
-      PAYROLL_WIZARD_STEPS.map((s) => s.id),
-      ['period', 'proof', 'lines', 'confirm'],
-    )
-    const daily = readFileSync(join(root, 'supabase/migrations/20261001090000_daily_sheet.sql'), 'utf8')
-    assert.match(daily, /revoke execute on function public\.run_payroll\(jsonb\) from authenticated/)
-    const sql = readFileSync(join(root, 'supabase/migrations/20260819100000_payroll_runs.sql'), 'utf8')
-    assert.match(sql, /create table if not exists public.payroll_runs/)
-    assert.match(sql, /create table if not exists public.payroll_run_lines/)
-    assert.match(sql, /create table if not exists public.payroll_run_sales/)
-    assert.match(sql, /create or replace function public.run_payroll/)
-    assert.match(sql, /sale already paid in another payroll run/)
-    assert.match(sql, /payout_frequency/)
-    assert.match(sql, /security definer/)
-    assert.match(sql, /enable row level security/)
-  })
-})

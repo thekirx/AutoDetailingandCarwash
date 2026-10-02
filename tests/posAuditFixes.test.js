@@ -20,7 +20,6 @@ import {
   isAllowedPosPaymentMethod,
   priceCartForMembership,
 } from '../src/lib/posSale.js'
-import { shiftCloseFieldHint, shiftCloseFieldLabel } from '../src/lib/shiftClose.js'
 import { buildBacoorDailyReport } from '../src/lib/bacoorDailyReport.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -77,11 +76,6 @@ describe('POS audit follow-up fixes', () => {
     assert.equal(isAllowedPosPaymentMethod('card', methods), false)
     assert.equal(isAllowedPosPaymentMethod('cash', []), true)
     assert.equal(isAllowedPosPaymentMethod('bitcoin', []), false)
-  })
-
-  it('EoS labels and hints warn against double-counting CA', () => {
-    assert.equal(shiftCloseFieldLabel('ca_collected_minor'), 'CA repaid to drawer')
-    assert.match(shiftCloseFieldHint('ca_collected_minor'), /Do not re-enter/i)
   })
 
   it('daily report counts expense drafts for wizard honesty', () => {

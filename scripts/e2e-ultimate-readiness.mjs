@@ -43,8 +43,8 @@ const STEPS = [
   },
   {
     id: 'L9',
-    label: 'e2e-shift-close-money (BUG-007 RPC)',
-    cmd: ['node', 'scripts/e2e-shift-close-money.mjs'],
+    label: 'e2e-daily-sheet-money (sandbox sheet RPCs)',
+    cmd: ['node', 'scripts/e2e-daily-sheet-money.mjs'],
     critical: true,
   },
   {

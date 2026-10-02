@@ -12,17 +12,11 @@ import {
   normalizeCompensationSettings,
   washPoolAmountMinor,
 } from '../src/lib/compensation.js'
-import {
-  buildPayrollPreview,
-  minorFromPesos,
-  pesosFromMinor,
-  rebuildWashPoolLines,
-} from '../src/lib/payroll.js'
+import { buildPayrollPreview } from '../src/lib/payroll.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (rel) => readFileSync(join(root, rel), 'utf8')
 
-const ty = { id: 'staff-ty', full_name: 'Ty', role: 'staff', branch_slug: 'bacoor' }
 
 describe('wash-eligible lines', () => {
   it('excludes merch / product / coffee from the wash base', () => {
@@ -112,35 +106,8 @@ describe('theoretical wash pool vs allocated', () => {
     assert.equal(preview.pool_minor, 0)
   })
 
-  it('clamps rebuildWashPoolLines percent to 100', () => {
-    const preview = buildPayrollPreview({
-      period: { start: '2026-08-19', end: '2026-08-19' },
-      rules: { wash_pool_pct: 35 },
-      sales: [
-        {
-          id: 'sale-wash',
-          branch: 'bacoor',
-          status: 'paid',
-          total_minor: 100000,
-          occurred_at: '2026-08-19T10:00:00+08:00',
-        },
-      ],
-      attendance: [{ ...ty, attendance_date: '2026-08-19', status: 'present' }],
-    })
-    const rebuilt = rebuildWashPoolLines(preview, 150)
-    assert.equal(rebuilt.rules.wash_pool_pct, 100)
-    assert.equal(rebuilt.theoretical_pool_minor, 100000)
-    assert.equal(rebuilt.lines[0].pay_minor, 100000)
-  })
 })
 
-describe('peso helpers', () => {
-  it('converts shirt-sized ceramic deduction without a centavo lie', () => {
-    assert.equal(pesosFromMinor(50000), 500)
-    assert.equal(minorFromPesos('500'), 50000)
-    assert.equal(minorFromPesos('500.00'), 50000)
-  })
-})
 
 describe('pay rules copy + ACL (source)', () => {
   it('Daily sheet rules writes require canEditFinanceBooks, not any admin', () => {

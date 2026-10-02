@@ -9,12 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { OPS_DEMO_ACCOUNTS } from '../src/lib/demoAccounts.js'
 import { isBookingBoardService, isSameDayQueueKind } from '../src/lib/serviceKinds.js'
 import { buildPosSalePayload } from '../src/lib/posSale.js'
-import {
-  buildPayrollPreview,
-  buildRunPayrollPayload,
-  floorConfirmBlockedByPendingCloses,
-  payrollBlocksConfirm,
-} from '../src/lib/payroll.js'
+import { summarizeSheetSales } from '../src/lib/dailySheet.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = join(root, 'e2e-evidence', 'lifecycle-day')
@@ -183,15 +178,6 @@ try {
     .maybeSingle()
   if (crewErr || !crew) throw new Error(crewErr?.message || 'no bay crew on the team lead branch')
 
-  const { data: already, error: attErr } = await boss.client
-    .from('staff_attendance')
-    .select('staff_id, status, staff_profiles(full_name, role)')
-    .eq('attendance_date', today)
-    .eq('branch_slug', tlProfile.branch_slug)
-    .in('status', ['present', 'late'])
-  if (attErr) throw new Error(attErr.message)
-  const others = (already || []).filter((row) => row.staff_id !== crew.id)
-
   const clock = `${today}T09:00:00+08:00`
   const { error: ovErr } = await boss.client.from('staff_attendance').upsert(
     {
@@ -308,118 +294,29 @@ try {
   }
   pass('finance.today', `${tlProfile.branch_slug} ${today} ${kindSum} minor`)
 
-  const baseline = {
-    square_sales_minor: kindSum,
-    cash_sales_minor: kindSum,
-    total_gcash_minor: 0,
-    credit_card_minor: 0,
-    total_expenses_minor: 0,
-    ca_collected_minor: 0,
-    downpayments_minor: 0,
-    total_cash_left_minor: kindSum,
-  }
-  let closeId = null
-  const { data: closeRow, error: closeErr } = await admin.client.rpc('submit_shift_close', {
-    payload: {
-      branch: tlProfile.branch_slug,
-      business_date: today,
-      shift_ended_at: new Date().toISOString(),
-      pos_baseline: baseline,
-      submitted: baseline,
-      override_reasons: {},
-    },
-  })
-  if (closeErr && /already/i.test(closeErr.message)) {
-    const { data: existingClose, error: existingErr } = await boss.client
-      .from('shift_close_reports')
-      .select('id, status')
-      .eq('branch', tlProfile.branch_slug)
-      .eq('business_date', today)
-      .in('status', ['accepted', 'locked', 'submitted'])
-      .limit(1)
-      .maybeSingle()
-    if (existingErr || !existingClose) throw new Error(closeErr.message)
-    closeId = existingClose.id
-    if (existingClose.status === 'submitted') {
-      const { error: reviewErr } = await boss.client.rpc('review_shift_close', {
-        payload: { id: closeId, action: 'accept', review_note: 'QA lifecycle accept' },
-      })
-      if (reviewErr) throw new Error(reviewErr.message)
-    }
-  } else if (closeErr) {
-    throw new Error(closeErr.message)
-  } else {
-    closeId = closeRow.id
-    const { error: reviewErr } = await boss.client.rpc('review_shift_close', {
-      payload: { id: closeId, action: 'accept', review_note: 'QA lifecycle accept' },
-    })
-    if (reviewErr) throw new Error(reviewErr.message)
-  }
-  pass('finance.accept_close', closeId)
-
-  const { data: rulesRow } = await boss.client.from('compensation_settings').select('*').limit(1).maybeSingle()
+  // Daily Sheet stays read-only here: today's sheet is the Branch Admin's live data.
+  // The save → submit → approve → reopen write path runs on a sandbox date in e2e-daily-sheet-money.mjs.
   const { data: salesToday, error: salesErr } = await boss.client
     .from('sales')
-    .select('id, branch, status, total_minor, occurred_at, created_at, sale_line_items(line_total_minor, line_kind, item_type, name)')
+    .select('id, branch, status, total_minor, discount_minor, payment_method, occurred_at, sale_line_items(item_type, line_total_minor, name)')
     .eq('branch', tlProfile.branch_slug)
-    .eq('status', 'paid')
+    .in('status', ['paid', 'refunded'])
     .gte('occurred_at', `${today}T00:00:00+08:00`)
-    .lte('occurred_at', `${today}T23:59:59+08:00`)
+    .lte('occurred_at', `${today}T23:59:59.999+08:00`)
   if (salesErr) throw new Error(salesErr.message)
-  const { data: attRows } = await boss.client
-    .from('staff_attendance')
-    .select('staff_id, branch_slug, attendance_date, status, staff_profiles(id, full_name, role)')
-    .eq('attendance_date', today)
-    .eq('branch_slug', tlProfile.branch_slug)
-    .in('status', ['present', 'late'])
-  const attendance = (attRows || []).map((row) => ({
-    staff_id: row.staff_id,
-    id: row.staff_id,
-    full_name: row.staff_profiles?.full_name,
-    role: row.staff_profiles?.role,
-    branch_slug: row.branch_slug,
-    attendance_date: row.attendance_date,
-    attendance_status: row.status,
-    status: row.status,
-  }))
-  const preview = buildPayrollPreview({
-    period: { start: today, end: today },
-    rules: rulesRow || {},
-    sales: salesToday || [],
-    attendance,
-    runKind: 'floor',
-    frequency: 'daily',
-  })
-  const closeGate = floorConfirmBlockedByPendingCloses({
-    pendingFloorOptional: rulesRow?.pending_floor_optional === false,
-    runKind: 'floor',
-    branch: tlProfile.branch_slug,
-    periodStart: today,
-    periodEnd: today,
-    closes: [{ branch: tlProfile.branch_slug, business_date: today, status: 'accepted' }],
-  })
-  const block = payrollBlocksConfirm(preview)
-  if (closeGate.blocked) throw new Error(closeGate.reason)
-  if (block.blocked) throw new Error(block.reason)
-  const proofIds = new Set((preview.proof || []).map((row) => row.sale_id))
-  if (saleId && !proofIds.has(String(saleId))) throw new Error('QA sale is missing from payroll proof')
-  const payerIds = [...new Set((preview.lines || []).filter((row) => row.pay_minor > 0).map((row) => row.staff_id))]
-  if (others.length) {
-    pass('payroll.proof', `sale in proof · confirm withheld because ${others.length} other present row(s) already exist`)
-  } else if (payerIds.length && payerIds.some((id) => id !== crew.id)) {
-    pass('payroll.proof', 'sale in proof · confirm withheld because preview pays someone other than the QA crew')
-  } else {
-    const payrollPayload = buildRunPayrollPayload({
-      preview,
-      branch: tlProfile.branch_slug,
-      frequency: 'daily',
-      runKind: 'floor',
-      notes: 'QA lifecycle day',
-    })
-    const { data: run, error: runErr } = await boss.client.rpc('run_payroll', { payload: payrollPayload })
-    if (runErr) throw new Error(runErr.message)
-    pass('payroll.confirm', run?.id || `payout ${run?.total_payout_minor ?? preview.total_payout_minor}`)
+  const sheetSales = summarizeSheetSales(salesToday || [])
+  if (saleId && !(salesToday || []).some((s) => String(s.id) === String(saleId))) {
+    throw new Error('QA sale is missing from the Daily Sheet sales')
   }
+  pass('sheet.sales_include_qa_sale', `net ${sheetSales.netMinor} · ${sheetSales.count} paid`)
+  const { data: sheetRow, error: sheetErr } = await admin.client
+    .from('daily_sheets')
+    .select('id, status')
+    .eq('branch', tlProfile.branch_slug)
+    .eq('business_date', today)
+    .maybeSingle()
+  if (sheetErr) throw new Error(sheetErr.message)
+  pass('sheet.ba_reads_today', sheetRow ? `${sheetRow.id} ${sheetRow.status}` : 'not started yet')
 
   report = {
     today,

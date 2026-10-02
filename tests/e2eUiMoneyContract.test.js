@@ -7,21 +7,11 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
-import { canAccessPos } from '../src/auth/permissions.js'
-import { canReviewShiftClose, canSubmitShiftClose } from '../src/lib/shiftClose.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const moneyScript = join(root, 'scripts', 'e2e-ui-money.mjs')
 
 describe('BUG-007 money UI pack contract', () => {
-  it('RBAC: TL cannot POS; admin can POS + submit EoS; Boss reviews closes', () => {
-    assert.equal(canAccessPos({ role: 'team_lead' }), false)
-    assert.equal(canAccessPos({ role: 'admin' }), true)
-    assert.equal(canSubmitShiftClose({ role: 'admin' }), true)
-    assert.equal(canSubmitShiftClose({ role: 'team_lead' }), false)
-    assert.equal(canReviewShiftClose({ role: 'BossMich' }), true)
-    assert.equal(canReviewShiftClose({ role: 'admin' }), false)
-  })
 
   it('scripts/e2e-ui-money.mjs covers required flow names', () => {
     assert.equal(existsSync(moneyScript), true, 'e2e-ui-money.mjs must exist')

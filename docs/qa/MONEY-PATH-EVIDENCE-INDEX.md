@@ -23,8 +23,7 @@ Maps each soft-launch shop-day step to a command, artifact, and SQL check. Fill 
 | FLOPS | `e2e:lifecycle-flops` | Yes (today’s branch) |
 | UI P0 | `e2e:ui-p0` | No |
 | Money path UI | `e2e:money-path` | No |
-| Shift close sandbox | `e2e:shift-close-money` | Yes (2099-01-01 wipe) |
-| Reopen probe | `node scripts/e2e-shift-close-reopen.mjs` | Yes (no new sale) |
+| Daily Sheet sandbox (save → submit → return → approve → reopen) | `e2e:daily-sheet-money` | Yes (2000-01-03, wiped after) |
 
 ## Latest campaign stamp
 

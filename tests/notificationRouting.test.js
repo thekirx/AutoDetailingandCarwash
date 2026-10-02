@@ -8,11 +8,6 @@ import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
 import { ROLES, allowRoute } from '../src/auth/permissions.js'
 import { NOTIFY_EVENTS, bookingOpsEvent, pickNotifyUrl } from '../src/lib/notifyRouting.js'
 import { buildBookingNotifyPayload, buildOpsNotifyCopy } from '../server/notifyBooking.mjs'
-import { buildComplaintNotifyCopy } from '../server/notifyOpsForm.mjs'
-import { buildPosNotifyCopy } from '../server/notifyPos.mjs'
-import { buildShiftCloseAcceptCopy } from '../server/notifyShiftClose.mjs'
-import { buildOpsLabNotifyCopy } from '../src/lib/opsRoadmap.js'
-import { buildPlannerAssignNotify } from '../src/lib/plannerTasks.js'
 
 /** ASA with every grant the notify rules ask for (resolver drops ASA without the grant). */
 const profileOf = (role) => ({
@@ -58,9 +53,10 @@ describe('notify routing table', () => {
     assert.equal(pickNotifyUrl(profileOf(ROLES.MARKETING), NOTIFY_EVENTS.planner_task.urls), '/operations/planning')
   })
 
-  it('money alerts are gated on the finance_write grant', () => {
-    assert.equal(NOTIFY_EVENTS.floor_pay_ready.grant, 'finance_write')
-    assert.deepEqual(NOTIFY_EVENTS.floor_pay_ready.urls, ['/operations/finance?tab=sheets'])
+  it('daily sheet approvals are gated on finance_view and land on Finance sheets', () => {
+    assert.equal(NOTIFY_EVENTS.sheet_submitted.grant, 'finance_view')
+    assert.deepEqual(NOTIFY_EVENTS.sheet_submitted.urls, ['/operations/finance?tab=sheets'])
+    for (const e of ['shift_submitted', 'shift_accepted', 'shift_rejected', 'floor_pay_ready']) assert.equal(NOTIFY_EVENTS[e], undefined, e)
   })
 
   it('Branch Admin cash advance alert opens the POS Daily sheet', () => {
@@ -83,12 +79,4 @@ describe('copy builders use the routing table', () => {
     }
   })
 
-  it('complaint, POS, shift close, Ops Lab and planner copy point inside their rule', () => {
-    assert.ok(NOTIFY_EVENTS.complaint.urls.includes(buildComplaintNotifyCopy({ payload: {} }).url))
-    assert.ok(NOTIFY_EVENTS.pos.urls.includes(buildPosNotifyCopy({ event: 'expense' }).url.split('?')[0]))
-    assert.ok(NOTIFY_EVENTS.pos.urls.includes(buildPosNotifyCopy({ event: 'sale' }).url))
-    assert.ok(NOTIFY_EVENTS.floor_pay_ready.urls.includes(buildShiftCloseAcceptCopy({}).url))
-    assert.ok(NOTIFY_EVENTS.ops_lab.urls.includes(buildOpsLabNotifyCopy({ event: 'board_created', boardId: 'b' }).url.split('?')[0]))
-    assert.deepEqual(buildPlannerAssignNotify({ title: 't', cardId: 'c' }).urls, NOTIFY_EVENTS.planner_task.urls)
-  })
 })

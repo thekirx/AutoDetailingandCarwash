@@ -7,55 +7,9 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
-import {
-  buildPayrollPreview,
-  buildRunPayrollPayload,
-  payrollBlocksConfirm,
-} from '../src/lib/payroll.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (rel) => readFileSync(join(root, rel), 'utf8')
-
-describe('run_payroll payload from POS-proofed preview', () => {
-  it('sends sale_id proof and amount_minor lines; skips zero pay', () => {
-    const preview = buildPayrollPreview({
-      period: { start: '2026-08-17', end: '2026-08-23' },
-      rules: { wash_pool_pct: 35 },
-      sales: [
-        {
-          id: 'sale-w',
-          branch: 'bacoor',
-          status: 'paid',
-          total_minor: 100000,
-          occurred_at: '2026-08-19T10:00:00+08:00',
-        },
-      ],
-      attendance: [
-        { id: 'staff-ty', full_name: 'Ty', branch_slug: 'bacoor', attendance_date: '2026-08-19', status: 'present' },
-      ],
-    })
-    const payload = buildRunPayrollPayload({
-      preview,
-      branch: 'bacoor',
-      frequency: 'weekly',
-      notes: 'week 34',
-    })
-    assert.equal(payload.branch, 'bacoor')
-    assert.equal(payload.frequency, 'weekly')
-    assert.equal(payload.period_start, '2026-08-17')
-    assert.equal(payload.period_end, '2026-08-23')
-    assert.equal(payload.wash_pool_pct, 35)
-    assert.equal(payload.notes, 'week 34')
-    assert.equal(payload.run_kind, 'floor')
-    assert.equal(payload.sales[0].sale_id, 'sale-w')
-    assert.equal(payload.sales[0].wash_pool_minor, 100000)
-    assert.equal(payload.lines.length, 1)
-    assert.equal(payload.lines[0].staff_id, 'staff-ty')
-    assert.equal(payload.lines[0].amount_minor, 35000)
-    assert.equal(payload.lines[0].kind, 'wash_pool')
-    assert.equal('pay_minor' in payload.lines[0], false)
-  })
-})
 
 describe('payroll frontend retired for the Daily Sheet', () => {
   it('Payroll, My pay and Payroll settings pages are gone; old links redirect', () => {
@@ -77,18 +31,6 @@ describe('payroll frontend retired for the Daily Sheet', () => {
     assert.equal(opsRouteKeyFromPath('/operations/my-pay'), null)
   })
 
-  it('blocks confirm when ceramic assignee is missing', () => {
-    const preview = buildPayrollPreview({
-      period: { start: '2026-08-19', end: '2026-08-19' },
-      rules: { wash_pool_pct: 35 },
-      sales: [],
-      attendance: [],
-      ceramicExpenses: [
-        { description: 'ceramic:sale-x:crew', total_minor: 1000, branch: 'bacoor', expense_kind: 'salary_carwash' },
-      ],
-    })
-    assert.equal(payrollBlocksConfirm(preview).blocked, true)
-  })
 })
 
 describe('payroll SQL / RPC contract', () => {

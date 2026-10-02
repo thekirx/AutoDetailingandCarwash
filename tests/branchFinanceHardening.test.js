@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { requireBranchSlug } from '../src/lib/branchScope.js'
-import { buildPayrollPreview, addPayrollAdjustment } from '../src/lib/payroll.js'
+import { buildPayrollPreview } from '../src/lib/payroll.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -40,17 +40,6 @@ describe('packages are branch-keyed', () => {
     assert.equal(preview.lines.find((l) => l.staff_id === 's2')?.branch, 'hq')
   })
 
-  it('addPayrollAdjustment falls back to HQ when branch missing', () => {
-    const next = addPayrollAdjustment([], {
-      staff: { id: 's1', full_name: 'Ty' },
-      branch: '',
-      direction: 'add',
-      label: 'Bonus',
-      amountMinor: 100,
-    })
-    assert.equal(next.length, 1)
-    assert.equal(next[0].branch, 'hq')
-  })
 })
 
 describe('finance integrity wiring', () => {

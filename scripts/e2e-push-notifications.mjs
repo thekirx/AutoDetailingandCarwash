@@ -10,7 +10,6 @@ import { readFileSync, existsSync } from 'node:fs'
 import { handlePushSubscribeRequest } from '../server/pushApi.mjs'
 import { notifyBookingStatus, buildOpsNotifyRule } from '../server/notifyBooking.mjs'
 import { resolveStaffRecipients, sendWebPushToUsers } from '../server/webPush.mjs'
-import { notifyShiftCloseAccepted } from '../server/notifyShiftClose.mjs'
 import { NOTIFY_EVENTS } from '../src/lib/notifyRouting.js'
 import webpush from 'web-push'
 
@@ -195,14 +194,11 @@ try {
 
   results.push(`notify.waiting: customer+ops inbox ok (branch=${branch})`)
 
-  // 6) Finance accept → SA/ASA push (no owner SMS)
-  const floorPayIds = (await resolveStaffRecipients(admin, NOTIFY_EVENTS.floor_pay_ready)).map((r) => r.id)
-  assert(floorPayIds.includes(users.boss.id), 'BossMich in floor-pay push fan-out')
-  assert(!floorPayIds.includes(users.admin.id) && !floorPayIds.includes(users.staff.id), 'floor-pay push is SA/ASA only')
-  const accept = await notifyShiftCloseAccepted({ branch, businessDate: new Date().toISOString().slice(0, 10), closeId: `e2e-${stamp}` })
-  assert(accept.targets >= 1 && !accept.push?.error, `shift-close push: ${JSON.stringify(accept.push)}`)
-  assert(accept.ownerSms?.skipped === 'owner_sms_disabled', `owner SMS must be off: ${JSON.stringify(accept.ownerSms)}`)
-  results.push(`shiftClose.accept: targets=${accept.targets} subs=${accept.push?.subscriptions ?? 0} ownerSms=off`)
+  // 6) Daily sheet submitted → SA/ASA approvers only (web push, no owner SMS)
+  const sheetIds = (await resolveStaffRecipients(admin, { ...NOTIFY_EVENTS.sheet_submitted, branch })).map((r) => r.id)
+  assert(sheetIds.includes(users.boss.id), 'BossMich in daily-sheet push fan-out')
+  assert(!sheetIds.includes(users.admin.id) && !sheetIds.includes(users.staff.id), 'daily-sheet push is SA/ASA only')
+  results.push(`dailySheet.submitted_fanout: ${sheetIds.length} approver(s)`)
 
   console.log(JSON.stringify({ ok: true, results }, null, 2))
 } catch (err) {
@@ -214,5 +210,5 @@ try {
     await admin.from('push_subscriptions').delete().in('endpoint', endpoints)
   }
   await admin.from('user_notifications').delete().like('body', '%E2EPUSH%')
-  await admin.from('user_notifications').delete().in('tag', [`e2e-${stamp}`, `shift_close:e2e-${stamp}`])
+  await admin.from('user_notifications').delete().eq('tag', `e2e-${stamp}`)
 }

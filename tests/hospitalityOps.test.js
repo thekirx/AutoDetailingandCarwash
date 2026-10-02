@@ -6,62 +6,12 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  addPayrollAdjustment,
-  netPayrollLinesMinor,
-  validatePayrollCustomRange,
-  confirmedPayInCalendarWindow,
-  manilaMonthBounds,
-} from '../src/lib/payroll.js'
 import { validateCustomerNote, isRegularGuest } from '../src/lib/customerNotes.js'
 import { validateRoleDefinition } from '../src/lib/roleDefinitions.js'
 import { normalizePlate } from '../src/lib/customerAuth.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-describe('payroll custom + adjustments', () => {
-  it('validates custom range and nets add/deduct', () => {
-    assert.equal(validatePayrollCustomRange('2026-01-01', '2026-01-10').ok, true)
-    assert.equal(validatePayrollCustomRange('2026-01-10', '2026-01-01').ok, false)
-    let lines = [{ key: 'a', pay_minor: 1000, staff_id: 's1', kind: 'wash_pool' }]
-    lines = addPayrollAdjustment(lines, {
-      staff: { id: 's1', full_name: 'Ty' },
-      branch: 'bacoor',
-      direction: 'deduct',
-      label: 'Uniform',
-      amountMinor: 200,
-    })
-    lines = addPayrollAdjustment(lines, {
-      staff: { id: 's1', full_name: 'Ty' },
-      branch: 'bacoor',
-      direction: 'add',
-      label: 'Bonus',
-      amountMinor: 100,
-    })
-    assert.equal(netPayrollLinesMinor(lines), 900)
-  })
-
-  it('month bounds and confirmed window helpers', () => {
-    const m = manilaMonthBounds('2026-08-21')
-    assert.equal(m.start, '2026-08-01')
-    assert.equal(m.end, '2026-08-31')
-    const total = confirmedPayInCalendarWindow(
-      [
-        {
-          amount_minor: 500,
-          payroll_runs: { status: 'confirmed', period_start: '2026-08-01', period_end: '2026-08-07' },
-        },
-        {
-          amount_minor: 100,
-          source_key: 'deduct:x',
-          payroll_runs: { status: 'confirmed', period_start: '2026-08-01', period_end: '2026-08-07' },
-        },
-      ],
-      { start: '2026-08-01', end: '2026-08-31' },
-    )
-    assert.equal(total, 400)
-  })
-})
 
 describe('customer notes', () => {
   it('validates body and normalizes plate', () => {

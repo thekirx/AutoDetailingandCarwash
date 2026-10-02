@@ -25,6 +25,7 @@ const WASH_SERVICE = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
 const CA_FORM = 'fe103337-850b-4f6f-b6d6-3aa8de9c7fed'
 const PLAN_LIST = '763bbbd8-ecb9-4cb2-abef-c44ff1f24fc6'
 const OTHER_BRANCH_TL = 'tl.batangas@hakumautocare.com'
+const SHEET_DATE = '2000-01-05'
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function tokenFor(persona) {
@@ -70,14 +71,13 @@ async function landsOn(page, base, url) {
 export async function runPushAudit({ base, db, sessions, userIds, outDir, desktopShot, clearShown, browserId }) {
   const byPersona = Object.fromEntries(sessions.map((s) => [s.persona, s]))
   const otherTl = { id: (await db.auth.admin.listUsers({ page: 1, perPage: 1000 })).data.users.find((u) => u.email === OTHER_BRANCH_TL)?.id }
-  const seeded = { bookings: [], closes: [], subs: [], inquiries: [], cards: [], tags: [] }
+  const seeded = { bookings: [], sheets: [], subs: [], inquiries: [], cards: [], tags: [] }
   const rows = []
   const tokens = {}
   const tok = async (p) => (tokens[p] ||= await tokenFor(p))
 
   const bookingId = randomUUID()
-  const closeA = randomUUID()
-  const closeR = randomUUID()
+  const sheetId = randomUUID()
   const caId = randomUUID()
   const reviewId = randomUUID()
   const complaintId = randomUUID()
@@ -122,34 +122,24 @@ export async function runPushAudit({ base, db, sessions, userIds, outDir, deskto
       },
     },
     {
-      name: 'BA submits end of shift → SA + ASA (finance_view) on Finance · shift close',
-      tag: new RegExp(`^shift-submitted-${closeA}$`),
-      expect: { boss: '/operations/finance?tab=shift-close', asa: '/operations/finance?tab=shift-close' },
+      name: 'BA submits the daily sheet → SA + ASA (finance_view) on Finance · Daily sheets',
+      tag: new RegExp(`^sheet-submitted-${sheetId}$`),
+      expect: { boss: `/operations/finance?tab=sheets&sheet=${sheetId}`, asa: `/operations/finance?tab=sheets&sheet=${sheetId}` },
       async fire() {
-        const { error } = await db.from('shift_close_reports').insert({ id: closeA, branch: 'bacoor', business_date: '2000-01-01', status: 'submitted', submitted_by: userIds.admin, submitted_at: new Date().toISOString(), submitted: {} })
-        if (error) throw new Error(`seed close: ${error.message}`)
-        seeded.closes.push(closeA)
-        return api(base, '/api/notify-ops-event', (await tok('admin')).token, { event: 'shift_submitted', id: closeA })
+        const { error } = await db.from('daily_sheets').insert({ id: sheetId, branch: 'bacoor', business_date: SHEET_DATE, status: 'submitted', created_by: userIds.admin, submitted_by: userIds.admin, submitted_at: new Date().toISOString() })
+        if (error) throw new Error(`seed sheet: ${error.message}`)
+        seeded.sheets.push(sheetId)
+        return api(base, '/api/notify-ops-event', (await tok('admin')).token, { event: 'sheet_submitted', id: sheetId })
       },
     },
     {
-      name: 'ASA accepts end of shift → SA floor pay (Daily sheets) + BA "accepted" (POS)',
-      tag: new RegExp(`^(shift_close:|shift-accepted-)${closeA}$`),
-      expect: { boss: '/operations/finance?tab=sheets', admin: '/operations/pos' },
+      name: 'ASA approves the daily sheet → only the submitting BA on POS · Daily sheet',
+      tag: new RegExp(`^sheet-reviewed-${sheetId}$`),
+      expect: { admin: `/operations/pos?tab=sheet&date=${SHEET_DATE}` },
       async fire() {
-        await db.from('shift_close_reports').update({ status: 'accepted', reviewed_by: userIds.asa, reviewed_at: new Date().toISOString() }).eq('id', closeA)
-        return api(base, '/api/notify-shift-close', (await tok('asa')).token, { branch: 'bacoor', business_date: '2000-01-01', close_id: closeA })
-      },
-    },
-    {
-      name: 'ASA rejects another end of shift → BA "sent back" with note (POS)',
-      tag: new RegExp(`^shift-rejected-${closeR}$`),
-      expect: { admin: '/operations/pos' },
-      async fire() {
-        const { error } = await db.from('shift_close_reports').insert({ id: closeR, branch: 'bacoor', business_date: '2000-01-02', status: 'rejected', submitted_by: userIds.admin, submitted_at: new Date().toISOString(), review_note: 'Audit: GCash off by 200', submitted: {} })
-        if (error) throw new Error(`seed rejected close: ${error.message}`)
-        seeded.closes.push(closeR)
-        return api(base, '/api/notify-shift-close', (await tok('asa')).token, { branch: 'bacoor', business_date: '2000-01-02', close_id: closeR, action: 'reject' })
+        const { error } = await db.from('daily_sheets').update({ status: 'approved', reviewed_by: userIds.asa, reviewed_at: new Date().toISOString() }).eq('id', sheetId)
+        if (error) throw new Error(`approve sheet: ${error.message}`)
+        return api(base, '/api/notify-ops-event', (await tok('asa')).token, { event: 'sheet_reviewed', id: sheetId })
       },
     },
     {
@@ -287,7 +277,7 @@ export async function runPushAudit({ base, db, sessions, userIds, outDir, deskto
     }
     await del('queue_assignments', 'booking_id', seeded.bookings)
     await del('bookings', 'id', seeded.bookings)
-    await del('shift_close_reports', 'id', seeded.closes)
+    await del('daily_sheets', 'id', seeded.sheets)
     await del('ops_form_submissions', 'id', seeded.subs)
     await del('partnership_inquiries', 'id', seeded.inquiries)
     await del('plan_card_assignees', 'card_id', seeded.cards)

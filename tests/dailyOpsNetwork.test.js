@@ -18,20 +18,7 @@ import {
   hoursForAttendanceDay,
   indexBranchOperatingHours,
 } from '../src/lib/compensation.js'
-import {
-  addPayrollAdjustment,
-  applyCashAdvanceDeductions,
-  buildPayrollPreview,
-  buildPendingFloorPayrollQueue,
-  buildRunPayrollPayload,
-  floorPayrollCoversDay,
-  netPayrollLinesMinor,
-  payrollBlocksConfirm,
-  posProofTotalsByBranchDay,
-  shiftClosePayrollCoverage,
-} from '../src/lib/payroll.js'
-import { buildShopDaySettlementReport, shopDayShouldClose } from '../src/lib/shopDaySettlement.js'
-import { moneySnapshotFromReport, validateShiftCloseSubmit } from '../src/lib/shiftClose.js'
+import { buildPayrollPreview } from '../src/lib/payroll.js'
 import { rollupPl } from '../src/lib/financeData.js'
 import { classifySaleBucket } from '../src/lib/bacoorDailyReport.js'
 
@@ -67,9 +54,6 @@ const imusCrew = staff('imus-crew', 'Imus Crew', IMUS, 'present', { clock_in_at:
 const imusDetailer = staff('imus-det', 'Imus Detailer', IMUS, 'present', {
   role: 'detailer',
   clock_in_at: '08:00',
-})
-const imusDetailerAbsent = staff('imus-det-out', 'No Show Detailer', IMUS, 'absent', {
-  role: 'detailer',
 })
 
 const bacoorWash = {
@@ -274,28 +258,6 @@ describe('Principal QA — Bacoor vs Imus isolation + late/absent wash pool', ()
     )
   })
 
-  it('assigned but absent detailer gets no commission (held as missing assignee)', () => {
-    const ceramicDrafts = buildCeramicCompensationExpenses({
-      saleId: imusCeramic.id,
-      branch: IMUS,
-      salesMinor: imusCeramic.total_minor,
-      toggles: { detailerAssigned: true },
-      assignedDetailerId: 'imus-det-out',
-    })
-    const preview = buildPayrollPreview({
-      period: { start: DAY, end: DAY },
-      rules: RULES,
-      sales: [imusCeramic],
-      attendance: [imusCrew, imusDetailerAbsent],
-      ceramicExpenses: ceramicDrafts,
-      runKind: 'floor',
-    })
-    const det = preview.lines.filter((l) => l.kind === 'ceramic_detailer')
-    assert.equal(det.length, 1)
-    assert.equal(det[0].missing_assignee, true)
-    assert.equal(det[0].staff_id, null)
-    assert.equal(payrollBlocksConfirm(preview).blocked, true)
-  })
 
   it('walk-in POS detailing with assigned_staff_id still pays that detailer', () => {
     const walkIn = {
@@ -378,124 +340,9 @@ describe('Principal QA — Bacoor vs Imus isolation + late/absent wash pool', ()
   })
 })
 
-describe('Principal QA — cash advance is a deduct, not sales', () => {
-  it('SA wizard applyCashAdvanceDeductions cuts net pay; CA never funds the wash pool', () => {
-    const preview = buildPayrollPreview({
-      period: { start: DAY, end: DAY },
-      rules: RULES,
-      sales: [bacoorWash],
-      attendance: [bacoorOnTime, bacoorLate],
-      runKind: 'floor',
-    })
-    const withCa = applyCashAdvanceDeductions(preview.lines, [
-      {
-        id: 'ca-1',
-        status: 'approved',
-        staff_id: 'crew-on',
-        staff_name: 'On Time',
-        branch: BACOOR,
-        amount_minor: 20_000,
-      },
-    ])
-    assert.equal(preview.lines.reduce((s, l) => s + l.pay_minor, 0), 70_000)
-    assert.equal(netPayrollLinesMinor(withCa), 50_000)
-    const deduct = withCa.find((l) => l.kind === 'adjustment_deduct')
-    assert.equal(deduct.staff_id, 'crew-on')
-    assert.equal(deduct.pay_minor, 20_000)
-    assert.equal(deduct.direction, 'deduct')
-  })
-
-  it('pending / draft cash advances are ignored until approved', () => {
-    const lines = addPayrollAdjustment([], {
-      staff: bacoorOnTime,
-      branch: BACOOR,
-      direction: 'add',
-      label: 'seed',
-      amountMinor: 10_000,
-    })
-    const next = applyCashAdvanceDeductions(lines, [
-      { id: 'ca-draft', status: 'pending', staff_id: 'crew-on', amount_minor: 99_000, branch: BACOOR },
-    ])
-    assert.equal(netPayrollLinesMinor(next), 10_000)
-  })
-})
 
 describe('Principal QA — close → Finance accept → payroll → books (both branches)', () => {
-  it('each branch close attests only its POS; pending floor stays per branch-day', () => {
-    const bacoorReport = buildShopDaySettlementReport({
-      branchSlug: BACOOR,
-      date: DAY,
-      sales: [bacoorWash],
-      attendance: [bacoorOnTime, bacoorLate],
-      rules: RULES,
-      cashAdvances: [{ status: 'approved', amount_minor: 20_000, employee_name: 'On Time' }],
-    })
-    assert.equal(bacoorReport.car_wash_sales_minor, 200_000)
-    assert.equal(bacoorReport.carwash_salary_minor, 70_000)
-    const baseline = moneySnapshotFromReport(bacoorReport)
-    assert.equal(
-      validateShiftCloseSubmit({ baseline, submitted: { ...baseline }, reasons: {}, fieldConfig: [] }).ok,
-      true,
-    )
-    assert.equal(
-      shopDayShouldClose({ sales: [bacoorWash], expenses: [], cashAdvances: [{ amount_minor: 20_000 }] }),
-      true,
-    )
 
-    const imusReport = buildShopDaySettlementReport({
-      branchSlug: IMUS,
-      date: DAY,
-      sales: [imusWash, imusCeramic],
-      attendance: [imusCrew, imusDetailer],
-      rules: RULES,
-    })
-    assert.equal(imusReport.car_wash_sales_minor, 100_000)
-    assert.notEqual(imusReport.car_wash_sales_minor, bacoorReport.car_wash_sales_minor)
-
-    const closes = [
-      { id: 'c-b', branch: BACOOR, business_date: DAY, status: 'accepted', submitted: { total_sales_minor: 200_000 } },
-      { id: 'c-i', branch: IMUS, business_date: DAY, status: 'accepted', submitted: { total_sales_minor: 1_100_000 } },
-    ]
-    const pending = buildPendingFloorPayrollQueue({ closes, runs: [] })
-    assert.equal(pending.length, 2)
-    assert.deepEqual(pending.map((p) => p.branch).sort(), [BACOOR, IMUS])
-
-    const proof = posProofTotalsByBranchDay([bacoorWash, imusWash, imusCeramic])
-    assert.equal(proof.get(`${BACOOR}|${DAY}`), 200_000)
-    assert.equal(proof.get(`${IMUS}|${DAY}`), 1_100_000)
-  })
-
-  it('run_payroll payload is branch-scoped; posted floor covers only that branch-day', () => {
-    const preview = buildPayrollPreview({
-      period: { start: DAY, end: DAY },
-      rules: RULES,
-      sales: [bacoorWash],
-      attendance: [bacoorOnTime, bacoorLate],
-      runKind: 'floor',
-    })
-    const payload = buildRunPayrollPayload({
-      preview,
-      branch: BACOOR,
-      frequency: 'daily',
-      runKind: 'floor',
-    })
-    assert.ok(payload.sales.every((s) => s.sale_id === bacoorWash.id || s.branch === BACOOR))
-    const posted = {
-      run_kind: 'floor',
-      status: 'paid',
-      branch: BACOOR,
-      period_start: DAY,
-      period_end: DAY,
-      payroll_run_sales: [{ branch: BACOOR, business_date: DAY, sale_id: bacoorWash.id }],
-    }
-    assert.equal(floorPayrollCoversDay(posted, DAY, BACOOR), true)
-    assert.equal(floorPayrollCoversDay(posted, DAY, IMUS), false)
-    const coverage = shiftClosePayrollCoverage(
-      { branch: BACOOR, business_date: DAY, status: 'accepted' },
-      [posted],
-    )
-    assert.equal(coverage.covered, true)
-  })
 
   it('Finance P&L does not mix Bacoor wash into Imus coating books', () => {
     const bacoorPl = rollupPl([
@@ -535,7 +382,8 @@ describe('Principal QA — wiring scan includes booking assign + geo clock', () 
     assert.match(read('src/lib/dailySheetApi.js'), /submit_daily_sheet/)
     assert.match(read('src/lib/dailySheetApi.js'), /review_daily_sheet/)
     assert.match(read('src/lib/dailySheet.js'), /buildPayrollPreview/)
-    assert.match(read('src/lib/payroll.js'), /applyCashAdvanceDeductions/)
+    assert.match(read('src/lib/payroll.js'), /export function buildPayrollPreview/)
+    assert.match(read('src/lib/dailySheet.js'), /ca_repay/)
     assert.match(read('src/lib/compensation.js'), /checked_in_at/)
   })
 })

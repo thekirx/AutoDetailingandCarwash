@@ -18,13 +18,6 @@ describe('buildOpsEventCopy', () => {
     assert.equal(c.tag, 'crew-b1')
   })
 
-  it('shift_submitted tells finance who submitted which day', () => {
-    const c = buildOpsEventCopy('shift_submitted', { closeId: 'c1', branchName: 'Bacoor', businessDate: '2026-09-27', submitter: 'Ana' })
-    assert.equal(c.title, 'End of shift to review · Bacoor')
-    assert.match(c.body, /Ana submitted 2026-09-27/)
-    assert.equal(c.tag, 'shift-submitted-c1')
-  })
-
   it('sheet_submitted tells approvers who, which day, net and drawer gap', () => {
     const c = buildOpsEventCopy('sheet_submitted', { sheetId: 's1', branchName: 'Bacoor', businessDate: '2026-10-01', submitter: 'Ana', netProfitMinor: 1250000, overShortMinor: -20000 })
     assert.equal(c.title, 'Daily sheet to approve · Bacoor')
@@ -44,21 +37,8 @@ describe('buildOpsEventCopy', () => {
     assert.equal(NOTIFY_EVENTS.sheet_submitted.grant, 'finance_view')
   })
 
-  it('shift_accepted tells the submitter finance accepted', () => {
-    const c = buildOpsEventCopy('shift_accepted', { closeId: 'c1', branchName: 'Bacoor', businessDate: '2026-09-27' })
-    assert.equal(c.title, 'End of shift accepted · Bacoor')
-    assert.equal(c.tag, 'shift-accepted-c1')
-  })
-
-  it('shift_rejected sends the review note back to the submitter', () => {
-    const c = buildOpsEventCopy('shift_rejected', { closeId: 'c1', branchName: 'Bacoor', businessDate: '2026-09-27', note: 'GCash off by 200' })
-    assert.equal(c.title, 'End of shift sent back · Bacoor')
-    assert.match(c.body, /GCash off by 200/)
-    assert.equal(c.tag, 'shift-rejected-c1')
-    assert.ok(NOTIFY_EVENTS.shift_rejected.urls.includes('/operations/pos'))
-  })
-
-  it('payroll events are retired with the Payroll page', () => {
+  it('payroll and end-of-shift events are retired with those pages', () => {
+    for (const e of ['shift_submitted', 'shift_accepted', 'shift_rejected']) assert.equal(buildOpsEventCopy(e, {}), null, e)
     assert.equal(OPS_EVENTS.includes('payroll_confirmed'), false)
     assert.equal(OPS_EVENTS.includes('cash_advance_resolved'), false)
     assert.equal(NOTIFY_EVENTS.payroll_confirmed, undefined)

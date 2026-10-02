@@ -252,11 +252,6 @@ export function cashAdvanceInBranchScope(row, { branch, posBranch, branchScopeLi
   return Array.isArray(branchScopeList) && branchScopeList.includes(subBranch)
 }
 
-/** @deprecated use cashAdvanceInBranchScope — kept for older call sites / tests */
-export function cashAdvanceVisibleOnPos(row, opts = {}) {
-  return cashAdvanceInBranchScope(row, opts)
-}
-
 function normalizeName(value) {
   return String(value || '')
     .trim()

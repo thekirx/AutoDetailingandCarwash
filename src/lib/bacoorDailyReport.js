@@ -15,12 +15,6 @@ export function manilaDayStamp(iso) {
   }).format(d)
 }
 
-export function approvedCaForCloseDay(row, dayIso) {
-  const status = String(row?.status || '').toLowerCase()
-  if (status !== 'resolved' && status !== 'approved') return false
-  return manilaDayStamp(row.resolved_at) === String(dayIso || '')
-}
-
 export function emptyBacoorDailyReport(meta = {}) {
   return {
     branch: meta.branchDisplay || meta.branch || '',

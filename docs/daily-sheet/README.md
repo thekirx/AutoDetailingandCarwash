@@ -99,7 +99,7 @@ Tabs: **Home · Daily sheets · Sales · Bills · P&L · Reports**. Every filter
 - Branch Admins see only their own branches. RLS stays on.
 - Old End of shift reports (`shift_close_reports`) stay as read-only history in **Finance → More → Old shift closes** (also linked from Daily sheets). There is no Accept / Reject / Lock any more; `submit_shift_close` and `review_shift_close` are revoked. Payroll tables are kept but locked (no new runs).
 - Bills keep `bill_reference` (max 80 characters) and `due_date` on `expenses`.
-- Migration: `supabase/migrations/20261001090000_daily_sheet.sql` — **not applied to production without owner approval.**
+- Migration: `supabase/migrations/20261001090000_daily_sheet.sql` — applied to production (`lybxhpzzqqyqswvuwpxv`) on 2026-10-02.
 
 ## What was retired (2026-10-01)
 
@@ -110,14 +110,15 @@ Tabs: **Home · Daily sheets · Sales · Bills · P&L · Reports**. Every filter
 | Settings → Payroll (`/operations/settings/payroll`) | Settings → Daily sheet rules | `/operations/settings/daily-sheet` |
 | POS → End of shift wizard | POS → Daily sheet | — |
 | Payroll → Cash advance panel | Cash advance lines on the Daily Sheet | — |
-| `npm run e2e:payroll` | `scripts/_daily-sheet-sql-check.mjs` + `scripts/_daily-sheet-walk.mjs` | — |
+| `npm run e2e:payroll`, `npm run e2e:shift-close-money`, `scripts/e2e-shift-close-reopen.mjs` | `npm run e2e:daily-sheet-money` (live) + `scripts/_daily-sheet-sql-check.mjs` + `scripts/_daily-sheet-walk.mjs` | — |
+| `POST /api/notify-shift-close`, `shift_*` / `floor_pay_ready` pushes | `sheet_submitted` / `sheet_reviewed` via `/api/notify-ops-event` | — |
 
 ## Release order
 
-1. Owner approves, then apply `20261001090000_daily_sheet.sql` to production.
-2. Deploy the app.
+1. Apply `20261001090000_daily_sheet.sql` to production — done 2026-10-02.
+2. Deploy the app — done (Vercel, `main`).
 
-If the app goes out first, POS → Daily sheet and Finance → Daily sheets show *“The Daily Sheet needs its database update (migration 20261001090000_daily_sheet)”* instead of breaking. Production has not been migrated yet, so the live walks in `scripts/e2e-*` that touch Daily sheets cannot pass until step 1 is done.
+If the app goes out before the migration, POS → Daily sheet and Finance → Daily sheets show *“The Daily Sheet needs its database update (migration 20261001090000_daily_sheet)”* instead of breaking.
 
 ## Messaging
 
@@ -127,9 +128,12 @@ Web push only: submit → approvers, approve/return → Branch Admin, cash advan
 
 | Check | Command | Last result (2026-10-02) |
 |---|---|---|
-| Unit + source tests | `npm test` | 1508 / 1508 pass |
-| Lint | `npx eslint src server tests scripts api` | 0 problems |
-| Production build | `npx vite build` | exit 0 |
+| Unit + source tests | `npm test` | 1437 / 1437 pass (legacy payroll / shift-close tests removed with their code) |
+| Lint | `npx eslint .` | 0 problems |
+| Production build | `npm run build` | exit 0 |
+| **Live production money path** (sandbox day 2000-01-03, wiped after; RLS, wrong-branch, TL denied, submit rules, return → resubmit → approve posts once, re-approve posts nothing, reopen voids, receipts, daily-rate guard, legacy RPCs revoked) | `npm run e2e:daily-sheet-money` | 32 / 32 pass |
+| Live production UI, read-only (BA Daily sheet, SA inbox, P&L, old closes, settings, retired routes redirect; aborts any write) | `node scripts/_daily-sheet-live-smoke.mjs` | 10 / 10 pass |
+| Live ops cutover (investor RLS, BA `run_payroll` denied, stock, customer mute) | `node scripts/e2e-ops-cutover.mjs` | PASS |
 | Migration on in-memory Postgres (RLS, RPCs, posting, revokes) | `node scripts/_daily-sheet-sql-check.mjs` | 11 / 11 groups pass |
 | Browser walk: BA submits → SA approves → P&L | `npm run build && npx vite preview --port 5176` then `node scripts/_daily-sheet-walk.mjs` | 29 / 29 pass |
 | Shop-day map (`docs/architecture/shop-day-flops.workflow.*`) | Archify `validate` → `deliver` → `visual-check` | 9 checks, 0 errors / 0 warnings; deliver exit 0; visual-check pass at 4 viewports |
@@ -179,7 +183,8 @@ P&L after approval — 375 · 768 · 1440
 
 ## Known follow-ups
 
-- Server paths with no caller left in the app: the `shift_submitted` push in `server/notifyOpsEvent.mjs`, `POST /api/notify-shift-close` (`server/notifyShiftCloseApi.mjs`, `server/notifyShiftClose.mjs`) and the `shift_*` / `floor_pay_ready` rules in `src/lib/notifyRouting.js`. Safe to delete in a cleanup pass with their tests.
-- Legacy library code with no caller left in the app: 35 of the 40 exports in `src/lib/payroll.js` (the app still uses `buildPayrollPreview`, `shiftClosePayrollCoverage`, `enrichCashAdvancePayload`, `applyFloorPreviewToBacoorReport`, `FIXED_SALARY_BOOKS_BRANCH`), 19 of the 24 in `src/lib/shiftClose.js`, plus `cashAdvanceVisibleOnPos` (`posSale.js`) and `approvedCaForCloseDay` (`bacoorDailyReport.js`). They are still imported by ~25 legacy test files and by the live e2e scripts above, which run against today's un-migrated production. Remove them in one pass together with the server paths and the e2e rewrite after release step 1 — removing them earlier breaks those scripts.
+- Done 2026-10-02: the legacy cleanup. Removed `POST /api/notify-shift-close` (`server/notifyShiftClose*.mjs`), the `shift_*` / `floor_pay_ready` push rules, `src/lib/shopDaySettlement.js`, the dead exports of `src/lib/payroll.js` and `src/lib/shiftClose.js` (only the helpers the app and old-closes history still use remain), `cashAdvanceVisibleOnPos` and `approvedCaForCloseDay`, with their tests. The live e2e scripts no longer call `submit_shift_close` / `review_shift_close` / `run_payroll` except to prove they are denied.
+- Old End of shift reports left in `submitted` can no longer be accepted (read-only history by design).
 - Dropping the locked payroll tables is a separate migration that needs the owner's OK.
-- Live production e2e scripts still drive the old RPCs and will fail once the migration revokes them: `e2e-lifecycle-flops.mjs`, `e2e-lifecycle-day.mjs`, `e2e-shift-close-money.mjs` (`npm run e2e:shift-close-money`) and `e2e-shift-close-reopen.mjs` call `submit_shift_close` / `review_shift_close` / `run_payroll`. Rewrite them onto `save_daily_sheet` → `submit_daily_sheet` → `review_daily_sheet` right after release step 1, when they can be run against the migrated database. `docs/qa/SHOP-DAY-RUNBOOK.md` and `docs/OPS/MONEY-CONTRACT.md` describe that old flow until then.
+- `scripts/push-audit-events.mjs` (real-device push audit, `PUSH_AUDIT=1`) now covers the Daily Sheet submit / approve pushes but has not been re-run since; it needs every persona's browser subscribed.
+- `20260929090000_visit_stamp.sql` is still unapplied on production (separate, not part of the Daily Sheet).

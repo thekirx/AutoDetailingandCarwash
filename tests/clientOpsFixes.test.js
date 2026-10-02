@@ -130,8 +130,6 @@ describe('client ops fixes batch', () => {
     const inventory = readFileSync(join(root, 'src/pages/InventoryPage.jsx'), 'utf8')
     assert.match(pos, /productMatchesMerchFamily/)
     assert.match(pos, /MERCH_FAMILIES/)
-    const settlement = readFileSync(join(root, 'src/lib/shopDaySettlement.js'), 'utf8')
-    assert.match(settlement, /paidSalesToBacoorRows/)
     const sheet = readFileSync(join(root, 'src/lib/dailySheet.js'), 'utf8')
     assert.match(sheet, /refreshment: 'coffee'/)
     assert.match(sheet, /paidSalesToBacoorRows/)

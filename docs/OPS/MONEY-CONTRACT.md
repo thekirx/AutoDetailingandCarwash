@@ -132,11 +132,11 @@ cash_left = cash_sales − total_expenses + ca_collected
 | Fixed pay | `staff_pay_packages` → `payroll_runs` (`run_kind=fixed`); kinds `package_fixed` / `package_hybrid` | Fixed wizard, My Pay labels |
 | CA out | `ops_form_submissions` (cash_advance, resolved) with **`payload.staff_id`** | EoS expenses/cash left; manual payroll deduct |
 | CA in | `expenses.expense_kind = ca_repayment` | Cash left up; never sales |
-| Day report + EoS baseline | `buildShopDaySettlementReport` (Bacoor + wash-pool preview + today’s attendance) | POS only — preview, not a second pay ledger |
+| Day report | Daily Sheet totals (`src/lib/dailySheet.js`; `buildShopDaySettlementReport` removed 2026-10-02) | POS → Daily sheet — preview until approved |
 
 **Branch rule:** every money read/write filters by branch (or SA “all” via scope list). One close per branch per day. Floor and fixed never share a run.
 
-**Notify path:** Finance accept → RPC writes `user_notifications` (inbox) → client calls `/api/notify-shift-close` (web push). Neither path auto-pays.
+**Notify path (since 2026-10-01):** Daily Sheet submit / approve → client calls `/api/notify-ops-event` (`sheet_submitted` → SA/ASA, `sheet_reviewed` → the submitting BA) → inbox + web push. `/api/notify-shift-close` was removed. Neither path auto-pays.
 
 ---
 

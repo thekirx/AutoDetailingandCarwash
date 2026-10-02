@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import {
   keepQueueHandoffWhenAdding,
   posCartBlocksCheckout,
-  cashAdvanceVisibleOnPos,
+  cashAdvanceInBranchScope,
   expenseCountsOnDailyClose,
   buildVisitHandoffCartLines,
 } from '../src/lib/posSale.js'
@@ -68,7 +68,7 @@ describe('POS checkout workflow seam', () => {
     assert.doesNotMatch(pos, /setTab\(branchAdmin \? 'merch' : 'services'\)/)
   })
 
-  it('Sell shows waiting tickets on the same page — no separate Pay queue tab', () => {
+  it('Sell shows waiting tickets on the same page â€” no separate Pay queue tab', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
     assert.match(pos, /<PosOpenTickets/)
     assert.doesNotMatch(pos, /Pay queue tab/)
@@ -80,12 +80,12 @@ describe('POS checkout workflow seam', () => {
       ops_forms: { kind: 'cash_advance' },
       payload: { branch },
     })
-    assert.equal(cashAdvanceVisibleOnPos(ca(''), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), false)
-    assert.equal(cashAdvanceVisibleOnPos(ca('imus'), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), false)
-    assert.equal(cashAdvanceVisibleOnPos(ca('bacoor'), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), true)
-    assert.equal(cashAdvanceVisibleOnPos({ ops_forms: { kind: 'complaint' }, payload: { branch: 'bacoor' } }, { posBranch: 'bacoor', branchScopeList: null }), false)
-    assert.equal(cashAdvanceVisibleOnPos(ca('bacoor'), { posBranch: 'bacoor', branchScopeList: null }), true)
-    assert.equal(cashAdvanceVisibleOnPos(ca('bacoor'), { branch: 'bacoor', branchScopeList: null }), true)
+    assert.equal(cashAdvanceInBranchScope(ca(''), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), false)
+    assert.equal(cashAdvanceInBranchScope(ca('imus'), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), false)
+    assert.equal(cashAdvanceInBranchScope(ca('bacoor'), { posBranch: 'bacoor', branchScopeList: ['bacoor'] }), true)
+    assert.equal(cashAdvanceInBranchScope({ ops_forms: { kind: 'complaint' }, payload: { branch: 'bacoor' } }, { posBranch: 'bacoor', branchScopeList: null }), false)
+    assert.equal(cashAdvanceInBranchScope(ca('bacoor'), { posBranch: 'bacoor', branchScopeList: null }), true)
+    assert.equal(cashAdvanceInBranchScope(ca('bacoor'), { branch: 'bacoor', branchScopeList: null }), true)
   })
 
   it('PPF pay_category is PPF on tiles and Bacoor close, not Queue wash', () => {

@@ -18,7 +18,6 @@ import {
   CORPORATE_BRANCH_SLUG,
 } from '../src/lib/financeCorporate.js'
 import { customerNotifyAllowed } from '../src/lib/ownerRevisionsPhase7.js'
-import { buildOwnerDailySmsFromClose } from '../server/notifyShiftClose.mjs'
 import { notifyBookingStatus } from '../server/notifyBooking.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -96,37 +95,7 @@ assert(baRpcErr, 'BA rpc run_payroll must fail')
 results.push(`ba.run_payroll_blocked: ${baRpcErr.message.slice(0, 60)}`)
 await baClient.auth.signOut()
 
-// ── 3. Owner SMS body shape + env ─────────────────────────────────────────
-const smsBody = buildOwnerDailySmsFromClose({
-  branch: 'bacoor',
-  businessDate: '2026-08-28',
-  submitted: {
-    branch_slug: 'bacoor',
-    date: '2026-08-28',
-    total_sales_minor: 500000,
-    car_wash_sales_minor: 300000,
-    detailing_sales_minor: 100000,
-    ceramic_tint_sales_minor: 50000,
-    refreshment_sales_minor: 25000,
-    car_accessories_minor: 25000,
-    total_gcash_minor: 200000,
-    credit_card_minor: 100000,
-    total_expenses_minor: 50000,
-    carwash_salary_minor: 40000,
-  },
-})
-for (const needle of ['BACOOR', 'Car Wash', 'Tint', 'GCash', 'Credit']) {
-  assert(smsBody.includes(needle) || smsBody.toUpperCase().includes(needle.toUpperCase()), `owner SMS missing: ${needle}`)
-}
-const ownerPhone = String(process.env.OWNER_SMS_PHONE || process.env.HAKUM_OWNER_PHONE || '').trim()
-if (ownerPhone) {
-  results.push(`owner_sms.env_phone: set (${ownerPhone.slice(0, 4)}…)`)
-} else {
-  warnings.push('owner_sms.env_phone: not set — falls back to BossMich staff phone on accept')
-}
-results.push('owner_sms.report_shape: ok')
-
-// ── 4. Branch stock (POS fail-closed) ─────────────────────────────────────
+// ── 3. Branch stock (POS fail-closed) ─────────────────────────────────────
 const { count: stockCount, error: stockErr } = await admin
   .from('product_branch_stock')
   .select('id', { count: 'exact', head: true })
@@ -135,7 +104,7 @@ assert(!stockErr, stockErr?.message)
 assert(stockCount > 0, 'bacoor product_branch_stock empty — run scripts/seed-branch-stock.sql')
 results.push(`stock.bacoor_rows: ${stockCount}`)
 
-// ── 5. Customer mute → notify skipped ─────────────────────────────────────
+// ── 4. Customer mute → notify skipped ─────────────────────────────────────
 const { data: demoCust } = await admin
   .from('customers')
   .select('id, notify_sms, notify_push, is_disabled')
@@ -157,7 +126,7 @@ if (demoCust?.id) {
   warnings.push('customer.mute_notify: demo customer row not found — skipped')
 }
 
-// ── 6. Sunday recon + floor chemical data ─────────────────────────────────
+// ── 5. Sunday recon + floor chemical data ─────────────────────────────────
 const { count: reconApproved, error: reconErr } = await admin
   .from('inventory_recons')
   .select('id', { count: 'exact', head: true })
@@ -169,21 +138,7 @@ if (reconApproved > 0) {
   warnings.push('recon.approved_count: 0 — floor chemical chart stays stub until first BA→SA approve')
 }
 
-// ── 7. salary_draft_extras on accepted closes ─────────────────────────────
-const { data: closes } = await admin
-  .from('shift_close_reports')
-  .select('id, status, submitted')
-  .eq('status', 'accepted')
-  .order('updated_at', { ascending: false })
-  .limit(20)
-const withDrafts = (closes || []).filter((c) => c.submitted?.salary_draft_extras?.length)
-if (withDrafts.length) {
-  results.push(`salary.draft_extras_on_accepted: ${withDrafts.length} close(s)`)
-} else {
-  warnings.push('salary.draft_extras: none on recent accepted closes — manual BA EoS demo still needed')
-}
-
-// ── 8. Experience investigation cards ───────────────────────────────────
+// ── 6. Experience investigation cards ───────────────────────────────────
 const { count: expCards, error: expErr } = await admin
   .from('plan_cards')
   .select('id', { count: 'exact', head: true })
@@ -195,7 +150,7 @@ if (expCards > 0) {
   warnings.push('detailing.experience_cards: 0 — complete outcome 2/3 in UI to seed')
 }
 
-// ── 9. Performance: lazy routes present ─────────────────────────────────
+// ── 7. Performance: lazy routes present ─────────────────────────────────
 const appSrc = readFileSync(join(root, 'src/App.jsx'), 'utf8')
 assert(appSrc.includes('lazy('), 'App.jsx must lazy-load heavy routes')
 results.push('perf.lazy_routes: ok')

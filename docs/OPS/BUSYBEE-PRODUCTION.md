@@ -33,7 +33,7 @@ Never use `VITE_*` for BusyBee keys.
 | Paint-maintenance reminder rules | `server/paintMaintenanceNotify.mjs` + Notifications ReminderRules |
 | CRM / marketing broadcast | `server/notificationBroadcastApi.mjs` |
 | Birthday greetings | `server/birthdayGreetings.mjs` |
-| Finance accept | `server/notifyShiftClose.mjs` → **web push only** |
+| Daily Sheet submit / approve | `server/notifyOpsEvent.mjs` (`sheet_submitted`, `sheet_reviewed`) → **web push only** |
 
 Shop-wide gate: `app_settings.sms_notifications.enabled` must be `true`.
 

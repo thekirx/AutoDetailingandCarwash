@@ -192,7 +192,7 @@ flowchart TB
 | Responsive | **CONDITIONAL** fail=0 | R · book touch targets |
 | Live status SMS DLR | **PASS** (campaign) | earlier run; L7 skipped when `SEND_LIVE_SMS` unset |
 | BusyBee balance smoke | **SOFT** | L6 softFail |
-| Destructive EoS submit → finance accept | **PASS** | L9 · [`e2e-shift-close-money.mjs`](../../scripts/e2e-shift-close-money.mjs) |
+| Destructive Daily Sheet submit → approve → reopen (replaced EoS on 2026-10-01) | **PASS** 32/32 (2026-10-02) | L9 · [`e2e-daily-sheet-money.mjs`](../../scripts/e2e-daily-sheet-money.mjs) |
 | Prod SMS egress / owner phone / SMTP / CHEM-RECON | **OPEN (ops)** | BUG-002…004, 10.x (QA recon seeded; prod approval still pending) |
 
 ### Verdict

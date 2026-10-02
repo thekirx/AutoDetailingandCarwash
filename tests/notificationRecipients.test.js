@@ -41,9 +41,10 @@ describe('planStaffRecipients', () => {
     assert.equal(got['det-bacoor'], '/operations/bookings')
   })
 
-  it('money alerts need finance_write for ASA', () => {
-    const got = planStaffRecipients(staff, { ...NOTIFY_EVENTS.floor_pay_ready, branch: 'bacoor' })
-    assert.deepEqual(ids(got), ['asa-fw', 'sa'])
+  it('daily sheet approvals need finance_view for ASA', () => {
+    const noView = { id: 'asa-nv', role: 'assistant_super_admin', branch_slug: null, permission_grants: { finance_view: false } }
+    const got = planStaffRecipients([...staff, noView], { ...NOTIFY_EVENTS.sheet_submitted, branch: 'bacoor' })
+    assert.deepEqual(ids(got), ['asa-fw', 'asa-ro', 'sa'])
   })
 
   it('cash advance requests go to that branch Branch Admin on the POS Daily sheet', () => {
