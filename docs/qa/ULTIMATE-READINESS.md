@@ -89,7 +89,7 @@ Soft-launch shop-day ready requires F.1–F.5 exit 0 with fresh artifacts. Produ
 | 4.1 | Attendance geo unit | covered by `npm test` | [x] |
 | 4.2 | Live attendance | `node scripts/e2e-attendance.mjs` | [x] |
 | 4.3 | UI attendance page | `e2e-ui-p0` | [x] |
-| 4.4 | Payroll | `npm run e2e:payroll` | [x] |
+| 4.4 | Payroll | retired 2026-10 — crew pay moved to the Daily Sheet (`node scripts/_daily-sheet-sql-check.mjs`) | n/a |
 | 4.5 | Crew / tasks | `node scripts/e2e-part4-crew-tasks.mjs` | [ ] not in orchestrator |
 
 ---

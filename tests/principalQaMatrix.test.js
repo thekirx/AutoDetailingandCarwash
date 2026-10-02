@@ -151,10 +151,10 @@ describe('Negative allowRoute denials', () => {
     }
   })
 
-  it('team_lead queue ok, pos denied by default', () => {
+  it('team_lead queue ok, Floor Board and pos denied by default', () => {
     const p = profile(ROLES.TEAM_LEAD)
     assert.equal(allowRoute(p, 'queue'), true)
-    assert.equal(allowRoute(p, 'dashboard'), true)
+    assert.equal(allowRoute(p, 'dashboard'), false)
     assert.equal(allowRoute(p, 'attendance'), true)
     assert.equal(allowRoute(p, 'pos'), false)
     assert.equal(allowRoute(p, 'finance'), false)

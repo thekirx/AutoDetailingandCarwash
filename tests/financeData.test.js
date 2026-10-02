@@ -33,6 +33,7 @@ describe('financeData tabs + presets', () => {
       FINANCE_TABS.map((t) => t.id),
       [
         'overview',
+        'sheets',
         'sales',
         'purchases',
         'pl',

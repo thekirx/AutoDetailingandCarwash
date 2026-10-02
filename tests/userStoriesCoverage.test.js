@@ -15,15 +15,15 @@ describe('US-PAY-03 · Crew estimate banner + settings path', () => {
   it('Crew shows estimate-only copy and never inserts wash-pool expenses', () => {
     const crew = read('src/pages/OperationsPages.jsx')
     assert.match(crew, /Estimate only — not posted pay/)
-    assert.match(crew, /\/operations\/payroll/)
+    assert.match(crew, /Crew pay is settled on the Daily Sheet/)
     assert.doesNotMatch(crew, /\.from\('expenses'\)\.insert\(pending\)/)
   })
 
-  it('Payroll rules live under settings/payroll, not the Settings hub poster', () => {
+  it('Pay rules live under settings/daily-sheet, not the Settings hub poster', () => {
     const hub = read('src/pages/SettingsHubPage.jsx')
-    assert.match(hub, /settings\/payroll/)
+    assert.match(hub, /settings\/daily-sheet/)
     assert.doesNotMatch(hub, /toCompensationSettingsRow/)
-    assert.match(read('src/pages/settings/PayrollSettingsPage.jsx'), /toCompensationSettingsRow|compensation_settings/)
+    assert.match(read('src/pages/settings/DailySheetRulesPage.jsx'), /toCompensationSettingsRow|compensation_settings/)
   })
 })
 

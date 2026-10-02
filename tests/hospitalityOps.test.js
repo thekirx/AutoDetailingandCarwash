@@ -110,15 +110,10 @@ describe('role definitions', () => {
 })
 
 describe('hospitality wiring scans', () => {
-  it('payroll page has custom + packages; finance has expense reports; my pay labels estimates', () => {
-    const payroll = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
+  it('finance has expense reports; attendance labels the wash pool as an unpaid estimate', () => {
     const finance = readFileSync(join(root, 'src/pages/FinancePage.jsx'), 'utf8')
-    const myPay = readFileSync(join(root, 'src/pages/MyPayPage.jsx'), 'utf8')
-    assert.match(payroll, /custom/)
-    assert.match(payroll, /staff_pay_packages/)
-    assert.match(payroll, /addPayrollAdjustment/)
+    const attendance = readFileSync(join(root, 'src/pages/crew/CrewAttendancePanels.jsx'), 'utf8')
     assert.match(finance, /expense-reports/)
-    assert.match(myPay, /Estimate — unpaid/)
-    assert.match(myPay, /Today \(confirmed\)/)
+    assert.match(attendance, /Wash pool estimate today — \{formatMoney\(myPayMinor\)\} unpaid/)
   })
 })

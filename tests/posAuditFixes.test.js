@@ -98,15 +98,10 @@ describe('POS audit follow-up fixes', () => {
     assert.equal(report.total_expenses_minor, 7000)
   })
 
-  it('POS and Payroll wire settings entry and pending policy', () => {
+  it('POS wires the settings entry and payment-method policy', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
     assert.match(pos, /canWritePosSettings/)
     assert.match(pos, /isAllowedPosPaymentMethod/)
-    const payroll = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
-    assert.match(payroll, /pending_floor_optional/)
-    const wiz = readFileSync(join(root, 'src/components/ShiftCloseWizard.jsx'), 'utf8')
-    assert.match(wiz, /Approved cash advances/)
-    assert.match(wiz, /does not run payroll/)
   })
 
   it('stamped line_kind separates wash, detailing, ppf, and merch', () => {
@@ -161,8 +156,8 @@ describe('POS audit follow-up fixes', () => {
     const finance = readFileSync(join(root, 'src/pages/FinancePage.jsx'), 'utf8')
     assert.match(finance, /canEditFinanceBooks/)
     assert.doesNotMatch(finance, /canWriteFinance/)
-    const overview = readFileSync(join(root, 'src/pages/finance/FinanceOverviewTab.jsx'), 'utf8')
-    assert.match(overview, /Paid by kind/)
-    assert.match(overview, /kindRows/)
+    const sales = readFileSync(join(root, 'src/pages/finance/FinanceSalesSummary.jsx'), 'utf8')
+    assert.match(sales, /By service family/)
+    assert.match(sales, /kindRows/)
   })
 })

@@ -6,6 +6,7 @@ import { enUS } from 'date-fns/locale'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { useAuth } from '@/auth/AuthProvider'
 import {
+  allowedBookingViews,
   canAccessBookingBoard,
   canAdvanceBookingStatus,
   canCheckInFormBooking,
@@ -85,7 +86,6 @@ import { createCoalescedReload } from '@/lib/coalesceReload'
 import { cn } from '@/lib/utils'
 import { ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ClipboardList, Send, Sparkles, Wrench } from 'lucide-react'
 
-const BOOKING_TABS = ['board', 'list', 'table', 'calendar', 'maintenance']
 const BOOKING_SHELL_TABS = Object.freeze([
   { id: 'board', label: 'Board' },
   { id: 'list', label: 'List' },
@@ -305,7 +305,8 @@ export default function BookingBoardPage() {
   const canCancelForm = canEdit && !bookingsReadOnly
   const canSeePayment = false // Bookings board ends at Successful Release — POS is separate
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = BOOKING_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'board'
+  const shellTabs = useMemo(() => allowedBookingViews(profile, BOOKING_SHELL_TABS), [profile])
+  const tab = shellTabs.some((t) => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'board'
   const [bookings, setBookings] = useState([])
   const [branches, setBranches] = useState([])
   const [services, setServices] = useState([])
@@ -1043,7 +1044,7 @@ export default function BookingBoardPage() {
       />
 
       <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'board' ? {} : { tab: next }, { replace: true })} className="min-w-0 flex flex-col gap-4">
-        <OpsTabList tabs={BOOKING_SHELL_TABS} aria-label="Bookings views" />
+        <OpsTabList tabs={shellTabs} aria-label="Bookings views" />
 
         <TabsContent value="board" className="mt-4 min-w-0">
           <div className="bk-board">

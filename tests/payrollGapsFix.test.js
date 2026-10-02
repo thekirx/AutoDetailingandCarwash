@@ -111,15 +111,7 @@ describe('getLocalCalendarDate sanity', () => {
   })
 })
 
-describe('Payroll page wiring for gap fixes', () => {
-  it('maps claimed sales with saleBusinessDate and filters ceramic by sale id', () => {
-    const page = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
-    assert.match(page, /saleBusinessDate/)
-    assert.match(page, /filterCeramicExpensesForSales/)
-    assert.doesNotMatch(page, /business_date: String\(s\.sales\?\.occurred_at \|\| ''\)\.slice\(0, 10\)/)
-    assert.match(page, /enrichCashAdvancePayload|Typical payday \(reminder\)/)
-  })
-
+describe('cash advance request wiring', () => {
   it('staff CA submit stamps staff_id via enrichCashAdvancePayload', () => {
     const panel = readFileSync(join(root, 'src/pages/planning/PlanningFormsSmartPanel.jsx'), 'utf8')
     assert.match(panel, /enrichCashAdvancePayload/)

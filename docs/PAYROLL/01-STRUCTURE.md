@@ -1,5 +1,7 @@
 # 01 — Payroll structure (modules & files)
 
+> **Retired 2026-10-01.** The pages and components below were deleted; their routes redirect (see [docs/daily-sheet/README.md](../daily-sheet/README.md) → "What was retired").
+
 ## Routes
 
 | Path | Page | Gate |

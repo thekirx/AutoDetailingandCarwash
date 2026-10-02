@@ -18,7 +18,7 @@ test('styles.css stays under 9000 lines after ops CSS dedupe', () => {
   assert.ok(lines < 9000, `styles.css has ${lines} lines; dedupe target < 9000`)
 })
 
-test('end-of-shift wizard rail CSS retained after dedupe', () => {
+test('retired End of shift wizard and Payroll CSS is gone', () => {
   const css = fs.readFileSync(cssPath, 'utf8')
-  assert.match(css, /\.hakum-shift-steps\s*\{/)
+  assert.doesNotMatch(css, /\.hakum-shift-steps|\.hakum-payroll|\.hakum-pos-end-shift/)
 })

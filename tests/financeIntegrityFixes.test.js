@@ -72,15 +72,16 @@ describe('empty window + unposted pay cues', () => {
     assert.equal(cue.lastPaidMinor, 285000)
   })
 
-  it('names unposted crew pay and missing shift closes', () => {
+  it('names unposted crew pay and missing approved Daily Sheets', () => {
     const cues = financeStatementCues({
       income: 285000,
       payrollExpenseMinor: 0,
-      shiftCloseCount: 0,
+      approvedSheetCount: 0,
       paidCount: 2,
     })
-    assert.ok(cues.some((c) => c.id === 'unposted-pay' && c.href === '/operations/payroll'))
-    assert.ok(cues.some((c) => c.id === 'no-close' && c.href === '/operations/pos'))
+    assert.ok(cues.some((c) => c.id === 'unposted-pay' && c.href === '/operations/finance?tab=sheets'))
+    assert.ok(cues.some((c) => c.id === 'no-sheet' && c.href === '/operations/pos?tab=sheet'))
+    assert.ok(cues.every((c) => c.linkLabel))
   })
 
   it('treats Payroll category rows as posted payroll expense', () => {
@@ -95,10 +96,16 @@ describe('empty window + unposted pay cues', () => {
 })
 
 describe('finance URL + primary tabs', () => {
-  it('keeps all 11 tab ids and 5 primary tabs', () => {
-    assert.equal(FINANCE_TABS.length, 11)
-    assert.equal(FINANCE_PRIMARY_TAB_IDS.length, 5)
-    assert.deepEqual(FINANCE_PRIMARY_TAB_IDS, ['overview', 'sales', 'purchases', 'pl', 'shift-close'])
+  it('keeps 12 tab ids and the Xero-style primary rail', () => {
+    assert.equal(FINANCE_TABS.length, 12)
+    assert.deepEqual(FINANCE_PRIMARY_TAB_IDS, ['overview', 'sheets', 'sales', 'purchases', 'pl', 'reports'])
+  })
+
+  it('keeps tab filters (sheet status, open sheet) in the URL', () => {
+    const parsed = parseFinanceSearch(new URLSearchParams('tab=sheets&status=returned&os=1&sheet=abc'))
+    assert.deepEqual([parsed.tab, parsed.extras.status, parsed.extras.os, parsed.extras.sheet], ['sheets', 'returned', '1', 'abc'])
+    const next = buildFinanceSearchParams({ tab: 'sheets', extras: { status: 'returned', os: '', sheet: 'abc' } })
+    assert.deepEqual(next, { tab: 'sheets', status: 'returned', sheet: 'abc' })
   })
 
   it('still aliases expenses → purchases', () => {
@@ -134,7 +141,8 @@ describe('finance leftover source scans', () => {
     assert.match(page, /buildFinanceSearchParams/)
     assert.match(page, /validateFinanceCustomRange/)
     assert.match(page, /financeStatementCues/)
-    assert.match(page, /Open Payroll/)
+    assert.match(page, /\{cue\.linkLabel\}/)
+    assert.doesNotMatch(page, /Open Payroll/)
     assert.match(page, /onVendorsChange=\{onVendorsChange\}/)
     assert.match(page, /useCallback\(\(rows\) =>/)
     assert.doesNotMatch(page, /opsTabSearchParams/)
@@ -150,7 +158,7 @@ describe('finance leftover source scans', () => {
     assert.match(cats, /not commission %/)
     assert.match(cats, /P&L bucket/)
     assert.match(lib, /Crew pay is not in this statement/)
-    assert.match(lib, /\/operations\/payroll/)
+    assert.doesNotMatch(lib, /\/operations\/payroll/)
   })
 
   it('windows Reports retention and labels crew KPI as roster', () => {
@@ -183,24 +191,25 @@ describe('finance leftover source scans', () => {
     assert.match(src, /htmlFor="er-period-end"/)
   })
 
-  it('Payroll handoff guide step links to Payroll', () => {
+  it('Finance guide step links to Daily sheets, not Payroll', () => {
     const copy = read('src/components/ops/opsGuideCopy.js')
     const card = read('src/components/ops/OpsGuideCard.jsx')
-    assert.match(copy, /href: '\/operations\/payroll'/)
+    assert.match(copy, /href: '\/operations\/finance\?tab=sheets'/)
+    assert.doesNotMatch(copy, /\/operations\/payroll/)
     assert.match(card, /step\.href/)
     assert.match(card, /step\.linkLabel/)
   })
 
-  it('Reports and ledgers export CSV only; Dashboard keeps the trio', () => {
+  it('Reports and ledgers export CSV only; Profit and loss has CSV, Excel and PDF', () => {
     const reports = read('src/pages/finance/FinanceReportsTab.jsx')
     const sales = read('src/pages/finance/FinanceSalesTab.jsx')
     const pl = read('src/pages/finance/FinancePLTab.jsx')
-    const overview = read('src/pages/finance/FinanceOverviewTab.jsx')
     assert.match(reports, /downloadCsv/)
     assert.doesNotMatch(reports, /downloadExcel|printAsPdf/)
     assert.doesNotMatch(sales, /downloadExcel|printAsPdf/)
     assert.doesNotMatch(pl, /pl-compare/)
-    assert.match(overview, /downloadExcel/)
-    assert.match(overview, /printAsPdf/)
+    assert.match(pl, /downloadCsv/)
+    assert.match(pl, /downloadExcel/)
+    assert.match(pl, /printAsPdf/)
   })
 })

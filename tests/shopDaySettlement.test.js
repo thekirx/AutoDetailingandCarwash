@@ -103,7 +103,7 @@ describe('shop day settlement + money contract continue', () => {
     assert.deepEqual(kinds, ['package_fixed', 'package_hybrid'])
   })
 
-  it('shift-close accept push copy targets payroll pending', () => {
+  it('shift-close accept push copy points at Finance Daily sheets', () => {
     const copy = buildShiftCloseAcceptCopy({
       branch: 'bacoor',
       businessDate: '2026-08-22',
@@ -111,7 +111,7 @@ describe('shop day settlement + money contract continue', () => {
     })
     assert.equal(copy.kind, 'payroll.pending_floor')
     assert.match(copy.title, /Floor pay ready/i)
-    assert.equal(copy.url, '/operations/payroll')
+    assert.equal(copy.url, '/operations/finance?tab=sheets')
     assert.equal(copy.tag, 'shift_close:c1')
   })
 })

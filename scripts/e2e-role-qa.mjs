@@ -253,8 +253,8 @@ async function ensurePreview() {
 const PERSONAS = [
   { id: 'tl', wave: 'B', home: '/operations/queue', allow: ['/operations/attendance', '/operations/bookings'], deny: '/operations/pos' },
   { id: 'admin', wave: 'B', home: '/operations/pos', allow: ['/operations/inventory', '/operations/queue', '/operations/bookings'], deny: '/operations/finance' },
-  { id: 'crew1', wave: 'B', home: '/operations/attendance', allow: ['/operations/my-tasks', '/operations/my-pay'], deny: '/operations/pos' },
-  { id: 'boss', wave: 'C', home: '/operations/console', allow: ['/operations/finance', '/operations/payroll'], deny: null },
+  { id: 'crew1', wave: 'B', home: '/operations/attendance', allow: ['/operations/my-tasks'], deny: '/operations/pos' },
+  { id: 'boss', wave: 'C', home: '/operations/console', allow: ['/operations/finance', '/operations/settings/daily-sheet'], deny: null },
   { id: 'asa', wave: 'C', home: '/operations/console', allow: ['/operations/queue'], deny: null },
   { id: 'opslead', wave: 'C', home: '/operations/roadmap', allow: ['/operations/dashboard', '/operations/pos'], deny: '/operations/people' },
   { id: 'investor', wave: 'C', home: '/operations/finance', allow: [], deny: '/operations/pos' },

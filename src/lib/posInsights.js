@@ -1,28 +1,25 @@
 /** POS dashboard helpers — stats, pending queue, plain-language workflow copy. */
 
-export const POS_SHELL_TABS = Object.freeze(['checkout', 'pending', 'expenses', 'dashboard'])
+// Pay queue lives on the checkout page; a legacy ?tab=pending link resolves there.
+export const POS_SHELL_TABS = Object.freeze(['checkout', 'sheet', 'dashboard'])
 export const POS_SETTINGS_TAB = 'settings'
+const LEGACY_POS_TABS = Object.freeze({ expenses: 'sheet' })
 
-/** Tabs shown in the shell; settings only when caller has settings access. */
-export function posVisibleShellTabs({ canSettings = false } = {}) {
-  return canSettings ? [...POS_SHELL_TABS, POS_SETTINGS_TAB] : [...POS_SHELL_TABS]
+/** Tabs shown in the shell; Daily sheet / settings only for roles that can use them. */
+export function posVisibleShellTabs({ canSettings = false, canSheet = true } = {}) {
+  const tabs = POS_SHELL_TABS.filter((t) => canSheet || t !== 'sheet')
+  return canSettings ? [...tabs, POS_SETTINGS_TAB] : tabs
 }
 
-export function resolvePosShellTab(tabParam, { canSettings = false } = {}) {
-  const allowed = posVisibleShellTabs({ canSettings })
-  return allowed.includes(tabParam) ? tabParam : 'checkout'
+export function resolvePosShellTab(tabParam, { canSettings = false, canSheet = true } = {}) {
+  const allowed = posVisibleShellTabs({ canSettings, canSheet })
+  const tab = LEGACY_POS_TABS[tabParam] || tabParam
+  return allowed.includes(tab) ? tab : 'checkout'
 }
 
-/**
- * Cashier landing: when URL has no tab and Pay queue has work, land on pending.
- * Explicit ?tab= always wins (including checkout).
- */
-export function resolvePosLandingTab(tabParam, { canSettings = false, pendingCount = 0 } = {}) {
-  if (tabParam != null && String(tabParam).trim() !== '') {
-    return resolvePosShellTab(tabParam, { canSettings })
-  }
-  if (Number(pendingCount) > 0) return 'pending'
-  return 'checkout'
+/** Queue ticket label shown on the counter, e.g. Q-007. */
+export function formatQueueTicket(booking) {
+  return booking?.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'
 }
 
 /** Pending handoffs waiting for payment. */
@@ -63,41 +60,21 @@ export const POS_WORKFLOW_STEPS = Object.freeze([
   {
     id: 'sell',
     title: 'Sell',
-    body: 'Add merch or extras to the cart, or open Pay queue when the floor sends a ticket. Link a customer if you have their phone, then take payment.',
+    body: 'Tap merch or coffee to ring it up. Link a customer if you have their phone, then take payment.',
   },
   {
     id: 'queue',
-    title: 'Pay queue',
-    body: 'When the floor sends a car to pay, it appears in Pay queue. Open the ticket, confirm the amount, and complete payment.',
+    title: 'Waiting to pay',
+    body: 'Cars the floor sends to pay line up above the catalogue. Tap one to open its ticket, add any merch the customer wants, and charge it all together.',
   },
   {
-    id: 'expenses',
-    title: 'Expenses',
-    body: 'Record petty cash and supplies under Expenses. Salary-related kinds feed end-of-shift and Payroll review.',
+    id: 'sheet',
+    title: 'Daily sheet',
+    body: 'Through the day, add expenses and cash advances on the Daily sheet. Crew pay is suggested from attendance and sales.',
   },
   {
     id: 'close',
-    title: 'End of shift',
-    body: 'Count cash and payment totals, submit end of shift. Finance reviews, then Payroll uses attendance + today sales for crew pay.',
+    title: 'Submit for approval',
+    body: 'Count the drawer and submit the sheet. Pay the crew only after the owner approves.',
   },
 ])
-
-/** Wash-pool preview from car-wash sales + attendance weights. */
-export function buildPosWashPoolPreview({
-  carWashMinor = 0,
-  washPoolPct = 0,
-  attendanceRows = [],
-  rules = {},
-} = {}) {
-  const pct = Number(washPoolPct) || Number(rules?.wash_pool_pct) || 0
-  const poolMinor = Math.round((Number(carWashMinor) || 0) * (pct / 100))
-  const onSite = (attendanceRows || []).filter((row) => row.status === 'present' || row.status === 'late')
-  return {
-    carWashMinor: Number(carWashMinor) || 0,
-    washPoolPct: pct,
-    poolMinor,
-    onSiteCount: onSite.length,
-    presentCount: onSite.filter((r) => r.status === 'present').length,
-    lateCount: onSite.filter((r) => r.status === 'late').length,
-  }
-}

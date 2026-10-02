@@ -25,9 +25,12 @@ node $archify visual-check .\docs\architecture\<name>.workflow.html --json
 | Concern | Type | Artifact |
 |---------|------|----------|
 | **Full shop-day lifecycle (all roles)** | `workflow` | [`shop-day-flops.workflow.html`](./shop-day-flops.workflow.html) · [spec](./shop-day-flops.workflow.json) |
+| **Daily Sheet money path** | `workflow` | [`daily-sheet.workflow.html`](./daily-sheet.workflow.html) · [spec](./daily-sheet.workflow.json) |
+| **Daily Sheet statuses** | `lifecycle` | [`daily-sheet.lifecycle.html`](./daily-sheet.lifecycle.html) · [spec](./daily-sheet.lifecycle.json) |
 | Money triangle detail | `workflow` / `dataflow` | create on demand → `money-path` |
 | Queue statuses | `lifecycle` | create on demand → `queue-status` |
-| Shift-close reopen | `sequence` | create on demand → `shift-close-reopen` |
-| Floor payroll | `sequence` | create on demand → `floor-payroll` |
+| Daily Sheet reopen | `sequence` | create on demand → `daily-sheet-reopen` |
 
-Canonical map: Customer · Sales · Crew · TL · Branch Admin · SA/ASA · Investor from book → bay → POS → EoS → accept → payroll/P&L. Showcase validate 9/9 + visual-check required after every re-deliver. Do not edit the HTML by hand.
+End of shift + Floor payroll were retired on 2026-10-01 (see [`docs/daily-sheet/README.md`](../daily-sheet/README.md)); do not draw them as live paths.
+
+Canonical map: Customer · Sales · Crew · TL · Branch Admin · SA/ASA · Investor from book → bay → POS → Daily Sheet → Finance approve → books/P&L. Showcase validate 9/9 + visual-check required after every re-deliver. Do not edit the HTML by hand.

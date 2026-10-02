@@ -1,5 +1,7 @@
 # Hakum POS — documentation index
 
+> **Changed 2026-10-01.** End of shift (`ShiftCloseWizard`) and the Payroll link were retired. The BA now closes the day on POS → **Daily sheet**, and SA/ASA approve it in Finance → **Daily sheets**. Old shift closes stay read-only in Finance. Pages below that describe End of shift or Payroll are history — see [docs/daily-sheet/README.md](../daily-sheet/README.md).
+
 **Last audited:** 2026-08-22  
 **Scope:** Point of Sale (`/operations/pos`), End of shift, POS settings, and how sales/close connect to Payroll and Finance.  
 **Tone:** Strict principal audit — what works, what is incomplete, what must not be advertised as finished.

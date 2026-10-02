@@ -169,6 +169,14 @@ export function searchServices(services, query) {
   })
 }
 
+/** One searchable list split into kind sections (SERVICE_KINDS order); empty sections dropped. */
+export function groupServicesByKind(services, kindIds, query = '') {
+  const allow = new Set(kindIds || SERVICE_KINDS.map((k) => k.id))
+  return SERVICE_KINDS.filter((k) => allow.has(k.id))
+    .map((k) => ({ ...k, rows: searchServices(filterServicesByKind(services, k.id), query) }))
+    .filter((group) => group.rows.length)
+}
+
 /** Terminal — job leaves the floor only after POS release or explicit cancel. */
 const FLOOR_TERMINAL_STATUSES = new Set(['completed', 'cancelled'])
 

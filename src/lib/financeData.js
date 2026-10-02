@@ -5,23 +5,27 @@
 import { getBranchScopeList } from '../auth/permissions.js'
 
 export const FINANCE_TABS = [
-  { id: 'overview', label: 'Dashboard', hint: 'Business overview for the selected window', group: 'Books' },
-  { id: 'sales', label: 'Sales', hint: 'POS sales by day, branch, and payment method', group: 'Business' },
-  { id: 'purchases', label: 'Bills & expenses', hint: 'Expenses and bills to pay', group: 'Business' },
-  { id: 'pl', label: 'Profit and loss', hint: 'Income vs expenses by category', group: 'Accounting' },
-  { id: 'shift-close', label: 'Shift reviews', hint: 'End-of-shift closes vs POS baseline', group: 'Accounting' },
+  { id: 'overview', label: 'Home', hint: 'Accounts watchlist, profit this year, sheets waiting', group: 'Books' },
+  { id: 'sheets', label: 'Daily sheets', hint: 'Approve or return each branch day', group: 'Books' },
+  { id: 'sales', label: 'Sales', hint: 'Gross, net, refunds and discounts vs the last period', group: 'Business' },
+  { id: 'purchases', label: 'Bills', hint: 'Bills and expenses by account', group: 'Business' },
+  { id: 'pl', label: 'Profit and loss', hint: 'Income vs expenses by account, month or branch', group: 'Accounting' },
+  { id: 'shift-close', label: 'Old shift closes', hint: 'End-of-shift history from before Daily Sheets', group: 'Accounting' },
   { id: 'expense-reports', label: 'Expense reports', hint: 'ASA category reports posted to expenses', group: 'Accounting' },
   { id: 'vendors', label: 'Vendors', hint: 'Supplier contacts for bills', group: 'Settings' },
   { id: 'quotes', label: 'Quotations', hint: 'Email quotations to CRM customers', group: 'Settings' },
   { id: 'corporate', label: 'Corporate', hint: 'HQ books, EOM roll-up, manual cash balance', group: 'Settings' },
-  { id: 'categories', label: 'Categories', hint: 'Expense categories (POS daily-expense source)', group: 'Settings' },
+  { id: 'categories', label: 'Accounts', hint: 'Chart of accounts used by Daily Sheets and Bills', group: 'Settings' },
   { id: 'reports', label: 'Reports', hint: 'Sales, operations, and retention exports', group: 'Reports' },
 ]
 
 export const FINANCE_TAB_IDS = FINANCE_TABS.map((t) => t.id)
 
-/** Dashboard, Sales, Bills, P&L, Shift reviews. Everything else lives under More. */
-export const FINANCE_PRIMARY_TAB_IDS = ['overview', 'sales', 'purchases', 'pl', 'shift-close']
+/** Home, Daily sheets, Sales, Bills, P&L, Reports. Everything else lives under More. */
+export const FINANCE_PRIMARY_TAB_IDS = ['overview', 'sheets', 'sales', 'purchases', 'pl', 'reports']
+
+/** Per-tab filters kept in the URL next to period / branch / compare. */
+const FINANCE_EXTRA_KEYS = ['status', 'os', 'sheet', 'n', 'by', 'acct', 'method']
 
 export const FINANCE_DEFAULT_PERIOD = 'last_30'
 
@@ -58,6 +62,7 @@ export function parseFinanceSearch(searchParams, { defaultBranch = 'all' } = {})
     compare,
     from: searchParamGet(searchParams, 'from') || '',
     to: searchParamGet(searchParams, 'to') || '',
+    extras: Object.fromEntries(FINANCE_EXTRA_KEYS.map((k) => [k, searchParamGet(searchParams, k) || ''])),
   }
 }
 
@@ -71,6 +76,7 @@ export function buildFinanceSearchParams({
   to = '',
   defaultBranch = 'all',
   reportsOnly = false,
+  extras = {},
 } = {}) {
   const q = {}
   if (reportsOnly) q.tab = 'reports'
@@ -82,6 +88,7 @@ export function buildFinanceSearchParams({
     if (from) q.from = from
     if (to) q.to = to
   }
+  for (const k of FINANCE_EXTRA_KEYS) if (extras?.[k]) q[k] = String(extras[k])
   return q
 }
 
@@ -150,11 +157,11 @@ export function financeEmptyWindowCue({
   }
 }
 
-/** Honesty cues when income exists but closes / payroll expense do not. */
+/** Honesty cues when income exists but approved daily sheets / crew pay do not. */
 export function financeStatementCues({
   income = 0,
   payrollExpenseMinor = 0,
-  shiftCloseCount = 0,
+  approvedSheetCount = 0,
   paidCount = 0,
 } = {}) {
   if (!(income > 0)) return []
@@ -162,15 +169,17 @@ export function financeStatementCues({
   if (payrollExpenseMinor <= 0) {
     cues.push({
       id: 'unposted-pay',
-      href: '/operations/payroll',
-      text: 'Crew pay is not in this statement until Payroll confirms a run. Open Payroll — this page does not set commission %.',
+      href: '/operations/finance?tab=sheets',
+      linkLabel: 'Open Daily sheets',
+      text: 'Crew pay is not in this statement until a Daily Sheet is approved.',
     })
   }
-  if (paidCount > 0 && Number(shiftCloseCount) === 0) {
+  if (paidCount > 0 && Number(approvedSheetCount) === 0) {
     cues.push({
-      id: 'no-close',
-      href: '/operations/pos',
-      text: 'Paid POS in this window has no accepted shift close. Floor payroll stays locked until End of shift is submitted and accepted.',
+      id: 'no-sheet',
+      href: '/operations/pos?tab=sheet',
+      linkLabel: 'Open POS Daily sheet',
+      text: 'Paid POS in this window has no approved Daily Sheet yet. Branch Admins submit it from POS › Daily sheet.',
     })
   }
   return cues

@@ -48,35 +48,15 @@ describe('ops shell adoption — settings + payroll', () => {
     assert.doesNotMatch(page, /planner-v2-tabs/)
   })
 
-  it('Payroll settings uses OpsPageShell with back link', () => {
-    const page = read('src/pages/settings/PayrollSettingsPage.jsx')
+  it('Daily sheet rules uses OpsPageShell with a Settings breadcrumb', () => {
+    const page = read('src/pages/settings/DailySheetRulesPage.jsx')
     assert.match(page, /OpsPageShell/)
     assert.match(page, /\/operations\/settings/)
-    assert.match(page, /\/operations\/payroll\?tab=run/)
-  })
-
-  it('Payroll page uses ops shell, guide, and shadcn tab list — not planner-v2-tabs', () => {
-    const page = read('src/pages/PayrollPage.jsx')
-    assert.match(page, /OpsPageShell/)
-    assert.match(page, /className="hakum-payroll"/)
-    assert.match(page, /OpsGuideCard/)
-    assert.match(page, /PAYROLL_WORKFLOW_STEPS/)
-    assert.match(page, /OpsTabList/)
-    assert.match(page, /const PAYROLL_SHELL_TABS = \[/)
-
-    const tabIds = ['home', 'run', 'cash-advance', 'packages', 'history', 'rules']
-    for (const id of tabIds) {
-      assert.match(page, new RegExp(`id: '${id}'`))
-    }
-
-    assert.doesNotMatch(page, /planner-v2-tabs/)
-    assert.match(page, /hakum-payroll-steps/)
-    assert.match(page, /Floor pay|Fixed salary/)
-    assert.match(page, /run_payroll/)
+    assert.doesNotMatch(page, /\/operations\/payroll/)
   })
 })
 
-describe('ops shell adoption — finance + my pay', () => {
+describe('ops shell adoption — finance', () => {
   it('Finance uses OpsPageShell with guide and keeps finance tab rail', () => {
     const page = read('src/pages/FinancePage.jsx')
     assert.match(page, /OpsPageShell/)
@@ -89,18 +69,6 @@ describe('ops shell adoption — finance + my pay', () => {
     assert.doesNotMatch(page, /planner-v2-tabs/)
   })
 
-  it('My pay uses OpsPageShell with guide and keeps payroll line table', () => {
-    const page = read('src/pages/MyPayPage.jsx')
-    assert.match(page, /OpsPageShell/)
-    assert.match(page, /className="hakum-payroll hakum-my-pay"/)
-    assert.match(page, /OpsGuideCard/)
-    assert.match(page, /MY_PAY_WORKFLOW_STEPS/)
-    assert.match(page, /currentPostedPayoutMinor/)
-    assert.match(page, /Estimate — unpaid/)
-    assert.match(page, /Today \(confirmed\)/)
-    assert.match(page, /hakum-payroll-table/)
-    assert.match(page, /payroll_run_lines/)
-  })
 })
 
 describe('ops shell adoption — inventory', () => {

@@ -1,5 +1,7 @@
 # Hakum Operations & Finance — Money Contract
 
+> **Superseded in part (2026-10-01).** End of shift, Finance accept and floor payroll were replaced by the Daily Sheet: the BA submits one sheet per branch per day, and SA/ASA approval posts its expenses and salaries once as paid `expenses`. "Paid POS is the income truth" still holds. See [docs/daily-sheet/README.md](../daily-sheet/README.md).
+
 **Locked:** 2026-08-23  
 **Source:** Owner questionnaire + principal fullstack decisions  
 **Status:** Binding for POS, Payroll, Finance product copy and behavior

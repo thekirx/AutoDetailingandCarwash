@@ -1,11 +1,10 @@
-/** Finance Bills & expenses — status flow + CRUD, dashboard chrome. */
+/** Finance Bills — Xero-style New bill (header + lines), status flow, account filter (URL `acct`), CSV. */
 import { useMemo, useState } from 'react'
 import { Download, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import FinanceBillForm from './FinanceBillForm'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -47,32 +46,27 @@ export default function FinancePurchasesTab({
   range,
   loading,
   onReload,
+  accountFilter = '',
+  onAccountFilter,
 }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [query, setQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    quantity: '1',
-    unit_cost: '',
-    branch: '',
-    category_id: '',
-    vendor_id: '',
-  })
+  const vendorName = (id) => vendors.find((v) => v.id === id)?.name || ''
 
   const filtered = useMemo(() => {
     let rows = [...(expenses || [])]
     if (statusFilter !== 'all') rows = rows.filter((r) => r.status === statusFilter)
+    if (accountFilter) rows = rows.filter((r) => r.category_id === accountFilter)
     if (query.trim()) {
       const q = query.trim().toLowerCase()
-      rows = rows.filter(
-        (r) => (r.title || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q),
+      rows = rows.filter((r) =>
+        [r.title, r.description, r.bill_reference].some((v) => String(v || '').toLowerCase().includes(q)),
       )
     }
     return rows
-  }, [expenses, statusFilter, query])
+  }, [expenses, statusFilter, accountFilter, query])
 
   const metrics = useMemo(() => {
     const all = expenses || []
@@ -86,7 +80,10 @@ export default function FinancePurchasesTab({
 
   const exportColumns = useMemo(
     () => [
-      { key: 'title', label: 'Title' },
+      { key: 'title', label: 'Item' },
+      { key: 'vendor_id', label: 'From', value: (row) => vendors.find((v) => v.id === row.vendor_id)?.name || '' },
+      { key: 'bill_reference', label: 'Reference', value: (row) => row.bill_reference || '' },
+      { key: 'due_date', label: 'Due date', value: (row) => row.due_date || '' },
       {
         key: 'branch',
         label: 'Branch',
@@ -94,14 +91,14 @@ export default function FinancePurchasesTab({
       },
       {
         key: 'category_id',
-        label: 'Category',
+        label: 'Account',
         value: (row) => categories.find((c) => c.id === row.category_id)?.name || 'Uncategorized',
       },
       { key: 'total_minor', label: 'Amount', value: (row) => formatMoney(row.total_minor) },
       { key: 'status', label: 'Status', value: (row) => STATUS_LABEL[row.status] || row.status },
-      { key: 'created_at', label: 'Created', value: (row) => new Date(row.created_at).toLocaleString() },
+      { key: 'created_at', label: 'Date', value: (row) => new Date(row.created_at).toLocaleDateString('en-PH') },
     ],
-    [branches, categories],
+    [branches, categories, vendors],
   )
 
   const windowLabel = formatFinanceWindow(range.start, range.end)
@@ -110,70 +107,12 @@ export default function FinancePurchasesTab({
 
   function openCreate() {
     setEditing(null)
-    setForm({
-      title: '',
-      description: '',
-      quantity: '1',
-      unit_cost: '',
-      branch: writableBranches[0]?.slug || '',
-      category_id: categories[0]?.id || '',
-      vendor_id: '',
-    })
     setShowForm(true)
   }
 
   function openEdit(row) {
     setEditing(row)
-    setForm({
-      title: row.title || '',
-      description: row.description || '',
-      quantity: String(row.quantity ?? '1'),
-      unit_cost: String((row.unit_cost_minor ?? 0) / 100),
-      branch: row.branch || '',
-      category_id: row.category_id || '',
-      vendor_id: row.vendor_id || '',
-    })
     setShowForm(true)
-  }
-
-  async function save(event) {
-    event.preventDefault()
-    if (!canWrite) return toast.error('You do not have finance write access')
-    const qty = Number(form.quantity)
-    const unitPesos = Number(String(form.unit_cost).replace(/,/g, '').trim())
-    if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(unitPesos) || unitPesos < 0) {
-      return toast.error('Enter a valid quantity and unit cost')
-    }
-    if (!form.branch || !form.category_id) return toast.error('Branch and category are required')
-    const unit = Math.round(unitPesos * 100)
-    const total = Math.round(qty * unit)
-    const payload = {
-      title: form.title.trim(),
-      description: form.description.trim() || null,
-      quantity: qty,
-      unit_cost_minor: unit,
-      total_minor: total,
-      branch: form.branch,
-      category_id: form.category_id,
-      vendor_id: form.vendor_id || null,
-    }
-    if (editing) {
-      const { error } = await supabase.from('expenses').update(payload).eq('id', editing.id)
-      if (error) return toast.error(error.message)
-      toast.success('Expense updated')
-    } else {
-      const cat = categories.find((c) => c.id === form.category_id)
-      const needsApproval = cat?.is_chemical || total > 500000
-      const { error } = await supabase
-        .from('expenses')
-        .insert({ ...payload, status: needsApproval ? 'pending_approval' : 'draft' })
-        .select('id')
-        .single()
-      if (error) return toast.error(error.message)
-      toast.success(needsApproval ? 'Expense submitted for approval' : 'Expense saved as draft')
-    }
-    setShowForm(false)
-    onReload?.()
   }
 
   async function transition(row, status) {
@@ -222,7 +161,7 @@ export default function FinancePurchasesTab({
           <Search aria-hidden />
           <input
             type="search"
-            placeholder="Search by title or description"
+            placeholder="Search item, description or reference"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search bills"
@@ -239,6 +178,20 @@ export default function FinancePurchasesTab({
             {STATUS_FLOW.map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </select>
+          <select
+            className="finance-toolbar-select min-h-10"
+            value={accountFilter}
+            onChange={(e) => onAccountFilter?.(e.target.value)}
+            aria-label="Filter by account"
+          >
+            <option value="">All accounts</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.code ? `${c.code} · ` : ''}
+                {c.name}
               </option>
             ))}
           </select>
@@ -261,105 +214,19 @@ export default function FinancePurchasesTab({
       </div>
 
       {showForm && canWrite ? (
-        <FinancePanel title={editing ? 'Edit bill' : 'New bill'} description="Branch and category required. Chemicals and large bills need approval.">
-          <form onSubmit={save} className="grid gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-2 md:col-span-2">
-              <Label htmlFor="exp-title">Title</Label>
-              <Input
-                id="exp-title"
-                required
-                className="min-h-10"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2 md:col-span-2">
-              <Label htmlFor="exp-desc">Description</Label>
-              <Textarea
-                id="exp-desc"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="exp-qty">Quantity</Label>
-              <Input
-                id="exp-qty"
-                type="number"
-                min="0.01"
-                step="0.01"
-                required
-                className="min-h-10"
-                value={form.quantity}
-                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="exp-unit">Unit cost (₱)</Label>
-              <Input
-                id="exp-unit"
-                required
-                className="min-h-10"
-                value={form.unit_cost}
-                onChange={(e) => setForm({ ...form, unit_cost: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="exp-branch">Branch</Label>
-              <select
-                id="exp-branch"
-                className="finance-toolbar-select min-h-10 w-full"
-                value={form.branch}
-                onChange={(e) => setForm({ ...form, branch: e.target.value })}
-              >
-                {writableBranches.map((b) => (
-                  <option key={b.slug} value={b.slug}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="exp-cat">Category</Label>
-              <select
-                id="exp-cat"
-                className="finance-toolbar-select min-h-10 w-full"
-                value={form.category_id}
-                onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                    {c.is_chemical ? ' (pre-approval)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="exp-vendor">Vendor (optional)</Label>
-              <select
-                id="exp-vendor"
-                className="finance-toolbar-select min-h-10 w-full"
-                value={form.vendor_id}
-                onChange={(e) => setForm({ ...form, vendor_id: e.target.value })}
-              >
-                <option value="">—</option>
-                {vendors.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-2 md:col-span-2">
-              <Button type="submit" className="min-h-10 cursor-pointer">
-                {editing ? 'Save changes' : 'Save bill'}
-              </Button>
-              <Button type="button" variant="ghost" className="min-h-10 cursor-pointer" onClick={() => setShowForm(false)}>
-                Cancel
-              </Button>
-            </div>
-          </form>
+        <FinancePanel title={editing ? 'Edit bill line' : 'New bill'} description="Who it's from, when it's due, and one line per item.">
+          <FinanceBillForm
+            key={editing?.id || 'new'}
+            editing={editing}
+            categories={categories}
+            vendors={vendors}
+            writableBranches={writableBranches}
+            onCancel={() => setShowForm(false)}
+            onSaved={() => {
+              setShowForm(false)
+              onReload?.()
+            }}
+          />
         </FinancePanel>
       ) : null}
 
@@ -378,8 +245,10 @@ export default function FinancePurchasesTab({
                   <div>
                     <p className="finance-mobile-title">{row.title}</p>
                     <p className="finance-mobile-sub">
-                      {branches.find((b) => b.slug === row.branch)?.name || row.branch} ·{' '}
-                      {categories.find((c) => c.id === row.category_id)?.name || 'Uncategorized'}
+                      {[vendorName(row.vendor_id), row.bill_reference, branches.find((b) => b.slug === row.branch)?.name || row.branch, categories.find((c) => c.id === row.category_id)?.name || 'Uncategorized']
+                        .filter(Boolean)
+                        .join(' · ')}
+                      {row.due_date ? ` · due ${row.due_date}` : ''}
                     </p>
                   </div>
                   <div className="finance-mobile-amount">
@@ -388,7 +257,9 @@ export default function FinancePurchasesTab({
                       {STATUS_LABEL[row.status] || row.status}
                     </Badge>
                   </div>
-                  {canWrite ? (
+                  {row.daily_sheet_line_id ? (
+                    <p className="text-xs text-muted-foreground">From a daily sheet · change it on the sheet</p>
+                  ) : canWrite ? (
                     <div className="finance-mobile-actions">
                       <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openEdit(row)}>
                         <Pencil data-icon="inline-start" />
@@ -411,9 +282,13 @@ export default function FinancePurchasesTab({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>From</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Account</TableHead>
                     <TableHead>Branch</TableHead>
-                    <TableHead>Category</TableHead>
+                    <TableHead>Due date</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
@@ -422,9 +297,13 @@ export default function FinancePurchasesTab({
                 <TableBody>
                   {filtered.map((row) => (
                     <TableRow key={row.id}>
+                      <TableCell className="tabular-nums">{row.created_at ? getLocalCalendarDate(row.created_at) : '—'}</TableCell>
+                      <TableCell>{vendorName(row.vendor_id) || '—'}</TableCell>
+                      <TableCell>{row.bill_reference || '—'}</TableCell>
                       <TableCell className="font-medium">{row.title}</TableCell>
-                      <TableCell>{branches.find((b) => b.slug === row.branch)?.name || row.branch}</TableCell>
                       <TableCell>{categories.find((c) => c.id === row.category_id)?.name || 'Uncategorized'}</TableCell>
+                      <TableCell>{branches.find((b) => b.slug === row.branch)?.name || row.branch}</TableCell>
+                      <TableCell className="tabular-nums">{row.due_date || '—'}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatMoney(row.total_minor)}</TableCell>
                       <TableCell>
                         <Badge variant={STATUS_BADGE[row.status] || 'secondary'}>
@@ -433,18 +312,21 @@ export default function FinancePurchasesTab({
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-2">
-                          {canWrite ? (
+                          {row.daily_sheet_line_id ? (
+                            <span className="text-xs text-muted-foreground">Daily sheet</span>
+                          ) : null}
+                          {canWrite && !row.daily_sheet_line_id ? (
                             <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openEdit(row)}>
                               <Pencil data-icon="inline-start" />
                               Edit
                             </Button>
                           ) : null}
-                          {canWrite && nextStatus(row.status) ? (
+                          {canWrite && !row.daily_sheet_line_id && nextStatus(row.status) ? (
                             <Button size="sm" className="cursor-pointer" onClick={() => transition(row, nextStatus(row.status))}>
                               {STATUS_LABEL[nextStatus(row.status)]}
                             </Button>
                           ) : null}
-                          {canWrite ? (
+                          {canWrite && !row.daily_sheet_line_id ? (
                             <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => remove(row)}>
                               <Trash2 data-icon="inline-start" />
                             </Button>

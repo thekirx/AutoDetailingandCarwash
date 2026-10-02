@@ -29,7 +29,7 @@ import {
   queueFamilyForProfile,
   QUEUE_FAMILIES,
 } from '../lib/queueFamilies'
-import { canAccessPayroll, canAccessPos, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, ROLES, isSuperAdmin } from '../auth/permissions'
+import { canAccessPos, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, ROLES, isSuperAdmin } from '../auth/permissions'
 import {
   DEFAULT_COMPENSATION_RULES,
   normalizeCompensationSettings,
@@ -97,7 +97,7 @@ import StatusBadge from '@/components/ops/StatusBadge'
 import { QUEUE_WORKFLOW_STEPS, MY_TASKS_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { toast } from 'sonner'
 import { plateKindLabel, plateValidationError, PLATE_FIELD_HINT } from '../lib/customerAuth'
-import { applyPlateSuggestion, plateSuggestPrefix, rankPlateSuggestions } from '../lib/plateSuggest'
+import { applyPlateSuggestion, clearPlateMatch, plateSuggestPrefix, rankPlateSuggestions } from '../lib/plateSuggest'
 
 const QUEUE_SHELL_TABS = Object.freeze([
   { id: 'board', label: 'Board' },
@@ -1345,6 +1345,7 @@ export function NewQueueTicketPage() {
           )
           if (exact && !plateValidationError(plate)) {
             setPlateMatch(exact)
+            setPlateSuggestions([])
             setPlateLookupState('found')
             setForm((current) => {
               if (current.vehicle_id && current.vehicle_id === (exact.vehicle_id || exact.id)) return current
@@ -1377,7 +1378,7 @@ export function NewQueueTicketPage() {
       if (key === 'customer_first_name' || key === 'customer_last_name') {
         next.customer_name = `${key === 'customer_first_name' ? value : current.customer_first_name} ${key === 'customer_last_name' ? value : current.customer_last_name}`.trim()
       }
-      return next
+      return key === 'vehicle_plate' ? clearPlateMatch(next) : next
     })
   }
   const pickPlateSuggestion = (row) => {
@@ -1421,7 +1422,6 @@ export function NewQueueTicketPage() {
 
   const parsedFormPrice = Number(String(form.final_price).replace(/,/g, '').trim())
   const showFormLowPriceWarning = Number.isFinite(parsedFormPrice) && parsedFormPrice > 0 && parsedFormPrice < 50
-
   const [step, setStep] = useState(0)
   const lastStep = NEW_TICKET_STEPS.length - 1
   const selectedServiceNames = (form.service_ids || [])
@@ -1969,11 +1969,7 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
   return (
     <Panel title="Compensation estimate · today" icon={Wallet} className="mt-5">
       <p className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
-        Estimate only — not posted pay. Confirm payouts on{' '}
-        <Link to="/operations/payroll" className="font-semibold underline underline-offset-2">
-          Payroll
-        </Link>
-        .
+        Estimate only — not posted pay. Crew pay is settled on the Daily Sheet.
       </p>
       <div className="grid gap-3 sm:grid-cols-3 mb-4">
         <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
@@ -2007,18 +2003,8 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
       ) : (
         <p className="text-sm text-muted-foreground">{!canSeePay ? 'Your pay shows here after you time in and wash sales post.' : 'No present crew for salary split.'}</p>
       )}
-      {canAccessPayroll(profile) ? (
-        <div className="mt-4">
-          <Link
-            to="/operations/payroll"
-            className="floor-touch-btn inline-flex min-h-11 items-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-          >
-            Run payroll
-          </Link>
-        </div>
-      ) : null}
       <p className="mt-3 text-xs text-muted-foreground">
-        Estimate from today&apos;s paid wash sales. Confirmed pay is posted once from Payroll, not from this tab.
+        Estimate from today&apos;s paid wash sales. Pay is posted when SA or ASA approves the Daily Sheet, not from this tab.
       </p>
       </Panel>
   )

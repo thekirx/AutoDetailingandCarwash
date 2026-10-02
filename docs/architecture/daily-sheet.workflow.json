@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hakum Daily Sheet Money Path",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/daily-sheet.workflow.html",
+    "views": [
+      {
+        "id": "branch",
+        "label": "Branch Admin",
+        "focus": ["ba_pos", "ba_sheet"],
+        "note": "POS Sell → POS Daily sheet (expenses, salaries, cash advances, cash count) → Submit."
+      },
+      {
+        "id": "approval",
+        "label": "Approval gate",
+        "focus": ["ba_sheet", "sa_review", "post_books"],
+        "note": "SA or ASA with finance_view approves or returns. Approve posts paid expenses once per line."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "floor", "label": "Crew · TL" },
+    { "id": "branch", "label": "Branch Admin" },
+    { "id": "leadership", "label": "SA · ASA" }
+  ],
+  "phases": [
+    { "id": "day", "label": "Shop day", "fromCol": 0, "toCol": 2 },
+    { "id": "sheet", "label": "Daily sheet", "fromCol": 3, "toCol": 3, "variant": "emphasis" },
+    { "id": "books", "label": "Approve + books", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["crew_clock", "tl_queue", "ba_pos", "ba_sheet", "sa_review", "post_books"],
+  "nodes": [
+    { "id": "crew_clock", "lane": "floor", "col": 0, "type": "backend", "label": "Clock-in", "sublabel": "staff_attendance", "tag": "Crew · TL", "width": 120 },
+    { "id": "tl_queue", "lane": "floor", "col": 1, "type": "backend", "label": "Wash Queue", "sublabel": "send_to_payment", "tag": "TL", "width": 120 },
+    { "id": "ba_pos", "lane": "branch", "col": 2, "type": "frontend", "label": "POS Sell", "sublabel": "complete_pos_sale", "tag": "BA", "width": 120 },
+    { "id": "ba_sheet", "lane": "branch", "col": 3, "type": "messagebus", "label": "Daily Sheet", "sublabel": "submit_daily_sheet", "tag": "BA", "width": 128 },
+    { "id": "sa_review", "lane": "leadership", "col": 4, "type": "security", "label": "Approve / Return", "sublabel": "review_daily_sheet", "tag": "SA · ASA", "width": 132 },
+    { "id": "post_books", "lane": "leadership", "col": 5, "type": "database", "label": "Expenses + P&L", "sublabel": "finance_daily_pl", "tag": "paid rows", "width": 128 }
+  ],
+  "edges": [
+    { "id": "e-clock-queue", "from": "crew_clock", "to": "tl_queue", "label": "assignable" },
+    { "id": "e-queue-pos", "from": "tl_queue", "to": "ba_pos", "label": "ready to pay", "variant": "emphasis" },
+    { "id": "e-pos-sheet", "from": "ba_pos", "to": "ba_sheet", "label": "paid sales" },
+    { "id": "e-sheet-review", "from": "ba_sheet", "to": "sa_review", "label": "web push", "variant": "security" },
+    { "id": "e-review-books", "from": "sa_review", "to": "post_books", "label": "approve", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "One sheet per branch per day",
+      "items": [
+        "Net profit = net sales − expenses − salaries",
+        "Cash advances move cash, never profit"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Guards",
+      "items": [
+        "BA sees own branches only · RLS on",
+        "Approve → web push to BA: release pay · no owner SMS"
+      ]
+    }
+  ]
+}

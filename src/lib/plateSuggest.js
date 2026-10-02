@@ -20,6 +20,19 @@ export function rankPlateSuggestions(rows, typed) {
     .slice(0, PLATE_SUGGEST_LIMIT)
 }
 
+/** Plate edited after a match: drop the matched customer/vehicle so a hidden name can't leak onto another car. */
+export function clearPlateMatch(form = {}) {
+  if (!form.vehicle_id && !form.customer_id) return form
+  return {
+    ...form,
+    customer_id: '',
+    vehicle_id: '',
+    customer_name: '',
+    customer_first_name: '',
+    customer_last_name: '',
+  }
+}
+
 export function applyPlateSuggestion(form = {}, match) {
   if (!match) return form
   const names = splitCustomerName(match.customer_name || `${match.customer_first_name || ''} ${match.customer_last_name || ''}`)

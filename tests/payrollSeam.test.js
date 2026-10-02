@@ -2,8 +2,8 @@
  * Payroll public seams:
  * - payrollPeriodRange / buildPayrollPreview / adjustPayrollLine / payrollBlocksConfirm
  * - POS sale ids as payout proof
- * - canAccessPayroll / canRunPayroll / canViewOwnPay
- * - wizard + RPC wiring (source scan)
+ * - Daily Sheet RBAC that replaced Payroll / My pay
+ * - run_payroll migration history (source scan)
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
@@ -34,13 +34,11 @@ import {
 import {
   ROLES,
   allowRoute,
-  canAccessPayroll,
-  canApproveCashAdvance,
-  canRunPayroll,
-  canViewOwnPay,
+  canEditFinanceBooks,
   getOperationsNav,
   getStaffDock,
 } from '../src/auth/permissions.js'
+import { canEditDailySheet, canReviewDailySheet } from '../src/lib/dailySheet.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -221,8 +219,8 @@ describe('payroll compensation settings persist frequency', () => {
   })
 })
 
-describe('payroll RBAC', () => {
-  it('SA and ASA with finance grants run payroll; crew sees own pay; SA does not', () => {
+describe('crew pay RBAC after the Daily Sheet', () => {
+  it('BA submits the sheet; SA / ASA finance_view approve; only finance_write edits books', () => {
     const sa = { role: ROLES.SUPER_ADMIN }
     const asaWrite = { role: ROLES.ASSISTANT_SUPER_ADMIN, permission_grants: { finance_view: true, finance_write: true } }
     const asaView = { role: ROLES.ASSISTANT_SUPER_ADMIN, permission_grants: { finance_view: true, finance_write: false } }
@@ -230,39 +228,32 @@ describe('payroll RBAC', () => {
     const staff = { role: ROLES.STAFF, branch_slug: 'bacoor' }
     const ba = { role: ROLES.ADMIN, branch_slug: 'bacoor' }
 
-    assert.equal(canAccessPayroll(sa), true)
-    assert.equal(canRunPayroll(sa), true)
-    assert.equal(canApproveCashAdvance(sa), true)
-    assert.equal(canViewOwnPay(sa), false)
-    assert.equal(allowRoute(sa, 'payroll'), true)
-    assert.equal(allowRoute(sa, 'my-pay'), false)
+    assert.equal(canReviewDailySheet(sa), true)
+    assert.equal(canEditFinanceBooks(sa), true)
+    assert.equal(canReviewDailySheet(asaWrite), true)
+    assert.equal(canEditFinanceBooks(asaWrite), true)
+    assert.equal(canReviewDailySheet(asaView), true)
+    assert.equal(canEditFinanceBooks(asaView), false)
+    assert.equal(canReviewDailySheet(asaNone), false)
 
-    assert.equal(canAccessPayroll(asaWrite), true)
-    assert.equal(canRunPayroll(asaWrite), true)
-    assert.equal(canApproveCashAdvance(asaWrite), true)
-    assert.equal(canViewOwnPay(asaWrite), true)
-    assert.equal(canRunPayroll(asaView), false)
-    assert.equal(canApproveCashAdvance(asaView), false)
-    assert.equal(canAccessPayroll(asaView), true)
-    assert.equal(canAccessPayroll(asaNone), false)
+    assert.equal(canEditDailySheet(ba), true)
+    assert.equal(canReviewDailySheet(ba), false)
+    assert.equal(canEditFinanceBooks(ba), false)
+    assert.equal(canEditDailySheet(staff), false)
+    assert.equal(canReviewDailySheet(staff), false)
 
-    assert.equal(canAccessPayroll(staff), false)
-    assert.equal(canViewOwnPay(staff), true)
-    assert.equal(allowRoute(staff, 'my-pay'), true)
-    assert.equal(allowRoute(staff, 'payroll'), false)
-    assert.equal(canViewOwnPay(ba), true)
-    assert.equal(canAccessPayroll(ba), false)
-    assert.equal(canApproveCashAdvance(ba), false)
+    for (const p of [sa, asaWrite, staff, ba]) {
+      assert.equal(allowRoute(p, 'payroll'), false, p.role)
+      assert.equal(allowRoute(p, 'my-pay'), false, p.role)
+    }
   })
 
-  it('sidebar lists Payroll for SA and My pay for crew, not SA', () => {
-    const saNav = getOperationsNav({ role: ROLES.SUPER_ADMIN }).map((i) => i.to)
-    assert.ok(saNav.includes('/operations/payroll'))
-    assert.equal(saNav.includes('/operations/my-pay'), false)
-    const staffNav = getOperationsNav({ role: ROLES.STAFF, branch_slug: 'bacoor' }).map((i) => i.to)
-    assert.ok(staffNav.includes('/operations/my-pay'))
-    assert.equal(staffNav.includes('/operations/payroll'), false)
-    assert.ok(getStaffDock({ role: ROLES.STAFF }).some((i) => i.to === '/operations/my-pay'))
+  it('no sidebar or dock links to Payroll or My pay', () => {
+    for (const p of [{ role: ROLES.SUPER_ADMIN }, { role: ROLES.STAFF, branch_slug: 'bacoor' }, { role: ROLES.ADMIN, branch_slug: 'bacoor' }]) {
+      const nav = getOperationsNav(p).map((i) => i.to)
+      assert.equal(nav.some((to) => /\/operations\/(payroll|my-pay)/.test(to)), false, p.role)
+    }
+    assert.equal(getStaffDock({ role: ROLES.STAFF }).some((i) => i.to === '/operations/my-pay'), false)
   })
 })
 
@@ -370,30 +361,13 @@ describe('monthly salary proration + dual run kinds', () => {
 })
 
 describe('payroll wizard + RPC wiring', () => {
-  it('four wizard steps and run_payroll settles POS-proofed lines', () => {
+  it('run_payroll migration history stays; the Daily Sheet migration revokes it from clients', () => {
     assert.deepEqual(
       PAYROLL_WIZARD_STEPS.map((s) => s.id),
       ['period', 'proof', 'lines', 'confirm'],
     )
-    const page = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
-    assert.match(page, /async function loadProof/)
-    assert.match(page, /onClick=\{loadProof\}/)
-    assert.match(page, /payrollWizardSteps/)
-    assert.match(page, /PAYROLL_RUN_KINDS/)
-    assert.match(page, /groupPayrollLinesByStaff/)
-    assert.match(page, /addPayrollCommission/)
-    assert.match(page, /Load salaried employees/)
-    assert.match(page, /run_payroll/)
-    assert.match(page, /canRunPayroll/)
-    assert.match(page, /hakum-payroll/)
-    assert.match(page, /Floor pay|Fixed salary/)
-    assert.match(page, /Company-wide salaries|no bay/)
-    const mine = readFileSync(join(root, 'src/pages/MyPayPage.jsx'), 'utf8')
-    assert.match(mine, /payroll_run_lines/)
-    assert.match(mine, /canViewOwnPay/)
-    const app = readFileSync(join(root, 'src/App.jsx'), 'utf8')
-    assert.match(app, /path="payroll"/)
-    assert.match(app, /path="my-pay"/)
+    const daily = readFileSync(join(root, 'supabase/migrations/20261001090000_daily_sheet.sql'), 'utf8')
+    assert.match(daily, /revoke execute on function public\.run_payroll\(jsonb\) from authenticated/)
     const sql = readFileSync(join(root, 'supabase/migrations/20260819100000_payroll_runs.sql'), 'utf8')
     assert.match(sql, /create table if not exists public.payroll_runs/)
     assert.match(sql, /create table if not exists public.payroll_run_lines/)

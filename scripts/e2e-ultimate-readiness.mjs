@@ -24,7 +24,6 @@ const needPreview = !skipUi || !skipResponsive
 const STEPS = [
   { id: 'U', label: 'npm test (unit)', cmd: isWin ? ['npm.cmd', 'test'] : ['npm', 'test'], critical: true },
   { id: 'L1', label: 'e2e-attendance', cmd: ['node', 'scripts/e2e-attendance.mjs'], critical: true },
-  { id: 'L2', label: 'e2e-payroll', cmd: isWin ? ['npm.cmd', 'run', 'e2e:payroll'] : ['npm', 'run', 'e2e:payroll'], critical: true },
   { id: 'L3', label: 'e2e-readiness', cmd: ['node', 'scripts/e2e-readiness.mjs'], critical: true },
   { id: 'L4', label: 'e2e-queue-part3', cmd: ['node', 'scripts/e2e-queue-part3.mjs'], critical: true },
   { id: 'L5', label: 'e2e-pos-part2', cmd: ['node', 'scripts/e2e-pos-part2.mjs'], critical: true },

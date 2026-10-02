@@ -48,10 +48,10 @@ describe('POS + Payroll settings', () => {
   it('routes and migration ship settings modules', () => {
     const app = readFileSync(join(root, 'src/App.jsx'), 'utf8')
     assert.match(app, /settings\/pos/)
-    assert.match(app, /settings\/payroll/)
+    assert.match(app, /settings\/daily-sheet/)
     const hub = readFileSync(join(root, 'src/pages/SettingsHubPage.jsx'), 'utf8')
     assert.match(hub, /POS settings/)
-    assert.match(hub, /Payroll settings/)
+    assert.match(hub, /Daily sheet rules/)
     const mig = readFileSync(join(root, 'supabase/migrations/20260821210000_pos_payroll_settings.sql'), 'utf8')
     assert.match(mig, /ops_pos_settings/)
     assert.match(mig, /cash_advance_auto_deduct/)

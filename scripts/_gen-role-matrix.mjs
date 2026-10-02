@@ -28,8 +28,6 @@ const keys = [
   'reviews',
   'memberships',
   'finance',
-  'payroll',
-  'my-pay',
   'planning',
   'roadmap',
   'history',

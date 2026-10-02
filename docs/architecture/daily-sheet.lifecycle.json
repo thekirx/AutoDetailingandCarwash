@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Daily Sheet Status Lifecycle",
+    "output": "docs/architecture/daily-sheet.lifecycle.html",
+    "quality_profile": "showcase",
+    "viewBox": [980, 566]
+  },
+  "lanes": [
+    { "id": "main", "label": "Sheet status" },
+    { "id": "recovery", "label": "Fix + resubmit" }
+  ],
+  "states": [
+    { "id": "draft", "type": "start", "label": "Draft", "sublabel": "BA fills sheet", "lane": "main", "col": 0, "step": "01", "tag": "save" },
+    { "id": "submitted", "type": "waiting", "label": "Submitted", "sublabel": "awaiting SA/ASA", "lane": "main", "col": 1, "step": "02", "tag": "locked" },
+    { "id": "review", "type": "decision", "label": "Review", "sublabel": "approve or return", "lane": "main", "col": 2, "step": "03", "tag": "gate" },
+    { "id": "approved", "type": "success", "label": "Approved", "sublabel": "expenses posted", "lane": "main", "col": 3, "step": "04", "tag": "release pay" },
+    { "id": "returned", "type": "failure", "label": "Returned", "sublabel": "BA edits", "lane": "recovery", "col": 0, "tag": "editable" }
+  ],
+  "transitions": [
+    { "from": "review", "to": "returned", "label": "return", "variant": "security", "labelDy": 24 },
+    { "from": "returned", "to": "submitted", "label": "resubmit", "variant": "dashed" },
+    { "from": "approved", "to": "returned", "label": "SA reopen", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Main path", "items": ["Draft → Submitted → Approved", "Submit is blocked until every check passes"] },
+    { "dot": "rose", "title": "Recovery", "items": ["Return keeps lines and adds a review note", "SA reopen voids posted expense rows first"] }
+  ]
+}

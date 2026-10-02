@@ -3,7 +3,7 @@
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -112,23 +112,15 @@ describe('shift close RBAC helpers', () => {
 })
 
 describe('shift close wiring', () => {
-  it('POS submits RPC with shift end time; ASA allowed in migration', () => {
+  it('End of shift is retired from POS; Finance keeps the legacy history tab', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
     const fin = readFileSync(join(root, 'src/pages/FinancePage.jsx'), 'utf8')
-    const wiz = readFileSync(join(root, 'src/components/ShiftCloseWizard.jsx'), 'utf8')
     const mig = readFileSync(
       join(root, 'supabase/migrations/20260821120000_shift_end_asa_semimonthly.sql'),
       'utf8',
     )
-    assert.match(pos, /submit_shift_close/)
-    assert.match(pos, /ShiftCloseWizard/)
-    assert.match(pos, /shift_ended_at/)
-    assert.match(pos, /End of shift/)
-    assert.match(pos, /setShiftCloseMode|shiftCloseMode/)
-    assert.match(pos, /openEndOfShift/)
-    assert.match(wiz, /hakum-pos-end-shift/)
-    assert.match(wiz, /Total sales/)
-    assert.match(wiz, /From POS/)
+    assert.doesNotMatch(pos, /submit_shift_close|ShiftCloseWizard|openEndOfShift/)
+    assert.equal(existsSync(join(root, 'src/components/ShiftCloseWizard.jsx')), false)
     assert.match(fin, /FinanceShiftCloseTab/)
     assert.match(fin, /shift-close/)
     assert.match(mig, /shift_ended_at/)

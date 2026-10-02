@@ -402,7 +402,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                 placeholder="Blank = global wash pool"
               />
               <p className="text-xs text-muted-foreground">
-                Paid on the next floor payroll run (replaces the global wash-pool % for this SKU). Blank = company wash pool.
+                Paid through the Daily Sheet crew pay (replaces the global wash-pool % for this SKU). Blank = company wash pool.
               </p>
             </div>
             <div className="flex flex-col gap-2">
@@ -657,7 +657,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                   placeholder="Blank = global wash pool"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Paid on the next floor payroll run (replaces the global wash-pool % for this SKU).
+                  Paid through the Daily Sheet crew pay (replaces the global wash-pool % for this SKU).
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">

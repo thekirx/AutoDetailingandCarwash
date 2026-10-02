@@ -7,6 +7,8 @@ import {
 import { useAuth } from '@/auth/AuthProvider'
 import { canSeeAllBranches, ROLES } from '@/auth/permissions'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import { canReviewDailySheet } from '@/lib/dailySheet'
+import FloorMoneyPanel from './FloorMoneyPanel'
 import { paymentMethodLabel } from '@/lib/paymentMethods'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { supabase } from '@/lib/supabase'
@@ -183,6 +185,7 @@ export default function SuperAdminFloorBoard() {
   const { profile, canViewQueueOperations } = useAuth()
   const navigate = useNavigate()
   const seeAll = canSeeAllBranches(profile)
+  const showMoney = canReviewDailySheet(profile)
   const [branchFilter, setBranchFilter] = useState('all')
   const [datePreset, setDatePreset] = useState('today')
   const [customStart, setCustomStart] = useState('')
@@ -577,6 +580,17 @@ export default function SuperAdminFloorBoard() {
           </div>
         ) : null}
       </Section>
+
+      {showMoney ? (
+        <Section eyebrow="Money" title="Today and this month">
+          <FloorMoneyPanel
+            profile={profile}
+            branchFilter={branchFilter}
+            branchName={(slug) => branches.find((b) => b.slug === slug)?.name || slug}
+            refreshKey={board}
+          />
+        </Section>
+      ) : null}
 
       <Section eyebrow="Money" title="Financials">
         <div className="grid grid-cols-2 gap-3 overflow-visible xl:grid-cols-3">

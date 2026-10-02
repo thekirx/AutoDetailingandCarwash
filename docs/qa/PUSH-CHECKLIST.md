@@ -12,12 +12,9 @@ Branch rule: people assigned to a branch (Branch Admin, Team Lead, crew, detaile
 | Booking on the floor (waiting → in progress → final check → release → payment, redo) | The customer | `/account/queue` |
 | New booking / floor status at a branch | SA, ASA, Ops Lead + that branch's Branch Admin and Team Lead (detailer for detailing jobs) | Bookings / Queue / POS by status |
 | TL assigns crew to a car | Only the assigned crew (just the new batch) | `/operations/my-tasks` |
-| Branch Admin submits end of shift | SA + ASA with `finance_view` | `/operations/finance?tab=shift-close` |
-| Finance accepts end of shift | SA / ASA with `finance_write` (floor pay ready) + the submitter | Payroll / POS |
-| Finance sends end of shift back | The submitter, with the review note | `/operations/pos` |
-| Payroll confirmed | Every person on the run | `/operations/my-pay` |
-| Cash advance requested | SA / ASA with `finance_write` | `/operations/payroll?tab=cash-advance` |
-| Cash advance approved / declined | The employee | `/operations/my-pay` |
+| Branch Admin submits the Daily Sheet | SA + ASA with `finance_view` (not the submitter) | `/operations/finance?tab=sheets&sheet=…` |
+| SA / ASA approves or returns the Daily Sheet | The Branch Admin who submitted it | `/operations/pos?tab=sheet&date=…` |
+| Cash advance requested | That branch's Branch Admin (releases it on the Daily Sheet; SA / ASA approve it with the sheet) | `/operations/pos?tab=sheet` |
 | Public partnership inquiry / complaint | SA + ASA | `/operations/inquiries` |
 | Customer review | SA, ASA, Ops Lead + that branch's Branch Admin | `/operations/reviews` |
 | Staff complaint form | SA, ASA + that branch's Branch Admin (global only if no branch) | `/operations/planning?tab=forms` |
@@ -62,19 +59,19 @@ Then do each row and tick it when the toast arrives **and** the tap opens the ri
 | 3 | Team Lead (Bacoor) | Customer books at Bacoor | New booking | Operations → Bookings/Queue | ☐ | ☐ |
 | 4 | Team Lead (Bacoor) | Customer books at **another** branch | **Nothing** | — | ☐ | ☐ |
 | 5 | Crew | TL assigns that crew to a car | "New car assigned" (plate · service @ branch) | My tasks | ☐ | ☐ |
-| 6 | Crew | SA confirms payroll that includes them | "Pay posted" | My pay | ☐ | ☐ |
-| 7 | Crew | SA approves their cash advance | "Cash advance approved" | My pay | ☐ | ☐ |
-| 8 | Super Admin | Branch Admin submits end of shift | "End of shift to review · Bacoor" | Finance → Shift close | ☐ | ☐ |
-| 9 | Super Admin | Finance accepts that shift | "Floor pay ready · Bacoor" | Payroll | ☐ | ☐ |
+| 6 | Super Admin | Branch Admin submits the Daily Sheet | "Daily sheet to approve · Bacoor" | Finance → Daily sheets | ☐ | ☐ |
+| 7 | Branch Admin (Bacoor) | SA approves or returns that sheet | "Daily sheet approved · Bacoor" / "Daily sheet returned · Bacoor" | POS → Daily sheet | ☐ | ☐ |
 | 10 | Super Admin | Public partnership form / customer review | "New partnership inquiry" / "New review · N★" | Inquiries / Reviews | ☐ | ☐ |
-| 11 | Super Admin | Crew requests a cash advance | "Cash advance request" | Payroll → Cash advance | ☐ | ☐ |
+| 11 | Branch Admin (Bacoor) | Bacoor crew requests a cash advance | "Cash advance request" | POS → Daily sheet | ☐ | ☐ |
+
+Payroll, My pay and End of shift were retired on 2026-10-01 (pay is posted when the Daily Sheet is approved; old shift closes are read-only in Finance), so the "Pay posted", "Cash advance approved / declined", "End of shift to review / accepted / sent back" and "Floor pay ready" alerts are no longer sent from the app. Rows 8–9 were removed for that reason. The 14/14 audit below predates that change; re-run it after the Daily Sheet migration is live.
 
 If a toast is missing: check the phone's notification settings for Hakum/Chrome, Focus/Do Not Disturb, and that the phone shows **Push alerts on** in the app. Tell me the row number and phone.
 
 ## Notes and limits
 
-- Staff event alerts (crew assigned, end-of-shift submit, payroll, cash advance) are sent by `POST /api/notify-ops-event` right after the action succeeds in the app. The server re-checks who is allowed and picks recipients from the database; if the phone that did the action loses signal at that exact moment, that one alert is skipped (the action itself is saved).
-- The demo ASA has default grants (`finance_view` on, `finance_write` off), so the ASA sees shift submissions but not floor-pay / cash-advance alerts. Turning on `finance_write` for an ASA adds them.
+- Staff event alerts (crew assigned, Daily Sheet submit / review, cash advance request) are sent by `POST /api/notify-ops-event` right after the action succeeds in the app. The server re-checks who is allowed and picks recipients from the database; if the phone that did the action loses signal at that exact moment, that one alert is skipped (the action itself is saved).
+- The ASA (Luci, `assistant@hakumautocare.com`) has every grant on since 2026-09-29, including `finance_write`, so she gets shift submissions and floor-pay / cash-advance alerts like the Super Admin. An ASA on default grants (`finance_write` off) sees shift submissions only.
 - DB function `resolve_ops_lab_notify_user_ids` is no longer called (Ops Lab now uses the shared recipient planner); left in place, safe to drop later.
 - `scripts/e2e-push-notifications.mjs` and the browser matrix send real pushes to every device subscribed as the demo customer — phones signed in as the demo customer will show "E2E probe" / "In the queue · PUSHQA…" toasts while those scripts run.
 - Test bookings created by the audit are archived (bookings are soft-deleted by the `bookings_soft_delete` trigger), not physically removed.

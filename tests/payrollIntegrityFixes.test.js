@@ -142,31 +142,18 @@ describe('peso helpers', () => {
   })
 })
 
-describe('payroll leftover copy + ACL (source)', () => {
-  it('PayrollPage is honest about paid unclaimed tickets, pesos, and a closed guide', () => {
-    const page = read('src/pages/PayrollPage.jsx')
-    assert.doesNotMatch(page, /unpaid POS/)
-    assert.match(page, /theoretical_pool_minor/)
-    assert.match(page, /none allocated/)
-    assert.match(page, /defaultOpen=\{false\}/)
-    assert.match(page, /Payroll confirmed/)
-    assert.match(page, /label: 'Advances'/)
-    assert.match(page, /validatePayrollCustomRange\(periodStart, periodEnd\)/)
-    assert.match(page, /htmlFor="payroll-adj-staff"/)
-    assert.match(page, /htmlFor="payroll-adj-amount"/)
-    assert.match(page, /pesosFromMinor\(rules\.ceramic_shirt_deduction_minor\)/)
-  })
-
-  it('Settings payroll writes require canRunPayroll, not any admin', () => {
-    const page = read('src/pages/settings/PayrollSettingsPage.jsx')
-    assert.match(page, /canRunPayroll/)
+describe('pay rules copy + ACL (source)', () => {
+  it('Daily sheet rules writes require canEditFinanceBooks, not any admin', () => {
+    const page = read('src/pages/settings/DailySheetRulesPage.jsx')
+    assert.match(page, /canEditFinanceBooks/)
+    assert.match(page, /canReviewDailySheet/)
     assert.doesNotMatch(page, /isAdmin/)
-    assert.match(page, /ASA with finance write/)
   })
 
-  it('Inventory salary % no longer claims preview-only', () => {
+  it('Inventory salary % points at the Daily Sheet, not a payroll run', () => {
     const page = read('src/pages/ServicesManagePage.jsx')
     assert.doesNotMatch(page, /does not auto-pay/)
-    assert.match(page, /Paid on the next floor payroll run/)
+    assert.doesNotMatch(page, /floor payroll run/)
+    assert.match(page, /Paid through the Daily Sheet crew pay/)
   })
 })

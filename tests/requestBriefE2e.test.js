@@ -173,14 +173,12 @@ describe('request.md money + POS + Bacoor', () => {
     assert.ok(MERCH_FAMILIES.some((f) => f.id === 'accessories'))
     assert.ok(MERCH_FAMILIES.some((f) => f.id === 'clothing'))
     const pos = read('src/pages/PosPage.jsx')
-    assert.match(pos, /Cash advances · Payroll/)
     assert.match(pos, /DEFAULT_POS_EXPENSE_KINDS|ops_pos_settings/)
     assert.match(pos, /pending/)
     const posSettings = read('src/lib/posSettings.js')
     assert.match(posSettings, /salary_carwash/)
     assert.match(posSettings, /salary_detailer/)
-    const payroll = read('src/pages/PayrollPage.jsx')
-    assert.match(payroll, /cash-advance/)
+    assert.match(read('src/pages/pos/DailySheetPanel.jsx'), /aria-label="Cash advances"/)
   })
 
   it('finance hover percent is a real share, not a hardcoded 50', () => {

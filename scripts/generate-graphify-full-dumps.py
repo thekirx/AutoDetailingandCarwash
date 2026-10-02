@@ -470,7 +470,7 @@ def write_frontend():
 | bookings | bookings |
 | planning | planning |
 | roadmap | roadmap |
-| settings, settings/pos, settings/payroll | settings |
+| settings, settings/pos, settings/daily-sheet | settings |
 | content | content |
 | notifications, broadcast | notifications |
 | history | history |
@@ -482,7 +482,7 @@ Login: `/operations/login`. Legacy `/admin/*` redirects into operations.
 
 ## `allowRoute` keys → permission functions
 
-`planning→canViewPlanning`, `roadmap→canAccessOpsRoadmap`, `people→canManagePeople`, `branches→canManageBranches`, `cars→canManageVehicleCatalog`, `audit→canAccessAudit`, `data-center→canAccessDataCenter`, `inquiries→canAccessInquiries`, `dashboard|queue|kpi→canViewQueueOperations`, `queue-new→canEditQueueOperations`, `attendance→canAccessAttendance`, `my-tasks→canViewAssignedTasks`, `pos→canAccessPos`, `inventory→canAccessInventory`, `finance→canOpenFinanceHub`, `payroll→canAccessPayroll`, `my-pay→canViewOwnPay`, `crm→canAccessCrm`, `bookings→canAccessBookingBoard`, `reviews→canAccessReviews`, `reports→canAccessReports`, `memberships→canAccessMemberships`, `settings→canAccessSettings`, `content→canManageSiteContent`, `notifications|history→canAccess*`. Branch admin uses `BRANCH_ADMIN_ROUTE_KEYS` allowlist instead of the map.
+`planning→canViewPlanning`, `roadmap→canAccessOpsRoadmap`, `people→canManagePeople`, `branches→canManageBranches`, `cars→canManageVehicleCatalog`, `audit→canAccessAudit`, `data-center→canAccessDataCenter`, `inquiries→canAccessInquiries`, `dashboard|queue|kpi→canViewQueueOperations`, `queue-new→canEditQueueOperations`, `attendance→canAccessAttendance`, `my-tasks→canViewAssignedTasks`, `pos→canAccessPos`, `inventory→canAccessInventory`, `finance→canOpenFinanceHub`, `crm→canAccessCrm`, `bookings→canAccessBookingBoard`, `reviews→canAccessReviews`, `reports→canAccessReports`, `memberships→canAccessMemberships`, `settings→canAccessSettings`, `content→canManageSiteContent`, `notifications|history→canAccess*`. Branch admin uses `BRANCH_ADMIN_ROUTE_KEYS` allowlist instead of the map.
 
 ## Detailer vs Queue viewer (resolved)
 

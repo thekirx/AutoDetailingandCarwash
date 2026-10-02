@@ -1,33 +1,10 @@
 /** Shared workflow copy for ops guide cards — plain language for floor staff. */
 
-export const PAYROLL_WORKFLOW_STEPS = Object.freeze([
-  {
-    id: 'pos-proof',
-    title: 'POS proof',
-    body: 'After Finance accepts end of shift, paid sales and ceramic drafts become proof for the period. Close attested amounts are for review — pay uses POS proof.',
-  },
-  {
-    id: 'preview',
-    title: 'Preview lines',
-    body: 'Load proof on Run payroll, pick floor or fixed salary, then review wash-pool splits, ceramic lines, and salary drafts before confirming.',
-  },
-  {
-    id: 'confirm',
-    title: 'Confirm payout',
-    body: 'Post the run when lines look right. Overlapping periods and double-paid sales are blocked. Crew see payouts under My pay.',
-  },
-  {
-    id: 'settings',
-    title: 'Rules and settings',
-    body: 'Pool %, ceramic splits, and payout frequency live under Rules. Attendance weights and CA netting are in Settings → Payroll.',
-  },
-])
-
 export const SETTINGS_HUB_COPY = Object.freeze({
   eyebrow: 'Settings',
   title: 'Company settings',
   description:
-    'POS and payroll policy. People, branches, content, and audit stay in the main Command menu.',
+    'POS and daily sheet rules. People, branches, content, and audit stay in the main Command menu.',
 })
 
 export const FINANCE_WORKFLOW_STEPS = Object.freeze([
@@ -37,44 +14,21 @@ export const FINANCE_WORKFLOW_STEPS = Object.freeze([
     body: 'Paid POS tickets land in Sales and roll into P&L. Filter by branch and date window at the top.',
   },
   {
-    id: 'shift',
-    title: 'Shift reviews',
-    body: 'Accept end-of-shift closes here before Payroll can confirm floor pay. Close attested amounts vs POS proof.',
+    id: 'sheets',
+    title: 'Daily sheets',
+    body: 'Branch Admins submit the day from POS › Daily sheet: crew pay, cash advances, expenses, and the drawer count. Approve each sheet here to post it to the books.',
+    href: '/operations/finance?tab=sheets',
+    linkLabel: 'Open Daily sheets',
   },
   {
     id: 'bills',
     title: 'Bills and expenses',
-    body: 'Record supplier bills and petty cash. Categories feed P&L; some kinds also surface on POS and Payroll.',
+    body: 'Record supplier bills with reference and due date. Each line picks an account that feeds P&L. Rows posted from a Daily Sheet stay locked here.',
   },
   {
-    id: 'payroll',
-    title: 'Payroll handoff',
-    body: 'After shifts are accepted, confirm crew pay on Payroll. Finance does not set commission %. Posted salary expenses then return here as P&L.',
-    href: '/operations/payroll',
-    linkLabel: 'Open Payroll',
-  },
-])
-
-export const MY_PAY_WORKFLOW_STEPS = Object.freeze([
-  {
-    id: 'confirmed',
-    title: 'Confirmed pay',
-    body: 'Money already posted from a Payroll run shows as confirmed. That is pay in the books, not an estimate.',
-  },
-  {
-    id: 'estimate',
-    title: 'Today’s estimate',
-    body: 'Unpaid wash-pool share from today’s sales and attendance. It changes until Payroll confirms a run.',
-  },
-  {
-    id: 'advances',
-    title: 'Cash advances',
-    body: 'Your advance requests and repayments net against future payroll. Approvals happen on Payroll, not POS.',
-  },
-  {
-    id: 'period',
-    title: 'Report period',
-    body: 'Pick daily, weekly, monthly, or custom dates to filter confirmed lines and KPIs for that window.',
+    id: 'pl',
+    title: 'Profit and loss',
+    body: 'Approved sheets and paid bills land in P&L. Switch between the statement, fiscal year, period compare, and branch columns, then export.',
   },
 ])
 

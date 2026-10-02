@@ -1,10 +1,8 @@
 import { Link, Navigate } from 'react-router-dom'
 import { ShoppingCart, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import {
-  canAccessPos,
-  canAccessPayroll,
-} from '@/auth/permissions'
+import { canAccessPos } from '@/auth/permissions'
+import { canReviewDailySheet } from '@/lib/dailySheet'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { SETTINGS_HUB_COPY } from '@/components/ops/opsGuideCopy'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,16 +18,16 @@ const TILES = [
     allow: canAccessPos,
   },
   {
-    key: 'payroll-settings',
-    title: 'Payroll settings',
-    description: 'Attendance weights, pending-floor policy, and cash-advance netting.',
-    to: '/operations/settings/payroll',
+    key: 'daily-sheet-rules',
+    title: 'Daily sheet rules',
+    description: 'Wash pool, detailing splits, attendance weights and Team Lead daily rates.',
+    to: '/operations/settings/daily-sheet',
     icon: Wallet,
-    allow: canAccessPayroll,
+    allow: canReviewDailySheet,
   },
 ]
 
-/** Settings hub — POS / Payroll policy tiles (not a second nav). */
+/** Settings hub — POS / Daily sheet policy tiles (not a second nav). */
 export default function SettingsHubPage() {
   const { profile } = useAuth()
   const tiles = TILES.filter((t) => t.allow(profile))

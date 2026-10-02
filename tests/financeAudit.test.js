@@ -66,17 +66,20 @@ describe('finance audit', () => {
     assert.ok(insights.avgTicketMinor > 0)
   })
 
-  it('5 Overview wires export helpers and expense/branch charts', () => {
-    const src = readFileSync(join(root, 'src/pages/finance/FinanceOverviewTab.jsx'), 'utf8')
-    assert.match(src, /topExpenseCategories/)
-    assert.match(src, /salesByBranch/)
-    assert.match(src, /rollupPl/)
-    assert.match(src, /downloadCsv/)
-    assert.match(src, /downloadExcel/)
-    assert.match(src, /printAsPdf/)
-    assert.match(src, /Where spend goes|expenseBars/)
-    assert.match(src, /title="Locations"/)
-    assert.match(src, /salesByLocation/)
+  it('5 P&L carries the export trio + expense chart; Sales carries locations; Home carries the watchlist', () => {
+    const pl = readFileSync(join(root, 'src/pages/finance/FinancePLTab.jsx'), 'utf8')
+    assert.match(pl, /topExpenseCategories/)
+    assert.match(pl, /rollupPl/)
+    assert.match(pl, /downloadCsv/)
+    assert.match(pl, /downloadExcel/)
+    assert.match(pl, /printAsPdf/)
+    assert.match(pl, /expenseBars/)
+    const sales = readFileSync(join(root, 'src/pages/finance/FinanceSalesSummary.jsx'), 'utf8')
+    assert.match(sales, /title="Locations"/)
+    assert.match(sales, /salesByLocation/)
+    const home = readFileSync(join(root, 'src/pages/finance/FinanceHomeTab.jsx'), 'utf8')
+    assert.match(home, /accountWatchlist/)
+    assert.match(home, /monthlyProfitYtd/)
   })
 
   it('6–7 Finance page still hosts shift-close and expense-reports tabs', () => {

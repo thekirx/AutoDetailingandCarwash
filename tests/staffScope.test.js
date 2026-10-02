@@ -57,7 +57,6 @@ describe('Staff capability matrix', () => {
         '/operations/kpi',
         '/operations/my-tasks',
         '/operations/planning',
-        '/operations/my-pay',
       ],
     )
   })

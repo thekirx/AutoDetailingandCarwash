@@ -96,13 +96,15 @@ describe('money contract seams', () => {
     )
   })
 
-  it('Branch Admin cannot access or run payroll (BA drafts only)', async () => {
-    const { canAccessPayroll, canRunPayroll, ROLES } = await import('../src/auth/permissions.js')
+  it('Branch Admin submits the Daily Sheet but cannot approve it or edit the books', async () => {
+    const { canEditFinanceBooks, ROLES } = await import('../src/auth/permissions.js')
+    const { canEditDailySheet, canReviewDailySheet } = await import('../src/lib/dailySheet.js')
     const ba = { role: ROLES.ADMIN, id: 'ba-1' }
-    assert.equal(canAccessPayroll(ba), false)
-    assert.equal(canRunPayroll(ba), false)
+    assert.equal(canEditDailySheet(ba), true)
+    assert.equal(canReviewDailySheet(ba), false)
+    assert.equal(canEditFinanceBooks(ba), false)
     const boss = { role: ROLES.SUPER_ADMIN, id: 'sa-1' }
-    assert.equal(canAccessPayroll(boss), true)
-    assert.equal(canRunPayroll(boss), true)
+    assert.equal(canReviewDailySheet(boss), true)
+    assert.equal(canEditFinanceBooks(boss), true)
   })
 })

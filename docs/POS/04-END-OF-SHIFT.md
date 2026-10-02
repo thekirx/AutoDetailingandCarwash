@@ -1,5 +1,7 @@
 # 04 — End of shift (truth & attestation)
 
+> **Retired 2026-10-01.** Replaced by the Daily Sheet. `submit_shift_close` / `review_shift_close` are revoked by migration `20261001090000_daily_sheet.sql`; old reports are read-only under Finance → Old shift closes. See [docs/daily-sheet/README.md](../daily-sheet/README.md).
+
 ## Purpose (honest)
 
 End of shift is a **shop-day settlement attestation**: BA (or SA/ASA) confirms “this is what we believe the register day looked like,” against a **POS-computed baseline**, then Finance reviews. It is **not** a second sales ledger and **not** the payroll calculator.

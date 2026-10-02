@@ -58,9 +58,13 @@ describe('notify routing table', () => {
     assert.equal(pickNotifyUrl(profileOf(ROLES.MARKETING), NOTIFY_EVENTS.planner_task.urls), '/operations/planning')
   })
 
-  it('ASA without the finance_write grant gets no money alert link', () => {
-    const asa = { role: ROLES.ASSISTANT_SUPER_ADMIN, permission_grants: { finance_view: false } }
-    assert.equal(pickNotifyUrl(asa, NOTIFY_EVENTS.cash_advance_submitted.urls), null)
+  it('money alerts are gated on the finance_write grant', () => {
+    assert.equal(NOTIFY_EVENTS.floor_pay_ready.grant, 'finance_write')
+    assert.deepEqual(NOTIFY_EVENTS.floor_pay_ready.urls, ['/operations/finance?tab=sheets'])
+  })
+
+  it('Branch Admin cash advance alert opens the POS Daily sheet', () => {
+    assert.equal(pickNotifyUrl(profileOf(ROLES.ADMIN), NOTIFY_EVENTS.cash_advance_submitted.urls), '/operations/pos?tab=sheet')
   })
 })
 

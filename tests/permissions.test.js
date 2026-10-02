@@ -11,7 +11,6 @@ import {
   canEditPlanning,
   canEditQueueOperations,
   canManageServices,
-  canViewOwnPay,
   canViewPlanning,
   getBranchScopeList,
   getOperationsNav,
@@ -30,8 +29,8 @@ describe('RBAC Part 1 matrix', () => {
     assert.equal(canEditQueueOperations(p), true)
     assert.equal(canManageServices(p), true)
     assert.equal(getBranchScopeList(p), null)
-    assert.equal(canViewOwnPay(p), false)
     assert.equal(allowRoute(p, 'my-pay'), false)
+    assert.equal(allowRoute(p, 'payroll'), false)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
@@ -46,7 +45,6 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/reviews',
         '/operations/memberships',
         '/operations/finance',
-        '/operations/payroll',
         '/operations/planning',
         '/operations/roadmap',
         '/operations/history',
@@ -61,7 +59,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/settings',
       ],
     )
-    assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-pay'))
+    assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-pay' || i.to === '/operations/payroll'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-tasks'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/services'))
@@ -136,7 +134,6 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/planning',
         '/operations/roadmap',
         '/operations/history',
-        '/operations/my-pay',
         '/operations/audit',
       ],
     )
@@ -151,7 +148,7 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(!getOperationsNav(staff).some((i) => String(i.to).includes('tab=forms')))
     assert.deepEqual(
       getOperationsNav({ role: ROLES.VIDEO_EDITOR }).map((i) => i.to),
-      ['/operations/planning?tab=calendar', '/operations/my-tasks', '/operations/my-pay'],
+      ['/operations/planning?tab=calendar', '/operations/my-tasks'],
     )
   })
 
@@ -168,7 +165,6 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/planning',
         '/operations/notifications',
         '/operations/history',
-        '/operations/my-pay',
       ],
     )
   })
@@ -187,6 +183,7 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(dock.some((i) => i.to === '/operations/queue/new'))
     assert.ok(dock.some((i) => i.to === '/operations/attendance'))
     assert.ok(dock.some((i) => i.to === '/operations/bookings'))
+    assert.equal(dock.some((i) => i.to === '/operations/dashboard'), false)
     assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).length, 2)
     assert.equal(getTeamLeadDock({ role: ROLES.STAFF }).some((i) => i.to === '/operations/queue'), false)
   })

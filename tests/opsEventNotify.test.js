@@ -25,6 +25,25 @@ describe('buildOpsEventCopy', () => {
     assert.equal(c.tag, 'shift-submitted-c1')
   })
 
+  it('sheet_submitted tells approvers who, which day, net and drawer gap', () => {
+    const c = buildOpsEventCopy('sheet_submitted', { sheetId: 's1', branchName: 'Bacoor', businessDate: '2026-10-01', submitter: 'Ana', netProfitMinor: 1250000, overShortMinor: -20000 })
+    assert.equal(c.title, 'Daily sheet to approve · Bacoor')
+    assert.equal(c.body, 'Ana submitted 2026-10-01 · net ₱12,500 · drawer short ₱200. Approve or return in Finance.')
+    assert.equal(c.tag, 'sheet-submitted-s1')
+    assert.doesNotMatch(buildOpsEventCopy('sheet_submitted', { overShortMinor: 0 }).body, /drawer/)
+  })
+
+  it('sheet_reviewed: approved says release pay, returned carries the note', () => {
+    const yes = buildOpsEventCopy('sheet_reviewed', { sheetId: 's1', approved: true, branchName: 'Bacoor', businessDate: '2026-10-01' })
+    const no = buildOpsEventCopy('sheet_reviewed', { sheetId: 's1', approved: false, note: 'Missing GCash receipt', branchName: 'Bacoor', businessDate: '2026-10-01' })
+    assert.equal(yes.title, 'Daily sheet approved · Bacoor')
+    assert.match(yes.body, /release pay/)
+    assert.equal(no.title, 'Daily sheet returned · Bacoor')
+    assert.match(no.body, /Missing GCash receipt/)
+    assert.ok(NOTIFY_EVENTS.sheet_reviewed.roles.includes('admin'))
+    assert.equal(NOTIFY_EVENTS.sheet_submitted.grant, 'finance_view')
+  })
+
   it('shift_accepted tells the submitter finance accepted', () => {
     const c = buildOpsEventCopy('shift_accepted', { closeId: 'c1', branchName: 'Bacoor', businessDate: '2026-09-27' })
     assert.equal(c.title, 'End of shift accepted · Bacoor')
@@ -39,22 +58,17 @@ describe('buildOpsEventCopy', () => {
     assert.ok(NOTIFY_EVENTS.shift_rejected.urls.includes('/operations/pos'))
   })
 
-  it('payroll_confirmed says which pay and period', () => {
-    const floor = buildOpsEventCopy('payroll_confirmed', { runId: 'r1', runKind: 'floor', periodStart: '2026-09-16', periodEnd: '2026-09-30' })
-    assert.equal(floor.title, 'Pay posted')
-    assert.match(floor.body, /Floor pay · 2026-09-16 to 2026-09-30/)
-    assert.match(buildOpsEventCopy('payroll_confirmed', { runKind: 'fixed' }).body, /^Salary/)
+  it('payroll events are retired with the Payroll page', () => {
+    assert.equal(OPS_EVENTS.includes('payroll_confirmed'), false)
+    assert.equal(OPS_EVENTS.includes('cash_advance_resolved'), false)
+    assert.equal(NOTIFY_EVENTS.payroll_confirmed, undefined)
+    assert.equal(NOTIFY_EVENTS.cash_advance_resolved, undefined)
   })
 
-  it('cash advance request and decision show pesos', () => {
+  it('cash advance request shows pesos and sends the BA to the Daily Sheet', () => {
     const req = buildOpsEventCopy('cash_advance_submitted', { submissionId: 's1', employee: 'Ben', amountMinor: 150000, branchName: 'Bacoor' })
-    assert.equal(req.body, 'Ben · ₱1,500 @ Bacoor')
-    const yes = buildOpsEventCopy('cash_advance_resolved', { submissionId: 's1', approved: true, amountMinor: 150000 })
-    const no = buildOpsEventCopy('cash_advance_resolved', { submissionId: 's1', approved: false, amountMinor: 150000 })
-    assert.equal(yes.title, 'Cash advance approved')
-    assert.equal(no.title, 'Cash advance declined')
-    assert.match(yes.body, /₱1,500/)
-    assert.notEqual(req.tag, yes.tag, 'request and decision are separate inbox rows / toasts')
+    assert.equal(req.body, "Ben · ₱1,500 @ Bacoor. Release it on today's Daily Sheet.")
+    assert.equal(req.tag, 'ca-req-s1')
   })
 
   it('public inquiry: complaint vs partnership wording', () => {

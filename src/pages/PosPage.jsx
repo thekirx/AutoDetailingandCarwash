@@ -1,50 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useSearchParams, Link } from 'react-router-dom'
-import { Cake, Gift, Link2, LogOut, MapPin, Minus, Plus, Receipt, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, UserRound, X } from 'lucide-react'
+import { Navigate, useSearchParams } from 'react-router-dom'
+import { Cake, CarFront, ClipboardList, Gift, Link2, Lock, MapPin, Minus, Plus, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, Volume2, VolumeX, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { allowRoute, canAccessPos, canManageServices, canSeeAllBranches, canWriteFinance, canWritePosSettings, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
+import { canAccessPos, canDiscountPosSale, canSeeAllBranches, canWriteFinance, canWritePosSettings, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashAdvanceVisibleOnPos, cashTenderCoversTotal, clearPosDraft, expenseCountsOnDailyClose, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, posCartBlocksCheckout, priceCartForMembership, readPosDraft, stepPosCartLineQuantity, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
+import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashTenderCoversTotal, clearPosDraft, detachHandoffFromCart, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, openHandoffInCart, posCartBlocksCheckout, priceCartForMembership, readPosDraft, stepPosCartLineQuantity, summarizePosCart, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
-import { approvedCaForCloseDay, formatBacoorReportText } from '@/lib/bacoorDailyReport'
-import { buildShopDaySettlementReport, shopDayShouldClose } from '@/lib/shopDaySettlement'
-import {
-  applyCaCollectedToCashLeft,
-  attachSalaryDraftExtras,
-  canSubmitShiftClose,
-  datetimeLocalToIso,
-  moneySnapshotFromReport,
-  parsePesosToMinor,
-  shiftCloseValidationBaseline,
-  toDatetimeLocalValue,
-  validateShiftCloseSubmit,
-  SHIFT_CLOSE_MONEY_KEYS,
-} from '@/lib/shiftClose'
-import ShiftCloseWizard from '@/components/ShiftCloseWizard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { PAYMENT_METHODS } from '@/lib/paymentMethods'
-import { normalizePosSettings, DEFAULT_POS_EXPENSE_KINDS } from '@/lib/posSettings'
-import { accumulatePosCategoryTotals, emptyPosCategoryTotals, MERCH_FAMILIES, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
+import { normalizePosSettings } from '@/lib/posSettings'
+import { MERCH_FAMILIES, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
 import { getAccessTokenFresh } from '@/lib/authToken'
-import { notifyOpsEvent } from '@/lib/opsEventNotify'
-import { collectPaged } from '@/lib/crmInsights'
+import { announcePayment, announceTest, readAnnouncerOn, unlockAudio, useAnnouncerDevice, writeAnnouncerOn } from '@/lib/posAnnouncer'
+import { parsePesosToMinor } from '@/lib/shiftClose'
 import {
   DEFAULT_COMPENSATION_RULES,
   normalizeCompensationSettings,
@@ -55,14 +38,16 @@ import {
 } from '@/lib/compensation'
 import {
   POS_SETTINGS_TAB,
+  formatQueueTicket,
   resolvePosShellTab,
-  resolvePosLandingTab,
   summarizePendingHandoffs,
   summarizeTodayPos,
-  buildPosWashPoolPreview,
 } from '@/lib/posInsights'
+import { canEditDailySheet } from '@/lib/dailySheet'
 import PosSettingsPanel from '@/pages/pos/PosSettingsPanel'
-import { PosGuideCard, PosPendingEmpty, PosSalaryPreviewCard, PosStatsBoard } from '@/pages/pos/PosPanels'
+import DailySheetPanel from '@/pages/pos/DailySheetPanel'
+import PosTodayPanel from '@/pages/pos/PosTodayPanel'
+import { PosGuideCard, PosOpenTickets, PosStatsBoard } from '@/pages/pos/PosPanels'
 
 /**
  * The order panel sits beside the catalogue from 1024px up. Below that the
@@ -91,15 +76,15 @@ export default function PosPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const branchAdmin = isBranchAdmin(profile)
-  const canManageCatalog = canManageServices(profile)
-  const canOpenFinance = allowRoute(profile, 'finance')
   const showSettingsTab = canWritePosSettings(profile)
-  const shellTab = resolvePosShellTab(searchParams.get('tab'), { canSettings: showSettingsTab })
+  const canSheet = canEditDailySheet(profile)
+  const shellTab = resolvePosShellTab(searchParams.get('tab'), { canSettings: showSettingsTab, canSheet })
   const scopeList = getBranchScopeList(profile)
   const canPickPosBranch = canSeeAllBranches(profile) || (Array.isArray(scopeList) && scopeList.length > 1)
   const branchLocked = !canPickPosBranch
   const assignedBranch = pickDefaultBranchSlug(profile, [])
   const canProvisionCustomer = isAdmin(profile)
+  const canDiscount = canDiscountPosSale(profile)
 
   const [services, setServices] = useState([])
   const [products, setProducts] = useState([])
@@ -137,13 +122,12 @@ export default function PosPage() {
   const [loyaltyStamps, setLoyaltyStamps] = useState(0)
   const [loyaltyMilestones, setLoyaltyMilestones] = useState([])
   const [catalogReady, setCatalogReady] = useState(false)
-  const draftRestored = useRef(false)
+  // State, not a ref: the save effect must wait until the restored draft has rendered.
+  const [draftBranch, setDraftBranch] = useState('')
   const [saving, setSaving] = useState(false)
   const [compToggles, setCompToggles] = useState({ freeShirt: false, cardPayment: false, crewAssisted: true, detailerAssigned: false })
   const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
   const [paymentOptions, setPaymentOptions] = useState(() => PAYMENT_METHODS.map((m) => ({ ...m })))
-  const [expenseKinds, setExpenseKinds] = useState(() => DEFAULT_POS_EXPENSE_KINDS.map((k) => ({ ...k })))
-
   useEffect(() => {
     if (!paymentOptions.length) return
     if (!isAllowedPosPaymentMethod(paymentMethod, paymentOptions)) {
@@ -151,33 +135,16 @@ export default function PosPage() {
     }
   }, [paymentOptions, paymentMethod])
   const [todayStats, setTodayStats] = useState(null)
-  const [todaySales, setTodaySales] = useState([])
-  const [categoryTotals, setCategoryTotals] = useState(emptyPosCategoryTotals())
-  const [dailyReportOpen, setDailyReportOpen] = useState(false)
-  const [shiftCloseMode, setShiftCloseMode] = useState(false)
-  const [shiftOverrides, setShiftOverrides] = useState({})
-  const [shiftEndedAtLocal, setShiftEndedAtLocal] = useState(() => toDatetimeLocalValue())
-  const [shiftEndedError, setShiftEndedError] = useState('')
-  const [shiftReasons, setShiftReasons] = useState({})
-  const [shiftFieldErrors, setShiftFieldErrors] = useState({})
-  const [shiftSubmitting, setShiftSubmitting] = useState(false)
-  const [shiftFieldConfig, setShiftFieldConfig] = useState([])
-  const [shiftWizardStep, setShiftWizardStep] = useState(0)
-  const [salaryDraftExtras, setSalaryDraftExtras] = useState([])
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
+  const [announcerOn, setAnnouncerOn] = useState(readAnnouncerOn)
+  const announcerOnRef = useRef(announcerOn)
+  announcerOnRef.current = announcerOn
+  const seenHandoffsRef = useRef({ branch: null, ids: new Set() })
+  useAnnouncerDevice(announcerOn)
   const [activeMembership, setActiveMembership] = useState(null)
   const [birthdayPerk, setBirthdayPerk] = useState(null)
   const [membershipsEnabled, setMembershipsEnabled] = useState(true)
-
-  // Expenses tab
-  const [expenseForm, setExpenseForm] = useState({ title: '', amount: '', expense_kind: 'daily' })
-  const [savingExpense, setSavingExpense] = useState(false)
-  const [todayExpenses, setTodayExpenses] = useState([])
-
-  // Approved cash advances for daily / shift-close report (approve on Payroll)
-  const [approvedCas, setApprovedCas] = useState([])
-  const [todayAttendance, setTodayAttendance] = useState([])
 
   const membershipContext = useMemo(
     () => ({
@@ -193,65 +160,23 @@ export default function PosPage() {
     [branches, branch],
   )
 
-  const familyTiles = useMemo(
-    () => [
-      { label: 'Car wash', value: formatMoney(categoryTotals.car_wash) },
-      { label: 'Coating', value: formatMoney(categoryTotals.ceramic_coating) },
-      { label: 'Paint maintenance', value: formatMoney(categoryTotals.paint_maintenance) },
-      { label: 'Other detailing', value: formatMoney(categoryTotals.detailing) },
-      { label: 'Tint', value: formatMoney(categoryTotals.nano_tint) },
-      { label: 'PPF', value: formatMoney(categoryTotals.ppf) },
-      { label: 'Coffee / refreshments', value: formatMoney(categoryTotals.coffee) },
-      { label: 'Accessories', value: formatMoney(categoryTotals.accessories) },
-      { label: 'Hakum clothing', value: formatMoney(categoryTotals.clothing) },
-      { label: 'Other merch', value: formatMoney(categoryTotals.merch) },
-    ],
-    [categoryTotals],
-  )
-
-  const todaySummary = useMemo(
-    () =>
-      summarizeTodayPos({
-        todayStats,
-        handoffs,
-        todayExpenses,
-        expenseFilter: expenseCountsOnDailyClose,
-      }),
-    [todayStats, handoffs, todayExpenses],
-  )
+  const todaySummary = useMemo(() => summarizeTodayPos({ todayStats, handoffs }), [todayStats, handoffs])
 
   const pendingSummary = useMemo(() => summarizePendingHandoffs(handoffs), [handoffs])
 
-  // Cashier scan path: unpaid handoffs jump to Pay queue unless the URL already chose a tab.
+  // Another counter (or a stale draft) may have settled the open ticket — never charge it twice.
   useEffect(() => {
-    const raw = searchParams.get('tab')
-    const next = resolvePosLandingTab(raw, {
-      canSettings: showSettingsTab,
-      pendingCount: pendingSummary.count,
-    })
-    if (next === 'pending' && shellTab !== 'pending' && (raw == null || raw === '')) {
-      setSearchParams({ tab: 'pending' }, { replace: true })
-    }
-  }, [pendingSummary.count, searchParams, setSearchParams, shellTab, showSettingsTab])
-
-  const washPreview = useMemo(
-    () =>
-      buildPosWashPoolPreview({
-        carWashMinor: categoryTotals.car_wash,
-        washPoolPct: compRules.wash_pool_pct,
-        attendanceRows: todayAttendance,
-        rules: compRules,
-      }),
-    [categoryTotals.car_wash, compRules, todayAttendance],
-  )
+    if (!catalogReady || saving || !activeHandoff) return
+    if (handoffs.some((row) => row.id === activeHandoff.id)) return
+    setActiveHandoff(null)
+    setCart((current) => detachHandoffFromCart(current))
+    toast.message(`${formatQueueTicket(activeHandoff.bookings)} is already settled — it was taken off the order.`)
+  }, [catalogReady, saving, handoffs, activeHandoff])
 
   const load = useCallback(async () => {
     if (!branch) return
     setCatalogReady(false)
     const today = getLocalCalendarDate()
-    const startIso = `${today}T00:00:00+08:00`
-    const endIso = `${today}T23:59:59.999+08:00`
-    let saleRows = []
     const [svc, prod, stats, handoffRes, compRes, posSettingsRes] = await Promise.all([
       supabase
         .from('services')
@@ -266,7 +191,7 @@ export default function PosPage() {
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
       supabase
         .from('pos_handoffs')
-        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, vehicle_plate, service_id, final_price_minor, price_minor, vehicle_type, status, queue_number, visit_group_id)')
+        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, vehicle_plate, vehicle_make, vehicle_model, service_id, final_price_minor, price_minor, vehicle_type, status, queue_number, visit_group_id)')
         .eq('status', 'pending')
         .eq('branch', branch)
         .order('created_at', { ascending: true }),
@@ -279,25 +204,6 @@ export default function PosPage() {
         .maybeSingle(),
       supabase.from('ops_pos_settings').select('payment_methods, expense_kinds').eq('id', 1).maybeSingle(),
     ])
-    try {
-      saleRows = await collectPaged(async (from, to) => {
-        const { data, error } = await supabase
-          .from('sales')
-          .select(
-            'id, total_minor, payment_method, booking_id, bookings(services(name, pay_category)), sale_line_items(item_type, line_total_minor, name, service_id, product_id, services(name, slug, pay_category), products(name, tags, category))',
-          )
-          .eq('status', 'paid')
-          .eq('branch', branch)
-          .gte('occurred_at', startIso)
-          .lte('occurred_at', endIso)
-          .order('occurred_at', { ascending: false })
-          .range(from, to)
-        if (error) throw error
-        return data || []
-      }, 1000)
-    } catch (err) {
-      toast.error(err.message)
-    }
     if (svc.error) toast.error(svc.error.message)
     if (prod.error) toast.error(prod.error.message)
     if (stats.error) toast.error(stats.error.message)
@@ -307,7 +213,6 @@ export default function PosPage() {
     if (!posSettingsRes.error && posSettingsRes.data) {
       const normalized = normalizePosSettings(posSettingsRes.data)
       setPaymentOptions(normalized.payment_methods)
-      setExpenseKinds(normalized.expense_kinds)
     }
     setServices(
       (svc.data || []).map((row) => ({
@@ -336,30 +241,16 @@ export default function PosPage() {
       })),
     )
     setTodayStats(stats.data)
-    setTodaySales(saleRows)
     setHandoffs(handoffRes.data || [])
-
-    const catRows = []
-    for (const sale of saleRows) {
-      const lines = sale.sale_line_items || []
-      if (!lines.length) {
-        catRows.push({ total_minor: sale.total_minor, itemType: sale.booking_id ? 'service' : 'product' })
-        continue
-      }
-      for (const line of lines) {
-        catRows.push({
-          total_minor: line.line_total_minor,
-          itemType: line.item_type,
-          serviceSlug: line.services?.slug,
-          serviceName: line.services?.name,
-          payCategory: line.services?.pay_category,
-          productTags: line.products?.tags,
-          productCategory: line.products?.category,
-          productName: line.products?.name || line.name,
-        })
-      }
+    if (!handoffRes.error) {
+      const rows = handoffRes.data || []
+      const seen = seenHandoffsRef.current
+      // First load of a branch is the baseline — only tickets that show up afterwards are announced.
+      const fresh = seen.branch === branch ? rows.filter((row) => !seen.ids.has(row.id)) : []
+      seenHandoffsRef.current = { branch, ids: new Set(rows.map((row) => row.id)) }
+      if (announcerOnRef.current) fresh.forEach(announcePayment)
     }
-    setCategoryTotals(accumulatePosCategoryTotals(catRows))
+
     setCatalogReady(true)
   }, [branch, branchAdmin])
 
@@ -384,14 +275,12 @@ export default function PosPage() {
   }, [assignedBranch, branchLocked, branch])
 
   useEffect(() => {
-    setActiveHandoff(null)
-    setShiftOverrides({})
-    setShiftReasons({})
-    setShiftFieldErrors({})
     const draft = branch ? readPosDraft(branch) : null
-    draftRestored.current = true
+    setDraftBranch(branch)
+    setActiveHandoff(draft?.cart?.length ? draft.activeHandoff || null : null)
     if (draft?.cart?.length) {
-      setCart(draft.cart)
+      // Locked ticket lines without their ticket would post unlinked — drop them.
+      setCart(draft.activeHandoff ? draft.cart : detachHandoffFromCart(draft.cart))
       setCustomerId(draft.customerId || '')
       setLinkedCustomer(draft.linkedCustomer || null)
       if (draft.paymentMethod) setPaymentMethod(draft.paymentMethod)
@@ -406,11 +295,12 @@ export default function PosPage() {
   }, [branch])
 
   useEffect(() => {
-    if (!branch || !draftRestored.current) return
+    if (!branch || draftBranch !== branch) return
     writePosDraft(branch, {
       cart,
       customerId,
       linkedCustomer,
+      activeHandoff,
       paymentMethod,
       cashTendered,
       paymentRef,
@@ -420,9 +310,11 @@ export default function PosPage() {
     })
   }, [
     branch,
+    draftBranch,
     cart,
     customerId,
     linkedCustomer,
+    activeHandoff,
     paymentMethod,
     cashTendered,
     paymentRef,
@@ -431,81 +323,23 @@ export default function PosPage() {
     discountReason,
   ])
 
-  const loadExpenses = useCallback(async () => {
-    if (!branch) return
-    const today = getLocalCalendarDate()
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('id, title, description, total_minor, expense_kind, branch, status, created_at')
-      .eq('branch', branch)
-      .gte('created_at', `${today}T00:00:00+08:00`)
-      .order('created_at', { ascending: false })
-      .limit(100)
-    if (error) toast.error(error.message)
-    setTodayExpenses(data || [])
-  }, [branch])
-
-  const loadApprovedCashAdvances = useCallback(async () => {
-    if (!branch) return
-    const today = getLocalCalendarDate()
-    const { data, error } = await supabase
-      .from('ops_form_submissions')
-      .select('id, form_id, payload, status, respondent_label, created_at, resolved_at, ops_forms!inner ( name, kind, slug )')
-      .eq('status', 'resolved')
-      .eq('ops_forms.kind', 'cash_advance')
-      .gte('resolved_at', `${today}T00:00:00+08:00`)
-      .order('resolved_at', { ascending: false })
-      .limit(100)
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    const scope = getBranchScopeList(profile)
-    const inScope = (row) => cashAdvanceVisibleOnPos(row, { posBranch: branch, branchScopeList: scope })
-    setApprovedCas((data || []).filter(inScope).filter((row) => approvedCaForCloseDay(row, today)))
-  }, [branch, profile])
-
-  const loadTodayAttendance = useCallback(async () => {
-    if (!branch) return
-    const today = getLocalCalendarDate()
-    const { data, error } = await supabase
-      .from('staff_attendance')
-      .select('staff_id, branch_slug, attendance_date, status, staff_profiles(id, full_name, role)')
-      .eq('branch_slug', branch)
-      .eq('attendance_date', today)
-      .limit(200)
-    if (error) {
-      setTodayAttendance([])
-      return
-    }
-    setTodayAttendance(data || [])
-  }, [branch])
-
   const loadRef = useRef(load)
   loadRef.current = load
-  const expensesRef = useRef(loadExpenses)
-  expensesRef.current = loadExpenses
   const scheduleReload = useMemo(() => createCoalescedReload(() => loadRef.current(), 400), [])
-  const scheduleExpenses = useMemo(() => createCoalescedReload(() => expensesRef.current(), 400), [])
 
   useEffect(() => {
     if (!branch) return
     load()
-    loadExpenses()
-    loadApprovedCashAdvances()
-    loadTodayAttendance()
     const channel = supabase
       .channel(`pos-${branch}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales', filter: `branch=eq.${branch}` }, scheduleReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs', filter: `branch=eq.${branch}` }, scheduleReload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `branch=eq.${branch}` }, scheduleExpenses)
       .subscribe()
     return () => {
       scheduleReload.cancel()
-      scheduleExpenses.cancel()
       supabase.removeChannel(channel)
     }
-  }, [load, loadExpenses, loadApprovedCashAdvances, loadTodayAttendance, branch, scheduleReload, scheduleExpenses])
+  }, [load, branch, scheduleReload])
 
   const bayItems = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -636,6 +470,10 @@ export default function PosPage() {
   const cartCount = cart.reduce((sum, line) => sum + Number(line.quantity || 0), 0)
 
   const cartTotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price_minor, 0)
+  const cartSummary = useMemo(() => summarizePosCart(cart), [cart])
+  const ticketBooking = activeHandoff?.bookings || null
+  // A ticket's customer comes from the booking — keep the sale on that customer and plate.
+  const customerLockedToTicket = Boolean(activeHandoff && ticketBooking?.customer_id)
 
   // Cash tendered → change due, and the quick-cash chips a cashier reaches for.
   const cashTenderedMinor = parsePesosToMinor(cashTendered)
@@ -710,7 +548,7 @@ export default function PosPage() {
       const today = getLocalCalendarDate()
       const expired = memRes.data?.ends_at && memRes.data.ends_at < today
       const membership =
-        enabled && tier?.is_active !== false && !expired && !memRes.error
+        enabled && tier && tier.is_active !== false && !expired && !memRes.error
           ? {
               name: tier.name,
               discount_percent: tier.discount_percent,
@@ -794,6 +632,7 @@ export default function PosPage() {
   }
 
   function applyCartDiscount() {
+    if (!canDiscount) return
     const amountMinor = discountAmountPesos.trim()
       ? Math.round(Number(discountAmountPesos) * 100)
       : 0
@@ -830,7 +669,10 @@ export default function PosPage() {
       toast.error('No birthday perk available for this customer.')
       return
     }
-    if (!keepQueueHandoffWhenAdding(item)) setActiveHandoff(null)
+    if (activeHandoff && !keepQueueHandoffWhenAdding(item)) {
+      toast.message(`${formatQueueTicket(ticketBooking)} set aside — this is now a walk-in order.`)
+      detachHandoff()
+    }
     const listPrice = item.price_minor
     const free = loyaltyAward || birthdayAward
     const priced = priceCartForMembership(
@@ -861,15 +703,35 @@ export default function PosPage() {
     })
   }
 
+  /** Take the ticket off the order; merch rung up so far stays as a walk-in sale. */
+  function detachHandoff() {
+    setActiveHandoff(null)
+    setCart((current) => detachHandoffFromCart(current))
+    clearCustomerLink()
+  }
+
   /** Clear the walk-in lines; a queue handoff keeps its locked line. */
   function clearCart() {
     if (!cart.length) return
-    if (!window.confirm('Clear the current order?')) return
+    if (!window.confirm(activeHandoff ? 'Remove the add-ons from this ticket?' : 'Clear the current order?')) return
     setCart((current) => current.filter((line) => !canRemovePosCartLine(line)))
     setDiscountPercent('')
     setDiscountAmountPesos('')
     setDiscountReason('')
     setCashTendered('')
+  }
+
+  function toggleAnnouncer() {
+    const next = !announcerOn
+    writeAnnouncerOn(next)
+    setAnnouncerOn(next)
+    if (next) {
+      unlockAudio()
+      announceTest()
+      toast.success('Voice on for this device — cars ready for payment will be announced.')
+    } else {
+      toast.message('Voice off for this device.')
+    }
   }
 
   async function notifyPosStaff(payload) {
@@ -929,7 +791,7 @@ export default function PosPage() {
       siblings,
       services,
     })
-    setCart(lines)
+    setCart((current) => openHandoffInCart(current, lines))
     if (lines.some((line) => line.missing_service)) {
       toast.message('Queue ticket has no linked service — checkout will record the amount without loyalty stamps.')
     }
@@ -1167,23 +1029,6 @@ export default function PosPage() {
     load()
   }
 
-  const dailyReportData = useMemo(() => {
-    return buildShopDaySettlementReport({
-      branchSlug: branch || '',
-      branchDisplay: branchLabel || branch || '',
-      date: getLocalCalendarDate(),
-      sales: todaySales,
-      expenses: todayExpenses,
-      cashAdvances: approvedCas.map((r) => ({
-        status: 'approved',
-        amount_minor: Number(r.payload?.amount || 0) * 100,
-        employee_name: r.payload?.employee_name || r.respondent_label || 'Employee',
-      })),
-      attendance: todayAttendance,
-      rules: compRules,
-    })
-  }, [branch, branchLabel, todaySales, todayExpenses, approvedCas, todayAttendance, compRules])
-
   if (!canAccessPos(profile)) return <Navigate to="/operations/access-denied" replace />
 
 
@@ -1191,248 +1036,163 @@ export default function PosPage() {
     setSearchParams(next === 'checkout' ? {} : { tab: next }, { replace: true })
   }
 
-  async function submitExpense(e) {
-    e.preventDefault()
-    if (!canWriteFinance(profile)) {
-      return toast.error('You do not have Finance write access to record expenses.')
-    }
-    const pesos = Number(String(expenseForm.amount).replace(/,/g, '').trim())
-    if (!expenseForm.title.trim() || !Number.isFinite(pesos) || pesos <= 0) {
-      return toast.error('Enter a title and valid amount')
-    }
-    setSavingExpense(true)
-    const total = Math.round(pesos * 100)
-    const { data: expRow, error } = await supabase.from('expenses').insert({
-      title: expenseForm.title.trim(),
-      total_minor: total,
-      unit_cost_minor: total,
-      quantity: 1,
-      expense_kind: expenseForm.expense_kind,
-      branch,
-      status: 'draft',
-    }).select('id').maybeSingle()
-    setSavingExpense(false)
-    if (error) return toast.error(error.message)
-    toast.success('Expense saved as draft (counts in End of shift cash-left)')
-    writeAudit({
-      action: 'pos.expense',
-      entityType: 'expense',
-      entityId: expRow?.id,
-      summary: `POS expense · ${expenseForm.title.trim()} · ${branch}`,
-      meta: { expense_title: expenseForm.title.trim(), amount_minor: total, branch },
-    })
-    notifyPosStaff({
-      event: 'expense',
-      branch,
-      amount_minor: total,
-      title: expenseForm.title.trim(),
-      entity_id: expRow?.id || '',
-    })
-    setExpenseForm({ title: '', amount: '', expense_kind: 'daily' })
-    loadExpenses()
-  }
-
-  function openEndOfShift() {
-    if (
-      !shopDayShouldClose({
-        sales: todaySales,
-        expenses: todayExpenses,
-        cashAdvances: approvedCas.map((r) => ({
-          amount_minor: Number(r.payload?.amount || 0) * 100,
-        })),
-        caRepayments: dailyReportData?.ca_repayments,
-      })
-    ) {
-      toast.message('Quiet day — you can still close the shift with a zero count.')
-    }
-    setShiftCloseMode(true)
-    setShiftOverrides({})
-    setShiftReasons({})
-    setShiftFieldErrors({})
-    setSalaryDraftExtras([])
-    setShiftEndedError('')
-    setShiftWizardStep(0)
-    setShiftEndedAtLocal(toDatetimeLocalValue())
-    setDailyReportOpen(true)
-    supabase
-      .from('shift_close_field_config')
-      .select('field_key, label, allow_override, is_active, sort_order')
-      .eq('is_active', true)
-      .order('sort_order')
-      .then(({ data }) => {
-        const rows = (data || []).map((row) =>
-          row.field_key === 'square_sales_minor' && /square/i.test(row.label || '')
-            ? { ...row, label: 'Total sales' }
-            : row,
-        )
-        setShiftFieldConfig(rows)
-      })
-  }
-
-  async function submitEndOfShift() {
-    const endedIso = datetimeLocalToIso(shiftEndedAtLocal)
-    if (!endedIso) {
-      setShiftEndedError('Pick when this shift ended.')
-      setShiftWizardStep(0)
-      toast.error('Set shift end time')
-      return
-    }
-    const baseline = moneySnapshotFromReport(dailyReportData)
-    const submitted = { ...baseline }
-    for (const key of SHIFT_CLOSE_MONEY_KEYS) {
-      if (shiftOverrides[key] != null) {
-        const parsed = parsePesosToMinor(shiftOverrides[key])
-        if (parsed == null) {
-          setShiftFieldErrors({ [key]: 'Enter a valid amount (0 or more).' })
-          toast.error('Fix invalid amounts before submit')
-          return
-        }
-        submitted[key] = parsed
-      }
-    }
-    Object.assign(submitted, applyCaCollectedToCashLeft(baseline, submitted))
-    const draftForSubmit = (salaryDraftExtras || []).map((row) => ({
-      staff_id: row.staff_id || null,
-      staff_name: row.staff_name,
-      amount_minor:
-        row.amount_minor != null ? row.amount_minor : parsePesosToMinor(row.amount_pesos) ?? 0,
-      note: row.note,
-      kind: row.kind,
-    }))
-    Object.assign(submitted, attachSalaryDraftExtras(submitted, draftForSubmit))
-    const validationBaseline = shiftCloseValidationBaseline(dailyReportData, submitted)
-    const check = validateShiftCloseSubmit({
-      baseline: validationBaseline,
-      submitted,
-      reasons: shiftReasons,
-      fieldConfig: shiftFieldConfig,
-    })
-    if (!check.ok) {
-      setShiftFieldErrors(check.errors)
-      const errKey = Object.keys(check.errors)[0]
-      if (['square_sales_minor', 'total_gcash_minor', 'credit_card_minor', 'total_cash_left_minor', 'downpayments_minor', 'ca_collected_minor'].includes(errKey)) {
-        setShiftWizardStep(1)
-      } else if (errKey) {
-        setShiftWizardStep(2)
-      }
-      toast.error('Fix override reasons or amounts')
-      return
-    }
-    setShiftSubmitting(true)
-    const { data: closed, error } = await supabase.rpc('submit_shift_close', {
-      payload: {
-        branch,
-        business_date: getLocalCalendarDate(),
-        shift_ended_at: endedIso,
-        pos_baseline: baseline,
-        submitted,
-        override_reasons: check.overrideReasons,
-      },
-    })
-    setShiftSubmitting(false)
-    if (error) toast.error(error.message)
-    else {
-      toast.success('End of shift submitted for review')
-      notifyOpsEvent('shift_submitted', closed?.id)
-      setDailyReportOpen(false)
-      setShiftCloseMode(false)
-    }
-  }
-
   /**
    * The order panel — lines, totals, tender and Charge. Rendered twice: pinned
    * beside the catalogue on large screens, and inside the sheet on phones.
    */
+  /** One receipt row: ticket lines are locked; add-ons get a stepper. */
+  function renderOrderLine(line) {
+    const free = line.is_loyalty_award || line.is_membership_included
+    const canStep = canChangePosCartLineQuantity(line)
+    const tags = [
+      line.from_handoff ? null : line.catalog_kind || line.item_type,
+      line.is_loyalty_award && !line.is_birthday_award ? 'loyalty' : null,
+      line.is_birthday_award ? 'birthday' : null,
+      line.is_membership_included ? 'member include' : null,
+      line.membership_discount_applied ? 'member discount' : null,
+      line.adhoc_discount_applied ? 'discount' : null,
+    ].filter(Boolean)
+    return (
+      <li key={line.key} className="py-2.5">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="min-w-0 flex-1 text-sm leading-snug font-medium">{line.name}</p>
+          <p className="shrink-0 text-sm font-semibold tabular-nums">
+            {free ? <span className="text-emerald-700 dark:text-emerald-400">FREE</span> : formatMoney(line.quantity * line.unit_price_minor)}
+          </p>
+        </div>
+        <div className="mt-1 flex items-center justify-between gap-3">
+        <p className="min-w-0 text-xs text-muted-foreground">
+          {free ? 'Included' : `${formatMoney(line.unit_price_minor)} ea`}
+          {tags.length ? ` · ${tags.join(' · ')}` : ''}
+        </p>
+        {canStep ? (
+          <div className="flex shrink-0 items-center rounded-full border border-border">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-10 rounded-full"
+              onClick={() => setCart((c) => stepPosCartLineQuantity(c, line.key, -1))}
+              aria-label={line.quantity > 1 ? `One fewer ${line.name}` : `Remove ${line.name}`}
+            >
+              {line.quantity > 1 ? <Minus /> : <Trash2 />}
+            </Button>
+            <span className="min-w-5 text-center text-sm font-semibold tabular-nums" aria-live="polite">
+              {line.quantity}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-10 rounded-full"
+              disabled={line.quantity >= POS_MAX_LINE_QUANTITY}
+              onClick={() => setCart((c) => stepPosCartLineQuantity(c, line.key, 1))}
+              aria-label={`One more ${line.name}`}
+            >
+              <Plus />
+            </Button>
+          </div>
+        ) : (
+          <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground tabular-nums">
+            <Lock className="size-3.5" aria-hidden />
+            {line.quantity}×<span className="sr-only"> locked</span>
+          </span>
+        )}
+        </div>
+      </li>
+    )
+  }
+
+  const ticketLines = cart.filter((line) => line.from_handoff)
+  const addOnLines = cart.filter((line) => !line.from_handoff)
+  const customerPerks =
+    birthdayPerk || activeMembership ? (
+      <>
+        {birthdayPerk ? <p className="mt-1 text-xs font-medium text-primary">Birthday free service available</p> : null}
+        {activeMembership ? (
+          <p className="mt-1 text-xs font-medium text-primary">
+            {activeMembership.name}
+            {activeMembership.discount_percent > 0 ? ` · ${activeMembership.discount_percent}% off services` : ''}
+            {(activeMembership.included_services || []).length
+              ? ` · ${(activeMembership.included_services || []).length} included`
+              : ''}
+          </p>
+        ) : null}
+      </>
+    ) : null
+  const savingsNote = [
+    cartSummary.discountMinor ? `${formatMoney(cartSummary.discountMinor)} discount` : null,
+    cartSummary.memberMinor ? `${formatMoney(cartSummary.memberMinor)} member savings` : null,
+  ].filter(Boolean)
+
   const orderPanelBody = (
     <>
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
-          <div className="flex flex-col gap-2">
-            {cart.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-                Nothing rung up yet.
-                <br />
-                Tap anything in the catalogue to start the order.
-              </p>
-            ) : null}
-            {cart.map((line) => {
-              const free = line.is_loyalty_award || line.is_membership_included
-              const canStep = canChangePosCartLineQuantity(line)
-              return (
-                <div key={line.key} className="rounded-xl border border-border bg-card p-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="min-w-0 flex-1 font-medium">{line.name}</p>
-                    <p className="shrink-0 font-semibold tabular-nums">
-                      {free ? (
-                        <span className="text-emerald-600">FREE</span>
-                      ) : (
-                        formatMoney(line.quantity * line.unit_price_minor)
-                      )}
-                    </p>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <p className="min-w-0 text-xs text-muted-foreground">
-                      {free ? 'Included' : `${formatMoney(line.unit_price_minor)} ea`}
-                      {' · '}
-                      {line.catalog_kind || line.item_type}
-                      {line.from_handoff ? ' · queue job' : ''}
-                      {line.is_loyalty_award && !line.is_birthday_award ? ' · loyalty' : ''}
-                      {line.is_birthday_award ? ' · birthday' : ''}
-                      {line.is_membership_included ? ' · member include' : ''}
-                      {line.membership_discount_applied ? ' · member discount' : ''}
-                      {line.adhoc_discount_applied ? ' · discount' : ''}
-                    </p>
-                    {canStep ? (
-                      <div className="flex shrink-0 items-center gap-1 rounded-full border border-border">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-10 rounded-full"
-                          onClick={() => setCart((c) => stepPosCartLineQuantity(c, line.key, -1))}
-                          aria-label={line.quantity > 1 ? `One fewer ${line.name}` : `Remove ${line.name}`}
-                        >
-                          {line.quantity > 1 ? <Minus /> : <Trash2 />}
-                        </Button>
-                        <span className="min-w-6 text-center font-semibold tabular-nums" aria-live="polite">
-                          {line.quantity}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-10 rounded-full"
-                          disabled={line.quantity >= POS_MAX_LINE_QUANTITY}
-                          onClick={() => setCart((c) => stepPosCartLineQuantity(c, line.key, 1))}
-                          aria-label={`One more ${line.name}`}
-                        >
-                          <Plus />
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="shrink-0 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-                        {line.quantity} × locked
-                      </span>
-                    )}
-                  </div>
-                  {line.from_handoff ? (
-                    <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">
-                      Ask Team Lead to change the wash/detailing job.
-                    </p>
-                  ) : null}
+          {activeHandoff ? (
+            <section aria-label="Queue ticket" className="shrink-0 overflow-hidden rounded-xl border border-border bg-card">
+              <div className="flex items-start gap-3 border-b border-border bg-muted/40 px-3 py-2.5">
+                <CarFront className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
+                    <span className="font-mono tabular-nums">{formatQueueTicket(ticketBooking)}</span>
+                    <span className="font-mono tracking-wide uppercase">{ticketBooking?.vehicle_plate || 'No plate'}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {ticketBooking?.customer_name || 'Customer'} · payment links to this booking
+                  </p>
+                  {customerLockedToTicket ? customerPerks : null}
                 </div>
-              )
-            })}
-          </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-9 shrink-0 px-2 text-xs"
+                  onClick={detachHandoff}
+                  aria-label={`Set aside ${formatQueueTicket(ticketBooking)} — it stays waiting to pay`}
+                >
+                  Set aside
+                </Button>
+              </div>
+              <ul className="divide-y divide-border px-3">{ticketLines.map(renderOrderLine)}</ul>
+              <p className="flex items-center gap-1.5 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
+                <Lock className="size-3 shrink-0" aria-hidden />
+                Set by the Team Lead. Ask them to change the job or price.
+              </p>
+            </section>
+          ) : null}
 
+          <section aria-label={activeHandoff ? 'Add-ons' : 'Items'} className="flex flex-col">
+            <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+              {activeHandoff ? 'Add-ons on this ticket' : 'Items'}
+            </p>
+            {addOnLines.length ? (
+              <ul className="divide-y divide-border">{addOnLines.map(renderOrderLine)}</ul>
+            ) : (
+              <div className="mt-2 flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-4 py-5 text-center text-sm text-muted-foreground">
+                <p className="max-w-[28ch]">
+                  {activeHandoff
+                    ? 'Selling merch or coffee too? Tap it in the catalogue and it joins this ticket.'
+                    : 'Nothing rung up yet. Tap an item, or open a car that is waiting to pay.'}
+                </p>
+                {!posSplitView ? (
+                  <Button type="button" variant="outline" size="sm" className="min-h-10" onClick={() => setCartOpen(false)}>
+                    <ShoppingBag data-icon="inline-start" aria-hidden />
+                    Browse catalogue
+                  </Button>
+                ) : null}
+              </div>
+            )}
+          </section>
+
+          {canDiscount ? (
           <details className="rounded-xl border border-border bg-muted/20 [&_summary::-webkit-details-marker]:hidden">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-semibold text-foreground">
-              Discount &amp; customer
-              <span className="text-xs font-normal text-muted-foreground">
-                {linkedCustomer ? linkedCustomer.full_name : 'Walk-in'}
-                {cart.some((l) => l.adhoc_discount_applied) ? ' · discounted' : ''}
+              Discount
+              <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                {cartSummary.discountMinor ? `−${formatMoney(cartSummary.discountMinor)}` : 'None'}
               </span>
             </summary>
-            <div className="flex flex-col gap-4 px-3 pt-1 pb-3">
+            <div className="px-3 pt-1 pb-3">
             <div className="space-y-2 rounded-xl border border-dashed border-border bg-muted/20 p-3">
               <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Ad-hoc discount</p>
               <div className="grid grid-cols-2 gap-2">
@@ -1475,19 +1235,20 @@ export default function PosPage() {
                 Apply discount
               </Button>
             </div>
+            </div>
+          </details>
+          ) : null}
 
-            <div className="space-y-3 rounded-xl border border-border bg-muted/25 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">Customer</p>
-                {linkedCustomer ? (
-                  <Badge variant="secondary" className="gap-1">
-                    <Link2 className="size-3" aria-hidden /> Loyalty linked
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">Walk-in</Badge>
-                )}
-              </div>
-
+          {customerLockedToTicket ? null : (
+          <details className="rounded-xl border border-border bg-muted/20 [&_summary::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-semibold text-foreground">
+              Customer
+              <span className="inline-flex min-w-0 items-center gap-1 text-xs font-normal text-muted-foreground">
+                {linkedCustomer ? <Link2 className="size-3 shrink-0" aria-hidden /> : null}
+                <span className="truncate">{linkedCustomer ? linkedCustomer.full_name : 'Walk-in · optional'}</span>
+              </span>
+            </summary>
+            <div className="space-y-3 px-3 pt-1 pb-3">
               {linkedCustomer ? (
                 <div className="flex items-start justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-3">
                   <div className="min-w-0">
@@ -1495,20 +1256,7 @@ export default function PosPage() {
                     <p className="text-xs text-muted-foreground">
                       {[linkedCustomer.phone, linkedCustomer.plate].filter(Boolean).join(' · ') || 'Account linked'}
                     </p>
-                    {birthdayPerk ? (
-                      <p className="mt-1 text-xs font-medium text-primary">Birthday free service available</p>
-                    ) : null}
-                    {activeMembership ? (
-                      <p className="mt-1 text-xs font-medium text-primary">
-                        {activeMembership.name}
-                        {activeMembership.discount_percent > 0
-                          ? ` · ${activeMembership.discount_percent}% off services`
-                          : ''}
-                        {(activeMembership.included_services || []).length
-                          ? ` · ${(activeMembership.included_services || []).length} included`
-                          : ''}
-                      </p>
-                    ) : null}
+                    {customerPerks}
                   </div>
                   <Button type="button" variant="ghost" size="icon" className="min-h-10 min-w-10 shrink-0" onClick={clearCustomerLink} aria-label="Unlink customer">
                     <X className="size-4" />
@@ -1623,8 +1371,33 @@ export default function PosPage() {
                 </>
               )}
             </div>
-            </div>
           </details>
+          )}
+
+          {cart.length ? (
+            <dl className="space-y-1.5 rounded-xl bg-muted/40 px-4 py-3 text-sm">
+              {cartSummary.ticketCount ? (
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-muted-foreground">Queue ticket</dt>
+                  <dd className="font-medium tabular-nums">{formatMoney(cartSummary.ticketMinor)}</dd>
+                </div>
+              ) : null}
+              {cartSummary.addOnCount ? (
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-muted-foreground">
+                    {activeHandoff ? 'Add-ons' : 'Items'} · {cartSummary.addOnCount}
+                  </dt>
+                  <dd className="font-medium tabular-nums">{formatMoney(cartSummary.addOnMinor)}</dd>
+                </div>
+              ) : null}
+              {savingsNote.length ? (
+                <div className="pt-0.5">
+                  <dt className="sr-only">Savings</dt>
+                  <dd className="text-xs text-emerald-700 dark:text-emerald-400">Includes {savingsNote.join(' and ')}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
 
           <div className="space-y-2">
             <Label className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
@@ -1742,13 +1515,19 @@ export default function PosPage() {
         <div className="pos-checkout-footer mt-auto space-y-3 border-t border-border px-5 py-4">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">Receipt total</p>
+              <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">Total</p>
               <p className="text-3xl font-semibold tabular-nums tracking-tight">{formatMoney(cartTotal)}</p>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <UserRound className="size-3.5" aria-hidden />
-              {linkedCustomer ? 'Loyalty' : 'Walk-in'}
-            </div>
+            <p className="flex min-w-0 items-center gap-1.5 pb-1 text-xs text-muted-foreground">
+              {activeHandoff || linkedCustomer ? <Link2 className="size-3.5 shrink-0" aria-hidden /> : null}
+              <span className="truncate">
+                {activeHandoff
+                  ? `${formatQueueTicket(ticketBooking)} · ${ticketBooking?.vehicle_plate || 'No plate'}`
+                  : linkedCustomer
+                    ? linkedCustomer.full_name
+                    : 'Walk-in'}
+              </span>
+            </p>
           </div>
           {chargeDisabled && chargeHint ? (
             <p className="text-xs text-muted-foreground">{chargeHint}</p>
@@ -1764,17 +1543,15 @@ export default function PosPage() {
     <div className="flex flex-col gap-6">
       <PosStatsBoard stats={todaySummary} compact />
 
-      {handoffs.length > 0 && (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
-          <p className="font-medium">
-            {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} waiting · {formatMoney(pendingSummary.totalMinor)}
-          </p>
-          <p className="text-sm text-muted-foreground">Open the Pay queue tab to settle floor handoffs.</p>
-        </div>
-      )}
-
       <div className="pos-counter grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-4">
+          <PosOpenTickets
+            tickets={handoffs}
+            activeId={activeHandoff?.id || null}
+            totalMinor={pendingSummary.totalMinor}
+            onOpen={loadHandoff}
+            onReplay={announcePayment}
+          />
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <div className="relative min-w-[12rem] flex-1">
               <Label htmlFor="pos-catalog-search" className="sr-only">Search catalogue</Label>
@@ -1847,13 +1624,13 @@ export default function PosPage() {
           <div className="pos-order-head flex items-center justify-between gap-2 px-4 py-3">
             <div className="min-w-0">
               <p className="text-[10px] font-bold tracking-[0.18em] text-white/55 uppercase">
-                {activeHandoff ? 'Pay queue ticket' : 'Order'}
+                {activeHandoff ? `Ticket ${formatQueueTicket(ticketBooking)}` : 'Walk-in order'}
               </p>
               <p className="truncate text-sm font-semibold text-white">
-                {cartCount ? `${cartCount} item${cartCount === 1 ? '' : 's'}` : 'Nothing rung up yet'}
+                {cartCount ? `${cartCount} item${cartCount === 1 ? '' : 's'} · ${formatMoney(cartTotal)}` : 'Nothing rung up yet'}
               </p>
             </div>
-            {cart.length ? (
+            {addOnLines.length ? (
               <Button type="button" variant="ghost" size="sm" className="min-h-9 text-white/85 hover:bg-white/10 hover:text-white" onClick={clearCart}>
                 Clear
               </Button>
@@ -1861,186 +1638,6 @@ export default function PosPage() {
           </div>
           {orderPanelBody}
         </aside>
-        ) : null}
-      </div>
-    </div>
-  )
-
-  const pendingBody = (
-    <div className="flex flex-col gap-4">
-      {handoffs.length > 0 ? (
-        <>
-          <Card className="border-primary/15 bg-muted/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Pending payments</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {handoffs.length} ticket{handoffs.length === 1 ? '' : 's'} ·{' '}
-                <span className="font-mono tabular-nums font-medium text-foreground">
-                  {formatMoney(pendingSummary.totalMinor)}
-                </span>{' '}
-                total
-              </p>
-            </CardHeader>
-          </Card>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {handoffs.map((row) => {
-              const booking = row.bookings || {}
-              return (
-                <button
-                  key={row.id}
-                  type="button"
-                  onClick={() => {
-                    loadHandoff(row)
-                    setShellTab('checkout')
-                  }}
-                  className="flex min-h-[88px] flex-col rounded-xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:bg-accent/20 active:scale-[0.99]"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium">{booking.customer_name || 'Customer'}</p>
-                    <Badge variant="secondary">
-                      {booking.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{booking.vehicle_plate || 'No plate'}</p>
-                  <p className="mt-auto pt-3 font-mono text-xl font-semibold tabular-nums">
-                    {formatMoney(row.amount_minor || booking.final_price_minor || 0)}
-                  </p>
-                  <p className="mt-1 text-xs text-primary">Tap to open checkout</p>
-                </button>
-              )
-            })}
-          </div>
-        </>
-      ) : (
-        <PosPendingEmpty />
-      )}
-    </div>
-  )
-
-  const expensesBody = (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Submit expense</CardTitle>
-          <CardDescription>
-            Saves as <strong>draft</strong> — counts in End of shift cash-left. Profit and loss only includes paid/posted
-            expenses (not these drafts).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canWriteFinance(profile) ? (
-            <p className="text-sm text-muted-foreground">Expense entry needs Finance write. Super Admin can grant it on People.</p>
-          ) : (
-          <form onSubmit={submitExpense} className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label htmlFor="pos-exp-title">Description</Label>
-              <Input
-                id="pos-exp-title"
-                required
-                placeholder="e.g. ice, supplies, parking"
-                value={expenseForm.title}
-                onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="pos-exp-amount">Amount (₱)</Label>
-              <Input
-                id="pos-exp-amount"
-                required
-                inputMode="decimal"
-                placeholder="0.00"
-                value={expenseForm.amount}
-                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="pos-exp-kind">Category</Label>
-              <Select value={expenseForm.expense_kind} onValueChange={(v) => setExpenseForm({ ...expenseForm, expense_kind: v })}>
-                <SelectTrigger id="pos-exp-kind" className="min-h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {expenseKinds.map((k) => (
-                    <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={savingExpense} className="min-h-11">
-                {savingExpense ? 'Saving…' : 'Record expense'}
-              </Button>
-            </div>
-          </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Today&apos;s expenses · {branchLabel}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {todayExpenses.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No expenses recorded today.</p>
-          ) : (
-            <div className="space-y-2">
-              {todayExpenses.map((row) => (
-                <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-                  <div>
-                    <p className="font-medium">{row.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {expenseKinds.find((k) => k.value === row.expense_kind)?.label || row.expense_kind}
-                      {' · '}
-                      {new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <p className="text-lg font-semibold tabular-nums">{formatMoney(row.total_minor)}</p>
-                </div>
-              ))}
-              <div className="flex items-center justify-between border-t border-border pt-2">
-                <p className="text-sm font-medium text-muted-foreground">Total</p>
-                <p className="text-lg font-semibold tabular-nums">
-                  {formatMoney(todayExpenses.filter(expenseCountsOnDailyClose).reduce((s, r) => s + Number(r.total_minor || 0), 0))}
-                </p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-
-  const dashboardBody = (
-    <div className="flex flex-col gap-6">
-      <p className="max-w-[65ch] text-sm leading-relaxed text-foreground">
-        These tiles are paid POS for {branchLabel}. End of shift is the drawer count. Crew pay uses paid POS after Finance accepts the close.
-      </p>
-      <PosStatsBoard stats={todaySummary} categoryRows={familyTiles} />
-      <PosSalaryPreviewCard
-        washPreview={washPreview}
-        compRules={compRules}
-        canPayroll={allowRoute(profile, 'payroll')}
-        canAttendance={allowRoute(profile, 'attendance')}
-      />
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" className="min-h-11" onClick={() => setDailyReportOpen(true)}>
-          Daily sales report
-        </Button>
-        {canManageCatalog && (
-          <Button type="button" variant="secondary" className="min-h-11" asChild>
-            <Link to="/operations/inventory">Inventory Management</Link>
-          </Button>
-        )}
-        {canOpenFinance ? (
-          <Button type="button" variant="secondary" className="min-h-11" asChild>
-            <Link to="/operations/finance?tab=purchases">Open Finance · expenses</Link>
-          </Button>
-        ) : null}
-        {allowRoute(profile, 'payroll') ? (
-          <Button type="button" variant="outline" className="min-h-11" asChild>
-            <Link to="/operations/payroll?tab=cash-advance">Cash advances · Payroll</Link>
-          </Button>
         ) : null}
       </div>
     </div>
@@ -2055,8 +1652,8 @@ export default function PosPage() {
       title="POS"
       description={
         branchAdmin
-          ? `Merch, queue payment, expenses, end of shift · ${branchLabel}`
-          : `Sell, pay queue, expenses, crew pay preview · ${branchLabel}`
+          ? `Merch, coffee and cars waiting to pay — one counter · ${branchLabel}`
+          : `Sell, cars waiting to pay, daily sheet · ${branchLabel}`
       }
       meta={
         <>
@@ -2066,12 +1663,17 @@ export default function PosPage() {
       }
       actions={
         <>
-          {canSubmitShiftClose(profile) ? (
-            <Button type="button" variant="destructive" className="min-h-11 gap-2" onClick={openEndOfShift}>
-              <LogOut data-icon="inline-start" aria-hidden />
-              End of shift
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant={announcerOn ? 'default' : 'outline'}
+            aria-pressed={announcerOn}
+            title="Say each car out loud on this device when it is ready for payment"
+            className="min-h-11 gap-2"
+            onClick={toggleAnnouncer}
+          >
+            {announcerOn ? <Volume2 data-icon="inline-start" aria-hidden /> : <VolumeX data-icon="inline-start" aria-hidden />}
+            {announcerOn ? 'Voice on' : 'Voice off'}
+          </Button>
           {shellTab === 'checkout' && !posSplitView ? (
             <Button onClick={() => setCartOpen(true)} className="min-h-11 gap-2">
               <ShoppingCart data-icon="inline-start" />
@@ -2087,9 +1689,8 @@ export default function PosPage() {
         <OpsTabList
           aria-label="POS sections"
           tabs={[
-            { id: 'checkout', label: 'Sell', icon: ShoppingBag },
-            { id: 'pending', label: 'Pay queue', icon: Receipt, badge: handoffs.length || undefined },
-            { id: 'expenses', label: 'Expenses' },
+            { id: 'checkout', label: 'Sell', icon: ShoppingBag, badge: handoffs.length || undefined },
+            ...(canSheet ? [{ id: 'sheet', label: 'Daily sheet', icon: ClipboardList }] : []),
             { id: 'dashboard', label: 'Today' },
             ...(showSettingsTab ? [{ id: POS_SETTINGS_TAB, label: 'Settings', icon: Settings2 }] : []),
           ]}
@@ -2097,14 +1698,22 @@ export default function PosPage() {
         <TabsContent value="checkout" className="mt-0 outline-none">
           {checkoutBody}
         </TabsContent>
-        <TabsContent value="pending" className="mt-0 outline-none">
-          {pendingBody}
-        </TabsContent>
-        <TabsContent value="expenses" className="mt-0 outline-none">
-          {expensesBody}
-        </TabsContent>
+        {canSheet ? (
+          <TabsContent value="sheet" className="mt-0 outline-none">
+            {shellTab === 'sheet' && branch ? <DailySheetPanel branch={branch} branchLabel={branchLabel} profile={profile} initialDate={searchParams.get('date')} /> : null}
+          </TabsContent>
+        ) : null}
         <TabsContent value="dashboard" className="mt-0 outline-none">
-          {dashboardBody}
+          {shellTab === 'dashboard' && branch ? (
+            <PosTodayPanel
+              branch={branch}
+              branchLabel={branchLabel}
+              waitingCount={pendingSummary.count}
+              waitingMinor={pendingSummary.totalMinor}
+              refreshKey={todayStats?.paid_count}
+              onOpenSheet={canSheet ? () => setShellTab('sheet') : undefined}
+            />
+          ) : null}
         </TabsContent>
         {showSettingsTab ? (
           <TabsContent value={POS_SETTINGS_TAB} className="mt-0 outline-none">
@@ -2113,113 +1722,18 @@ export default function PosPage() {
         ) : null}
       </Tabs>
 
-      <Sheet
-        open={dailyReportOpen}
-        onOpenChange={(open) => {
-          setDailyReportOpen(open)
-          if (!open) {
-            setShiftCloseMode(false)
-            setShiftWizardStep(0)
-          }
-        }}
-      >
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>
-              {shiftCloseMode ? 'End of shift' : 'Daily sales report'} · {branchLabel}
-            </SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 space-y-3 text-sm">
-            {shiftCloseMode ? (
-              <ShiftCloseWizard
-                step={shiftWizardStep}
-                onStep={setShiftWizardStep}
-                branchLabel={branchLabel}
-                shiftEndedAtLocal={shiftEndedAtLocal}
-                onShiftEndedAt={(v) => {
-                  setShiftEndedAtLocal(v)
-                  setShiftEndedError('')
-                }}
-                shiftEndedError={shiftEndedError}
-                dailyReportData={dailyReportData}
-                shiftFieldConfig={shiftFieldConfig}
-                shiftOverrides={shiftOverrides}
-                setShiftOverrides={setShiftOverrides}
-                shiftReasons={shiftReasons}
-                setShiftReasons={setShiftReasons}
-                shiftFieldErrors={shiftFieldErrors}
-                setShiftFieldErrors={setShiftFieldErrors}
-                salaryDraftExtras={salaryDraftExtras}
-                setSalaryDraftExtras={setSalaryDraftExtras}
-                staffOptions={(todayAttendance || []).map((row) => ({
-                  id: row.staff_id,
-                  full_name: row.staff_profiles?.full_name || row.staff_id,
-                }))}
-                onSubmit={submitEndOfShift}
-                shiftSubmitting={shiftSubmitting || !branch}
-              />
-            ) : (
-              <>
-            <p className="text-muted-foreground">
-              Auto-filled from today’s paid sales. Payment modes: Cash, GCash, Credit Cards.
-            </p>
-            <div className="rounded-xl border border-border p-3">
-              <p className="font-semibold">Payment totals</p>
-              <p className="mt-1">All sales · {formatMoney(todayStats?.total_sales_minor || 0)}</p>
-              <p>Cash · {formatMoney(todayStats?.cash_sales_minor || 0)}</p>
-              <p>GCash · {formatMoney(todayStats?.gcash_sales_minor || 0)}</p>
-              <p>Credit Cards · {formatMoney(todayStats?.card_sales_minor || 0)}</p>
-              <p className="mt-2 text-xs text-muted-foreground">Paid count · {todayStats?.paid_count ?? 0}</p>
-            </div>
-            <div className="rounded-xl border border-border p-3">
-              <p className="font-semibold">By job type</p>
-              {familyTiles.map((row) => (
-                <p key={row.label}>{row.label} · {row.value}</p>
-              ))}
-            </div>
-            <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <p className="mb-2 font-semibold">Daily close report</p>
-              <pre className="whitespace-pre-wrap text-xs leading-relaxed">{formatBacoorReportText(dailyReportData, formatMoney)}</pre>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-11 w-full"
-              onClick={() => {
-                navigator.clipboard.writeText(formatBacoorReportText(dailyReportData, formatMoney))
-                toast.success('Report copied to clipboard')
-              }}
-            >
-              Copy report text
-            </Button>
-            {canOpenFinance ? (
-            <Button type="button" className="min-h-11 w-full" asChild>
-              <Link to="/operations/finance?tab=purchases" onClick={() => setDailyReportOpen(false)}>
-                Open Finance · expenses
-              </Link>
-            </Button>
-            ) : null}
-              </>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
-
       <Sheet open={cartOpen && !posSplitView} onOpenChange={setCartOpen}>
-        <SheetContent className="pos-checkout-sheet flex w-full flex-col gap-0 border-l-0 p-0 sm:max-w-md">
+        <SheetContent className="pos-checkout-sheet flex w-full flex-col gap-0 border-l-0 p-0 data-[side=right]:w-full sm:max-w-md">
           <div className="pos-checkout-head px-5 pt-5 pb-4">
             <SheetHeader className="gap-1 pr-8 text-left">
               <p className="text-[10px] font-bold tracking-[0.2em] text-white/55 uppercase">Hakum POS · {branchLabel}</p>
-              <SheetTitle className="text-xl text-white">{activeHandoff ? 'Pay queue ticket' : 'Checkout'}</SheetTitle>
+              <SheetTitle className="text-xl text-white">
+                {activeHandoff ? `Ticket ${formatQueueTicket(ticketBooking)}` : 'Walk-in order'}
+              </SheetTitle>
             </SheetHeader>
-            {activeHandoff && (
-              <p className="mt-3 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white/80">
-                Linked to booking {activeHandoff.booking_id?.slice(0, 8)}… · paying closes the handoff.
-              </p>
-            )}
             <div className="mt-3 flex items-center justify-between gap-2 text-xs text-white/70">
               <span>{cartCount ? `${cartCount} item${cartCount === 1 ? '' : 's'}` : 'Nothing rung up yet'}</span>
-              {cart.length ? (
+              {addOnLines.length ? (
                 <button
                   type="button"
                   onClick={clearCart}

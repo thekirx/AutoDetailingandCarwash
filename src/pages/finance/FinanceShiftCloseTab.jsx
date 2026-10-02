@@ -1,17 +1,12 @@
-/** SA / ASA finance_view: review BA end-of-shift closes vs POS baseline. */
+/** Old shift closes — read-only history from before Daily Sheets (review RPCs are revoked). */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
-import {
-  canReviewShiftClose,
-  shiftCloseDiffRows,
-} from '@/lib/shiftClose'
+import { shiftCloseDiffRows } from '@/lib/shiftClose'
 import { shiftClosePayrollCoverage } from '@/lib/payroll'
 import { toast } from 'sonner'
 import {
@@ -28,15 +23,12 @@ function statusVariant(status) {
   return 'outline'
 }
 
-export default function FinanceShiftCloseTab({ profile, range, branchFilter, canWrite }) {
-  const canReview = canReviewShiftClose(profile)
+export default function FinanceShiftCloseTab({ range, branchFilter }) {
   const [rows, setRows] = useState([])
   const [payrollRuns, setPayrollRuns] = useState([])
   const [fieldConfig, setFieldConfig] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState(null)
-  const [reviewNote, setReviewNote] = useState('')
-  const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -109,73 +101,6 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
     return counts
   }, [rows])
 
-  async function review(action) {
-    if (!canReview || !selected) return
-    if ((action === 'reject' || action === 'reopen') && String(reviewNote).trim().length < 3) {
-      toast.error(action === 'reopen' ? 'Reopen needs a note' : 'Reject needs a review note')
-      return
-    }
-    setBusy(true)
-    const { data, error } = await supabase.rpc('review_shift_close', {
-      payload: {
-        id: selected.id,
-        action,
-        review_note: reviewNote.trim() || null,
-      },
-    })
-    setBusy(false)
-    if (error) toast.error(error.message)
-    else {
-      toast.success(`Shift close ${data?.status || action}`)
-      setReviewNote('')
-      if ((action === 'accept' || action === 'reject') && selected) {
-        try {
-          const { data: sessionData } = await supabase.auth.getSession()
-          const token = sessionData?.session?.access_token
-          if (token) {
-            const notifyRes = await fetch('/api/notify-shift-close', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                branch: selected.branch,
-                business_date: selected.business_date,
-                close_id: selected.id,
-                action,
-              }),
-            })
-            const notifyBody = await notifyRes.json().catch(() => null)
-            // Owner daily SMS is intentionally off (outbound customer reminders only).
-            // Push notify failure is still worth surfacing; do not nag about owner handset env.
-            if (!notifyRes.ok) {
-              toast.warning('Shift-close notify request failed (push may be delayed)')
-            } else if (notifyBody?.notify?.push?.error) {
-              toast.warning(`Floor-pay push — ${String(notifyBody.notify.push.error).slice(0, 120)}`)
-            }
-          }
-        } catch {
-          /* inbox already written by RPC; push is best-effort */
-        }
-      }
-      load()
-    }
-  }
-
-  async function toggleOverride(fieldKey, allow) {
-    if (!canWrite || profile?.role !== 'BossMich') return
-    const { error } = await supabase
-      .from('shift_close_field_config')
-      .update({ allow_override: allow })
-      .eq('field_key', fieldKey)
-    if (error) toast.error(error.message)
-    else {
-      toast.success('Field updated')
-      load()
-    }
-  }
-
   return (
     <div className="finance-dash flex flex-col gap-5">
       <FinanceMetricStrip label="Shift close totals">
@@ -187,15 +112,20 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
       </FinanceMetricStrip>
 
       <FinancePanel
-        title="Shift reviews"
-        description="POS baseline vs Branch Admin submission. Accept unlocks Pending floor pay — it does not rewrite POS sales. P&L income stays on paid tickets."
+        title="Old shift closes"
+        description="Read-only history from before Daily Sheets. New days are closed and approved in Daily sheets."
+        actions={
+          <Button asChild variant="outline" className="min-h-11">
+            <Link to="/operations/finance?tab=sheets">Open Daily sheets</Link>
+          </Button>
+        }
       >
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : rows.length === 0 ? (
             <FinanceEmpty
-              title="No shift closes in this range"
-              body="Branch Admin, Super Admin, or ASA submit from POS → End of shift (with editable close time)."
+              title="No old shift closes in this range"
+              body="End of shift was replaced by the Daily Sheet. Pick an earlier range to see past closes."
             />
           ) : (
             <Table>
@@ -240,7 +170,7 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
                           className="min-h-10 cursor-pointer"
                           onClick={() => setSelectedId(row.id)}
                         >
-                          Review
+                          View
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -291,104 +221,14 @@ export default function FinanceShiftCloseTab({ profile, range, branchFilter, can
 
             {!selectedCoverage?.covered && selected.status === 'accepted' ? (
               <p className="text-sm text-muted-foreground">
-                No floor payroll run claimed this day yet.{' '}
-                <Link className="underline" to="/operations/payroll">
-                  Open Payroll dashboard
+                No floor payroll run claimed this day. Crew pay now goes through{' '}
+                <Link className="underline" to="/operations/finance?tab=sheets">
+                  Daily sheets
                 </Link>
               </p>
             ) : null}
 
-            {canReview && selected.status === 'submitted' ? (
-              <div className="flex flex-col gap-3 border-t border-border pt-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="shift-review-note">Review note (required to reject)</Label>
-                  <Input
-                    id="shift-review-note"
-                    className="min-h-10"
-                    value={reviewNote}
-                    onChange={(e) => setReviewNote(e.target.value)}
-                    placeholder="Reason for reject, or optional accept note"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review('accept')}>
-                    Accept
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    className="min-h-10 cursor-pointer"
-                    disabled={busy}
-                    onClick={() => review('reject')}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
-            {canReview && selected.status === 'accepted' ? (
-              <div className="flex flex-col gap-3 border-t border-border pt-4">
-                {profile?.role === 'BossMich' ? (
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="shift-reopen-note">Reopen note</Label>
-                    <Input
-                      id="shift-reopen-note"
-                      className="min-h-10"
-                      value={reviewNote}
-                      onChange={(e) => setReviewNote(e.target.value)}
-                      placeholder="Why this accepted count is being sent back"
-                    />
-                    <div>
-                      <Button type="button" variant="outline" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review('reopen')}>
-                        Reopen for a new count
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-                <div>
-                  <Button type="button" variant="secondary" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => review('lock')}>
-                    Lock day
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
-            {selected.status === 'locked' ? (
-              <p className="text-sm text-muted-foreground">This day is locked. Resubmit is blocked until unlocked by policy.</p>
-            ) : null}
             </div>
-        </FinancePanel>
-      ) : null}
-
-      {profile?.role === 'BossMich' ? (
-        <FinancePanel title="Field customization" description="Which money fields Branch Admins may override on End of shift.">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Field</TableHead>
-                  <TableHead>Allow override</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fieldConfig.map((f) => (
-                  <TableRow key={f.field_key}>
-                    <TableCell>{f.label}</TableCell>
-                    <TableCell>
-                      <label className="inline-flex min-h-10 items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={f.allow_override !== false}
-                          disabled={!canWrite}
-                          onChange={(e) => toggleOverride(f.field_key, e.target.checked)}
-                        />
-                        Override allowed
-                      </label>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
         </FinancePanel>
       ) : null}
     </div>

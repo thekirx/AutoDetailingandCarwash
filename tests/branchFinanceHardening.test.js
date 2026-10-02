@@ -6,7 +6,7 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { requireBranchSlug, branchSlugsForOwnPay } from '../src/lib/branchScope.js'
+import { requireBranchSlug } from '../src/lib/branchScope.js'
 import { buildPayrollPreview, addPayrollAdjustment } from '../src/lib/payroll.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -18,15 +18,6 @@ describe('requireBranchSlug fail-closed', () => {
     assert.equal(requireBranchSlug({ branch_slug: 'batangas' }), 'batangas')
     assert.equal(requireBranchSlug({ branch_slugs: ['imus'], branch_slug: 'batangas' }), 'imus')
     assert.equal(requireBranchSlug({ branch_slug: 'batangas' }, 'bacoor'), 'bacoor')
-  })
-
-  it('branchSlugsForOwnPay uses scope list or home only', () => {
-    assert.deepEqual(
-      branchSlugsForOwnPay({ branch_slug: 'batangas' }, () => ['batangas', 'imus']),
-      ['batangas', 'imus'],
-    )
-    assert.deepEqual(branchSlugsForOwnPay({ branch_slug: 'batangas' }, () => null), ['batangas'])
-    assert.deepEqual(branchSlugsForOwnPay({}, () => []), [])
   })
 })
 
@@ -93,9 +84,6 @@ describe('finance integrity wiring', () => {
       'utf8',
     )
     assert.match(acl, /user_has_branch_access/)
-    const myPay = readFileSync(join(root, 'src/pages/MyPayPage.jsx'), 'utf8')
-    assert.doesNotMatch(myPay, /\|\| 'bacoor'/)
-    assert.match(myPay, /branchSlugsForOwnPay/)
   })
 
   it('SA expense report approve lands on pending_payment; mark_paid later', () => {

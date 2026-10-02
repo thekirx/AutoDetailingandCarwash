@@ -1,0 +1,190 @@
+/* Daily Sheet + Xero-style money figures. Operate mode: off-white page, white cards, navy summary. */
+
+.ds-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.ds-neg { color: #b42318; }
+.ds-alert { color: #b42318; }
+.ds-ok { color: #067647; }
+.ds-link {
+  color: var(--color-brand-primary, #052699);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+.ds-link:hover, .ds-link:focus-visible { text-decoration: underline; }
+
+.ds-root { display: flex; flex-direction: column; gap: 1.25rem; padding-bottom: 5.5rem; }
+@media (min-width: 1024px) { .ds-root { padding-bottom: 0; } }
+
+.ds-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem; }
+.ds-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-brand-primary, #052699);
+}
+.ds-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(1.15rem, 2.4vw, 1.6rem);
+  line-height: 1.15;
+  color: var(--color-surface-cinematic, #020a31);
+}
+
+.ds-layout { display: grid; gap: 1.25rem; }
+@media (min-width: 1024px) {
+  .ds-layout { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+}
+
+.ds-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid var(--border, #e2e2dc);
+  border-radius: 1rem;
+  background: #fff;
+  padding: 1.1rem 1.15rem;
+}
+.ds-section-head { display: flex; align-items: flex-start; gap: 0.75rem; }
+.ds-section-title { font-family: var(--font-display, sans-serif); font-size: 1rem; color: var(--color-surface-cinematic, #020a31); }
+.ds-step {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-brand-primary, #052699);
+  color: var(--color-brand-primary, #052699);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.ds-step--done { background: #067647; border-color: #067647; color: #fff; }
+
+.ds-mini-head {
+  margin-bottom: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground, #6b6b66);
+}
+
+.ds-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  font-size: 0.925rem;
+}
+.ds-row--rule { margin-top: 0.25rem; border-top: 1px solid currentColor; border-top-color: color-mix(in srgb, currentColor 30%, transparent); padding-top: 0.5rem; }
+
+.ds-line {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--border, #e2e2dc);
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+  background: var(--color-surface-page, #f1f1ed);
+}
+@media (min-width: 640px) {
+  .ds-line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .ds-line { grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) minmax(0, 1fr) auto; }
+  .ds-line > .sm\:col-span-2:first-child { grid-column: span 1; }
+  .ds-line--salary { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .ds-line--salary > .sm\:col-span-2 { grid-column: span 2; }
+  .ds-line--salary > .sm\:col-span-2:first-child { grid-column: span 1; }
+}
+.ds-input-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.ds-summary {
+  border-radius: 1rem;
+  background: var(--color-surface-cinematic, #020a31);
+  color: #f1f1ed;
+  padding: 1.15rem;
+}
+@media (min-width: 1024px) {
+  .ds-summary { position: sticky; top: 1rem; }
+}
+.ds-summary .ds-neg, .ds-summary .ds-alert { color: #fda29b; }
+.ds-summary .ds-ok { color: #75e0a7; }
+.ds-summary-head { font-family: var(--font-display, sans-serif); font-size: 1rem; margin-bottom: 0.5rem; }
+.ds-summary-gap { height: 0.75rem; }
+.ds-summary-actions { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.ds-summary .ds-submit { background: #fff; color: var(--color-brand-primary, #052699); font-weight: 700; }
+.ds-summary .ds-submit:hover:not(:disabled) { background: var(--color-brand-primary-soft, #e8edff); }
+.ds-summary [data-slot="button"][data-variant="outline"],
+.ds-summary button.border { color: #fff; border-color: rgb(255 255 255 / 0.35); background: transparent; }
+.ds-summary label { color: #f1f1ed; }
+.ds-missing { list-style: disc; padding-left: 1.1rem; font-size: 0.85rem; line-height: 1.45; color: #fde7c2; }
+
+.ds-mobile-bar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  background: var(--color-surface-cinematic, #020a31);
+  color: #f1f1ed;
+}
+.ds-mobile-bar .ds-submit { background: #fff; color: var(--color-brand-primary, #052699); font-weight: 700; }
+.ds-mobile-bar .ds-neg { color: #fda29b; }
+@media (min-width: 1024px) { .ds-mobile-bar { display: none; } }
+
+.ds-banner {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  border-radius: 0.9rem;
+  border: 1px solid var(--color-brand-primary-soft, #e8edff);
+  background: var(--color-brand-primary-soft, #e8edff);
+  color: var(--color-surface-cinematic, #020a31);
+  padding: 0.85rem 1rem;
+}
+.ds-banner--warn { background: #fffaeb; border-color: #fedf89; color: #7a2e0e; }
+.ds-banner--ok { background: #ecfdf3; border-color: #abefc6; color: #054f31; }
+
+.ds-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  border-radius: 999px;
+  padding: 0 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #e7e7e3;
+  color: #3d3d39;
+}
+.ds-chip--draft,
+.ds-chip--none { background: #e7e7e3; color: #3d3d39; }
+.ds-chip--submitted { background: #fef0c7; color: #93370d; }
+.ds-chip--approved { background: #dcfae6; color: #085d3a; }
+.ds-chip--returned { background: #fee4e2; color: #912018; }
+
+/* Xero-style tables (Finance) */
+.xero-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.xero-table th {
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground, #6b6b66);
+  border-bottom: 1px solid var(--border, #e2e2dc);
+  white-space: nowrap;
+}
+.xero-table th.num, .xero-table td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.xero-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid color-mix(in srgb, var(--border, #e2e2dc) 60%, transparent); }
+.xero-table tr.xero-section td { padding-top: 1rem; font-weight: 700; color: var(--color-surface-cinematic, #020a31); border-bottom: none; }
+.xero-table tr.xero-total td { font-weight: 700; border-top: 1px solid #3d3d39; border-bottom: 3px double #3d3d39; }
+.xero-table tr.xero-subtotal td { font-weight: 700; border-top: 1px solid var(--border, #e2e2dc); }

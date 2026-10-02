@@ -31,8 +31,8 @@ export function buildShiftCloseAcceptCopy({ branch = '', businessDate = '', clos
   return {
     kind: 'payroll.pending_floor',
     title: `Floor pay ready · ${site}`,
-    body: `End of shift accepted for ${site} · ${day}. Confirm floor payroll on Payroll (does not auto-pay).`,
-    url: '/operations/payroll',
+    body: `End of shift accepted for ${site} · ${day}. Crew pay now goes through the Daily Sheet in Finance.`,
+    url: '/operations/finance?tab=sheets',
     tag: `shift_close:${id}`,
   }
 }

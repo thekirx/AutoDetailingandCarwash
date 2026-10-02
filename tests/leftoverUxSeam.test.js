@@ -15,7 +15,6 @@ import {
   canAccessNotifications,
   canAccessReviews,
   canManageSiteContent,
-  canViewOwnPay,
   canViewQueueOperations,
   getDetailerMore,
   getMarketingMore,
@@ -33,25 +32,19 @@ import { SERVICES, WASH_SERVICES } from '../src/components/public/bredesign/cont
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(root, p), 'utf8')
 
-describe('Floor chrome includes My pay when the role can view it', () => {
-  it('puts Pay on TL / sales / marketing / detailer / video overflow', () => {
+describe('Floor chrome has no My pay after the Daily Sheet', () => {
+  it('drops Pay from TL / sales / marketing / detailer / video overflow', () => {
     const teamLead = { role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' }
     const sales = { role: ROLES.SALES, branch_slug: 'bacoor' }
     const marketing = { role: ROLES.MARKETING, branch_slug: 'bacoor' }
     const detailer = { role: ROLES.DETAILER, branch_slug: 'bacoor' }
     const video = { role: ROLES.VIDEO_EDITOR, branch_slug: 'bacoor' }
-    for (const p of [teamLead, sales, marketing, detailer, video]) {
-      assert.equal(canViewOwnPay(p), true, p.role)
-    }
-    assert.ok(getTeamLeadMore(teamLead).some((i) => i.to === '/operations/my-pay'))
+    const more = [getTeamLeadMore(teamLead), getSalesMore(sales), getMarketingMore(marketing), getDetailerMore(detailer), getVideoEditorMore(video)]
+    for (const items of more) assert.equal(items.some((i) => i.to === '/operations/my-pay'), false)
     assert.equal(getTeamLeadMore(teamLead).some((i) => i.to === '/operations/crew'), false)
     const app = read('src/App.jsx')
     assert.match(app, /path="crew"/)
     assert.match(app, /Navigate to="\/operations\/attendance"/)
-    assert.ok(getSalesMore(sales).some((i) => i.to === '/operations/my-pay'))
-    assert.ok(getMarketingMore(marketing).some((i) => i.to === '/operations/my-pay'))
-    assert.ok(getDetailerMore(detailer).some((i) => i.to === '/operations/my-pay'))
-    assert.ok(getVideoEditorMore(video).some((i) => i.to === '/operations/my-pay'))
   })
 })
 
@@ -72,7 +65,6 @@ describe('Finance tab alias', () => {
     assert.equal(resolveFinanceTab('purchases'), 'purchases')
     assert.equal(resolveFinanceTab('nope'), 'overview')
     const pos = read('src/pages/PosPage.jsx')
-    assert.match(pos, /\/operations\/finance\?tab=purchases/)
     assert.doesNotMatch(pos, /finance\?tab=expenses/)
     const page = read('src/pages/FinancePage.jsx')
     assert.match(page, /resolveFinanceTab/)
@@ -97,8 +89,6 @@ describe('My pay current payout', () => {
     const current = currentPostedPayoutMinor(lines)
     assert.equal(current.amountMinor, 1000)
     assert.equal(current.periodStart, '2026-08-11')
-    const page = read('src/pages/MyPayPage.jsx')
-    assert.match(page, /currentPostedPayoutMinor/)
   })
 })
 
@@ -336,11 +326,6 @@ describe('Finance Reports is the books reports surface', () => {
     assert.match(page, /canManageCrew && canManagePeople\(profile\)/)
     assert.match(page, /canManageCrew && !canManagePeople\(profile\)/)
     assert.match(page, /\/operations\/people/)
-  })
-
-  it('Payroll pending closes surfaces load errors', () => {
-    const page = read('src/pages/PayrollPage.jsx')
-    assert.match(page, /loadPendingCloses\(\)\.catch\(\(err\) => toast\.error/)
   })
 
   it('My Tasks empty state links planners to Planner', () => {

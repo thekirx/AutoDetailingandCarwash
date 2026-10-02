@@ -106,9 +106,9 @@ export default function PosSettingsPanel({ embedded = false }) {
               <Link to="/operations/attendance?tab=settings" className="font-medium text-primary underline-offset-2 hover:underline">
                 Attendance → Settings
               </Link>
-              . Payroll rules:{' '}
-              <Link to="/operations/settings/payroll" className="font-medium text-primary underline-offset-2 hover:underline">
-                Payroll settings
+              . Pay rules:{' '}
+              <Link to="/operations/settings/daily-sheet" className="font-medium text-primary underline-offset-2 hover:underline">
+                Daily sheet rules
               </Link>
               .
             </CardDescription>

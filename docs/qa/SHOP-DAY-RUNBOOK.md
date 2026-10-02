@@ -1,5 +1,7 @@
 # Shop-day runbook (FLOPS)
 
+> **Out of date after the Daily Sheet release (2026-10-01).** Steps E1/F1/P1 below (End of shift → Shift reviews → Payroll) become POS → Daily sheet → Finance → Daily sheets → Approve once migration `20261001090000_daily_sheet.sql` is applied. `e2e:lifecycle-flops` still drives the old RPCs and needs the rewrite listed in [docs/daily-sheet/README.md](../daily-sheet/README.md) → Known follow-ups.
+
 **Purpose:** Principal QA / Branch Admin playbook for one Manila calendar day.  
 **Contract:** [docs/OPS/MONEY-CONTRACT.md](../OPS/MONEY-CONTRACT.md) · [docs/user-stories/shop-day-flow.md](../user-stories/shop-day-flow.md)  
 **Evidence command:** `BASE_URL=http://127.0.0.1:5174 npm run e2e:lifecycle-flops`  

@@ -1,5 +1,7 @@
 # 06 — Cash advances (approve vs auto-deduct)
 
+> **Retired 2026-10-01.** Cash-advance requests now go to the BA, who releases and repays them on the Daily Sheet. See "Cash advances, start to finish" in [docs/daily-sheet/README.md](../daily-sheet/README.md).
+
 ## What works
 
 1. Staff submit ops form `cash_advance`.

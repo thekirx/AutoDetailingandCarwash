@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   BookOpen,
   ChevronDown,
@@ -8,15 +7,14 @@ import {
   Clock3,
   Receipt,
   ShoppingBag,
+  Volume2,
   Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { POS_WORKFLOW_STEPS } from '@/lib/posInsights'
+import { POS_WORKFLOW_STEPS, formatQueueTicket } from '@/lib/posInsights'
 import { formatMoney } from '@/queue/queueApi'
-import { demoWashPoolSplit, latePaySharePercent } from '@/lib/compensation'
-
 export function PosStatsBoard({ stats, categoryRows = [], compact = false }) {
   const {
     salesMinor = 0,
@@ -28,7 +26,7 @@ export function PosStatsBoard({ stats, categoryRows = [], compact = false }) {
 
   const tiles = [
     { label: 'Paid today', value: String(paidCount), mono: false },
-    { label: 'Pay queue', value: String(pendingCount), mono: false, highlight: pendingCount > 0 },
+    { label: 'Waiting to pay', value: String(pendingCount), mono: false, highlight: pendingCount > 0 },
     { label: 'Avg ticket', value: formatMoney(avgTicketMinor), mono: true },
     ...(compact ? [] : [{ label: 'Expenses', value: formatMoney(expenseMinor), mono: true }]),
   ]
@@ -153,79 +151,76 @@ export function PosGuideCard({ defaultOpen = false }) {
   )
 }
 
-export function PosSalaryPreviewCard({ washPreview, compRules, canPayroll, canAttendance }) {
-  if (!washPreview) return null
-  const latePct = latePaySharePercent(compRules)
-  const split = demoWashPoolSplit({
-    poolMinor: washPreview.poolMinor || 0,
-    onTimeCount: washPreview.presentCount || 0,
-    lateCount: washPreview.lateCount || 0,
-    lateWeight: compRules?.attendance_late_weight,
-  })
-
+/** Cars the floor sent to pay, as ticket stubs above the catalogue. Tap one to put it on the order. */
+export function PosOpenTickets({ tickets = [], activeId = null, totalMinor = 0, onOpen, onReplay }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Crew pay connection</CardTitle>
-        <CardDescription className="max-w-prose">
-          Car-wash sales today feed the wash pool ({washPreview.washPoolPct}% of{' '}
-          {formatMoney(washPreview.carWashMinor)} = {formatMoney(washPreview.poolMinor)}). Split among{' '}
-          {washPreview.onSiteCount} on-site crew using attendance weights (late = {latePct}% share).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {washPreview.poolMinor > 0 && washPreview.onSiteCount > 0 ? (
-          <div className="rounded-xl border border-border bg-muted/20 p-3 text-sm">
-            <p className="font-medium">Today&apos;s pool split</p>
-            <ul className="mt-2 flex flex-col gap-1 text-muted-foreground">
-              {washPreview.presentCount > 0 ? (
-                <li>
-                  On time ({washPreview.presentCount}) → {formatMoney(split.perOnTimeMinor)} each
-                </li>
-              ) : null}
-              {washPreview.lateCount > 0 ? (
-                <li>
-                  Late ({washPreview.lateCount}) → {formatMoney(split.perLateMinor)} each
-                </li>
-              ) : null}
-            </ul>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Pool preview appears when there are car-wash sales and crew clocked in present or late.
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {canAttendance ? (
-            <Button type="button" variant="outline" className="min-h-11" asChild>
-              <Link to="/operations/attendance?tab=register">Attendance register</Link>
-            </Button>
-          ) : null}
-          {canPayroll ? (
-            <Button type="button" variant="outline" className="min-h-11" asChild>
-              <Link to="/operations/payroll">Open Payroll</Link>
-            </Button>
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-export function PosPendingEmpty() {
-  return (
-    <Card className="border-dashed">
-      <CardHeader className="text-center">
-        <CardTitle className="text-lg">No cars waiting to pay</CardTitle>
-        <CardDescription className="mx-auto max-w-md">
-          When the floor marks a job ready, the ticket lands here. You can also sell walk-ins from the Sell tab.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex justify-center pb-8">
-        <Button type="button" variant="secondary" className="min-h-11" asChild>
-          <Link to="/operations/pos">Go to Sell</Link>
-        </Button>
-      </CardContent>
-    </Card>
+    <section aria-labelledby="pos-open-tickets-title" className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="pos-open-tickets-title" className="text-sm font-semibold">
+          Waiting to pay
+          {tickets.length ? <span className="ml-1.5 tabular-nums text-muted-foreground">{tickets.length}</span> : null}
+        </h2>
+        {tickets.length ? (
+          <p className="font-mono text-sm tabular-nums text-muted-foreground">{formatMoney(totalMinor)}</p>
+        ) : null}
+      </div>
+      {tickets.length ? (
+        <ul className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+          {tickets.map((row) => {
+            const booking = row.bookings || {}
+            const active = row.id === activeId
+            const plate = booking.vehicle_plate || 'No plate'
+            const name = booking.customer_name || 'Customer'
+            return (
+              <li key={row.id} className="relative shrink-0 snap-start">
+                <button
+                  type="button"
+                  aria-pressed={active}
+                  aria-label={`${formatQueueTicket(booking)} · ${plate} · ${name}`}
+                  onClick={() => onOpen(row)}
+                  className={`flex min-h-[4.75rem] w-60 items-stretch overflow-hidden rounded-xl border text-left transition-[border-color,background-color,transform] duration-150 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none ${
+                    active ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border bg-card hover:border-primary/50'
+                  }`}
+                >
+                  <span className="flex w-16 shrink-0 flex-col items-center justify-center gap-0.5 bg-[var(--pos-navy)] px-1 text-white">
+                    <span className="text-[9px] font-bold tracking-[0.16em] text-white/65 uppercase">Queue</span>
+                    <span className="font-mono text-base font-semibold tabular-nums">
+                      {booking.queue_number != null ? String(booking.queue_number).padStart(3, '0') : '—'}
+                    </span>
+                  </span>
+                  <span className={`flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-2 pl-3 ${onReplay ? 'pr-11' : 'pr-3'}`}>
+                    <span className="truncate font-mono text-sm font-semibold tracking-wide uppercase" title={plate}>{plate}</span>
+                    <span className="truncate text-xs text-muted-foreground" title={name}>{name}</span>
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="font-mono text-sm font-semibold tabular-nums">
+                        {formatMoney(row.amount_minor ?? booking.final_price_minor ?? booking.price_minor ?? 0)}
+                      </span>
+                      {active ? (
+                        <span className="text-[10px] font-bold tracking-wide text-primary uppercase">On order</span>
+                      ) : null}
+                    </span>
+                  </span>
+                </button>
+                {onReplay ? (
+                  <button
+                    type="button"
+                    aria-label={`Announce ${plate} again`}
+                    title="Announce again"
+                    onClick={() => onReplay(row)}
+                    className="absolute top-1 right-1 flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    <Volume2 className="size-4" aria-hidden />
+                  </button>
+                ) : null}
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <p className="rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+          No cars waiting to pay. Tickets from the floor show up here on their own.
+        </p>
+      )}
+    </section>
   )
 }

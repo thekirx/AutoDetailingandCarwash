@@ -104,7 +104,7 @@ const ceramicDrafts = buildCeramicCompensationExpenses({
 })
 
 describe('Principal QA — daily ops RBAC gates', () => {
-  it('crew/TL clock; TL manages queue; BA POS + close; SA payroll + finance', () => {
+  it('crew/TL clock; TL manages queue; BA POS + Daily Sheet; SA finance', () => {
     assert.equal(canUseAttendanceClock({ role: ROLES.STAFF }), true)
     assert.equal(canUseAttendanceClock({ role: ROLES.TEAM_LEAD }), true)
     assert.equal(canUseAttendanceClock({ role: ROLES.ADMIN }), true)
@@ -115,7 +115,7 @@ describe('Principal QA — daily ops RBAC gates', () => {
     assert.equal(allowRoute({ role: ROLES.TEAM_LEAD }, 'queue'), true)
     assert.equal(allowRoute({ role: ROLES.SALES }, 'bookings'), true)
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'pos'), true)
-    assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'payroll'), true)
+    assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'payroll'), false)
     assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'finance'), true)
   })
 
@@ -268,13 +268,12 @@ describe('Principal QA — Finance accept → payroll confirm → books', () => 
 })
 
 describe('Principal QA — wiring scan (pages + RPCs exist)', () => {
-  it('daily ops surfaces chain attendance → queue → POS → Finance shift tab → Payroll', () => {
+  it('daily ops surfaces chain attendance → queue → POS Daily sheet → Finance Daily sheets', () => {
     assert.match(read('src/pages/crew/CrewAttendancePanels.jsx'), /geoTimeIn|geofence/)
     assert.match(read('src/pages/OperationsPages.jsx'), /queue/)
     assert.match(read('src/pages/BookingBoardPage.jsx'), /assignStaff/)
-    assert.match(read('src/pages/PosPage.jsx'), /submit_shift_close|ShiftCloseWizard/)
-    assert.match(read('src/pages/finance/FinanceShiftCloseTab.jsx'), /review_shift_close/)
-    assert.match(read('src/pages/PayrollPage.jsx'), /buildPendingFloorPayrollQueue|run_payroll/)
+    assert.match(read('src/pages/PosPage.jsx'), /DailySheetPanel/)
+    assert.match(read('src/pages/FinancePage.jsx'), /FinanceDailySheetsTab/)
     assert.match(read('src/pages/FinancePage.jsx'), /finance_daily_pl/)
     assert.match(read('src/pages/BookingBoardPage.jsx'), /booking_status|detailing/)
   })

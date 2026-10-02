@@ -141,9 +141,12 @@ describe('TL ops contract — cancel, payment gate, form bookings', () => {
     assert.match(tlQueue, /QUEUE_DATE_PRESETS|matchesDurationFilter|matchesTicketSearch/)
   })
 
-  it('renames Queue View dock to Floor for TL', () => {
-    assert.match(permissions, /label: 'Floor'/)
-    assert.match(permissions, /to: '\/operations\/dashboard'/)
-    assert.match(permissions, /export function getTeamLeadDock/)
+  it('TL dock drops the Floor Board', () => {
+    const dockFn = permissions.slice(
+      permissions.indexOf('export function getTeamLeadDock'),
+      permissions.indexOf('export function getTeamLeadMore'),
+    )
+    assert.ok(dockFn.length > 0)
+    assert.match(dockFn, /if \(canAccessFloorBoard\(profile\)\) dock\.push\(\{ label: 'Floor'/)
   })
 })

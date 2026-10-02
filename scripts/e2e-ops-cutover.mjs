@@ -10,7 +10,6 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   ROLES,
-  canRunPayroll,
   getOperationsNav,
 } from '../src/auth/permissions.js'
 import {
@@ -92,7 +91,6 @@ const { data: baStaff } = await baClient
   .eq('id', baAuth.user.id)
   .maybeSingle()
 assert(baStaff?.role === ROLES.ADMIN, 'admin demo is branch admin role')
-assert(!canRunPayroll({ role: baStaff.role }), 'BA cannot run_payroll')
 const { error: baRpcErr } = await baClient.rpc('run_payroll', { payload: {} })
 assert(baRpcErr, 'BA rpc run_payroll must fail')
 results.push(`ba.run_payroll_blocked: ${baRpcErr.message.slice(0, 60)}`)

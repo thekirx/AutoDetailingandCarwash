@@ -77,6 +77,44 @@ export function canRemovePosCartLine(line) {
   return !(line?.from_handoff)
 }
 
+/** Drop a queue ticket's locked lines; merch and walk-in lines stay. */
+export function detachHandoffFromCart(cart = []) {
+  return (cart || []).filter((line) => canRemovePosCartLine(line))
+}
+
+/**
+ * Open a queue ticket: its lines replace any previous ticket or walk-in service,
+ * while merch already rung up rides along on the same sale.
+ */
+export function openHandoffInCart(cart = [], handoffLines = []) {
+  const addOns = (cart || []).filter(
+    (line) => canRemovePosCartLine(line) && normalizePosLineItemType(line.item_type) === 'product',
+  )
+  return [...(handoffLines || []), ...addOns]
+}
+
+/** Order-summary split: locked ticket lines vs add-ons, plus what was taken off. */
+export function summarizePosCart(cart = []) {
+  const out = { ticketMinor: 0, addOnMinor: 0, discountMinor: 0, memberMinor: 0, ticketCount: 0, addOnCount: 0, totalMinor: 0 }
+  for (const line of cart || []) {
+    const qty = Math.max(1, Number(line.quantity) || 1)
+    const unit = Math.max(0, Math.floor(Number(line.unit_price_minor) || 0))
+    const list = Math.max(0, Math.floor(Number(line.list_price_minor ?? unit) || 0))
+    const saved = Math.max(0, list - unit) * qty
+    if (line.from_handoff) {
+      out.ticketMinor += unit * qty
+      out.ticketCount += qty
+    } else {
+      out.addOnMinor += unit * qty
+      out.addOnCount += qty
+    }
+    if (line.adhoc_discount_applied) out.discountMinor += saved
+    else if (line.membership_discount_applied || line.is_membership_included) out.memberMinor += saved
+  }
+  out.totalMinor = out.ticketMinor + out.addOnMinor
+  return out
+}
+
 export function removePosCartLine(cart = [], lineKey) {
   const target = (cart || []).find((x) => x.key === lineKey)
   if (target && !canRemovePosCartLine(target)) return [...(cart || [])]
@@ -441,6 +479,7 @@ export function serializePosDraft(branch, state = {}) {
     cart: state.cart || [],
     customerId: state.customerId || '',
     linkedCustomer: state.linkedCustomer || null,
+    activeHandoff: state.activeHandoff || null,
     paymentMethod: state.paymentMethod || 'cash',
     cashTendered: state.cashTendered || '',
     paymentRef: state.paymentRef || '',

@@ -38,7 +38,6 @@ describe('Branch Admin simplified shell', () => {
         '/operations/planning',
         '/operations/roadmap',
         '/operations/history',
-        '/operations/my-pay',
         '/operations/audit',
       ],
     )
@@ -72,11 +71,11 @@ describe('Branch Admin POS UI is checkout-only', () => {
     const { dirname, join } = await import('node:path')
     const root = join(dirname(fileURLToPath(import.meta.url)), '..')
     const src = await readFile(join(root, 'src/pages/PosPage.jsx'), 'utf8')
-    assert.match(src, /canManageCatalog/)
-    assert.match(src, /Merch, queue payment, expenses, end of shift/)
+    assert.match(src, /Merch, coffee and cars waiting to pay — one counter/)
     // Branch Admin's category rail is merch families only — no service catalogue.
     assert.match(src, /if \(branchAdmin\) return merch/)
-    assert.match(src, /ShiftCloseWizard/)
-    assert.doesNotMatch(src, /canManageServices\(profile\) && <TabsTrigger value="services">Manage services/)
+    assert.match(src, /<DailySheetPanel /)
+    assert.doesNotMatch(src, /ShiftCloseWizard/)
+    assert.doesNotMatch(src, /Manage services/)
   })
 })

@@ -2,12 +2,13 @@
  * Daily-ops events the client can't target itself: the server loads the record, checks the caller,
  * and derives recipients (assigned crew, payees, requester, SA/ASA finance) from the DB.
  */
-import { canAccessPos, canEditQueueOperations, canRunPayroll } from '../src/auth/permissions.js'
+import { canAccessPos, canEditQueueOperations } from '../src/auth/permissions.js'
+import { canEditDailySheet, canReviewDailySheet } from '../src/lib/dailySheet.js'
 import { NOTIFY_EVENTS, branchLabel } from '../src/lib/notifyRouting.js'
 import { hydrateBookingForNotify } from './notifyBooking.mjs'
 import { notifyRecipients, resolveStaffRecipients } from './webPush.mjs'
 
-export const OPS_EVENTS = ['crew_assigned', 'shift_submitted', 'payroll_confirmed', 'cash_advance_submitted', 'cash_advance_resolved']
+export const OPS_EVENTS = ['crew_assigned', 'shift_submitted', 'sheet_submitted', 'sheet_reviewed', 'cash_advance_submitted']
 
 /** Replayed calls for old records are ignored. */
 const FRESH_MS = 10 * 60_000
@@ -30,6 +31,24 @@ export function buildOpsEventCopy(event, c = {}) {
         body: `${c.submitter || 'Branch admin'} submitted ${c.businessDate || 'today'}. Review and accept in Finance.`,
         tag: `shift-submitted-${c.closeId}`,
       }
+    case 'sheet_submitted': {
+      const off = Number(c.overShortMinor) || 0
+      return {
+        kind: 'sheet_submitted',
+        title: `Daily sheet to approve · ${c.branchName || 'branch'}`,
+        body: `${c.submitter || 'Branch admin'} submitted ${c.businessDate || 'today'} · net ${pesos(c.netProfitMinor)}${off ? ` · drawer ${off > 0 ? 'over' : 'short'} ${pesos(Math.abs(off))}` : ''}. Approve or return in Finance.`,
+        tag: `sheet-submitted-${c.sheetId}`,
+      }
+    }
+    case 'sheet_reviewed':
+      return {
+        kind: 'sheet_reviewed',
+        title: `Daily sheet ${c.approved ? 'approved' : 'returned'} · ${c.branchName || 'branch'}`,
+        body: c.approved
+          ? `${c.businessDate || 'Today'}: approved — release pay to the crew.`
+          : `${c.businessDate || 'Today'}: ${c.note || 'please fix and submit again'}`,
+        tag: `sheet-reviewed-${c.sheetId}`,
+      }
     case 'shift_accepted':
       return {
         kind: 'shift_accepted',
@@ -44,26 +63,12 @@ export function buildOpsEventCopy(event, c = {}) {
         body: `Finance: ${c.note || 'please review and resubmit'} (${c.businessDate || 'today'}).`,
         tag: `shift-rejected-${c.closeId}`,
       }
-    case 'payroll_confirmed':
-      return {
-        kind: 'payroll_confirmed',
-        title: 'Pay posted',
-        body: `${c.runKind === 'fixed' ? 'Salary' : 'Floor pay'} · ${c.periodStart || ''} to ${c.periodEnd || ''}. Tap to see your payslip.`,
-        tag: `payroll-${c.runId}`,
-      }
     case 'cash_advance_submitted':
       return {
         kind: 'cash_advance_submitted',
         title: 'Cash advance request',
-        body: `${c.employee || 'Employee'} · ${pesos(c.amountMinor)} @ ${c.branchName || 'branch'}`,
+        body: `${c.employee || 'Employee'} · ${pesos(c.amountMinor)} @ ${c.branchName || 'branch'}. Release it on today's Daily Sheet.`,
         tag: `ca-req-${c.submissionId}`,
-      }
-    case 'cash_advance_resolved':
-      return {
-        kind: 'cash_advance_resolved',
-        title: c.approved ? 'Cash advance approved' : 'Cash advance declined',
-        body: `${pesos(c.amountMinor)} · ${c.approved ? 'Approved — it will be deducted from payroll.' : 'Declined by finance.'}`,
-        tag: `ca-done-${c.submissionId}`,
       }
     case 'inquiry':
       return {
@@ -139,16 +144,32 @@ const LOADERS = {
     }
   },
 
-  async payroll_confirmed(db, id, actor) {
-    if (!canRunPayroll(actor)) return deny
-    const { data: run } = await db.from('payroll_runs').select('id, run_kind, period_start, period_end, status, confirmed_at').eq('id', id).maybeSingle()
-    if (!run) return gone
-    if (run.status !== 'confirmed' || !fresh(run.confirmed_at)) return deny
-    const { data: lines, error } = await db.from('payroll_run_lines').select('staff_id').eq('run_id', id)
-    if (error) throw error
+  async sheet_submitted(db, id, actor) {
+    if (!canEditDailySheet(actor)) return deny
+    const { data: sheet } = await db.from('daily_sheets').select('id, branch, business_date, status, totals, submitted_by, submitted_at').eq('id', id).maybeSingle()
+    if (!sheet) return gone
+    if (sheet.submitted_by !== actor.id || sheet.status !== 'submitted' || !fresh(sheet.submitted_at)) return deny
     return {
-      rule: { ...NOTIFY_EVENTS.payroll_confirmed, ids: [...new Set((lines || []).map((l) => l.staff_id))], excludeId: actor.id },
-      ctx: { runId: id, runKind: run.run_kind, periodStart: run.period_start, periodEnd: run.period_end },
+      rule: { ...NOTIFY_EVENTS.sheet_submitted, urls: [`/operations/finance?tab=sheets&sheet=${id}`], branch: sheet.branch, excludeId: actor.id },
+      ctx: {
+        sheetId: id,
+        branchName: await branchName(db, sheet.branch),
+        businessDate: sheet.business_date,
+        submitter: actor.full_name,
+        netProfitMinor: sheet.totals?.netProfitMinor,
+        overShortMinor: sheet.totals?.overShortMinor,
+      },
+    }
+  },
+
+  async sheet_reviewed(db, id, actor) {
+    if (!canReviewDailySheet(actor)) return deny
+    const { data: sheet } = await db.from('daily_sheets').select('id, branch, business_date, status, review_note, submitted_by, reviewed_by, reviewed_at').eq('id', id).maybeSingle()
+    if (!sheet) return gone
+    if (!['approved', 'returned'].includes(sheet.status) || sheet.reviewed_by !== actor.id || !fresh(sheet.reviewed_at)) return deny
+    return {
+      rule: { ...NOTIFY_EVENTS.sheet_reviewed, urls: [`/operations/pos?tab=sheet&date=${sheet.business_date}`], ids: [sheet.submitted_by], excludeId: actor.id },
+      ctx: { sheetId: id, approved: sheet.status === 'approved', note: sheet.review_note, branchName: await branchName(db, sheet.branch), businessDate: sheet.business_date },
     }
   },
 
@@ -161,18 +182,6 @@ const LOADERS = {
     return {
       rule: { ...NOTIFY_EVENTS.cash_advance_submitted, branch, excludeId: actor.id },
       ctx: { submissionId: id, employee: p.employee_name || actor.full_name, amountMinor: Math.round(Number(p.amount || 0) * 100), branchName: await branchName(db, branch) },
-    }
-  },
-
-  async cash_advance_resolved(db, id, actor) {
-    if (!canRunPayroll(actor)) return deny
-    const { data: sub } = await db.from('ops_form_submissions').select('id, payload, status, created_by, ops_forms!inner(kind)').eq('id', id).maybeSingle()
-    if (!sub || sub.ops_forms?.kind !== 'cash_advance') return gone
-    if (!['resolved', 'archived'].includes(sub.status)) return deny
-    const p = sub.payload || {}
-    return {
-      rule: { ...NOTIFY_EVENTS.cash_advance_resolved, ids: [p.staff_id || sub.created_by], excludeId: actor.id },
-      ctx: { submissionId: id, approved: sub.status === 'resolved', amountMinor: Math.round(Number(p.amount || 0) * 100) },
     }
   },
 }

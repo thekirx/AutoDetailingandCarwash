@@ -7,10 +7,8 @@ import {
   POS_SHELL_TABS,
   POS_SETTINGS_TAB,
   POS_WORKFLOW_STEPS,
-  buildPosWashPoolPreview,
   posVisibleShellTabs,
   resolvePosShellTab,
-  resolvePosLandingTab,
   summarizePendingHandoffs,
   summarizeTodayPos,
 } from '../src/lib/posInsights.js'
@@ -47,23 +45,16 @@ describe('posInsights', () => {
     assert.equal(resolvePosShellTab('settings', { canSettings: true }), 'settings')
   })
 
-  it('lands cashiers on Pay queue when pending and no explicit tab', () => {
-    assert.equal(resolvePosLandingTab(null, { pendingCount: 2 }), 'pending')
-    assert.equal(resolvePosLandingTab('', { pendingCount: 2 }), 'pending')
-    assert.equal(resolvePosLandingTab('checkout', { pendingCount: 2 }), 'checkout')
-    assert.equal(resolvePosLandingTab(null, { pendingCount: 0 }), 'checkout')
+  it('sends old Pay queue links to the combined checkout page', () => {
+    assert.equal(resolvePosShellTab('pending'), 'checkout')
+    assert.equal(resolvePosShellTab(null), 'checkout')
   })
 
-  it('builds wash pool preview from car-wash sales and attendance', () => {
-    const preview = buildPosWashPoolPreview({
-      carWashMinor: 100000,
-      washPoolPct: 35,
-      attendanceRows: [{ status: 'present' }, { status: 'late' }],
-    })
-    assert.equal(preview.poolMinor, 35000)
-    assert.equal(preview.onSiteCount, 2)
-    assert.equal(preview.presentCount, 1)
-    assert.equal(preview.lateCount, 1)
+  it('sends old Expenses links to the Daily sheet, hidden for roles that cannot fill it', () => {
+    assert.deepEqual([...POS_SHELL_TABS], ['checkout', 'sheet', 'dashboard'])
+    assert.equal(resolvePosShellTab('expenses'), 'sheet')
+    assert.equal(resolvePosShellTab('sheet', { canSheet: false }), 'checkout')
+    assert.deepEqual(posVisibleShellTabs({ canSheet: false }), ['checkout', 'dashboard'])
   })
 
   it('ships workflow guide steps', () => {
@@ -73,11 +64,13 @@ describe('posInsights', () => {
 })
 
 describe('POS redesign seams', () => {
-  it('PosPage embeds settings tab, guide, and salary preview', () => {
+  it('PosPage embeds settings tab, guide, Daily sheet and Today panels', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
     assert.match(pos, /PosGuideCard/)
     assert.match(pos, /PosSettingsPanel/)
-    assert.match(pos, /PosSalaryPreviewCard/)
+    assert.match(pos, /<DailySheetPanel/)
+    assert.match(pos, /<PosTodayPanel/)
+    assert.doesNotMatch(pos, /ShiftCloseWizard|End of shift|PosSalaryPreviewCard/)
     assert.match(pos, /POS_SETTINGS_TAB/)
     assert.match(pos, /OpsPageShell/)
     assert.match(pos, /hakum-pos/)

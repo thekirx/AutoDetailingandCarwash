@@ -131,12 +131,7 @@ describe('pending floor payroll from shift closes', () => {
     assert.equal(payload.run_kind, 'floor')
   })
 
-  it('dashboard and migration wire pending floor accumulation', () => {
-    const page = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
-    assert.match(page, /buildPendingFloorPayrollQueue/)
-    assert.match(page, /Pending floor pay/)
-    assert.match(page, /startAccumulatedFloorPay/)
-    assert.match(page, /floorConfirmBlockedByPendingCloses/)
+  it('migration and Finance shift-close history keep floor coverage', () => {
     const mig = readFileSync(
       join(root, 'supabase/migrations/20260821170000_payroll_run_kind_pending_floor.sql'),
       'utf8',

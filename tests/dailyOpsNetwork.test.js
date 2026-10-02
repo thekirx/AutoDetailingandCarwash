@@ -518,9 +518,9 @@ describe('Principal QA — close → Finance accept → payroll → books (both 
     assert.equal(imusPl.net, 875_000)
   })
 
-  it('BA closes; SA payroll+finance; investor cannot open queue or POS', () => {
+  it('BA closes; SA finance; investor cannot open queue or POS', () => {
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'pos'), true)
-    assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'payroll'), true)
+    assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'payroll'), false)
     assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'finance'), true)
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'queue'), false)
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'pos'), false)
@@ -528,16 +528,14 @@ describe('Principal QA — close → Finance accept → payroll → books (both 
 })
 
 describe('Principal QA — wiring scan includes booking assign + geo clock', () => {
-  it('crew clock uses geo time-in; bookings assign staff; POS submits close', () => {
+  it('crew clock uses geo time-in; bookings assign staff; POS submits the Daily Sheet', () => {
     assert.match(read('src/pages/crew/CrewAttendancePanels.jsx'), /geoTimeIn|geofence/)
     assert.match(read('src/pages/BookingBoardPage.jsx'), /assignStaff/)
-    assert.match(read('src/pages/PosPage.jsx'), /submit_shift_close/)
-    assert.match(read('src/pages/finance/FinanceShiftCloseTab.jsx'), /review_shift_close/)
-    assert.match(read('src/pages/PayrollPage.jsx'), /run_payroll/)
-    assert.match(read('src/pages/PayrollPage.jsx'), /checked_in_at/)
-    assert.match(read('src/pages/PayrollPage.jsx'), /attendanceRowForPayroll/)
+    assert.match(read('src/pages/PosPage.jsx'), /DailySheetPanel/)
+    assert.match(read('src/lib/dailySheetApi.js'), /submit_daily_sheet/)
+    assert.match(read('src/lib/dailySheetApi.js'), /review_daily_sheet/)
+    assert.match(read('src/lib/dailySheet.js'), /buildPayrollPreview/)
     assert.match(read('src/lib/payroll.js'), /applyCashAdvanceDeductions/)
-    assert.match(read('src/pages/PayrollPage.jsx'), /indexBranchOperatingHours|hoursForAttendanceDay/)
     assert.match(read('src/lib/compensation.js'), /checked_in_at/)
   })
 })

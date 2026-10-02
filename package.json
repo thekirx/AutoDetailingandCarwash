@@ -17,7 +17,6 @@
     "preview": "vite preview",
     "e2e:newrequest": "node scripts/e2e-newrequest.mjs",
     "e2e:integrity": "node scripts/e2e-data-integrity.mjs",
-    "e2e:payroll": "node scripts/e2e-payroll.mjs",
     "e2e:request": "node scripts/e2e-request-brief.mjs",
     "e2e:cutover": "node scripts/e2e-ops-cutover.mjs",
     "e2e:shift-close-money": "node scripts/e2e-shift-close-money.mjs",

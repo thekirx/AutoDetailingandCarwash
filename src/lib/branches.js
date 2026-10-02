@@ -127,4 +127,4 @@ export function branchNameMap(rows = []) {
   return map
 }
 
-export { requireBranchSlug, branchSlugsForOwnPay } from './branchScope.js'
+export { requireBranchSlug } from './branchScope.js'

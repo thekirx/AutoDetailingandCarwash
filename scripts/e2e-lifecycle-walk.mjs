@@ -185,25 +185,25 @@ try {
   if (!(await opsLogin(page, boss.email, boss.password))) {
     fail('boss.login', page.url())
   } else {
-    const financeUrl = `${base}/operations/finance?tab=overview&period=custom&from=2026-08-01&to=2026-08-31`
+    const financeUrl = `${base}/operations/finance?tab=sales&period=custom&from=2026-08-01&to=2026-08-31`
     await page.goto(financeUrl, { waitUntil: 'networkidle2', timeout: 60000 }).catch(() => null)
-    await page.waitForFunction(() => /Paid by kind|No paid lines/i.test(document.body.innerText), { timeout: 30000 }).catch(() => null)
+    await page.waitForFunction(() => /By service family/i.test(document.body.innerText), { timeout: 30000 }).catch(() => null)
     await new Promise((r) => setTimeout(r, 500))
     const fin = await page.evaluate(() => document.body.innerText)
     writeFileSync(join(outDir, 'finance.txt'), fin)
-    const augustService = fin.includes('₱2,850') && /Paid by kind[\s\S]*Services[\s\S]*₱2,850/.test(fin)
-    if (augustService) pass('finance.paid_by_kind', 'August window shows Services ₱2,850, matching paid POS')
-    else fail('finance.paid_by_kind', fin.slice(fin.indexOf('Paid by kind'), fin.indexOf('Paid by kind') + 240))
+    const augustService = /By service family[\s\S]*2,850/.test(fin)
+    if (augustService) pass('finance.by_service_family', 'August window shows 2,850 by service family, matching paid POS')
+    else fail('finance.by_service_family', fin.slice(fin.indexOf('By service family'), fin.indexOf('By service family') + 240))
     await page.screenshot({ path: join(outDir, '06-finance-august.png'), fullPage: false, timeout: 15000 })
 
-    await page.goto(`${base}/operations/payroll?tab=run`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.goto(`${base}/operations/finance?tab=sheets`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await page
-      .waitForFunction(() => /Confirm writes payroll|End of shift does not pay/i.test(document.body.innerText), { timeout: 30000 })
+      .waitForFunction(() => /One sheet per branch per day/i.test(document.body.innerText), { timeout: 30000 })
       .catch(() => null)
-    const pay = await textOf(page)
-    if (/Confirm writes payroll|End of shift does not pay/i.test(pay)) pass('payroll.run', 'confirm copy visible')
-    else fail('payroll.run', pay.slice(0, 240))
-    await shot(page, '07-payroll-run')
+    const sheets = await textOf(page)
+    if (/One sheet per branch per day/i.test(sheets)) pass('finance.daily_sheets', 'inbox visible')
+    else fail('finance.daily_sheets', sheets.slice(0, 240))
+    await shot(page, '07-daily-sheets')
   }
 } catch (err) {
   fail('fatal', err?.message || String(err))

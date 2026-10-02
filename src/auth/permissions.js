@@ -232,6 +232,11 @@ export function canAccessPos(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+/** Branch Admin rings up at list price — only SA / ASA may reprice a sale. */
+export function canDiscountPosSale(profile) {
+  return canAccessPos(profile) && !isBranchAdmin(profile)
+}
+
 export function canAccessFinance(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'finance_view')
@@ -264,31 +269,6 @@ export function canEditFinanceBooks(profile) {
 export function canWritePosSettings(profile) {
   if (isSuperAdmin(profile)) return true
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'finance_write')
-}
-
-/** SA + ASA with finance_view: open the payroll register. Branch Admin runs Finance, not payroll. */
-export function canAccessPayroll(profile) {
-  if (isSuperAdmin(profile)) return true
-  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'finance_view')
-}
-
-/** SA + ASA with finance_write: confirm a payroll run. */
-export function canRunPayroll(profile) {
-  if (isSuperAdmin(profile)) return true
-  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'finance_write')
-}
-
-/** Approve / decline cash advances on Payroll (not POS). Same gate as run payroll. */
-export function canApproveCashAdvance(profile) {
-  return canRunPayroll(profile)
-}
-
-/** Employees see their own payouts. Super Admin uses Payroll instead. */
-export function canViewOwnPay(profile) {
-  if (!profile?.role) return false
-  if (isSuperAdmin(profile)) return false
-  if (profile.role === ROLES.INVESTOR) return false
-  return true
 }
 
 export function canAccessReports(profile) {
@@ -600,6 +580,19 @@ export function canViewQueueOperations(profile) {
   return has(profile, QUEUE_VIEWER_ROLES)
 }
 
+/** Floor Board (/operations/dashboard): queue viewers except Team Lead, who works from Queue. */
+export function canAccessFloorBoard(profile) {
+  return canViewQueueOperations(profile) && profile?.role !== ROLES.TEAM_LEAD
+}
+
+const TEAM_LEAD_BOOKING_VIEWS = Object.freeze(['board', 'calendar'])
+
+/** Bookings view tabs a role may switch between. */
+export function allowedBookingViews(profile, views) {
+  if (profile?.role !== ROLES.TEAM_LEAD) return views
+  return views.filter((view) => TEAM_LEAD_BOOKING_VIEWS.includes(view.id))
+}
+
 /** Failed-QA visibility follows the Floor Board observer scope; correction actions remain separately gated. */
 export function canViewRedoLane(profile) {
   if (has(profile, [ROLES.TEAM_LEAD, ROLES.STAFF])) return true
@@ -744,7 +737,6 @@ export function getOperationsNav(profile) {
     return [
       nav('Calendar', '/operations/planning?tab=calendar', 'Columns3', 'work'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
-      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
@@ -753,7 +745,6 @@ export function getOperationsNav(profile) {
       nav('Bookings', '/operations/bookings', 'Kanban', 'floor'),
       nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
-      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
@@ -764,7 +755,6 @@ export function getOperationsNav(profile) {
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
       nav('Notifications', '/operations/notifications', 'Bell', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
-      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
@@ -772,7 +762,6 @@ export function getOperationsNav(profile) {
     return [
       nav('Bookings', '/operations/bookings', 'Kanban', 'floor'),
       nav('History', '/operations/history', 'History', 'work'),
-      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
@@ -788,7 +777,6 @@ export function getOperationsNav(profile) {
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
       nav('Ops Lab', '/operations/roadmap', 'Map', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
-      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
       nav('Audit', '/operations/audit', 'ScrollText', 'company'),
     ]
   }
@@ -804,7 +792,6 @@ export function getOperationsNav(profile) {
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
       nav('Ops Lab', '/operations/roadmap', 'Map', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
-      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
       nav('Finance', '/operations/finance', 'Wallet', 'books'),
       nav('Audit', '/operations/audit', 'ScrollText', 'company'),
     ]
@@ -818,7 +805,6 @@ export function getOperationsNav(profile) {
       nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
-      nav('My pay', '/operations/my-pay', 'Banknote', 'books'),
     ]
   }
 
@@ -828,11 +814,9 @@ export function getOperationsNav(profile) {
       ? 'Floor Board'
       : isAdmin(profile)
         ? 'Queue View'
-        : profile?.role === ROLES.TEAM_LEAD
-          ? 'Floor'
-          : 'Dashboard'
+        : 'Dashboard'
 
-  if (canViewQueueOperations(profile)) {
+  if (canAccessFloorBoard(profile)) {
     items.push(nav(floorBoardLabel, '/operations/dashboard', 'Gauge', 'floor'))
   }
   if (canAccessQueuePage(profile)) {
@@ -872,13 +856,6 @@ export function getOperationsNav(profile) {
   } else if (canAccessReports(profile)) {
     items.push(nav('Finance', '/operations/finance?tab=reports', 'Wallet', 'books'))
   }
-  if (canAccessPayroll(profile)) {
-    items.push(nav('Payroll', '/operations/payroll', 'Banknote', 'books'))
-  }
-  if (canViewOwnPay(profile)) {
-    items.push(nav('My pay', '/operations/my-pay', 'Banknote', 'books'))
-  }
-
   if (canViewPlanning(profile)) {
     items.push(nav('Planner', '/operations/planning', 'Columns3', 'work'))
   }
@@ -929,7 +906,7 @@ export function getTeamLeadDock(profile) {
   const dock = []
   if (canAccessQueuePage(profile)) dock.push({ label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true })
   if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
-  if (canQueue) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
+  if (canAccessFloorBoard(profile)) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
   if (canQueue) dock.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
   if (canAccessBookingBoard(profile)) dock.push({ label: 'Bookings', to: '/operations/bookings', icon: 'Kanban' })
   return dock.slice(0, 5)
@@ -941,7 +918,6 @@ export function getTeamLeadMore(profile) {
   if (canViewQueueOperations(profile)) more.push({ label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' })
   if (canViewAssignedTasks(profile)) more.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
   if (canViewPlanning(profile)) more.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
-  if (canViewOwnPay(profile)) more.push({ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' })
   return more
 }
 
@@ -970,10 +946,8 @@ export function getSalesDock(profile) {
   ]
 }
 
-export function getSalesMore(profile) {
-  if (!isSalesRole(profile)) return []
-  if (!canViewOwnPay(profile)) return []
-  return [{ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' }]
+export function getSalesMore() {
+  return []
 }
 
 /** Crew thumb dock — attendance primary. */
@@ -982,7 +956,6 @@ export function getStaffDock(profile) {
   return [
     { label: 'Attendance', to: '/operations/attendance', icon: 'Clock', primary: true, end: true },
     { label: 'Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
-    { label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' },
     { label: 'Forms', to: '/operations/planning?tab=forms', icon: 'Columns3' },
   ]
 }
@@ -1010,7 +983,6 @@ export function getMarketingMore(profile) {
   if (profile?.role !== ROLES.MARKETING) return []
   const more = []
   if (canAccessHistory(profile)) more.push({ label: 'History', to: '/operations/history', icon: 'History' })
-  if (canViewOwnPay(profile)) more.push({ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' })
   return more
 }
 
@@ -1023,10 +995,8 @@ export function getVideoEditorDock(profile) {
   ]
 }
 
-export function getVideoEditorMore(profile) {
-  if (profile?.role !== ROLES.VIDEO_EDITOR) return []
-  if (!canViewOwnPay(profile)) return []
-  return [{ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' }]
+export function getVideoEditorMore() {
+  return []
 }
 
 /** Detailer — detailing pipeline on Bookings + attendance. */
@@ -1039,10 +1009,8 @@ export function getDetailerDock(profile) {
   ]
 }
 
-export function getDetailerMore(profile) {
-  if (profile?.role !== ROLES.DETAILER) return []
-  if (!canViewOwnPay(profile)) return []
-  return [{ label: 'Pay', to: '/operations/my-pay', icon: 'Banknote' }]
+export function getDetailerMore() {
+  return []
 }
 
 export function redirectForRole(role) {
@@ -1075,7 +1043,6 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'planning',
   'roadmap',
   'history',
-  'my-pay',
   'audit',
 ])
 
@@ -1091,7 +1058,7 @@ export function allowRoute(profile, key) {
     audit: canAccessAudit,
     'data-center': canAccessDataCenter,
     inquiries: canAccessInquiries,
-    dashboard: canViewQueueOperations,
+    dashboard: canAccessFloorBoard,
     queue: canAccessQueuePage,
     'queue-new': canEditQueueOperations,
     crew: () => false,
@@ -1101,8 +1068,6 @@ export function allowRoute(profile, key) {
     pos: canAccessPos,
     inventory: canAccessInventory,
     finance: canOpenFinanceHub,
-    payroll: canAccessPayroll,
-    'my-pay': canViewOwnPay,
     crm: canAccessCrm,
     bookings: canAccessBookingBoard,
     reviews: canAccessReviews,

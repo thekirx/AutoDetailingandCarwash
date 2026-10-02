@@ -70,7 +70,7 @@ async function landsOn(page, base, url) {
 export async function runPushAudit({ base, db, sessions, userIds, outDir, desktopShot, clearShown, browserId }) {
   const byPersona = Object.fromEntries(sessions.map((s) => [s.persona, s]))
   const otherTl = { id: (await db.auth.admin.listUsers({ page: 1, perPage: 1000 })).data.users.find((u) => u.email === OTHER_BRANCH_TL)?.id }
-  const seeded = { bookings: [], closes: [], runs: [], subs: [], inquiries: [], cards: [], tags: [] }
+  const seeded = { bookings: [], closes: [], subs: [], inquiries: [], cards: [], tags: [] }
   const rows = []
   const tokens = {}
   const tok = async (p) => (tokens[p] ||= await tokenFor(p))
@@ -78,7 +78,6 @@ export async function runPushAudit({ base, db, sessions, userIds, outDir, deskto
   const bookingId = randomUUID()
   const closeA = randomUUID()
   const closeR = randomUUID()
-  const runId = randomUUID()
   const caId = randomUUID()
   const reviewId = randomUUID()
   const complaintId = randomUUID()
@@ -134,9 +133,9 @@ export async function runPushAudit({ base, db, sessions, userIds, outDir, deskto
       },
     },
     {
-      name: 'ASA accepts end of shift → SA floor pay (Payroll) + BA "accepted" (POS)',
+      name: 'ASA accepts end of shift → SA floor pay (Daily sheets) + BA "accepted" (POS)',
       tag: new RegExp(`^(shift_close:|shift-accepted-)${closeA}$`),
-      expect: { boss: '/operations/payroll', admin: '/operations/pos' },
+      expect: { boss: '/operations/finance?tab=sheets', admin: '/operations/pos' },
       async fire() {
         await db.from('shift_close_reports').update({ status: 'accepted', reviewed_by: userIds.asa, reviewed_at: new Date().toISOString() }).eq('id', closeA)
         return api(base, '/api/notify-shift-close', (await tok('asa')).token, { branch: 'bacoor', business_date: '2000-01-01', close_id: closeA })
@@ -154,38 +153,14 @@ export async function runPushAudit({ base, db, sessions, userIds, outDir, deskto
       },
     },
     {
-      name: 'SA confirms payroll → each payee (crew1, TL, detailer) on My pay',
-      tag: new RegExp(`^payroll-${runId}$`),
-      expect: { crew1: '/operations/my-pay', tl: '/operations/my-pay', detailer: '/operations/my-pay' },
-      async fire() {
-        const now = new Date().toISOString()
-        const { error } = await db.from('payroll_runs').insert({ id: runId, branch: 'bacoor', frequency: 'custom', period_start: '2000-01-01', period_end: '2000-01-02', status: 'confirmed', run_kind: 'floor', confirmed_at: now, created_by: userIds.boss, notes: 'push audit' })
-        if (error) throw new Error(`seed run: ${error.message}`)
-        seeded.runs.push(runId)
-        const lines = ['crew1', 'tl', 'detailer'].map((p) => ({ run_id: runId, staff_id: userIds[p], branch: 'bacoor', kind: 'adjustment', amount_minor: 100 }))
-        const { error: lErr } = await db.from('payroll_run_lines').insert(lines)
-        if (lErr) throw new Error(`seed lines: ${lErr.message}`)
-        return api(base, '/api/notify-ops-event', (await tok('boss')).token, { event: 'payroll_confirmed', id: runId })
-      },
-    },
-    {
-      name: 'crew1 requests cash advance → SA (ASA has no finance_write) on Payroll · cash advance',
+      name: 'crew1 requests cash advance → Branch Admin on POS · Daily sheet',
       tag: new RegExp(`^ca-req-${caId}$`),
-      expect: { boss: '/operations/payroll?tab=cash-advance' },
+      expect: { admin: '/operations/pos?tab=sheet' },
       async fire() {
         const { error } = await db.from('ops_form_submissions').insert({ id: caId, form_id: CA_FORM, created_by: userIds.crew1, status: 'new', source: 'staff', payload: { staff_id: userIds.crew1, employee_name: 'Push Audit Crew', amount: 500, branch: 'bacoor', reason: 'push audit' } })
         if (error) throw new Error(`seed CA: ${error.message}`)
         seeded.subs.push(caId)
         return api(base, '/api/notify-ops-event', (await tok('crew1')).token, { event: 'cash_advance_submitted', id: caId })
-      },
-    },
-    {
-      name: 'SA approves cash advance → crew1 on My pay',
-      tag: new RegExp(`^ca-done-${caId}$`),
-      expect: { crew1: '/operations/my-pay' },
-      async fire() {
-        await db.from('ops_form_submissions').update({ status: 'resolved' }).eq('id', caId)
-        return api(base, '/api/notify-ops-event', (await tok('boss')).token, { event: 'cash_advance_resolved', id: caId })
       },
     },
     {
@@ -313,8 +288,6 @@ export async function runPushAudit({ base, db, sessions, userIds, outDir, deskto
     await del('queue_assignments', 'booking_id', seeded.bookings)
     await del('bookings', 'id', seeded.bookings)
     await del('shift_close_reports', 'id', seeded.closes)
-    await del('payroll_run_lines', 'run_id', seeded.runs)
-    await del('payroll_runs', 'id', seeded.runs)
     await del('ops_form_submissions', 'id', seeded.subs)
     await del('partnership_inquiries', 'id', seeded.inquiries)
     await del('plan_card_assignees', 'card_id', seeded.cards)

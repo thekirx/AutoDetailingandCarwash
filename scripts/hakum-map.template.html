@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HAKUM Workflow &amp; Database</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  @font-face { font-family: "Benzin"; src: url("../../public/fonts/benzin-semibold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+  @font-face { font-family: "Benzin"; src: url("../../public/fonts/benzin-extrabold.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+  @font-face { font-family: "Gilmer"; src: url("../../public/fonts/gilmer-regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Gilmer"; src: url("../../public/fonts/gilmer-medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+  @font-face { font-family: "Gilmer"; src: url("../../public/fonts/gilmer-bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+  :root {
+    --bg: #020a31; --card: rgba(10, 26, 92, 0.42); --card-solid: #0a1a5c;
+    --line: rgba(160, 180, 255, 0.14); --line-2: rgba(160, 180, 255, 0.3);
+    --ink: #f1f1f1; --muted: #b3bde2; --dim: #8490bd;
+    --brand: #052699; --brand-hi: #4d7bff; --amber: #fbbf24;
+    --display: "Benzin", "Arial Black", sans-serif;
+    --body: "Gilmer", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100dvh; color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+    background:
+      radial-gradient(1100px 560px at 8% -12%, rgba(5, 38, 153, 0.6), transparent 62%),
+      radial-gradient(900px 480px at 100% -8%, rgba(77, 123, 255, 0.16), transparent 60%),
+      var(--bg);
+  }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+
+  /* Header */
+  .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 48px; align-items: end; padding: 28px clamp(16px, 4vw, 48px) 24px; }
+  .brand { display: block; width: 120px; height: 72px; margin: -12px 0 14px -14px; object-fit: cover; }
+  body[data-view="db"] .top, body[data-view="code"] .top { padding-block: 16px; }
+  body[data-view="db"] :is(.brand, .eyebrow, .lede, .stats), body[data-view="code"] :is(.brand, .eyebrow, .lede, .stats) { display: none; }
+  body[data-view="db"] h1, body[data-view="code"] h1 { font-size: clamp(20px, 2.4vw, 28px); }
+  .eyebrow { margin: 0 0 12px; font-weight: 700; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--brand-hi); }
+  h1 { margin: 0; font: 800 clamp(30px, 4.6vw, 60px)/0.92 var(--display); letter-spacing: -0.025em; text-transform: uppercase; text-wrap: balance; }
+  h1 .amp { color: var(--brand-hi); }
+  .lede { margin: 16px 0 0; max-width: 58ch; color: var(--muted); font-size: 16px; }
+  .stats { display: grid; grid-template-columns: repeat(5, auto); margin: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--card); overflow: hidden; }
+  .stats > div { padding: 14px 20px; }
+  .stats > div + div { border-left: 1px solid var(--line); }
+  .stats dt { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
+  .stats dd { margin: 6px 0 0; font: 600 26px/1 var(--display); font-variant-numeric: tabular-nums; }
+
+  /* Tabs */
+  .tabs { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px clamp(16px, 4vw, 48px); background: rgba(2, 10, 49, 0.86); backdrop-filter: blur(10px); border-block: 1px solid var(--line); }
+  .tab { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 18px; border: 1px solid var(--line-2); border-radius: 999px; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease; }
+  .tab:hover { color: var(--ink); border-color: var(--brand-hi); }
+  .tab[aria-selected="true"] { background: var(--brand); border-color: var(--brand-hi); color: #fff; }
+  .tab .n { padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  main > section { padding: 24px clamp(16px, 4vw, 48px) 48px; }
+  h2 { margin: 40px 0 6px; font: 600 20px/1.1 var(--display); text-transform: uppercase; letter-spacing: -0.01em; }
+  .sub { margin: 0 0 16px; color: var(--muted); }
+
+  /* Workflow */
+  .wf-card { border: 1px solid var(--line); border-radius: 20px; background: rgba(6, 17, 69, 0.6); padding: 16px; overflow-x: auto; }
+  .wf-card svg { display: block; min-width: 1100px; width: 100%; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 14px 2px 0; color: var(--muted); font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend svg { flex: none; }
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 16px; }
+  .note { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: var(--card); }
+  .note h3 { margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
+  .note p { margin: 0; }
+  .areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .area { display: flex; flex-direction: column; gap: 14px; padding: 16px; border: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: 14px; background: var(--card); }
+  .area h3 { margin: 0; font-size: 15px; font-weight: 700; }
+  .area dl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 0; }
+  .area dt { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+  .area dd { margin: 2px 0 0; font: 600 18px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+  .btn { min-height: 40px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 10px; background: transparent; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease; }
+  .btn:hover { background: rgba(77, 123, 255, 0.16); border-color: var(--brand-hi); }
+
+  /* Explorers */
+  .explorer { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; height: calc(100dvh - 190px); min-height: 540px; }
+  #view-db, #view-code { padding-bottom: 20px; }
+  .canvas-wrap { position: relative; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: radial-gradient(900px 600px at 50% 40%, rgba(5, 38, 153, 0.28), transparent 70%), #030c38; }
+  .canvas { position: absolute; inset: 0; }
+  .zoom { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
+  .zoom button { width: 44px; height: 44px; border: 1px solid var(--line-2); border-radius: 12px; background: rgba(6, 17, 69, 0.9); font-size: 18px; font-weight: 700; cursor: pointer; }
+  .zoom button:hover { border-color: var(--brand-hi); }
+  .modes { position: absolute; left: 12px; top: 12px; display: flex; gap: 4px; padding: 4px; border: 1px solid var(--line-2); border-radius: 999px; background: rgba(6, 17, 69, 0.92); }
+  .mode { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
+  .mode:hover { color: var(--ink); }
+  .mode[aria-pressed="true"] { background: var(--brand); color: #fff; }
+  .mode .n { padding: 1px 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .shapes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 14px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 13px; }
+  .shapes li { display: flex; align-items: center; gap: 8px; }
+  .canvas-hint { position: absolute; left: 14px; bottom: 18px; margin: 0; padding: 6px 10px; border-radius: 999px; background: rgba(6, 17, 69, 0.85); border: 1px solid var(--line); color: var(--muted); font-size: 12px; pointer-events: none; }
+  .panel { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--line); border-radius: 20px; background: rgba(6, 17, 69, 0.78); overflow: hidden; }
+  .search { position: relative; padding: 14px; border-bottom: 1px solid var(--line); }
+  .search label { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .search input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg); font-size: 16px; }
+  .results { position: absolute; left: 14px; right: 14px; top: calc(100% - 8px); z-index: 5; max-height: 280px; overflow: auto; margin: 0; padding: 6px; list-style: none; border: 1px solid var(--line-2); border-radius: 12px; background: #06124a; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--line-2); border-radius: 999px; background: transparent; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .chip[aria-pressed="false"] { opacity: 0.45; }
+  .chip[aria-pressed="false"] span { text-decoration: line-through; }
+  .info { flex: 1; overflow: auto; padding: 16px; }
+  .info .empty { color: var(--dim); }
+  .info h3 { margin: 8px 0 2px; font: 600 17px/1.3 var(--mono); overflow-wrap: anywhere; }
+  .info .path { margin: 0 0 14px; color: var(--dim); font: 12px/1.4 var(--mono); overflow-wrap: anywhere; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 12px; font-weight: 600; }
+  .badge i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .info h4 { margin: 16px 0 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  .list button, .results button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 4px 8px; border: 0; border-radius: 8px; background: transparent; text-align: left; font-size: 13px; cursor: pointer; }
+  .list button:hover, .results button:hover { background: rgba(77, 123, 255, 0.16); }
+  .list i, .results i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .list span, .results span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list small, .results small { margin-left: auto; color: var(--dim); font-size: 11px; white-space: nowrap; }
+  .more { margin: 4px 8px 0; color: var(--dim); font-size: 12px; }
+
+  footer { padding: 0 clamp(16px, 4vw, 48px) 32px; color: var(--dim); font-size: 12px; }
+  footer code { font-family: var(--mono); }
+
+  @media (max-width: 1100px) {
+    .top { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  }
+  @media (max-width: 900px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stats > div + div { border-left: 0; }
+    .stats > div { border-top: 1px solid var(--line); }
+    .explorer { grid-template-columns: 1fr; height: auto; }
+    .canvas-wrap { height: 64vh; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <img class="brand" src="../../public/branding/hakum-lw-ow.png" alt="Hakum Auto Care">
+    <p class="eyebrow">System overview</p>
+    <h1>Hakum Workflow <span class="amp">&amp;</span> Database</h1>
+    <p class="lede">How a shop day moves through the Hakum app, from booking to payroll, and where every record is stored.</p>
+  </div>
+  <dl class="stats" id="stats"></dl>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Views">
+  <button class="tab" role="tab" id="tab-workflow" aria-controls="view-workflow" data-view="workflow">Shop-day workflow</button>
+  <button class="tab" role="tab" id="tab-db" aria-controls="view-db" data-view="db">Database <span class="n" id="n-db"></span></button>
+  <button class="tab" role="tab" id="tab-code" aria-controls="view-code" data-view="code">System map <span class="n" id="n-code"></span></button>
+</nav>
+
+<main>
+  <section id="view-workflow" role="tabpanel" aria-labelledby="tab-workflow">
+    <h2 style="margin-top:8px">One shop day, end to end</h2>
+    <p class="sub">Numbered steps are the main path a car and its money follow. Each row is who does the work.</p>
+    <div class="wf-card"><svg id="wf" role="img" aria-label="Hakum shop-day workflow"></svg></div>
+    <div class="legend" aria-label="Legend">
+      <span><svg width="34" height="10" aria-hidden="true"><line x1="0" y1="5" x2="34" y2="5" stroke="#5b8cff" stroke-width="3"/></svg>Main path</span>
+      <span><svg width="34" height="10" aria-hidden="true"><line x1="0" y1="5" x2="34" y2="5" stroke="#8ea0d8" stroke-width="2" stroke-dasharray="6 5"/></svg>Alternate route</span>
+      <span><svg width="34" height="10" aria-hidden="true"><line x1="0" y1="5" x2="34" y2="5" stroke="#fbbf24" stroke-width="2.5"/></svg>Sign-off step</span>
+      <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="7" fill="#4d7bff"/></svg>Step number</span>
+    </div>
+    <div class="notes" id="wf-notes"></div>
+
+    <h2>Business areas</h2>
+    <p class="sub">The whole app, grouped into the parts of the business it runs. Open any area to see its tables or its code.</p>
+    <div class="areas" id="areas"></div>
+  </section>
+
+  <section id="view-db" role="tabpanel" aria-labelledby="tab-db" hidden>
+    <div class="explorer" data-explorer="db">
+      <div class="canvas-wrap">
+        <div class="canvas" aria-label="Database map. Use the search box to find a table."></div>
+        <p class="canvas-hint">Scroll to zoom · drag to move · click a table</p>
+        <div class="zoom"><button type="button" data-zoom="in" aria-label="Zoom in">+</button><button type="button" data-zoom="out" aria-label="Zoom out">−</button><button type="button" data-zoom="fit" aria-label="Fit everything">⤢</button></div>
+      </div>
+      <aside class="panel" aria-label="Database details">
+        <div class="search"><label for="q-db">Find a table or server action</label><input id="q-db" type="search" placeholder="e.g. bookings, payroll" autocomplete="off"><ul class="results" hidden></ul></div>
+        <div class="chips" role="group" aria-label="Show business areas"></div>
+        <div class="info" aria-live="polite"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="view-code" role="tabpanel" aria-labelledby="tab-code" hidden>
+    <div class="explorer" data-explorer="code">
+      <div class="canvas-wrap">
+        <div class="canvas" aria-label="System map of every code file. Use the search box to find a file."></div>
+        <div class="modes" role="group" aria-label="System map detail"><button type="button" class="mode" data-mode="code" aria-pressed="true">Code files <span class="n" data-count="code"></span></button><button type="button" class="mode" data-mode="graph" aria-pressed="false">Complete graph <span class="n" data-count="graph"></span></button></div>
+        <p class="canvas-hint">Each dot is a code file · bigger = more connected</p>
+        <div class="zoom"><button type="button" data-zoom="in" aria-label="Zoom in">+</button><button type="button" data-zoom="out" aria-label="Zoom out">−</button><button type="button" data-zoom="fit" aria-label="Fit everything">⤢</button></div>
+      </div>
+      <aside class="panel" aria-label="File details">
+        <div class="search"><label for="q-code">Find a screen or file</label><input id="q-code" type="search" placeholder="e.g. PosPage, queue" autocomplete="off"><ul class="results" hidden></ul></div>
+        <div class="chips" role="group" aria-label="Show business areas"></div>
+        <div class="info" aria-live="polite"></div>
+      </aside>
+    </div>
+    <div class="explorer" data-explorer="graph" hidden>
+      <div class="canvas-wrap">
+        <div class="canvas" aria-label="Complete graphify graph. Use the search box to find any node."></div>
+        <div class="modes" role="group" aria-label="System map detail"><button type="button" class="mode" data-mode="code" aria-pressed="false">Code files <span class="n" data-count="code"></span></button><button type="button" class="mode" data-mode="graph" aria-pressed="true">Complete graph <span class="n" data-count="graph"></span></button></div>
+        <p class="canvas-hint">Every graphify node · zoom in to read labels · drag any node</p>
+        <div class="zoom"><button type="button" data-zoom="in" aria-label="Zoom in">+</button><button type="button" data-zoom="out" aria-label="Zoom out">−</button><button type="button" data-zoom="fit" aria-label="Fit everything">⤢</button></div>
+      </div>
+      <aside class="panel" aria-label="Node details">
+        <div class="search"><label for="q-graph">Find any function, file, table or doc</label><input id="q-graph" type="search" placeholder="e.g. complete_pos_sale, payroll" autocomplete="off"><ul class="results" hidden></ul></div>
+        <div class="chips" role="group" aria-label="Show business areas"></div>
+        <div class="info" aria-live="polite"></div>
+      </aside>
+    </div>
+  </section>
+</main>
+<footer id="footer"></footer>
+
+<script>
+const DATA = /*__DATA__*/null;
+const AREA = Object.fromEntries(DATA.areas.map((a) => [a.id, a]));
+DATA.graph = {
+  nodes: DATA.full.nodes.map(([label, area, type, file, loc, community, deg, x, y], id) => ({ id, label, area, type, file, loc, community, deg, x, y })),
+  edges: DATA.full.edges.map(([from, to, rels]) => ({ from, to, rels })),
+  clusters: DATA.full.clusters,
+};
+const GROUPS = new Map();
+for (const h of DATA.full.hyperedges) for (const i of h.nodes) GROUPS.set(i, [...(GROUPS.get(i) || []), h.label]);
+const HUB_DEG = [...DATA.graph.nodes].map((n) => n.deg).sort((a, b) => b - a)[150] || 0;
+const graphFont = (n) => (n.deg > HUB_DEG ? 15 : 5);
+const SHAPE = { code: 'dot', document: 'square', concept: 'diamond', rationale: 'triangle', paper: 'star', image: 'square' };
+const TYPE_LABEL = { code: 'Code', document: 'Document', concept: 'Concept', rationale: 'Decision note', paper: 'Reference', image: 'Image' };
+const MOTION = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+const fmt = (n) => n.toLocaleString('en-PH');
+const twoLines = (s) => {
+  if (s.length <= 16) return [s];
+  const words = s.split(' ');
+  let best = [s];
+  let bestLen = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const pair = [words.slice(0, i).join(' '), words.slice(i).join(' ')];
+    const len = Math.max(pair[0].length, pair[1].length);
+    if (len < bestLen) { best = pair; bestLen = len; }
+  }
+  return best;
+};
+
+/* ── Header + footer ─────────────────────────────────────── */
+const tableCount = DATA.db.nodes.filter((n) => n.type !== 'rpc').length;
+const rpcCount = DATA.db.nodes.length - tableCount;
+document.getElementById('stats').innerHTML = [
+  ['Business areas', DATA.areas.filter((a) => a.files || a.tables).length],
+  ['Code files', DATA.code.nodes.length],
+  ['Connections', DATA.code.edges.length],
+  ['Tables & views', tableCount],
+  ['Server actions', rpcCount],
+].map(([k, v]) => `<div><dt>${k}</dt><dd>${fmt(v)}</dd></div>`).join('');
+document.getElementById('n-db').textContent = fmt(DATA.db.nodes.length);
+document.getElementById('n-code').textContent = fmt(DATA.code.nodes.length);
+document.getElementById('footer').innerHTML = `Generated ${esc(DATA.generatedAt)} from the graphify code graph${DATA.commit ? ` (commit <code>${esc(DATA.commit)}</code>)` : ''} and ${fmt(DATA.migrations)} Supabase migrations. Rebuild with <code>node scripts/build-hakum-map.mjs</code>.`;
+
+/* ── Workflow swimlanes ──────────────────────────────────── */
+function renderWorkflow() {
+  const W = DATA.workflow;
+  const LW = 168, CW = 216, LH = 132, BW = 164, BH = 74, TOP = 58, BOTTOM = 46;
+  const cols = Math.max(...W.nodes.map((n) => n.col)) + 1;
+  const width = LW + cols * CW + 12;
+  const lanesH = W.lanes.length * LH;
+  const height = TOP + lanesH + BOTTOM;
+  const laneIdx = Object.fromEntries(W.lanes.map((l, i) => [l.id, i]));
+  const step = Object.fromEntries(W.mainPath.map((id, i) => [id, i + 1]));
+  const onMain = new Set(W.mainPath.slice(1).map((id, i) => `${W.mainPath[i]}>${id}`));
+  const pos = {};
+  const occupied = new Set();
+  for (const n of W.nodes) {
+    const lane = laneIdx[n.lane];
+    const x = LW + n.col * CW + (CW - BW) / 2;
+    const y = TOP + lane * LH + (LH - BH) / 2;
+    pos[n.id] = { x, y, cx: x + BW / 2, cy: y + BH / 2, lane, col: n.col };
+    occupied.add(`${lane}:${n.col}`);
+  }
+  const TYPE = { external: '#94a3b8', frontend: '#22d3ee', backend: '#6ea8ff', messagebus: '#c084fc', security: '#fbbf24', database: '#34d399' };
+  const STROKE = { main: '#5b8cff', dashed: '#8ea0d8', security: '#fbbf24', plain: '#8ea0d8' };
+  const rounded = (pts, r = 14) => pts.reduce((d, p, i) => {
+    if (i === 0) return `M${p[0]},${p[1]}`;
+    if (i === pts.length - 1) return `${d} L${p[0]},${p[1]}`;
+    const [px, py] = pts[i - 1], [nx, ny] = pts[i + 1];
+    const k1 = Math.min(r, Math.hypot(p[0] - px, p[1] - py) / 2), k2 = Math.min(r, Math.hypot(nx - p[0], ny - p[1]) / 2);
+    const a = [p[0] - Math.sign(p[0] - px) * k1, p[1] - Math.sign(p[1] - py) * k1];
+    const b = [p[0] + Math.sign(nx - p[0]) * k2, p[1] + Math.sign(ny - p[1]) * k2];
+    return `${d} L${a[0]},${a[1]} Q${p[0]},${p[1]} ${b[0]},${b[1]}`;
+  }, '');
+
+  let s = `<defs>${Object.entries(STROKE).map(([k, c]) => `<marker id="ar-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${c}"/></marker>`).join('')}</defs>`;
+
+  W.lanes.forEach((l, i) => {
+    const y = TOP + i * LH;
+    s += `<rect x="0" y="${y}" width="${width}" height="${LH}" fill="${i % 2 ? 'rgba(255,255,255,0.012)' : 'rgba(77,123,255,0.055)'}"/>`;
+    s += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="rgba(160,180,255,0.12)"/>`;
+    s += `<text x="18" y="${y + LH / 2 - 6}" fill="#8490bd" font-size="10" font-weight="700" letter-spacing="1.6">ROW ${i + 1}</text>`;
+    s += `<text x="18" y="${y + LH / 2 + 13}" fill="#f1f1f1" font-size="14" font-weight="700">${esc(l.label)}</text>`;
+  });
+  s += `<line x1="${LW - 8}" y1="${TOP}" x2="${LW - 8}" y2="${TOP + lanesH}" stroke="rgba(160,180,255,0.18)"/>`;
+
+  for (const p of W.phases) {
+    const x1 = LW + p.fromCol * CW + 8, x2 = LW + (p.toCol + 1) * CW - 8;
+    const emph = p.variant === 'emphasis';
+    s += `<rect x="${x1}" y="12" width="${x2 - x1}" height="30" rx="15" fill="${emph ? 'rgba(77,123,255,0.22)' : 'rgba(160,180,255,0.07)'}" stroke="${emph ? '#4d7bff' : 'rgba(160,180,255,0.3)'}" ${p.variant === 'dashed' ? 'stroke-dasharray="5 5"' : ''}/>`;
+    s += `<text x="${(x1 + x2) / 2}" y="31" text-anchor="middle" fill="${emph ? '#fff' : '#b3bde2'}" font-size="11" font-weight="700" letter-spacing="1.4">${esc(p.label.toUpperCase())}</text>`;
+  }
+
+  for (const g of W.groups || []) {
+    const lane = laneIdx[g.lane];
+    const x1 = LW + g.fromCol * CW + 4, x2 = LW + (g.toCol + 1) * CW - 4, y = TOP + lane * LH + 6;
+    s += `<rect x="${x1}" y="${y}" width="${x2 - x1}" height="${LH - 12}" rx="18" fill="rgba(52,211,153,0.05)" stroke="#34d399" stroke-opacity="0.55" stroke-dasharray="6 5"/>`;
+    s += `<text x="${x2 - 12}" y="${y + LH - 20}" text-anchor="end" fill="#34d399" font-size="10" font-weight="700" letter-spacing="1.4">${esc(g.label.toUpperCase())}</text>`;
+  }
+
+  const labels = [];
+  let edges = '';
+  const bottomY = TOP + lanesH + 22;
+  for (const e of W.edges) {
+    const a = pos[e.from], b = pos[e.to];
+    const kind = e.variant === 'security' ? 'security' : onMain.has(`${e.from}>${e.to}`) || e.variant === 'emphasis' ? 'main' : e.variant === 'dashed' ? 'dashed' : 'plain';
+    let d, lx, ly;
+    if (a.col === b.col) {
+      const down = a.lane < b.lane;
+      const sy = down ? a.y + BH : a.y, ey = down ? b.y : b.y + BH;
+      d = `M${a.cx},${sy} L${b.cx},${ey}`; lx = a.cx; ly = (sy + ey) / 2;
+    } else if (Math.abs(b.col - a.col) === 1) {
+      const dir = Math.sign(b.col - a.col);
+      const sx = dir > 0 ? a.x + BW : a.x, ex = dir > 0 ? b.x : b.x + BW, k = (ex - sx) / 2;
+      d = `M${sx},${a.cy} C${sx + k},${a.cy} ${ex - k},${b.cy} ${ex},${b.cy}`; lx = (sx + ex) / 2;
+      ly = a.lane === b.lane ? a.y - 13 : (a.cy + b.cy) / 2;
+    } else {
+      const between = (lane, from, to) => { for (let c = from; c <= to; c++) if (occupied.has(`${lane}:${c}`)) return false; return true; };
+      const laneStep = Math.sign(b.lane - a.lane);
+      let clearDown = laneStep !== 0;
+      for (let l = a.lane + laneStep; clearDown && l !== b.lane + laneStep; l += laneStep) if (occupied.has(`${l}:${a.col}`)) clearDown = false;
+      const dir = Math.sign(b.col - a.col);
+      if (clearDown && between(b.lane, dir > 0 ? a.col : b.col + 1, dir > 0 ? b.col - 1 : a.col)) {
+        const sy = laneStep > 0 ? a.y + BH : a.y, ex = dir > 0 ? b.x : b.x + BW;
+        d = rounded([[a.cx, sy], [a.cx, b.cy], [ex, b.cy]]); lx = (a.cx + ex) / 2; ly = b.cy;
+      } else {
+        d = rounded([[a.cx, a.y + BH], [a.cx, bottomY], [b.cx, bottomY], [b.cx, b.y + BH]]); lx = (a.cx + b.cx) / 2; ly = bottomY;
+      }
+    }
+    edges += `<path d="${d}" fill="none" stroke="${STROKE[kind]}" stroke-width="${kind === 'main' ? 2.6 : kind === 'security' ? 2.4 : 1.8}" ${kind === 'dashed' ? 'stroke-dasharray="6 5"' : ''} marker-end="url(#ar-${kind})"/>`;
+    if (e.label) labels.push({ x: lx, y: ly, t: e.label, c: STROKE[kind] });
+  }
+  s += edges;
+
+  for (const n of W.nodes) {
+    const p = pos[n.id];
+    const main = step[n.id];
+    s += `<g><rect x="${p.x}" y="${p.y}" width="${BW}" height="${BH}" rx="14" fill="#0b1c63" stroke="${main ? '#4d7bff' : 'rgba(160,180,255,0.3)'}" stroke-width="${main ? 1.6 : 1}"/>`;
+    s += `<rect x="${p.x + 14}" y="${p.y}" width="${BW - 28}" height="2.5" rx="1.25" fill="${TYPE[n.type] || '#94a3b8'}"/>`;
+    if (main) s += `<circle cx="${p.x + 22}" cy="${p.y + 22}" r="11" fill="#4d7bff"/><text x="${p.x + 22}" y="${p.y + 26}" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">${main}</text>`;
+    if (n.tag) s += `<text x="${p.x + BW - 12}" y="${p.y + 26}" text-anchor="end" fill="${TYPE[n.type] || '#b3bde2'}" font-size="10" font-weight="700" letter-spacing="1">${esc(n.tag.toUpperCase())}</text>`;
+    s += `<text x="${p.x + 14}" y="${p.y + 50}" fill="#f1f1f1" font-size="14.5" font-weight="700">${esc(n.label)}</text>`;
+    if (n.sublabel) s += `<text x="${p.x + 14}" y="${p.y + 66}" fill="#b3bde2" font-size="11" font-family="ui-monospace, Consolas, monospace">${esc(n.sublabel)}</text>`;
+    s += '</g>';
+  }
+
+  for (const l of labels) {
+    const w = l.t.length * 6.3 + 18;
+    s += `<rect x="${l.x - w / 2}" y="${l.y - 10}" width="${w}" height="20" rx="10" fill="#061245" stroke="${l.c}" stroke-opacity="0.55"/>`;
+    s += `<text x="${l.x}" y="${l.y + 4}" text-anchor="middle" fill="#dbe2ff" font-size="11" font-weight="500">${esc(l.t)}</text>`;
+  }
+
+  const svg = document.getElementById('wf');
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.innerHTML = s;
+
+  const views = Object.fromEntries((W.meta.views || []).map((v) => [v.id, v.note]));
+  document.getElementById('wf-notes').innerHTML = [
+    ['Customer to bay', views['customer-floor']],
+    ['Money path', views.money],
+    ['Who can do what', views.roles],
+  ].filter(([, t]) => t).map(([h, t]) => `<div class="note"><h3>${h}</h3><p>${esc(t)}</p></div>`).join('');
+}
+
+function renderAreas() {
+  document.getElementById('areas').innerHTML = DATA.areas.filter((a) => a.files || a.tables).map((a) => `
+    <article class="area" style="--c:${a.color}">
+      <h3>${esc(a.name)}</h3>
+      <dl>
+        <div><dt>Screens</dt><dd>${a.screens}</dd></div>
+        <div><dt>Files</dt><dd>${a.files}</dd></div>
+        <div><dt>Tables</dt><dd>${a.tables}</dd></div>
+        <div><dt>Actions</dt><dd>${a.rpcs}</dd></div>
+      </dl>
+      <div class="acts">
+        ${a.tables || a.rpcs ? `<button class="btn" type="button" data-open="db" data-area="${a.id}">Open tables</button>` : ''}
+        ${a.files ? `<button class="btn" type="button" data-open="code" data-area="${a.id}">Open code</button>` : ''}
+      </div>
+    </article>`).join('');
+  document.getElementById('areas').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-open]');
+    if (b) explorers[b.dataset.open].soloArea(b.dataset.area);
+  });
+}
+
+/* ── Explorers (database + system map) ───────────────────── */
+const explorers = {};
+const codeById = new Map(DATA.code.nodes.map((n) => [n.id, n]));
+const dbById = new Map(DATA.db.nodes.map((n) => [n.id, n]));
+
+function linkList(items, max = 14) {
+  if (!items.length) return '<p class="more">None</p>';
+  const rows = items.slice(0, max).map((it) => `<li><button type="button" data-go="${it.view}" data-id="${esc(it.id)}"><i style="--c:${AREA[it.area].color}"></i><span>${esc(it.label)}</span>${it.note ? `<small>${esc(it.note)}</small>` : ''}</button></li>`).join('');
+  return `<ul class="list">${rows}</ul>${items.length > max ? `<p class="more">+ ${items.length - max} more</p>` : ''}`;
+}
+const asCode = (id) => { const n = codeById.get(id); return n && { view: 'code', id, area: n.area, label: n.label, note: n.kind }; };
+const asDb = (id) => { const n = dbById.get(id); return n && { view: 'db', id, area: n.area, label: n.label, note: n.type === 'rpc' ? 'action' : n.type }; };
+const asGraph = (i, note) => { const n = DATA.graph.nodes[i]; return n && { view: 'graph', id: i, area: n.area, label: n.label, note: note || TYPE_LABEL[n.type] }; };
+const fileNode = new Map();
+for (const n of DATA.graph.nodes) {
+  if (!n.file || !codeById.has(n.file)) continue;
+  const base = n.file.split('/').pop().replace(/\.(jsx?|mjs)$/, '').toLowerCase();
+  if (!fileNode.has(n.file) || n.label.toLowerCase().replace(/\.(jsx?|mjs)$/, '') === base) fileNode.set(n.file, n.id);
+}
+
+function describeGraph(id) {
+  const n = DATA.graph.nodes[id];
+  const rel = (r) => DATA.full.relations[r].replace(/_/g, ' ');
+  const groups = new Map();
+  for (const e of DATA.graph.edges) {
+    if (e.from !== id && e.to !== id) continue;
+    const out = e.from === id;
+    for (const r of e.rels) {
+      const key = out ? `${rel(r)} →` : `← ${rel(r)}`;
+      groups.set(key, [...(groups.get(key) || []), out ? e.to : e.from]);
+    }
+  }
+  let h = `<div class="badges"><span class="badge">${esc(TYPE_LABEL[n.type] || n.type)}</span><span class="badge" style="--c:${AREA[n.area].color}"><i></i>${esc(AREA[n.area].name)}</span></div><h3>${esc(n.label)}</h3>`;
+  if (n.file) h += `<p class="path">${esc(n.file)}${n.loc ? ` · ${esc(n.loc)}` : ''}</p>`;
+  if (n.community) h += `<h4>Graphify community</h4><p class="more" style="margin:0 8px">${esc(n.community)}</p>`;
+  if (GROUPS.has(id)) h += `<h4>Part of</h4><ul class="list">${GROUPS.get(id).map((g) => `<li><span class="more" style="margin:0 8px">${esc(g)}</span></li>`).join('')}</ul>`;
+  if (codeById.has(n.file)) h += `<h4>File</h4>${linkList([asCode(n.file)])}`;
+  h += `<h4>${n.deg} connection${n.deg === 1 ? '' : 's'}</h4>`;
+  if (!groups.size) h += '<p class="more">None</p>';
+  for (const [key, ids] of [...groups].sort((a, b) => b[1].length - a[1].length)) {
+    h += `<h4 style="text-transform:none;letter-spacing:0">${esc(key)} · ${ids.length}</h4>${linkList(ids.map((i) => asGraph(i)).filter(Boolean), 10)}`;
+  }
+  return h;
+}
+
+function describe(view, id) {
+  if (view === 'graph') return describeGraph(id);
+  const areaBadge = (a) => `<span class="badge" style="--c:${AREA[a].color}"><i></i>${esc(AREA[a].name)}</span>`;
+  if (view === 'db') {
+    const n = dbById.get(id);
+    const out = DATA.db.edges.filter((e) => e.from === id).map((e) => e.to);
+    const inc = DATA.db.edges.filter((e) => e.to === id).map((e) => e.from);
+    const kindLabel = n.type === 'rpc' ? 'Server action (RPC)' : n.type === 'view' ? 'View' : 'Table';
+    let h = `<div class="badges"><span class="badge">${kindLabel}</span>${areaBadge(n.area)}</div><h3>${esc(n.label)}</h3>`;
+    h += n.definedIn ? `<p class="path">Created in ${esc(n.definedIn)}</p>` : '<p class="path">Not found in schema.sql or migrations</p>';
+    h += `<h4>Used by ${n.usedBy.length} code file${n.usedBy.length === 1 ? '' : 's'}</h4>${linkList(n.usedBy.map(asCode).filter(Boolean))}`;
+    if (n.type === 'rpc') h += `<h4>Reads or writes</h4>${linkList(out.map(asDb).filter(Boolean))}`;
+    else {
+      h += `<h4>Points to (foreign keys)</h4>${linkList(out.map(asDb).filter(Boolean))}`;
+      h += `<h4>Pointed to by</h4>${linkList(inc.map(asDb).filter(Boolean))}`;
+    }
+    return h;
+  }
+  const n = codeById.get(id);
+  const uses = DATA.code.edges.filter((e) => e.from === id).map((e) => e.to);
+  const usedBy = DATA.code.edges.filter((e) => e.to === id).map((e) => e.from);
+  let h = `<div class="badges"><span class="badge">${esc(n.kind)}</span>${areaBadge(n.area)}</div><h3>${esc(n.label)}</h3><p class="path">${esc(n.id)}</p>`;
+  if (n.db) {
+    const ids = [...n.db.tables.map((t) => `t:${t}`), ...n.db.rpcs.map((r) => `f:${r}`)];
+    h += `<h4>Database it touches</h4>${linkList(ids.map(asDb).filter(Boolean))}`;
+  }
+  h += `<h4>Uses ${uses.length}</h4>${linkList(uses.map(asCode).filter(Boolean))}`;
+  h += `<h4>Used by ${usedBy.length}</h4>${linkList(usedBy.map(asCode).filter(Boolean))}`;
+  if (fileNode.has(id)) h += `<h4>Inside this file</h4>${linkList([asGraph(fileNode.get(id), 'complete graph')])}`;
+  return h;
+}
+
+function makeExplorer(view) {
+  const root = document.querySelector(`[data-explorer="${view}"]`);
+  const el = root.querySelector('.canvas');
+  const info = root.querySelector('.info');
+  const input = root.querySelector('input');
+  const results = root.querySelector('.results');
+  const chips = root.querySelector('.chips');
+  const src = DATA[view];
+  const hidden = new Set();
+  let net = null, nodes = null, selected = null;
+  const clustered = view !== 'db';
+  const shapeKey = `<ul class="shapes">${Object.entries(TYPE_LABEL).filter(([t]) => t !== 'image').map(([t, l]) => `<li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" fill="#b3bde2">${{ code: '<circle cx="7" cy="7" r="6"/>', document: '<rect x="1" y="1" width="12" height="12"/>', concept: '<path d="M7 0 14 7 7 14 0 7z"/>', rationale: '<path d="M7 1 13 13H1z"/>', paper: '<path d="M7 0l2 5h5l-4 3 2 6-5-4-5 4 2-6-4-3h5z"/>' }[t]}</svg>${l}</li>`).join('')}</ul>`;
+  const emptyInfo = {
+    db: '<p class="empty">Click any table to see which screens use it and what it links to. Blue lines are foreign keys; amber dashed lines are server actions reading or writing a table.</p>',
+    code: '<p class="empty">Click any dot to see what the file uses, what uses it, and which tables it touches. Lines show one file importing or calling another.</p>',
+    graph: `<p class="empty">Every node graphify found: functions, components, tables, docs and decisions. Click a node to see all of its connections; drag nodes to rearrange; double-click to zoom in.</p>${shapeKey}`,
+  }[view];
+  info.innerHTML = emptyInfo;
+
+  const presentAreas = DATA.areas.filter((a) => src.nodes.some((n) => n.area === a.id));
+  chips.innerHTML = presentAreas.map((a) => `<button class="chip" type="button" aria-pressed="true" data-area="${a.id}" style="--c:${a.color}"><i></i><span>${esc(a.name)}</span></button>`).join('');
+
+  function visNode(n) {
+    const c = AREA[n.area].color;
+    if (view === 'graph') {
+      return {
+        id: n.id, label: n.label.length > 42 ? `${n.label.slice(0, 40)}…` : n.label, x: n.x, y: n.y,
+        shape: SHAPE[n.type] || 'dot', size: 4 + Math.min(16, Math.sqrt(n.deg) * 1.6),
+        color: { background: c, border: c, highlight: { background: '#ffffff', border: c }, hover: { background: '#ffffff', border: c } },
+        font: { color: '#e4e9ff', size: graphFont(n), face: 'Gilmer, system-ui, sans-serif', strokeWidth: 3, strokeColor: '#030c38' },
+      };
+    }
+    if (view === 'code') {
+      return {
+        id: n.id, label: n.label, x: n.x, y: n.y, shape: 'dot', size: 6 + Math.min(20, Math.sqrt(n.deg) * 2.2),
+        color: { background: c, border: c, highlight: { background: '#ffffff', border: c }, hover: { background: '#ffffff', border: c } },
+        font: { color: '#e4e9ff', size: 13, face: 'Gilmer, system-ui, sans-serif', strokeWidth: 4, strokeColor: '#030c38' },
+      };
+    }
+    const rpc = n.type === 'rpc';
+    return {
+      id: n.id, label: n.label, x: n.x, y: n.y, shape: 'box', margin: { top: 9, bottom: 9, left: 10, right: 10 },
+      widthConstraint: { minimum: 226, maximum: 226 }, borderWidth: 1.4,
+      shapeProperties: { borderRadius: 9, borderDashes: n.type === 'view' ? [4, 3] : false },
+      color: rpc
+        ? { background: 'rgba(251,191,36,0.10)', border: '#fbbf24', highlight: { background: 'rgba(251,191,36,0.28)', border: '#fff' }, hover: { background: 'rgba(251,191,36,0.2)', border: '#fbbf24' } }
+        : { background: '#0b1b5e', border: alpha(c, 0.75), highlight: { background: '#16307f', border: '#ffffff' }, hover: { background: '#12266f', border: c } },
+      font: { color: rpc ? '#fde68a' : '#eef2ff', size: 13, face: 'ui-monospace, Consolas, monospace' },
+    };
+  }
+
+  function init() {
+    nodes = new vis.DataSet(src.nodes.map(visNode));
+    const edges = new vis.DataSet(src.edges.map((e, i) => view === 'graph'
+      ? { id: i, from: e.from, to: e.to, width: 0.6, color: { color: 'rgba(150,172,255,0.07)', highlight: 'rgba(190,208,255,0.9)', hover: 'rgba(190,208,255,0.6)' }, arrows: { to: { enabled: false } } }
+      : view === 'code'
+      ? { id: i, from: e.from, to: e.to, width: Math.min(3, 0.6 + Math.log2(e.w + 1) * 0.4), color: { color: 'rgba(150,172,255,0.10)', highlight: 'rgba(190,208,255,0.85)', hover: 'rgba(190,208,255,0.6)' }, arrows: { to: { enabled: true, scaleFactor: 0.35 } } }
+      : { id: i, from: e.from, to: e.to, dashes: e.kind === 'rpc', width: 1.2, color: e.kind === 'rpc' ? { color: 'rgba(251,191,36,0.28)', highlight: '#fbbf24', hover: '#fbbf24' } : { color: 'rgba(120,150,255,0.22)', highlight: '#8fb0ff', hover: '#8fb0ff' }, arrows: { to: { enabled: true, scaleFactor: 0.45 } }, smooth: { type: 'curvedCW', roundness: 0.18 } }));
+    net = new vis.Network(el, { nodes, edges }, {
+      physics: false,
+      layout: { improvedLayout: false },
+      interaction: { hover: true, tooltipDelay: 150, hideEdgesOnDrag: clustered, hideEdgesOnZoom: clustered, keyboard: { enabled: true, bindToWindow: false }, multiselect: false },
+      edges: { ...(clustered && { smooth: false }), selectionWidth: 0.8, hoverWidth: 0.5 },
+      nodes: { scaling: { label: { enabled: false, drawThreshold: view === 'graph' ? 8 : 5 } } },
+    });
+    net.on('beforeDrawing', drawAreas);
+    net.on('click', (p) => (p.nodes.length ? select(p.nodes[0], false) : clear()));
+    net.on('doubleClick', (p) => { if (p.nodes.length) select(p.nodes[0], true); });
+    net.on('hoverNode', () => { el.style.cursor = 'pointer'; });
+    net.on('blurNode', () => { el.style.cursor = 'default'; });
+    fitAreas(null, false);
+  }
+
+  /** vis fit() only measures nodes; this also keeps area titles and panels in frame. */
+  function fitAreas(only, animate = MOTION) {
+    const boxes = clustered
+      ? src.clusters.filter((c) => (only ? c.area === only : !hidden.has(c.area))).map((c) => [c.x - c.cell / 2, c.labelY - c.cell / 12, c.x + c.cell / 2, c.y + c.r])
+      : src.panels.filter((p) => (only ? p.area === only : !hidden.has(p.area))).map((p) => [p.x, p.y, p.x + p.w, p.y + p.h]);
+    if (!boxes.length) return;
+    const x1 = Math.min(...boxes.map((b) => b[0])), y1 = Math.min(...boxes.map((b) => b[1]));
+    const x2 = Math.max(...boxes.map((b) => b[2])), y2 = Math.max(...boxes.map((b) => b[3]));
+    const scale = 0.94 * Math.min(el.clientWidth / (x2 - x1), el.clientHeight / (y2 - y1));
+    net.moveTo({ position: { x: (x1 + x2) / 2, y: (y1 + y2) / 2 }, scale, animation: animate ? { duration: 550, easingFunction: 'easeInOutQuad' } : false });
+  }
+
+  function drawAreas(ctx) {
+    const s = net.getScale();
+    const px = (n) => n / s;
+    ctx.save();
+    if (clustered) {
+      for (const c of src.clusters) {
+        if (hidden.has(c.area)) continue;
+        const col = AREA[c.area].color;
+        ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.fillStyle = alpha(col, 0.05); ctx.fill();
+        ctx.setLineDash([px(4), px(6)]); ctx.lineWidth = px(1.2); ctx.strokeStyle = alpha(col, 0.45); ctx.stroke(); ctx.setLineDash([]);
+        const title = c.cell / 15;
+        const lines = twoLines(AREA[c.area].name.toUpperCase());
+        ctx.textAlign = 'center';
+        ctx.font = `600 ${title}px Benzin, "Arial Black", sans-serif`; ctx.fillStyle = col;
+        lines.forEach((line, i) => ctx.fillText(line, c.x, c.labelY + i * title * 1.15));
+        ctx.font = `500 ${c.cell / 24}px Gilmer, system-ui, sans-serif`; ctx.fillStyle = '#b3bde2';
+        ctx.fillText(`${fmt(c.count)} ${view === 'graph' ? 'nodes' : 'files'}`, c.x, c.labelY + lines.length * title * 1.15 + c.cell / 40);
+      }
+    } else {
+      for (const p of src.panels) {
+        if (hidden.has(p.area)) continue;
+        const col = AREA[p.area].color;
+        ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, p.h, 18);
+        ctx.fillStyle = 'rgba(8,22,84,0.72)'; ctx.fill();
+        ctx.lineWidth = Math.max(1, px(1)); ctx.strokeStyle = alpha(col, 0.35); ctx.stroke();
+        ctx.fillStyle = col; ctx.fillRect(p.x + 22, p.y, 56, 3);
+        const name = AREA[p.area].name.toUpperCase();
+        ctx.textAlign = 'left';
+        ctx.font = '600 32px Benzin, "Arial Black", sans-serif';
+        const size = Math.min(32, 32 * (p.w - 44) / ctx.measureText(name).width);
+        ctx.font = `600 ${size}px Benzin, "Arial Black", sans-serif`; ctx.fillStyle = '#f1f1f1';
+        ctx.fillText(name, p.x + 22, p.y + 50);
+        ctx.font = '500 17px Gilmer, system-ui, sans-serif'; ctx.fillStyle = '#b3bde2';
+        ctx.fillText(`${p.count} tables & actions`, p.x + 22, p.y + 76);
+      }
+    }
+    ctx.restore();
+  }
+
+  function applyOpacity() {
+    const keep = selected !== null ? new Set([selected, ...net.getConnectedNodes(selected)]) : null;
+    nodes.update(src.nodes.map((n) => {
+      const on = !keep || keep.has(n.id);
+      const row = { id: n.id, hidden: hidden.has(n.area), opacity: on ? 1 : 0.14 };
+      // ponytail: label declutter for the 8k-node graph = hubs only until zoomed, selection + neighbours when selected.
+      if (view === 'graph') row.font = keep
+        ? { size: on ? 13 : 5, color: on ? '#e4e9ff' : 'rgba(0,0,0,0)', strokeColor: on ? '#030c38' : 'rgba(0,0,0,0)' }
+        : { size: graphFont(n), color: '#e4e9ff', strokeColor: '#030c38' };
+      return row;
+    }));
+  }
+
+  function select(rawId, move = true) {
+    if (!net) init();
+    const id = view === 'graph' ? Number(rawId) : rawId;
+    const n = view === 'graph' ? src.nodes[id] : src.nodes.find((x) => x.id === id);
+    if (!n) return;
+    if (hidden.has(n.area)) setArea(n.area, true);
+    selected = id;
+    net.selectNodes([id]);
+    applyOpacity();
+    info.innerHTML = describe(view, id);
+    info.scrollTop = 0;
+    if (move) net.focus(id, { scale: view === 'db' ? 1.1 : view === 'graph' ? 1.1 : 1.3, animation: MOTION ? { duration: 550, easingFunction: 'easeInOutQuad' } : false });
+  }
+
+  function clear() {
+    selected = null;
+    net.unselectAll();
+    applyOpacity();
+    info.innerHTML = emptyInfo;
+  }
+
+  function setArea(area, on) {
+    on ? hidden.delete(area) : hidden.add(area);
+    chips.querySelector(`[data-area="${area}"]`).setAttribute('aria-pressed', String(on));
+    if (net) { if (selected !== null && hidden.has(src.nodes.find((x) => x.id === selected).area)) selected = null; applyOpacity(); net.redraw(); }
+  }
+
+  function soloArea(area) {
+    open(view);
+    presentAreas.forEach((a) => setArea(a.id, a.id === area));
+    selected = null;
+    info.innerHTML = emptyInfo;
+    net.unselectAll(); applyOpacity();
+    fitAreas(area);
+  }
+
+  chips.addEventListener('click', (e) => {
+    const b = e.target.closest('.chip');
+    if (b) setArea(b.dataset.area, b.getAttribute('aria-pressed') === 'false');
+  });
+  root.querySelector('.zoom').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || !net) return;
+    const anim = MOTION ? { duration: 250 } : false;
+    if (b.dataset.zoom === 'fit') fitAreas(null);
+    else net.moveTo({ scale: net.getScale() * (b.dataset.zoom === 'in' ? 1.4 : 1 / 1.4), animation: anim });
+  });
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    const hay = (n) => `${n.label} ${view === 'graph' ? n.file : n.id}`.toLowerCase();
+    const hits = q ? src.nodes.filter((n) => hay(n).includes(q)).sort((a, b) => b.label.toLowerCase().startsWith(q) - a.label.toLowerCase().startsWith(q) || (b.deg || 0) - (a.deg || 0)).slice(0, 12) : [];
+    results.hidden = !hits.length;
+    const note = (n) => (view === 'db' ? (n.type === 'rpc' ? 'action' : n.type) : view === 'graph' ? TYPE_LABEL[n.type] || n.type : n.kind);
+    results.innerHTML = hits.map((n) => `<li><button type="button" data-id="${esc(n.id)}"><i style="--c:${AREA[n.area].color}"></i><span>${esc(n.label)}</span><small>${esc(note(n))}</small></button></li>`).join('');
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { const first = results.querySelector('button'); if (first) first.click(); }
+    if (e.key === 'Escape') { input.value = ''; results.hidden = true; }
+  });
+  results.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    select(b.dataset.id);
+    results.hidden = true;
+    input.value = '';
+  });
+  document.addEventListener('click', (e) => { if (!root.querySelector('.search').contains(e.target)) results.hidden = true; });
+
+  return { ensure: () => { if (!net) init(); }, select, soloArea };
+}
+
+/* ── Tabs + cross-links ──────────────────────────────────── */
+const VIEWS = ['workflow', 'db', 'code'];
+function show(view, pushHash = true) {
+  for (const v of VIEWS) {
+    document.getElementById(`view-${v}`).hidden = v !== view;
+    document.getElementById(`tab-${v}`).setAttribute('aria-selected', String(v === view));
+    document.getElementById(`tab-${v}`).tabIndex = v === view ? 0 : -1;
+  }
+  document.body.dataset.view = view;
+  if (view === 'code') setMode(codeMode, pushHash);
+  else if (explorers[view]) explorers[view].ensure();
+  if (pushHash && view !== 'code') history.replaceState(null, '', `#${view}`);
+}
+let codeMode = 'code';
+function setMode(mode, pushHash = true) {
+  codeMode = mode;
+  for (const m of ['code', 'graph']) document.querySelector(`[data-explorer="${m}"]`).hidden = m !== mode;
+  document.querySelectorAll('.mode').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+  explorers[mode].ensure();
+  if (pushHash) history.replaceState(null, '', `#${mode}`);
+}
+/** Route a cross-link or deep link to its tab; the complete graph lives inside the System map tab. */
+function open(view, pushHash = true) {
+  if (view === 'graph' || view === 'code') { codeMode = view; show('code', pushHash); } else show(view, pushHash);
+}
+const DEEP = [...VIEWS, 'graph'];
+addEventListener('hashchange', () => { const v = location.hash.slice(1); if (DEEP.includes(v)) open(v, false); });
+document.addEventListener('click', (e) => { const b = e.target.closest('.mode'); if (b) setMode(b.dataset.mode); });
+document.querySelectorAll('[data-count="code"]').forEach((el) => { el.textContent = fmt(DATA.code.nodes.length); });
+document.querySelectorAll('[data-count="graph"]').forEach((el) => { el.textContent = fmt(DATA.graph.nodes.length); });
+document.querySelector('.tabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (b) show(b.dataset.view); });
+document.querySelector('.tabs').addEventListener('keydown', (e) => {
+  if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+  const i = VIEWS.indexOf(document.querySelector('.tab[aria-selected="true"]').dataset.view);
+  const next = VIEWS[(i + (e.key === 'ArrowRight' ? 1 : VIEWS.length - 1)) % VIEWS.length];
+  show(next); document.getElementById(`tab-${next}`).focus();
+});
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-go]');
+  if (!b) return;
+  open(b.dataset.go);
+  explorers[b.dataset.go].select(b.dataset.id);
+});
+
+renderWorkflow();
+renderAreas();
+explorers.db = makeExplorer('db');
+explorers.code = makeExplorer('code');
+explorers.graph = makeExplorer('graph');
+open(DEEP.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'workflow', false);
+</script>
+</body>
+</html>

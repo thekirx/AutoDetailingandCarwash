@@ -10,7 +10,7 @@ import {
 
 const copy = buildShiftCloseAcceptCopy({ branch: 'bacoor', businessDate: '2026-08-27', closeId: 'c1' })
 assert.match(copy.title, /bacoor/i)
-assert.match(copy.body, /Confirm floor payroll/i)
+assert.match(copy.body, /Crew pay now goes through the Daily Sheet/i)
 
 // Helper stays for optional ENABLE_OWNER_SMS=1 QA only — product default is no owner SMS.
 const sms = buildOwnerDailySmsFromClose({
@@ -46,7 +46,8 @@ const fin = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), '../src/pages/finance/FinanceShiftCloseTab.jsx'),
   'utf8',
 )
-assert.match(fin, /\/api\/notify-shift-close/)
+// Old shift closes are read-only history now — nothing there can accept a close or send its push.
+assert.doesNotMatch(fin, /\/api\/notify-shift-close|review_shift_close/)
 // Finance must not nag operators to configure OWNER_SMS — outbound reminders only, no owner daily SMS.
 assert.doesNotMatch(fin, /set OWNER_SMS_PHONE/)
 assert.doesNotMatch(fin, /Owner SMS skipped/)

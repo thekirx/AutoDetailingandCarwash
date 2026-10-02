@@ -42,8 +42,13 @@ describe('planStaffRecipients', () => {
   })
 
   it('money alerts need finance_write for ASA', () => {
-    const got = planStaffRecipients(staff, { ...NOTIFY_EVENTS.cash_advance_submitted, branch: 'bacoor' })
+    const got = planStaffRecipients(staff, { ...NOTIFY_EVENTS.floor_pay_ready, branch: 'bacoor' })
     assert.deepEqual(ids(got), ['asa-fw', 'sa'])
+  })
+
+  it('cash advance requests go to that branch Branch Admin on the POS Daily sheet', () => {
+    const got = planStaffRecipients(staff, { ...NOTIFY_EVENTS.cash_advance_submitted, branch: 'bacoor' })
+    assert.deepEqual(got, [{ id: 'ba-bacoor', url: '/operations/pos?tab=sheet' }])
   })
 
   it('explicit people (assigned crew) skip the role/branch filter and still get an allowed url', () => {

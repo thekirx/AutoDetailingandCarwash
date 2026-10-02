@@ -1,5 +1,7 @@
 # Hakum Payroll — documentation index
 
+> **Retired 2026-10-01.** Payroll, My pay, Payroll settings and the cash-advance panel were removed. Crew pay is now a salary line on the BA's Daily Sheet, posted as an expense when SA/ASA approve it. This folder is kept as history — see [docs/daily-sheet/README.md](../daily-sheet/README.md).
+
 **Last audited:** 2026-08-22  
 **Scope:** Floor pay, fixed salary, pending queue, cash advances, My Pay, settings, and how POS / End of shift connect.  
 **Tone:** Strict principal audit — what pays people, what is theater, what must not be advertised.

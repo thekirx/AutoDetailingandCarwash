@@ -638,11 +638,11 @@ try {
 
   const bossUi = await loginOps(browser, 'boss')
   await bossUi.page.goto(
-    `${base}/operations/finance?tab=overview&period=custom&from=${today}&to=${today}`,
+    `${base}/operations/finance?tab=sales&period=custom&from=${today}&to=${today}`,
     { waitUntil: 'domcontentloaded', timeout: 60000 },
   )
   await bossUi.page.waitForFunction(
-    () => /Paid by kind|₱|PHP|Package|Service/i.test(document.body.innerText),
+    () => /By service family|₱|PHP|Package|Service/i.test(document.body.innerText),
     { timeout: 45000 },
   )
   const financeText = await bossUi.page.evaluate(() => document.body.innerText)
@@ -654,22 +654,20 @@ try {
   await shot(bossUi.page, '09-finance-today')
   pass('ui.09.finance_today', `kind ${kindSum}`)
 
-  await bossUi.page.goto(`${base}/operations/payroll`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-  await bossUi.page.waitForFunction(() => /Payroll|Confirm|Floor|Pending/i.test(document.body.innerText), { timeout: 30000 })
-  await shot(bossUi.page, '10-payroll')
-  pass('ui.10.payroll', 'screenshot')
+  await bossUi.page.goto(`${base}/operations/finance?tab=sheets`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await bossUi.page.waitForFunction(() => /One sheet per branch per day/i.test(document.body.innerText), { timeout: 30000 })
+  await shot(bossUi.page, '10-daily-sheets')
+  pass('ui.10.daily_sheets', 'screenshot')
   await bossUi.context.close()
 
   const invUi = await loginOps(browser, 'investor')
-  await invUi.page.goto(`${base}/operations/payroll`, { waitUntil: 'domcontentloaded', timeout: 20000 })
-  await invUi.page.waitForFunction(
-    () =>
-      location.pathname.includes('access-denied') ||
-      /lane closed|access denied|not authorized|you don.?t have|permission/i.test(document.body.innerText),
-    { timeout: 25000 },
-  )
-  await shot(invUi.page, '12-investor-payroll-deny')
-  pass('R1.investor.payroll_denied', invUi.page.url())
+  await invUi.page.goto(`${base}/operations/finance?tab=sheets`, { waitUntil: 'domcontentloaded', timeout: 20000 })
+  await new Promise((r) => setTimeout(r, 4000))
+  if (/One sheet per branch per day/i.test(await invUi.page.evaluate(() => document.body.innerText))) {
+    throw new Error('investor can open the Daily sheets inbox')
+  }
+  await shot(invUi.page, '12-investor-sheets-deny')
+  pass('R1.investor.sheets_denied', invUi.page.url())
   await invUi.context.close()
 
   try {

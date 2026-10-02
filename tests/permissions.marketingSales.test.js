@@ -29,7 +29,6 @@ assert.deepEqual(
     '/operations/planning',
     '/operations/notifications',
     '/operations/history',
-    '/operations/my-pay',
   ],
 )
 

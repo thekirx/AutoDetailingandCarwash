@@ -176,9 +176,8 @@ async function ensurePreview() {
   }
 }
 
-const POS_TABS = ['checkout', 'pending', 'expenses', 'dashboard']
-const FINANCE_TABS = ['overview', 'sales', 'purchases', 'pl', 'shift-close', 'reports']
-const PAYROLL_TABS = ['home', 'run', 'cash-advance', 'packages', 'history', 'rules']
+const POS_TABS = ['checkout', 'sheet', 'dashboard']
+const FINANCE_TABS = ['overview', 'sheets', 'sales', 'purchases', 'pl', 'shift-close', 'reports']
 
 let server = null
 try {
@@ -211,7 +210,7 @@ try {
     }
   }
 
-  // Admin POS tabs + EoS wizard
+  // Admin POS tabs + Daily sheet
   {
     const admin = account('admin')
     await clearSession(page, base)
@@ -221,29 +220,20 @@ try {
         const path = tab === 'checkout' ? '/operations/pos' : `/operations/pos?tab=${tab}`
         await gotoShot(page, base, path, `admin-pos-${tab}`)
       }
-      await page.goto(`${base}/operations/pos?tab=dashboard`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.goto(`${base}/operations/pos?tab=sheet`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await waitSettled(page)
-      const opened = await page.evaluate(() => {
-        const btn = [...document.querySelectorAll('button')].find((b) => /End of shift/i.test(b.textContent || ''))
-        if (btn) {
-          btn.click()
-          return true
-        }
-        return false
-      })
-      await new Promise((r) => setTimeout(r, 1200))
-      if (opened) {
-        pass('admin.eos_wizard', 'opened')
-        await shot(page, 'admin-eos-wizard')
-        await page.keyboard.press('Escape').catch(() => null)
+      const sheetText = await page.evaluate(() => document.body.innerText)
+      if (/Cash advances/i.test(sheetText)) {
+        pass('admin.daily_sheet', 'opened')
+        await shot(page, 'admin-daily-sheet')
       } else {
-        fail('admin.eos_wizard', 'button not found')
-        await shot(page, 'admin-eos-wizard-FAIL')
+        fail('admin.daily_sheet', sheetText.slice(0, 200))
+        await shot(page, 'admin-daily-sheet-FAIL')
       }
     }
   }
 
-  // Boss finance + payroll
+  // Boss finance + daily sheets
   {
     const boss = account('boss')
     await clearSession(page, base)
@@ -251,9 +241,6 @@ try {
     else {
       for (const tab of FINANCE_TABS) {
         await gotoShot(page, base, `/operations/finance?tab=${tab}`, `boss-finance-${tab}`)
-      }
-      for (const tab of PAYROLL_TABS) {
-        await gotoShot(page, base, `/operations/payroll?tab=${tab}`, `boss-payroll-${tab}`)
       }
     }
   }
@@ -266,15 +253,15 @@ try {
     else {
       await gotoShot(page, base, '/operations/finance?tab=overview', 'investor-finance-overview')
       await gotoShot(page, base, '/operations/finance?tab=reports', 'investor-finance-reports')
-      await page.goto(`${base}/operations/payroll`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.goto(`${base}/operations/finance?tab=sheets`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await waitSettled(page)
       const url = page.url()
-      if (/access-denied|forbidden/i.test(url) || !url.includes('/payroll')) {
-        pass('investor.payroll_denied', url)
-        await shot(page, 'investor-payroll-denied')
+      if (!/One sheet per branch per day/i.test(await page.evaluate(() => document.body.innerText))) {
+        pass('investor.sheets_denied', url)
+        await shot(page, 'investor-sheets-denied')
       } else {
-        fail('investor.payroll_denied', url)
-        await shot(page, 'investor-payroll-denied-FAIL')
+        fail('investor.sheets_denied', url)
+        await shot(page, 'investor-sheets-denied-FAIL')
       }
     }
   }

@@ -43,8 +43,6 @@ const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
 const PosPage = lazy(() => import('./pages/PosPage'))
 const InventoryPage = lazy(() => import('./pages/InventoryPage'))
 const FinancePage = lazy(() => import('./pages/FinancePage'))
-const PayrollPage = lazy(() => import('./pages/PayrollPage'))
-const MyPayPage = lazy(() => import('./pages/MyPayPage'))
 const CrmPage = lazy(() => import('./pages/CrmPage'))
 const BookingBoardPage = lazy(() => import('./pages/BookingBoardPage'))
 const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
@@ -52,7 +50,7 @@ const OpsRoadmapPage = lazy(() => import('./pages/OpsRoadmapPage'))
 const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
 const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
 const PosSettingsPage = lazy(() => import('./pages/settings/PosSettingsPage'))
-const PayrollSettingsPage = lazy(() => import('./pages/settings/PayrollSettingsPage'))
+const DailySheetRulesPage = lazy(() => import('./pages/settings/DailySheetRulesPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const AttendancePage = lazy(() => import('./pages/AttendancePage'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage'))
@@ -197,8 +195,8 @@ export default function App() {
             <Route path="pos" element={gate('pos', <PosPage />)} />
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
-            <Route path="payroll" element={gate('payroll', <PayrollPage />)} />
-            <Route path="my-pay" element={gate('my-pay', <MyPayPage />)} />
+            <Route path="payroll" element={<Navigate to="/operations/finance?tab=sheets" replace />} />
+            <Route path="my-pay" element={<Navigate to="/operations" replace />} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
             <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory" replace />)} />
             <Route path="products" element={gate('inventory', <Navigate to="/operations/inventory?tab=merch" replace />)} />
@@ -208,7 +206,8 @@ export default function App() {
             <Route path="roadmap" element={gate('roadmap', <OpsRoadmapPage />)} />
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
             <Route path="settings/pos" element={gate('settings', <PosSettingsPage />)} />
-            <Route path="settings/payroll" element={gate('settings', <PayrollSettingsPage />)} />
+            <Route path="settings/daily-sheet" element={gate('settings', <DailySheetRulesPage />)} />
+            <Route path="settings/payroll" element={<Navigate to="/operations/settings/daily-sheet" replace />} />
             <Route path="content" element={gate('content', <ContentAdminPage />)} />
             <Route path="notifications" element={gate('notifications', <NotificationsPage />)} />
             <Route path="history" element={gate('history', <HistoryPage />)} />

@@ -23,13 +23,14 @@ describe('frontend audit', () => {
   it('1 no leftover console.log in ops page entrypoints', () => {
     const watched = [
       'FinancePage.jsx',
-      'PayrollPage.jsx',
       'AttendancePage.jsx',
       'PosPage.jsx',
       'KpiPage.jsx',
       'ReportsPage.jsx',
       'DataCenterPage.jsx',
-      'finance/FinanceOverviewTab.jsx',
+      'finance/FinanceHomeTab.jsx',
+      'finance/FinanceDailySheetsTab.jsx',
+      'pos/DailySheetPanel.jsx',
     ]
     for (const rel of watched) {
       const src = readFileSync(join(pagesDir, rel), 'utf8')
@@ -37,13 +38,13 @@ describe('frontend audit', () => {
     }
   })
 
-  it('2 Finance / KPI / Attendance / Payroll tabs have empty-state patterns', () => {
-    const overview = readFileSync(join(pagesDir, 'finance/FinanceOverviewTab.jsx'), 'utf8')
-    assert.match(overview, /FinanceEmpty/)
+  it('2 Finance / KPI / Attendance / Daily sheet tabs have empty-state patterns', () => {
+    const home = readFileSync(join(pagesDir, 'finance/FinanceHomeTab.jsx'), 'utf8')
+    assert.match(home, /FinanceEmpty/)
     const attendance = readFileSync(join(pagesDir, 'AttendancePage.jsx'), 'utf8')
     assert.match(attendance, /CrewAttendancePanel|OpsPageShell/)
-    const payroll = readFileSync(join(pagesDir, 'PayrollPage.jsx'), 'utf8')
-    assert.match(payroll, /OpsPageShell|wizard|preview/i)
+    const sheets = readFileSync(join(pagesDir, 'finance/FinanceDailySheetsTab.jsx'), 'utf8')
+    assert.match(sheets, /FinanceEmpty/)
     const kpi = readFileSync(join(pagesDir, 'KpiPage.jsx'), 'utf8')
     assert.match(kpi, /OpsPageShell/)
   })
@@ -65,8 +66,10 @@ describe('frontend audit', () => {
     assert.ok(files.length < 200)
   })
 
-  it('6 Finance Overview exports are present for owner decision pack', () => {
-    const src = readFileSync(join(pagesDir, 'finance/FinanceOverviewTab.jsx'), 'utf8')
-    assert.match(src, /Download|downloadCsv|Export/)
+  it('6 Finance P&L exports are present for owner decision pack', () => {
+    const src = readFileSync(join(pagesDir, 'finance/FinancePLTab.jsx'), 'utf8')
+    assert.match(src, /downloadCsv/)
+    assert.match(src, /downloadExcel/)
+    assert.match(src, /printAsPdf/)
   })
 })

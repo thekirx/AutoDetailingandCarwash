@@ -1,4 +1,4 @@
-/** Finance Sales — POS ledger by branch × day, payment filters, exports. */
+/** Finance Sales — Square-style summary on top, then the POS ledger by branch × day, payment filter (URL), exports. */
 import { useMemo, useState } from 'react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { Download, Search } from 'lucide-react'
@@ -25,6 +25,7 @@ import {
   FinancePanel,
   FinanceTabSkeleton,
 } from './FinanceChrome'
+import FinanceSalesSummary from './FinanceSalesSummary'
 
 const PAYMENT_FILTERS = [
   { value: 'all', label: 'All methods' },
@@ -37,8 +38,9 @@ const trendConfig = {
   sales: { label: 'Sales', color: 'var(--color-brand-primary)' },
 }
 
-export default function FinanceSalesTab({ salesRows, branchOptions, range, loading }) {
-  const [method, setMethod] = useState('all')
+export default function FinanceSalesTab({ salesRows, branchOptions, range, loading, method: methodParam = '', onMethodChange, summary = null }) {
+  const method = PAYMENT_FILTERS.some((p) => p.value === methodParam) ? methodParam : 'all'
+  const setMethod = (next) => onMethodChange?.(next === 'all' ? '' : next)
   const [query, setQuery] = useState('')
 
   const ledger = useMemo(() => salesLedgerRows(salesRows), [salesRows])
@@ -109,8 +111,9 @@ export default function FinanceSalesTab({ salesRows, branchOptions, range, loadi
 
   return (
     <div className="finance-dash flex flex-col gap-5">
-      <FinanceMetricStrip label="Sales totals">
-        <FinanceMetricCell label="Total sales" value={formatMoney(totals.total)} hint="Filtered rows" tone="ink" />
+      {summary ? <FinanceSalesSummary {...summary} branchOptions={branchOptions} /> : null}
+      <FinanceMetricStrip label="Ledger totals">
+        <FinanceMetricCell label="Ledger total" value={formatMoney(totals.total)} hint="Rows below" tone="ink" />
         <FinanceMetricCell label="Cash" value={formatMoney(totals.cash)} hint="Till" tone="ink" />
         <FinanceMetricCell label="GCash" value={formatMoney(totals.gcash)} hint="Wallet" tone="ink" />
         <FinanceMetricCell label="Card" value={formatMoney(totals.card)} hint="Terminal" tone="muted" />

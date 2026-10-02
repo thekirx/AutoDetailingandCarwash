@@ -104,7 +104,7 @@ describe('shift close audit', () => {
     assert.equal(result.ok, true)
   })
 
-  it('Super Admin can reopen an accepted close and cannot reopen a locked one', () => {
+  it('legacy reopen rules stay in SQL; Finance shows old closes read-only', () => {
     const sql = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), '../supabase/migrations/20260923143000_shift_close_reopen.sql'),
       'utf8',
@@ -118,7 +118,9 @@ describe('shift close audit', () => {
       join(dirname(fileURLToPath(import.meta.url)), '../src/pages/finance/FinanceShiftCloseTab.jsx'),
       'utf8',
     )
-    assert.match(page, /review\('reopen'\)/)
-    assert.match(page, /BossMich/)
+    // The Daily Sheet migration revokes review_shift_close, so the Finance tab is history only.
+    assert.doesNotMatch(page, /review_shift_close|review\('(accept|reject|reopen|lock)'\)|shift_close_field_config'\)\s*\.update/)
+    assert.match(page, /Read-only history from before Daily Sheets/)
+    assert.match(page, /\/operations\/finance\?tab=sheets/)
   })
 })

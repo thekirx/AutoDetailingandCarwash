@@ -8,7 +8,6 @@ import {
   canEditPlanning,
   canEditQueueOperations,
   canUseAttendanceClock,
-  canViewOwnPay,
   canViewPlanning,
   getBranchScopeList,
   getOperationsNav,
@@ -55,13 +54,12 @@ describe('Operations Lead + Ops Lab', () => {
     assert.ok(!getOperationsNav({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' }).some((i) => i.to === '/operations/roadmap'))
   })
 
-  it('OL has TL∪BA ops, all branches, My Pay, no clock; deep-link key works', () => {
+  it('OL has TL∪BA ops, all branches, no clock; deep-link key works', () => {
     assert.equal(getBranchScopeList(ol), null)
     assert.equal(canViewPlanning(ol), true)
     assert.equal(canEditPlanning(ol), true)
     assert.equal(canEditQueueOperations(ol), true)
     assert.equal(canAccessPos(ol), true)
-    assert.equal(canViewOwnPay(ol), true)
     assert.equal(canUseAttendanceClock(ol), false)
     assert.equal(redirectForRole(ROLES.OPERATIONS_LEAD), '/operations/roadmap')
     assert.equal(opsRouteKeyFromPath('/operations/roadmap'), 'roadmap')

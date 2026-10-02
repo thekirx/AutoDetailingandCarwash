@@ -11,6 +11,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { registerSW } from 'virtual:pwa-register'
 import './styles.css'
 import './styles/finance.css'
+import './styles/daily-sheet.css'
 import './styles-customer-app.css'
 import './styles/bredesign.css'
 

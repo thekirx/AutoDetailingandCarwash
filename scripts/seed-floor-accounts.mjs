@@ -21,6 +21,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { setAssistantGrantsPreset } from '../src/auth/permissions.js'
 
 // ponytail: load .env without adding dotenv dependency
 const envPath = resolve(process.cwd(), '.env')
@@ -328,16 +329,16 @@ async function main() {
   const asa = await ensureAuthUser({
     email: 'assistant@hakumautocare.com',
     password: 'HakumAsa2026!',
-    full_name: 'Assistant Super Admin',
+    full_name: 'Luci',
   })
   await upsertStaffProfile(asa, {
-    full_name: 'Assistant Super Admin',
+    full_name: 'Luci',
     role: 'assistant_super_admin',
     branch_slug: null,
     phone: '09170000030',
-    permission_grants: {},
+    permission_grants: setAssistantGrantsPreset('all'),
   })
-  console.log('Assistant Super Admin', asa.id)
+  console.log('Assistant Super Admin (Luci)', asa.id)
 
   const opsLead = await ensureAuthUser({
     email: 'opslead@hakumautocare.com',

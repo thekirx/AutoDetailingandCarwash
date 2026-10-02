@@ -37,10 +37,10 @@ import {
   canEditAttendanceRoles,
   canEditAttendanceSettings,
   canOverrideAttendance,
-  canViewOwnPay,
   getBranchScopeList,
   isAdmin,
   isSuperAdmin,
+  ROLES,
 } from '@/auth/permissions'
 import {
   ATTENDANCE_ROLE_OPTIONS,
@@ -92,6 +92,10 @@ import { collectPaged } from '@/lib/crmInsights'
 import { buildCompensationPostPlan } from '@/lib/compensation'
 
 const ATTENDANCE_PAGE_SIZE = 25
+
+function seesOwnPayEstimate(profile) {
+  return Boolean(profile?.role) && !isSuperAdmin(profile) && profile.role !== ROLES.INVESTOR
+}
 
 function fmtTime(iso) {
   if (!iso) return '—'
@@ -174,7 +178,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
       setCrewFloor(floorRes)
       if (rulesRes?.data) setCompRules(normalizeCompensationSettings(rulesRes.data))
 
-      if (canViewOwnPay(profile) && profile?.id) {
+      if (seesOwnPayEstimate(profile) && profile?.id) {
         setMyToday(attRows.find((r) => r.staff_id === profile.id && r.attendance_date === today) || null)
         const startIso = `${today}T00:00:00+08:00`
         const endIso = `${today}T23:59:59.999+08:00`
@@ -383,14 +387,10 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                   ) : null}
                 </div>
               ) : null}
-              {canViewOwnPay(profile) && myPayMinor != null ? (
+              {seesOwnPayEstimate(profile) && myPayMinor != null ? (
                 <p className="mt-3 text-sm text-foreground">
                   <Wallet className="mr-1 inline size-4 text-primary" aria-hidden />
                   Wash pool estimate today — {formatMoney(myPayMinor)} unpaid
-                  {' · '}
-                  <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/operations/my-pay">
-                    Posted payouts
-                  </Link>
                 </p>
               ) : null}
             </div>
@@ -1049,7 +1049,7 @@ export function CrewSettingsPanel({ profile }) {
                   <li>Late → {formatMoney(payDemo.perLateMinor)}</li>
                 </ul>
                 <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                  On-time crew always receive 100% of their fair share. Pool % and ceramic splits live under Payroll.
+                  On-time crew always receive 100% of their fair share. Pool % and ceramic splits live under Daily sheet rules.
                 </p>
               </div>
 
@@ -1058,7 +1058,7 @@ export function CrewSettingsPanel({ profile }) {
                   {paySaving ? 'Saving…' : 'Save late pay policy'}
                 </Button>
                 <Button type="button" variant="outline" className="min-h-11" asChild>
-                  <Link to="/operations/settings/payroll">More payroll settings</Link>
+                  <Link to="/operations/settings/daily-sheet">Daily sheet rules</Link>
                 </Button>
               </div>
             </form>

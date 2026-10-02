@@ -11,6 +11,7 @@ import {
   Tags,
   BookOpen,
   ClipboardCheck,
+  ClipboardList,
   FileSpreadsheet,
   Building2,
   Truck,
@@ -61,13 +62,15 @@ import { collectPaged } from '@/lib/crmInsights'
 import { salesCompareWindow } from '@/lib/salesSummary'
 import { formatMoney } from '@/queue/queueApi'
 import FinanceFilters from './finance/FinanceFilters'
-import FinanceOverviewTab from './finance/FinanceOverviewTab'
+import FinanceHomeTab from './finance/FinanceHomeTab'
 import FinanceSalesTab from './finance/FinanceSalesTab'
 import FinancePurchasesTab from './finance/FinancePurchasesTab'
 import FinancePLTab from './finance/FinancePLTab'
 import FinanceCategoriesTab from './finance/FinanceCategoriesTab'
 import FinanceReportsTab from './finance/FinanceReportsTab'
 import FinanceShiftCloseTab from './finance/FinanceShiftCloseTab'
+import FinanceDailySheetsTab from './finance/FinanceDailySheetsTab'
+import { canReviewDailySheet } from '@/lib/dailySheet'
 import FinanceExpenseReportsTab from './finance/FinanceExpenseReportsTab'
 import FinanceVendorsTab from './finance/FinanceVendorsTab'
 import FinanceQuotesTab from './finance/FinanceQuotesTab'
@@ -78,6 +81,7 @@ import { FINANCE_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 
 const TAB_ICONS = {
   overview: LayoutDashboard,
+  sheets: ClipboardList,
   sales: ShoppingCart,
   purchases: Receipt,
   pl: FileBarChart,
@@ -96,6 +100,7 @@ export default function FinancePage() {
   const canWrite = booksAccess && canEditFinanceBooks(profile)
   const canManageVendors = canManageFinanceVendors(profile)
   const showCorporate = canAccessCorporateFinance(profile)
+  const showSheets = canReviewDailySheet(profile)
   const reportsOnly = !booksAccess && canOpenFinanceHub(profile)
   const [searchParams, setSearchParams] = useSearchParams()
   const scope = branchScopeList(profile)
@@ -110,15 +115,17 @@ export default function FinancePage() {
   const customEnd = parsed.to
   const comparePreset = parsed.compare
   const branchFilter = parsed.branch || defaultBranch
+  const extras = parsed.extras
   const visibleTabs = useMemo(() => {
     if (reportsOnly) return FINANCE_TABS.filter((t) => t.id === 'reports')
     return FINANCE_TABS.filter((t) => {
       if (t.id === 'corporate') return showCorporate
+      if (t.id === 'sheets') return showSheets
       // Quotes write is SA/ASA/admin; investor has no SELECT on finance_quotes
       if (t.id === 'quotes' && profile?.role === ROLES.INVESTOR) return false
       return true
     })
-  }, [reportsOnly, showCorporate, profile?.role])
+  }, [reportsOnly, showCorporate, showSheets, profile?.role])
   const primaryTabs = useMemo(
     () => visibleTabs.filter((t) => FINANCE_PRIMARY_TAB_IDS.includes(t.id)),
     [visibleTabs],
@@ -133,6 +140,7 @@ export default function FinancePage() {
   const [vendors, setVendors] = useState([])
   const [salesRows, setSalesRows] = useState([])
   const [kindRows, setKindRows] = useState([])
+  const [priorKindRows, setPriorKindRows] = useState([])
   const [plRows, setPlRows] = useState([])
   const [priorPlRows, setPriorPlRows] = useState([])
   const [expenses, setExpenses] = useState([])
@@ -140,7 +148,7 @@ export default function FinancePage() {
   const [priorSaleRows, setPriorSaleRows] = useState([])
   const [salesWindow, setSalesWindow] = useState(null)
   const [lastPaidHint, setLastPaidHint] = useState(null)
-  const [shiftCloseCount, setShiftCloseCount] = useState(0)
+  const [approvedSheetCount, setApprovedSheetCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -178,6 +186,7 @@ export default function FinancePage() {
 
   const patchSearch = useCallback(
     (patch = {}) => {
+      const tabChanged = patch.tab != null && patch.tab !== tab
       setSearchParams(
         buildFinanceSearchParams({
           tab: patch.tab ?? tab,
@@ -188,6 +197,8 @@ export default function FinancePage() {
           to: patch.to ?? customEnd,
           defaultBranch,
           reportsOnly,
+          // Tab-specific filters (sheet status, open sheet, P&L compare…) reset on tab change.
+          extras: { ...(tabChanged ? {} : extras), ...(patch.extras || {}) },
         }),
         { replace: true },
       )
@@ -201,6 +212,7 @@ export default function FinancePage() {
       customEnd,
       defaultBranch,
       reportsOnly,
+      extras,
       setSearchParams,
     ],
   )
@@ -257,6 +269,17 @@ export default function FinancePage() {
           .lte('period_date', compareRange.end)
         priorQ = scopeBranch(priorQ, profile, branchFilter)
       }
+      const priorKindQ = compareRange
+        ? scopeBranch(
+            supabase
+              .from('finance_daily_line_kind')
+              .select('branch, period_date, line_kind, amount_minor')
+              .gte('period_date', compareRange.start)
+              .lte('period_date', compareRange.end),
+            profile,
+            branchFilter,
+          )
+        : Promise.resolve({ data: [], error: null })
 
       let lastPaidQ = supabase
         .from('daily_sales_summary')
@@ -266,13 +289,13 @@ export default function FinancePage() {
         .limit(1)
       lastPaidQ = scopeBranch(lastPaidQ, profile, branchFilter)
 
-      let shiftCountQ = supabase
-        .from('shift_close_reports')
+      let sheetCountQ = supabase
+        .from('daily_sheets')
         .select('id', { count: 'exact', head: true })
-        .in('status', ['accepted', 'locked'])
+        .eq('status', 'approved')
         .gte('business_date', queryRange.start)
         .lte('business_date', queryRange.end)
-      shiftCountQ = scopeBranch(shiftCountQ, profile, branchFilter)
+      sheetCountQ = scopeBranch(sheetCountQ, profile, branchFilter)
 
       const saleNow = new Date()
       const saleRange = { start: queryRange.start, end: queryRange.end }
@@ -293,16 +316,16 @@ export default function FinancePage() {
           return data || []
         }, 1000)
 
-      const [branchRows, cats, sales, pl, kindRes, expRows, prior, vendorRes, lastPaidRes, shiftCountRes, curSales, prevSales] = await Promise.all([
+      const [branchRows, cats, sales, pl, kindRes, expRows, prior, vendorRes, lastPaidRes, sheetCountRes, curSales, prevSales, priorKindRes] = await Promise.all([
         listBranches(),
-        supabase.from('expense_categories').select('id, name, is_chemical, kind').order('name'),
+        supabase.from('expense_categories').select('*').order('name'),
         salesQ,
         plQ,
         kindQ,
         collectPaged(async (from, to) => {
           let q = supabase
             .from('expenses')
-            .select('id, title, description, total_minor, branch, status, expense_kind, category_id, vendor_id, created_at, quantity, unit_cost_minor')
+            .select('*')
             .gte('created_at', startIso)
             .lte('created_at', endIso)
             .order('created_at', { ascending: false })
@@ -315,9 +338,10 @@ export default function FinancePage() {
         priorQ || Promise.resolve({ data: [], error: null }),
         supabase.from('vendors').select('id, name, is_active').eq('is_active', true).order('name'),
         lastPaidQ,
-        shiftCountQ,
+        sheetCountQ,
         fetchSaleRows(startIso, endIso),
         saleCompare ? fetchSaleRows(saleCompare.startIso, saleCompare.endIso) : Promise.resolve([]),
+        priorKindQ,
       ])
       if (cats.error) throw cats.error
       if (sales.error) throw sales.error
@@ -330,6 +354,7 @@ export default function FinancePage() {
       setVendors(vendorRes.error ? [] : vendorRes.data || [])
       setSalesRows(sales.data || [])
       setKindRows(kindRes.error ? [] : kindRes.data || [])
+      setPriorKindRows(priorKindRes.error ? [] : priorKindRes.data || [])
       setPlRows(pl.data || [])
       setPriorPlRows(prior.data || [])
       setExpenses(expRows)
@@ -337,7 +362,7 @@ export default function FinancePage() {
       setPriorSaleRows(prevSales)
       setSalesWindow({ preset: datePreset, range: saleRange, now: saleNow, compare: saleCompare })
       setLastPaidHint(lastPaidRes.error ? null : lastPaidRes.data?.[0] || null)
-      setShiftCloseCount(shiftCountRes.error ? 0 : shiftCountRes.count || 0)
+      setApprovedSheetCount(sheetCountRes.error ? 0 : sheetCountRes.count || 0)
     } catch (err) {
       const message = err.message || 'Unable to load finance data'
       setLoadError(message)
@@ -387,14 +412,14 @@ export default function FinancePage() {
     const extra = financeStatementCues({
       income: headlinePl.income,
       payrollExpenseMinor: postedPayrollExpenseMinor(plRows),
-      shiftCloseCount,
+      approvedSheetCount,
       paidCount,
     })
     const out = []
     if (empty && empty.id === 'last-paid-outside') out.push(empty)
     extra.forEach((cue) => out.push(cue))
     return out
-  }, [headlinePl.income, headlinePl.expenses, lastPaidHint, queryRange, plRows, shiftCloseCount, paidCount])
+  }, [headlinePl.income, headlinePl.expenses, lastPaidHint, queryRange, plRows, approvedSheetCount, paidCount])
 
   const branchName = useMemo(() => {
     if (branchFilter === 'all') return 'All branches'
@@ -440,7 +465,7 @@ export default function FinancePage() {
       {!reportsOnly ? (
         <OpsGuideCard
           title="How Finance works"
-          description="Income from POS, expenses from bills, shift closes before payroll. Open a step if you are new to books."
+          description="Income from POS, expenses from bills, crew pay from approved Daily Sheets. Open a step if you are new to books."
           steps={FINANCE_WORKFLOW_STEPS}
           stepIcons={financeStepIcons}
           defaultOpen={false}
@@ -512,9 +537,7 @@ export default function FinancePage() {
                 ) : null}
                 {cue.href ? (
                   <Button asChild variant="outline" size="sm" className="min-h-11">
-                    <Link to={cue.href}>
-                      {cue.id === 'unposted-pay' ? 'Open Payroll' : 'Open POS'}
-                    </Link>
+                    <Link to={cue.href}>{cue.linkLabel}</Link>
                   </Button>
                 ) : null}
               </div>
@@ -567,27 +590,29 @@ export default function FinancePage() {
         <Separator className="finance-tabs-sep" />
 
         <TabsContent value="overview" className="finance-tab-panel">
-          <FinanceOverviewTab
-            plRows={plRows}
-            priorPlRows={priorPlRows}
-            salesRows={salesRows}
-            kindRows={kindRows}
-            branchOptions={branchOptions.filter((b) => b.slug !== 'all')}
-            range={queryRange}
-            compareRange={compareRange}
-            loading={loading}
-            onNavigate={setTab}
-            lastPaidHint={lastPaidHint}
-            saleRows={saleRows}
-            priorSaleRows={priorSaleRows}
-            salesWindow={salesWindow}
-            expenses={expenses}
-            categories={categories}
-            period={datePreset}
+          <FinanceHomeTab
+            profile={profile}
+            branchFilter={branchFilter}
             branchName={branchName}
-            onPeriodChange={(next) => patchSearch({ period: next })}
+            showSheets={showSheets}
+            onDrill={patchSearch}
           />
         </TabsContent>
+
+        {showSheets ? (
+          <TabsContent value="sheets" className="finance-tab-panel">
+            <FinanceDailySheetsTab
+              profile={profile}
+              range={queryRange}
+              branchFilter={branchFilter}
+              branchOptions={branchOptions.filter((b) => b.slug !== 'all')}
+              status={extras.status || 'submitted'}
+              overShortOnly={extras.os === '1'}
+              openSheetId={extras.sheet}
+              onFilters={(next) => patchSearch({ extras: next })}
+            />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="sales" className="finance-tab-panel">
           <FinanceSalesTab
@@ -595,6 +620,19 @@ export default function FinancePage() {
             branchOptions={branchOptions.filter((b) => b.slug !== 'all')}
             range={queryRange}
             loading={loading}
+            method={extras.method}
+            onMethodChange={(next) => patchSearch({ extras: { ...extras, method: next } })}
+            summary={{
+              saleRows,
+              priorSaleRows,
+              salesWindow,
+              period: datePreset,
+              onPeriodChange: (next) => patchSearch({ period: next }),
+              branchName,
+              kindRows,
+              expenses,
+              categories,
+            }}
           />
         </TabsContent>
 
@@ -609,6 +647,8 @@ export default function FinancePage() {
             range={queryRange}
             loading={loading}
             onReload={load}
+            accountFilter={extras.acct}
+            onAccountFilter={(next) => patchSearch({ extras: { ...extras, acct: next } })}
           />
         </TabsContent>
 
@@ -616,19 +656,22 @@ export default function FinancePage() {
           <FinancePLTab
             plRows={plRows}
             priorPlRows={priorPlRows}
+            kindRows={kindRows}
+            priorKindRows={priorKindRows}
             range={queryRange}
             compareRange={compareRange}
             loading={loading}
+            profile={profile}
+            branchFilter={branchFilter}
+            branchOptions={branchOptions.filter((b) => b.slug !== 'all')}
+            layout={extras.by}
+            periodsBack={extras.n}
+            onLayout={(next) => patchSearch({ extras: { ...extras, ...next } })}
           />
         </TabsContent>
 
         <TabsContent value="shift-close" className="finance-tab-panel">
-          <FinanceShiftCloseTab
-            profile={profile}
-            range={queryRange}
-            branchFilter={branchFilter}
-            canWrite={canWrite}
-          />
+          <FinanceShiftCloseTab range={queryRange} branchFilter={branchFilter} />
         </TabsContent>
 
         <TabsContent value="expense-reports" className="finance-tab-panel">

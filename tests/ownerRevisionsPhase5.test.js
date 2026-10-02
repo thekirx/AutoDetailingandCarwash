@@ -155,12 +155,12 @@ describe('P5 source seams', () => {
     assert.match(src, /audit_logs/)
   })
 
-  it('Finance tabs include vendors, quotes, corporate; categories document POS source', () => {
+  it('Finance tabs include vendors, quotes, corporate; accounts document their sources', () => {
     assert.ok(FINANCE_TABS.some((t) => t.id === 'vendors'))
     assert.ok(FINANCE_TABS.some((t) => t.id === 'quotes'))
     assert.ok(FINANCE_TABS.some((t) => t.id === 'corporate'))
     const cats = FINANCE_TABS.find((t) => t.id === 'categories')
-    assert.match(cats.hint, /POS/)
+    assert.match(cats.hint, /Daily Sheets and Bills/)
     const page = read('src/pages/FinancePage.jsx')
     assert.match(page, /filterFinanceBranchOptions/)
     assert.match(page, /FinanceVendorsTab/)

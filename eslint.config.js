@@ -75,7 +75,6 @@ export default [
       'scripts/probe-queue-board-overflow.mjs',
       'scripts/probe-shop-tv.mjs',
       'scripts/_pos-deep-shots.mjs',
-      'scripts/_payroll-deep-shots.mjs',
       'scripts/_finance-deep-shots.mjs',
       'scripts/_diag-bleed.mjs',
     ],

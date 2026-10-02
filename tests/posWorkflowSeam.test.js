@@ -68,10 +68,10 @@ describe('POS checkout workflow seam', () => {
     assert.doesNotMatch(pos, /setTab\(branchAdmin \? 'merch' : 'services'\)/)
   })
 
-  it('Sell tab links to Pay queue instead of duplicating handoff cards', () => {
+  it('Sell shows waiting tickets on the same page — no separate Pay queue tab', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
-    assert.match(pos, /Pay queue tab/)
-    assert.doesNotMatch(pos, /Waiting for payment/)
+    assert.match(pos, /<PosOpenTickets/)
+    assert.doesNotMatch(pos, /Pay queue tab/)
     assert.doesNotMatch(pos, /Open Pay queue/)
   })
 
@@ -97,28 +97,24 @@ describe('POS checkout workflow seam', () => {
     assert.equal(rows[0].bucket, 'ppf')
   })
 
-  it('POS page keeps handoff on merch add, gates expense, loads approved CA for close only', () => {
+  it('POS page keeps handoff on merch add; cash advances and expenses live on the Daily sheet', () => {
     const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
     assert.match(pos, /keepQueueHandoffWhenAdding/)
     assert.match(pos, /posCartBlocksCheckout/)
-    assert.match(pos, /cashAdvanceVisibleOnPos/)
     assert.match(pos, /canWriteFinance\(profile\)/)
-    assert.match(pos, /loadApprovedCashAdvances/)
     assert.match(pos, /resolvePosShellTab/)
     assert.match(pos, /POS_SETTINGS_TAB/)
     assert.match(pos, /PosGuideCard/)
     assert.doesNotMatch(pos, /TabsTrigger value="cash-advance"/)
-    assert.match(pos, /\/operations\/payroll\?tab=cash-advance/)
+    assert.doesNotMatch(pos, /\/operations\/payroll/)
     assert.doesNotMatch(pos, /SHELL_TABS = \[[^\]]*'services'/)
     const insights = readFileSync(join(root, 'src/lib/posInsights.js'), 'utf8')
-    assert.match(insights, /POS_SHELL_TABS = Object\.freeze\(\['checkout', 'pending', 'expenses', 'dashboard'\]\)/)
+    assert.match(insights, /POS_SHELL_TABS = Object\.freeze\(\['checkout', 'sheet', 'dashboard'\]\)/)
     assert.match(pos, /writeAudit/)
     assert.match(pos, /notify-pos/)
     assert.match(pos, /buildVisitHandoffCartLines/)
-    assert.match(pos, /expenseCountsOnDailyClose/)
-    const payroll = readFileSync(join(root, 'src/pages/PayrollPage.jsx'), 'utf8')
-    assert.match(payroll, /cash-advance/)
-    assert.match(payroll, /PayrollCashAdvancesPanel/)
+    const sheet = readFileSync(join(root, 'src/pages/pos/DailySheetPanel.jsx'), 'utf8')
+    assert.match(sheet, /aria-label="Cash advances"/)
   })
 
   it('complete_pos_sale rejects null service_id and settles pending_payment transactions', () => {

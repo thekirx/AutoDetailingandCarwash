@@ -15,7 +15,7 @@ const picker = readFileSync(join(root, 'src/components/ServiceKindPicker.jsx'), 
 describe('ServiceKindPicker contrast (CommandShell + FloorShell)', () => {
   it('floor form controls are light-first with dark overrides', () => {
     assert.match(styles, /\.floor-control\s*\{[^}]*background:\s*#ffffff/s)
-    assert.match(styles, /\.floor-kind-tab-active\s*\{[^}]*color:\s*#052699/s)
+    assert.match(styles, /\.floor-picker-group\s*\{[^}]*color:\s*#052699/s)
     assert.match(styles, /\.floor-picker-list\s*\{[^}]*background:\s*#ffffff/s)
     assert.match(styles, /\.dark \.floor-picker-list\s*\{[^}]*background:\s*#0f172a/s)
     assert.doesNotMatch(styles, /html:not\(\.dark\)[^\n]*\.floor-control/)

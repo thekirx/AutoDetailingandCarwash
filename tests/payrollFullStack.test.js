@@ -1,13 +1,12 @@
 /**
- * Full payroll stack: RPC payload, wizard/My pay UI, SQL grants, one salary path.
+ * Payroll lib + SQL history, and the retirement of the Payroll / My pay UI for the Daily Sheet.
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
-import { ROLES, canAccessPayroll, canViewOwnPay } from '../src/auth/permissions.js'
 import {
   buildPayrollPreview,
   buildRunPayrollPayload,
@@ -58,25 +57,24 @@ describe('run_payroll payload from POS-proofed preview', () => {
   })
 })
 
-describe('payroll frontend contract', () => {
-  it('wizard posts via buildRunPayrollPayload; confirm stays behind canRunPayroll', () => {
-    const page = read('src/pages/PayrollPage.jsx')
-    assert.match(page, /buildRunPayrollPayload/)
-    assert.match(page, /rpc\('run_payroll'/)
-    assert.match(page, /disabled=\{!canRun \|\| saving \|\| gate\.blocked/)
-    assert.match(page, /hakum-payroll-steps/)
-    assert.match(page, /canRunPayroll\(profile\)/)
-    const mine = read('src/pages/MyPayPage.jsx')
-    assert.match(mine, /from\('payroll_run_lines'\)/)
-    assert.match(mine, /\.eq\('staff_id', profile\.id\)/)
-    assert.match(mine, /Navigate to=\{canAccessPayroll\(profile\) \? '\/operations\/payroll'/)
-    assert.equal(canViewOwnPay({ role: ROLES.SUPER_ADMIN }), false)
-    assert.equal(canAccessPayroll({ role: ROLES.SUPER_ADMIN }), true)
+describe('payroll frontend retired for the Daily Sheet', () => {
+  it('Payroll, My pay and Payroll settings pages are gone; old links redirect', () => {
+    for (const rel of [
+      'src/pages/PayrollPage.jsx',
+      'src/pages/MyPayPage.jsx',
+      'src/pages/settings/PayrollSettingsPage.jsx',
+      'src/components/PayrollCashAdvancesPanel.jsx',
+      'src/components/ShiftCloseWizard.jsx',
+    ]) {
+      assert.equal(existsSync(join(root, rel)), false, rel)
+    }
     const app = read('src/App.jsx')
-    assert.match(app, /gate\('payroll'/)
-    assert.match(app, /gate\('my-pay'/)
-    assert.equal(opsRouteKeyFromPath('/operations/payroll'), 'payroll')
-    assert.equal(opsRouteKeyFromPath('/operations/my-pay'), 'my-pay')
+    assert.match(app, /path="payroll" element=\{<Navigate to="\/operations\/finance\?tab=sheets" replace \/>\}/)
+    assert.match(app, /path="my-pay" element=\{<Navigate to="\/operations" replace \/>\}/)
+    assert.match(app, /path="settings\/payroll" element=\{<Navigate to="\/operations\/settings\/daily-sheet" replace \/>\}/)
+    assert.doesNotMatch(app, /gate\('payroll'|gate\('my-pay'/)
+    assert.equal(opsRouteKeyFromPath('/operations/payroll'), null)
+    assert.equal(opsRouteKeyFromPath('/operations/my-pay'), null)
   })
 
   it('blocks confirm when ceramic assignee is missing', () => {
@@ -107,17 +105,18 @@ describe('payroll SQL / RPC contract', () => {
   })
 })
 
-describe('one salary path — payroll, not duplicate posters', () => {
-  it('Crew estimate does not insert wash-pool expenses; Payroll is the poster', () => {
+describe('one salary path — the Daily Sheet, not duplicate posters', () => {
+  it('Crew estimate does not insert wash-pool expenses; Daily sheet rules own the settings', () => {
     const crew = read('src/pages/OperationsPages.jsx')
     assert.doesNotMatch(crew, /\.from\('expenses'\)\.insert\(pending\)/)
-    assert.match(crew, /\/operations\/payroll/)
-    const payroll = read('src/pages/PayrollPage.jsx')
-    assert.match(payroll, /toCompensationSettingsRow/)
+    assert.doesNotMatch(crew, /\/operations\/payroll/)
+    assert.match(crew, /Crew pay is settled on the Daily Sheet/)
+    const rules = read('src/pages/settings/DailySheetRulesPage.jsx')
+    assert.match(rules, /toCompensationSettingsRow/)
     const settings = read('src/pages/SettingsHubPage.jsx')
     assert.doesNotMatch(settings, /toCompensationSettingsRow/)
-    assert.match(settings, /settings\/payroll/)
-    assert.doesNotMatch(settings, /to: '\/operations\/payroll'/)
+    assert.match(settings, /settings\/daily-sheet/)
+    assert.doesNotMatch(settings, /payroll/i)
   })
 
   it('POS keeps ceramic drafts as proof and does not clone Inventory as POS tabs', () => {
@@ -130,12 +129,10 @@ describe('one salary path — payroll, not duplicate posters', () => {
     assert.match(products, /\/operations\/pos/)
   })
 
-  it('Cash advances live on Payroll, not POS shell tabs', () => {
+  it('Cash advances are released on the POS Daily sheet, not a separate tab', () => {
     const pos = read('src/pages/PosPage.jsx')
     assert.doesNotMatch(pos, /TabsTrigger value="cash-advance"/)
-    assert.match(pos, /Cash advances · Payroll/)
-    const payroll = read('src/pages/PayrollPage.jsx')
-    assert.match(payroll, /PayrollCashAdvancesPanel/)
-    assert.match(payroll, /canApproveCashAdvance/)
+    const sheet = read('src/pages/pos/DailySheetPanel.jsx')
+    assert.match(sheet, /aria-label="Cash advances"/)
   })
 })

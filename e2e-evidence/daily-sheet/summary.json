@@ -1,0 +1,161 @@
+{
+  "today": "2026-10-02",
+  "results": [
+    {
+      "name": "BA: sheet loads for today",
+      "ok": true,
+      "detail": "2026-10-02"
+    },
+    {
+      "name": "BA: mocked sales feed Net sales ₱4,700",
+      "ok": true,
+      "detail": "₱4,700.00"
+    },
+    {
+      "name": "BA: clocked-in crew gets a suggested salary line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BA: submit blocked until float + count entered",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BA: CA request shows as a one-tap chip",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BA: expense line added",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BA: expense account picked from chart",
+      "ok": true,
+      "detail": "Chemicals"
+    },
+    {
+      "name": "BA: new expense amount starts empty (no leading 0)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BA: Net profit = Net sales − Expenses − Salaries",
+      "ok": true,
+      "detail": "4700 -150 -920 → 3630"
+    },
+    {
+      "name": "BA: Expected cash = float + cash sales − expenses − salaries − CA out",
+      "ok": true,
+      "detail": "1000+1200-150-920-300 → 830"
+    },
+    {
+      "name": "BA: CA release ₱300 counted in drawer",
+      "ok": true,
+      "detail": "-300"
+    },
+    {
+      "name": "BA: autosave called save_daily_sheet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BA: over/short is zero",
+      "ok": true,
+      "detail": "₱0.00"
+    },
+    {
+      "name": "BA: Submit enabled once complete",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BA: submit RPC called and sheet locked",
+      "ok": true,
+      "detail": "rpc: save_daily_sheet,save_daily_sheet,submit_daily_sheet · failed: "
+    },
+    {
+      "name": "BA: sheet_submitted push requested (mocked)",
+      "ok": true,
+      "detail": "sheet_submitted"
+    },
+    {
+      "name": "SA: Daily sheets inbox lists the submitted sheet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "SA: review drawer shows lines read-only",
+      "ok": true,
+      "detail": "Review daily sheet DAILY SHEET · BACOOR Friday, October 2, 2026 Waiting for approval Money in — complete From today's"
+    },
+    {
+      "name": "SA: review drawer is wide enough to read the sheet at 1440 (≥ 900px)",
+      "ok": true,
+      "detail": "1024px"
+    },
+    {
+      "name": "SA: drawer totals match BA summary (net profit)",
+      "ok": true,
+      "detail": "3630"
+    },
+    {
+      "name": "SA: approve RPC called",
+      "ok": true,
+      "detail": "approved"
+    },
+    {
+      "name": "SA: sheet_reviewed push requested (mocked)",
+      "ok": true,
+      "detail": "sheet_submitted,sheet_reviewed"
+    },
+    {
+      "name": "P&L: salaries posted under Salaries & wages",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "P&L: total operating expenses = sheet expenses + salaries (₱1,070.00)",
+      "ok": true,
+      "detail": "1,070.00"
+    },
+    {
+      "name": "P&L: income ₱4,700 from sales",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Old shift closes: read-only (no Accept / Reject / Lock)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BA: sees Approved: release pay",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no blocked production writes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "rpcCalls": [
+    "save_daily_sheet",
+    "save_daily_sheet",
+    "submit_daily_sheet",
+    "review_daily_sheet"
+  ],
+  "notifyCalls": [
+    "sheet_submitted",
+    "sheet_reviewed"
+  ],
+  "blockedWrites": []
+}
