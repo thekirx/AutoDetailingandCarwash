@@ -319,3 +319,87 @@ export function mergeSalarySuggestions(lines = [], suggestions = []) {
   })
   return [...others, ...merged, ...existing.values()]
 }
+
+/** "1,500.50" pesos → 150050 minor; blank or not a number → null (filter off). */
+const pesosOrNull = (text) => {
+  const s = String(text ?? '').replace(/[₱,\s]/g, '')
+  if (!s) return null
+  const n = Number(s)
+  return Number.isFinite(n) ? Math.round(n * 100) : null
+}
+
+/** Finance › Daily sheets client-side filters on top of the status / branch / date query. */
+export function filterSheets(rows = [], { search = '', submitter = '', minNet = '', maxNet = '', overShortOnly = false, branchName = (s) => s } = {}) {
+  const q = String(search || '').trim().toLowerCase()
+  const min = pesosOrNull(minNet)
+  const max = pesosOrNull(maxNet)
+  return (rows || []).filter((r) => {
+    const net = amount(r?.totals?.netProfitMinor)
+    if (submitter && r.submitted_by !== submitter) return false
+    if (min != null && net < min) return false
+    if (max != null && net > max) return false
+    if (overShortOnly && !amount(r?.totals?.overShortMinor)) return false
+    if (!q) return true
+    return [r.business_date, r.branch, branchName(r.branch), r.staff_profiles?.full_name, r.notes, r.review_note]
+      .some((v) => String(v || '').toLowerCase().includes(q))
+  })
+}
+
+/**
+ * Square-style close-of-day slip: one flat row list (section · item · detail · amount) that feeds
+ * Print / Save as PDF, CSV and Excel. Figures come from computeSheetTotals, same as the sheet itself.
+ */
+export function closeOfDaySlip({ sheet = {}, lines = [], sales = [], branchLabel = '' } = {}) {
+  const t = computeSheetTotals({ sales, lines, openingFloatMinor: sheet.opening_float_minor, countedCashMinor: sheet.counted_cash_minor })
+  const rows = []
+  const add = (section, item, amountMinor, detail = '') => rows.push({ section, item, detail, amount_minor: amountMinor })
+  const who = (l) => l.staff_name || 'Staff'
+
+  add('Sales', 'Gross sales', t.grossMinor)
+  if (t.discountsMinor) add('Sales', 'Discounts', -t.discountsMinor)
+  if (t.refundsMinor) add('Sales', 'Refunds', -t.refundsMinor)
+  add('Sales', 'Net sales', t.netMinor)
+  add('Sales', 'Transactions', null, `${t.count} sale(s) · average ${formatAccounting(t.avgMinor)}`)
+  for (const [id, label] of Object.entries(METHOD_LABELS)) if (t.byMethod[id]) add('Payments', label, t.byMethod[id])
+  for (const f of t.byFamily) add('Services', f.label, f.minor)
+
+  for (const l of linesOf(lines, 'expense')) add('Expenses', l.description || 'Expense', amount(l.amount_minor), l.account_label || '')
+  add('Expenses', 'Total expenses', t.expensesMinor)
+  for (const l of linesOf(lines, 'salary')) {
+    const changed = amount(l.amount_minor) !== amount(l.suggested_minor)
+    add('Salaries', who(l), amount(l.amount_minor), changed ? `Suggested ${formatAccounting(l.suggested_minor)} · ${l.reason || 'no reason'}` : '')
+  }
+  add('Salaries', 'Total salaries', t.salariesMinor)
+  for (const l of linesOf(lines, 'ca_release')) add('Cash advances', `Given out · ${who(l)}`, amount(l.amount_minor))
+  for (const l of linesOf(lines, 'ca_repay')) add('Cash advances', `Paid back · ${who(l)}`, amount(l.amount_minor))
+
+  add('Drawer', 'Opening float', t.openingFloatMinor)
+  add('Drawer', 'Cash sales', t.cashMinor)
+  if (t.caRepaidMinor) add('Drawer', 'Cash advances paid back', t.caRepaidMinor)
+  add('Drawer', 'Expenses paid', -t.expensesMinor)
+  add('Drawer', 'Salaries paid', -t.salariesMinor)
+  if (t.caReleasedMinor) add('Drawer', 'Cash advances given out', -t.caReleasedMinor)
+  add('Drawer', 'Expected cash', t.expectedCashMinor)
+  add('Drawer', 'Counted cash', t.countedCashMinor)
+  add('Drawer', 'Over/short', t.overShortMinor, t.overShortMinor ? sheet.notes || '' : '')
+
+  add('Result', 'Net profit', t.netProfitMinor, 'Net sales − expenses − salaries')
+
+  const date = String(sheet.business_date || '').slice(0, 10)
+  const by = sheet.staff_profiles?.full_name
+  return {
+    title: `Close of day · ${branchLabel || sheet.branch || ''} · ${date}`,
+    subtitle: [SHEET_STATUS_LABELS[sheet.status] || 'Not saved yet', by ? `Submitted by ${by}` : '', sheet.review_note ? `Review note: ${sheet.review_note}` : '']
+      .filter(Boolean)
+      .join(' · '),
+    rows,
+    totals: t,
+  }
+}
+
+/** Distinct submitters for the "Submitted by" filter. */
+export function sheetSubmitters(rows = []) {
+  const seen = new Map()
+  for (const r of rows || []) if (r?.submitted_by && !seen.has(r.submitted_by)) seen.set(r.submitted_by, r.staff_profiles?.full_name || 'Branch Admin')
+  return [...seen.entries()].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label))
+}

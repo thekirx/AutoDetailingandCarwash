@@ -1,4 +1,4 @@
-/* global document, location */
+/* global document, location, window, HTMLAnchorElement */
 /**
  * Read-only browser smoke of the deployed Daily Sheet (real data, real logins, no writes).
  * BA opens POS › Daily sheet; SA opens Finance › Daily sheets, P&L, old shift closes and Settings › Daily sheet;
@@ -32,6 +32,40 @@ function isWrite(req) {
   return /\/rest\/v1\/(?!rpc\/)/.test(u) && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(m)
 }
 
+/** Runs in the page: records Print (window.open) and CSV/Excel (Blob downloads) instead of opening or saving them. */
+function installExportSpy() {
+  window.__exports = []
+  window.open = () => {
+    const rec = { kind: 'print', html: '' }
+    window.__exports.push(rec)
+    return { opener: 1, document: { write: (s) => { rec.html += s }, close() {} }, focus() {}, print() {}, close() {} }
+  }
+  URL.createObjectURL = (blob) => {
+    const rec = { kind: 'file', type: blob.type, text: '' }
+    window.__exports.push(rec)
+    blob.text().then((t) => { rec.text = t })
+    return 'about:blank'
+  }
+  URL.revokeObjectURL = () => {}
+  const click = HTMLAnchorElement.prototype.click
+  HTMLAnchorElement.prototype.click = function spyClick() {
+    if (this.download) window.__exports[window.__exports.length - 1].filename = this.download
+    else click.call(this)
+  }
+}
+
+async function exportVia(page, label) {
+  const clicked = await page.evaluate((re) => {
+    window.__exports = []
+    const btn = [...document.querySelectorAll('button')].find((b) => new RegExp(re).test(b.textContent.trim()) && !b.disabled)
+    btn?.click()
+    return Boolean(btn)
+  }, label.source)
+  if (!clicked) return null
+  await page.waitForFunction(() => window.__exports.length && window.__exports.every((r) => r.html || r.text), { timeout: 5000 }).catch(() => null)
+  return page.evaluate(() => window.__exports[0] || null)
+}
+
 async function login(browser, id) {
   const ctx = await browser.createBrowserContext()
   const page = await ctx.newPage()
@@ -52,6 +86,7 @@ async function login(browser, id) {
     return req.continue()
   })
   await page.setViewport({ width: 1440, height: 900 })
+  await page.evaluateOnNewDocument(installExportSpy)
   const acct = OPS_DEMO_ACCOUNTS.find((a) => a.id === id)
   await page.goto(`${base}/operations/login`, { waitUntil: 'domcontentloaded' })
   await page.evaluate((consentKey, consent, installKey) => {
@@ -76,6 +111,13 @@ try {
   let body = await text(ba.page)
   check('BA: POS › Daily sheet loads on live data', /Money out/.test(body) && /Cash in drawer/.test(body) && !NEEDS_MIGRATION.test(body), body.match(/Daily sheet[^\n]*/)?.[0] || '')
 
+  let out = await exportVia(ba.page, /^Print slip$/)
+  check('BA: Print slip opens the close-of-day slip', /Close of day/.test(out?.html) && /Expected cash/.test(out?.html) && /Net profit/.test(out?.html), out ? out.html.match(/<title>[^<]*/)?.[0] : 'button missing')
+  out = await exportVia(ba.page, /^Slip CSV$/)
+  check('BA: Slip CSV downloads the slip lines', /\.csv$/.test(out?.filename) && /Section.*Item.*Detail.*Amount \(PHP\)/.test(out?.text) && /Expected cash/.test(out?.text), out?.filename || 'button missing')
+  out = await exportVia(ba.page, /^Slip Excel$/)
+  check('BA: Slip Excel downloads the slip lines', /\.xls$/.test(out?.filename) && /<table/i.test(out?.text) && /Expected cash/.test(out?.text), out?.filename || 'button missing')
+
   await ba.page.goto(`${base}/operations/payroll`, { waitUntil: 'domcontentloaded' })
   await ba.page.waitForFunction(() => !location.pathname.includes('/payroll'), { timeout: 15000 }).catch(() => null)
   check('Retired /operations/payroll redirects', !ba.page.url().includes('/operations/payroll'), ba.page.url().replace(base, ''))
@@ -88,6 +130,26 @@ try {
   await waitText(sa.page, /One sheet per branch per day/)
   body = await text(sa.page)
   check('SA: Finance › Daily sheets inbox loads', /One sheet per branch per day/.test(body) && !NEEDS_MIGRATION.test(body))
+
+  const filters = await sa.page.evaluate(() => ['#ds-search', '#ds-submitter', '#ds-min-net', '#ds-max-net'].filter((s) => !document.querySelector(s)))
+  check('SA: sheet filters (search, submitted by, net profit range) render', !filters.length && /Over\/short only/.test(body), filters.join(','))
+  await sa.page.evaluate(() => [...document.querySelectorAll('[aria-label="Quick date range"] button')].find((b) => b.textContent.trim() === 'This week')?.click())
+  await sa.page.waitForFunction(() => location.search.includes('period=week'), { timeout: 10000 }).catch(() => null)
+  check('SA: quick date "This week" sets the period', sa.page.url().includes('period=week'), sa.page.url().replace(base, ''))
+  await sa.page.goto(`${base}/operations/finance?tab=sheets&period=month&status=all`, { waitUntil: 'domcontentloaded' })
+  await waitText(sa.page, /One sheet per branch per day/)
+  const listButtons = await sa.page.$$eval('button', (els) => els.filter((e) => /^(CSV|Excel|Print \/ PDF)$/.test(e.textContent.trim())).map((e) => `${e.textContent.trim()}${e.disabled ? ':off' : ''}`))
+  const sheetCount = await sa.page.$$eval('table.xero-table tbody tr', (els) => els.length).catch(() => 0)
+  if (!sheetCount) {
+    check('SA: list exports render, disabled with no sheets', listButtons.length === 3 && listButtons.every((b) => b.endsWith(':off')), listButtons.join(','))
+  } else {
+    out = await exportVia(sa.page, /^Print \/ PDF$/)
+    check('SA: list Print / PDF opens the filtered list', /Hakum daily sheets/.test(out?.html) && /Net profit/.test(out?.html), `${sheetCount} sheet(s)`)
+    out = await exportVia(sa.page, /^Excel$/)
+    check('SA: list Excel downloads', /\.xls$/.test(out?.filename) && /<table/i.test(out?.text), out?.filename || 'button missing')
+    out = await exportVia(sa.page, /^CSV$/)
+    check('SA: list CSV downloads', /\.csv$/.test(out?.filename) && /Net profit/.test(out?.text), out?.filename || 'button missing')
+  }
 
   await sa.page.goto(`${base}/operations/finance?tab=pl&period=month`, { waitUntil: 'domcontentloaded' })
   await waitText(sa.page, /Total operating expenses|No income or expenses in this window/)

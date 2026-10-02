@@ -609,6 +609,8 @@ export default function FinancePage() {
               status={extras.status || 'submitted'}
               overShortOnly={extras.os === '1'}
               openSheetId={extras.sheet}
+              period={datePreset}
+              onPeriod={(next) => patchSearch({ period: next })}
               onFilters={(next) => patchSearch({ extras: next })}
             />
           </TabsContent>

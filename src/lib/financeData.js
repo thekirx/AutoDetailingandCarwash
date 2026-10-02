@@ -695,11 +695,13 @@ export function downloadExcel(rows, columns, filename, title) {
 
 /** Open a print-friendly window with the table; user picks "Save as PDF". */
 export function printAsPdf(rows, columns, title, subtitle = '') {
-  const win = window.open('', '_blank', 'noopener,noreferrer')
+  // "noopener" makes window.open return null, so the window could never be written; detach opener by hand.
+  const win = window.open('', '_blank')
   if (!win) {
     alert('Pop-up blocked. Allow pop-ups for this site to export PDF.')
     return
   }
+  win.opener = null
   const head = columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join('')
   const body = (rows || [])
     .map((row) =>

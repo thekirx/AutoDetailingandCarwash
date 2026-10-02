@@ -36,7 +36,7 @@ export async function loadAccounts() {
 export async function loadSheet(branch, date) {
   const { data, error } = await supabase
     .from('daily_sheets')
-    .select('*, daily_sheet_lines(*, staff_profiles(full_name, role), expense_categories(name, code))')
+    .select('*, staff_profiles!daily_sheets_submitted_by_fkey(full_name), daily_sheet_lines(*, staff_profiles(full_name, role), expense_categories(name, code))')
     .eq('branch', branch)
     .eq('business_date', date)
     .maybeSingle()
@@ -47,7 +47,7 @@ export async function loadSheet(branch, date) {
 export async function loadSheetById(id) {
   const { data, error } = await supabase
     .from('daily_sheets')
-    .select('*, daily_sheet_lines(*, staff_profiles(full_name, role), expense_categories(name, code))')
+    .select('*, staff_profiles!daily_sheets_submitted_by_fkey(full_name), daily_sheet_lines(*, staff_profiles(full_name, role), expense_categories(name, code))')
     .eq('id', id)
     .maybeSingle()
   if (error) throw error

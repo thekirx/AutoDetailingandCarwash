@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, Check, CircleAlert, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Camera, Check, CircleAlert, Download, Plus, Printer, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,9 +11,11 @@ import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { ROLES } from '@/auth/permissions'
+import { downloadCsv, downloadExcel, printAsPdf } from '@/lib/financeData'
 import {
   METHOD_LABELS,
   SHEET_STATUS_LABELS,
+  closeOfDaySlip,
   computeSheetTotals,
   formatAccounting,
   mergeSalarySuggestions,
@@ -35,6 +37,13 @@ import {
 } from '@/lib/dailySheetApi'
 
 const toText = (minor) => (minor == null ? '' : String(Math.round(Number(minor)) / 100))
+
+const slipColumns = (forPrint) => [
+  { label: 'Section', key: 'section' },
+  { label: 'Item', key: 'item' },
+  { label: 'Detail', key: 'detail' },
+  { label: forPrint ? 'Amount' : 'Amount (PHP)', value: (r) => (r.amount_minor == null ? '' : forPrint ? formatAccounting(r.amount_minor) : (r.amount_minor / 100).toFixed(2)) },
+]
 const newId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`)
 
 function hydrateLine(row) {
@@ -396,6 +405,20 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
   const sheetBranchLabel = review ? sheet?.branch : branchLabel
   const sheetDate = review ? sheet?.business_date : date
 
+  function exportSlip(kind) {
+    const accountLabel = (id) => accountOptions.find((o) => o.value === id)?.label || ''
+    const slip = closeOfDaySlip({
+      branchLabel: sheetBranchLabel,
+      sheet: { ...sheet, ...sheetValues, business_date: sheetDate },
+      sales,
+      lines: lines.map((l) => ({ ...l, staff_name: l.staff_name || (l.staff_id ? staffName(l.staff_id) : ''), account_label: l.account_label || accountLabel(l.account_id) })),
+    })
+    const name = `hakum-close-of-day-${sheet?.branch || branch}-${sheetDate}`
+    if (kind === 'csv') downloadCsv(slip.rows, slipColumns(false), `${name}.csv`)
+    else if (kind === 'excel') downloadExcel(slip.rows, slipColumns(false), `${name}.xls`, slip.title)
+    else printAsPdf(slip.rows, slipColumns(true), slip.title, slip.subtitle)
+  }
+
   return (
     <div className="ds-root">
       <header className="ds-head">
@@ -420,6 +443,23 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           ) : null}
         </div>
       </header>
+
+      {ctx ? (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Close-of-day slip">
+          <Button type="button" variant="outline" size="sm" className="min-h-11 gap-2" onClick={() => exportSlip('print')}>
+            <Printer aria-hidden className="size-4" />
+            Print slip
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="min-h-11 gap-2" onClick={() => exportSlip('csv')}>
+            <Download aria-hidden className="size-4" />
+            Slip CSV
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="min-h-11 gap-2" onClick={() => exportSlip('excel')}>
+            <Download aria-hidden className="size-4" />
+            Slip Excel
+          </Button>
+        </div>
+      ) : null}
 
       {status === 'returned' && sheet?.review_note ? (
         <div className="ds-banner ds-banner--warn" role="status">

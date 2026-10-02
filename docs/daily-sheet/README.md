@@ -90,6 +90,7 @@ Tabs: **Home · Daily sheets · Sales · Bills · P&L · Reports**. Every filter
 - **Sales** — gross, count, average, net, refunds, discounts with % change; Today / Week / Month / Quarter / Year; hourly vs prior day.
 - **Bills** — New bill: From, Date, Due date, Reference, then lines (Item, Description, Qty, Unit price, Account, Branch).
 - **P&L** — by month, compare 1–12 previous months, quarters or years, or compare branches. Export CSV, Excel or PDF.
+- **Daily sheets** — filter by status, date, search, submitted by, net profit range and over/short; export the filtered (or ticked) sheets as CSV, Excel or Print / PDF. Each sheet has a close-of-day slip (Print / PDF, CSV, Excel), also on POS → Daily sheet.
 
 ## Data and security
 
@@ -128,11 +129,11 @@ Web push only: submit → approvers, approve/return → Branch Admin, cash advan
 
 | Check | Command | Last result (2026-10-02) |
 |---|---|---|
-| Unit + source tests | `npm test` | 1437 / 1437 pass (legacy payroll / shift-close tests removed with their code) |
+| Unit + source tests | `npm test` | 1448 / 1448 pass (legacy payroll / shift-close tests removed with their code) |
 | Lint | `npx eslint .` | 0 problems |
 | Production build | `npm run build` | exit 0 |
 | **Live production money path** (sandbox day 2000-01-03, wiped after; RLS, wrong-branch, TL denied, submit rules, return → edit → resubmit → approve posts once, re-approve posts nothing, reopen voids, ASA re-approve after reopen posts once; every illegal transition refused (review a draft, double submit, return an approved sheet, reopen a returned one); receipts, daily-rate guard, legacy RPCs revoked) | `npm run e2e:daily-sheet-money` | 38 / 38 pass |
-| Live production UI, read-only (BA Daily sheet, SA inbox, P&L, old closes, settings, retired routes redirect; aborts any write) | `node scripts/_daily-sheet-live-smoke.mjs` | 10 / 10 pass |
+| Live production UI, read-only (BA Daily sheet + slip Print / CSV / Excel, SA inbox filters, quick dates and list exports, P&L, old closes, settings, retired routes redirect; aborts any write) | `node scripts/_daily-sheet-live-smoke.mjs` | 16 / 16 pass |
 | Live ops cutover (investor RLS, BA `run_payroll` denied, stock, customer mute) | `node scripts/e2e-ops-cutover.mjs` | PASS |
 | Migration on in-memory Postgres (RLS, RPCs, posting, revokes) | `node scripts/_daily-sheet-sql-check.mjs` | 11 / 11 groups pass |
 | Browser walk: BA submits → SA approves → P&L | `npm run build && npx vite preview --port 5176` then `node scripts/_daily-sheet-walk.mjs` | 29 / 29 pass |
@@ -175,7 +176,8 @@ P&L after approval — 375 · 768 · 1440
 
 | Area | Have | Not built (by choice, not in this plan) |
 |---|---|---|
-| Day close (Square close-of-day) | Gross / discounts / refunds / net, by payment method, by service, opening float, paid out, cash advances, expected vs counted, over/short with required note | Printed close-of-day slip per sheet (CSV export of sheets exists) |
+| Day close (Square close-of-day) | Gross / discounts / refunds / net, by payment method, by service, opening float, paid out, cash advances, expected vs counted, over/short with required note; close-of-day slip per sheet (Print / PDF, CSV, Excel) | — |
+| Sheet list | Status, branch, date (plus Today / This week / This month), search, submitted by, net profit range, over/short only; CSV, Excel and Print / PDF of the filtered (or ticked) sheets | — |
 | Approvals (Xero) | Draft → Submitted → Approved / Returned, approve-once posting, Super Admin reopen voids posted rows, every decision in the audit log | — |
 | Bills (Xero) | From, date, due date, reference, multi-line, account, branch, receipt | Overdue / aged payables view, bill payments against a due balance |
 | Reports (Xero) | P&L by account, compare periods or branches, CSV / Excel / PDF | Balance sheet, bank reconciliation |
