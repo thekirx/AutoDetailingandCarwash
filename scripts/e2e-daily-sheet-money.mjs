@@ -98,10 +98,11 @@ async function postedExpenses(sheetId) {
 await cleanup()
 
 try {
-  const [ba, boss, tl] = await Promise.all([
+  const [ba, boss, tl, asa] = await Promise.all([
     login('admin@hakumautocare.com', 'HakumAdmin2026!'),
     login('bossmich@hakumautocare.com', 'HakumBoss2026!'),
     login('teamlead@hakumautocare.com', 'HakumTL2026!'),
+    login('assistant@hakumautocare.com', 'HakumAsa2026!'),
   ])
 
   const { data: accounts, error: accErr } = await admin.from('expense_categories').select('id, code').in('code', ['14', '18'])
@@ -157,6 +158,7 @@ try {
   const { data: tlView } = await tl.client.from('daily_sheets').select('id').eq('id', sheetId)
   assert((tlView || []).length === 0, 'TL must not read daily sheets')
   pass('sheet.tl_cannot_read')
+  await refused('sheet.review_draft_refused', rpc(boss.client, 'review_daily_sheet', { id: sheetId, action: 'approve' }), /Only submitted/)
   await refused(
     'sheet.direct_insert_refused',
     ba.client.from('daily_sheets').insert({ branch: QA_BRANCH, business_date: '2000-01-04' }),
@@ -179,6 +181,7 @@ try {
   pass('sheet.ba_submit', 'expected ₱450, over/short 0')
 
   await refused('sheet.edit_after_submit_refused', rpc(ba.client, 'save_daily_sheet', sheetPayload()), /no longer be edited/)
+  await refused('sheet.double_submit_refused', rpc(ba.client, 'submit_daily_sheet', { id: sheetId }), /Only draft or returned/)
   await refused('sheet.ba_cannot_approve', rpc(ba.client, 'review_daily_sheet', { id: sheetId, action: 'approve' }), /Only Super Admin/)
   await refused('sheet.tl_cannot_approve', rpc(tl.client, 'review_daily_sheet', { id: sheetId, action: 'approve' }), /Only Super Admin/)
 
@@ -191,6 +194,10 @@ try {
   })
   assert(!returnErr && returned.status === 'returned', `return: ${returnErr?.message}`)
   pass('sheet.sa_return')
+  await refused('sheet.reopen_returned_refused', rpc(boss.client, 'reopen_daily_sheet', { id: sheetId, review_note: 'QA early reopen' }), /Only approved/)
+  const { data: fixed, error: fixErr } = await rpc(ba.client, 'save_daily_sheet', sheetPayload({ notes: 'QA rechecked' }))
+  assert(!fixErr && fixed.status === 'returned', `BA edit returned sheet: ${fixErr?.message} ${JSON.stringify(fixed)}`)
+  pass('sheet.ba_edits_returned', 'stays returned until resubmit')
   const { data: resub, error: resubErr } = await rpc(ba.client, 'submit_daily_sheet', { id: sheetId })
   assert(!resubErr && resub.status === 'submitted', `resubmit: ${resubErr?.message}`)
   pass('sheet.ba_resubmit_after_return')
@@ -216,6 +223,11 @@ try {
   assert(!againErr && again.posted === 0, `re-approve: ${againErr?.message} ${JSON.stringify(again)}`)
   assert((await postedExpenses(sheetId)).length === 2, 're-approve must not double-post')
   pass('sheet.re_approve_posts_nothing')
+  await refused(
+    'sheet.return_approved_refused',
+    rpc(boss.client, 'review_daily_sheet', { id: sheetId, action: 'return', review_note: 'QA late return' }),
+    /Only submitted/,
+  )
 
   const { data: inbox, error: inboxErr } = await boss.client
     .from('daily_sheets')
@@ -237,6 +249,13 @@ try {
   assert(!reopenErr && reopened.status === 'returned' && reopened.voided === 2, `reopen ${reopenErr?.message} ${JSON.stringify(reopened)}`)
   assert((await postedExpenses(sheetId)).length === 0, 'reopen must void posted expenses')
   pass('sheet.sa_reopen_voids', 'voided 2')
+
+  const { error: resub2Err } = await rpc(ba.client, 'submit_daily_sheet', { id: sheetId })
+  assert(!resub2Err, `resubmit after reopen: ${resub2Err?.message}`)
+  const { data: asaApproved, error: asaErr } = await rpc(asa.client, 'review_daily_sheet', { id: sheetId, action: 'approve' })
+  assert(!asaErr && asaApproved.status === 'approved' && asaApproved.posted === 2, `ASA approve ${asaErr?.message} ${JSON.stringify(asaApproved)}`)
+  assert((await postedExpenses(sheetId)).length === 2, 'approve after reopen must post exactly once again')
+  pass('sheet.asa_approve_after_reopen_posts_once', 'posted 2')
 
   // ── Receipts bucket: own branch only ──────────────────────────────────────
   const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])
@@ -263,7 +282,7 @@ try {
   await refused('legacy.submit_shift_close_denied', rpc(ba.client, 'submit_shift_close', {}), /permission denied/)
   await refused('legacy.review_shift_close_denied', rpc(boss.client, 'review_shift_close', {}), /permission denied/)
 
-  await Promise.all([ba.client.auth.signOut(), boss.client.auth.signOut(), tl.client.auth.signOut()])
+  await Promise.all([ba, boss, tl, asa].map((u) => u.client.auth.signOut()))
 } finally {
   await cleanup()
 }

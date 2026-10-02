@@ -131,7 +131,7 @@ Web push only: submit → approvers, approve/return → Branch Admin, cash advan
 | Unit + source tests | `npm test` | 1437 / 1437 pass (legacy payroll / shift-close tests removed with their code) |
 | Lint | `npx eslint .` | 0 problems |
 | Production build | `npm run build` | exit 0 |
-| **Live production money path** (sandbox day 2000-01-03, wiped after; RLS, wrong-branch, TL denied, submit rules, return → resubmit → approve posts once, re-approve posts nothing, reopen voids, receipts, daily-rate guard, legacy RPCs revoked) | `npm run e2e:daily-sheet-money` | 32 / 32 pass |
+| **Live production money path** (sandbox day 2000-01-03, wiped after; RLS, wrong-branch, TL denied, submit rules, return → edit → resubmit → approve posts once, re-approve posts nothing, reopen voids, ASA re-approve after reopen posts once; every illegal transition refused (review a draft, double submit, return an approved sheet, reopen a returned one); receipts, daily-rate guard, legacy RPCs revoked) | `npm run e2e:daily-sheet-money` | 38 / 38 pass |
 | Live production UI, read-only (BA Daily sheet, SA inbox, P&L, old closes, settings, retired routes redirect; aborts any write) | `node scripts/_daily-sheet-live-smoke.mjs` | 10 / 10 pass |
 | Live ops cutover (investor RLS, BA `run_payroll` denied, stock, customer mute) | `node scripts/e2e-ops-cutover.mjs` | PASS |
 | Migration on in-memory Postgres (RLS, RPCs, posting, revokes) | `node scripts/_daily-sheet-sql-check.mjs` | 11 / 11 groups pass |
