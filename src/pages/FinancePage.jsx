@@ -455,6 +455,7 @@ export default function FinancePage() {
           <div className="finance-net-chip" data-tone={headlinePl.net >= 0 ? 'up' : 'down'}>
             <p className="finance-net-label">{headlinePl.net >= 0 ? 'Net profit' : 'Net loss'}</p>
             <p className="finance-net-value tabular-nums">{loading ? '—' : formatMoney(headlinePl.net)}</p>
+            <p className="finance-net-label">{windowLabel}</p>
           </div>
           <Badge variant={canWrite ? 'default' : 'secondary'} className="finance-role-badge">
             {canWrite ? 'Can edit' : 'View only'}
@@ -594,6 +595,7 @@ export default function FinancePage() {
             profile={profile}
             branchFilter={branchFilter}
             branchName={branchName}
+            branchOptions={branchOptions}
             showSheets={showSheets}
             onDrill={patchSearch}
           />

@@ -31,7 +31,7 @@ function Metric({ label, value, current, previous }) {
   return (
     <div className="ds-card flex flex-col gap-1 p-4">
       <p className="ds-eyebrow">{label}</p>
-      <p className="ds-num text-2xl font-semibold">{value}</p>
+      <p className="text-2xl font-semibold tabular-nums">{value}</p>
       <Delta current={current} previous={previous} />
     </div>
   )
@@ -130,7 +130,7 @@ export default function PosTodayPanel({ branch, branchLabel, waitingCount = 0, w
           <section className="ds-card flex items-center gap-3 p-4" aria-label="Cars waiting to pay">
             <CarFront aria-hidden className="size-8 text-[#052699]" />
             <div>
-              <p className="ds-num text-2xl font-semibold">{waitingCount}</p>
+              <p className="text-2xl font-semibold tabular-nums">{waitingCount}</p>
               <p className="text-sm text-muted-foreground">
                 {waitingCount === 1 ? 'car' : 'cars'} waiting to pay{waitingCount ? ` · ${formatAccounting(waitingMinor)}` : ''}
               </p>

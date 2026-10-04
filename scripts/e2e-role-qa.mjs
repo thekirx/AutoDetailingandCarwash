@@ -252,7 +252,7 @@ async function ensurePreview() {
 /** persona checks: demo id, home path, extra allow paths, deny path */
 const PERSONAS = [
   { id: 'tl', wave: 'B', home: '/operations/queue', allow: ['/operations/attendance', '/operations/bookings'], deny: '/operations/pos' },
-  { id: 'admin', wave: 'B', home: '/operations/pos', allow: ['/operations/inventory', '/operations/queue', '/operations/bookings'], deny: '/operations/finance' },
+  { id: 'admin', wave: 'B', home: '/operations/pos', allow: ['/operations/inventory', '/operations/bookings'], deny: '/operations/finance' },
   { id: 'crew1', wave: 'B', home: '/operations/attendance', allow: ['/operations/my-tasks'], deny: '/operations/pos' },
   { id: 'boss', wave: 'C', home: '/operations/console', allow: ['/operations/finance', '/operations/settings/daily-sheet'], deny: null },
   { id: 'asa', wave: 'C', home: '/operations/console', allow: ['/operations/queue'], deny: null },

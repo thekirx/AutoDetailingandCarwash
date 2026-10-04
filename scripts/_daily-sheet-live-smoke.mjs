@@ -111,8 +111,10 @@ try {
   let body = await text(ba.page)
   check('BA: POS › Daily sheet loads on live data', /Money out/.test(body) && /Cash in drawer/.test(body) && !NEEDS_MIGRATION.test(body), body.match(/Daily sheet[^\n]*/)?.[0] || '')
 
+  await waitText(ba.page, /DAILY SHEET · HAKUM/i, 15000)
+  check('BA: Daily sheet header shows the branch name', /Daily sheet · Hakum/i.test(await text(ba.page)))
   let out = await exportVia(ba.page, /^Print slip$/)
-  check('BA: Print slip opens the close-of-day slip', /Close of day/.test(out?.html) && /Expected cash/.test(out?.html) && /Net profit/.test(out?.html), out ? out.html.match(/<title>[^<]*/)?.[0] : 'button missing')
+  check('BA: Print slip opens the close-of-day slip', /Close of day · Hakum/.test(out?.html) && /Expected cash/.test(out?.html) && /Net profit/.test(out?.html), out ? out.html.match(/<title>[^<]*/)?.[0] : 'button missing')
   out = await exportVia(ba.page, /^Slip CSV$/)
   check('BA: Slip CSV downloads the slip lines', /\.csv$/.test(out?.filename) && /Section.*Item.*Detail.*Amount \(PHP\)/.test(out?.text) && /Expected cash/.test(out?.text), out?.filename || 'button missing')
   out = await exportVia(ba.page, /^Slip Excel$/)

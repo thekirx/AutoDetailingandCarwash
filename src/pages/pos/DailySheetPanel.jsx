@@ -12,6 +12,7 @@ import { parsePesosToMinor } from '@/lib/shiftClose'
 import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { ROLES } from '@/auth/permissions'
 import { downloadCsv, downloadExcel, printAsPdf } from '@/lib/financeData'
+import { listBranches } from '@/lib/adminApi'
 import {
   METHOD_LABELS,
   SHEET_STATUS_LABELS,
@@ -229,6 +230,13 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
   const [busy, setBusy] = useState(false)
   const [returnNote, setReturnNote] = useState('')
   const [returnOpen, setReturnOpen] = useState(false)
+  const [branchNames, setBranchNames] = useState({})
+
+  useEffect(() => {
+    listBranches()
+      .then((rows) => setBranchNames(Object.fromEntries(rows.map((b) => [b.slug, b.name]))))
+      .catch(() => {})
+  }, [])
 
   const load = useCallback(async () => {
     if (!review && !branch) return
@@ -402,7 +410,8 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
   const salaryLines = lines.filter((l) => l.kind === 'salary')
   const caLines = lines.filter((l) => l.kind === 'ca_release' || l.kind === 'ca_repay')
   const isSuperAdmin = profile?.role === ROLES.SUPER_ADMIN
-  const sheetBranchLabel = review ? sheet?.branch : branchLabel
+  const sheetBranchSlug = review ? sheet?.branch : branch
+  const sheetBranchLabel = branchNames[sheetBranchSlug] || (review ? sheet?.branch : branchLabel)
   const sheetDate = review ? sheet?.business_date : date
 
   function exportSlip(kind) {

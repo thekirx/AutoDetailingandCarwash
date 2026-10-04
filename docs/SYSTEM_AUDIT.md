@@ -4,20 +4,25 @@
 
 | Field | Value |
 |-------|-------|
-| Audit date | **2026-09-27** (Asia/Manila) — untested pages, push, backend pass (builds on 2026-09-26 daily-ops verify) |
-| Nav walk (every role × every sidebar link) | **PASS** — `e2e:nav-walk` **92/92**, backend 4xx **0** · `e2e-evidence/nav-walk/` |
-| Role matrix | **PASS** — `e2e:role-qa` **54/54** (11 staff personas + customer + public forms) |
-| Web push wiring | **PASS** — `e2e-push-notifications.mjs` incl. Finance accept → SA/ASA push (owner SMS off) |
-| Supabase advisors | **Hardened** — migration `20260927120000_advisor_hardening_split_write_policies.sql` applied; FLOPS 25/25 re-run after |
-| Branch / HEAD | `main` @ `59c27e0` (fast-forward pulled; homepage polish + prior FLOPS/SMS ops) |
+| Audit date | **2026-10-04** (Asia/Manila) — re-verification after the Daily Sheet replaced End of shift, Payroll and My pay (2026-10-01) |
+| Nav walk (every role × every sidebar link) | **PASS** — `e2e:nav-walk` **84/84**, backend 4xx **0** (fewer links: Payroll / My pay retired) · `e2e-evidence/nav-walk/` |
+| Role matrix | **PASS** — `e2e:role-qa` **52/52**. Branch Admin is now denied the Queue (only SA, ASA, TL, Ops Lead); the stale "BA may open Queue" expectation was fixed |
+| Money UI pack | **PASS** — `e2e:ui-money` **5/5** (TL denied POS, BA denied Queue, BA POS + Daily sheet, SA Finance › Daily sheets); End of shift steps removed |
+| P0 UI | **PASS** — `e2e:ui-p0` **9/9** |
+| Daily Sheet money path (live, sandbox day wiped) | **PASS** — `e2e:daily-sheet-money` **38/38** (2026-10-02) |
+| Daily Sheet live UI (read-only, incl. slip Print / CSV / Excel, filters, list exports) | **PASS** — `scripts/_daily-sheet-live-smoke.mjs` **17/17** |
+| Money dashboards 375 / 768 / 1440 (read-only, full page) | **PASS** — `scripts/_ops-pages-shots.mjs` **36/36**, every page ready in ~1.5–2.5 s · `e2e-evidence/ops-pages/` |
+| Web push wiring | Unit-proven for `sheet_submitted` / `sheet_reviewed`; real-device audit **NOT RE-RUN** since the Daily Sheet |
+| Supabase advisors | **Hardened** — migration `20260927120000_advisor_hardening_split_write_policies.sql` applied |
 | Framework | Vite + React · Supabase Auth/RLS · PostgREST + `/api/*` |
 | Build | **PASS** — `npm run build` exit 0 |
-| Unit suite | **PASS** — **1284/1284** (`npm test`) |
+| Unit suite | **PASS** — **1448/1448** (`npm test`) |
 | Lint | **PASS** — `npx eslint .` exit 0 |
-| FLOPS shop-day | **PASS** — `e2e:lifecycle-flops` **25/25** · `e2e-evidence/lifecycle-flops/` (Manila **2026-09-26**) |
-| Data integrity | **PASS** — `e2e:integrity` |
-| POS handoff smoke | **PASS** — `smoke-pos-handoff.mjs` (no pending / exit 0) |
-| Daily-ops package | **PASS** — `npm run ops:daily-ops` exit 0 (`redesignRequired: false`) |
+| FLOPS shop-day | **NOT RE-RUN** since 2026-09-26 (25/25 then). It completes a real paid sale on production that would land on the live Daily Sheet; the money path is covered by `e2e:daily-sheet-money` on a wiped sandbox day |
+| Data integrity | **PASS** — `e2e:integrity` (2026-10-04) |
+| POS handoff smoke | **NOT RE-RUN** since 2026-09-26 (exit 0 then) |
+| Daily-ops package | **NOT RE-RUN** since 2026-09-26 (exit 0 then) |
+| Branch / HEAD | `main` (see `git log`; Daily Sheet commits `ff0477d` → latest) |
 | Soft-launch | **READY_WITH_OPS_BLOCKERS** |
 | Production messaging | **NOT MET** — BrandTxt IP + Auth SMTP open; **owner SMS N/A** |
 | BusyBee relay code | **PASS** — `resolveBusybeeSendMode` / relay handler / `api/busybee-relay.js` (unit seams green) |
@@ -135,16 +140,16 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 - [x] Production build passes
 - [ ] Type check — N/A (JS; no `tsc` script)
 - [x] Lint passes
-- [x] Automated tests pass (**1284/1284**)
-- [x] Critical user flows tested (FLOPS **25/25** this campaign)
-- [x] Permissions verified (FLOPS R1)
+- [x] Automated tests pass (**1448/1448**, 2026-10-04)
+- [x] Critical user flows tested (Daily Sheet money path **38/38**; nav walk **84/84**; FLOPS not re-run — see Summary)
+- [x] Permissions verified (role matrix **52/52**)
 - [x] Known blockers documented (SMS/SMTP/Static IPs)
 - [x] `PROJECT_STATUS.md` updated
 
 ## Verdict
 
-**Soft-launch shop-day code gate: MET** (fresh FLOPS 2026-09-26; re-run 25/25 on 2026-09-27 after DB hardening).  
-**Every role × every sidebar page: PASS** (nav-walk 92/92, one CRM bug fixed).  
+**Soft-launch shop-day code gate: MET** on the Daily Sheet money path (2026-10-04 re-verification above).  
+**Every role × every sidebar page: PASS** (nav-walk 84/84 on 2026-10-04).  
 **100% production ops gate: NOT MET** (BrandTxt IP + Auth SMTP + Vercel Static IPs).  
 **Overall: READY_WITH_OPS_BLOCKERS.**
 
@@ -153,5 +158,5 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 1. Malcolm: send [`brandtxt-dexter-followup.txt`](./OPS/brandtxt-dexter-followup.txt) → Dexter; then prove `sms:egress` DELIVRD.  
 2. Enable Hakum Vercel Static IPs (or deploy relay) and whitelist those IPs.  
 3. Close Auth SMTP Gate 10.1 with real-inbox proof.
-4. BossMich (and any ASA with finance_write) enable push on their phones — today zero ops devices are subscribed, so Finance-accept push reaches nobody.
+4. BossMich (and any approving ASA) enable push on their phones so Daily Sheet submit / approve pushes land; then re-run `PUSH_AUDIT=1 node scripts/push-audit-events.mjs`.
 5. Optional: enable Auth leaked-password protection in the Supabase dashboard.

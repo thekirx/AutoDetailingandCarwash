@@ -402,9 +402,8 @@ function ScopedFloorDashboard() {
   }, [loadSales])
 
   useEffect(() => {
-    if (!seeAll && !(Array.isArray(scopeList) && scopeList.length > 1)) return
     fetchBranches().then(setBranches).catch(() => setBranches([]))
-  }, [seeAll, scopeList])
+  }, [])
 
   const refreshAll = useCallback(() => {
     reload()
@@ -427,13 +426,14 @@ function ScopedFloorDashboard() {
             ? scopedBranchRows
             : scopeList.map((slug) => ({ slug, name: slug }))),
         ]
-      : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
+      : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: branches.find((b) => b.slug === slug)?.name || slug }))
 
+  const nameOf = (slug) => branches.find((b) => b.slug === slug)?.name || slug
   const branchLabel = !seeAll && branchOptions.length <= 1
-    ? (getBranchScope(profile) || 'unassigned')
+    ? (getBranchScope(profile) ? nameOf(getBranchScope(profile)) : 'unassigned')
     : branchFilter === 'all'
       ? (seeAll ? 'All branches' : 'All my branches')
-      : branchFilter
+      : nameOf(branchFilter)
 
   const queueMetricCols = isTeamLeadFloor
     ? 'xl:grid-cols-5'
@@ -952,7 +952,7 @@ function OperationsQueueBoardPage() {
             </label>
           ) : (
             <p className="rounded-xl border border-border bg-muted px-3 py-2 text-sm font-medium text-foreground">
-              Branch · {getBranchScope(profile) || 'unassigned'}
+              Branch · {branchOptions.find((b) => b.slug === getBranchScope(profile))?.name || getBranchScope(profile) || 'unassigned'}
             </p>
           )}
           {branchFilter && branchFilter !== 'all' ? (

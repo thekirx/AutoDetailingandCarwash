@@ -35,7 +35,7 @@ import {
   Star,
   Search,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import {
@@ -61,6 +61,7 @@ import {
   usesCommandShell,
 } from '../auth/permissions'
 import { resolvePostLoginPath } from '../auth/authRedirect'
+import { supabase } from '@/lib/supabase'
 import NotificationBell from '@/components/NotificationBell'
 import UserSettingsModal from '@/components/UserSettingsModal'
 import { OpsInstallPopup } from '@/components/InstallGuide'
@@ -143,12 +144,24 @@ function formatRole(role) {
   return role || 'Ops'
 }
 
-function formatScope(profile) {
+function formatScope(profile, names = {}) {
   if (canSeeAllBranches(profile)) return 'All branches'
   const multi = Array.isArray(profile?.branch_slugs) ? profile.branch_slugs.filter(Boolean) : []
-  if (multi.length > 1) return multi.join(', ')
-  if (multi.length === 1) return multi[0]
-  return profile?.branch_slug || 'No branch'
+  const label = (slug) => names[slug] || slug
+  if (multi.length > 1) return multi.map(label).join(', ')
+  if (multi.length === 1) return label(multi[0])
+  return profile?.branch_slug ? label(profile.branch_slug) : 'No branch'
+}
+
+function useBranchNames() {
+  const [names, setNames] = useState({})
+  useEffect(() => {
+    supabase
+      .from('branches')
+      .select('slug, name')
+      .then(({ data }) => setNames(Object.fromEntries((data || []).map((b) => [b.slug, b.name]))))
+  }, [])
+  return names
 }
 
 function BrandMark({ size = 28 }) {
@@ -212,7 +225,7 @@ function FloorAppShell({
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const branch = formatScope(profile)
+  const branch = formatScope(profile, useBranchNames())
 
   const railNav = (
     <nav className="floor-rail-nav" aria-label="Primary navigation">
@@ -506,6 +519,7 @@ function CommandNavList({ items }) {
 function CommandShell({ profile, user, signOut, navigation, adminShell }) {
   const location = useLocation()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const scope = formatScope(profile, useBranchNames())
   const [cmdOpen, setCmdOpen] = useState(false)
   const label =
     profile?.role === ROLES.INVESTOR
@@ -538,7 +552,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           <div className="command-rail-who group-data-[collapsible=icon]:hidden">
             <p className="command-rail-who-name truncate">{profile?.full_name || 'Operations'}</p>
             <p className="command-rail-who-meta truncate">
-              {formatRole(profile?.role)} · {formatScope(profile)}
+              {formatRole(profile?.role)} · {scope}
             </p>
             <p className="command-rail-who-meta truncate">{profile?.email || user?.email}</p>
           </div>
@@ -571,10 +585,10 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
             </nav>
             <p className="truncate text-sm text-muted-foreground">
               {isBranchAdmin(profile)
-                ? `Branch · ${formatScope(profile)}`
+                ? `Branch · ${scope}`
                 : adminShell
                   ? 'Operations · cost · profit · stock'
-                  : `Scope · ${formatScope(profile)}`}
+                  : `Scope · ${scope}`}
             </p>
           </div>
           <Button

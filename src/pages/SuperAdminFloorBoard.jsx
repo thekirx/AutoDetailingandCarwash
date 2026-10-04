@@ -203,7 +203,7 @@ export default function SuperAdminFloorBoard() {
   const rangeStartDate = useMemo(() => getLocalCalendarDate(range.start), [range.start])
   const rangeEndDate = useMemo(() => getLocalCalendarDate(range.end), [range.end])
   const branchLabel =
-    branchFilter === 'all' ? 'All branches' : branchFilter
+    branchFilter === 'all' ? 'All branches' : branches.find((b) => b.slug === branchFilter)?.name || branchFilter
 
   const load = useCallback(async () => {
     setError('')

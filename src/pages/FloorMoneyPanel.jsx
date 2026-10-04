@@ -81,12 +81,12 @@ export default function FloorMoneyPanel({ profile, branchFilter = 'all', branchN
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Net sales today</p>
-          <p className="ds-num text-2xl font-semibold">{formatAccounting(m.todayMinor)}</p>
+          <p className="text-2xl font-semibold tabular-nums">{formatAccounting(m.todayMinor)}</p>
           <Delta today={m.todayMinor} prior={m.yesterdayMinor} />
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Net profit this month</p>
-          <p className={`ds-num text-2xl font-semibold ${m.mtdNetMinor < 0 ? 'text-rose-700' : ''}`}>{formatAccounting(m.mtdNetMinor)}</p>
+          <p className={`text-2xl font-semibold tabular-nums ${m.mtdNetMinor < 0 ? 'text-rose-700' : ''}`}>{formatAccounting(m.mtdNetMinor)}</p>
           <Link to="/operations/finance?tab=pl&period=month" className="ds-link inline-flex min-h-11 items-center text-xs">Open Profit and loss</Link>
         </div>
         <div>

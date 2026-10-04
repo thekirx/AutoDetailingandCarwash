@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-04 — Daily Sheet re-verification, names not codes, dashboard polish
+
+- Branch names replace branch codes ("bacoor") on the close-of-day slip, Daily sheet header, sidebar / top bar scope, Branch Admin Queue View, Finance Home lists and the Floor Board branch label.
+- Finance header net profit now shows its date window.
+- Floor Board money and POS Today headline amounts sit under their labels (were pushed right).
+- `e2e:role-qa` and `e2e:ui-money` match the product again (Queue is SA / ASA / TL / Ops Lead; Daily sheet replaces End of shift).
+- New read-only `scripts/_ops-pages-shots.mjs`: full-page money dashboards at 375 / 768 / 1440.
+
+## 2026-10-02 — Daily sheets: slip, filters, exports
+
+- Close-of-day slip (Print / PDF, CSV, Excel) on POS › Daily sheet and the Finance review drawer.
+- Finance › Daily sheets: search, submitted by, net profit range, quick dates, Excel and Print alongside CSV.
+- Fixed every PDF export showing "Pop-up blocked".
+
+## 2026-10-01 — Daily Sheet replaces End of shift, Payroll and My pay
+
+- One sheet per branch per day: sales, expenses, salaries, cash advances, drawer count; submit → approve posts to the books once. See `docs/daily-sheet/README.md`.
+
 ## 2026-09-15 — Car size chart accuracy + bay size pricing
 
 - Cars catalog sizes follow body footprint: **Small** = sedans/hatchbacks · **Medium** = crossovers · **Large** = SUVs/pickups/larger MPVs · **Extra Large** = full-size vans/people movers (e.g. Raize/Q2 medium, Civic/Corolla small, Tucson/Sportage large).

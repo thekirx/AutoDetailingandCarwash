@@ -1,6 +1,6 @@
 /**
  * BUG-007 seam contract: money UI pack must exist and encode the floor path
- * Admin queue → POS → End of shift wizard; Boss finance shift-close; TL POS denied.
+ * Admin POS → Daily sheet (queue is denied); Boss Finance → Daily sheets; TL POS denied.
  */
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
@@ -18,12 +18,13 @@ describe('BUG-007 money UI pack contract', () => {
     const src = readFileSync(moneyScript, 'utf8')
     for (const name of [
       'money.tl.pos_denied',
-      'money.admin.queue',
+      'money.admin.queue_denied',
       'money.admin.pos',
-      'money.admin.eos_wizard',
-      'money.boss.finance_shift_close',
+      'money.admin.daily_sheet',
+      'money.boss.finance_sheets',
     ]) {
       assert.match(src, new RegExp(name.replace(/\./g, '\\.')), `missing flow ${name}`)
     }
+    assert.doesNotMatch(src, /End of shift|tab=shift-close/, 'retired End of shift flow must not be asserted')
   })
 })

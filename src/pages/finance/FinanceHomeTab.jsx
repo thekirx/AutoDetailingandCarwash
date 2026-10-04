@@ -29,7 +29,8 @@ function Amount({ minor, onClick, label }) {
   )
 }
 
-export default function FinanceHomeTab({ profile, branchFilter = 'all', branchName, showSheets = false, onDrill }) {
+export default function FinanceHomeTab({ profile, branchFilter = 'all', branchName, branchOptions = [], showSheets = false, onDrill }) {
+  const branchLabel = (slug) => branchOptions.find((b) => b.slug === slug)?.name || slug
   const today = getLocalCalendarDate()
   const [state, setState] = useState({ loading: true, error: '', pl: [], accounts: [], sheets: [], sheetError: '', payments: [] })
 
@@ -135,7 +136,7 @@ export default function FinanceHomeTab({ profile, branchFilter = 'all', branchNa
                   <li key={s.id}>
                     <button type="button" className="flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left hover:bg-muted/40" onClick={() => onDrill?.({ tab: 'sheets', extras: { sheet: s.id } })}>
                       <span>
-                        <span className="block font-medium">{s.business_date} · {s.branch}</span>
+                        <span className="block font-medium">{s.business_date} · {branchLabel(s.branch)}</span>
                         <span className="text-xs text-muted-foreground">{s.staff_profiles?.full_name || 'Branch admin'}</span>
                       </span>
                       <span className="flex items-center gap-2">
@@ -187,7 +188,7 @@ export default function FinanceHomeTab({ profile, branchFilter = 'all', branchNa
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{p.title || p.description || 'Expense'}</span>
                     <span className="text-xs text-muted-foreground">
-                      {p.expense_categories?.code ? `${p.expense_categories.code} · ` : ''}{p.expense_categories?.name || 'No account'} · {p.branch} · {String(p.updated_at).slice(0, 10)}
+                      {p.expense_categories?.code ? `${p.expense_categories.code} · ` : ''}{p.expense_categories?.name || 'No account'} · {branchLabel(p.branch)} · {String(p.updated_at).slice(0, 10)}
                     </span>
                   </span>
                   <span className="ds-num shrink-0">{formatAccounting(p.total_minor)}</span>

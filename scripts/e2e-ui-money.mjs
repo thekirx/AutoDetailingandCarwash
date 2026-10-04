@@ -2,10 +2,10 @@
  * BUG-007 money path UI pack (Puppeteer).
  * Seams:
  *   TL → POS denied
- *   Admin → queue + POS + End of shift wizard opens (no submit)
- *   Boss → finance?tab=shift-close reachable
+ *   Admin → queue denied; POS + POS › Daily sheet open (no save)
+ *   Boss → Finance › Daily sheets reachable
  *
- * Does NOT post shift_close or complete_pos_sale (non-destructive).
+ * Does NOT save a daily sheet or call complete_pos_sale (non-destructive).
  *
  * Usage:
  *   BASE_URL=http://127.0.0.1:5260 node scripts/e2e-ui-money.mjs
@@ -177,25 +177,24 @@ try {
     }
   }
 
-  // --- money.admin.queue / pos / eos_wizard ---
+  // --- money.admin.queue_denied / pos / daily_sheet ---
   {
     const admin = account('admin')
     await clearSession(page, base)
     const ok = await opsLogin(page, base, admin.email, admin.password)
     if (!ok) {
-      fail('money.admin.queue', `login failed ${page.url()}`)
+      fail('money.admin.queue_denied', `login failed ${page.url()}`)
       fail('money.admin.pos', 'skipped')
-      fail('money.admin.eos_wizard', 'skipped')
+      fail('money.admin.daily_sheet', 'skipped')
     } else {
       await page.goto(`${base}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await dismissCookieBanner(page)
       await new Promise((r) => setTimeout(r, 1200))
-      if (isLoginWallUrl(page.url()) || !isOpsAuthedUrl(page.url())) {
-        fail('money.admin.queue', page.url())
-        await shot(page, 'admin-queue-FAIL')
+      if (/access-denied/i.test(page.url()) || !page.url().includes('/operations/queue')) {
+        pass('money.admin.queue_denied', page.url())
       } else {
-        pass('money.admin.queue', page.url())
-        await shot(page, 'admin-queue')
+        fail('money.admin.queue_denied', `Branch Admin reached the queue: ${page.url()}`)
+        await shot(page, 'admin-queue-FAIL')
       }
 
       await page.goto(`${base}/operations/pos`, { waitUntil: 'domcontentloaded', timeout: 60000 })
@@ -204,61 +203,47 @@ try {
       if (isLoginWallUrl(page.url()) || !isOpsAuthedUrl(page.url())) {
         fail('money.admin.pos', page.url())
         await shot(page, 'admin-pos-FAIL')
-        fail('money.admin.eos_wizard', 'pos not reachable')
+        fail('money.admin.daily_sheet', 'pos not reachable')
       } else {
         pass('money.admin.pos', page.url())
         await shot(page, 'admin-pos')
 
-        const clicked = await page.evaluate(() => {
-          const btn = [...document.querySelectorAll('button')].find((b) =>
-            /End of shift/i.test(b.textContent || ''),
-          )
-          if (!btn) return false
-          btn.click()
-          return true
-        })
-        await new Promise((r) => setTimeout(r, 1000))
-        const wizardOpen = await page.evaluate(() => {
-          const t = document.body?.innerText || ''
-          return /End of shift/i.test(t) && (/Cash|baseline|attested|wizard|step/i.test(t) || document.querySelector('[role="dialog"], [data-slot="sheet-content"]'))
-        })
-        if (clicked && wizardOpen) {
-          pass('money.admin.eos_wizard', 'End of shift sheet open')
-          await shot(page, 'admin-eos-wizard')
+        await page.goto(`${base}/operations/pos?tab=sheet`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+        const sheetOk = await page
+          .waitForFunction(() => /Cash in drawer/.test(document.body?.innerText || '') && /Money out/.test(document.body?.innerText || ''), { timeout: 30000 })
+          .then(() => true, () => false)
+        if (sheetOk) {
+          pass('money.admin.daily_sheet', 'POS › Daily sheet open (no save)')
+          await shot(page, 'admin-daily-sheet')
         } else {
-          fail('money.admin.eos_wizard', `clicked=${clicked} wizardOpen=${wizardOpen}`)
-          await shot(page, 'admin-eos-wizard-FAIL')
+          fail('money.admin.daily_sheet', page.url())
+          await shot(page, 'admin-daily-sheet-FAIL')
         }
       }
     }
   }
 
-  // --- money.boss.finance_shift_close ---
+  // --- money.boss.finance_sheets ---
   {
     const boss = account('boss')
     await clearSession(page, base)
     const ok = await opsLogin(page, base, boss.email, boss.password)
     if (!ok) {
-      fail('money.boss.finance_shift_close', `login failed ${page.url()}`)
+      fail('money.boss.finance_sheets', `login failed ${page.url()}`)
       await shot(page, 'boss-login-FAIL')
     } else {
-      await page.goto(`${base}/operations/finance?tab=shift-close`, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000,
-      })
+      await page.goto(`${base}/operations/finance?tab=sheets`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await dismissCookieBanner(page)
-      await new Promise((r) => setTimeout(r, 1500))
+      const bodyOk = await page
+        .waitForFunction(() => /One sheet per branch per day/.test(document.body?.innerText || ''), { timeout: 30000 })
+        .then(() => true, () => false)
       const url = page.url()
-      const bodyOk = await page.evaluate(() => {
-        const t = document.body?.innerText || ''
-        return /shift|close|finance|accept|review/i.test(t)
-      })
       if (isOpsAuthedUrl(url) && bodyOk && !/access-denied/i.test(url)) {
-        pass('money.boss.finance_shift_close', url)
-        await shot(page, 'boss-finance-shift-close')
+        pass('money.boss.finance_sheets', url)
+        await shot(page, 'boss-finance-sheets')
       } else {
-        fail('money.boss.finance_shift_close', `${url} bodyOk=${bodyOk}`)
-        await shot(page, 'boss-finance-shift-close-FAIL')
+        fail('money.boss.finance_sheets', `${url} bodyOk=${bodyOk}`)
+        await shot(page, 'boss-finance-sheets-FAIL')
       }
     }
   }

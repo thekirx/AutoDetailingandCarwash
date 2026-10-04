@@ -10,7 +10,7 @@
 | BUG-004 | Medium | Inventory | Sunday chemical recon data incomplete | CHEM-RECON; QA seeded 1 line 2026-09-07 | Mitigated (QA) | Ops still needs weekly BA→SA recon habit |
 | BUG-005 | Low | SMS | Legacy `post_service_completed` rows stuck `pending` (no writer in current code) | 19 orphans cancelled 2026-09-07; pending count **0** | **Closed** | Marked `cancelled`; live status SMS uses `booking_status` |
 | BUG-006 | Low | CRM | Duplicate active customer rows historically shared phone `09625294043` | Pre-E2E query | Mitigated | Archive dups in `e2e-real-customer-status-sms.mjs` |
-| BUG-007 | High | Ops E2E | Full browser TL→POS→EoS→Finance→payroll not proven | OWNER-REVISIONS OPS-E2E | Partial→RPC **MET** | UI: `e2e-ui-money`. RPC: `e2e-shift-close-money` 13/13. |
+| BUG-007 | High | Ops E2E | Full browser money path not proven (was TL→POS→EoS→Finance→payroll; now POS → Daily Sheet → Finance approve) | OWNER-REVISIONS OPS-E2E | **Closed** (2026-10-04) | UI: `e2e:ui-money` 5/5 + `_daily-sheet-live-smoke.mjs` 17/17; RPC: `e2e:daily-sheet-money` 38/38. End of shift / payroll retired 2026-10-01. |
 | BUG-013 | Medium | Planning UX | Experience tickets easy to miss / silent create failure | oldest-board vs Cash Advance default; no toast | **Mitigated** | Prefer `Planner` board; toast on `experienceCard`; QA seed card on Experience list |
 | BUG-009 | Low | Tests | Stale source contracts: BA nav denied inventory; POS `SHELL_TABS`/`max-w-7xl`/`Sell merch` copy; detailing→coating bucket; PLANNER_TABS only on page | `npm test` 9 fails → 0 after update | Closed | Updated tests to match intentional product (BA restock inventory, `POS_SHELL_TABS` in `posInsights.js`, detailing honesty) |
 | BUG-010 | Medium | Live e2e | `e2e-pos-part2` assumed TL cannot provision queue / wrong `custom-size` normalize | pos-part2 false fail | Closed | TL is in `QUEUE_PROVISION_ROLES`; `normalizeVehicleType('custom-size')` → `custom_size` |
@@ -44,6 +44,10 @@
 | BUG-039 | Medium | Finance | Vendors tab stuck on skeleton | FINANCE-DEEP-AUDIT P1-5 | **Closed** | Stable vendor callback + error empty |
 | BUG-040 | Medium | Finance / honesty | No unposted-pay cue; Categories looked like commission setup | FINANCE-DEEP-AUDIT P1-9 | **Closed** | Payroll/POS cues; P&L-bucket copy |
 | BUG-041 | Low | Finance / UX | CSV/Excel/PDF × 5 on Reports; duplicate P&L Compare; ₱0 quotes | FINANCE-DEEP-AUDIT P1-7 / P2 | **Closed** | CSV-only ledgers; Dashboard trio; quote > 0 |
+| BUG-042 | High | Finance / exports | Every PDF export (P&L, Daily sheets) showed "Pop-up blocked": `window.open(…, 'noopener')` returns null | `tests/financeExports.test.js` red | **Closed** (`5140aff`) | Open without noopener, then `win.opener = null` |
+| BUG-043 | Medium | Tests | `e2e:role-qa` expected Branch Admin on Queue; `e2e:ui-money` expected the retired End of shift wizard | role-qa 52/53; ui-money stale | **Closed** (2026-10-04) | Expectations match product (Queue = SA/ASA/TL/Ops Lead; Daily sheet replaces EoS) |
+| BUG-044 | Low | UI copy | Branch code ("bacoor") instead of name on the close-of-day slip, Daily sheet header, Finance Home lists and Floor Board branch label | ops-pages screenshots | **Closed** (2026-10-04) | Resolve names from `branches` (also the sidebar / top-bar scope label and the Branch Admin Queue View chip) |
+| BUG-045 | Low | UI | Floor Board money and POS Today headline amounts right-aligned away from their labels (table-only `ds-num`) | ops-pages screenshots | **Closed** (2026-10-04) | `tabular-nums` on headline figures |
 
 ## Severity guide
 
