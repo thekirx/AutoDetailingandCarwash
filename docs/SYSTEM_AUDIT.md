@@ -11,12 +11,13 @@
 | P0 UI | **PASS** — `e2e:ui-p0` **9/9** |
 | Daily Sheet money path (live, sandbox day wiped) | **PASS** — `e2e:daily-sheet-money` **38/38** (2026-10-02) |
 | Daily Sheet live UI (read-only, incl. slip Print / CSV / Excel, filters, list exports) | **PASS** — `scripts/_daily-sheet-live-smoke.mjs` **17/17** |
-| Money dashboards 375 / 768 / 1440 (read-only, full page) | **PASS** — `scripts/_ops-pages-shots.mjs` **36/36**, every page ready in ~1.5–2.5 s · `e2e-evidence/ops-pages/` |
+| Money dashboards 375 / 768 / 1440 (read-only, full page) | **PASS** — `scripts/_ops-pages-shots.mjs` **39/39** (incl. Floor Board on "3 months" with real sales; totals match SQL: ₱28,696.00, 17 paid), every page ready in ~1.6–2.6 s · `e2e-evidence/ops-pages/` |
+| Floor Board / POS Today depth | **Built (2026-10-04)** — Floor Board money follows the Timeline with % vs prior, hourly chart, method / service bars, per-branch table; POS Today adds discounts, refunds, spent so far, top services. `floorCompareWindow` / `floorMoneyBreakdown` / `topServices` in `tests/dailySheet.test.js` |
 | Web push wiring | Unit-proven for `sheet_submitted` / `sheet_reviewed`; real-device audit **NOT RE-RUN** since the Daily Sheet |
 | Supabase advisors | **Hardened** — migration `20260927120000_advisor_hardening_split_write_policies.sql` applied |
 | Framework | Vite + React · Supabase Auth/RLS · PostgREST + `/api/*` |
 | Build | **PASS** — `npm run build` exit 0 |
-| Unit suite | **PASS** — **1448/1448** (`npm test`) |
+| Unit suite | **PASS** — **1451/1451** (`npm test`) |
 | Lint | **PASS** — `npx eslint .` exit 0 |
 | FLOPS shop-day | **NOT RE-RUN** since 2026-09-26 (25/25 then). It completes a real paid sale on production that would land on the live Daily Sheet; the money path is covered by `e2e:daily-sheet-money` on a wiped sandbox day |
 | Data integrity | **PASS** — `e2e:integrity` (2026-10-04) |
@@ -140,7 +141,7 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 - [x] Production build passes
 - [ ] Type check — N/A (JS; no `tsc` script)
 - [x] Lint passes
-- [x] Automated tests pass (**1448/1448**, 2026-10-04)
+- [x] Automated tests pass (**1451/1451**, 2026-10-04)
 - [x] Critical user flows tested (Daily Sheet money path **38/38**; nav walk **84/84**; FLOPS not re-run — see Summary)
 - [x] Permissions verified (role matrix **52/52**)
 - [x] Known blockers documented (SMS/SMTP/Static IPs)

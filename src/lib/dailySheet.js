@@ -2,7 +2,7 @@
  * Daily Sheet formulas — one branch, one Manila day. Pure: rows in, numbers out (minor units).
  * POS (Branch Admin) and Finance (SA/ASA) both read these, so their numbers cannot disagree.
  */
-import { rollupSales } from './salesSummary.js'
+import { rollupSales, salesCompareWindow, topItems, vsPrior } from './salesSummary.js'
 import { paidSalesToBacoorRows } from './posSellables.js'
 import { buildPayrollPreview } from './payroll.js'
 import { normalizeCompensationSettings } from './compensation.js'
@@ -246,33 +246,92 @@ export function manilaHour(iso) {
   return Number(h) % 24
 }
 
+/** Floor Board "vs" window: Today → yesterday up to the same Manila time; other timelines → salesCompareWindow. */
+export function floorCompareWindow(preset, range, now = new Date()) {
+  if (preset !== 'today' || !range?.start) return salesCompareWindow(preset, range, now)
+  const d = new Date(`${range.start}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  const day = d.toISOString().slice(0, 10)
+  const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(now)
+  const [h, m] = time.split(':').map(Number)
+  return {
+    start: day,
+    end: day,
+    startIso: `${day}T00:00:00+08:00`,
+    endIso: `${day}T23:59:59.999+08:00`,
+    cutoffIso: `${day}T${time}+08:00`,
+    label: `vs yesterday up to ${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`,
+  }
+}
+
+const shareOf = (minor, total) => (total ? Math.round((minor / total) * 1000) / 10 : 0)
+
 /**
- * Owner Money view on the Floor Board. Net sales today vs yesterday up to the same Manila hour, per branch;
- * month-to-date net profit from finance_daily_pl rows; sheets waiting; drawer over/short alerts.
+ * Owner Money view on the Floor Board for the selected timeline: KPIs vs the prior window (up to cutoffIso when set),
+ * per-branch net / transactions / average / P&L expenses / net profit, payment-method and service-family shares,
+ * hourly net (whole prior window), sheets waiting and drawer over/short alerts.
  */
-export function floorMoney({ todaySales = [], yesterdaySales = [], nowHour = 23, plRows = [], sheets = [] } = {}) {
-  const net = (list) => rollupSales(list).netMinor
-  const sameTime = yesterdaySales.filter((s) => s?.occurred_at && manilaHour(s.occurred_at) <= nowHour)
-  const branches = [...new Set([...todaySales, ...sameTime].map((s) => s?.branch).filter(Boolean))].sort()
-  const byBranch = branches.map((branch) => ({
-    branch,
-    todayMinor: net(todaySales.filter((s) => s.branch === branch)),
-    yesterdayMinor: net(sameTime.filter((s) => s.branch === branch)),
-  }))
-  const mtdNetMinor = (plRows || []).reduce((s, r) => s + (r?.kind === 'income' ? 1 : r?.kind === 'expense' ? -1 : 0) * amount(r.amount_minor), 0)
+export function floorMoneyBreakdown({ sales = [], priorSales = [], cutoffIso = null, plRows = [], sheets = [] } = {}) {
+  const cutoff = cutoffIso ? Date.parse(cutoffIso) : null
+  const priorCut = (priorSales || []).filter((s) => cutoff == null || (s?.occurred_at && Date.parse(s.occurred_at) <= cutoff))
+  const totals = summarizeSheetSales(sales)
+  const prior = summarizeSheetSales(priorCut)
+  const pl = (branch) => {
+    const rows = (plRows || []).filter((r) => branch == null || r?.branch === branch)
+    const sum = (kind) => rows.filter((r) => r?.kind === kind).reduce((s, r) => s + amount(r.amount_minor), 0)
+    return { income: sum('income'), expense: sum('expense') }
+  }
+  const branches = [...new Set([...(sales || []), ...priorCut, ...(plRows || [])].map((r) => r?.branch).filter(Boolean))]
+  const byBranch = branches
+    .map((branch) => {
+      const cur = summarizeSheetSales(sales.filter((s) => s.branch === branch))
+      const before = summarizeSheetSales(priorCut.filter((s) => s.branch === branch))
+      const p = pl(branch)
+      return {
+        branch,
+        netMinor: cur.netMinor,
+        count: cur.count,
+        avgMinor: cur.avgMinor,
+        expensesMinor: p.expense,
+        netProfitMinor: p.income - p.expense,
+        netPct: vsPrior(cur.netMinor, before.netMinor),
+      }
+    })
+    .sort((a, b) => b.netMinor - a.netMinor || a.branch.localeCompare(b.branch))
+  const methodTotal = Object.values(totals.byMethod).reduce((s, v) => s + v, 0)
+  const familyTotal = totals.byFamily.reduce((s, f) => s + f.minor, 0)
+  const all = pl(null)
   const waiting = (sheets || []).filter((s) => s?.status === 'submitted')
   const alerts = (sheets || [])
     .filter((s) => s?.status !== 'draft' && Number(s?.totals?.overShortMinor))
     .map((s) => ({ id: s.id, branch: s.branch, date: s.business_date, overShortMinor: Number(s.totals.overShortMinor) }))
   return {
+    totals,
+    prior,
+    change: {
+      gross: vsPrior(totals.grossMinor, prior.grossMinor),
+      net: vsPrior(totals.netMinor, prior.netMinor),
+      count: vsPrior(totals.count, prior.count),
+      avg: vsPrior(totals.avgMinor, prior.avgMinor),
+    },
     byBranch,
-    todayMinor: net(todaySales),
-    yesterdayMinor: net(sameTime),
-    mtdNetMinor,
+    byMethod: Object.entries(METHOD_LABELS)
+      .map(([id, label]) => ({ id, label, minor: totals.byMethod[id], share: shareOf(totals.byMethod[id], methodTotal) }))
+      .filter((r) => r.minor),
+    byFamily: totals.byFamily.map((f) => ({ ...f, share: shareOf(f.minor, familyTotal) })),
+    hourly: hourlyNetSales(sales, priorSales),
+    expensesMinor: all.expense,
+    netProfitMinor: all.income - all.expense,
     waiting: waiting.length,
     alerts,
     allGood: waiting.length === 0 && alerts.length === 0,
   }
+}
+
+/** Best-selling services (paid sales only) by gross, with units sold. */
+export function topServices(sales = [], limit = 5) {
+  const lines = (sales || []).filter((s) => s?.status === 'paid').flatMap((s) => (s.sale_line_items || []).filter((l) => l?.item_type === 'service'))
+  return topItems(lines, limit)
 }
 
 /** Square "performance by hour": net sales (pesos) per Manila hour, today vs prior day. */

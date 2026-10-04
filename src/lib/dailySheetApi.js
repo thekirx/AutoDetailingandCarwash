@@ -5,7 +5,7 @@ import { normalizeCompensationSettings } from '@/lib/compensation'
 import { suggestSalaries, toSheetPayloadLines } from '@/lib/dailySheet'
 
 const SALE_SELECT =
-  'id, branch, status, total_minor, discount_minor, payment_method, occurred_at, booking_id, bookings(services(name, pay_category)), sale_line_items(item_type, line_total_minor, name, service_id, product_id, services(name, slug, pay_category, salary_pct), products(name, tags, category))'
+  'id, branch, status, total_minor, discount_minor, payment_method, occurred_at, booking_id, bookings(services(name, pay_category)), sale_line_items(item_type, line_total_minor, name, quantity, service_id, product_id, services(name, slug, pay_category, salary_pct), products(name, tags, category))'
 
 export const dayRange = (date) => ({ start: `${date}T00:00:00+08:00`, end: `${date}T23:59:59.999+08:00` })
 
@@ -18,6 +18,11 @@ export function previousDay(date) {
 /** Paid + refunded sales for one branch/day (refunds feed the Net sales formula). */
 export async function loadDaySales(branch, date, { select = SALE_SELECT } = {}) {
   const { start, end } = dayRange(date)
+  return loadSalesBetween(branch, start, end, { select })
+}
+
+/** Paid + refunded sales between two ISO timestamps. ponytail: pages 1000 rows at a time — 6-month all-branch views pull every sale; move to an RPC if that gets slow. */
+export async function loadSalesBetween(branch, start, end, { select = SALE_SELECT } = {}) {
   return collectPaged(async (from, to) => {
     let q = supabase.from('sales').select(select).in('status', ['paid', 'refunded']).gte('occurred_at', start).lte('occurred_at', end)
     if (branch && branch !== 'all') q = q.eq('branch', branch)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-04 — Dashboards: full money breakdown
+
+- Floor Board › Sales and profit (SA / ASA finance view) follows the Timeline filter instead of only today: gross, net, transactions, average and posted net profit with % change vs the prior period (Today compares with yesterday up to the same time), net sales by hour, by-payment-method and by-service bars, deductions and costs, and a per-branch table (net, transactions, average, expenses, net profit, change) with a total row. Replaces the flat ₱ tiles for money viewers.
+- POS Today (Branch Admin) adds discounts, refunds, money spent so far from the daily sheet, and top services.
+- The money panel no longer reloads twice per timeline change.
+- `_ops-pages-shots.mjs` waits for the page heading and `aria-busy`, and adds a Floor Board "3 months" shot with real sales.
+
 ## 2026-10-04 — Daily Sheet re-verification, names not codes, dashboard polish
 
 - Branch names replace branch codes ("bacoor") on the close-of-day slip, Daily sheet header, sidebar / top bar scope, Branch Admin Queue View, Finance Home lists and the Floor Board branch label.

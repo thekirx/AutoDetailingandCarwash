@@ -195,6 +195,7 @@ export default function SuperAdminFloorBoard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [live, setLive] = useState(false)
+  const [moneyTick, setMoneyTick] = useState(0)
 
   const range = useMemo(
     () => getDashboardDateRange(datePreset, customStart, customEnd),
@@ -233,7 +234,10 @@ export default function SuperAdminFloorBoard() {
   }, [seeAll])
 
   useEffect(() => {
-    const scheduleReload = createCoalescedReload(() => load(), 500)
+    const scheduleReload = createCoalescedReload(() => {
+      load()
+      setMoneyTick((t) => t + 1)
+    }, 500)
     const filter =
       branchFilter && branchFilter !== 'all' ? `branch=eq.${branchFilter}` : undefined
     const channel = supabase
@@ -368,7 +372,10 @@ export default function SuperAdminFloorBoard() {
         </div>
         <button
           type="button"
-          onClick={load}
+          onClick={() => {
+            load()
+            setMoneyTick((t) => t + 1)
+          }}
           disabled={loading}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground disabled:opacity-50"
         >
@@ -582,81 +589,86 @@ export default function SuperAdminFloorBoard() {
       </Section>
 
       {showMoney ? (
-        <Section eyebrow="Money" title="Today and this month">
+        <Section eyebrow="Money" title="Sales and profit">
           <FloorMoneyPanel
             profile={profile}
             branchFilter={branchFilter}
             branchName={(slug) => branches.find((b) => b.slug === slug)?.name || slug}
-            refreshKey={board}
+            refreshKey={moneyTick}
+            preset={datePreset}
+            startDate={rangeStartDate}
+            endDate={rangeEndDate}
+            cancelLossMinor={financials.cancel_loss_minor}
+            onOpenCancelled={() => openHistory('cancelled')}
           />
         </Section>
-      ) : null}
-
-      <Section eyebrow="Money" title="Financials">
-        <div className="grid grid-cols-2 gap-3 overflow-visible xl:grid-cols-3">
-          <StatTile
-            label="Queue app sales"
-            value={formatMoney(financials.queue_sales_minor)}
-            hint="Carwash only"
-            onNavigate={() => navigate('/operations/finance')}
-            breakdown={`Paid sales linked to queue tickets (services & packages) for ${branchLabel} in this timeline.\nAmount: ${formatMoney(financials.queue_sales_minor)}`}
-          />
-          <StatTile
-            label="Counter / POS sales"
-            value={formatMoney(financials.pos_sales_minor)}
-            hint="Detailing · coffee · merch"
-            onNavigate={() => navigate('/operations/pos')}
-            breakdown={[
-              `Walk-in / counter POS paid sales for ${branchLabel} in this timeline.`,
-              financials.detailing_sales_minor != null
-                ? `Detailing ${formatMoney(financials.detailing_sales_minor)}`
-                : null,
-              financials.coffee_sales_minor != null ? `Coffee ${formatMoney(financials.coffee_sales_minor)}` : null,
-              financials.merch_sales_minor != null ? `Merch ${formatMoney(financials.merch_sales_minor)}` : null,
-              `Total ${formatMoney(financials.pos_sales_minor)}`,
-            ]
-              .filter(Boolean)
-              .join('\n')}
-          />
-          <StatTile
-            label="Cash"
-            value={formatMoney(financials.cash_sales_minor)}
-            hint={paymentMethodLabel('cash') || 'Cash'}
-            onNavigate={() => navigate('/operations/finance')}
-            breakdown={`Cash tender share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.cash_sales_minor)}`}
-          />
-          <StatTile
-            label="GCash"
-            value={formatMoney(financials.gcash_sales_minor)}
-            hint={paymentMethodLabel('gcash') || 'GCash'}
-            onNavigate={() => navigate('/operations/finance')}
-            breakdown={`GCash tender share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.gcash_sales_minor)}`}
-          />
-          <StatTile
-            label="Credit / Debit"
-            value={formatMoney(financials.card_sales_minor)}
-            hint={paymentMethodLabel('card') || 'Card'}
-            onNavigate={() => navigate('/operations/finance')}
-            breakdown={`Credit / debit card tender share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.card_sales_minor)}`}
-          />
-          <StatTile
-            label="Cancel loss"
-            value={formatMoney(financials.cancel_loss_minor)}
-            tone="rose"
-            hint="Cancelled job value in timeline"
-            onNavigate={() => openHistory('cancelled')}
-            breakdown={`Estimated value of cancelled jobs in the selected timeline (${branchLabel}). Opens History filtered to cancelled.`}
-          />
-          <StatTile
-            label="Posted expenses"
-            value={formatMoney(financials.expense_minor)}
-            tone="amber"
-            hint="Paid · posted in timeline"
-            onNavigate={() => navigate('/operations/finance')}
-            breakdown="Sum of expense total_minor for paid/posted rows created in this timeline (same statuses as Finance P&L). Approved-but-unpaid bills are excluded."
-          />
-        </div>
-      </Section>
+      ) : (
+        <Section eyebrow="Money" title="Financials">
+          <div className="grid grid-cols-2 gap-3 overflow-visible xl:grid-cols-3">
+            <StatTile
+              label="Queue app sales"
+              value={formatMoney(financials.queue_sales_minor)}
+              hint="Carwash only"
+              onNavigate={() => navigate('/operations/finance')}
+              breakdown={`Paid sales linked to queue tickets (services & packages) for ${branchLabel} in this timeline.\nAmount: ${formatMoney(financials.queue_sales_minor)}`}
+            />
+            <StatTile
+              label="Counter / POS sales"
+              value={formatMoney(financials.pos_sales_minor)}
+              hint="Detailing · coffee · merch"
+              onNavigate={() => navigate('/operations/pos')}
+              breakdown={[
+                `Walk-in / counter POS paid sales for ${branchLabel} in this timeline.`,
+                financials.detailing_sales_minor != null
+                  ? `Detailing ${formatMoney(financials.detailing_sales_minor)}`
+                  : null,
+                financials.coffee_sales_minor != null ? `Coffee ${formatMoney(financials.coffee_sales_minor)}` : null,
+                financials.merch_sales_minor != null ? `Merch ${formatMoney(financials.merch_sales_minor)}` : null,
+                `Total ${formatMoney(financials.pos_sales_minor)}`,
+              ]
+                .filter(Boolean)
+                .join('\n')}
+            />
+            <StatTile
+              label="Cash"
+              value={formatMoney(financials.cash_sales_minor)}
+              hint={paymentMethodLabel('cash') || 'Cash'}
+              onNavigate={() => navigate('/operations/finance')}
+              breakdown={`Cash tender share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.cash_sales_minor)}`}
+            />
+            <StatTile
+              label="GCash"
+              value={formatMoney(financials.gcash_sales_minor)}
+              hint={paymentMethodLabel('gcash') || 'GCash'}
+              onNavigate={() => navigate('/operations/finance')}
+              breakdown={`GCash tender share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.gcash_sales_minor)}`}
+            />
+            <StatTile
+              label="Credit / Debit"
+              value={formatMoney(financials.card_sales_minor)}
+              hint={paymentMethodLabel('card') || 'Card'}
+              onNavigate={() => navigate('/operations/finance')}
+              breakdown={`Credit / debit card tender share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.card_sales_minor)}`}
+            />
+            <StatTile
+              label="Cancel loss"
+              value={formatMoney(financials.cancel_loss_minor)}
+              tone="rose"
+              hint="Cancelled job value in timeline"
+              onNavigate={() => openHistory('cancelled')}
+              breakdown={`Estimated value of cancelled jobs in the selected timeline (${branchLabel}). Opens History filtered to cancelled.`}
+            />
+            <StatTile
+              label="Posted expenses"
+              value={formatMoney(financials.expense_minor)}
+              tone="amber"
+              hint="Paid · posted in timeline"
+              onNavigate={() => navigate('/operations/finance')}
+              breakdown="Sum of expense total_minor for paid/posted rows created in this timeline (same statuses as Finance P&L). Approved-but-unpaid bills are excluded."
+            />
+          </div>
+        </Section>
+      )}
 
       <Section eyebrow="Tempo" title="KPI">
         <div className="grid grid-cols-1 gap-3 overflow-visible sm:grid-cols-3">

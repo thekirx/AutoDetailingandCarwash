@@ -8,7 +8,9 @@
 
 Since 2026-10-01 the money path is **POS → Daily Sheet (Branch Admin) → Finance approve (Super Admin / ASA) → books**. End of shift, Payroll and My pay are retired. The Daily Sheet has a close-of-day slip (Print / PDF, CSV, Excel); Finance › Daily sheets has search, submitted by, net profit range, quick dates, over/short, and CSV / Excel / Print exports.
 
-Fresh evidence (2026-10-04): unit **1448/1448**, lint **0**, build **0**, nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards at 375 / 768 / 1440 **36/36**. Daily Sheet money path on production (sandbox day, wiped) **38/38** (2026-10-02).
+Dashboards (2026-10-04): the Floor Board money section follows the Timeline filter (Today / Week / Month / 3 / 6 months / custom) with gross, net, transactions, average and posted net profit vs the prior period, net sales by hour, payment-method and service bars, deductions (discounts, refunds, cancelled estimate, posted expenses) and an always-on per-branch table. POS Today (Branch Admin) adds discounts, refunds, money spent so far (from the daily sheet) and top services.
+
+Fresh evidence (2026-10-04): unit **1451/1451**, lint **0**, build **0**, nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards at 375 / 768 / 1440 **39/39**. Daily Sheet money path on production (sandbox day, wiped) **38/38** (2026-10-02).
 
 Production messaging remains **open**: BrandTxt ErrorCode **11** (server IP not whitelisted); Auth SMTP unproven. **Owner daily SMS is intentionally disabled** — Daily Sheet submit / approve use web push.
 
@@ -24,7 +26,7 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 
 | Check | Result |
 |-------|--------|
-| `npm test` | **1448/1448** |
+| `npm test` | **1451/1451** |
 | `npx eslint .` | exit **0** |
 | `npm run build` | exit **0** |
 | `e2e:nav-walk` (every role × every sidebar link) | **84/84**, backend 4xx **0** |
@@ -33,7 +35,7 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 | `e2e:ui-p0` | **9/9** |
 | `e2e:integrity` | **PASS** |
 | `scripts/_daily-sheet-live-smoke.mjs` (read-only, aborts writes) | **17/17** local + production |
-| `scripts/_ops-pages-shots.mjs` (money dashboards, full page, 3 widths) | **36/36**, ready in ~1.5–2.5 s |
+| `scripts/_ops-pages-shots.mjs` (money dashboards, full page, 3 widths, incl. Floor Board on "3 months" with real sales) | **39/39**, ready in ~1.6–2.6 s |
 | `e2e:daily-sheet-money` (live RPCs, sandbox day wiped) | **38/38** (2026-10-02) |
 | `e2e:lifecycle-flops` | **NOT RE-RUN** — it completes a real paid sale on production that would land on the live Daily Sheet |
 | Real-device push audit (`push-audit-events.mjs`) | **NOT RE-RUN** since the Daily Sheet |
@@ -52,6 +54,8 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 - `20260929090000_visit_stamp.sql` is unapplied on production; no app code calls it.
 - Production has no real Daily Sheet yet — list exports with real rows are proven by unit tests, not yet in a browser on real data.
 - Xero gaps by choice: aged payables, balance sheet, bank reconciliation, VAT.
+- Floor Board money pages all sales in the timeline in the browser (1000 rows per request). Fine at today's volume; move to an RPC if 6-month all-branch views get slow.
+- Ops Lead still sees the flat Financials tiles on the Floor Board (pre-existing; the new money panel is SA / ASA finance view only). Decide whether Ops Lead should see money at all.
 
 ## Recommended Next Action
 

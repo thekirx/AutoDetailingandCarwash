@@ -21,6 +21,7 @@ mkdirSync(outDir, { recursive: true })
 const PAGES = {
   boss: [
     ['floor-board', '/operations/dashboard'],
+    ['floor-board-3mo', '/operations/dashboard', '3mo'],
     ['finance-home', '/operations/finance'],
     ['finance-sheets', '/operations/finance?tab=sheets&status=all'],
     ['finance-sales', '/operations/finance?tab=sales'],
@@ -87,14 +88,22 @@ try {
     await page.click('button[type="submit"]')
     await page.waitForFunction(() => location.pathname.startsWith('/operations') && !location.pathname.includes('login'), { timeout: 60000 })
 
-    for (const [name, url] of pages) {
+    for (const [name, url, timeline] of pages) {
       for (const width of VIEWPORTS) {
         problems.length = 0
         await page.setViewport({ width, height: width < 768 ? 812 : 900 })
         const started = Date.now()
         await page.goto(`${base}${url}`, { waitUntil: 'networkidle2' }).catch(() => null)
-        const stillLoading = () => /•••|…|Loading/.test(document.querySelector('main')?.innerText || document.body.innerText)
+        const stillLoading = () =>
+          !document.querySelector('main h1, main h2') ||
+          Boolean(document.querySelector('[aria-busy="true"]')) ||
+          /•••|…|Loading/.test(document.querySelector('main')?.innerText || document.body.innerText)
         await page.waitForFunction(`!(${stillLoading})()`, { timeout: 30000 }).catch(() => null)
+        if (timeline) {
+          await page.select(`select:has(option[value="${timeline}"])`, timeline)
+          await new Promise((r) => setTimeout(r, 300))
+          await page.waitForFunction(`!(${stillLoading})()`, { timeout: 30000 }).catch(() => null)
+        }
         const readyMs = Date.now() - started
         await new Promise((r) => setTimeout(r, 800))
         const state = await page.evaluate((src) => ({

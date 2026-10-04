@@ -9,8 +9,11 @@ import {
   sheetChecklist,
   formatAccounting,
   hourlyNetSales,
-  floorMoney,
+  floorCompareWindow,
+  floorMoneyBreakdown,
+  topServices,
 } from '../src/lib/dailySheet.js'
+import { salesCompareWindow } from '../src/lib/salesSummary.js'
 
 const washLine = (total) => ({ item_type: 'service', line_total_minor: total, services: { name: 'Basic wash', slug: 'basic-wash', pay_category: 'carwash' } })
 const coffeeLine = (total) => ({ item_type: 'product', line_total_minor: total, products: { name: 'Latte', tags: ['coffee'], category: 'coffee' } })
@@ -167,41 +170,100 @@ test('hourlyNetSales: Manila hours, today vs prior day', () => {
   assert.equal(rows.length, 24)
 })
 
-test('floorMoney: today vs yesterday by the same hour per branch, MTD net, waiting sheets, drawer alerts', () => {
-  const m = floorMoney({
-    nowHour: 12,
-    todaySales: [
-      { branch: 'bacoor', status: 'paid', total_minor: 100000, occurred_at: '2026-10-02T01:00:00Z' },
-      { branch: 'imus', status: 'refunded', total_minor: 20000, occurred_at: '2026-10-02T02:00:00Z' },
-    ],
-    yesterdaySales: [
-      { branch: 'bacoor', status: 'paid', total_minor: 50000, occurred_at: '2026-10-01T01:00:00Z' },
-      { branch: 'bacoor', status: 'paid', total_minor: 70000, occurred_at: '2026-10-01T12:00:00Z' },
-    ],
-    plRows: [
-      { kind: 'income', amount_minor: 900000 },
-      { kind: 'expense', amount_minor: 250000 },
-    ],
-    sheets: [
-      { id: 'a', branch: 'bacoor', business_date: '2026-10-01', status: 'submitted', totals: { overShortMinor: 0 } },
-      { id: 'b', branch: 'imus', business_date: '2026-09-30', status: 'approved', totals: { overShortMinor: -5000 } },
-      { id: 'c', branch: 'imus', business_date: '2026-10-02', status: 'draft', totals: { overShortMinor: 900 } },
-    ],
+const NOW = new Date('2026-10-04T06:30:00Z') // 2:30 pm Manila
+
+test('floorCompareWindow: Today compares with yesterday up to the same time; other timelines use the Square window', () => {
+  assert.deepEqual(floorCompareWindow('today', { start: '2026-10-04', end: '2026-10-04' }, NOW), {
+    start: '2026-10-03',
+    end: '2026-10-03',
+    startIso: '2026-10-03T00:00:00+08:00',
+    endIso: '2026-10-03T23:59:59.999+08:00',
+    cutoffIso: '2026-10-03T14:30:00+08:00',
+    label: 'vs yesterday up to 2:30 pm',
   })
-  assert.deepEqual(m.byBranch, [
-    { branch: 'bacoor', todayMinor: 100000, yesterdayMinor: 50000 },
-    { branch: 'imus', todayMinor: 0, yesterdayMinor: 0 },
-  ])
-  assert.equal(m.yesterdayMinor, 50000, '8 pm yesterday is after noon — not compared yet')
-  assert.equal(m.mtdNetMinor, 650000)
-  assert.equal(m.waiting, 1)
-  assert.deepEqual(m.alerts, [{ id: 'b', branch: 'imus', date: '2026-09-30', overShortMinor: -5000 }])
-  assert.equal(m.allGood, false)
-  assert.equal(floorMoney({}).allGood, true)
+  const week = { start: '2026-09-28', end: '2026-10-04' }
+  assert.deepEqual(floorCompareWindow('week', week, NOW), salesCompareWindow('week', week, NOW))
+  const threeMonths = floorCompareWindow('3mo', { start: '2026-07-04', end: '2026-10-04' }, NOW)
+  assert.equal(threeMonths.cutoffIso, null, '3 / 6 months and custom compare with the previous equal-length period')
+  assert.equal(threeMonths.end, '2026-07-03')
 })
 
-test('Floor Board shows the Money panel only to sheet reviewers (SA / ASA finance view)', () => {
+test('floorMoneyBreakdown: KPIs vs prior up to the cutoff, per-branch table with P&L, method and service shares', () => {
+  const m = floorMoneyBreakdown({
+    sales: [
+      { branch: 'bacoor', status: 'paid', total_minor: 100000, discount_minor: 10000, payment_method: 'cash', occurred_at: '2026-10-04T01:00:00Z', sale_line_items: [washLine(110000)] },
+      { branch: 'imus', status: 'paid', total_minor: 40000, discount_minor: 0, payment_method: 'gcash', occurred_at: '2026-10-04T05:00:00Z', sale_line_items: [coffeeLine(40000)] },
+      { branch: 'imus', status: 'refunded', total_minor: 20000, payment_method: 'card', occurred_at: '2026-10-04T05:10:00Z' },
+    ],
+    priorSales: [
+      { branch: 'bacoor', status: 'paid', total_minor: 50000, occurred_at: '2026-10-03T01:00:00Z' },
+      { branch: 'bacoor', status: 'paid', total_minor: 70000, occurred_at: '2026-10-03T12:00:00Z' },
+    ],
+    cutoffIso: '2026-10-03T14:30:00+08:00',
+    plRows: [
+      { branch: 'bacoor', kind: 'income', amount_minor: 100000 },
+      { branch: 'bacoor', kind: 'expense', amount_minor: 30000 },
+      { branch: 'imus', kind: 'income', amount_minor: 20000 },
+      { branch: 'imus', kind: 'expense', amount_minor: 5000 },
+    ],
+    sheets: [
+      { id: 'a', branch: 'bacoor', business_date: '2026-10-03', status: 'submitted', totals: { overShortMinor: 0 } },
+      { id: 'b', branch: 'imus', business_date: '2026-10-02', status: 'approved', totals: { overShortMinor: -5000 } },
+      { id: 'c', branch: 'imus', business_date: '2026-10-04', status: 'draft', totals: { overShortMinor: 900 } },
+    ],
+  })
+  assert.equal(m.totals.grossMinor, 170000)
+  assert.equal(m.totals.netMinor, 140000)
+  assert.equal(m.prior.netMinor, 50000, '8 pm yesterday is after the 2:30 pm cutoff — not compared')
+  assert.deepEqual(m.change, { gross: 240, net: 180, count: 100, avg: 40 })
+  assert.deepEqual(m.byBranch, [
+    { branch: 'bacoor', netMinor: 100000, count: 1, avgMinor: 100000, expensesMinor: 30000, netProfitMinor: 70000, netPct: 100 },
+    { branch: 'imus', netMinor: 40000, count: 1, avgMinor: 40000, expensesMinor: 5000, netProfitMinor: 15000, netPct: null },
+  ])
+  assert.deepEqual(m.byMethod, [
+    { id: 'cash', label: 'Cash', minor: 100000, share: 71.4 },
+    { id: 'gcash', label: 'GCash', minor: 40000, share: 28.6 },
+  ])
+  assert.deepEqual(m.byFamily.map((f) => [f.id, f.share]), [['car_wash', 73.3], ['coffee', 26.7]])
+  assert.equal(m.expensesMinor, 35000)
+  assert.equal(m.netProfitMinor, 85000)
+  assert.equal(m.hourly.find((r) => r.hour === 9).today, 1000)
+  assert.equal(m.hourly.find((r) => r.hour === 20).prior, 700, 'chart shows the whole prior day')
+  assert.equal(m.waiting, 1)
+  assert.deepEqual(m.alerts, [{ id: 'b', branch: 'imus', date: '2026-10-02', overShortMinor: -5000 }])
+  assert.equal(m.allGood, false)
+  const empty = floorMoneyBreakdown({})
+  assert.equal(empty.allGood, true)
+  assert.deepEqual(empty.change, { gross: null, net: null, count: null, avg: null })
+  assert.deepEqual(empty.byBranch, [])
+})
+
+test('topServices: paid service lines only, ranked by gross with quantity counts', () => {
+  const rows = topServices([
+    { status: 'paid', sale_line_items: [{ item_type: 'service', name: 'Basic wash', quantity: 2, line_total_minor: 60000 }, { item_type: 'product', name: 'Latte', line_total_minor: 99999 }] },
+    { status: 'paid', sale_line_items: [{ item_type: 'service', name: 'Ceramic', quantity: 1, line_total_minor: 500000 }] },
+    { status: 'refunded', sale_line_items: [{ item_type: 'service', name: 'Basic wash', quantity: 9, line_total_minor: 90000 }] },
+  ])
+  assert.deepEqual(rows, [
+    { name: 'Ceramic', count: 1, grossMinor: 500000 },
+    { name: 'Basic wash', count: 2, grossMinor: 60000 },
+  ])
+})
+
+test('Floor Board money follows the timeline; flat ₱ tiles stay only for viewers without money access', () => {
   const board = readFileSync(new URL('../src/pages/SuperAdminFloorBoard.jsx', import.meta.url), 'utf8')
   assert.match(board, /const showMoney = canReviewDailySheet\(profile\)/)
-  assert.match(board, /showMoney \? \([\s\S]*<FloorMoneyPanel/)
+  assert.match(board, /showMoney \? \([\s\S]*<FloorMoneyPanel[\s\S]*preset=\{datePreset\}[\s\S]*startDate=\{rangeStartDate\}[\s\S]*endDate=\{rangeEndDate\}/)
+  assert.match(board, /\) : \(\s*<Section eyebrow="Money" title="Financials">/)
+  const panel = readFileSync(new URL('../src/pages/FloorMoneyPanel.jsx', import.meta.url), 'utf8')
+  assert.match(panel, /floorCompareWindow\(preset/)
+  assert.match(panel, /floorMoneyBreakdown\(/)
+})
+
+test('POS Today shows discounts, refunds, top services and money spent so far', () => {
+  const src = readFileSync(new URL('../src/pages/pos/PosTodayPanel.jsx', import.meta.url), 'utf8')
+  assert.match(src, /discountsMinor/)
+  assert.match(src, /refundsMinor/)
+  assert.match(src, /topServices\(/)
+  assert.match(src, /computeSheetTotals\(/)
 })
