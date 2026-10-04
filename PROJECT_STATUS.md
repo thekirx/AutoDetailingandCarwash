@@ -1,6 +1,6 @@
 # Project Status
 
-**Last Updated:** 2026-10-04 (Asia/Manila) — re-verification on the Daily Sheet money path  
+**Last Updated:** 2026-10-04 (Asia/Manila) — September 2026 test month, role probe, three production fixes  
 **Current Branch:** `main` (pushed to `origin/main`; Vercel auto-deploys)  
 **Overall Status:** **READY_WITH_OPS_BLOCKERS** (soft-launch shop-day) · **NOT** 100% production-ops ready
 
@@ -10,7 +10,11 @@ Since 2026-10-01 the money path is **POS → Daily Sheet (Branch Admin) → Fina
 
 Dashboards (2026-10-04): the Floor Board money section follows the Timeline filter (Today / Week / Month / 3 / 6 months / custom) with gross, net, transactions, average and posted net profit vs the prior period, net sales by hour, payment-method and service bars, deductions (discounts, refunds, cancelled estimate, posted expenses) and an always-on per-branch table. POS Today (Branch Admin) adds discounts, refunds, money spent so far (from the daily sheet) and top services.
 
-Fresh evidence (2026-10-04): unit **1451/1451**, lint **0**, build **0**, nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards at 375 / 768 / 1440 **39/39**. Daily Sheet money path on production (sandbox day, wiped) **38/38** (2026-10-02).
+September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month in production — 1,221 bookings (1,141 completed cars), 1,288 sales, maintenance, attendance and 60 Daily Sheets reviewed by SA / ASA (approved, returned, reopened). Tagged and removable: [`docs/qa/SEPTEMBER-2026-SEED.md`](docs/qa/SEPTEMBER-2026-SEED.md). Queue, POS, Daily Sheets, P&L and Floor Board agree (**23/23**); screens per role **22/22**; statuses / overrides / approvals by role **20/20** (rolled-back probe).
+
+Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 on production (fixed in repo — **needs a deploy**).
+
+Fresh evidence (2026-10-04): unit **1465/1465**, lint **0**, build **0**, nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards at 375 / 768 / 1440 **39/39**. Daily Sheet money path on production (sandbox day, wiped) **38/38** (2026-10-02).
 
 Production messaging remains **open**: BrandTxt ErrorCode **11** (server IP not whitelisted); Auth SMTP unproven. **Owner daily SMS is intentionally disabled** — Daily Sheet submit / approve use web push.
 
@@ -26,10 +30,13 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 
 | Check | Result |
 |-------|--------|
-| `npm test` | **1451/1451** |
+| `npm test` | **1465/1465** |
 | `npx eslint .` | exit **0** |
 | `npm run build` | exit **0** |
-| `e2e:nav-walk` (every role × every sidebar link) | **84/84**, backend 4xx **0** |
+| `e2e:nav-walk` (every role × every sidebar link) | **84/84**, backend 4xx **1** (SA Data Center 404 on production — fixed in repo, live after deploy) |
+| `scripts/verify-september-2026.mjs` (read-only) | **23/23** |
+| `scripts/_september-shots.mjs` (read-only, SA / ASA / BA ×2 / TL, 375 + 1440) | **22/22** on production |
+| `supabase/tests/daily_flow_role_probe.sql` (rolled back) | **20/20** |
 | `e2e:role-qa` | **52/52** (Branch Admin denied Queue by design) |
 | `e2e:ui-money` | **5/5** (rewritten for the Daily Sheet) |
 | `e2e:ui-p0` | **9/9** |
@@ -52,11 +59,15 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 
 - Dropping the locked payroll tables needs a separate migration and the owner's OK.
 - `20260929090000_visit_stamp.sql` is unapplied on production; no app code calls it.
-- Production has no real Daily Sheet yet — list exports with real rows are proven by unit tests, not yet in a browser on real data.
+- Production has no real Daily Sheet yet; the 60 September seed sheets show the lists, filters and review drawer in a browser. **Wipe the September test month before go-live** (`scripts/seed/wipe-september-2026.sql`) or keep it as training data — owner's call.
+- Deploy needed: BUG-048 (public Complaints / Partnership / Events forms and SA Data Center 404) is fixed in the repo only.
+- `send_queue_ticket_to_payment` still fills `transactions.recorded_by` from a customers lookup, so the pending-payment transaction has no recorder for most staff (the paid sale records the cashier). Low; not on the money path.
 - Xero gaps by choice: aged payables, balance sheet, bank reconciliation, VAT.
 - Floor Board money pages all sales in the timeline in the browser (1000 rows per request). Fine at today's volume; move to an RPC if 6-month all-branch views get slow.
 - Ops Lead still sees the flat Financials tiles on the Floor Board (pre-existing; the new money panel is SA / ASA finance view only). Decide whether Ops Lead should see money at all.
 
 ## Recommended Next Action
 
-**Single highest value:** whitelist the BrandTxt sending IP (or enable Vercel Static IPs) and prove `npm run sms:egress` DELIVRD, so customer status SMS works. Before opening day: BossMich and approving ASAs enable push (sidebar → Account → push) so Daily Sheet submit / approve alerts land, then re-run the real-device push audit.
+**First:** deploy (push `main`) so the public inquiry forms and Data Center work on production again (BUG-048).
+
+**Single highest value after that:** whitelist the BrandTxt sending IP (or enable Vercel Static IPs) and prove `npm run sms:egress` DELIVRD, so customer status SMS works. Before opening day: BossMich and approving ASAs enable push (sidebar → Account → push) so Daily Sheet submit / approve alerts land, then re-run the real-device push audit.

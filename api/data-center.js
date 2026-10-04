@@ -5,4 +5,5 @@ export const operations = Object.freeze({
   'data-center': handleDataCenterRequest,
 })
 
-export default createGateway(operations)
+// Vercel serves this file before the vercel.json rewrite, so /api/data-center arrives without ?operation.
+export default createGateway(operations, { defaultOperation: 'data-center' })

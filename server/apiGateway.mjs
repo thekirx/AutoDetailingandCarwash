@@ -6,7 +6,7 @@ export function readGatewayOperation(req) {
   return values.length === 1 && values[0] ? values[0] : null
 }
 
-export function createGateway(operationHandlers) {
+export function createGateway(operationHandlers, { defaultOperation = null } = {}) {
   const handlers = Object.freeze({ ...operationHandlers })
 
   return async function gateway(req, res) {
@@ -17,7 +17,8 @@ export function createGateway(operationHandlers) {
       return
     }
 
-    const operation = readGatewayOperation(req)
+    const url = new URL(req?.url || '/', 'http://localhost')
+    const operation = url.searchParams.has('operation') ? readGatewayOperation(req) : defaultOperation
     const handler =
       operation && Object.prototype.hasOwnProperty.call(handlers, operation)
         ? handlers[operation]

@@ -47,6 +47,27 @@ const domains = [
   ['public-inquiry', publicInquiryGateway, publicInquiry, ['complaints', 'event-registration', 'partnership']],
 ]
 
+describe('gateways whose file path is also a public route', () => {
+  // Vercel serves api/<name>.js before vercel.json rewrites, so these paths arrive without ?operation.
+  it('/api/data-center reaches the Data Center handler (401 without a token, not 404)', async () => {
+    const res = response()
+    await dataCenterGateway({ method: 'GET', url: '/api/data-center', headers: {} }, res)
+    assert.equal(res.out.statusCode, 401)
+  })
+
+  it('/api/public-inquiry reaches the inquiry handler (405 on GET, not 404)', async () => {
+    const res = response()
+    await publicInquiryGateway({ method: 'GET', url: '/api/public-inquiry', headers: {} }, res)
+    assert.equal(res.out.statusCode, 405)
+  })
+
+  it('an unknown operation on those paths is still 404', async () => {
+    const res = response()
+    await dataCenterGateway({ method: 'GET', url: '/api/data-center?operation=purge-all', headers: {} }, res)
+    assert.equal(res.out.statusCode, 404)
+  })
+})
+
 describe('domain gateway allowlists', () => {
   for (const [name, gateway, operations, expected] of domains) {
     it(`${name} exposes exactly its fixed operation map`, () => {

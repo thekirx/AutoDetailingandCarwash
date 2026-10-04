@@ -111,4 +111,16 @@ describe('hot path FK indexes migration', () => {
     assert.match(sql, /create policy user_notifications_select/)
     assert.doesNotMatch(sql, /is_assistant_super_admin\(\)\s*OR \(\(current_user_role\(\) = 'admin'/)
   })
+
+  it('evaluates sales/bookings/queue_events read helpers once per statement, not per row', () => {
+    const sql = readFileSync(join(root, 'supabase/migrations/20261004092000_hot_read_policies_initplan.sql'), 'utf8')
+    const policies = sql.slice(sql.indexOf('drop policy'))
+    for (const name of ['"Queue managers can read branch events"', 'sales_select', 'bookings_select']) {
+      assert.match(policies, new RegExp(`create policy ${name}`))
+    }
+    assert.doesNotMatch(policies, /(can_manage_branch|user_has_branch_access)\(/)
+    const bare = policies.replace(/\(select public\.[a-z_]+\([^)]*\)\)/g, '')
+    assert.doesNotMatch(bare, /public\.(is_super_admin|asa_has_grant|current_user_role|current_user_branch|accessible_branch_slugs|manageable_branch_slugs)\(/)
+    assert.match(policies, /or public\.staff_is_assigned_to_booking\(id\)\s*\);/)
+  })
 })

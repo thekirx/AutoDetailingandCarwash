@@ -8,4 +8,6 @@ export const operations = Object.freeze({
   'event-registration': handlePublicInquiryRequest,
 })
 
-export default createGateway(operations)
+// Vercel serves this file before the vercel.json rewrite, so /api/public-inquiry arrives without ?operation;
+// every alias is the same handler, so any of them is the right default.
+export default createGateway(operations, { defaultOperation: 'complaints' })

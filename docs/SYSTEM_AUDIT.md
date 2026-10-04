@@ -5,7 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Audit date | **2026-10-04** (Asia/Manila) — re-verification after the Daily Sheet replaced End of shift, Payroll and My pay (2026-10-01) |
-| Nav walk (every role × every sidebar link) | **PASS** — `e2e:nav-walk` **84/84**, backend 4xx **0** (fewer links: Payroll / My pay retired) · `e2e-evidence/nav-walk/` |
+| Nav walk (every role × every sidebar link) | **PASS** — `e2e:nav-walk` **84/84**; backend 4xx **1**: SA Data Center `/api/data-center` 404 on production (BUG-048, fixed in repo, live after deploy) · `e2e-evidence/nav-walk/` |
+| September 2026 test month (production, tagged, wipeable) | **PASS** — `scripts/verify-september-2026.mjs` **23/23** (queue ↔ POS ↔ daily sheets ↔ P&L ↔ Floor Board), `_september-shots.mjs` **22/22** at 375 / 1440 (SA, ASA, both BAs, TL) · [`qa/SEPTEMBER-2026-SEED.md`](./qa/SEPTEMBER-2026-SEED.md) |
+| Statuses / overrides / approvals by role | **PASS** — `supabase/tests/daily_flow_role_probe.sql` **20/20** (rolled back): TL lifecycle incl. failed QA + send to payment, cross-branch + crew denials, BA / ASA / SA overrides, BA cannot approve own sheet, ASA can |
 | Role matrix | **PASS** — `e2e:role-qa` **52/52**. Branch Admin is now denied the Queue (only SA, ASA, TL, Ops Lead); the stale "BA may open Queue" expectation was fixed |
 | Money UI pack | **PASS** — `e2e:ui-money` **5/5** (TL denied POS, BA denied Queue, BA POS + Daily sheet, SA Finance › Daily sheets); End of shift steps removed |
 | P0 UI | **PASS** — `e2e:ui-p0` **9/9** |
@@ -17,7 +19,7 @@
 | Supabase advisors | **Hardened** — migration `20260927120000_advisor_hardening_split_write_policies.sql` applied |
 | Framework | Vite + React · Supabase Auth/RLS · PostgREST + `/api/*` |
 | Build | **PASS** — `npm run build` exit 0 |
-| Unit suite | **PASS** — **1451/1451** (`npm test`) |
+| Unit suite | **PASS** — **1465/1465** (`npm test`) |
 | Lint | **PASS** — `npx eslint .` exit 0 |
 | FLOPS shop-day | **NOT RE-RUN** since 2026-09-26 (25/25 then). It completes a real paid sale on production that would land on the live Daily Sheet; the money path is covered by `e2e:daily-sheet-money` on a wiped sandbox day |
 | Data integrity | **PASS** — `e2e:integrity` (2026-10-04) |
@@ -98,8 +100,11 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 | `stamp_sale_line_kind` (trigger fn) | RPC-executable by anon/authenticated | Revoked EXECUTE (trigger fire unaffected) | FLOPS 25/25 after (sale lines still stamped) |
 | `expense_reports`, `expense_report_lines`, `ops_pos_settings`, `role_definitions` | Multiple permissive SELECT policies | Split `FOR ALL` write into insert/update/delete; `role_definitions_select` = `is_staff() or is_super_admin()` (SA read was only via write policy) | Advisor WARN cleared; FLOPS + nav-walk green |
 | Push fan-out (production data) | Only **3** push subscriptions exist — all demo customer; **0** SA/ASA/staff devices | Not a code bug — needs device opt-in | SA/ASA must enable notifications on their phones before soft-launch |
-| Advisors left as-is (by design) | 4 `SECURITY DEFINER` public queue/home views (anon board), 3 RLS-no-policy tables (RPC-only), 44 authenticated definer RPCs (internal role checks), 124 unused indexes (low traffic) | No change | Documented |
+| Advisors left as-is (by design) | 4 `SECURITY DEFINER` public queue/home views (anon board), 3 RLS-no-policy tables (RPC-only), 51 authenticated definer RPCs (internal role checks; incl. the RLS branch-list helpers, 2026-10-04), 124 unused indexes (low traffic) | No change | Documented |
 | Auth leaked-password protection | Disabled | Dashboard toggle (ops) | Open P2 |
+| `bookings.final_checked_by` / `sent_to_payment_by` | FK to `customers`: TL / SA / ASA without a customer row could not reach Final check (BUG-046) | FK → `staff_profiles`; RPC stamps caller | Applied to prod 2026-10-04; role probe 20/20 |
+| `sales` / `bookings` / `queue_events` read RLS | Helpers evaluated per row → ASA Floor Board 500, month of sales 1.3–3 s (BUG-047) | `(select …)` initPlans + `accessible_branch_slugs()` / `manageable_branch_slugs()` | Applied to prod 2026-10-04; read fingerprint identical (25 users); 140–640 ms |
+| `/api/data-center`, `/api/public-inquiry` | Gateway file shadows its vercel.json rewrite → 404 without `?operation` (BUG-048) | `createGateway(…, { defaultOperation })` | Unit red → green; **live after deploy** |
 
 ## Missing Features / Incomplete Implementations
 
@@ -141,7 +146,7 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 - [x] Production build passes
 - [ ] Type check — N/A (JS; no `tsc` script)
 - [x] Lint passes
-- [x] Automated tests pass (**1451/1451**, 2026-10-04)
+- [x] Automated tests pass (**1465/1465**, 2026-10-04)
 - [x] Critical user flows tested (Daily Sheet money path **38/38**; nav walk **84/84**; FLOPS not re-run — see Summary)
 - [x] Permissions verified (role matrix **52/52**)
 - [x] Known blockers documented (SMS/SMTP/Static IPs)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-04 — September 2026 test month, Team Lead final check fix, faster dashboards
+
+- September 2026 test data for Bacoor + Batangas in production: 1,221 bookings (1,141 completed cars), 1,288 sales, maintenance schedules, crew attendance and 60 Daily Sheets reviewed by SA / ASA (approved, returned, reopened). Tagged and removable — see `docs/qa/SEPTEMBER-2026-SEED.md`. `scripts/verify-september-2026.mjs` checks queue, POS, sheets, P&L and Floor Board agree (23/23).
+- Fixed: Team Leads and admins without a customer record could not move a car to Final check (foreign key pointed at customers); send to payment now stamps who sent it.
+- Fixed: Floor Board returned an error for ASA on mobile and money dashboards took seconds — sales, bookings and queue history checks now run once per page load instead of once per row (same access for every role).
+- New read-only role probe (`supabase/tests/daily_flow_role_probe.sql`, 20 checks) and read-access fingerprint (`supabase/tests/rls_read_fingerprint.sql`).
+
 ## 2026-10-04 — Dashboards: full money breakdown
 
 - Floor Board › Sales and profit (SA / ASA finance view) follows the Timeline filter instead of only today: gross, net, transactions, average and posted net profit with % change vs the prior period (Today compares with yesterday up to the same time), net sales by hour, by-payment-method and by-service bars, deductions and costs, and a per-branch table (net, transactions, average, expenses, net profit, change) with a total row. Replaces the flat ₱ tiles for money viewers.
