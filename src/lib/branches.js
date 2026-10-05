@@ -1,3 +1,4 @@
+import { isApprovalPreview, APPROVAL_BRANCHES } from './approvalPreview'
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 import { publicBranchName } from './homeBranches.js'
@@ -74,11 +75,12 @@ export async function fetchPublicBranchHours(slugs = []) {
 }
 
 export function usePublicBranches({ mode = 'bookable' } = {}) {
-  const [branches, setBranches] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [branches, setBranches] = useState(isApprovalPreview ? APPROVAL_BRANCHES : [])
+  const [loading, setLoading] = useState(!isApprovalPreview)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    if (isApprovalPreview) return
     let active = true
     setLoading(true)
     fetchPublicBranches({ mode })

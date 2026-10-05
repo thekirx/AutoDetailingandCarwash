@@ -1,0 +1,1 @@
+{"version":3,"routes":[{"src":"/","status":307,"headers":{"Location":"/tint-designs/index.html"}},{"handle":"filesystem"},{"src":"/.*","dest":"/index.html"}]}

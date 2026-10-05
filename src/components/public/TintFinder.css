@@ -95,3 +95,8 @@
 @media(max-width:760px){.bredesign .tf-section-head{display:block}.bredesign .tf-section-head>p{margin-top:16px}.bredesign .tf-quiz{grid-template-columns:1fr}.bredesign .tf-photo{display:none}.bredesign .tf-question{padding:24px 20px}.bredesign .tf-results-head{flex-wrap:wrap}.bredesign .tf-results-head p{margin-bottom:0}.bredesign .tf-results-head{margin-bottom:20px}.bredesign .tf-answer-summary{gap:16px;display:grid;grid-template-columns:1fr 1fr}.bredesign .tf-option{padding:22px 18px}.bredesign .tf-form-grid{grid-template-columns:1fr}.bredesign .tf-benefit-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:30px 16px}.bredesign .tf-benefit-grid img{width:80px;height:80px}.bredesign .tf-benefit-grid h3{font-size:15px}.bredesign .tf-benefit-grid p{font-size:12px}.bredesign .tf-seal{flex-direction:column;text-align:center}}
 
 .bredesign .tf-results-head,.bredesign .tf-booking h3,.bredesign .tf-question h3 {scroll-margin-top:110px}
+
+.bredesign .tf-approval-review {position:fixed;z-index:1000;bottom:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:28px;padding:12px 18px;border:1px solid #506394;border-radius:12px;background:#020a31;box-shadow:0 12px 48px #0009;font-size:12px;color:white;max-width:calc(100% - 24px);white-space:nowrap}
+.bredesign .tf-approval-review nav {display:flex;gap:8px;align-items:center}
+.bredesign .tf-approval-review a {display:inline-flex;padding:8px 12px;border:1px solid #506394;border-radius:6px;color:white;min-height:36px;align-items:center}
+@media(max-width:580px){.bredesign .tf-approval-review{flex-direction:column;gap:8px;width:calc(100% - 24px);bottom:8px}.bredesign .tf-approval-review nav{width:100%;justify-content:center}}

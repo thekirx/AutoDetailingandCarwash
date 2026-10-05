@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, RotateCcw, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { isApprovalPreview } from '../../lib/approvalPreview'
 import { useTintFinderConfig } from '../../lib/tintFinderData'
 import { TINT_QUESTIONS, TINT_VEHICLES, TINT_DISCLAIMERS, recommendTint, orderedBenefits, tintPeso } from '../../lib/tintFinder'
 import { usePublicBranches } from '../../lib/branches'
@@ -40,16 +41,18 @@ function TintBooking({option,config,answers,onCancel}) {
   useEffect(()=>{heading.current?.focus()},[])
   const set=(key,value)=>setForm(f=>({...f,[key]:value}))
   async function submit(e) {
-    e.preventDefault();setBusy(true);setError('')
+    e.preventDefault()
+    if (isApprovalPreview) { setSent(true); return }
+    setBusy(true);setError('')
     const result=await submitPublicInquiry('tint_finder',{...form,answers,optionId:option.id},guard.current)
     setBusy(false)
     if(result.ok) setSent(true)
     else setError(result.error)
   }
   return <div className="tf-booking" id="tint-booking">
-    <h3 ref={heading} tabIndex={-1}>{sent?'Your request is with Hakum.':'Book your tint package.'}</h3>
+    <h3 ref={heading} tabIndex={-1}>{sent?(isApprovalPreview?'Preview complete.':'Your request is with Hakum.'):'Book your tint package.'}</h3>
     <p>{config.packages[option.package].name} · {option.front} front / {option.rear} rear · {tintPeso(option.price)}</p>
-    {sent ? <div role="status"><p>Our team will contact you to confirm availability, your film choice and the final price. Your preferred date is a request until the branch confirms it.</p><button className="bd-btn bd-btn-quiet" onClick={onCancel}>Back to my results</button></div> : <form onSubmit={submit}>
+    {sent ? <div role="status"><p>{isApprovalPreview ? 'This is a client approval demo. Nothing was sent or saved, and no appointment was created.' : 'Our team will contact you to confirm availability, your film choice and the final price. Your preferred date is a request until the branch confirms it.'}</p><button className="bd-btn bd-btn-quiet" onClick={onCancel}>Back to my results</button></div> : <form onSubmit={submit}>
       <div className="tf-form-grid">
         <label>Your name<input autoComplete="name" required maxLength={120} value={form.name} onChange={e=>set('name',e.target.value)} /></label>
         <label>Mobile number<input type="tel" autoComplete="tel" required pattern="(09[0-9]{9}|[+]?639[0-9]{9})" placeholder="0917 123 4567 (no spaces)" value={form.phone} onChange={e=>set('phone',e.target.value)} /></label>
@@ -61,7 +64,7 @@ function TintBooking({option,config,answers,onCancel}) {
       <label className="tf-consent"><input type="checkbox" required checked={form.acknowledged} onChange={e=>set('acknowledged',e.target.checked)} /><span>I understand the information above. I agree that Hakum may contact me about this request. <Link to="/privacy">Privacy policy</Link></span></label>
       {(error || branchError) && <p role="alert" className="tf-error">{error || 'Unable to load branches. Please try again or message us.'}</p>}
       <div className="tf-actions"><button type="submit" className="bd-btn bd-btn-primary" disabled={busy || loading || !!branchError || !branches.length}>{busy?'Sending…':'Request booking'}<ArrowRight size={18}/></button><button className="bd-btn bd-btn-quiet" type="button" disabled={busy} onClick={onCancel}>Cancel</button></div>
-      <small>We’ll confirm availability and final pricing with you before your visit.</small>
+      <small>{isApprovalPreview ? 'Client preview only. No booking requests are sent from this preview.' : 'We’ll confirm availability and final pricing with you before your visit.'}</small>
     </form>}
   </div>
 }
@@ -82,6 +85,7 @@ export default function TintFinder() {
   const move=n=>{setSelected(n<4?answers[TINT_QUESTIONS[n].key] || null:null);setBooking(null);setStep(n)}
   const next=()=>{setAnswers(a=>({...a,[q.key]:selected}));setSelected(answers[TINT_QUESTIONS[step+1]?.key] || null);setStep(s=>s+1)}
   return <section className="tf-section" id="tint-finder" aria-labelledby="tint-finder-title">
+    {isApprovalPreview && <aside className="tf-approval-review" aria-label="Client design choices"><span>Client review · A / Original</span><nav><a href="/tint-designs/index.html">All designs</a>{['B','C','D','E'].map(id=><a key={id} href={`/tint-designs/option-${id.toLowerCase()}.html`}>{id}</a>)}</nav></aside>}
     <div className="bd-shell">
       <div className="tf-section-head"><div><p className="bd-eyebrow">Find your film</p><h2 id="tint-finder-title">Your drive. <em>Your tint.</em></h2></div><p>Four quick questions. The right combinations for your comfort, priorities and vehicle.</p></div>
       {step<4 ? <div className="tf-quiz">
