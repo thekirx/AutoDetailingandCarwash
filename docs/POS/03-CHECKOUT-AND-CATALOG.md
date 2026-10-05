@@ -6,7 +6,7 @@
 
 1. TL (or allowed editor) progresses ticket → `for_payment`.
 2. RPC `send_queue_ticket_to_payment` creates/updates `pos_handoffs` (`pending`).
-3. BA/SA opens **Pay queue**, `loadHandoff` → cart via `buildHandoffCartLine` / `buildVisitHandoffCartLines`.
+3. BA/SA opens **Checkout** (pay queue lives on the same page), `loadHandoff` → cart via `buildHandoffCartLine` / `buildVisitHandoffCartLines`.
 4. Optional merch add-ons keep the handoff (`keepQueueHandoffWhenAdding` for products only).
 5. Checkout → `complete_pos_sale` with `pos_handoff_id` + `booking_id`.
 

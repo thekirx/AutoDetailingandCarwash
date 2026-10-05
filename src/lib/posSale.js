@@ -57,6 +57,47 @@ export function keepQueueHandoffWhenAdding(item) {
   return normalizePosLineItemType(item?.item_type) === 'product'
 }
 
+/**
+ * Branch Admin counter: locked queue ticket lines + product add-ons only.
+ * Strips walk-in bay/detailing services and clears crafted ad-hoc discounts.
+ */
+export function sanitizeBranchAdminCart(cart = []) {
+  return (cart || [])
+    .filter((line) => {
+      if (line?.from_handoff) return true
+      return normalizePosLineItemType(line?.item_type) === 'product'
+    })
+    .map((line) => {
+      if (!line?.adhoc_discount_applied) return line
+      const list = Math.max(0, Math.floor(Number(line.list_price_minor ?? line.unit_price_minor) || 0))
+      return {
+        ...line,
+        unit_price_minor: list,
+        price_minor: list,
+        adhoc_discount_applied: false,
+        adhoc_discount_reason: undefined,
+      }
+    })
+}
+
+/** Client gate matching RPC assert_branch_admin_pos_cart. */
+export function assertBranchAdminCart(cart = [], { isBranchAdmin = false } = {}) {
+  if (!isBranchAdmin) return { ok: true }
+  for (const line of cart || []) {
+    if (line?.from_handoff) continue
+    if (normalizePosLineItemType(line?.item_type) !== 'product') {
+      return {
+        ok: false,
+        error: 'Branch Admin sells merch and coffee only. Open a waiting ticket for bay jobs.',
+      }
+    }
+    if (line?.adhoc_discount_applied) {
+      return { ok: false, error: 'Branch Admin cannot discount POS sales.' }
+    }
+  }
+  return { ok: true }
+}
+
 /** complete_pos_sale CHECKs service lines must have service_id. */
 export function posCartBlocksCheckout(cart = []) {
   return (cart || []).some(

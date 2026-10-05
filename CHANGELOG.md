@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-05 — Branch Admin POS counter hardened
+
+- BA counter: merch/coffee only; queue ticket lines stay locked; pay queue + sell stay on one Checkout page.
+- Client `sanitizeBranchAdminCart` / `assertBranchAdminCart`; RPC `assert_branch_admin_pos_cart` blocks BA walk-in bay services and BA discounts.
+- Docs: `docs/guides/pages/pos.md` + POS checkout/gaps updated for Daily Sheet + combined counter.
+
 ## 2026-10-05 — Owner pack + FLOPS Daily Sheet cutover
 
 - Regenerated [`docs/user-stories/USER-STORIES-OWNER.html`](docs/user-stories/USER-STORIES-OWNER.html) / `.pdf` from Daily Sheet night path (submit → Finance approve → books).

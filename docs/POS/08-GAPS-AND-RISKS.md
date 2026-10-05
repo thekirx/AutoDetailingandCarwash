@@ -4,7 +4,7 @@
 
 1. **“Fully customizable”** — false; see [06-SETTINGS.md](./06-SETTINGS.md).
 2. **“BA manual POS for services/packages/detailing”** — false; BA merch-only.
-3. **“EoS feeds payroll amounts”** — false; reminder + attestation only.
+3. **“EoS feeds payroll amounts”** — false; Daily Sheet posts pay/expenses on Finance approve.
 4. **`pending_floor_optional`** — **enforced** when `false` via `floorConfirmBlockedByPendingCloses` in `PayrollPage` confirm (see PAYROLL/09 — Closed).
 
 ## Technical / operational risks
@@ -16,6 +16,7 @@
 | 3 | `ca_collected_minor` baseline 0 while approved CAs already listed | Medium | Double-count training hazard |
 | 4 | Payment methods in settings not enforced by RPC | Low–Med | Typos / unknown methods possible |
 | 5 | SA merch grid = all products (not sellable filter) | Low–Med | Supplies may appear sellable |
+| 5b | BA walk-in service via crafted RPC (pre-20261005) | **Closed** | `assert_branch_admin_pos_cart` + client sanitize |
 | 6 | Products not branch-scoped | Low | Global active catalog |
 | 7 | Handoff missing `service_id` blocks pay | Med (ops) | Stuck until ticket fixed |
 | 8 | Visit-group price drift | Med | Sibling booking amounts must stay consistent |

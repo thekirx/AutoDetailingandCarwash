@@ -7,7 +7,7 @@ import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { applyAdHocDiscount, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashTenderCoversTotal, clearPosDraft, detachHandoffFromCart, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, openHandoffInCart, posCartBlocksCheckout, priceCartForMembership, readPosDraft, stepPosCartLineQuantity, summarizePosCart, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
+import { applyAdHocDiscount, assertBranchAdminCart, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashTenderCoversTotal, clearPosDraft, detachHandoffFromCart, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, normalizePosLineItemType, openHandoffInCart, posCartBlocksCheckout, priceCartForMembership, readPosDraft, sanitizeBranchAdminCart, stepPosCartLineQuantity, summarizePosCart, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
@@ -280,19 +280,27 @@ export default function PosPage() {
     setActiveHandoff(draft?.cart?.length ? draft.activeHandoff || null : null)
     if (draft?.cart?.length) {
       // Locked ticket lines without their ticket would post unlinked — drop them.
-      setCart(draft.activeHandoff ? draft.cart : detachHandoffFromCart(draft.cart))
+      let next = draft.activeHandoff ? draft.cart : detachHandoffFromCart(draft.cart)
+      if (branchAdmin) next = sanitizeBranchAdminCart(next)
+      setCart(next)
       setCustomerId(draft.customerId || '')
       setLinkedCustomer(draft.linkedCustomer || null)
       if (draft.paymentMethod) setPaymentMethod(draft.paymentMethod)
       setCashTendered(draft.cashTendered || '')
       setPaymentRef(draft.paymentRef || '')
-      setDiscountPercent(draft.discountPercent || '')
-      setDiscountAmountPesos(draft.discountAmountPesos || '')
-      setDiscountReason(draft.discountReason || '')
+      if (branchAdmin) {
+        setDiscountPercent('')
+        setDiscountAmountPesos('')
+        setDiscountReason('')
+      } else {
+        setDiscountPercent(draft.discountPercent || '')
+        setDiscountAmountPesos(draft.discountAmountPesos || '')
+        setDiscountReason(draft.discountReason || '')
+      }
     } else {
       setCart([])
     }
-  }, [branch])
+  }, [branch, branchAdmin])
 
   useEffect(() => {
     if (!branch || draftBranch !== branch) return
@@ -656,6 +664,17 @@ export default function PosPage() {
   }
 
   function addToCart(item, { loyaltyAward = false, birthdayAward = false } = {}) {
+    if (branchAdmin) {
+      const product = (products || []).find((p) => p.id === item?.id)
+      if (
+        normalizePosLineItemType(item?.item_type) !== 'product' ||
+        !product ||
+        !productIsPosSellable(product)
+      ) {
+        toast.error('Branch Admin sells merch and coffee only. Open a waiting ticket for bay jobs.')
+        return
+      }
+    }
     if (loyaltyAward && !canRedeemLoyaltyAward({
       customerId,
       stamps: loyaltyStamps,
@@ -851,6 +870,12 @@ export default function PosPage() {
     }
     if (!isAllowedPosPaymentMethod(paymentMethod, paymentOptions)) {
       toast.error('Choose a payment method from the list.')
+      return
+    }
+    const baGate = assertBranchAdminCart(cart, { isBranchAdmin: branchAdmin })
+    if (!baGate.ok) {
+      toast.error(baGate.error)
+      if (branchAdmin) setCart((c) => sanitizeBranchAdminCart(c))
       return
     }
     const gate = validatePosSaleCart(cart, {
