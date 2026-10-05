@@ -14,7 +14,7 @@ September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month
 
 Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 (BUG-048 — **closed on production 2026-10-05**: live 405 / 401).
 
-Fresh evidence: **2026-10-05** unit **1474/1474** (includes `futureBranchReady` + sheet_reviewed recipients). Prior **2026-10-04**: lint **0**, build **0**, nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
+Fresh evidence: **2026-10-05** unit **1475/1475** (includes FLOPS Daily Sheet seam + `futureBranchReady` + sheet_reviewed recipients). Prior **2026-10-04**: lint **0**, build **0**, nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
 Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change). Shop-day **markdown** + **owner HTML/PDF pack** teach Daily Sheet; legacy `user-stories/pdf/process-*` may still be stale.
 
