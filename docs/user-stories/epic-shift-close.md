@@ -1,53 +1,44 @@
-# Epic: End of shift & close review
+# Epic: Daily Sheet close (was End of shift)
 
-**Goal:** Branch Admin attests drawer; Finance accepts; Payroll unlocks floor confirm.
+> **Superseded 2026-10-01.** End of shift wizard, Finance shift review, and pending-floor payroll unlock are retired.  
+> Use [`docs/daily-sheet/README.md`](../daily-sheet/README.md) and [`shop-day-flow.md`](./shop-day-flow.md).
 
-## US-CLOSE-01 · End of shift wizard
+**Goal:** Branch Admin closes the day on one Daily Sheet; Super Admin / ASA approve so pay and expenses post once.
+
+## US-CLOSE-01 · Branch Admin submits Daily Sheet
 
 **As** branch admin  
-**I want** to submit end-of-shift when the day had activity  
-**So that** drawer cash/GCash/card totals are attested against POS proof  
+**I want** to submit one Daily Sheet per branch per day  
+**So that** sales, expenses, crew pay, and drawer cash are attested together  
 
 **Acceptance**
 
-- [x] Offer close only when sales, expenses, or CA activity exist (`shopDayShouldClose`)
-- [x] Total sales = paid POS (wash + detailing + merch), not CA repayments
-- [x] Carwash salary cell = wash-pool preview only (ceramic crew is not extra carwash salary)
-- [x] Override requires reason when submitted ≠ baseline
-- [x] One open close per branch per business day (unique index)
+- [x] One sheet per `(branch, business_date)` (`unique` on `daily_sheets`)
+- [x] Money-in from paid POS only (not editable fiction)
+- [x] Submit blocked until required sections complete
+- [x] Web push to SA / ASA with `finance_view` (`sheet_submitted`)
 
-**Test seam:** `tests/shiftClose.test.js`, `tests/shopDaySettlement.test.js`, `tests/dailyOpsWorkflow.test.js`, `tests/userStoriesCoverage.test.js`
+**Test seam:** `tests/userStoriesCoverage.test.js` (US-CLOSE-01), `e2e:daily-sheet-money`, `tests/notificationRecipients.test.js`
 
 ---
 
-## US-CLOSE-02 · Finance shift review
+## US-CLOSE-02 · Finance reviews Daily Sheet
 
 **As** ASA or Super Admin  
-**I want** to accept or reject submitted closes  
-**So that** attested days unlock payroll pending floor  
+**I want** to approve or return a submitted sheet  
+**So that** books and crew pay stay correct  
 
 **Acceptance**
 
-- [x] `review_shift_close` RPC from Finance Shift Close tab
-- [x] Accepted close → notify SA/ASA (`payroll.pending_floor`)
-- [x] One close per branch per business day
-- [x] P&L still keys off paid POS, not override fiction
+- [x] Approve posts expense/salary lines once
+- [x] Return with note; BA can resubmit
+- [x] Reopen (SA) voids posted lines
+- [x] Web push to submitting BA (`sheet_reviewed`)
 
-**Test seam:** `tests/branchFinanceHardening.test.js`, `tests/dailyOpsWorkflow.test.js`, `tests/shopDaySettlement.test.js`
+**Test seam:** `e2e:daily-sheet-money`, `supabase/tests/daily_flow_role_probe.sql`, `tests/notificationRecipients.test.js`
 
 ---
 
-## US-CLOSE-03 · Pending floor gate
+## Historical (retired)
 
-**As** Super Admin  
-**I want** pending floor pay visible before I confirm payroll  
-**So that** I never pay without Finance-accepted close (when hard gate on)  
-
-**Acceptance**
-
-- [x] `buildPendingFloorPayrollQueue` lists accepted days without floor run
-- [x] Side-by-side close attested ₱ vs POS proof ₱
-- [x] `pending_floor_optional = false` hard-blocks floor confirm (`floorConfirmBlockedByPendingCloses` + Payroll confirm)
-- [x] After floor run posts, coverage label = “posted”
-
-**Test seam:** `tests/payrollSeam.test.js`, `tests/dailyOpsWorkflow.test.js`, `tests/moneyContract.test.js`
+Former US-CLOSE stories that referenced `submit_shift_close` / `review_shift_close` / pending floor live only in archived Payroll/POS docs under `docs/PAYROLL/` and `docs/POS/`.

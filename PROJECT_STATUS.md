@@ -1,8 +1,8 @@
 # Project Status
 
-**Last Updated:** 2026-10-05 (Asia/Manila) — future-branch / People RBAC readiness + remaining-work audit  
-**Current Branch:** `main` (local ahead until push)  
-**Overall Status:** **READY_WITH_OPS_BLOCKERS** (soft-launch shop-day) · future branch hire path **ready** · **doc cutover incomplete**
+**Last Updated:** 2026-10-05 (Asia/Manila) — owner pack + FLOPS Daily Sheet cutover  
+**Current Branch:** `main`  
+**Overall Status:** **READY_WITH_OPS_BLOCKERS** · shop-day **docs + owner pack aligned** · push **routing OK / 0 staff devices** · SMS **not tested**
 
 ## Executive Summary
 
@@ -14,9 +14,9 @@ September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month
 
 Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 (BUG-048 — **closed on production 2026-10-05**: live 405 / 401).
 
-Fresh evidence: **2026-10-05** unit **1473/1473** (includes `futureBranchReady`). Prior **2026-10-04**: lint **0**, build **0**, nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Principal gap list: [`docs/qa/REMAINING-WORK-2026-10.md`](docs/qa/REMAINING-WORK-2026-10.md).
+Fresh evidence: **2026-10-05** unit **1474/1474** (includes `futureBranchReady` + sheet_reviewed recipients). Prior **2026-10-04**: lint **0**, build **0**, nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
-Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change).
+Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change). Shop-day **markdown** + **owner HTML/PDF pack** teach Daily Sheet; legacy `user-stories/pdf/process-*` may still be stale.
 
 Production messaging remains **open**: BrandTxt ErrorCode **11** (server IP not whitelisted); Auth SMTP unproven. **Owner daily SMS is intentionally disabled** — Daily Sheet submit / approve use web push.
 
@@ -46,7 +46,7 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 | `scripts/_daily-sheet-live-smoke.mjs` (read-only, aborts writes) | **17/17** local + production |
 | `scripts/_ops-pages-shots.mjs` (money dashboards, full page, 3 widths, incl. Floor Board on "3 months" with real sales) | **39/39**, ready in ~1.6–2.6 s |
 | `e2e:daily-sheet-money` (live RPCs, sandbox day wiped) | **38/38** (2026-10-02) |
-| `e2e:lifecycle-flops` | **NOT RE-RUN** — it completes a real paid sale on production that would land on the live Daily Sheet |
+| `e2e:lifecycle-flops` | Script **Daily Sheet–aware** (read-only today sheet); money writes on `e2e:daily-sheet-money`. **Live re-run deferred** (would pay a real sale onto today’s sheet) |
 | Real-device push audit (`push-audit-events.mjs`) | **NOT RE-RUN** since the Daily Sheet |
 
 ## Soft-launch vs production
@@ -62,7 +62,8 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 - Dropping the locked payroll tables needs a separate migration and the owner's OK.
 - `20260929090000_visit_stamp.sql` is unapplied on production; no app code calls it.
 - Production has no real Daily Sheet yet; the 60 September seed sheets show the lists, filters and review drawer in a browser. **Wipe the September test month before go-live** (`scripts/seed/wipe-september-2026.sql`) or keep it as training data — owner's call.
-- **P1 documentation debt:** many user stories / runbook / MONEY-CONTRACT body still describe End of shift → Payroll (superseded by Daily Sheet). Track: [`docs/qa/REMAINING-WORK-2026-10.md`](docs/qa/REMAINING-WORK-2026-10.md).
+- **Push delivery:** routing unit-proven; **0 staff** push subscriptions — BossMich / ASA / BAs must Enable alerts before soft-launch night ([`PUSH-CHECKLIST.md`](docs/qa/PUSH-CHECKLIST.md)).
+- **P2 docs:** legacy per-process PDFs under `docs/user-stories/pdf/` may still show old close/pay — prefer the regenerated OWNER pack.
 - `send_queue_ticket_to_payment` still fills `transactions.recorded_by` from a customers lookup, so the pending-payment transaction has no recorder for most staff (the paid sale records the cashier). Low; not on the money path.
 - Xero gaps by choice: aged payables, balance sheet, bank reconciliation, VAT.
 - Floor Board money pages all sales in the timeline in the browser (1000 rows per request). Fine at today's volume; move to an RPC if 6-month all-branch views get slow.
@@ -70,9 +71,9 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 
 ## Recommended Next Action
 
-**Continue — not finished.** Pick a track from [`docs/qa/REMAINING-WORK-2026-10.md`](docs/qa/REMAINING-WORK-2026-10.md):
+**Continue — not finished.** See [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
-1. **A — Documentation cutover** (user stories + runbook + MONEY-CONTRACT + owner PDFs → Daily Sheet). Highest honesty risk if staff train on old EoS/Payroll docs.  
-2. **B — Ops proofs** — BrandTxt IP / Static IPs → `sms:egress` DELIVRD; Auth SMTP inbox; SA/ASA enable push → push audit.  
-3. **C — Rewrite `e2e:lifecycle-flops`** for Daily Sheet (old script still mutates retired RPCs).  
-4. **Owner call:** wipe September seed before go-live, or keep as training data.
+1. **Push:** BossMich, Luci (ASA), each Branch Admin → Account → **Enable alerts** → Test alert. Re-run `PUSH_AUDIT=1` after that. **Do not test SMS yet.**  
+2. Archive or ignore legacy `user-stories/pdf/process-*` (OWNER pack is current).  
+3. Persona deep QA (Sales / Marketing / Video / Customer portal).  
+4. Owner: wipe September seed before go-live?

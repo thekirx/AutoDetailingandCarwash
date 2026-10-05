@@ -27,12 +27,16 @@ Canonical landing + epic map for **all** `ROLES` in `src/auth/permissions.js`, p
 
 **Seam:** `redirectForRole` · `resolveAppHome` · `tests/principalQaMatrix.test.js` · `tests/rolePersonaCoverage.test.js`
 
-## Who never clocks / never pays on floor
+## Who clocks / who settles pay
 
-| Persona | Attendance clock | My Pay | Payroll register |
-|---------|------------------|--------|------------------|
-| Super Admin | No | No (uses Payroll) | Yes |
-| ASA | No (unless grant) | Yes | View / write by grant |
-| Ops Lead | **No clock** (register ok) | Yes | No |
-| Investor | No | No | No |
-| Customer | N/A | N/A | N/A |
+| Persona | Attendance clock | Daily Sheet / pay |
+|---------|------------------|-------------------|
+| Super Admin | No | Approves sheets; sees all branches |
+| ASA | No (unless grant) | Approves if `finance_view` |
+| Branch Admin | Optional | **Submits** Daily Sheet; releases pay after approve |
+| Ops Lead | **No clock** (register ok) | No sheet approve |
+| Team Lead / Crew / Detailer | Yes (branch) | Paid when BA sheet is approved |
+| Investor | No | Finance read-only |
+| Customer | N/A | N/A |
+
+**Retired:** My Pay and floor Payroll register (2026-10-01).

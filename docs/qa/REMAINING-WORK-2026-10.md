@@ -53,7 +53,7 @@ Prior-session evidence (not re-run this hour): nav-walk 84/84, role-qa 52/52, Se
 
 | Area | Why it matters | Status |
 |------|----------------|--------|
-| `e2e:lifecycle-flops` | Full shop-day click path (customer book → pay → close) | **NOT RE-RUN** — still drives **old** EoS/Payroll RPCs; needs rewrite for Daily Sheet |
+| `e2e:lifecycle-flops` | Full shop-day click path (customer book → pay → sheet) | **UPDATED** — Daily Sheet read-only + screenshots; money writes stay on `e2e:daily-sheet-money`. **Re-run on next ship** to refresh evidence |
 | Real-device push audit | SA/ASA get sheet submit/approve alerts | **NOT RE-RUN**; **0 staff** devices opted in |
 | Customer portal deep stories | Book, loyalty, queue, reviews, account for real customer | Smoke/role home only; **seed customers cannot log in** (0 auth users) |
 | Marketing / Sales / Video / Investor deep CRUD | Persona epics claim coverage | Nav-walk + role-qa allow/deny only — **not** full story acceptance |
@@ -70,14 +70,17 @@ Prior-session evidence (not re-run this hour): nav-walk 84/84, role-qa 52/52, Se
 
 ---
 
-## Documentation debt (must continue)
+## Documentation debt
 
-Canonical Daily Sheet truth exists (`docs/daily-sheet/`, Archify). Many older docs still teach End of shift → Finance accept → Floor payroll.
+Canonical Daily Sheet path is now in stories + runbook + MONEY-CONTRACT (2026-10-05 cutover). Matrix: [`ROLE-STORY-EVIDENCE.md`](./ROLE-STORY-EVIDENCE.md).
 
 | Artifact | Problem | Priority |
 |----------|---------|----------|
-| [`user-stories/README.md`](../user-stories/README.md) | Sprint night still “EoS → Finance → Payroll” | **P1 doc** |
-| [`user-stories/shop-day-flow.md`](../user-stories/shop-day-flow.md) | Diagram still EoS | **P1 doc** |
+| Owner pack `USER-STORIES-OWNER.html/.pdf` | Regenerated from Daily Sheet stories (2026-10-05) | **Done this slice** — re-verify after next copy change |
+| Owner PDFs `user-stories/pdf/process-*` (legacy per-process) | May still show old close/pay path | **P2 doc** — prefer OWNER pack |
+| [`POS/`](../POS/) / [`PAYROLL/`](../PAYROLL/) packs | Archive — train from daily-sheet only | **P2** |
+| ~~[`user-stories/README.md`](../user-stories/README.md)~~ | ~~EoS night~~ → **Done** Daily Sheet | — |
+| ~~[`user-stories/shop-day-flow.md`](../user-stories/shop-day-flow.md)~~ | ~~EoS diagram~~ → **Done** | — |
 | [`user-stories/epic-shift-close.md`](../user-stories/epic-shift-close.md) | Entire epic titled End of shift | **P1 doc** — rewrite or mark superseded → Daily Sheet |
 | [`user-stories/epic-payroll.md`](../user-stories/epic-payroll.md) + [`roles-matrix.md`](../user-stories/roles-matrix.md) | Still “My Pay / Payroll register” as current | **P1 doc** |
 | [`user-stories/epic-role-branch-admin.md`](../user-stories/epic-role-branch-admin.md) | Acceptance still checks EoS | **P1 doc** |

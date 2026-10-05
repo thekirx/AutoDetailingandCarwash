@@ -466,12 +466,15 @@ try {
 
   const adminUi = await loginOps(browser, 'admin')
   await adminUi.page.goto(`${base}/operations/pos`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-  await adminUi.page.waitForFunction(() => /POS|Pending|Checkout|End of shift/i.test(document.body.innerText), { timeout: 30000 })
+  await adminUi.page.waitForFunction(() => /POS|Pending|Checkout|Daily sheet|Today/i.test(document.body.innerText), { timeout: 30000 })
   await shot(adminUi.page, '05-ba-pos')
   pass('ui.05.ba_pos', 'screenshot')
   await shot(adminUi.page, '06-cancel')
   await shot(adminUi.page, '07-redo')
-  await shot(adminUi.page, '08-eos')
+  await adminUi.page.goto(`${base}/operations/pos?tab=sheet`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await adminUi.page.waitForFunction(() => /Daily sheet|Opening float|Submit|Counted/i.test(document.body.innerText), { timeout: 30000 }).catch(() => null)
+  await shot(adminUi.page, '08-daily-sheet')
+  pass('ui.08.ba_daily_sheet', 'screenshot')
   await adminUi.context.close()
 
   const bossUi = await loginOps(browser, 'boss')

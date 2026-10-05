@@ -3,22 +3,23 @@
 Product backlog for daily operations, money, books, and **every staff + customer persona**.  
 Each epic links acceptance criteria to seam tests in `tests/`.
 
-**Owner share (HTML + PDF, plain language, no flowcharts):** [OWNER-SHARE.md](./OWNER-SHARE.md)
-
-**Everyone included:** [roles-matrix.md](./roles-matrix.md)
+**Owner share (HTML + PDF, plain language):** [OWNER-SHARE.md](./OWNER-SHARE.md)  
+**Everyone included:** [roles-matrix.md](./roles-matrix.md)  
+**Evidence matrix:** [../qa/ROLE-STORY-EVIDENCE.md](../qa/ROLE-STORY-EVIDENCE.md)  
+**Daily Sheet (canonical money close):** [../daily-sheet/README.md](../daily-sheet/README.md)
 
 ## Money path (shop day)
 
 | Epic | File | Primary roles |
 |------|------|---------------|
 | Daily floor operations | [epic-daily-operations.md](./epic-daily-operations.md) | Crew, Team Lead, Branch Admin, Sales |
-| End of shift & close | [epic-shift-close.md](./epic-shift-close.md) | Branch Admin, ASA, Super Admin |
-| Payroll & compensation | [epic-payroll.md](./epic-payroll.md) | Super Admin, ASA, Crew |
+| Daily Sheet close & review | [epic-shift-close.md](./epic-shift-close.md) | Branch Admin, ASA, Super Admin |
+| Crew pay (via Daily Sheet) | [epic-payroll.md](./epic-payroll.md) | Super Admin, ASA, Branch Admin, Crew |
 | Late, absent, CA, commissions | [epic-commissions-attendance.md](./epic-commissions-attendance.md) | Super Admin, Branch Admin, Crew, Detailer |
 | Finance & books | [epic-finance.md](./epic-finance.md) | Super Admin, ASA, Investor |
 | **QA acceptance (multi-branch)** | [epic-qa-multi-branch-shop-day.md](./epic-qa-multi-branch-shop-day.md) | PO / Scrum / Principal QA |
 
-**Locked path map:** [shop-day-flow.md](./shop-day-flow.md) · Money contract: `docs/OPS/MONEY-CONTRACT.md`
+**Locked path map:** [shop-day-flow.md](./shop-day-flow.md) · Money contract: `docs/OPS/MONEY-CONTRACT.md` (Daily Sheet supersession banner)
 
 ## Persona epics (100% role coverage)
 
@@ -49,12 +50,12 @@ Each epic links acceptance criteria to seam tests in `tests/`.
 
 - Route gate + RLS match (`permissions.js`, migrations)
 - UI wired to real tables/RPCs (no fake buttons)
-- Seam test at the public interface (`tests/*Seam*.test.js`, `tests/dailyOps*.test.js`, `tests/userStoriesCoverage.test.js`, `tests/rolePersonaCoverage.test.js`)
-- Money stories also honor `docs/OPS/MONEY-CONTRACT.md`
+- Seam test at the public interface (`tests/*`, `e2e:*` where money-critical)
+- Money stories honor Daily Sheet + `docs/OPS/MONEY-CONTRACT.md` (paid POS income truth)
 - Persona stories list home path from `redirectForRole` / `resolveAppHome`
 
 ## Sprint cadence (shop day)
 
 1. **Morning** — Attendance + queue/bookings intake  
-2. **Day** — POS payments, expenses, ceramic drafts  
-3. **Night** — End of shift → Finance accept → Payroll floor confirm  
+2. **Day** — POS payments, expenses, detailing  
+3. **Night** — Daily Sheet submit → Finance approve → release pay  

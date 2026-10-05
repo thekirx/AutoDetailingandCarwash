@@ -45,6 +45,17 @@ describe('planStaffRecipients', () => {
     const noView = { id: 'asa-nv', role: 'assistant_super_admin', branch_slug: null, permission_grants: { finance_view: false } }
     const got = planStaffRecipients([...staff, noView], { ...NOTIFY_EVENTS.sheet_submitted, branch: 'bacoor' })
     assert.deepEqual(ids(got), ['asa-fw', 'asa-ro', 'sa'])
+    assert.equal(got.find((r) => r.id === 'sa').url, '/operations/finance?tab=sheets')
+  })
+
+  it('daily sheet review notifies only the submitting Branch Admin (not every BA)', () => {
+    const got = planStaffRecipients(staff, {
+      ...NOTIFY_EVENTS.sheet_reviewed,
+      urls: ['/operations/pos?tab=sheet&date=2026-09-30'],
+      ids: ['ba-bacoor'],
+      excludeId: 'sa',
+    })
+    assert.deepEqual(got, [{ id: 'ba-bacoor', url: '/operations/pos?tab=sheet&date=2026-09-30' }])
   })
 
   it('cash advance requests go to that branch Branch Admin on the POS Daily sheet', () => {

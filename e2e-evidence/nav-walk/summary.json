@@ -1,10 +1,16 @@
 {
   "ok": true,
-  "base": "http://127.0.0.1:5175",
-  "passed": 92,
-  "total": 92,
+  "base": "https://auto-detailingand-carwash.vercel.app",
+  "passed": 84,
+  "total": 84,
   "failed": [],
-  "backendFindings": [],
+  "backendFindings": [
+    {
+      "persona": "boss",
+      "path": "/operations/data-center",
+      "response": "404 https://auto-detailingand-carwash.vercel.app/api/data-center"
+    }
+  ],
   "evidence": "e2e-evidence/nav-walk",
-  "at": "2026-09-27T03:30:39.006Z"
+  "at": "2026-10-04T16:02:50.362Z"
 }

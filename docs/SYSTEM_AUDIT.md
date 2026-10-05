@@ -20,7 +20,7 @@
 | Supabase advisors | **Hardened** — migration `20260927120000_advisor_hardening_split_write_policies.sql` applied |
 | Framework | Vite + React · Supabase Auth/RLS · PostgREST + `/api/*` |
 | Build | **PASS** — `npm run build` exit 0 (fresh 2026-10-05) |
-| Unit suite | **PASS** — **1473/1473** (`npm test`, fresh 2026-10-05; includes future-branch / People hire seams) |
+| Unit suite | **PASS** — **1474/1474** (`npm test`, fresh 2026-10-05; future-branch + sheet_reviewed recipients) |
 | Future branch / People hire | **PASS** — Dasma slug `dasmarinas` in prod; coming-soon hire; Detailer/Video branch picker; junk branches archived |
 | Lint | **PASS** — `npx eslint .` exit 0 (fresh 2026-10-05) |
 | FLOPS shop-day | **NOT RE-RUN** since 2026-09-26 (25/25 then). It completes a real paid sale on production that would land on the live Daily Sheet; the money path is covered by `e2e:daily-sheet-money` on a wiped sandbox day |
@@ -132,19 +132,20 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 | Customer reminder SMS live | Done | Done | Ops IP | sms:egress | **BLOCKED** ops |
 | Archify lifecycle diagram | Done | n/a | Artifact | prior deliver | **Complete** (claim unchanged) |
 
-## Product / PM doc cross-check (2026-10-05 — strict)
+## Product / PM doc cross-check (2026-10-05 — after cutover)
 
 | Artifact | Aligns with Daily Sheet money path? |
 |----------|-------------------------------------|
 | [`daily-sheet/README.md`](./daily-sheet/README.md) | **Yes** — canonical |
 | [`architecture/daily-sheet.*.html`](./architecture/) | **Yes** |
-| [`MONEY-CONTRACT.md`](./OPS/MONEY-CONTRACT.md) | **Partial** — supersession banner; body still EoS/Payroll triangle |
-| [`SHOP-DAY-RUNBOOK.md`](./qa/SHOP-DAY-RUNBOOK.md) | **No** — out-of-date banner; steps still E1/F1/P1 |
-| [`shop-day-flow.md`](./user-stories/shop-day-flow.md) + [`user-stories/README.md`](./user-stories/README.md) | **No** — still night = EoS → Payroll |
-| [`epic-shift-close.md`](./user-stories/epic-shift-close.md) / [`epic-payroll.md`](./user-stories/epic-payroll.md) | **Stale** — need superseded → Daily Sheet |
-| Owner PDFs `user-stories/pdf/process-*` | **Stale** |
-| [`POS/09-FLOWCHARTS`](./POS/09-FLOWCHARTS.md) / [`PAYROLL/10-FLOWCHARTS`](./PAYROLL/10-FLOWCHARTS.md) | Historical; archive risk |
-| [`shop-day-flops.workflow.html`](./architecture/shop-day-flops.workflow.html) | Historical FLOPS claim |
+| [`MONEY-CONTRACT.md`](./OPS/MONEY-CONTRACT.md) | **Yes** — triangle rewritten to Daily Sheet |
+| [`SHOP-DAY-RUNBOOK.md`](./qa/SHOP-DAY-RUNBOOK.md) | **Yes** — Daily Sheet steps |
+| [`shop-day-flow.md`](./user-stories/shop-day-flow.md) + [`user-stories/README.md`](./user-stories/README.md) | **Yes** |
+| [`epic-shift-close.md`](./user-stories/epic-shift-close.md) / [`epic-payroll.md`](./user-stories/epic-payroll.md) | **Yes** — superseded banners + Daily Sheet ACs |
+| [`qa/ROLE-STORY-EVIDENCE.md`](./qa/ROLE-STORY-EVIDENCE.md) | **Yes** — role × evidence matrix |
+| [`qa/PUSH-CHECKLIST.md`](./qa/PUSH-CHECKLIST.md) | **Yes** — routing OK; **0 staff devices** called out |
+| Owner PDFs `user-stories/pdf/process-*` | **Still stale** (HTML/PDF pack) — P2 |
+| [`POS/`](./POS/) / [`PAYROLL/`](./PAYROLL/) flowchart packs | Historical archive |
 | Full gap list | [`qa/REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) |
 
 ## Final Verification

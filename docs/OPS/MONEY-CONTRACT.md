@@ -8,19 +8,19 @@
 
 ---
 
-## Product triangle
+## Product triangle (Daily Sheet era)
 
 | System | Owns | Does not own |
 |--------|------|--------------|
-| **POS** | Paid tickets (all methods), merch, day expenses, CA repayments, End of shift attestation, Bacoor-style report | Paying crew, rewriting history |
-| **Finance** | Accept/reject/lock close, P&L from **paid POS + expenses**, shift review | Changing sales totals, auto-running payroll |
-| **Payroll** | Floor pay from **paid POS proof + attendance + ceramic keys**; fixed packages; **manual** CA deduct | Inventing pay from close attestation ₱ |
+| **POS** | Paid tickets (all methods), merch, counter expenses, CA repayments, **Daily Sheet** submit | Approving books, rewriting history |
+| **Finance** | Approve/return/reopen Daily Sheets, P&L from **paid POS + posted expenses** | Changing sales totals, inventing income |
+| **Daily Sheet pay** | Suggested crew pay + BA overrides (reason); posts on approve | Separate floor-payroll wizard (retired) |
 
 ```
 Paid POS (services / packages / detailing / merch)
-    → Bacoor report + EoS (drawer attestation)
-    → Finance accept  →  notify SA/ASA + Pending floor (hard gate)
-    → SA/ASA confirms floor payroll (same night preferred)
+    → Daily Sheet (BA: expenses, pay, float, counted cash)
+    → SA / ASA approve  →  web push to BA + posted expenses/salaries
+    → Finance P&L / Floor Board (paid POS truth)
 ```
 
 ---

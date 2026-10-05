@@ -69,11 +69,11 @@ add_tab(
 <p class="tab-intro">A short owner brief — how Hakum Ops handles money and who is responsible. No technical diagrams — only stories.</p>
 {section(
     "What this document is",
-    "Everything your team needs to understand the shop day, payroll honesty, and who can open which tools — written for owners, not developers.",
+    "Everything your team needs to understand the shop day, Daily Sheet money honesty, and who can open which tools — written for owners, not developers.",
     """<ul>
     <li><strong>Shop day</strong> — morning to night stories</li>
     <li><strong>Pay rules</strong> — wash pool, late, absent, detailing, cash advances</li>
-    <li><strong>Night close</strong> — end of shift → finance → payroll → books</li>
+    <li><strong>Night close</strong> — Daily Sheet submit → Finance approve → books</li>
     <li><strong>One tab per role</strong> — Owner through Customer</li>
     <li><strong>All pages</strong> — every major screen and what it is for</li>
   </ul>""",
@@ -82,18 +82,18 @@ add_tab(
     "The one money rule",
     None,
     """<p><strong>Paid checkout tickets are the only source of day sales.</strong>
-  Ending the shift is a cash-drawer story — it does not invent employee pay.
-  Finance accepts the close. Then you (or your assistant) confirm floor payroll from real sales plus who clocked in.</p>""",
+  The Daily Sheet is the cash-drawer and crew-pay story — it does not invent income.
+  Finance approves the sheet once; that posts expenses and salaries. Books follow paid sales.</p>""",
 )}
 {section(
     "Same-night loop (target)",
     None,
     """<ol>
-    <li>Branch Admin submits end of shift</li>
-    <li>You or your assistant accept it in Finance</li>
-    <li>Pending floor pay shows “what they attested” next to “what POS actually sold”</li>
-    <li>You confirm floor payroll (blocked until the close is accepted, when the hard gate is on)</li>
-    <li>Books / profit &amp; loss follow paid sales — not typed overrides</li>
+    <li>Branch Admin fills and submits the Daily Sheet (POS → Daily sheet)</li>
+    <li>You or your assistant approve or return it in Finance → Daily sheets</li>
+    <li>Approve posts expenses and crew pay once; return sends the branch back to fix</li>
+    <li>Branch Admin releases cash pay after the approve push</li>
+    <li>Books / profit &amp; loss follow paid sales — not typed fiction</li>
   </ol>""",
 )}
 {section(
@@ -192,29 +192,28 @@ add_tab(
     ),
 )}
 {section(
-    "End of shift",
+    "Daily Sheet",
     None,
     join_stories(
         story(
             "Branch Admin",
-            "to submit end of shift when the day had activity",
-            "cash / GCash / card are attested against what POS sold",
+            "to submit one Daily Sheet per branch per day",
+            "cash / GCash / card, expenses, and crew pay are attested against what POS sold",
             [
-                "Close only offered when there were sales, expenses, or cash advances",
-                "Total sales = paid POS (wash + detailing + merch), never cash-advance repayments",
-                "Carwash salary preview = wash pool only",
-                "If numbers differ from the baseline, a reason is required",
-                "Only one open close per branch per day",
+                "Money-in comes from paid POS (wash + detailing + merch), never cash-advance repayments",
+                "Suggested crew pay from attendance; overrides need a short reason",
+                "Float and counted cash close the drawer story",
+                "Only one sheet per branch per day",
             ],
         ),
         story(
             "Owner or assistant",
-            "to accept or reject submitted closes",
-            "accepted days unlock pending floor pay",
+            "to approve or return the Daily Sheet",
+            "approved sheets post expenses and salaries once",
             [
-                "Review happens in Finance shift close",
-                "Accept notifies the people who confirm payroll",
-                "Profit & loss still follows paid sales, not typed overrides",
+                "Review happens in Finance → Daily sheets",
+                "Approve / return notifies the Branch Admin by web push",
+                "Profit & loss still follows paid sales, not typed fiction",
             ],
         ),
     ),
@@ -229,45 +228,35 @@ add_tab(
     f"""
 <p class="tab-intro">How people get paid fairly — late, absent, detailing commission, cash advances, and books.</p>
 {section(
-    "Floor payroll",
-    "Official pay is confirmed on Payroll — not guessed from the close report.",
+    "Crew pay (Daily Sheet)",
+    "Official pay posts when the Daily Sheet is approved — not from a separate Payroll wizard.",
     join_stories(
         story(
             "Owner or assistant with finance rights",
-            "to confirm floor payroll from paid sales and attendance",
-            "wash pool and detailing lines post once with proof",
+            "to approve the Daily Sheet so pay and expenses post once",
+            "crew lines and shop costs land in the books with the same day",
             [
-                "Payload keeps sale proof for the wash pool",
-                "Wash pool = wash sales × pool % × present bay washers",
-                "Missing detailer assignee blocks confirm",
-                "Double-pay / overlap is rejected by the system",
+                "Suggestions use attendance and pay rules",
+                "Branch Admin overrides need a reason",
+                "Approve posts once; reopen voids if needed",
             ],
         ),
         story(
-            "Owner",
-            "a separate wizard for monthly salaries",
-            "bay floor pay and company salaries stay on separate tracks",
+            "Branch Admin",
+            "to set crew pay on the Daily Sheet",
+            "I settle the bay without inventing income",
             [
-                "Fixed run = packages only; floor run excludes packages",
-                "Company packages can book under HQ when no branch is set",
-            ],
-        ),
-        story(
-            "Branch Admin or Team Lead",
-            "to see today’s compensation estimate on Crew",
-            "I can plan shifts without confusing estimate for posted pay",
-            [
-                "Crew does not insert wash-pool expenses as if they were paid",
-                "Banner says estimate only — confirm on Payroll",
+                "Money-in is locked to paid POS",
+                "Cash advances release on the same sheet",
             ],
         ),
         story(
             "crew",
-            "to see my posted payout",
-            "I trust My Pay over any estimate",
+            "to know pay is settled after sheet approval",
+            "I do not look for a separate My Pay page",
             [
-                "My Pay totals the latest posted run for me",
-                "Owner account does not use My Pay (uses Payroll instead)",
+                "Estimate banners say pay is settled on the Daily Sheet",
+                "Owner uses Finance → Daily sheets, not My Pay",
             ],
         ),
     ),
@@ -299,12 +288,12 @@ add_tab(
         ),
         story(
             "Owner",
-            "approved cash advances deducted in the payroll wizard",
+            "approved cash advances settled on the Daily Sheet",
             "advances never inflate sales and never auto-strip pay",
             [
                 "Only approved / accepted / paid advances deduct",
                 "Pending drafts are ignored",
-                "Preview does not auto-apply cash advances",
+                "Suggestions do not auto-apply cash advances",
             ],
         ),
         story(
@@ -323,8 +312,8 @@ add_tab(
             "Bacoor wash never funds Imus coating books",
             [
                 "Wash pool keyed by branch and day",
-                "Pending floor is one row per accepted branch-day",
-                "Posted floor covers only that branch-day",
+                "One Daily Sheet per branch per day",
+                "Approved sheet posts only that branch-day",
                 "Books roll up per branch — not a merged fiction",
             ],
         ),
@@ -365,52 +354,52 @@ add_tab(
     "close",
     "Night close",
     f"""
-<p class="tab-intro">How the night handoff works — Branch Admin closes, leadership accepts, then floor pay.</p>
+<p class="tab-intro">How the night handoff works — Branch Admin submits the Daily Sheet; leadership approves; pay is released.</p>
 {section(
     "Branch Admin submits",
     None,
     join_stories(
         story(
             "Branch Admin",
-            "to submit end of shift when the day had activity",
-            "cash / GCash / card are attested against what POS sold",
+            "to submit the Daily Sheet when the day is done",
+            "cash / GCash / card, expenses, and crew pay match what POS sold",
             [
-                "Close only when sales, expenses, or cash advances exist",
+                "One sheet per branch per day",
                 "Total sales = paid POS only",
-                "Carwash salary preview = wash pool only",
-                "Override reason required when numbers differ from baseline",
+                "Crew pay suggestions with reasons on overrides",
+                "Submit notifies Owner / assistant by web push",
             ],
         )
     ),
 )}
 {section(
-    "Finance accepts",
+    "Finance approves",
     None,
     join_stories(
         story(
             "Owner or assistant",
-            "to accept or reject the night report",
-            "only trusted days unlock pending floor pay",
+            "to approve or return the Daily Sheet",
+            "only trusted sheets post expenses and salaries",
             [
-                "Accept notifies payroll confirmers",
-                "Reject sends the branch back to fix and resubmit",
+                "Approve posts books once",
+                "Return sends the branch back to fix and resubmit",
                 "Books still follow paid sales",
             ],
         )
     ),
 )}
 {section(
-    "Confirm floor pay",
+    "Release pay",
     None,
     join_stories(
         story(
-            "Owner or assistant with finance rights",
-            "to confirm floor payroll from the accepted day",
-            "staff are paid from the same numbers Finance trusted",
+            "Branch Admin",
+            "to release cash pay after the sheet is approved",
+            "crew are paid from the same sheet Finance trusted",
             [
-                "Hard gate can block confirm until Finance accepts",
-                "Pending list shows attested vs POS sold",
-                "Day marked paid after confirm",
+                "Approve push says release pay",
+                "No separate floor-payroll wizard",
+                "Reopen (Owner) voids posted lines if a fix is needed",
             ],
         )
     ),
@@ -447,8 +436,7 @@ role_tab(
     [
         "Console",
         "People",
-        "Payroll",
-        "Finance",
+        "Finance (Daily sheets)",
         "Data Center",
         "Settings",
         "Audit",
@@ -456,16 +444,16 @@ role_tab(
         "KPI",
         "History",
     ],
-    ["Floor clock", "My Pay (use Payroll instead)"],
+    ["Floor clock", "Legacy Payroll / My Pay pages (redirect away)"],
     join_stories(
         story(
             "Owner",
             "Console home and full company tools",
-            "People, Payroll, Finance, and Data Center stay under one owner",
+            "People, Finance, and Data Center stay under one owner",
             [
                 "Opens Console first",
-                "Can run Payroll and Finance",
-                "Does not use the floor clock or My Pay",
+                "Approves Daily Sheets in Finance",
+                "Does not use the floor clock",
             ],
         ),
         story(
@@ -484,7 +472,7 @@ role_tab(
             "loyalty, POS rules, and checkout actions stay controlled",
             [
                 "Memberships kill-switch",
-                "Separate POS and Payroll settings modules",
+                "POS and Daily Sheet rules under Settings",
                 "Audit trail",
             ],
         ),
@@ -496,7 +484,7 @@ role_tab(
     "Assistant",
     "Assistant Super Admin — same tools, limited by grants you set.",
     "Console",
-    ["Console", "Granted Finance / CRM / Content / People tools", "My Pay"],
+    ["Console", "Granted Finance / CRM / Content / People tools"],
     ["Tools you turned off in grants"],
     join_stories(
         story(
@@ -506,15 +494,14 @@ role_tab(
             [
                 "Opens Console first",
                 "Denied grants actually block those tools",
-                "Can use My Pay (unlike Owner)",
             ],
         ),
         story(
             "Assistant Super Admin",
-            "to help accept closes and confirm floor pay when granted",
+            "to help approve or return Daily Sheets when granted",
             "the owner is not the only person who can finish the night",
             [
-                "Finance write grant required for accept / confirm",
+                "Finance write grant required for approve / return",
                 "No grant → those actions stay blocked",
             ],
         ),
@@ -524,16 +511,16 @@ role_tab(
 role_tab(
     "role-ba",
     "Branch Admin",
-    "One bay’s money day — checkout, close, attendance, planner.",
+    "One bay’s money day — checkout, Daily Sheet, attendance, planner.",
     "Checkout / POS",
     [
         "POS / Checkout",
+        "Daily Sheet (inside POS)",
         "Queue",
         "Attendance",
         "Planner",
         "Ops Lab (view)",
         "History",
-        "My Pay",
         "Audit",
         "Reviews",
     ],
@@ -542,7 +529,7 @@ role_tab(
         "CRM",
         "People",
         "Console",
-        "Payroll register",
+        "Legacy Payroll / My Pay",
         "Inventory",
         "Bookings board",
     ],
@@ -553,8 +540,8 @@ role_tab(
             "Command never links a page I cannot open",
             [
                 "Opens checkout first",
-                "Allowed: floor, queue, attendance, POS, reviews, planner, Ops Lab, history, My Pay, audit",
-                "Denied: finance, CRM, people, console, payroll register, inventory, bookings board",
+                "Allowed: floor, queue, attendance, POS + Daily Sheet, reviews, planner, Ops Lab, history, audit",
+                "Denied: finance, CRM, people, console, inventory, bookings board",
             ],
         ),
         story(
@@ -564,16 +551,16 @@ role_tab(
             [
                 "Cash, GCash, card",
                 "Catalog link required on service lines",
-                "Cash advances show on close, not as fake sales",
+                "Cash advances show on the Daily Sheet, not as fake sales",
             ],
         ),
         story(
             "Branch Admin",
-            "to submit end of shift when the day had activity",
-            "cash / GCash / card are attested against what POS sold",
+            "to submit the Daily Sheet when the day is done",
+            "cash / GCash / card and crew pay are attested against what POS sold",
             [
-                "One open close per branch per day",
-                "Override reason when numbers differ",
+                "One sheet per branch per day",
+                "Override reason when pay differs from suggestion",
             ],
         ),
     ),
@@ -589,11 +576,10 @@ role_tab(
         "Attendance",
         "KPI (glance)",
         "My Tasks",
-        "My Pay",
         "History",
         "Reviews",
     ],
-    ["POS checkout as primary", "Finance", "People", "Payroll register"],
+    ["POS checkout as primary", "Finance", "People", "Daily Sheet submit"],
     join_stories(
         story(
             "Team Lead",
@@ -604,7 +590,7 @@ role_tab(
                 "Can create tickets; detailing stays elsewhere",
                 "Absent crew off the assign list",
                 "Can mark Failed QA; Sales cannot",
-                "No POS / Finance / People",
+                "No POS / Finance / People / Daily Sheet submit",
             ],
         ),
         story(
@@ -619,10 +605,10 @@ role_tab(
 role_tab(
     "role-crew",
     "Crew",
-    "Floor washers — clock in, do bay work, see posted pay.",
+    "Floor washers — clock in, do bay work; pay settles on the Daily Sheet.",
     "Attendance",
-    ["Attendance", "My Tasks", "My Pay", "Notifications"],
-    ["POS admin", "Finance", "People", "Payroll register"],
+    ["Attendance", "My Tasks", "Notifications"],
+    ["POS admin", "Finance", "People", "Daily Sheet submit"],
     join_stories(
         story(
             "crew",
@@ -630,15 +616,15 @@ role_tab(
             "clock-in is the first action of the day",
             [
                 "Opens Attendance",
-                "My Tasks and My Pay for posted work",
+                "My Tasks for assigned work",
                 "Late or absent changes wash-pool share honestly",
             ],
         ),
         story(
             "crew",
-            "to see my posted payout",
-            "I trust My Pay over any estimate",
-            ["My Pay totals the latest posted run for me"],
+            "to know pay is settled after sheet approval",
+            "I do not look for a separate My Pay page",
+            ["Branch Admin releases cash after Finance approves"],
         ),
     ),
 )
@@ -646,7 +632,7 @@ role_tab(
 role_tab(
     "role-ops",
     "Ops Lead",
-    "Operations Lead — network help across branches without owning payroll.",
+    "Operations Lead — network help across branches without owning Daily Sheet approve.",
     "Ops Lab roadmap",
     [
         "Ops Lab",
@@ -654,20 +640,18 @@ role_tab(
         "POS help",
         "Attendance register (view)",
         "Planner",
-        "My Pay",
     ],
-    ["Floor clock", "Payroll register", "People", "Data Center"],
+    ["Floor clock", "Finance Daily Sheet approve", "People", "Data Center"],
     join_stories(
         story(
             "Operations Lead",
             "Ops Lab as home and network-wide floor help",
-            "I cover Team Lead and Branch Admin work across branches without owning payroll",
+            "I cover Team Lead and Branch Admin work across branches without owning money approve",
             [
                 "Opens Ops Lab roadmap",
                 "Can use queue and POS across branches",
                 "Can see the attendance register but cannot floor-clock",
-                "Has My Pay; no payroll register",
-                "No People or Data Center",
+                "No Finance approve / People / Data Center",
             ],
         )
     ),
@@ -678,8 +662,8 @@ role_tab(
     "Sales",
     "Detailing pipeline across branches.",
     "Detailing bookings",
-    ["Bookings", "Planner", "History", "Notifications", "My Pay"],
-    ["Wash queue as home", "Payroll register", "People"],
+    ["Bookings", "Planner", "History", "Notifications"],
+    ["Wash queue as home", "Daily Sheet approve", "People"],
     join_stories(
         story(
             "Sales",
@@ -704,13 +688,13 @@ role_tab(
     "Detailer",
     "Assigned detailing jobs and commission.",
     "Detailing bookings",
-    ["Bookings (assigned)", "Attendance", "My Tasks", "My Pay"],
-    ["Wash pool share", "Finance", "People", "Payroll register"],
+    ["Bookings (assigned)", "Attendance", "My Tasks"],
+    ["Wash pool share", "Finance", "People", "Daily Sheet submit"],
     join_stories(
         story(
             "a detailer",
-            "Bookings + Attendance + My Tasks + My Pay",
-            "I work assigned jobs and see posted commission",
+            "Bookings + Attendance + My Tasks",
+            "I work assigned jobs; commission settles on the Daily Sheet",
             [
                 "Opens Bookings",
                 "Assigned jobs pay on booking and walk-in",
@@ -729,14 +713,14 @@ role_tab(
 role_tab(
     "role-mkt",
     "Marketing",
-    "Demand and customers — not payroll.",
+    "Demand and customers — not Daily Sheet money.",
     "Customer list (CRM)",
     ["CRM", "Content", "Bookings (as allowed)", "Notifications", "History"],
-    ["Payroll", "Finance accept", "People admin"],
+    ["Daily Sheet approve", "Finance approve", "People admin"],
     join_stories(
         story(
             "Marketing",
-            "CRM, content, bookings, and alerts — not payroll",
+            "CRM, content, bookings, and alerts — not money approve",
             "I run demand without touching pay",
             ["Opens customer list", "Content and notifications when allowed"],
         ),
@@ -754,7 +738,7 @@ role_tab(
     "Video Editor",
     "Shoot and edit work on the planner — no floor noise.",
     "Planner calendar",
-    ["Planner calendar", "My Tasks", "My Pay"],
+    ["Planner calendar", "My Tasks"],
     ["Queue", "POS", "Finance", "CRM", "Bookings", "People"],
     join_stories(
         story(
@@ -763,7 +747,7 @@ role_tab(
             "shoot and edit work is scheduled without queue noise",
             [
                 "Opens Planner calendar first",
-                "Dock: Calendar + Tasks; Pay in overflow",
+                "Dock: Calendar + Tasks",
                 "Denied: queue, POS, Finance, CRM, Bookings, People",
             ],
         )
@@ -776,7 +760,7 @@ role_tab(
     "Read books only — performance without floor tools.",
     "Finance",
     ["Finance (sales, P&L, expenses)"],
-    ["Queue", "Checkout", "People", "Payroll", "Attendance clock"],
+    ["Queue", "Checkout", "People", "Daily Sheet approve", "Attendance clock"],
     join_stories(
         story(
             "Investor",
@@ -785,6 +769,7 @@ role_tab(
             [
                 "Home opens Finance",
                 "Navigation is Finance only",
+                "Cannot approve Daily Sheets",
                 "Queue, checkout, and people are denied",
             ],
         ),
@@ -812,7 +797,7 @@ role_tab(
         "Queue status",
         "Public queue board (guest)",
     ],
-    ["Staff payroll", "People", "Finance", "POS"],
+    ["Staff tools", "People", "Finance", "POS"],
     join_stories(
         story(
             "a customer",
@@ -832,7 +817,7 @@ role_tab(
         story(
             "a customer",
             "My account as home",
-            "I never open staff payroll or people tools",
+            "I never open staff money or people tools",
             ["Account tabs only", "Staff tools denied"],
         ),
     ),
@@ -851,14 +836,14 @@ add_tab(
         story(
             "Owner / Assistant / Investor",
             "Finance",
-            "I can accept closes, read books, and see money health",
-            ["Shift close review", "Sales / P&L / expenses", "Investor is Finance-only"],
+            "I can approve Daily Sheets, read books, and see money health",
+            ["Daily sheets inbox", "Sales / P&L / expenses", "Investor is Finance-only (no approve)"],
         ),
         story(
             "Owner / Assistant",
-            "Payroll",
-            "I confirm floor pay and monthly salaries",
-            ["Floor wizard and fixed wizard stay separate"],
+            "Finance → Daily sheets",
+            "I approve or return the night sheet so pay and expenses post once",
+            ["Approve posts books", "Return sends the branch back"],
         ),
         story(
             "Team Lead / leadership",
@@ -904,9 +889,9 @@ add_tab(
         ),
         story(
             "Branch Admin",
-            "End of shift (inside POS / close flow)",
-            "the night report can be accepted",
-            ["Attest cash vs POS", "Wash pool preview only"],
+            "Daily Sheet (inside POS)",
+            "the night sheet can be approved in Finance",
+            ["Attest cash vs POS", "Crew pay + expenses on one sheet"],
         ),
     ),
 )}
@@ -974,7 +959,7 @@ add_tab(
         story(
             "Owner or assistant",
             "Settings",
-            "POS and Payroll rules stay thin and clear",
+            "POS and Daily Sheet rules stay thin and clear",
             ["Separate modules under settings"],
         ),
         story(
@@ -984,10 +969,10 @@ add_tab(
             ["Content and broadcast under the right permissions"],
         ),
         story(
-            "any staff with My Pay",
-            "My Pay",
-            "I see posted payouts, not estimates",
-            ["Owner uses Payroll instead of My Pay"],
+            "Branch Admin / Owner",
+            "Daily Sheet money path",
+            "pay settles on the sheet — legacy Payroll / My Pay routes redirect away",
+            ["POS → Daily sheet", "Finance → Daily sheets"],
         ),
     ),
 )}
@@ -1169,7 +1154,7 @@ html_doc = f"""<!DOCTYPE html>
     <header class="hero">
       <p class="eyebrow">Hakum Auto Care · For the owner</p>
       <h1>How the shop runs — user stories</h1>
-      <p>Plain-language stories for the full day: clock-in, wash, detailing, checkout, close, finance, payroll, every role, and every major page. No technical flowcharts.</p>
+      <p>Plain-language stories for the full day: clock-in, wash, detailing, checkout, Daily Sheet, Finance approve, every role, and every major page. No technical flowcharts.</p>
       <div class="meta">
         <span>{e(today)} · Asia/Manila</span>
         <span>{len(TABS)} tabs · stories only</span>

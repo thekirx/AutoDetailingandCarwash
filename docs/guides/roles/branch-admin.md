@@ -6,16 +6,24 @@
 
 ## Nav (sidebar)
 
-Floor · Queue · Attendance · POS · Inventory · Reviews · Planner · Ops Lab · History · My pay · Audit
+Dashboard · Bookings · Attendance · POS · Inventory · Reviews · Planner · Ops Lab · History · Audit  
+(Queue is **not** in BA nav — wash status is Team Lead / SA / ASA / Ops Lead.)
 
 ## Daily flow
 
-1. POS / shift open  
-2. Queue and Bookings as **view-only** (no ticket or status writes)  
+1. POS open — ring wash / merch / packages  
+2. Bookings as needed (view / limited write per product rules)  
 3. Inventory / restock  
-4. End-of-shift close  
-5. Attendance exceptions
+4. Attendance exceptions  
+5. **POS → Daily sheet** — expenses, crew pay, float, counted cash → Submit  
+6. After SA/ASA approve — release cash pay to crew  
 
 ## Must never see
 
-All-branch finance write, SA people RBAC for other branches, Data Center (SA).
+All-branch finance write, SA people RBAC for other branches, Data Center (SA), Queue edit (denied by design).
+
+## Notify
+
+- Cash advance requests from crew → your phone (Enable alerts)  
+- Sheet approved / returned → your phone  
+See [docs/qa/PUSH-CHECKLIST.md](../../qa/PUSH-CHECKLIST.md).

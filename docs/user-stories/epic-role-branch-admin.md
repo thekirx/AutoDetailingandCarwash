@@ -1,6 +1,6 @@
 # Epic: Branch Admin persona
 
-**Goal:** One bay’s money day — POS, close, attendance, planner — without network People/Finance.
+**Goal:** One bay’s money day — POS, Daily Sheet, attendance, planner — without network People/Finance write.
 
 **Home:** `/operations/pos`
 
@@ -13,39 +13,39 @@
 **Acceptance**
 
 - [x] Home → `/operations/pos`
-- [x] Allowed: dashboard, queue, bookings (view-only), attendance, pos, inventory restock, reviews, planning, roadmap, history, my-pay, audit
-- [x] Queue and Bookings: no ticket/status writes (`canStaffUpdateBookingStatus` denies `admin`)
-- [x] Denied: finance, CRM, people, console, payroll, Cars, Data Center
+- [x] Allowed: dashboard, bookings, attendance, pos, inventory, reviews, planning, roadmap, history, audit
+- [x] Queue: **denied** (Team Lead / SA / ASA / Ops Lead only)
+- [x] Denied: finance hub, CRM, people, console, Cars, Data Center, My Pay (retired)
 
-**Test seam:** `tests/leftoverUxSeam.test.js`, `tests/branchAdminShell.test.js`, `tests/principalQaMatrix.test.js`
-
----
-
-## US-BA-02 · Checkout → end of shift
-
-**As** Branch Admin  
-**I want** Pay queue + merch + expenses + EoS  
-**So that** paid POS is attested that night  
-
-**Acceptance**
-
-- [x] POS shell tabs: checkout, pending, expenses, dashboard (no cash-advance tab; no Settings — SA / ASA `finance_write` only)
-- [x] End of shift on a quiet day (zero-count close allowed)
-- [x] Override reason when submitted ≠ baseline
-
-**Test seam:** `tests/posWorkflowSeam.test.js`, `tests/payrollFullStack.test.js`, `tests/shiftClose.test.js`, `tests/dailyOpsWorkflow.test.js`
+**Test seam:** `tests/adminScope.test.js`, `e2e:role-qa`, `e2e:nav-walk`
 
 ---
 
-## US-BA-03 · Crew estimate only
+## US-BA-02 · Checkout → Daily Sheet
 
 **As** Branch Admin  
-**I want** today’s pool estimate without posting pay  
-**So that** I plan shifts while SA confirms Payroll  
+**I want** POS + Daily Sheet  
+**So that** paid POS is closed that night  
 
 **Acceptance**
 
-- [x] Estimate banner; no wash-pool expense insert from Crew
-- [x] My Pay for own posted lines
+- [x] POS tabs include Today + Daily sheet (not End of shift)
+- [x] Submit Daily Sheet; cannot approve own sheet
+- [x] After SA/ASA approve — release pay
 
-**Test seam:** `tests/userStoriesCoverage.test.js`, `tests/payrollFullStack.test.js`
+**Test seam:** `e2e:daily-sheet-money`, `e2e:ui-money`, `supabase/tests/daily_flow_role_probe.sql`
+
+---
+
+## US-BA-03 · Crew pay suggestions
+
+**As** Branch Admin  
+**I want** suggested pay on the sheet  
+**So that** I adjust with a reason before submit  
+
+**Acceptance**
+
+- [x] Suggestions from attendance + compensation settings
+- [x] Override requires reason
+
+**Test seam:** `tests/dailySheet.test.js`, `docs/daily-sheet/README.md`

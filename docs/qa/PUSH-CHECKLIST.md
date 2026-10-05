@@ -1,6 +1,8 @@
 # Push notification checklist
 
-**Audit date:** 2026-09-27 (Asia/Manila) · **Rule source:** `NOTIFY_EVENTS` in [`src/lib/notifyRouting.js`](../../src/lib/notifyRouting.js)
+**Audit date:** 2026-10-05 (Asia/Manila) · **Rule source:** `NOTIFY_EVENTS` in [`src/lib/notifyRouting.js`](../../src/lib/notifyRouting.js)
+
+**Delivery status (production SQL):** **0** active staff devices subscribed · only demo-customer push rows remain. Routing unit tests pass; **phones will not ring until BossMich / ASA / each BA enable alerts** (Account → Enable alerts). **SMS not tested this pass.**
 
 Branch rule: people assigned to a branch (Branch Admin, Team Lead, crew, detailer, sales, video) only get that branch's alerts (home branch + `staff_branch_assignments`). **Super Admin, ASA, Ops Lead and Marketing are global.** Recipients are read live from `staff_profiles` at send time — not from old subscription rows.
 
@@ -28,9 +30,9 @@ Not sent by design: owner daily close SMS (Finance accept uses web push), inboun
 
 | Check | Result |
 |-------|--------|
-| Unit suite (`npm test`) incl. routing, recipients, service-worker click, ops-event copy | **1402/1402** |
-| `PUSH_AUDIT=1` real-browser event audit (Chrome, 12 signed-in personas, 14 events) | **14/14** — right people shown the toast, **no leaks** to the other 11, tap URL matches, page opens (no login / access denied), inbox rows match |
-| 4 browsers × 12 personas self-test + live booking event (Chrome, Edge, Brave, Firefox) | _see below_ |
+| Unit suite (`npm test`) incl. routing, recipients, sheet_reviewed → submitting BA only | Re-run after doc pass — see `PROJECT_STATUS.md` |
+| `PUSH_AUDIT=1` real-browser event audit (Chrome) | **NOT RE-RUN** since Daily Sheet (2026-09-27 was 14/14 on older EoS events). Re-run after staff opt-in |
+| Staff push subscriptions | **0** — soft-launch blocker for night alerts |
 
 Evidence: `e2e-evidence/push-audit/` (audit toasts + `summary.json`), `e2e-evidence/push-real/` (browser matrix).
 

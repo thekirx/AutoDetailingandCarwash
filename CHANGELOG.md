@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-05 — Owner pack + FLOPS Daily Sheet cutover
+
+- Regenerated [`docs/user-stories/USER-STORIES-OWNER.html`](docs/user-stories/USER-STORIES-OWNER.html) / `.pdf` from Daily Sheet night path (submit → Finance approve → books).
+- `scripts/e2e-lifecycle-flops.mjs` waits on Daily Sheet UI (read-only today sheet); money writes stay on `e2e:daily-sheet-money`.
+- Seam: `tests/e2eUiMoneyContract.test.js` asserts FLOPS is not still driving End of shift.
+
+## 2026-10-05 — Daily Sheet doc cutover + push honesty
+
+- Shop-day user stories, runbook, MONEY-CONTRACT triangle, Branch Admin guide, and role matrix now teach **Daily Sheet** (not End of shift / My Pay / floor payroll).
+- Added [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md). Push checklist: routing proven; **0 staff** devices subscribed. SMS not tested.
+- `US-CLOSE-01` seam → `daily_sheets` unique `(branch, business_date)`; sheet_reviewed notifies only the submitting BA.
+
 ## 2026-10-05 — Future-branch + People RBAC readiness
 
 - Dasmariñas production slug is now `dasmarinas` (coming soon); remapped orphan rows off `aud-xmyz95` and archived CRUD-test / probe branches.

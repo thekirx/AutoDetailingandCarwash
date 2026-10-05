@@ -27,4 +27,14 @@ describe('BUG-007 money UI pack contract', () => {
     }
     assert.doesNotMatch(src, /End of shift|tab=shift-close/, 'retired End of shift flow must not be asserted')
   })
+
+  it('scripts/e2e-lifecycle-flops.mjs is Daily Sheet–aware (read-only sheet; no EoS wait)', () => {
+    const flops = join(root, 'scripts', 'e2e-lifecycle-flops.mjs')
+    assert.equal(existsSync(flops), true, 'e2e-lifecycle-flops.mjs must exist')
+    const src = readFileSync(flops, 'utf8')
+    assert.match(src, /Daily sheet|daily_sheets/, 'FLOPS must reference Daily Sheet')
+    assert.match(src, /e2e-daily-sheet-money/, 'FLOPS must point money writes to daily-sheet-money')
+    assert.doesNotMatch(src, /waitForFunction\(\(\) => \/End of shift/, 'must not wait for retired End of shift UI')
+    assert.doesNotMatch(src, /tab=shift-close|ShiftCloseWizard/, 'retired shift-close UI must not be driven')
+  })
 })

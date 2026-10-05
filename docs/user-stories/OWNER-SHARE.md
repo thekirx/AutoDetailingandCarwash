@@ -2,6 +2,8 @@
 
 Plain-language stories for leadership. **No flowcharts** — tabs for every role and page.
 
+Night money path in this pack: **POS Daily Sheet → Finance approve → books / crew pay** (legacy End of shift / Payroll / My Pay routes redirect away).
+
 ## Start here (full pack)
 
 | File | What it is |

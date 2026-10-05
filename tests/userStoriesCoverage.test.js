@@ -27,12 +27,11 @@ describe('US-PAY-03 · Crew estimate banner + settings path', () => {
   })
 })
 
-describe('US-CLOSE-01 · One close per branch-day', () => {
-  it('migration enforces unique open close per branch + business_date', () => {
-    const sql = read('supabase/migrations/20260821010000_shift_close_reports.sql')
-    assert.match(sql, /shift_close_reports_branch_date_open_uidx/)
-    assert.match(sql, /unique index[\s\S]*\(branch, business_date\)/)
-    assert.match(sql, /status in \('draft', 'submitted', 'accepted', 'locked'\)/)
+describe('US-CLOSE-01 · One Daily Sheet per branch-day', () => {
+  it('daily_sheets enforces unique (branch, business_date)', () => {
+    const sql = read('supabase/migrations/20261001090000_daily_sheet.sql')
+    assert.match(sql, /create table if not exists public\.daily_sheets/)
+    assert.match(sql, /unique \(branch, business_date\)/)
   })
 })
 
