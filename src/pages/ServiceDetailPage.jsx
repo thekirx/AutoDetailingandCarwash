@@ -1,5 +1,6 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
 
+import TintFinder from '../components/public/TintFinder'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import ServiceBottomCta from '../components/public/bredesign/ServiceBottomCta'
 import ServiceFaqSection from '../components/public/bredesign/ServiceFaqSection'
@@ -49,7 +50,7 @@ const TITLES = {
 const SECONDARY_CTA = {
   ppf: { label: 'See packages', href: '#ppf-packages' },
   ceramic: { label: 'See packages', href: '#ceramic' },
-  tint: { label: 'All services', to: '/services' },
+  tint: { label: 'Find my tint', href: '#tint-finder' },
   'wash-detailing': { label: 'All services', to: '/services' },
 }
 
@@ -349,6 +350,8 @@ export default function ServiceDetailPage() {
           image={section.image}
         />
       )}
+
+      {slug === 'tint' ? <TintFinder /> : null}
 
       {slug === 'wash-detailing' ? <WashServiceRail /> : <ServiceDetail slug={slug} section={section} />}
 

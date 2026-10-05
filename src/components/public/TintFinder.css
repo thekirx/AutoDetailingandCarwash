@@ -1,0 +1,97 @@
+.bredesign .tf-section { scroll-margin-top:100px; border-block:1px solid var(--bd-rule); }
+.bredesign .tf-section-head {display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:30px}
+.bredesign .tf-section-head h2 {font-size:clamp(32px,4vw,54px)}
+.bredesign .tf-section-head>p {max-width:390px;margin:0;line-height:1.7}
+.bredesign .tf-quiz {display:grid;grid-template-columns:1.2fr 1fr;border:1px solid var(--bd-rule);background:var(--bd-navy-2);border-radius:16px;overflow:hidden}
+.bredesign .tf-question {padding:clamp(24px,4vw,48px)}
+.bredesign .tf-progress-label {display:flex;justify-content:space-between;font-size:12px;color:var(--bd-accent);text-transform:uppercase;letter-spacing:.1em}
+.bredesign .tf-progress {display:flex;gap:6px;margin:14px 0 30px}
+.bredesign .tf-progress span {height:3px;background:var(--bd-rule);flex:1}
+.bredesign .tf-progress .is-filled {background:var(--bd-accent)}
+.bredesign .tf-question h3 {font-size:clamp(26px,2.8vw,38px);line-height:1.2;max-width:530px}
+.bredesign .tf-question>p {font-size:14px;margin:12px 0 24px}
+.bredesign .tf-choices {display:grid;gap:10px}
+.bredesign .tf-choices button {display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:66px;padding:18px 20px;background:var(--bd-navy);border:1px solid #334474;border-radius:8px;text-align:left;color:var(--bd-paper);font:inherit;cursor:pointer}
+.bredesign .tf-choices strong {display:block;font-size:16px;font-weight:600}
+.bredesign .tf-choices small {display:block;margin-top:4px;font-size:13px;color:var(--bd-ink-2)}
+.bredesign .tf-choices button:hover,.bredesign .tf-choices .is-selected {border-color:var(--bd-accent);background:var(--bd-navy-3)}
+.bredesign .tf-choice-mark {display:grid;place-items:center;flex-shrink:0;width:22px;height:22px;border:1px solid #6e79a8;border-radius:50%}
+.bredesign .is-selected .tf-choice-mark {background:var(--bd-blue);border-color:var(--bd-blue);color:white}
+.bredesign .tf-actions {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:28px}
+.bredesign .tf-back {display:inline-flex;align-items:center;gap:8px;color:var(--bd-accent);font:inherit;font-size:14px;background:transparent;border:0;min-height:44px;padding:8px 0;cursor:pointer}
+.bredesign .tf-photo {position:relative;min-height:530px;overflow:hidden}
+.bredesign .tf-photo>img {width:100%;height:100%;position:absolute;object-fit:cover;object-position:42% center}
+.bredesign .tf-photo:after {content:'';position:absolute;inset:0;background:linear-gradient(0deg,rgba(2,10,49,.94),transparent 85%)}
+.bredesign .tf-photo>div {position:absolute;z-index:1;bottom:36px;left:36px;right:24px;color:var(--bd-paper)}
+.bredesign .tf-photo h3 {font-size:clamp(30px,3vw,42px);line-height:1.15;margin:16px 0 12px}
+.bredesign .tf-photo p {font-size:14px;line-height:1.6}
+.bredesign .tf-section button:focus-visible,.bredesign .tf-section a:focus-visible,.bredesign .tf-section summary:focus-visible {outline:2px solid var(--bd-accent);outline-offset:4px}
+.bredesign .tf-section h3:focus {outline:none}
+.bredesign .tf-section .bd-btn:disabled {opacity:.45;cursor:not-allowed}
+.bredesign .tf-results-head {display:flex;justify-content:space-between;align-items:start;gap:20px}
+.bredesign .tf-results-head h3 {font-size:clamp(28px,3vw,42px)}
+.bredesign .tf-results-head p {font-size:14px;margin:10px 0 24px}
+.bredesign .tf-answer-summary {display:flex;flex-wrap:wrap;gap:20px 36px;border-block:1px solid var(--bd-rule);padding:18px 0;margin-bottom:28px;font-size:13px}
+.bredesign .tf-answer-summary small {display:block;color:var(--bd-accent);margin-bottom:5px}
+.bredesign .tf-options {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px}
+.bredesign .tf-option {padding:24px;border:1px solid var(--bd-rule);border-radius:12px;background:var(--bd-navy-2);display:flex;flex-direction:column;min-width:0}
+.bredesign .tf-option-top {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--bd-accent);margin-bottom:20px}
+.bredesign .tf-option-top>span:last-child {display:flex;align-items:center;gap:5px}
+.bredesign .tf-option h3 {font-size:26px}
+.bredesign .tf-match-reason {font-size:13px;line-height:1.6;min-height:42px;margin:12px 0 18px}
+.bredesign .tf-price {padding-bottom:24px;margin-bottom:20px;border-bottom:1px solid var(--bd-rule)}
+.bredesign .tf-price strong {display:block;font-family:var(--bd-body);font-size:38px;color:var(--bd-paper)}
+.bredesign .tf-price span {font-size:12px;color:var(--bd-accent)}
+.bredesign .tf-film-heading {display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--bd-paper)}
+.bredesign .tf-film-heading span {color:var(--bd-accent)}
+.bredesign .tf-film dl {margin:12px 0 0}
+.bredesign .tf-film dl>div {display:flex;justify-content:space-between;align-items:center;padding:8px 0;gap:10px;border-bottom:1px solid var(--bd-rule)}
+.bredesign .tf-film dt {font-size:12px;color:var(--bd-paper)}
+.bredesign .tf-film dt small {display:block;color:var(--bd-ink-2);font-size:11px;line-height:1.4;margin-top:3px}
+.bredesign .tf-film dd {margin:0;font-size:19px;color:var(--bd-paper);font-weight:600;white-space:nowrap}
+.bredesign .tf-zone-caption {font-size:11px;line-height:1.5;margin:10px 0 24px;color:var(--bd-ink-2)}
+.bredesign .tf-price-list {font-size:12px;margin:0 0 20px}
+.bredesign .tf-price-list summary {cursor:pointer;min-height:32px;color:var(--bd-accent)}
+.bredesign .tf-price-list table {width:100%;border-collapse:collapse;font-size:11px}
+.bredesign .tf-price-list caption {text-align:left;margin:8px 0;color:var(--bd-ink-2)}
+.bredesign .tf-price-list th,.bredesign .tf-price-list td {padding:9px 6px;border-bottom:1px solid var(--bd-rule);font-weight:400;text-align:left}
+.bredesign .tf-price-list td {text-align:right;white-space:nowrap}
+.bredesign .tf-price-list .is-current {background:var(--bd-navy-3);color:var(--bd-paper)}
+.bredesign .tf-option-actions {display:grid;gap:10px;margin-top:auto}
+.bredesign .tf-option-actions .bd-btn {width:100%;justify-content:center}
+.bredesign .tf-disclaimers {border-block:1px solid var(--bd-rule);padding:24px 0;margin:30px 0}
+.bredesign .tf-disclaimers h3 {font-size:22px;margin-bottom:14px}
+.bredesign .tf-disclaimers p {font-size:13px;line-height:1.7;margin:8px 0;max-width:1000px}
+.bredesign .tf-advisory {padding:18px;border-left:3px solid var(--bd-accent);background:var(--bd-navy-3);font-size:14px;line-height:1.6}
+.bredesign .tf-booking {border:1px solid var(--bd-accent);border-radius:12px;padding:clamp(22px,4vw,40px);margin:30px 0;background:var(--bd-navy-2)}
+.bredesign .tf-booking h3 {font-size:30px}
+.bredesign .tf-booking p {font-size:14px;line-height:1.6}
+.bredesign .tf-form-grid {display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px}
+.bredesign .tf-form-grid label {display:flex;flex-direction:column;gap:9px;font-size:13px;color:var(--bd-paper)}
+.bredesign .tf-form-grid input,.bredesign .tf-form-grid select {min-height:48px;padding:12px;background:var(--bd-navy);border:1px solid #435487;border-radius:6px;color:var(--bd-paper);font:inherit;width:100%;color-scheme:dark}
+.bredesign .tf-form-wide {grid-column:1/-1}
+.bredesign .tf-consent {display:flex;align-items:start;gap:12px;margin-top:22px;line-height:1.6;font-size:13px}
+.bredesign .tf-consent input {margin-top:4px;min-width:20px;height:20px;accent-color:var(--bd-blue)}
+.bredesign .tf-consent a {text-decoration:underline;color:var(--bd-accent)}
+.bredesign .tf-booking small {display:block;font-size:12px;margin-top:14px}
+.bredesign .tf-honeypot {position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+.bredesign .tf-error {color:#ffb9b9}
+.bredesign .tf-benefits {background:#000;border-radius:12px;padding:clamp(24px,4vw,48px);margin-top:30px;text-align:center;color:#ddd}
+.bredesign .tf-benefits>h2 {color:white;font-size:clamp(26px,3vw,40px);max-width:650px;margin:auto}
+.bredesign .tf-benefits>p {font-size:14px;line-height:1.7;max-width:580px;margin:16px auto 32px}
+.bredesign .tf-benefit-grid {display:grid;grid-template-columns:repeat(3,1fr);gap:36px 26px}
+.bredesign .tf-benefit-grid article {display:flex;flex-direction:column;align-items:center}
+.bredesign .tf-benefit-grid img {width:100px;height:100px;object-fit:contain}
+.bredesign .tf-for-you {font-size:10px;color:#b2ee24;background:#182500;padding:4px 8px;border-radius:4px;margin-top:8px}
+.bredesign .tf-benefit-grid h3 {color:white;font-family:var(--bd-body);font-size:17px;margin:14px 0 8px;font-weight:600}
+.bredesign .tf-benefit-grid p {font-size:13px;line-height:1.65;max-width:280px;margin:0;color:#ccc}
+.bredesign .tf-benefits>small {display:block;font-size:11px;line-height:1.6;color:#aaa;margin-top:32px}
+.bredesign .tf-benefits a {color:inherit;text-decoration:underline}
+.bredesign .tf-seal {display:flex;align-items:center;gap:24px;max-width:650px;margin:36px auto 0;background:white;color:#222;text-align:left;padding:24px;border-radius:8px}
+.bredesign .tf-seal img {width:120px;height:auto}
+.bredesign .tf-seal h3 {color:#222;font-size:22px}
+.bredesign .tf-seal p {font-size:13px;line-height:1.6}
+.bredesign .tf-restart {margin-top:20px}
+@media(max-width:760px){.bredesign .tf-section-head{display:block}.bredesign .tf-section-head>p{margin-top:16px}.bredesign .tf-quiz{grid-template-columns:1fr}.bredesign .tf-photo{display:none}.bredesign .tf-question{padding:24px 20px}.bredesign .tf-results-head{flex-wrap:wrap}.bredesign .tf-results-head p{margin-bottom:0}.bredesign .tf-results-head{margin-bottom:20px}.bredesign .tf-answer-summary{gap:16px;display:grid;grid-template-columns:1fr 1fr}.bredesign .tf-option{padding:22px 18px}.bredesign .tf-form-grid{grid-template-columns:1fr}.bredesign .tf-benefit-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:30px 16px}.bredesign .tf-benefit-grid img{width:80px;height:80px}.bredesign .tf-benefit-grid h3{font-size:15px}.bredesign .tf-benefit-grid p{font-size:12px}.bredesign .tf-seal{flex-direction:column;text-align:center}}
+
+.bredesign .tf-results-head,.bredesign .tf-booking h3,.bredesign .tf-question h3 {scroll-margin-top:110px}

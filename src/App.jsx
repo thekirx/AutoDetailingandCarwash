@@ -50,6 +50,7 @@ const OpsRoadmapPage = lazy(() => import('./pages/OpsRoadmapPage'))
 const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
 const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
 const PosSettingsPage = lazy(() => import('./pages/settings/PosSettingsPage'))
+const TintFinderSettingsPage = lazy(() => import('./pages/settings/TintFinderSettingsPage'))
 const DailySheetRulesPage = lazy(() => import('./pages/settings/DailySheetRulesPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const AttendancePage = lazy(() => import('./pages/AttendancePage'))
@@ -205,6 +206,7 @@ export default function App() {
             <Route path="planning" element={gate('planning', <PlanningBoardPage />)} />
             <Route path="roadmap" element={gate('roadmap', <OpsRoadmapPage />)} />
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
+            <Route path="settings/tint-finder" element={gate('settings', <TintFinderSettingsPage />)} />
             <Route path="settings/pos" element={gate('settings', <PosSettingsPage />)} />
             <Route path="settings/daily-sheet" element={gate('settings', <DailySheetRulesPage />)} />
             <Route path="settings/payroll" element={<Navigate to="/operations/settings/daily-sheet" replace />} />

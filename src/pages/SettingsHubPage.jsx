@@ -1,7 +1,7 @@
 import { Link, Navigate } from 'react-router-dom'
-import { ShoppingCart, Wallet } from 'lucide-react'
+import { ShoppingCart, Wallet, Sun } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos } from '@/auth/permissions'
+import { canAccessPos, isSuperAdmin } from '@/auth/permissions'
 import { canReviewDailySheet } from '@/lib/dailySheet'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { SETTINGS_HUB_COPY } from '@/components/ops/opsGuideCopy'
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 /** Policy destinations only — People / Branches / Audit / Content stay in Command nav. */
 const TILES = [
+  { key: 'tint-finder', title: 'Tint Finder', description: 'Film specifications, package prices, recommendation rules and customer requests.', to: '/operations/settings/tint-finder', icon: Sun, allow: isSuperAdmin },
   {
     key: 'pos',
     title: 'POS settings',
