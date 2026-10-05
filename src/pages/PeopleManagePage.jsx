@@ -38,7 +38,13 @@ import {
   canCreateStaffRoleOverride,
   canRevokeStaffRoleOverride,
 } from '@/lib/ownerRevisionsPhase7'
-import { filterDirectoryPeople, PEOPLE_DIRECTORY_TABS, supervisorCandidates } from '@/lib/peopleDirectory'
+import {
+  filterDirectoryPeople,
+  PEOPLE_DIRECTORY_TABS,
+  showBranchPicker,
+  supervisorCandidates,
+  usesMultiBranch,
+} from '@/lib/peopleDirectory'
 import { summarizeTodayAttendance } from '@/lib/attendanceInsights'
 import { BASELINE_TEMPLATES, validateRoleDefinition } from '@/lib/roleDefinitions'
 import { cn } from '@/lib/utils'
@@ -62,18 +68,6 @@ function toggleSlug(list, slug) {
   if (set.has(slug)) set.delete(slug)
   else set.add(slug)
   return [...set]
-}
-
-function usesMultiBranch(role, grants) {
-  if (role === 'admin' || role === 'marketing') return true
-  if (role === 'assistant_super_admin' && grants && grants.branches_all === false) return true
-  return false
-}
-
-function showBranchPicker(role, grants) {
-  if (['admin', 'team_lead', 'staff', 'marketing', 'sales'].includes(role)) return true
-  if (role === 'assistant_super_admin' && grants && grants.branches_all === false) return true
-  return false
 }
 
 function DirectoryPersonActions({ profile, row, onEdit, onDeactivate }) {

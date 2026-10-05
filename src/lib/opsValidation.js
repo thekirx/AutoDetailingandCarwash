@@ -3,8 +3,27 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const BRANCH_CODE_RE = /^[A-Z]{2,5}$/
-const EDITABLE_ROLES = new Set(['admin', 'assistant_super_admin', 'team_lead', 'staff', 'marketing'])
-const BRANCH_REQUIRED_ROLES = new Set(['admin', 'team_lead', 'staff', 'marketing'])
+const EDITABLE_ROLES = new Set([
+  'admin',
+  'assistant_super_admin',
+  'operations_lead',
+  'team_lead',
+  'staff',
+  'marketing',
+  'sales',
+  'detailer',
+  'video_editor',
+  'investor',
+])
+const BRANCH_REQUIRED_ROLES = new Set([
+  'admin',
+  'team_lead',
+  'staff',
+  'marketing',
+  'sales',
+  'detailer',
+  'video_editor',
+])
 
 export function validateBranchInput(
   { name, slug, code, address, latitude, longitude, coming_soon, is_active, status },
@@ -16,7 +35,7 @@ export function validateBranchInput(
   const normalizedSlug = String(slug || '').trim().toLowerCase()
   if (requireSlug) {
     if (!normalizedSlug) errors.push('Branch slug is required.')
-    else if (!SLUG_RE.test(normalizedSlug)) errors.push('Slug must be lowercase and URL-safe (e.g. imus).')
+    else if (!SLUG_RE.test(normalizedSlug)) errors.push('Slug must be lowercase and URL-safe (e.g. dasmarinas).')
   }
   const normalizedCode = String(code || '').trim().toUpperCase()
   if (!BRANCH_CODE_RE.test(normalizedCode)) errors.push('Code must be 2–5 uppercase letters.')

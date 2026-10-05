@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { filterDirectoryPeople, personDirectoryTab, supervisorCandidates } from '../src/lib/peopleDirectory.js'
+import {
+  filterDirectoryPeople,
+  personDirectoryTab,
+  showBranchPicker,
+  supervisorCandidates,
+  usesMultiBranch,
+} from '../src/lib/peopleDirectory.js'
 
 describe('people directory tabs', () => {
   it('splits crew, TL, admins, and office, and filters search', () => {
@@ -21,5 +27,11 @@ describe('people directory tabs', () => {
       supervisorCandidates([{ id: 'x', is_active: true, is_supervisor: true, role: 'team_lead' }]).map((r) => r.id),
       ['x'],
     )
+  })
+
+  it('shows a branch picker for detailer and video editor hires', () => {
+    assert.equal(showBranchPicker('detailer'), true)
+    assert.equal(showBranchPicker('video_editor'), true)
+    assert.equal(usesMultiBranch('detailer'), false)
   })
 })

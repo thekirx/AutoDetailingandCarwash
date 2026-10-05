@@ -4,6 +4,7 @@
  * team_lead may create staff for their own branch.
  */
 import { createClient } from '@supabase/supabase-js'
+import { isStaffAssignableBranch } from '../src/lib/branchAssignable.js'
 
 const SUPER = 'BossMich'
 const ASSISTANT = 'assistant_super_admin'
@@ -125,7 +126,7 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
     branchSlugs.push(caller.branch_slug)
   }
 
-  if (['admin', 'team_lead', 'staff', 'marketing', 'sales', 'detailer', 'video_editor', 'investor'].includes(role) && !branchSlug && !branchSlugs.length) {
+  if (['admin', 'team_lead', 'staff', 'marketing', 'sales', 'detailer', 'video_editor'].includes(role) && !branchSlug && !branchSlugs.length) {
     throw Object.assign(new Error('Branch is required for this role.'), { status: 400 })
   }
   if (!branchSlug && branchSlugs.length) branchSlug = branchSlugs[0]
@@ -138,12 +139,13 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
   if (branchSlug) {
     const { data: branch } = await admin
       .from('branches')
-      .select('slug')
+      .select('slug, is_active, coming_soon, is_archived')
       .eq('slug', branchSlug)
-      .eq('is_active', true)
       .eq('is_archived', false)
       .maybeSingle()
-    if (!branch) throw Object.assign(new Error('Branch not found or inactive.'), { status: 400 })
+    if (!isStaffAssignableBranch(branch)) {
+      throw Object.assign(new Error('Branch not found or not assignable (archived / inactive).'), { status: 400 })
+    }
   }
 
   const redirectTo = `${String(siteOrigin || '').replace(/\/$/, '')}/operations/login`
@@ -327,12 +329,13 @@ export async function updateStaffAccount({ accessToken, body }) {
     if (branchSlug) {
       const { data: branch } = await admin
         .from('branches')
-        .select('slug')
+        .select('slug, is_active, coming_soon, is_archived')
         .eq('slug', branchSlug)
-        .eq('is_active', true)
         .eq('is_archived', false)
         .maybeSingle()
-      if (!branch) throw Object.assign(new Error('Branch not found or inactive.'), { status: 400 })
+      if (!isStaffAssignableBranch(branch)) {
+        throw Object.assign(new Error('Branch not found or not assignable (archived / inactive).'), { status: 400 })
+      }
     }
     patch.branch_slug = branchSlug
   }

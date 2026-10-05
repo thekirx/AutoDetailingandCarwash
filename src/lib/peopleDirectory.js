@@ -7,6 +7,21 @@ export const PEOPLE_DIRECTORY_TABS = Object.freeze([
   { id: 'office', label: 'Office', roles: ['operations_lead', 'assistant_super_admin', 'marketing', 'sales', 'video_editor', 'investor', 'BossMich'] },
 ])
 
+/** Roles that pick one or more shop branches when hiring / editing. */
+const BRANCH_PICKER_ROLES = new Set(['admin', 'team_lead', 'staff', 'marketing', 'sales', 'detailer', 'video_editor'])
+
+export function usesMultiBranch(role, grants) {
+  if (role === 'admin' || role === 'marketing') return true
+  if (role === 'assistant_super_admin' && grants && grants.branches_all === false) return true
+  return false
+}
+
+export function showBranchPicker(role, grants) {
+  if (BRANCH_PICKER_ROLES.has(role)) return true
+  if (role === 'assistant_super_admin' && grants && grants.branches_all === false) return true
+  return false
+}
+
 export function personDirectoryTab(role) {
   const key = String(role || '')
   for (const tab of PEOPLE_DIRECTORY_TABS) {

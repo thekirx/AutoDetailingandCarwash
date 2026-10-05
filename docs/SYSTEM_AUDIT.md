@@ -4,8 +4,9 @@
 
 | Field | Value |
 |-------|-------|
-| Audit date | **2026-10-04** (Asia/Manila) — re-verification after the Daily Sheet replaced End of shift, Payroll and My pay (2026-10-01) |
-| Nav walk (every role × every sidebar link) | **PASS** — `e2e:nav-walk` **84/84**; backend 4xx **1**: SA Data Center `/api/data-center` 404 on production (BUG-048, fixed in repo, live after deploy) · `e2e-evidence/nav-walk/` |
+| Audit date | **2026-10-05** (Asia/Manila) — principal remaining-work / doc-debt audit; shop-day evidence from 2026-10-04 |
+| Remaining work (PM) | [`qa/REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) — continue: doc cutover, ops SMS/SMTP/push, FLOPS rewrite |
+| Nav walk (every role × every sidebar link) | **PASS** — `e2e:nav-walk` **84/84** (2026-10-04). BUG-048 **closed live** 2026-10-05 (`/api/public-inquiry` 405, `/api/data-center` 401) · `e2e-evidence/nav-walk/` |
 | September 2026 test month (production, tagged, wipeable) | **PASS** — `scripts/verify-september-2026.mjs` **23/23** (queue ↔ POS ↔ daily sheets ↔ P&L ↔ Floor Board), `_september-shots.mjs` **22/22** at 375 / 1440 (SA, ASA, both BAs, TL) · [`qa/SEPTEMBER-2026-SEED.md`](./qa/SEPTEMBER-2026-SEED.md) |
 | Statuses / overrides / approvals by role | **PASS** — `supabase/tests/daily_flow_role_probe.sql` **20/20** (rolled back): TL lifecycle incl. failed QA + send to payment, cross-branch + crew denials, BA / ASA / SA overrides, BA cannot approve own sheet, ASA can |
 | Role matrix | **PASS** — `e2e:role-qa` **52/52**. Branch Admin is now denied the Queue (only SA, ASA, TL, Ops Lead); the stale "BA may open Queue" expectation was fixed |
@@ -18,9 +19,10 @@
 | Web push wiring | Unit-proven for `sheet_submitted` / `sheet_reviewed`; real-device audit **NOT RE-RUN** since the Daily Sheet |
 | Supabase advisors | **Hardened** — migration `20260927120000_advisor_hardening_split_write_policies.sql` applied |
 | Framework | Vite + React · Supabase Auth/RLS · PostgREST + `/api/*` |
-| Build | **PASS** — `npm run build` exit 0 |
-| Unit suite | **PASS** — **1465/1465** (`npm test`) |
-| Lint | **PASS** — `npx eslint .` exit 0 |
+| Build | **PASS** — `npm run build` exit 0 (fresh 2026-10-05) |
+| Unit suite | **PASS** — **1473/1473** (`npm test`, fresh 2026-10-05; includes future-branch / People hire seams) |
+| Future branch / People hire | **PASS** — Dasma slug `dasmarinas` in prod; coming-soon hire; Detailer/Video branch picker; junk branches archived |
+| Lint | **PASS** — `npx eslint .` exit 0 (fresh 2026-10-05) |
 | FLOPS shop-day | **NOT RE-RUN** since 2026-09-26 (25/25 then). It completes a real paid sale on production that would land on the live Daily Sheet; the money path is covered by `e2e:daily-sheet-money` on a wiped sandbox day |
 | Data integrity | **PASS** — `e2e:integrity` (2026-10-04) |
 | POS handoff smoke | **NOT RE-RUN** since 2026-09-26 (exit 0 then) |
@@ -104,7 +106,7 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 | Auth leaked-password protection | Disabled | Dashboard toggle (ops) | Open P2 |
 | `bookings.final_checked_by` / `sent_to_payment_by` | FK to `customers`: TL / SA / ASA without a customer row could not reach Final check (BUG-046) | FK → `staff_profiles`; RPC stamps caller | Applied to prod 2026-10-04; role probe 20/20 |
 | `sales` / `bookings` / `queue_events` read RLS | Helpers evaluated per row → ASA Floor Board 500, month of sales 1.3–3 s (BUG-047) | `(select …)` initPlans + `accessible_branch_slugs()` / `manageable_branch_slugs()` | Applied to prod 2026-10-04; read fingerprint identical (25 users); 140–640 ms |
-| `/api/data-center`, `/api/public-inquiry` | Gateway file shadows its vercel.json rewrite → 404 without `?operation` (BUG-048) | `createGateway(…, { defaultOperation })` | Unit red → green; **live after deploy** |
+| `/api/data-center`, `/api/public-inquiry` | Gateway file shadows its vercel.json rewrite → 404 without `?operation` (BUG-048) | `createGateway(…, { defaultOperation })` | **Closed live** 2026-10-05 (405 / 401) |
 
 ## Missing Features / Incomplete Implementations
 
@@ -130,39 +132,45 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 | Customer reminder SMS live | Done | Done | Ops IP | sms:egress | **BLOCKED** ops |
 | Archify lifecycle diagram | Done | n/a | Artifact | prior deliver | **Complete** (claim unchanged) |
 
-## Product / PM doc cross-check (2026-09-26)
+## Product / PM doc cross-check (2026-10-05 — strict)
 
-| Artifact | Aligns with money triangle? |
-|----------|----------------------------|
-| [`SHOP-DAY-RUNBOOK.md`](./qa/SHOP-DAY-RUNBOOK.md) | Yes — BA POS → EoS → Finance → Payroll |
-| [`shop-day-flow.md`](./user-stories/shop-day-flow.md) | Yes — paid POS ≠ close fiction |
-| [`MONEY-CONTRACT.md`](./OPS/MONEY-CONTRACT.md) | Yes — payroll from paid POS + attendance |
-| [`POS/09-FLOWCHARTS`](./POS/09-FLOWCHARTS.md) / [`PAYROLL/10-FLOWCHARTS`](./PAYROLL/10-FLOWCHARTS.md) | Present |
-| [`shop-day-flops.workflow.html`](./architecture/shop-day-flops.workflow.html) | Present; claim unchanged (no Archify re-deliver) |
-| [`epic-daily-operations.md`](./user-stories/epic-daily-operations.md) | Acceptance checked; seams pass |
+| Artifact | Aligns with Daily Sheet money path? |
+|----------|-------------------------------------|
+| [`daily-sheet/README.md`](./daily-sheet/README.md) | **Yes** — canonical |
+| [`architecture/daily-sheet.*.html`](./architecture/) | **Yes** |
+| [`MONEY-CONTRACT.md`](./OPS/MONEY-CONTRACT.md) | **Partial** — supersession banner; body still EoS/Payroll triangle |
+| [`SHOP-DAY-RUNBOOK.md`](./qa/SHOP-DAY-RUNBOOK.md) | **No** — out-of-date banner; steps still E1/F1/P1 |
+| [`shop-day-flow.md`](./user-stories/shop-day-flow.md) + [`user-stories/README.md`](./user-stories/README.md) | **No** — still night = EoS → Payroll |
+| [`epic-shift-close.md`](./user-stories/epic-shift-close.md) / [`epic-payroll.md`](./user-stories/epic-payroll.md) | **Stale** — need superseded → Daily Sheet |
+| Owner PDFs `user-stories/pdf/process-*` | **Stale** |
+| [`POS/09-FLOWCHARTS`](./POS/09-FLOWCHARTS.md) / [`PAYROLL/10-FLOWCHARTS`](./PAYROLL/10-FLOWCHARTS.md) | Historical; archive risk |
+| [`shop-day-flops.workflow.html`](./architecture/shop-day-flops.workflow.html) | Historical FLOPS claim |
+| Full gap list | [`qa/REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) |
 
 ## Final Verification
 
 - [x] Production build passes
 - [ ] Type check — N/A (JS; no `tsc` script)
 - [x] Lint passes
-- [x] Automated tests pass (**1465/1465**, 2026-10-04)
+- [x] Automated tests pass (**1465/1465**, fresh 2026-10-05)
 - [x] Critical user flows tested (Daily Sheet money path **38/38**; nav walk **84/84**; FLOPS not re-run — see Summary)
 - [x] Permissions verified (role matrix **52/52**)
-- [x] Known blockers documented (SMS/SMTP/Static IPs)
-- [x] `PROJECT_STATUS.md` updated
+- [x] Known blockers documented (SMS/SMTP/Static IPs + **P1 doc debt**)
+- [x] `PROJECT_STATUS.md` + [`qa/REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) updated
 
 ## Verdict
 
-**Soft-launch shop-day code gate: MET** on the Daily Sheet money path (2026-10-04 re-verification above).  
-**Every role × every sidebar page: PASS** (nav-walk 84/84 on 2026-10-04).  
-**100% production ops gate: NOT MET** (BrandTxt IP + Auth SMTP + Vercel Static IPs).  
-**Overall: READY_WITH_OPS_BLOCKERS.**
+**Soft-launch shop-day code gate: MET** on the Daily Sheet money path.  
+**Every role × every sidebar page: PASS** (nav load / allow-deny — not full story acceptance).  
+**Documentation cutover: NOT MET** — staff/owner stories still teach End of shift / Payroll.  
+**100% production ops gate: NOT MET** (BrandTxt IP + Auth SMTP + Vercel Static IPs + 0 staff push devices).  
+**Overall: READY_WITH_OPS_BLOCKERS — continue.**
 
 ## Recommended Next Action
 
-1. Malcolm: send [`brandtxt-dexter-followup.txt`](./OPS/brandtxt-dexter-followup.txt) → Dexter; then prove `sms:egress` DELIVRD.  
-2. Enable Hakum Vercel Static IPs (or deploy relay) and whitelist those IPs.  
-3. Close Auth SMTP Gate 10.1 with real-inbox proof.
-4. BossMich (and any approving ASA) enable push on their phones so Daily Sheet submit / approve pushes land; then re-run `PUSH_AUDIT=1 node scripts/push-audit-events.mjs`.
-5. Optional: enable Auth leaked-password protection in the Supabase dashboard.
+1. **Doc cutover (P1):** rewrite shop-day user stories, runbook, MONEY-CONTRACT body, owner PDFs → Daily Sheet ([`REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) track A).  
+2. Malcolm: BrandTxt IP / Static IPs → prove `sms:egress` DELIVRD.  
+3. Close Auth SMTP Gate 10.1 with real-inbox proof.  
+4. BossMich / approving ASA enable push → `PUSH_AUDIT=1 node scripts/push-audit-events.mjs`.  
+5. Rewrite or retire `e2e:lifecycle-flops` for Daily Sheet.  
+6. Owner: wipe or keep September seed; set branch Google review URLs.

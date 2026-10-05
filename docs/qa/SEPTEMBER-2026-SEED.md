@@ -19,6 +19,10 @@ Everything is tagged and removable in one transaction.
 The plan is deterministic (`scripts/seed/september2026Plan.mjs`, seed `20260901`): the same input gives the same rows.
 Preflight refuses to run twice (existing tag, `ZZ` plates, `0955500` phones or September sheets).
 
+## Customer portal note
+
+Seed creates **CRM customer rows** (893) + vehicles + bookings for staff screens. It does **not** create `auth.users` for `*@sep2026.hakum.test`, so those people **cannot** sign into `/account`. Portal smoke uses the existing demo: `demo.customer@hakumautocare.com` / `HakumCustomer2026!`.
+
 ## What is seeded
 
 | Area | Result in production |

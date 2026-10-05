@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-05 — Future-branch + People RBAC readiness
+
+- Dasmariñas production slug is now `dasmarinas` (coming soon); remapped orphan rows off `aud-xmyz95` and archived CRUD-test / probe branches.
+- Staff can be hired onto coming-soon branches; Detailer / Video Editor get a branch picker; validation allows every role `provisionStaff` can create.
+- Seam: `tests/futureBranchReady.test.js` + `isStaffAssignableBranch`.
+
+## 2026-10-05 — Principal remaining-work audit (docs)
+
+- Added [`docs/qa/REMAINING-WORK-2026-10.md`](docs/qa/REMAINING-WORK-2026-10.md): honest checked vs unchecked matrix (roles, stories, ops blockers, doc debt).
+- BUG-048 marked **closed live** (public inquiry 405, Data Center 401). Fresh `npm test` 1465/1465, lint 0, build 0.
+- Clarified September seed: CRM customers yes, customer portal auth no. Updated `PROJECT_STATUS.md` / `SYSTEM_AUDIT.md` — continue on doc cutover + ops proofs; soft-launch code still READY_WITH_OPS_BLOCKERS.
+
 ## 2026-10-04 — September 2026 test month, Team Lead final check fix, faster dashboards
 
 - September 2026 test data for Bacoor + Batangas in production: 1,221 bookings (1,141 completed cars), 1,288 sales, maintenance schedules, crew attendance and 60 Daily Sheets reviewed by SA / ASA (approved, returned, reopened). Tagged and removable — see `docs/qa/SEPTEMBER-2026-SEED.md`. `scripts/verify-september-2026.mjs` checks queue, POS, sheets, P&L and Floor Board agree (23/23).
