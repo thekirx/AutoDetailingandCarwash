@@ -30,7 +30,7 @@ export default function OpsPageShell({
                 <span key={`${crumb.label}-${i}`} className="inline-flex items-center gap-1.5">
                   {i > 0 ? <span aria-hidden>/</span> : null}
                   {crumb.to ? (
-                    <Link to={crumb.to} className="hover:text-foreground">
+                    <Link to={crumb.to} className="-my-3 inline-flex min-h-11 min-w-11 items-center justify-center hover:text-foreground">
                       {crumb.label}
                     </Link>
                   ) : (

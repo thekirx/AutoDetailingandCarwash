@@ -5,10 +5,13 @@
 import { createClient } from '@supabase/supabase-js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { sendPaintMaintenanceReminder } from './paintMaintenanceNotify.mjs'
+import { notifyBookingStatus } from './notifyBooking.mjs'
 import {
   DETAILING_SCHEDULE_TYPES,
   PAINT_MAINTENANCE_PROGRAM,
+  PAINT_MAINTENANCE_SLUG,
   addMonthsDateOnly,
+  buildMaintenanceArrivalBooking,
   coatedAtDateOnly,
   normalizeMaintPlate,
   sortMaintenanceSchedules,
@@ -30,8 +33,10 @@ const READ_ROLES = new Set([
   'marketing',
   'operations_lead',
 ])
-const WRITE_ROLES = new Set(['BossMich', 'assistant_super_admin', 'sales', 'operations_lead', 'team_lead'])
+const WRITE_ROLES = new Set(['BossMich', 'assistant_super_admin', 'sales', 'operations_lead', 'team_lead', 'admin'])
 const TYPE_ROLES = new Set(['BossMich', 'assistant_super_admin'])
+/** Floor roles that check a due car in at the shop (Sales books remotely via New booking). */
+const ARRIVE_ROLES = new Set(['BossMich', 'assistant_super_admin', 'operations_lead', 'team_lead', 'admin'])
 
 const SELECT_COLS =
   'id, vehicle_id, customer_id, booking_id, service_slug, plate_number, plate_normalized, program_key, customer_phone, customer_name, coated_at, last_maintenance_at, next_due_at, branch_slug, status, last_notified_at, notes, created_at, updated_at'
@@ -62,10 +67,86 @@ function canSeeAllBranches(role) {
   return role === 'BossMich' || role === 'assistant_super_admin' || role === 'sales' || role === 'marketing' || role === 'operations_lead'
 }
 
+/** TL / Branch Admin check in only at their own branch; SA / ASA / OL at any branch. */
+export function canProcessMaintenanceArrival(staff, branch) {
+  if (!staff?.role || !ARRIVE_ROLES.has(staff.role) || !branch) return false
+  if (canSeeAllBranches(staff.role)) return true
+  return (staff.branch_slugs || []).includes(branch)
+}
+
+async function processArrival(db, staff, row, body) {
+  const branch = row.branch_slug || String(body.branch || '').trim() || (staff.branch_slugs?.length === 1 ? staff.branch_slugs[0] : '')
+  if (!canProcessMaintenanceArrival(staff, branch)) {
+    return { status: 403, body: { error: branch ? 'Outside your branch scope' : 'Pick a branch for this arrival.' } }
+  }
+
+  const plates = [...new Set([String(row.plate_number || '').trim().toUpperCase(), row.plate_normalized].filter(Boolean))]
+  const { data: service } = await db
+    .from('services')
+    .select('id, slug, price_minor, service_size_prices(size_slug, price_minor)')
+    .eq('slug', PAINT_MAINTENANCE_SLUG)
+    .maybeSingle()
+
+  // ponytail: plate match is exact on stored vs normalized spelling; a third spelling ("NKA 9234") slips through.
+  if (service?.id && plates.length) {
+    const { data: open } = await db
+      .from('bookings')
+      .select('id, status, branch')
+      .eq('is_archived', false)
+      .eq('service_id', service.id)
+      .in('vehicle_plate', plates)
+      .not('status', 'in', '(completed,cancelled)')
+      .limit(1)
+    if (open?.[0]) return { status: 409, body: { error: 'This car is already on the Bookings board.', booking: open[0] } }
+  }
+
+  const [{ data: vehicle }, { data: customer }, { data: lastRows }] = await Promise.all([
+    row.vehicle_id
+      ? db.from('vehicles').select('id, customer_id, plate_number, vehicle_make, vehicle_model, vehicle_type').eq('id', row.vehicle_id).maybeSingle()
+      : row.plate_normalized
+        ? db.from('vehicles').select('id, customer_id, plate_number, vehicle_make, vehicle_model, vehicle_type').eq('normalized_plate_number', row.plate_normalized).maybeSingle()
+        : Promise.resolve({ data: null }),
+    row.customer_id
+      ? db.from('customers').select('id, full_name, phone').eq('id', row.customer_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    plates.length
+      ? db
+          .from('bookings')
+          .select('customer_id, customer_name, customer_phone, vehicle_make, vehicle_model, vehicle_type')
+          .in('vehicle_plate', plates)
+          .order('created_at', { ascending: false })
+          .limit(1)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const built = buildMaintenanceArrivalBooking({
+    schedule: row,
+    vehicle,
+    customer,
+    lastBooking: lastRows?.[0] || null,
+    service,
+    branch,
+    staff,
+  })
+  if (built.error) return { status: 400, body: { error: built.error } }
+
+  const { data: booking, error } = await db.from('bookings').insert(built.row).select('*, services(name, slug, pay_category)').single()
+  if (error) return { status: 400, body: { error: error.message } }
+
+  let notify = null
+  try {
+    notify = await notifyBookingStatus(booking, 'waiting')
+  } catch (err) {
+    notify = { error: String(err?.message || err) }
+  }
+  return { status: 200, body: { ok: true, booking: { id: booking.id, status: booking.status, branch: booking.branch }, notify } }
+}
+
 /**
  * GET  /api/maintenance-schedules?branch=&status=
  * PATCH body: { id, next_due_at? } | { id, status: 'cancelled'|'scheduled' } | { id, action: 'bump', months? }
  * POST body: { id, force? } — send reminder now
+ * POST body: { id, action: 'arrive', branch? } — car is at the shop → Paint Maintenance booking at Vehicle intake
  * PUT body: { types: [{ slug, frequency_months, channel? }] } — SA/ASA type intervals
  */
 export async function handleMaintenanceSchedulesRequest(req, res) {
@@ -125,6 +206,7 @@ export async function handleMaintenanceSchedulesRequest(req, res) {
         services: services || [],
         settings: settings || [],
         canWrite: WRITE_ROLES.has(staff.role),
+        canArrive: ARRIVE_ROLES.has(staff.role),
         canEditTypes: TYPE_ROLES.has(staff.role),
       })
     }
@@ -239,8 +321,9 @@ export async function handleMaintenanceSchedulesRequest(req, res) {
     }
 
     if (req.method === 'POST') {
-      if (!WRITE_ROLES.has(staff.role)) return json(res, 403, { error: 'Forbidden' })
       const body = await readJsonBody(req)
+      const arriving = body.action === 'arrive'
+      if (!(arriving ? ARRIVE_ROLES : WRITE_ROLES).has(staff.role)) return json(res, 403, { error: 'Forbidden' })
       const id = body.id
       if (!id) return json(res, 400, { error: 'id required' })
 
@@ -251,6 +334,20 @@ export async function handleMaintenanceSchedulesRequest(req, res) {
         .maybeSingle()
       if (loadErr) return json(res, 400, { error: loadErr.message })
       if (!row) return json(res, 404, { error: 'Schedule not found' })
+
+      if (arriving) {
+        const out = await processArrival(db, staff, row, body)
+        return json(res, out.status, out.body)
+      }
+
+      if (
+        !canSeeAllBranches(staff.role) &&
+        row.branch_slug &&
+        staff.branch_slugs?.length &&
+        !staff.branch_slugs.includes(row.branch_slug)
+      ) {
+        return json(res, 403, { error: 'Outside your branch scope' })
+      }
 
       const result = await sendPaintMaintenanceReminder({
         db,

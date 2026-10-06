@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-06 — TL/BA Bookings floor board + maintenance check-in
+
+- TL and Branch Admin Bookings use a Queue-style board: stage status cards (incl. Maintenance due count) + expandable car cards; TL never advances into Payment from the board.
+- **Car arrived · Start intake** turns a maintenance schedule into a Paint Maintenance booking at Vehicle intake (`POST /api/maintenance-schedules` `action: 'arrive'`, size-priced, duplicate plate → 409). BA can now send reminders (branch-scoped).
+- TL shell touch targets ≥44px (tabs, breadcrumb, bell, filters) and 16px phone form fonts. `scripts/_tl-responsive-validation.mjs`: 54/54 page × viewport checks pass (baseline 21/54).
+- Docs: Team Lead / Branch Admin role guides, Bookings + Queue page guides, shop-day runbook (C1c), BusyBee code paths.
+- Known gap: `/api/booking-status` has no transition check (TL could move Payment → Done outside the board UI).
+
 ## 2026-10-05 — Branch Admin POS counter hardened
 
 - BA counter: merch/coffee only; queue ticket lines stay locked; pay queue + sell stay on one Checkout page.

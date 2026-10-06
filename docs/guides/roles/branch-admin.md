@@ -12,7 +12,7 @@ Dashboard · Bookings · Attendance · POS · Inventory · Reviews · Planner ·
 ## Daily flow
 
 1. POS open — ring wash / merch / packages  
-2. Bookings as needed (view / limited write per product rules)  
+2. Bookings — detailing pipeline view-only; **Maintenance** card: remind due clients (Notify client / Remind again) and check in arrivals (**Car arrived · Start intake**) for your branch  
 3. Inventory / restock  
 4. Attendance exceptions  
 5. **POS → Daily sheet** — expenses, crew pay, float, counted cash → Submit  

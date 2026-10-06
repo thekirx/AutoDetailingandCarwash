@@ -114,9 +114,11 @@ export default function NotificationBell({
 
   const btn = capp
     ? 'capp-icon-btn'
-    : light
-      ? 'relative rounded-full p-2 text-white/90 hover:bg-white/10'
-      : 'relative rounded-full p-2 text-foreground hover:bg-muted'
+    : variant === 'floor'
+      ? 'relative floor-icon-btn'
+      : light
+      ? 'relative grid size-11 place-items-center rounded-full text-white/90 hover:bg-white/10'
+      : 'relative grid size-11 place-items-center rounded-full text-foreground hover:bg-muted'
 
   return (
     <div className={`relative ${className}`} ref={root}>

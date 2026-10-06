@@ -3850,12 +3850,21 @@ html:has(.tv-board) {
 }
 .qmgr-search input {
   flex: 1;
+  align-self: stretch;
   min-width: 0;
   border: 0;
   background: transparent;
   color: var(--foreground);
   font-size: 0.9rem;
   outline: none;
+}
+/* Phones: 16px form text so iOS Safari does not zoom on focus. */
+@media (max-width: 767px) {
+  .qmgr-search input,
+  .qmgr .qmgr-filter select,
+  .floor-control {
+    font-size: 1rem;
+  }
 }
 .qmgr-filter-row {
   display: grid;
@@ -3873,7 +3882,7 @@ html:has(.tv-board) {
   color: var(--muted-foreground);
 }
 .qmgr-filter select {
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   border-radius: 0.75rem;
   border: 1px solid var(--border);
   background: var(--card);
@@ -3895,7 +3904,7 @@ html:has(.tv-board) {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   padding: 0 0.75rem;
   font-size: 0.8rem;
   font-weight: 700;
@@ -3910,7 +3919,7 @@ html:has(.tv-board) {
   padding: 0 0.65rem 0.65rem;
 }
 .qmgr-history-btn {
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   padding: 0 0.85rem;
   border: 0;
   border-radius: 0.65rem;
@@ -5755,10 +5764,10 @@ body:has(.account-app) {
   }
 
   .floor-icon-btn {
-    width: 2.5rem;
-    height: 2.5rem;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
   }
 }
 
@@ -7839,6 +7848,119 @@ button.bk-ticket-compact {
   font-size: 0.75rem;
   line-height: 1.4;
   color: var(--muted-foreground);
+}
+/* Bookings — Queue-style floor board (TL / Branch Admin): status cards + car cards. */
+.bk-floor {
+  container-type: inline-size;
+  container-name: bk-floor;
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+.bk-floor-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.bk-floor-status-card {
+  min-height: 3.25rem;
+  justify-content: space-between;
+}
+.bk-floor-status-card-label {
+  font-size: 0.66rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.bk-floor-status-card[data-urgent='true']:not(.qmgr-status-card-active) .qmgr-status-card-value {
+  color: #b91c1c;
+}
+.dark .bk-floor-status-card[data-urgent='true']:not(.qmgr-status-card-active) .qmgr-status-card-value {
+  color: #fca5a5;
+}
+.bk-floor-head {
+  display: grid;
+  gap: 0.15rem;
+}
+.bk-floor-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+.bk-floor-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+.bk-floor-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-items: start;
+  gap: 0.5rem;
+}
+.bk-floor-card {
+  border-left-width: 4px;
+  border-left-color: var(--border);
+}
+.bk-floor-card.is-placeholder,
+.bk-floor-card.is-progress,
+.bk-floor-card.is-check { border-left-color: #052699; }
+.bk-floor-card.is-assign { border-left-color: color-mix(in oklab, #052699 72%, #c4a35a); }
+.bk-floor-card.is-intake,
+.bk-floor-card.is-release,
+.bk-floor-card.is-pay { border-left-color: #c4a35a; }
+.bk-floor-card.is-done { border-left-color: color-mix(in oklab, #052699 35%, #c4a35a); }
+.bk-floor-card.is-cancelled { border-left-color: #7a2e2e; }
+.bk-floor-maint { border-left-color: color-mix(in oklab, #052699 40%, var(--border)); }
+.bk-floor-maint.is-due-soon { border-left-color: #d97706; }
+.bk-floor-maint.is-overdue { border-left-color: #dc2626; }
+.bk-floor-actions {
+  display: grid;
+  gap: 0.45rem;
+}
+.bk-floor .qmgr-open-btn {
+  min-height: 2.75rem;
+}
+.bk-floor .qmgr-open-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.bk-floor .qmgr-card-head {
+  min-height: 2.75rem;
+}
+.bk-floor-empty {
+  grid-column: 1 / -1;
+}
+@container bk-floor (min-width: 34rem) {
+  .bk-floor-status-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+@container bk-floor (min-width: 44rem) {
+  .bk-floor-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bk-floor-actions {
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  }
+}
+@container bk-floor (min-width: 62rem) {
+  .bk-floor-status-grid {
+    grid-template-columns: repeat(var(--bk-stage-count, 9), minmax(0, 1fr));
+  }
+}
+@container bk-floor (min-width: 74rem) {
+  .bk-floor-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bk-floor-status-card { transition: none; }
 }
 .bk-board > .bk-status-strip {
   position: sticky;

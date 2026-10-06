@@ -1,0 +1,388 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 9994,
+ "loaderId": "B84070818E773BC8E633008F6687C2ED",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/queue",
+ "children": [
+  {
+   "role": "banner",
+   "backendNodeId": 10101,
+   "loaderId": "B84070818E773BC8E633008F6687C2ED",
+   "name": "",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 10289,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Hakum Auto Care"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10290,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "TL Test Account"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10002,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": " · "
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10291,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "HAKUM AUTO CARE BACOOR"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10111,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10116,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Settings"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10120,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Open more menu",
+     "expanded": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10125,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Sign out"
+    }
+   ]
+  },
+  {
+   "role": "main",
+   "backendNodeId": 10130,
+   "loaderId": "B84070818E773BC8E633008F6687C2ED",
+   "name": "",
+   "children": [
+    {
+     "role": "heading",
+     "backendNodeId": 10134,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Car Wash Queue",
+     "level": 1
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10294,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Today"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10003,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": " · services & packages · detailing on Bookings"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10137,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Refresh queue"
+    },
+    {
+     "role": "link",
+     "backendNodeId": 10143,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Add",
+     "url": "http://localhost:5173/operations/queue/new",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 10295,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "Add"
+      }
+     ]
+    },
+    {
+     "role": "searchbox",
+     "backendNodeId": 10004,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": ""
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10296,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "DATE"
+    },
+    {
+     "role": "combobox",
+     "backendNodeId": 9999,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "DATE",
+     "value": "Today",
+     "expanded": false,
+     "haspopup": "menu",
+     "children": [
+      {
+       "role": "option",
+       "backendNodeId": 10165,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "Today",
+       "selected": true
+      },
+      {
+       "role": "option",
+       "backendNodeId": 10168,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "Yesterday",
+       "selected": false
+      },
+      {
+       "role": "option",
+       "backendNodeId": 10171,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "This week",
+       "selected": false
+      },
+      {
+       "role": "option",
+       "backendNodeId": 10174,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "All dates",
+       "selected": false
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10297,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "DURATION"
+    },
+    {
+     "role": "combobox",
+     "backendNodeId": 10000,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "DURATION",
+     "value": "Any duration",
+     "expanded": false,
+     "haspopup": "menu",
+     "children": [
+      {
+       "role": "option",
+       "backendNodeId": 10185,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "Any duration",
+       "selected": true
+      },
+      {
+       "role": "option",
+       "backendNodeId": 10188,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "Under 30m",
+       "selected": false
+      },
+      {
+       "role": "option",
+       "backendNodeId": 10191,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "30-60m",
+       "selected": false
+      },
+      {
+       "role": "option",
+       "backendNodeId": 10194,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "1-2h",
+       "selected": false
+      },
+      {
+       "role": "option",
+       "backendNodeId": 10197,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "Over 2h",
+       "selected": false
+      }
+     ]
+    },
+    {
+     "role": "DisclosureTriangle",
+     "backendNodeId": 10205,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Plate / phone history",
+     "expanded": false
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10299,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "Waiting"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10300,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": " avg "
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 10301,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "1408h 25m"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10222,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "WAITING 2",
+     "pressed": true
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10006,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "IN PROGRESS 0",
+     "pressed": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10225,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "FINAL CHECK 0",
+     "pressed": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10227,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "COMPLETED 0",
+     "pressed": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10229,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "CANCELLED 0",
+     "pressed": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 10231,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "ALL 2",
+     "pressed": false
+    },
+    {
+     "role": "generic",
+     "backendNodeId": 10015,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "",
+     "atomic": false,
+     "live": "polite",
+     "relevant": "additions text",
+     "children": [
+      {
+       "role": "button",
+       "backendNodeId": 10234,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "TGD2134 NEXT WAITING Toyota Fortuner(medium) Q-007 · Service",
+       "expanded": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 10247,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "DRE8762 WAITING Honda City(medium) Q-008 · Service",
+       "expanded": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "navigation",
+   "backendNodeId": 10016,
+   "loaderId": "B84070818E773BC8E633008F6687C2ED",
+   "name": "Primary navigation",
+   "children": [
+    {
+     "role": "link",
+     "backendNodeId": 10258,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "QUEUE",
+     "url": "http://localhost:5173/operations/queue",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 10331,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "QUEUE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 10267,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "NEW",
+     "url": "http://localhost:5173/operations/queue/new",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 10332,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "NEW"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 10272,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "ATTENDANCE",
+     "url": "http://localhost:5173/operations/attendance",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 10333,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "ATTENDANCE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 10277,
+     "loaderId": "B84070818E773BC8E633008F6687C2ED",
+     "name": "BOOKINGS",
+     "url": "http://localhost:5173/operations/bookings",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 10334,
+       "loaderId": "B84070818E773BC8E633008F6687C2ED",
+       "name": "BOOKINGS"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "region",
+   "backendNodeId": 10282,
+   "loaderId": "B84070818E773BC8E633008F6687C2ED",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

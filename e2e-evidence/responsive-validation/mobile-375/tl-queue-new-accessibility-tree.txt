@@ -1,0 +1,355 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 13170,
+ "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/queue/new",
+ "children": [
+  {
+   "role": "banner",
+   "backendNodeId": 13272,
+   "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+   "name": "",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 13410,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Hakum Auto Care"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 13411,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "TL Test Account"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 13176,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": " · "
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 13412,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "HAKUM AUTO CARE BACOOR"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 13282,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 13287,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Settings"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 13291,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Open more menu",
+     "expanded": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 13296,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Sign out"
+    }
+   ]
+  },
+  {
+   "role": "main",
+   "backendNodeId": 13301,
+   "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+   "name": "",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 13414,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "CREATE QUEUE TICKET"
+    },
+    {
+     "role": "heading",
+     "backendNodeId": 13306,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Add vehicle to queue",
+     "level": 1
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 13416,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Four quick steps: vehicle, customer, services, then review. Detailing jobs belong on Bookings."
+    },
+    {
+     "role": "button",
+     "backendNodeId": 13311,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Vehicle"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 13315,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Customer"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 13319,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Services"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 13323,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "Review"
+    },
+    {
+     "role": "heading",
+     "backendNodeId": 13334,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "1 · Vehicle",
+     "level": 2
+    },
+    {
+     "role": "form",
+     "backendNodeId": 13179,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 13426,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "PLATE / STICKER *"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 13178,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "PLATE / STICKER *",
+       "focused": true,
+       "multiline": false,
+       "readonly": false,
+       "required": false,
+       "autocomplete": "list"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13427,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "LTO plate (ABC 1234), conduction sticker (5–8 digits or CS), or temporary / TOP"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13428,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": ". Matches appear after 3 characters."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13429,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "VEHICLE BRAND"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 13180,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "VEHICLE BRAND",
+       "expanded": false,
+       "required": true,
+       "autocomplete": "list",
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13430,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "VEHICLE MODEL"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 13181,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "VEHICLE MODEL",
+       "disabled": true,
+       "expanded": false,
+       "required": true,
+       "autocomplete": "list",
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13431,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "YEAR"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 13182,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "YEAR",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 1886
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13432,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "COLOR"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 13183,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "COLOR",
+       "multiline": false,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13433,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "CAR SIZE (PRICING)"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 13177,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "CAR SIZE (PRICING)",
+       "value": "Medium",
+       "expanded": false,
+       "haspopup": "menu",
+       "children": [
+        {
+         "role": "option",
+         "backendNodeId": 13361,
+         "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+         "name": "Small",
+         "selected": false
+        },
+        {
+         "role": "option",
+         "backendNodeId": 13364,
+         "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+         "name": "Medium",
+         "selected": true
+        },
+        {
+         "role": "option",
+         "backendNodeId": 13367,
+         "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+         "name": "Large",
+         "selected": false
+        },
+        {
+         "role": "option",
+         "backendNodeId": 13370,
+         "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+         "name": "Extra Large",
+         "selected": false
+        }
+       ]
+      },
+      {
+       "role": "button",
+       "backendNodeId": 13375,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "Next"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "navigation",
+   "backendNodeId": 13186,
+   "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+   "name": "Primary navigation",
+   "children": [
+    {
+     "role": "link",
+     "backendNodeId": 13379,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "QUEUE",
+     "url": "http://localhost:5173/operations/queue",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 13435,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "QUEUE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 13388,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "NEW",
+     "url": "http://localhost:5173/operations/queue/new",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 13436,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "NEW"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 13393,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "ATTENDANCE",
+     "url": "http://localhost:5173/operations/attendance",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 13437,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "ATTENDANCE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 13398,
+     "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+     "name": "BOOKINGS",
+     "url": "http://localhost:5173/operations/bookings",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 13438,
+       "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+       "name": "BOOKINGS"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "region",
+   "backendNodeId": 13403,
+   "loaderId": "96CF840D44FE725DA680C35AB6D150D9",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

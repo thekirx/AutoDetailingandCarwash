@@ -1,0 +1,1600 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 4875,
+ "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/bookings?stage=maintenance",
+ "children": [
+  {
+   "role": "banner",
+   "backendNodeId": 4966,
+   "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+   "name": "",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 5457,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Hakum Auto Care"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 5458,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "TL Test Account"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 4881,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": " · "
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 5459,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "HAKUM AUTO CARE BACOOR"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 4976,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 4981,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Settings"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 4985,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Open more menu",
+     "expanded": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 4990,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Sign out"
+    }
+   ]
+  },
+  {
+   "role": "main",
+   "backendNodeId": 4995,
+   "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+   "name": "",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 5461,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "HAKUM AUTO CARE"
+    },
+    {
+     "role": "heading",
+     "backendNodeId": 5000,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Bookings",
+     "level": 1
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 5463,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "2026-10-05 → 2026-10-11 · detailing only"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 5464,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Search bookings"
+    },
+    {
+     "role": "searchbox",
+     "backendNodeId": 4882,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Search bookings"
+    },
+    {
+     "role": "combobox",
+     "backendNodeId": 5022,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Date range",
+     "value": "This week",
+     "expanded": false,
+     "required": false,
+     "haspopup": "listbox"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 5027,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "New booking"
+    },
+    {
+     "role": "tab",
+     "backendNodeId": 5030,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Board",
+     "selected": true
+    },
+    {
+     "role": "tab",
+     "backendNodeId": 5031,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Calendar",
+     "selected": false
+    },
+    {
+     "role": "tabpanel",
+     "backendNodeId": 5032,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Board",
+     "children": [
+      {
+       "role": "button",
+       "backendNodeId": 5035,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Placeholder: 1",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 4884,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Assign: 3",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 5040,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Intake: 6",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 5043,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "In progress: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 5046,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Final check: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 5049,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Releasing: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 5052,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Payment: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 5055,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Done: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 5058,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Maintenance: 22",
+       "pressed": true
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 5062,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Maintenance due",
+       "level": 2
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 5490,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "Paint-maintenance cars due back. Branch Admin reminds the client; when the car arrives, tap Car arrived to put it on Vehicle intake."
+      },
+      {
+       "role": "generic",
+       "backendNodeId": 5064,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "",
+       "atomic": false,
+       "live": "polite",
+       "relevant": "additions text",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 5491,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "CRM1101"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5492,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "OVERDUE · 64D LATE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5493,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Test Owner"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5494,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5495,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5496,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2026-08-03"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5497,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5498,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09170001101"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5499,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Reminded "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5500,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Sep 14, 10:53 PM"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5076,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "On board · Vehicle intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5503,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "PPF2202"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5504,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "OVERDUE · 59D LATE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5505,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "PPF Test Owner"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5506,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Paint Protection Film"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5507,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5508,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2026-08-08"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5509,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5510,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09170001102"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5088,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5091,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Notify client"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5513,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0005"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5514,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "OVERDUE · 25D LATE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5515,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Patricia Bautista"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5516,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5517,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5518,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2026-09-11"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5519,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5520,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000005"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5521,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Reminded "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5522,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Sep 4, 10:00 AM"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5109,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5112,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Remind again"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5525,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0006"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5526,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "OVERDUE · 23D LATE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5527,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Liza Mercado"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5528,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Paint Protection Film"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5529,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5530,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2026-09-13"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5531,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5532,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000006"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5533,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Reminded "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5534,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Sep 6, 10:00 AM"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5130,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5133,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Remind again"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5537,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0007"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5538,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "OVERDUE · 20D LATE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5539,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ramon Lim"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5540,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5541,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5542,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2026-09-16"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5543,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5544,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000007"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5545,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Reminded "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5546,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Sep 9, 10:00 AM"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5151,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5154,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Remind again"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5549,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0008"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5550,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "OVERDUE · 18D LATE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5551,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Kevin Torres"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5552,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Paint Protection Film"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5553,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5554,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2026-09-18"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5555,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5556,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000008"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5171,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5174,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Notify client"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5559,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0009"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5560,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "OVERDUE · 16D LATE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5561,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Jose Reyes"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5562,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5563,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5564,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2026-09-20"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5565,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5566,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000009"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5191,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5194,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Notify client"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5569,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0037"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5570,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 147D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5571,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Kristine Torres"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5572,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Paint Protection Film"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5573,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5574,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-02"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5575,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5576,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000047"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5211,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5578,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0093"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5579,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 150D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5580,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Gabriel Santos"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5581,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5582,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5583,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-05"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5584,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5585,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000103"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5225,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5587,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0001"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5588,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 151D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5589,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Andrea Domingo"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5590,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5591,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5592,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-06"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5593,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5594,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000001"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5239,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5596,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "NCA2943"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5597,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 152D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5598,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Malcolm Cuady"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5599,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5600,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5601,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-07"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5602,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5603,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09625294043"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5253,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5605,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0002"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5606,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 152D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5607,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Patricia Pascual"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5608,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Paint Protection Film"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5609,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5610,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-07"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5611,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5612,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000002"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5267,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5614,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0003"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5615,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 153D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5616,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Nicole Lim"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5617,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5618,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5619,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-08"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5620,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5621,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000003"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5281,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5623,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0004"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5624,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 154D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5625,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Angelica Mendoza"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5626,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Paint Protection Film"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5627,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5628,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-09"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5629,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5630,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000004"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5295,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5632,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0200"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5633,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 156D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5634,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ramon Domingo"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5635,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Paint Protection Film"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5636,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5637,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-11"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5638,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5639,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000210"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5309,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5641,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0220"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5642,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 157D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5643,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Kevin Domingo"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5644,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5645,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5646,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-12"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5647,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5648,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000230"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5323,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5650,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0242"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5651,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 158D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5652,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Carlo Cruz"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5653,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5654,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5655,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-13"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5656,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5657,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000252"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5337,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5659,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0256"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5660,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 159D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5661,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Enzo Lim"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5662,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Paint Protection Film"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5663,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5664,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-14"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5665,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5666,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000266"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5351,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5668,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0341"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5669,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 164D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5670,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Liza Pascual"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5671,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5672,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5673,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-19"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5674,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5675,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000351"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5365,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5677,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0467"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5678,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 171D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5679,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Andrea Lim"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5680,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5681,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5682,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-26"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5683,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5684,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000477"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5379,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5686,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0520"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5687,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 174D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5688,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Patricia Bautista"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5689,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Paint Protection Film"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5690,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5691,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-29"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5692,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5693,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000530"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5393,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5695,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "ZZB0535"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5696,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "UPCOMING · 175D"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5697,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Bea Pascual"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5698,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Ceramic Coating"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5699,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Due "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5700,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "2027-03-30"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5701,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · bacoor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 5702,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": " · 09555000545"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 5407,
+         "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+         "name": "Car arrived · Start intake"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 5704,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "How bookings work"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 5705,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Multi-day detailing jobs stay visible until release or cancel. Wash and packages use Queue."
+    },
+    {
+     "role": "button",
+     "backendNodeId": 5420,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "Show guide",
+     "expanded": false
+    }
+   ]
+  },
+  {
+   "role": "navigation",
+   "backendNodeId": 4886,
+   "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+   "name": "Primary navigation",
+   "children": [
+    {
+     "role": "link",
+     "backendNodeId": 5426,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "QUEUE",
+     "url": "http://localhost:5173/operations/queue",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 5707,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "QUEUE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 5435,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "NEW",
+     "url": "http://localhost:5173/operations/queue/new",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 5708,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "NEW"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 5440,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "ATTENDANCE",
+     "url": "http://localhost:5173/operations/attendance",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 5709,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "ATTENDANCE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 5445,
+     "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+     "name": "BOOKINGS",
+     "url": "http://localhost:5173/operations/bookings",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 5710,
+       "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+       "name": "BOOKINGS"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "region",
+   "backendNodeId": 5450,
+   "loaderId": "ABE1A663E52F98B6B29EF2913FE3E80B",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}
