@@ -312,6 +312,24 @@ describe('queue logic', () => {
     assert.deepEqual(multi.linked_booking_ids, ['a', 'b'])
   })
 
+  it('keeps notes attached to every service when a visit is grouped', () => {
+    const rows = [
+      { booking_id: 'a', visit_group_id: 'visit', service_name: 'Wash', notes: 'Avoid left mirror', final_price_minor: 10000 },
+      { booking_id: 'b', visit_group_id: 'visit', service_name: 'Interior', notes: 'Keep child seat\nDo not move it', final_price_minor: 20000 },
+      { booking_id: 'c', visit_group_id: null, service_name: 'Wash', notes: null, final_price_minor: 5000 },
+    ]
+    const grouped = groupVisitTickets(rows)
+    assert.deepEqual(grouped[0].service_notes, [
+      { booking_id: 'a', service_name: 'Wash', notes: 'Avoid left mirror' },
+      { booking_id: 'b', service_name: 'Interior', notes: 'Keep child seat\nDo not move it' },
+    ])
+    assert.deepEqual(grouped[1].service_notes, [
+      { booking_id: 'c', service_name: 'Wash', notes: null },
+    ])
+    assert.equal(grouped[0].final_price_minor, 30000)
+    assert.equal(rows[0].service_notes, undefined)
+  })
+
   it('flags suspicious in_progress → final_checking timing', () => {
     const start = '2026-07-26T10:00:00.000Z'
     const endFast = '2026-07-26T10:00:30.000Z'

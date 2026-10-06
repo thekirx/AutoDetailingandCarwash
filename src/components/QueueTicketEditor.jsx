@@ -661,9 +661,14 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                 key={line.booking_id}
                 className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-border bg-muted/20 px-4 py-3"
               >
-                <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                  {line.service_name || 'Service'}
-                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-sm font-medium text-foreground">
+                    {line.service_name || 'Service'}
+                  </p>
+                  <p className="qmgr-notes mt-1 text-muted-foreground">
+                    {line.notes?.trim() ? line.notes : 'No notes'}
+                  </p>
+                </div>
                 <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
                   {formatMoney(line.final_price_minor ?? line.base_price_minor ?? 0)}
                 </span>

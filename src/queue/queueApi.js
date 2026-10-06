@@ -1290,13 +1290,14 @@ export async function fetchVisitLines(ticket) {
       booking_id: ticket?.booking_id,
       service_id: ticket?.service_id,
       service_name: ticket?.service_name,
+      notes: ticket?.notes ?? null,
       final_price_minor: ticket?.final_price_minor ?? ticket?.base_price_minor ?? 0,
       status: ticket?.status,
     }]
   }
   const { data, error } = await supabase
     .from('operations_queue_board')
-    .select('booking_id, service_id, service_name, final_price_minor, base_price_minor, status, created_at')
+    .select('booking_id, service_id, service_name, notes, final_price_minor, base_price_minor, status, created_at')
     .eq('visit_group_id', ticket.visit_group_id)
     .order('created_at')
   if (error) throw formatQueueActionError(error)

@@ -506,11 +506,13 @@ export function groupVisitTickets(rows = []) {
         ...row,
         linked_booking_ids: [row.booking_id],
         service_names: [row.service_name].filter(Boolean),
+        service_notes: [{ booking_id: row.booking_id, service_name: row.service_name, notes: row.notes ?? null }],
         final_price_minor: Number(row.final_price_minor || 0),
       })
       continue
     }
     existing.linked_booking_ids.push(row.booking_id)
+    existing.service_notes.push({ booking_id: row.booking_id, service_name: row.service_name, notes: row.notes ?? null })
     if (row.service_name) existing.service_names.push(row.service_name)
     existing.final_price_minor += Number(row.final_price_minor || 0)
     existing.service_name = existing.service_names.join(' + ')
