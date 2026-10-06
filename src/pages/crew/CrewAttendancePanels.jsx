@@ -39,6 +39,7 @@ import {
   canOverrideAttendance,
   getBranchScopeList,
   isAdmin,
+  isAssistantSuperAdmin,
   isSuperAdmin,
   ROLES,
 } from '@/auth/permissions'
@@ -51,6 +52,7 @@ import {
   buildAttendanceHeatmap,
   buildAttendanceTableRows,
   combineLocalDateAndTime,
+  geoAlertReasonText,
   isoToLocalHhmm,
   shiftTimeToLabel,
 } from '@/lib/attendanceGeo'
@@ -80,6 +82,7 @@ import {
   fetchAttendanceRoleSettings,
   fetchBranchAttendanceSettings,
   fetchCrewFloorSnapshot,
+  fetchLocationAlerts,
   geoTimeIn,
   geoTimeOut,
   readBrowserPosition,
@@ -148,6 +151,9 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   const [myPayMinor, setMyPayMinor] = useState(null)
   const [crewFloor, setCrewFloor] = useState(null)
   const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
+  const [clockError, setClockError] = useState('')
+  const [locationAlerts, setLocationAlerts] = useState([])
+  const seesLocationAlerts = showRegister && (isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || profile?.role === ROLES.ADMIN)
   const canOverride = canOverrideAttendance(profile)
   const scope = getBranchScopeList(profile)
   const today = getLocalCalendarDate()
@@ -164,18 +170,20 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
     }
     setLoading(true)
     try {
-      const [matrixRes, floorRes, rulesRes] = await Promise.all([
+      const [matrixRes, floorRes, rulesRes, alertRows] = await Promise.all([
         fetchAttendanceMatrix({ branchSlug, period }),
         showRegister ? fetchCrewFloorSnapshot(branchSlug).catch(() => null) : Promise.resolve(null),
         showPayPreview
           ? supabase.from('compensation_settings').select('*').eq('id', 1).maybeSingle()
           : Promise.resolve({ data: null }),
+        seesLocationAlerts ? fetchLocationAlerts(branchSlug).catch(() => []) : Promise.resolve([]),
       ])
       const { staff: staffRows, attendance: attRows, range } = matrixRes
       setStaff(staffRows)
       setAttendance(attRows)
       setDates(range.dates)
       setCrewFloor(floorRes)
+      setLocationAlerts(alertRows)
       if (rulesRes?.data) setCompRules(normalizeCompensationSettings(rulesRes.data))
 
       if (seesOwnPayEstimate(profile) && profile?.id) {
@@ -220,7 +228,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
     } finally {
       setLoading(false)
     }
-  }, [branchSlug, period, profile, showRegister, showPayPreview, today])
+  }, [branchSlug, period, profile, showRegister, showPayPreview, seesLocationAlerts, today])
 
   useEffect(() => {
     fetchBranches()
@@ -304,6 +312,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
 
   const runGeo = async (kind) => {
     setBusy(kind)
+    setClockError('')
     try {
       const coords = await readBrowserPosition()
       if (kind === 'in') {
@@ -319,7 +328,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
       }
       await load()
     } catch (err) {
-      toast.error(err.message)
+      setClockError(err.message)
     } finally {
       setBusy('')
     }
@@ -403,6 +412,43 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
               </Button>
             </div>
           </CardHeader>
+          {clockError ? (
+            <CardContent className="pt-0">
+              <p role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive">
+                {clockError}
+              </p>
+            </CardContent>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {seesLocationAlerts && locationAlerts.length ? (
+        <Card className="border-destructive/30 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Location alerts</CardTitle>
+            <CardDescription>
+              Time-ins blocked because the location looked faked or tampered. Talk to the person before overriding.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2">
+              {locationAlerts.map((a) => {
+                const person = staff.find((s) => s.id === a.staff_id)
+                return (
+                  <li key={a.id} className="flex flex-col gap-1 rounded-xl border border-border/70 bg-muted/20 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                    <span className="min-w-0">
+                      <span className="font-medium">{person?.full_name || person?.username || 'Team member'}</span>
+                      {person?.role ? <span className="text-muted-foreground"> · {attendanceRoleLabel(person.role)}</span> : null}
+                      <span className="block text-muted-foreground">{geoAlertReasonText(a.reasons)}</span>
+                    </span>
+                    <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                      {new Date(a.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </CardContent>
         </Card>
       ) : null}
 

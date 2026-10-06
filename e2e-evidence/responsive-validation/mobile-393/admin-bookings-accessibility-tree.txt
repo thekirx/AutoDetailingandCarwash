@@ -1,0 +1,319 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 334,
+ "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/bookings",
+ "children": [
+  {
+   "role": "main",
+   "backendNodeId": 410,
+   "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+   "name": "",
+   "children": [
+    {
+     "role": "button",
+     "backendNodeId": 411,
+     "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+     "name": "Toggle Sidebar"
+    },
+    {
+     "role": "navigation",
+     "backendNodeId": 418,
+     "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 553,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Ops"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 555,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Bookings"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 556,
+     "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+     "name": "Branch · Hakum Auto Care Bacoor"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 345,
+     "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+     "name": "Open command menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 348,
+     "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 351,
+     "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+     "name": "Account menu",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "main",
+     "backendNodeId": 435,
+     "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 560,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "HAKUM AUTO CARE"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 440,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Bookings",
+       "level": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 562,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Detailing pipeline (view only) · check in paint-maintenance arrivals"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 563,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Search bookings"
+      },
+      {
+       "role": "searchbox",
+       "backendNodeId": 339,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Search bookings"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 462,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Date range",
+       "value": "This week",
+       "expanded": false,
+       "required": false,
+       "haspopup": "listbox"
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 467,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Board",
+       "selected": true
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 468,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "List",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 469,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Table",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 470,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Calendar",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 471,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Maintenance",
+       "selected": false
+      },
+      {
+       "role": "tabpanel",
+       "backendNodeId": 472,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Board",
+       "children": [
+        {
+         "role": "button",
+         "backendNodeId": 475,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Placeholder: 1",
+         "pressed": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 354,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Assign: 3",
+         "pressed": true
+        },
+        {
+         "role": "button",
+         "backendNodeId": 356,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Intake: 6",
+         "pressed": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 480,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "In progress: 0",
+         "pressed": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 358,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Final check: 0",
+         "pressed": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 360,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Releasing: 0",
+         "pressed": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 485,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Payment: 0",
+         "pressed": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 362,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Done: 0",
+         "pressed": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 364,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Cancelled: 0",
+         "pressed": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 490,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Maintenance: 22",
+         "pressed": false
+        },
+        {
+         "role": "heading",
+         "backendNodeId": 494,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Assign to branch",
+         "level": 2
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 593,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "Sent to the shop"
+        },
+        {
+         "role": "generic",
+         "backendNodeId": 496,
+         "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+         "name": "",
+         "atomic": false,
+         "live": "polite",
+         "relevant": "additions text",
+         "children": [
+          {
+           "role": "button",
+           "backendNodeId": 498,
+           "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+           "name": "NKA9234 Assign to branch Toyota Vios(medium) Paint Maintenance Sep 25, 12:47 AM · D-006",
+           "expanded": false
+          },
+          {
+           "role": "button",
+           "backendNodeId": 508,
+           "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+           "name": "NKA9234 Assign to branch Toyota Vios(medium) Paint Maintenance Sep 25, 12:49 AM · D-007",
+           "expanded": false
+          },
+          {
+           "role": "button",
+           "backendNodeId": 521,
+           "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+           "name": "NKA9234 Assign to branch Toyota Vios(medium) Paint Maintenance Sep 25, 12:50 AM · D-008",
+           "expanded": false
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 621,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "How bookings work"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 622,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Multi-day detailing jobs stay visible until release or cancel. Wash and packages use Queue."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 542,
+       "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+       "name": "Show guide",
+       "expanded": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "heading",
+   "backendNodeId": 547,
+   "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+   "name": "Go to",
+   "level": 2
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 625,
+   "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+   "name": "Jump to an operations page"
+  },
+  {
+   "role": "region",
+   "backendNodeId": 549,
+   "loaderId": "9BEF8F82283496F21AAB6A201E556FC3",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

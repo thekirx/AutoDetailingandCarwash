@@ -13,6 +13,9 @@ supabase/.temp
 # Local scratch copies — keep them on disk, never in the repo
 *.backup
 
+# Verifier scratch output written to the repo root by ad-hoc npm/eslint/e2e runs
+tmp-*.txt
+
 # Local-only backups, never committed
 local-backups/
 .claude/

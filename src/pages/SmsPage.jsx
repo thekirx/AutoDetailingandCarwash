@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { MessageSquareWarning } from 'lucide-react'
+import { MessageSquareWarning, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessMarketing, isAdmin } from '@/auth/permissions'
 import { getSmsNotificationsEnabled, setSmsNotificationsEnabled } from '@/lib/adminApi'
@@ -11,6 +11,14 @@ import { cn } from '@/lib/utils'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -28,6 +36,7 @@ export default function SmsPage({ embedded = false }) {
   const [toggling, setToggling] = useState(false)
   const [providerHealth, setProviderHealth] = useState(null)
   const [form, setForm] = useState({ name: '', template_type: 'promo', body: '' })
+  const [tplOpen, setTplOpen] = useState(false)
   const [send, setSend] = useState({ phone: '', body: '', template_type: 'promo', template_id: '' })
 
   const providerLabel = useMemo(() => busybeeProviderStatusLabel(providerHealth), [providerHealth])
@@ -94,6 +103,7 @@ export default function SmsPage({ embedded = false }) {
     else {
       toast.success('Template saved')
       setForm({ name: '', template_type: 'promo', body: '' })
+      setTplOpen(false)
       load()
     }
   }
@@ -196,55 +206,61 @@ export default function SmsPage({ embedded = false }) {
     <div className="flex flex-col gap-6">
       {statusPanel}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-border/80 shadow-none">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">New template</CardTitle>
-            <CardDescription>Saved copy for campaigns and queue sends.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={saveTemplate} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="sms-tpl-name">Name</Label>
-                <Input
-                  id="sms-tpl-name"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Type</Label>
-                <Select value={form.template_type} onValueChange={(v) => setForm({ ...form, template_type: v })}>
-                  <SelectTrigger className="min-h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="sms-tpl-body">Body</Label>
-                <Textarea
-                  id="sms-tpl-body"
-                  required
-                  className="min-h-28"
-                  value={form.body}
-                  onChange={(e) => setForm({ ...form, body: e.target.value })}
-                />
-              </div>
-              <Button type="submit" className="min-h-11 w-full sm:w-auto">
+      <Dialog open={tplOpen} onOpenChange={setTplOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>New template</DialogTitle>
+            <DialogDescription>Saved copy for campaigns and queue sends.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={saveTemplate} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="sms-tpl-name">Name</Label>
+              <Input
+                id="sms-tpl-name"
+                required
+                className="min-h-11"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Type</Label>
+              <Select value={form.template_type} onValueChange={(v) => setForm({ ...form, template_type: v })}>
+                <SelectTrigger className="min-h-11 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="sms-tpl-body">Body</Label>
+              <Textarea
+                id="sms-tpl-body"
+                required
+                className="min-h-28"
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setTplOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="min-h-11">
                 Save template
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
+      <div className="grid gap-6">
         <Card
           className={cn(
             'border-border/80 shadow-none',
@@ -267,6 +283,7 @@ export default function SmsPage({ embedded = false }) {
                   <Input
                     id="sms-send-phone"
                     required
+                    className="min-h-11"
                     inputMode="tel"
                     autoComplete="tel"
                     value={send.phone}
@@ -340,8 +357,12 @@ export default function SmsPage({ embedded = false }) {
       </div>
 
       <Card className="border-border/80 shadow-none">
-        <CardHeader className="pb-3">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-3">
           <CardTitle className="text-lg">Templates</CardTitle>
+          <Button type="button" className="min-h-11" onClick={() => setTplOpen(true)}>
+            <Plus size={16} className="mr-1.5" aria-hidden />
+            New template
+          </Button>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -365,7 +386,7 @@ export default function SmsPage({ embedded = false }) {
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="min-h-10"
+                        className="min-h-11"
                         disabled={sendBlocked}
                         onClick={() =>
                           setSend((s) => ({

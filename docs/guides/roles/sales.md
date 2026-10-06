@@ -6,7 +6,7 @@
 
 ## Dock
 
-Bookings · History · (More: Pay)
+Bookings · History · (More: none)
 
 ## Daily flow
 

@@ -1,0 +1,258 @@
+{
+  "base": "http://localhost:5173",
+  "dead": [
+    {
+      "persona": "tl",
+      "path": "/operations/queue/new",
+      "button": "3 Services"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/queue/new",
+      "button": "4 Review"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/queue/new",
+      "button": "Next"
+    }
+  ],
+  "errors": [],
+  "pages": [
+    {
+      "persona": "asa",
+      "path": "/operations/dashboard",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/queue",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/bookings",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/attendance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/kpi",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/pos",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/inventory",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/crm",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/reviews",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/memberships",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/finance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/planning",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/roadmap",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/my-tasks",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/history",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/notifications",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/people",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/branches",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/content",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/audit",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/inquiries",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "asa",
+      "path": "/operations/settings",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/pos",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/dashboard",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/bookings",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/attendance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/inventory",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/reviews",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/planning",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/roadmap",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/history",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "admin",
+      "path": "/operations/audit",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/queue",
+      "clicks": 12,
+      "dead": 0
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/queue/new",
+      "clicks": 4,
+      "dead": 3
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/attendance",
+      "clicks": 1,
+      "dead": 0
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "clicks": 23,
+      "dead": 0
+    },
+    {
+      "persona": "crew1",
+      "path": "/operations/attendance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "crew1",
+      "path": "/operations/my-tasks",
+      "clicks": 6,
+      "dead": 0
+    },
+    {
+      "persona": "crew1",
+      "path": "/operations/planning?tab=forms",
+      "clicks": 7,
+      "dead": 0
+    }
+  ],
+  "at": "2026-10-06T10:48:24.902Z"
+}

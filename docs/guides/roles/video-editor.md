@@ -6,13 +6,12 @@
 
 ## Dock
 
-Calendar · Tasks · Pay
+Calendar · Tasks
 
 ## Daily flow
 
 1. Calendar assignments  
-2. My Tasks proof upload  
-3. My pay
+2. My Tasks proof upload
 
 ## Must never see
 

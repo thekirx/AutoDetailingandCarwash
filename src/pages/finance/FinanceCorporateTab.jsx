@@ -2,6 +2,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -29,6 +37,7 @@ export default function FinanceCorporateTab({ profile, range }) {
   const [balances, setBalances] = useState([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ period: '', period_date: '', amount: '', note: '' })
+  const [createOpen, setCreateOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -94,6 +103,7 @@ export default function FinanceCorporateTab({ profile, range }) {
     else {
       toast.success('Corporate balance saved')
       setForm({ period: '', period_date: '', amount: '', note: '' })
+      setCreateOpen(false)
       load()
     }
   }
@@ -139,15 +149,19 @@ export default function FinanceCorporateTab({ profile, range }) {
         </p>
       </FinancePanel>
 
-      {canManage ? (
-        <FinancePanel title="Record corporate balance" description="Manual cash/bank snapshot for the business.">
-          <form onSubmit={saveBalance} className="grid gap-3 md:grid-cols-2">
-            <div className="flex flex-col gap-2">
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Record corporate balance</DialogTitle>
+            <DialogDescription>Manual cash/bank snapshot for the business.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={saveBalance} className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="corp-period">Period</Label>
               <Input
                 id="corp-period"
                 required
-                className="min-h-10"
+                className="min-h-11"
                 placeholder="e.g. 2026-08 or Aug 2026 EOM"
                 value={form.period}
                 onChange={(e) => setForm({ ...form, period: e.target.value })}
@@ -158,7 +172,7 @@ export default function FinanceCorporateTab({ profile, range }) {
               <Input
                 id="corp-date"
                 type="date"
-                className="min-h-10"
+                className="min-h-11"
                 value={form.period_date}
                 onChange={(e) => setForm({ ...form, period_date: e.target.value })}
               />
@@ -168,12 +182,13 @@ export default function FinanceCorporateTab({ profile, range }) {
               <Input
                 id="corp-amount"
                 required
-                className="min-h-10"
+                inputMode="decimal"
+                className="min-h-11"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
               />
             </div>
-            <div className="flex flex-col gap-2 md:col-span-2">
+            <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="corp-note">Note</Label>
               <Textarea
                 id="corp-note"
@@ -181,21 +196,32 @@ export default function FinanceCorporateTab({ profile, range }) {
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
               />
             </div>
-            <div className="md:col-span-2">
-              <Button type="submit" className="min-h-10 cursor-pointer">
-                <Plus data-icon="inline-start" />
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="min-h-11 cursor-pointer">
                 Save balance
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-        </FinancePanel>
-      ) : null}
+        </DialogContent>
+      </Dialog>
 
-      <FinancePanel title="Corporate balances" description="Owner-entered money left for the business.">
+      <FinancePanel
+        title="Corporate balances"
+        description="Owner-entered money left for the business."
+        actions={canManage ? (
+          <Button type="button" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(true)}>
+            <Plus data-icon="inline-start" />
+            Record balance
+          </Button>
+        ) : null}
+      >
         {!balances.length ? (
           <FinanceEmpty
             title="No corporate balances yet"
-            body={canManage ? 'Record an EOM cash/bank snapshot above.' : 'Only Super Admin / ASA can enter balances.'}
+            body={canManage ? 'Use Record balance to enter an EOM cash/bank snapshot.' : 'Only Super Admin / ASA can enter balances.'}
           />
         ) : (
           <div className="finance-table-wrap">

@@ -16,7 +16,8 @@ import { formatMoney } from '@/queue/queueApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -55,7 +56,7 @@ function emptyForm(catalogScope = 'all') {
 function OptionalSizePriceFields({ enabled, sizeEnabled, sizePrices, onEnabledChange, onSizeEnabledChange, onPricesChange }) {
   return (
     <div className="md:col-span-2 space-y-3 rounded-xl border border-border p-3">
-      <label className="flex items-center gap-2 text-sm font-medium">
+      <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
         <input
           type="checkbox"
           checked={enabled}
@@ -70,7 +71,7 @@ function OptionalSizePriceFields({ enabled, sizeEnabled, sizePrices, onEnabledCh
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {PRICING_SIZES.map((size) => (
             <div key={size.slug} className="flex flex-col gap-1 rounded-lg border border-border p-2">
-              <label className="flex items-center gap-2 text-xs font-medium">
+              <label className="flex min-h-11 items-center gap-2 text-xs font-medium">
                 <input
                   type="checkbox"
                   checked={Boolean(sizeEnabled[size.slug])}
@@ -84,6 +85,7 @@ function OptionalSizePriceFields({ enabled, sizeEnabled, sizePrices, onEnabledCh
                 type="number"
                 min="0"
                 step="0.01"
+                className="min-h-11"
                 disabled={!sizeEnabled[size.slug]}
                 value={sizePrices[size.slug] ?? ''}
                 onChange={(e) => {
@@ -120,7 +122,7 @@ function PackageIncludesField({ services, value, onChange, selfId }) {
       </p>
       <div className="grid max-h-48 gap-2 overflow-y-auto rounded-xl border border-border p-3 sm:grid-cols-2">
         {options.map((svc) => (
-          <label key={svc.id} className="flex items-center gap-2 text-sm">
+          <label key={svc.id} className="flex min-h-11 items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={selected.has(svc.id)}
@@ -180,6 +182,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
   const [services, setServices] = useState([])
   const [form, setForm] = useState(() => emptyForm(catalogScope))
   const [editing, setEditing] = useState(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const categoryOptions = useMemo(
@@ -231,6 +234,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
       })
       toast.success('Catalog item created')
       setForm(emptyForm(catalogScope))
+      setCreateOpen(false)
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -339,29 +343,29 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
             : 'Same-day bay work. Packages can bundle services or use a custom price. Flat price by default; size pricing optional.'}
         </p>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>{createLabel}</CardTitle>
-          <CardDescription>
-            {catalogScope === 'detailing'
-              ? 'Creates rows on the POS Detailing tab and Bookings board.'
-              : 'Creates rows on the POS Services & packages tab. Packages = mixed services or custom price.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{createLabel}</DialogTitle>
+            <DialogDescription>
+              {catalogScope === 'detailing'
+                ? 'Creates rows on the POS Detailing tab and Bookings board.'
+                : 'Creates rows on the POS Services & packages tab. Packages = mixed services or custom price.'}
+            </DialogDescription>
+          </DialogHeader>
           <form onSubmit={onCreate} className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label>Name</Label>
-              <Input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Input required minLength={2} className="min-h-11" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="flex flex-col gap-2">
               <Label>Slug</Label>
-              <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} placeholder="auto-from-name" />
+              <Input className="min-h-11" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} placeholder="auto-from-name" />
             </div>
             <div className="flex flex-col gap-2">
               <Label>Category</Label>
               <Select value={form.pay_category} onValueChange={(pay_category) => setForm({ ...form, pay_category })}>
-                <SelectTrigger className="min-h-11">
+                <SelectTrigger className="min-h-11 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -453,7 +457,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                   })
                 }
               >
-                <SelectTrigger className="min-h-11"><SelectValue placeholder="Not a package" /></SelectTrigger>
+                <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Not a package" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not a package</SelectItem>
                   {services
@@ -467,6 +471,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
             <div className="md:col-span-2 flex flex-col gap-2">
               <Label>Description</Label>
               <Input
+                className="min-h-11"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder="Shown on packages / custom notes"
@@ -499,18 +504,29 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
               onSizeEnabledChange={(size_enabled) => setForm({ ...form, size_enabled })}
               onPricesChange={(size_prices) => setForm({ ...form, size_prices, price: size_prices.medium || form.price })}
             />
-            <Button type="submit" className="min-h-11 md:col-span-2" disabled={saving}>
-              {saving ? 'Saving…' : 'Create'}
-            </Button>
+            <DialogFooter className="md:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="min-h-11" disabled={saving}>
+                {saving ? 'Saving…' : 'Create'}
+              </Button>
+            </DialogFooter>
           </form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
       <Card>
-        <CardHeader>
-          <CardTitle>{scopeTitle}</CardTitle>
-          <CardDescription>
-            {scopedRows.length} active item{scopedRows.length === 1 ? '' : 's'} in this tab
-          </CardDescription>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <CardTitle>{scopeTitle}</CardTitle>
+            <CardDescription>
+              {scopedRows.length} active item{scopedRows.length === 1 ? '' : 's'} in this tab
+            </CardDescription>
+          </div>
+          <Button type="button" className="min-h-11" onClick={() => setCreateOpen(true)}>
+            <Plus size={16} className="mr-1.5" aria-hidden />
+            {createLabel}
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>
@@ -528,7 +544,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
               {!scopedRows.length ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-sm text-muted-foreground">
-                    Nothing here yet — use the form above to create the first item.
+                    Nothing here yet — use {createLabel} to create the first item.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -619,7 +635,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                   value={editing.pay_category || defaultPayCategoryForCatalogScope(catalogScope)}
                   onValueChange={(pay_category) => setEditing({ ...editing, pay_category })}
                 >
-                  <SelectTrigger className="min-h-11">
+                  <SelectTrigger className="min-h-11 w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -709,7 +725,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                       })
                     }
                   >
-                    <SelectTrigger className="min-h-11"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="min-h-11 w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Not a package</SelectItem>
                       {services

@@ -28,6 +28,28 @@ export function shouldEnforceGeofence(profile) {
   return profile?.geofence_enabled !== false
 }
 
+/** Tamper signs only the browser can see; geo_clock_in adds the rest (typed coords, pin paste, replay, no accuracy). */
+export function geoClientFlags({ timestamp } = {}, { webdriver = false, now = Date.now() } = {}) {
+  const flags = []
+  if (webdriver) flags.push('automation')
+  const ageMs = now - Number(timestamp)
+  if (timestamp != null && Number.isFinite(ageMs) && (ageMs > 5 * 60_000 || ageMs < -60_000)) flags.push('stale_fix')
+  return flags
+}
+
+export const GEO_ALERT_REASONS = {
+  automation: 'automated browser',
+  stale_fix: 'old or future-dated position',
+  no_accuracy: 'no GPS accuracy',
+  low_precision: 'typed-in coordinates',
+  pin_match: 'exact copy of the branch pin',
+  replayed_fix: 'reused a past location',
+}
+
+export function geoAlertReasonText(reasons = []) {
+  return (reasons || []).map((r) => GEO_ALERT_REASONS[r] || r).join(', ')
+}
+
 /** @param {'daily'|'weekly'|'monthly'} period */
 export function attendanceDateRange(period, anchor = new Date()) {
   const day = new Date(anchor)

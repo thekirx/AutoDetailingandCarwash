@@ -1,6 +1,6 @@
 # Project Status
 
-**Last Updated:** 2026-10-05 (Asia/Manila) — owner pack + FLOPS Daily Sheet cutover  
+**Last Updated:** 2026-10-07 (Asia/Manila) — principal full-system audit; gates re-verified, doc/money-contract drift fixed  
 **Current Branch:** `main`  
 **Overall Status:** **READY_WITH_OPS_BLOCKERS** · shop-day **docs + owner pack aligned** · push **routing OK / 0 staff devices** · SMS **not tested**
 
@@ -14,7 +14,7 @@ September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month
 
 Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 (BUG-048 — **closed on production 2026-10-05**: live 405 / 401).
 
-Fresh evidence: **2026-10-05** unit **1475/1475** (includes FLOPS Daily Sheet seam + `futureBranchReady` + sheet_reviewed recipients). Prior **2026-10-04**: lint **0**, build **0**, nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
+Fresh evidence: **2026-10-07** unit **1518/1518** and lint **0** / build **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
 Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change). Shop-day **markdown** + **owner HTML/PDF pack** teach Daily Sheet; legacy `user-stories/pdf/process-*` may still be stale.
 
@@ -32,7 +32,7 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 
 | Check | Result |
 |-------|--------|
-| `npm test` | **1465/1465** |
+| `npm test` | **1518/1518** (2026-10-07) |
 | `npx eslint .` | exit **0** |
 | `npm run build` | exit **0** |
 | `e2e:nav-walk` (every role × every sidebar link) | **84/84** (2026-10-04); BUG-048 Data Center / public-inquiry **closed live** 2026-10-05 |
@@ -68,6 +68,23 @@ Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet g
 - Xero gaps by choice: aged payables, balance sheet, bank reconciliation, VAT.
 - Floor Board money pages all sales in the timeline in the browser (1000 rows per request). Fine at today's volume; move to an RPC if 6-month all-branch views get slow.
 - Ops Lead still sees the flat Financials tiles on the Floor Board (pre-existing; the new money panel is SA / ASA finance view only). Decide whether Ops Lead should see money at all.
+
+## Uncommitted work at risk (2026-10-07)
+
+`main` is level with `origin/main` at `1e0311b`, but the working tree carries a **whole uncommitted work unit**:
+
+| Area | Uncommitted |
+|------|-------------|
+| Source | 33 files, ~1,250 insertions / ~600 deletions across `src/`, `server/`, `vite.config.js` |
+| **Untracked source** | `src/lib/branchListFilter.js` — **imported by `BranchesManagePage.jsx`** |
+| **Untracked migrations** | `20261006120000_attendance_geo_spoof_alerts.sql`, `20261006130000_archive_e2e_leftovers.sql` — **already applied in production** |
+| Untracked tests | `tests/branchListFilter.test.js`, `tests/crudCreateModals.test.js`, `tests/bookingCalendarControlled.test.js` |
+| Untracked script | `scripts/_dead-button-crawl.mjs` |
+| Docs | 19 files, incl. `CHANGELOG.md`, `MONEY-CONTRACT.md`, this file |
+| Evidence | 211 modified + 389 untracked PNG/txt under `e2e-evidence/` |
+| Scratch | **220 untracked `tmp-*.txt`** at repo root, none covered by `.gitignore` |
+
+Risk: production already runs `geo_clock_in` and has `attendance_location_alerts`, but neither the migration nor the client code is in git. A clean clone cannot rebuild the database or that feature, and `git clean` would delete the migrations outright. `HEAD` itself is self-consistent and still builds — this is durability risk, not a broken `main`.
 
 ## Recommended Next Action
 

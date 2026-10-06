@@ -2,6 +2,7 @@
  * Paint maintenance program — Ceramic Coating + PPF share one 6-month reminder cycle per plate.
  * Dedup key: plate_normalized + program_key (active rows only).
  */
+import { normalizePricingSize, resolveServicePriceMinor } from './servicePricing.js'
 
 export const PAINT_MAINTENANCE_PROGRAM = 'paint_maintenance'
 export const PAINT_MAINTENANCE_SLUG = 'paint-maintenance'
@@ -148,6 +149,78 @@ export function resolveFrequencyMonthsFromSettings(settings, serviceId, branchSl
     null
   const months = Number(match?.frequency_months)
   return Number.isFinite(months) && months >= 1 ? Math.min(24, months) : fallback
+}
+
+const CLOSED_BOOKING_STATUSES = new Set(['completed', 'cancelled'])
+
+/** Open Paint Maintenance booking already on the board for this plate — blocks a second intake. */
+export function openMaintenanceBookingForPlate(bookings, plate) {
+  const want = normalizeMaintPlate(plate)
+  if (!want) return null
+  return (
+    (bookings || []).find(
+      (b) =>
+        b &&
+        !b.is_archived &&
+        !CLOSED_BOOKING_STATUSES.has(String(b.status || '')) &&
+        (b.service_id === PAINT_MAINTENANCE_SERVICE_ID || isPaintMaintenanceSlug(b.services?.slug)) &&
+        normalizeMaintPlate(b.vehicle_plate) === want,
+    ) || null
+  )
+}
+
+/**
+ * Booking row for a due car that just arrived at the shop — lands on Vehicle intake (`waiting`).
+ * Vehicle details fall back to the last booking for the plate; contact falls back schedule → customer → last booking.
+ * @returns {{ row: object } | { error: string }}
+ */
+export function buildMaintenanceArrivalBooking({
+  schedule,
+  vehicle = null,
+  customer = null,
+  lastBooking = null,
+  service,
+  branch,
+  staff,
+  now = new Date(),
+}) {
+  const plate = String(schedule?.plate_number || vehicle?.plate_number || '').trim().toUpperCase()
+  if (!plate) return { error: 'This schedule has no plate.' }
+  if (!branch) return { error: 'Pick a branch for this arrival.' }
+  if (!service?.id) return { error: 'Paint Maintenance is missing from the service catalog.' }
+  const make = String(vehicle?.vehicle_make || lastBooking?.vehicle_make || '').trim()
+  const model = String(vehicle?.vehicle_model || lastBooking?.vehicle_model || '').trim()
+  if (!make || !model) return { error: `No make/model on file for ${plate}. Use New booking instead.` }
+  const phone = String(schedule?.customer_phone || customer?.phone || lastBooking?.customer_phone || '').trim()
+  if (!phone) return { error: `No phone on file for ${plate}. Use New booking instead.` }
+  const name =
+    String(schedule?.customer_name || customer?.full_name || lastBooking?.customer_name || '').trim() || 'Walk-in'
+  const size = normalizePricingSize(vehicle?.vehicle_type || lastBooking?.vehicle_type)
+  const price = resolveServicePriceMinor(service, size)
+  const at = now.toISOString()
+  return {
+    row: {
+      customer_id: schedule?.customer_id || vehicle?.customer_id || lastBooking?.customer_id || null,
+      vehicle_id: schedule?.vehicle_id || vehicle?.id || null,
+      customer_name: name,
+      customer_phone: phone,
+      vehicle_plate: plate,
+      vehicle_make: make,
+      vehicle_model: model,
+      vehicle_type: size,
+      service_id: service.id,
+      branch,
+      scheduled_start: at,
+      status: 'waiting',
+      waiting_at: at,
+      is_archived: false,
+      price_minor: price,
+      final_price_minor: price,
+      created_by: staff?.id || null,
+      team_lead_id: staff?.role === 'team_lead' ? staff.id : null,
+      notes: 'Paint maintenance arrival',
+    },
+  }
 }
 
 /**

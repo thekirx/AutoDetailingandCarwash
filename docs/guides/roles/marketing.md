@@ -6,7 +6,7 @@
 
 ## Dock
 
-CRM · Bookings · Planner · Notifications (+ More: History, Pay)
+CRM · Bookings · Planner · Alerts (+ More: History)
 
 ## Daily flow
 

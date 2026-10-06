@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Bell, ListTree, Megaphone, Pencil, ShieldCheck, Trash2 } from 'lucide-react'
+import { Bell, ListTree, Megaphone, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import {
@@ -24,6 +24,14 @@ import { filterFloorDetailingServices } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -195,7 +203,7 @@ function MessageTokenChips({ value, onChange, inputId, className }) {
           key={row.token}
           type="button"
           title={row.hint}
-          className="min-h-9 cursor-pointer rounded-lg border border-border bg-muted/50 px-2.5 text-xs font-semibold text-foreground transition hover:border-primary/50 hover:bg-primary/10"
+          className="min-h-11 cursor-pointer rounded-lg border xl:min-h-9 border-border bg-muted/50 px-2.5 text-xs font-semibold text-foreground transition hover:border-primary/50 hover:bg-primary/10"
           onClick={() => insert(row.token)}
         >
           {row.token}
@@ -212,6 +220,7 @@ function ReminderRulesPanel() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [draft, setDraft] = useState(EMPTY_REMINDER)
+  const [ruleOpen, setRuleOpen] = useState(false)
 
   const detailingServices = useMemo(() => filterFloorDetailingServices(services), [services])
   const paintMaint = detailingServices.find((s) => s.slug === PAINT_MAINTENANCE_SLUG)
@@ -314,6 +323,7 @@ function ReminderRulesPanel() {
       }
       toast.success('Reminder saved')
       setDraft({ ...EMPTY_REMINDER, service_id: paintMaint?.id || '' })
+      setRuleOpen(false)
       load()
     } finally {
       setSaving(false)
@@ -334,22 +344,22 @@ function ReminderRulesPanel() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
-      <Card className="border-border/80 shadow-none">
-          <CardHeader className="space-y-1">
-          <CardTitle className="text-lg">Reminder rule</CardTitle>
-          <CardDescription>
-            Scope: whole network, one branch, one service, or service × branch. Tap tokens to insert into title or
-            message. Prefer <strong className="font-medium text-foreground">Paint Maintenance</strong> for Ceramic/PPF
-            cycles. SMS uses each customer&apos;s mobile on file.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={saveDraft} className="grid gap-4 sm:grid-cols-2">
+    <div className="flex flex-col gap-5">
+      <Dialog open={ruleOpen} onOpenChange={setRuleOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>New reminder rule</DialogTitle>
+            <DialogDescription>
+              Scope: whole network, one branch, one service, or service × branch. Tap tokens to insert into title or
+              message. Prefer <strong className="font-medium text-foreground">Paint Maintenance</strong> for Ceramic/PPF
+              cycles. SMS uses each customer&apos;s mobile on file.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={saveDraft} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="ns-scope">Scope</Label>
               <Select value={draft.scope} onValueChange={setScope} items={NOTIFICATION_SCOPES.map((s) => ({ value: s.id, label: `${s.label} — ${s.hint}` }))}>
-                <SelectTrigger id="ns-scope" className="min-h-11 cursor-pointer">
+                <SelectTrigger id="ns-scope" className="min-h-11 w-full cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -370,7 +380,7 @@ function ReminderRulesPanel() {
                   onValueChange={(v) => setDraft({ ...draft, service_id: v })}
                   items={detailingServices.map((s) => ({ value: s.id, label: s.name }))}
                 >
-                  <SelectTrigger id="ns-service" className="min-h-11 cursor-pointer">
+                  <SelectTrigger id="ns-service" className="min-h-11 w-full cursor-pointer">
                     <SelectValue placeholder="Pick service" />
                   </SelectTrigger>
                   <SelectContent>
@@ -393,7 +403,7 @@ function ReminderRulesPanel() {
                   onValueChange={(v) => setDraft({ ...draft, branch_slug: v })}
                   items={branches.map((b) => ({ value: b.slug, label: b.name }))}
                 >
-                  <SelectTrigger id="ns-branch" className="min-h-11 cursor-pointer">
+                  <SelectTrigger id="ns-branch" className="min-h-11 w-full cursor-pointer">
                     <SelectValue placeholder="Pick branch" />
                   </SelectTrigger>
                   <SelectContent>
@@ -418,7 +428,7 @@ function ReminderRulesPanel() {
                   { value: 'both', label: 'Push + SMS' },
                 ]}
               >
-                <SelectTrigger id="ns-channel" className="min-h-11 cursor-pointer">
+                <SelectTrigger id="ns-channel" className="min-h-11 w-full cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -496,7 +506,7 @@ function ReminderRulesPanel() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 sm:col-span-2">
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium sm:col-span-2">
               <input
                 id="ns-enabled"
                 type="checkbox"
@@ -504,24 +514,33 @@ function ReminderRulesPanel() {
                 checked={draft.enabled}
                 onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
               />
-              <Label htmlFor="ns-enabled">Enabled</Label>
-            </div>
+              Enabled
+            </label>
 
-            <div className="sm:col-span-2">
-              <Button type="submit" className="min-h-11 w-full sm:w-auto" disabled={saving}>
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setRuleOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="min-h-11" disabled={saving}>
                 {saving ? 'Saving…' : 'Save reminder'}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
       <Card className="border-border/80 shadow-none">
-        <CardHeader>
-          <CardTitle className="text-lg">Active rules</CardTitle>
-          <CardDescription>
-            {loading ? 'Loading…' : `${settings.length} rule${settings.length === 1 ? '' : 's'}`}
-          </CardDescription>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <CardTitle className="text-lg">Active rules</CardTitle>
+            <CardDescription>
+              {loading ? 'Loading…' : `${settings.length} rule${settings.length === 1 ? '' : 's'}`}
+            </CardDescription>
+          </div>
+          <Button type="button" className="min-h-11" onClick={() => setRuleOpen(true)}>
+            <Plus size={16} className="mr-1.5" aria-hidden />
+            New reminder
+          </Button>
         </CardHeader>
         <CardContent>
           {settings.length === 0 && !loading ? (
@@ -908,6 +927,7 @@ function BroadcastKindsManager({ kinds, onChanged }) {
     is_active: true,
   }
   const [draft, setDraft] = useState(empty)
+  const [kindOpen, setKindOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const editing = Boolean(draft.id)
 
@@ -955,6 +975,7 @@ function BroadcastKindsManager({ kinds, onChanged }) {
       }
       toast.success(editing ? 'Kind updated' : 'Kind created')
       setDraft(empty)
+      setKindOpen(false)
       onChanged?.()
     } finally {
       setSaving(false)
@@ -979,11 +1000,23 @@ function BroadcastKindsManager({ kinds, onChanged }) {
 
   return (
     <Card className="border-border/80 shadow-none">
-      <CardHeader>
-        <CardTitle className="text-lg">Broadcast kinds</CardTitle>
-        <CardDescription>Create, edit, or archive kinds used in the compose dropdown (SA / ASA).</CardDescription>
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <CardTitle className="text-lg">Broadcast kinds</CardTitle>
+          <CardDescription>Create, edit, or archive kinds used in the compose dropdown (SA / ASA).</CardDescription>
+        </div>
+        <Button type="button" className="min-h-11" onClick={() => { setDraft(empty); setKindOpen(true) }}>
+          <Plus size={16} className="mr-1.5" aria-hidden />
+          Add kind
+        </Button>
       </CardHeader>
-      <CardContent className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <CardContent>
+        <Dialog open={kindOpen} onOpenChange={(open) => { setKindOpen(open); if (!open) setDraft(empty) }}>
+          <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editing ? `Edit ${draft.label || 'kind'}` : 'Add broadcast kind'}</DialogTitle>
+              <DialogDescription>Shown in the compose dropdown. Defaults prefill the title and message.</DialogDescription>
+            </DialogHeader>
         <form onSubmit={save} className="grid gap-3">
           <div className="flex flex-col gap-2">
             <Label htmlFor="kind-label">Label</Label>
@@ -1043,25 +1076,25 @@ function BroadcastKindsManager({ kinds, onChanged }) {
               onChange={(default_body) => setDraft({ ...draft, default_body })}
             />
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={draft.is_active}
-                onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })}
-              />
-              Active
-            </label>
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={draft.is_active}
+              onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })}
+            />
+            Active
+          </label>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => { setKindOpen(false); setDraft(empty) }}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={saving} className="min-h-11">
               {saving ? 'Saving…' : editing ? 'Update kind' : 'Add kind'}
             </Button>
-            {editing ? (
-              <Button type="button" variant="ghost" className="min-h-11" onClick={() => setDraft(empty)}>
-                Cancel edit
-              </Button>
-            ) : null}
-          </div>
+          </DialogFooter>
         </form>
+          </DialogContent>
+        </Dialog>
 
         <ul className="divide-y divide-border rounded-xl border border-border">
           {kinds.length === 0 ? (
@@ -1086,7 +1119,7 @@ function BroadcastKindsManager({ kinds, onChanged }) {
                     variant="ghost"
                     className="size-10 cursor-pointer"
                     aria-label={`Edit ${k.label}`}
-                    onClick={() =>
+                    onClick={() => {
                       setDraft({
                         id: k.id,
                         slug: k.slug || '',
@@ -1097,7 +1130,8 @@ function BroadcastKindsManager({ kinds, onChanged }) {
                         display_order: k.display_order ?? 100,
                         is_active: k.is_active !== false,
                       })
-                    }
+                      setKindOpen(true)
+                    }}
                   >
                     <Pencil className="size-4" />
                   </Button>

@@ -1,7 +1,15 @@
 /** Finance Quotations — CRM customer picker + sendFinanceQuote API (Owner Revisions P5). */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Send } from 'lucide-react'
+import { Plus, Search, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -29,6 +37,7 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
   const [sending, setSending] = useState(false)
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
   const [form, setForm] = useState({
     title: 'Quotation',
     amount: '',
@@ -109,6 +118,7 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
       if (!res.ok) throw new Error(body.error || 'Quote send failed')
       toast.success(body.preview ? 'Quote preview saved (Resend not configured)' : `Quote sent to ${body.to}`)
       setForm({ title: 'Quotation', amount: '', notes: '', branch: form.branch })
+      setCreateOpen(false)
       load()
     } catch (err) {
       toast.error(err.message || 'Quote send failed')
@@ -131,10 +141,14 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
         />
       </FinanceMetricStrip>
 
-      {canWrite ? (
-        <FinancePanel title="Send quotation" description="Pick a CRM customer with an email. Sends via Resend when configured.">
-          <form onSubmit={sendQuote} className="grid gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-2 md:col-span-2">
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send quotation</DialogTitle>
+            <DialogDescription>Pick a CRM customer with an email. Sends via Resend when configured.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={sendQuote} className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="quote-search">Customer</Label>
               <div className="finance-toolbar-search">
                 <Search aria-hidden />
@@ -148,7 +162,7 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
                 />
               </div>
               <select
-                className="finance-toolbar-select min-h-10 w-full"
+                className="finance-toolbar-select min-h-11 w-full"
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
                 aria-label="Select customer"
@@ -169,7 +183,7 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
               <Label htmlFor="quote-title">Title</Label>
               <Input
                 id="quote-title"
-                className="min-h-10"
+                className="min-h-11"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
               />
@@ -181,7 +195,7 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
                 type="number"
                 min="0.01"
                 step="0.01"
-                className="min-h-10"
+                className="min-h-11"
                 required
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
@@ -191,7 +205,7 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
               <Label htmlFor="quote-branch">Branch (optional)</Label>
               <select
                 id="quote-branch"
-                className="finance-toolbar-select min-h-10 w-full"
+                className="finance-toolbar-select min-h-11 w-full"
                 value={form.branch}
                 onChange={(e) => setForm({ ...form, branch: e.target.value })}
               >
@@ -203,7 +217,7 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
                 ))}
               </select>
             </div>
-            <div className="flex flex-col gap-2 md:col-span-2">
+            <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="quote-notes">Notes</Label>
               <Textarea
                 id="quote-notes"
@@ -211,17 +225,29 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
               />
             </div>
-            <div className="md:col-span-2">
-              <Button type="submit" className="min-h-10 cursor-pointer" disabled={sending}>
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="min-h-11 cursor-pointer" disabled={sending}>
                 <Send data-icon="inline-start" />
                 {sending ? 'Sending…' : 'Send quotation'}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-        </FinancePanel>
-      ) : null}
+        </DialogContent>
+      </Dialog>
 
-      <FinancePanel title="Recent quotations" description="Stored after each send (or preview).">
+      <FinancePanel
+        title="Recent quotations"
+        description="Stored after each send (or preview)."
+        actions={canWrite ? (
+          <Button type="button" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(true)}>
+            <Plus data-icon="inline-start" />
+            New quotation
+          </Button>
+        ) : null}
+      >
         {!quotes.length ? (
           <FinanceEmpty title="No quotations yet" body="Send a quote to a CRM customer to build history." />
         ) : (

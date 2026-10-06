@@ -20,7 +20,7 @@
 | Supabase advisors | **Hardened** — migration `20260927120000_advisor_hardening_split_write_policies.sql` applied |
 | Framework | Vite + React · Supabase Auth/RLS · PostgREST + `/api/*` |
 | Build | **PASS** — `npm run build` exit 0 (fresh 2026-10-05) |
-| Unit suite | **PASS** — **1474/1474** (`npm test`, fresh 2026-10-05; future-branch + sheet_reviewed recipients) |
+| Unit suite | **PASS** — **1518/1518** (`npm test`, re-verified 2026-10-07 with the working tree; includes geo time-in, CRUD dialogs, branch list filter, TL bookings board) |
 | Future branch / People hire | **PASS** — Dasma slug `dasmarinas` in prod; coming-soon hire; Detailer/Video branch picker; junk branches archived |
 | Lint | **PASS** — `npx eslint .` exit 0 (fresh 2026-10-05) |
 | FLOPS shop-day | **NOT RE-RUN** since 2026-09-26 (25/25 then). It completes a real paid sale on production that would land on the live Daily Sheet; the money path is covered by `e2e:daily-sheet-money` on a wiped sandbox day |
@@ -124,9 +124,9 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 | Customer book / portal | Done | Done | FLOPS C1 | Unit + FLOPS | **Complete** |
 | Crew attendance | Done | Done | FLOPS A1 | Unit + live | **Complete** |
 | TL wash queue | Done | Done | FLOPS W* | Unit + FLOPS | **Complete** |
-| BA POS + EoS | Done | Done | FLOPS W1/E1 | FLOPS 25/25 | **Complete** |
+| BA POS + ~~EoS~~ | Done | Done | FLOPS W1/E1 | FLOPS 25/25 | **EoS RETIRED 2026-10-01** — BA closes via Daily Sheet; POS + Daily Sheet are live |
 | SA Finance accept + P&L | Done | Done | FLOPS F1 | SQL + UI | **Complete** |
-| SA Floor payroll | Done | Done | FLOPS P1 | 157500 confirmed | **Complete** |
+| ~~SA Floor payroll~~ | Retired | Retired | FLOPS P1 | 157500 confirmed (historical) | **RETIRED 2026-10-01** — replaced by Daily Sheet salary lines |
 | RBAC denials | Done | Done | FLOPS R1 | TL POS / Investor payroll | **Complete** |
 | Owner daily SMS | Done | Done | — | — | **N/A** (disabled) |
 | Customer reminder SMS live | Done | Done | Ops IP | sms:egress | **BLOCKED** ops |
@@ -153,7 +153,7 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 - [x] Production build passes
 - [ ] Type check — N/A (JS; no `tsc` script)
 - [x] Lint passes
-- [x] Automated tests pass (**1465/1465**, fresh 2026-10-05)
+- [x] Automated tests pass (**1518/1518**, re-verified 2026-10-07 with the uncommitted working tree)
 - [x] Critical user flows tested (Daily Sheet money path **38/38**; nav walk **84/84**; FLOPS not re-run — see Summary)
 - [x] Permissions verified (role matrix **52/52**)
 - [x] Known blockers documented (SMS/SMTP/Static IPs + **P1 doc debt**)

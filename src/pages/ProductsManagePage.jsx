@@ -7,7 +7,8 @@ import { formatMoney } from '@/queue/queueApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Plus } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -23,6 +24,7 @@ export default function ProductsManagePage({ embedded = false }) {
   const [branches, setBranches] = useState([])
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [familyFilter, setFamilyFilter] = useState('all')
   const [query, setQuery] = useState('')
@@ -63,6 +65,7 @@ export default function ProductsManagePage({ embedded = false }) {
       await createProduct({ ...form, branch_slug: form.branch_slug || null })
       toast.success('Merch item created')
       setForm(empty)
+      setCreateOpen(false)
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -148,13 +151,12 @@ export default function ProductsManagePage({ embedded = false }) {
         </p>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-        <Card className="planner-ticket">
-          <CardHeader>
-            <CardTitle>Add merch item</CardTitle>
-            <CardDescription>Shows under Checkout → Merch on POS.</CardDescription>
-          </CardHeader>
-          <CardContent>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add merch item</DialogTitle>
+            <DialogDescription>Shows under Checkout → Merch on POS.</DialogDescription>
+          </DialogHeader>
             <form onSubmit={onCreate} className="flex flex-col gap-3">
               <div className="flex flex-col gap-2"><Label>Name</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Microfiber towel set" /></div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -206,10 +208,13 @@ export default function ProductsManagePage({ embedded = false }) {
                   Branch Admin POS only sells tagged items (sellable, coffee, accessories, scents…).
                 </p>
               </div>
-              <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save item'}</Button>
+              <DialogFooter>
+                <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                <Button type="submit" className="min-h-11" disabled={saving}>{saving ? 'Saving…' : 'Save item'}</Button>
+              </DialogFooter>
             </form>
-          </CardContent>
-        </Card>
+        </DialogContent>
+      </Dialog>
 
         <Card className="planner-ticket">
           <CardHeader>
@@ -233,6 +238,10 @@ export default function ProductsManagePage({ embedded = false }) {
                   ))}
                 </SelectContent>
               </Select>
+              <Button type="button" className="min-h-11 shrink-0" onClick={() => setCreateOpen(true)}>
+                <Plus size={16} className="mr-1.5" aria-hidden />
+                Add merch item
+              </Button>
             </div>
             <Table>
               <TableHeader>
@@ -282,7 +291,6 @@ export default function ProductsManagePage({ embedded = false }) {
             </Table>
           </CardContent>
         </Card>
-      </div>
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>

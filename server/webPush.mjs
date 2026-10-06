@@ -76,11 +76,13 @@ export async function resolveStaffRecipients(db, rule = {}) {
 }
 
 /** Inbox row per recipient + one push batch per landing url. */
-export async function notifyRecipients(db, recipients, { kind, title, body, tag }) {
+export async function notifyRecipients(db, recipients, { kind, title, body, tag }, { inbox = true } = {}) {
   const result = { targets: recipients.length, inbox: { inserted: 0 }, push: { sent: 0, pruned: 0, subscriptions: 0 } }
   if (!recipients.length) return result
-  const { error } = await db.from('user_notifications').insert(recipients.map((r) => ({ user_id: r.id, kind, title, body, url: r.url, tag })))
-  result.inbox = error ? { error: error.message } : { inserted: recipients.length }
+  if (inbox) {
+    const { error } = await db.from('user_notifications').insert(recipients.map((r) => ({ user_id: r.id, kind, title, body, url: r.url, tag })))
+    result.inbox = error ? { error: error.message } : { inserted: recipients.length }
+  }
   const byUrl = new Map()
   for (const r of recipients) byUrl.set(r.url, [...(byUrl.get(r.url) || []), r.id])
   try {

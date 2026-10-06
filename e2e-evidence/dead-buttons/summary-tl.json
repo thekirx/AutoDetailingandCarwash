@@ -1,0 +1,128 @@
+{
+  "base": "http://localhost:5173",
+  "dead": [
+    {
+      "persona": "tl",
+      "path": "/operations/queue",
+      "button": "WAITING 2"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/queue/new",
+      "button": "1 Vehicle"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/queue/new",
+      "button": "3 Services"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/queue/new",
+      "button": "4 Review"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Board"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Today"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Back"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Next"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Month"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Week"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Day"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Agenda"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Mon 10/5"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Tue 10/6"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Wed 10/7"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Thu 10/8"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Fri 10/9"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Sat 10/10"
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "button": "Sun 10/11"
+    }
+  ],
+  "errors": [],
+  "pages": [
+    {
+      "persona": "tl",
+      "path": "/operations/queue",
+      "clicks": 12,
+      "dead": 1
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/queue/new",
+      "clicks": 5,
+      "dead": 3
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/attendance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "tl",
+      "path": "/operations/bookings",
+      "clicks": 20,
+      "dead": 15
+    }
+  ],
+  "at": "2026-10-06T10:24:53.195Z"
+}

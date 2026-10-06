@@ -6,7 +6,7 @@
 
 ## Nav
 
-Floor · Queue · Crew · KPI · POS · Reviews · Planner · Ops Lab · History · My pay · Finance · Audit
+Ops Lab · Floor · Queue · KPI · POS · Reviews · Planner · History · Finance (view) · Audit
 
 ## Daily flow
 

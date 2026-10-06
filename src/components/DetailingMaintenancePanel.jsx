@@ -13,6 +13,7 @@ import {
   resolveFrequencyMonthsFromSettings,
 } from '@/lib/paintMaintenance'
 import StatusBadge from '@/components/ops/StatusBadge'
+import { processMaintenanceArrival } from '@/lib/maintenanceSchedulesClient'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,10 +30,11 @@ const URGENCY_LABEL = {
  * Bookings → Maintenance: per-type intervals + per-plate due dates + manual client reminders.
  * Status SMS/push still fire from the board when a detailing job advances.
  */
-export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
+export default function DetailingMaintenancePanel({ branchFilter = 'all', canCreateBooking = false, onArrived }) {
   const [loading, setLoading] = useState(true)
   const [schedules, setSchedules] = useState([])
   const [canWrite, setCanWrite] = useState(false)
+  const [canArrive, setCanArrive] = useState(false)
   const [canEditTypes, setCanEditTypes] = useState(false)
   const [typeMonths, setTypeMonths] = useState({})
   const [savingTypes, setSavingTypes] = useState(false)
@@ -61,6 +63,7 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
       }
       setSchedules(body.schedules || [])
       setCanWrite(Boolean(body.canWrite))
+      setCanArrive(Boolean(body.canArrive))
       setCanEditTypes(Boolean(body.canEditTypes))
 
       const bySlug = new Map((body.services || []).map((s) => [String(s.slug || '').toLowerCase(), s]))
@@ -190,6 +193,17 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
       const push = body.notify?.push?.sent ? ' · Push sent' : ''
       toast.success(`Client notified${sms}${push}`)
       load()
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function arrive(row) {
+    setBusyId(row.id)
+    try {
+      if (await processMaintenanceArrival(row)) onArrived?.()
+    } catch (err) {
+      toast.error(err.message)
     } finally {
       setBusyId(null)
     }
@@ -405,6 +419,19 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
                           Notify client
                         </Button>
                         ) : null}
+                        {canArrive ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="min-h-11 cursor-pointer gap-1.5"
+                            disabled={busy}
+                            onClick={() => arrive(row)}
+                          >
+                            <Wrench className="size-4" aria-hidden />
+                            Car arrived · Start intake
+                          </Button>
+                        ) : null}
+                        {canCreateBooking ? (
                         <Button type="button" variant="outline" size="sm" className="min-h-11 cursor-pointer gap-1.5" asChild>
                           <Link
                             to={`/operations/bookings?tab=board&book=1&service=${PAINT_MAINTENANCE_SLUG}&plate=${encodeURIComponent(row.plate_number || '')}&name=${encodeURIComponent(row.customer_name || '')}&phone=${encodeURIComponent(row.customer_phone || '')}&branch=${encodeURIComponent(row.branch_slug || '')}`}
@@ -413,6 +440,7 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all' }) {
                             Ticket maintenance
                           </Link>
                         </Button>
+                        ) : null}
                         <Button
                           type="button"
                           variant="ghost"

@@ -1,5 +1,7 @@
 # Principal progress — 2026-09-26
 
+> **⚠️ ARCHIVED 2026-10-07 — historical handoff, NOT current status.** This predates the 2026-10-01 money-path cutover; its End of shift and floor-payroll steps are retired. Current status: [`../SYSTEM_AUDIT.md`](../SYSTEM_AUDIT.md) · [`REMAINING-WORK-2026-10.md`](./REMAINING-WORK-2026-10.md)
+
 Strict handoff after daily-ops verification campaign. **Do not treat as 100% production-ready.**
 
 ## Overall verdict

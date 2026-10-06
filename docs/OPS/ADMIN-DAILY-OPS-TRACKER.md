@@ -1,7 +1,9 @@
 # Admin daily-ops tracker (no redesign)
 
+> **⚠️ ARCHIVED 2026-10-07 — historical tracker.** The money path below was replaced on 2026-10-01: **End of shift and floor payroll are retired.** Current path is POS → **Daily Sheet** → Finance approve → books. See [`../daily-sheet/README.md`](../daily-sheet/README.md) and [`MONEY-CONTRACT.md`](./MONEY-CONTRACT.md). BrandTxt / SMS rows are still tracked in [`../qa/REMAINING-WORK-2026-10.md`](../qa/REMAINING-WORK-2026-10.md).
+
 **Decision:** Soft-launch admin daily ops do **not** need a POS / Payroll / Finance redesign.  
-**Money path:** BA POS → End of shift → SA Finance accept → SA Floor payroll.
+**Money path (as of 2026-09-26 — now superseded):** BA POS → End of shift → SA Finance accept → SA Floor payroll.
 
 ## Checklist
 

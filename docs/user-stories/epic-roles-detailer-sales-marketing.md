@@ -1,19 +1,19 @@
 # Epic: Detailer, Sales & Marketing roles
 
-**Goal:** Non-bay roles get the right boards without Payroll or People inventing new engines.
+**Goal:** Non-bay roles get the right boards without Daily Sheet approval or People inventing new engines.
 
 ## US-DET-01 · Detailer floor
 
 **As** a detailer  
-**I want** Bookings + Attendance + My Tasks + My Pay  
-**So that** I work jobs I am assigned and see posted commission  
+**I want** Bookings + Attendance + My Tasks  
+**So that** I work jobs I am assigned and my commission lands on the Daily Sheet  
 
 **Acceptance**
 
 - [x] Home → `/operations/bookings`
 - [x] Dock: Bookings + Attendance + Tasks (`getDetailerDock`)
 - [x] `canAccessBookingBoard` for detailer
-- [x] My Pay in detailer overflow when `canViewOwnPay`
+- [x] Own pay estimate on Attendance (My Pay retired 2026-10-01)
 - [x] Assigned detailing commission pays `assigned_staff_id` (booking + walk-in)
 - [x] Denied: POS, Finance, People, queue-new
 

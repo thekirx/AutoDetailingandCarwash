@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -19,6 +28,7 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
   const [events, setEvents] = useState([])
   const [opsForms, setOpsForms] = useState([])
   const [branchOptions, setBranchOptions] = useState([])
+  const [createOpen, setCreateOpen] = useState(false)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -90,6 +100,7 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
         is_published: true,
         form_id: '',
       })
+      setCreateOpen(false)
       load()
     }
   }
@@ -129,38 +140,34 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
   return (
     <div className="planner-events flex flex-col gap-6">
       {canEdit && (
-        <Card className="planner-ticket">
-          <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <CardTitle>New event</CardTitle>
-              <CardDescription>Creates a public page you can share. Attach a form if people need to RSVP.</CardDescription>
-            </div>
-            {onCreateForm ? (
-              <Button type="button" variant="outline" onClick={onCreateForm}>Create event form</Button>
-            ) : null}
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={createEvent} className="grid gap-3 md:grid-cols-2">
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <Label>Title</Label>
-                <Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>New event</DialogTitle>
+              <DialogDescription>Creates a public page you can share. Attach a form if people need to RSVP.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={createEvent} className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label htmlFor="ev-title">Title</Label>
+                <Input id="ev-title" required className="min-h-11" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
               </div>
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <Label>Description</Label>
-                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label htmlFor="ev-desc">Description</Label>
+                <Textarea id="ev-desc" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Branch</Label>
                 <NamedSelect
                   value={form.branch || ''}
                   onChange={(branch) => setForm({ ...form, branch })}
+                  className="min-h-11"
                   options={[{ value: '', label: 'All / none' }, ...branchOptions]}
                 />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Published</Label>
                 <Select value={form.is_published ? 'yes' : 'no'} onValueChange={(v) => setForm({ ...form, is_published: v === 'yes' })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="min-h-11 w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="yes">Published</SelectItem>
                     <SelectItem value="no">Draft</SelectItem>
@@ -168,34 +175,51 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Starts</Label>
-                <Input type="datetime-local" required value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} />
+                <Label htmlFor="ev-starts">Starts</Label>
+                <Input id="ev-starts" type="datetime-local" required className="min-h-11" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Ends</Label>
-                <Input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
+                <Label htmlFor="ev-ends">Ends</Label>
+                <Input id="ev-ends" type="datetime-local" className="min-h-11" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
               </div>
-              <div className="flex flex-col gap-2 md:col-span-2">
+              <div className="flex flex-col gap-2 sm:col-span-2">
                 <Label htmlFor="ev-form">Optional form for attendees</Label>
                 <NamedSelect
                   id="ev-form"
                   value={form.form_id || ''}
                   onChange={(v) => setForm({ ...form, form_id: v })}
                   emptyLabel="No form"
+                  className="min-h-11"
                   options={opsForms.map((f) => ({ value: f.id, label: f.name }))}
                 />
                 <p className="text-xs text-muted-foreground">Shown on the public event page when set. Publish the form + enable its public link to accept answers.</p>
               </div>
-              <Button type="submit" className="md:col-span-2 w-fit cursor-pointer">Create event</Button>
+              <DialogFooter className="sm:col-span-2">
+                <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                <Button type="submit" className="min-h-11 cursor-pointer">Create event</Button>
+              </DialogFooter>
             </form>
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
       )}
 
       <Card className="planner-ticket">
-        <CardHeader>
-          <CardTitle>Events</CardTitle>
-          <CardDescription>Share links and optional attached smart forms.</CardDescription>
+        <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <CardTitle>Events</CardTitle>
+            <CardDescription>Share links and optional attached smart forms.</CardDescription>
+          </div>
+          {canEdit ? (
+            <div className="flex flex-wrap gap-2">
+              {onCreateForm ? (
+                <Button type="button" variant="outline" className="min-h-11" onClick={onCreateForm}>Create event form</Button>
+              ) : null}
+              <Button type="button" className="min-h-11" onClick={() => setCreateOpen(true)}>
+                <Plus size={16} className="mr-1.5" aria-hidden />
+                New event
+              </Button>
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent>
           <div className="planning-event-list">
@@ -213,12 +237,12 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                 </div>
                 {ev.slug ? (
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" asChild>
+                    <Button size="sm" variant="outline" className="max-xl:min-h-11" asChild>
                       <a href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">Open page</a>
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => copyLink(ev)}>Copy link</Button>
+                    <Button size="sm" variant="ghost" className="max-xl:min-h-11" onClick={() => copyLink(ev)}>Copy link</Button>
                     {canEdit ? (
-                      <Button size="sm" variant="ghost" onClick={() => togglePublish(ev)}>
+                      <Button size="sm" variant="ghost" className="max-xl:min-h-11" onClick={() => togglePublish(ev)}>
                         {ev.is_published ? 'Unpublish' : 'Publish'}
                       </Button>
                     ) : null}
@@ -252,7 +276,7 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                       {ev.is_published ? 'Published' : 'Draft'}
                     </Badge>
                     {canEdit && (
-                      <Button size="sm" variant="ghost" className="ml-2 cursor-pointer" onClick={() => togglePublish(ev)}>
+                      <Button size="sm" variant="ghost" className="ml-2 cursor-pointer max-xl:min-h-11" onClick={() => togglePublish(ev)}>
                         Toggle
                       </Button>
                     )}
@@ -263,7 +287,7 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                         value={ev.form_id || ''}
                         onChange={(v) => assignForm(ev, v)}
                         emptyLabel="None"
-                        className="h-9 w-48"
+                        className="w-48 min-w-40 max-xl:min-h-11 xl:h-9"
                         options={opsForms.map((f) => ({ value: f.id, label: f.name }))}
                       />
                     ) : (
@@ -273,10 +297,10 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                   <TableCell>
                     {ev.slug ? (
                       <div className="flex flex-wrap gap-2">
-                        <a className="text-sm text-primary underline" href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">
+                        <a className="inline-flex items-center text-sm text-primary underline max-xl:min-h-11" href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">
                           /events/{ev.slug}
                         </a>
-                        <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => copyLink(ev)}>Copy</Button>
+                        <Button size="sm" variant="outline" className="cursor-pointer max-xl:min-h-11" onClick={() => copyLink(ev)}>Copy</Button>
                       </div>
                     ) : '—'}
                   </TableCell>

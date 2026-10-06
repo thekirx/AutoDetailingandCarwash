@@ -149,7 +149,7 @@ export default function BranchLocationPicker({ latitude, longitude, address, onC
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="City, mall, barangay, street…"
-            className="pl-9 text-base"
+            className="min-h-11 pl-9 text-base"
             autoComplete="off"
           />
           {searching ? <Loader2 className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" /> : null}

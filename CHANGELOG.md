@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-06 — Spoofed-location time-in blocked + CRUD create forms in dialogs
+
+- **Geo time-in** now goes through RPC `geo_clock_in` (migration `20261006120000_attendance_geo_spoof_alerts.sql`). Faked or tampered fixes are blocked: automation, stale fix, no accuracy, typed coordinates, pasted branch pin, replayed coordinates. Each block writes `attendance_location_alerts` plus an inbox row for SA / ASA / the branch BA. Web push goes out via `notify-ops-event` `attendance_location_alert`, once per alert. The trigger rejects direct `source='geo'` writes. The Attendance page shows the error inline, and SA / ASA / BA see a Location alerts list.
+- Honest limit: a web PWA cannot read Android Developer options or the mock-location flag. Realistic spoofed coordinates still pass.
+- **Branches:** New branch is a dialog; the list has search and status chips with counts. The same button + dialog pattern now covers Products, Cars, SMS templates, Memberships (tier / stamp threshold / assign), Planning events, Services, Finance (vendors, categories, corporate, quotes, expense reports), People (custom role, temp TL), and Notifications (reminder rule, broadcast kind). Seam: `tests/crudCreateModals.test.js`.
+- Touch / phone polish: `NamedSelect` is 44px tall below `xl`; selects use a 16px font on phones; finance toolbar selects are 44px; `.planner-v2` no longer overflows on phones.
+- **Production DB:** `attendance_geo_spoof_alerts` applied. E2E leftovers with no money attached (10 bookings, 3 `E2E Customer …` rows) archived by `20261006130000_archive_e2e_leftovers.sql`; `TestName` / `test run` stay live because they carry a sale / transaction.
+- Button handlers that `await fetch` without a `catch` no longer fail silently offline: one `unhandledrejection` listener in `src/main.jsx` shows a "Network error" toast.
+- Docs: `docs/OPS/MONEY-CONTRACT.md` binding sections rewritten for the Daily Sheet (IDs kept, retired ones marked). Role epics and guides no longer describe My Pay / Payroll register / `canViewOwnPay` as current.
+
+## 2026-10-06 — TL/BA Bookings floor board + maintenance check-in
+
+- TL and Branch Admin Bookings use a Queue-style board: stage status cards (incl. Maintenance due count) + expandable car cards; TL never advances into Payment from the board.
+- **Car arrived · Start intake** turns a maintenance schedule into a Paint Maintenance booking at Vehicle intake (`POST /api/maintenance-schedules` `action: 'arrive'`, size-priced, duplicate plate → 409). BA can now send reminders (branch-scoped).
+- TL shell touch targets ≥44px (tabs, breadcrumb, bell, filters) and 16px phone form fonts. `scripts/_tl-responsive-validation.mjs`: 54/54 page × viewport checks pass (baseline 21/54).
+- Docs: Team Lead / Branch Admin role guides, Bookings + Queue page guides, shop-day runbook (C1c), BusyBee code paths.
+- Known gap: `/api/booking-status` has no transition check (TL could move Payment → Done outside the board UI).
+
 ## 2026-10-05 — Branch Admin POS counter hardened
 
 - BA counter: merch/coffee only; queue ticket lines stay locked; pay queue + sell stay on one Checkout page.

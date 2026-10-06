@@ -1,21 +1,24 @@
 ﻿# Super Admin / Assistant Super Admin
 
-**Home:** `/operations/console`  
+**Home:** `/operations/dashboard` (Floor Board)  
 **Shell:** CommandShell  
 **Device:** Desktop-first
 
 ## Nav
 
-Full Command set (ASA filtered by `permission_grants`). Includes Console, Floor Board, Queue, Bookings, Attendance, Crew, KPI, POS, Inventory, CRM, Reviews, Memberships, Finance, Payroll, Planner, Ops Lab, History, Notifications, People, Branches, Cars, Content, Audit, Data Center, Inquiries, Settings.
+Floor Board · Queue · Bookings · Attendance · KPI · POS · Inventory · CRM · Reviews · Memberships · Finance · Planner · Ops Lab · History · Notifications · People · Branches · Cars · Content · Audit · Data Center · Inquiries · Settings
+
+Retired from this nav: **Console** (off since the Floor Board became the landing surface) and **Payroll / Crew** (`canAccessConsole()` returns `false`; `crew` is denied).
 
 ## Daily flow
 
-1. Console — exceptions + money pulse  
-2. Floor Board / Queue as needed  
-3. Finance / Payroll  
-4. People + grants (SA)  
-5. Settings / Notifications
+1. Floor Board / Queue as needed  
+2. Finance (Daily sheets → approve / return)  
+3. People + grants (SA)  
+4. Settings / Notifications
 
 ## ASA
 
 Cannot exceed grants. `rbac_edit` required to edit other ASA grants.
+
+Approving a Daily Sheet needs `finance_view`. Setting daily rates or editing Daily sheet rules needs `finance_write`. See `docs/OPS/MONEY-CONTRACT.md`.

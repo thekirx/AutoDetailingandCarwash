@@ -1,0 +1,164 @@
+{
+  "base": "http://localhost:5173",
+  "dead": [],
+  "errors": [],
+  "pages": [
+    {
+      "persona": "boss",
+      "path": "/operations/dashboard",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/queue",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/bookings",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/attendance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/kpi",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/pos",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/inventory",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/crm",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/reviews",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/memberships",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/finance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/planning",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/roadmap",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/history",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/notifications",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/people",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/branches",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/cars",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/content",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/audit",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/data-center",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/inquiries",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "boss",
+      "path": "/operations/settings",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "investor",
+      "path": "/operations/finance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "video",
+      "path": "/operations/planning?tab=calendar",
+      "clicks": 6,
+      "dead": 0
+    },
+    {
+      "persona": "video",
+      "path": "/operations/my-tasks",
+      "clicks": 3,
+      "dead": 0
+    }
+  ],
+  "at": "2026-10-06T10:46:51.538Z"
+}

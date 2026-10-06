@@ -57,10 +57,10 @@ export default function VehicleSizesPanel() {
       <CardContent className="flex flex-col gap-4">
         {canEdit && (
           <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-4">
-            <div className="flex flex-col gap-1"><Label>Slug</Label><Input required value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="suv" /></div>
-            <div className="flex flex-col gap-1"><Label>Label</Label><Input required value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="SUV" /></div>
-            <div className="flex flex-col gap-1"><Label>Order</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></div>
-            <div className="flex items-end"><Button type="submit" disabled={saving} className="w-full">{saving ? '…' : 'Add size'}</Button></div>
+            <div className="flex flex-col gap-1"><Label htmlFor="vs-slug">Slug</Label><Input id="vs-slug" required className="min-h-11 xl:min-h-8" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="suv" /></div>
+            <div className="flex flex-col gap-1"><Label htmlFor="vs-label">Label</Label><Input id="vs-label" required className="min-h-11 xl:min-h-8" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="SUV" /></div>
+            <div className="flex flex-col gap-1"><Label htmlFor="vs-order">Order</Label><Input id="vs-order" type="number" className="min-h-11 xl:min-h-8" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></div>
+            <div className="flex items-end"><Button type="submit" disabled={saving} className="min-h-11 w-full xl:min-h-8">{saving ? '…' : 'Add size'}</Button></div>
           </form>
         )}
         <Table>
@@ -81,7 +81,7 @@ export default function VehicleSizesPanel() {
                 {canEdit && (
                   <TableCell className="text-right">
                     {r.is_active && (
-                      <Button size="sm" variant="ghost" onClick={() => deactivateVehicleSize(r.id).then(load).catch((e) => toast.error(e.message))}>
+                      <Button size="sm" variant="ghost" className="min-h-11 xl:min-h-8" onClick={() => deactivateVehicleSize(r.id).then(load).catch((e) => toast.error(e.message))}>
                         Deactivate
                       </Button>
                     )}

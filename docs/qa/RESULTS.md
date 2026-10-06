@@ -1,3 +1,7 @@
+> **⚠️ ARCHIVED 2026-10-07 — historical snapshot, NOT current status.**
+> This log predates the 2026-10-01 money-path cutover. Its End of shift, floor payroll, `run_payroll` and owner-SMS gates describe the **retired** path and must not be used to judge readiness or to train staff.
+> Current status: [`../SYSTEM_AUDIT.md`](../SYSTEM_AUDIT.md) · [`REMAINING-WORK-2026-10.md`](./REMAINING-WORK-2026-10.md) · Money path: [`../daily-sheet/README.md`](../daily-sheet/README.md)
+
 ## Latest principal completion (2026-09-24)
 
 | Field | Value |

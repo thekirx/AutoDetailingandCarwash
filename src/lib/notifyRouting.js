@@ -21,6 +21,8 @@ export const NOTIFY_EVENTS = {
   sheet_reviewed: { roles: [R.ADMIN, R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/pos?tab=sheet'] },
   // The Branch Admin releases the cash on the Daily Sheet; SA / ASA approve it with the sheet.
   cash_advance_submitted: { roles: [R.ADMIN], urls: ['/operations/pos?tab=sheet'] },
+  // Must match the inbox recipients written by the geo_clock_in SQL function.
+  attendance_location_alert: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/attendance'] },
   inquiry: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/inquiries'] },
   review: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.OPERATIONS_LEAD, R.ADMIN], urls: ['/operations/reviews'] },
   complaint: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/planning?tab=forms'] },

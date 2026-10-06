@@ -23,8 +23,8 @@
 - [x] Sales detailing booking + walk-in POS → assigned detailer commission
 - [x] Solo ceramic 20% / split 10+10 / card fee before split
 - [x] Absent = no car, no wash share, no detailer commission (hold `missing_assignee`)
-- [x] CA approve → wizard deduct only (no auto; B4)
-- [x] BA end of shift → Finance accept → floor payroll → P&L (per branch-day)
+- [x] Cash advance = *Given out* / *Paid back* lines on the Daily Sheet; never a cost, never auto-deducted (MONEY-CONTRACT B1–B4)
+- [x] BA Daily Sheet submit → SA / ASA approve → posted expenses + salaries → P&L (per branch-day)
 - [x] Branch isolation: Bacoor ≠ Imus ≠ Silang
 
 ---
@@ -86,11 +86,11 @@
 
 **Acceptance**
 
-- EoS attests paid POS; Finance `review_shift_close`
-- Pending floor per branch-day; `run_payroll` claims that branch only
-- CA: approve on Payroll; deduct manual in wizard; never auto
+- Daily Sheet money in = that branch's paid POS; SA / ASA `review_daily_sheet`
+- One sheet per branch-day; approve posts that branch's lines only (`expenses` keyed per sheet line)
+- CA: lines on that branch's sheet; never auto-deducted
 
-**Test:** `dailyOpsNetwork` · close → books · CA deduct
+**Test:** `dailyOpsNetwork` · `npm run e2e:daily-sheet-money` (submit → approve posts once, wrong-branch denied)
 
 ---
 

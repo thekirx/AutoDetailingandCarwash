@@ -1,6 +1,6 @@
 # Epic: Crew (staff) persona
 
-**Goal:** Clock in, do assigned tasks, see posted pay — no queue manager or POS.
+**Goal:** Clock in, do assigned tasks, see today's pay estimate — no queue manager or POS.
 
 **Home:** `/operations/attendance`
 
@@ -20,19 +20,20 @@
 
 ---
 
-## US-CREW-02 · My Tasks + My Pay
+## US-CREW-02 · My Tasks + today's pay estimate
 
 **As** crew  
-**I want** assigned planner cards and posted payroll  
-**So that** I trust Pay over any Crew estimate  
+**I want** assigned planner cards and a pay estimate on Attendance  
+**So that** I know roughly what today's Daily Sheet will pay me  
 
 **Acceptance**
 
 - [x] My Tasks for assignees
-- [x] My Pay sums latest posted run for `staff_id`
-- [x] Super Admin denied My Pay (contrast)
+- [x] Attendance shows "Wash pool estimate today — ₱… unpaid" for the signed-in person (`seesOwnPayEstimate`)
+- [x] Super Admin and Investor see no estimate (contrast)
+- [x] Actual pay = the salary line on the branch's **approved** Daily Sheet; My Pay (`/operations/my-pay`) was retired 2026-10-01 and redirects to `/operations`
 
-**Test seam:** `tests/leftoverUxSeam.test.js`, `tests/payrollSeam.test.js`, `tests/plannerTasks.test.js`
+**Test seam:** `tests/leftoverUxSeam.test.js`, `tests/plannerTasks.test.js`, `src/pages/crew/CrewAttendancePanels.jsx`
 
 ---
 

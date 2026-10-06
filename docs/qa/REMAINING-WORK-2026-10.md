@@ -1,4 +1,6 @@
-# Remaining work — principal PM audit (2026-10-05)
+# Remaining work — principal PM audit (2026-10-05, re-audited 2026-10-07)
+
+> **2026-10-07 update (principal full-system audit).** Fixed this pass: `MONEY-CONTRACT.md` approve grant corrected `finance_write` → `finance_view` (code was already right); phantom "Pay" dock removed from 3 role guides; `super-admin-asa.md` rewritten to the real nav (Console/Crew/Payroll do not exist); live dead breadcrumb `/operations/console` fixed in `AuditLogPage.jsx`; archive banners added to 4 stale money-path docs; `SYSTEM_AUDIT.md` retired-rows + test counts corrected. **Still open and higher priority than most items below: the entire 2026-10-06 work unit is uncommitted** — see "Uncommitted work at risk" in `PROJECT_STATUS.md`.
 
 Honest, strict status after September seed + Daily Sheet cutover + three production fixes (BUG-046/047/048).  
 Canonical product status: [`PROJECT_STATUS.md`](../../PROJECT_STATUS.md) · Audit table: [`SYSTEM_AUDIT.md`](../SYSTEM_AUDIT.md).
@@ -17,15 +19,29 @@ Canonical product status: [`PROJECT_STATUS.md`](../../PROJECT_STATUS.md) · Audi
 | Opening day flip (coming_soon → active) | **Ops step** — Branches → set Active; no code deploy required |
 | Staff for Dasma before open | **Ready** — hire against `dasmarinas` now |
 
+### Attendance spoof block, CRUD dialogs, data hygiene (2026-10-06)
+
+| Item | Status |
+|------|--------|
+| Spoofed-location time-in blocked (`geo_clock_in`, `attendance_location_alerts`) | **Applied in prod** (migration `attendance_geo_spoof_alerts`); client already calls the RPC |
+| E2E leftovers (10 bookings, 3 `E2E Customer …` rows; no sale / transaction) | **Archived in prod** (`archive_e2e_leftovers`, reversible) |
+| `TestName` (July sale) and `test run` (one transaction) | **Left live** — tied to money rows; owner decides |
+| CRUD create forms → dialogs (Branches, Products, Cars, SMS, Memberships, Planning, Services, Finance ×5, People ×2, Notifications ×2) | **Done** — seam `tests/crudCreateModals.test.js` |
+| Button handlers that `await fetch` with no `catch` | **Fixed once** — global `unhandledrejection` → "Network error" toast (`src/main.jsx`) |
+| Dead-button crawl (`scripts/_dead-button-crawl.mjs`, writes aborted) | Floor personas deep (TL / Sales / Detailer / Marketing / Crew / Video): 5 flags, all false positives (native required-field block, re-selecting the active option, repeated wizard error). **SA / ASA / BA pages only got 2 clicks each — not a real crawl yet** |
+| Supabase advisors | No new findings from today's migrations. Open, pre-existing: 4 public `SECURITY DEFINER` views (TV board / home stats), leaked-password protection off (dashboard toggle) |
+
 ---
 
 ## Fresh verify (this session, 2026-10-05)
 
 | Check | Command | Result |
 |-------|---------|--------|
-| Unit | `npm test` | **1465/1465**, exit 0 |
-| Lint | `npx eslint .` | exit **0** |
-| Build | `npm run build` | exit **0** |
+| Unit | `npm test` | **1518/1518**, exit 0 (re-verified 2026-10-07) |
+| Lint | `npx eslint .` | exit **0** (re-verified 2026-10-07) |
+| Build | `npm run build` | exit **0** (re-verified 2026-10-07) |
+| Production `geo_clock_in` | RPC present; function body reached ("Sign in to time in") | **PASS** — CHANGELOG's "applied in prod" is true |
+| Production `attendance_location_alerts` | Table present, 0 rows | **PASS** — the nav-walk 404 evidence predates the apply |
 | BUG-048 live | GET production `/api/public-inquiry` → **405**; `/api/data-center` → **401** | **PASS** (was 404) |
 | Seed still present | SQL: 893 customers, 1221 bookings, 60 Sep sheets | Present (wipe before go-live = owner call) |
 | Staff push | SQL: **0** staff push subscriptions (3 demo-customer only) | Soft-launch notify gap |
@@ -81,16 +97,17 @@ Canonical Daily Sheet path is now in stories + runbook + MONEY-CONTRACT (2026-10
 | [`POS/`](../POS/) / [`PAYROLL/`](../PAYROLL/) packs | Archive — train from daily-sheet only | **P2** |
 | ~~[`user-stories/README.md`](../user-stories/README.md)~~ | ~~EoS night~~ → **Done** Daily Sheet | — |
 | ~~[`user-stories/shop-day-flow.md`](../user-stories/shop-day-flow.md)~~ | ~~EoS diagram~~ → **Done** | — |
-| [`user-stories/epic-shift-close.md`](../user-stories/epic-shift-close.md) | Entire epic titled End of shift | **P1 doc** — rewrite or mark superseded → Daily Sheet |
-| [`user-stories/epic-payroll.md`](../user-stories/epic-payroll.md) + [`roles-matrix.md`](../user-stories/roles-matrix.md) | Still “My Pay / Payroll register” as current | **P1 doc** |
-| [`user-stories/epic-role-branch-admin.md`](../user-stories/epic-role-branch-admin.md) | Acceptance still checks EoS | **P1 doc** |
-| Owner PDFs under `user-stories/pdf/` | process-close / process-pay / charts still old money path | **P1 doc** (owner-facing) |
-| [`qa/SHOP-DAY-RUNBOOK.md`](./SHOP-DAY-RUNBOOK.md) | Banner says out of date; body still E1/F1/P1 | **P1 doc** — rewrite steps to Daily Sheet |
-| [`OPS/MONEY-CONTRACT.md`](../OPS/MONEY-CONTRACT.md) | Supersession banner OK; body triangle still EoS/Payroll | **P1 doc** — rewrite binding sections |
+| ~~[`user-stories/epic-shift-close.md`](../user-stories/epic-shift-close.md)~~ | ~~Titled End of shift~~ | **Done** — Daily Sheet close epic, superseded banner |
+| ~~[`user-stories/epic-payroll.md`](../user-stories/epic-payroll.md) + [`roles-matrix.md`](../user-stories/roles-matrix.md)~~ | ~~My Pay as current~~ | **Done** — crew pay on the Daily Sheet |
+| ~~[`user-stories/epic-role-branch-admin.md`](../user-stories/epic-role-branch-admin.md)~~ | ~~EoS acceptance~~ | **Done** |
+| ~~Role epics: crew, leadership, ops lead, team lead, detailer, multi-branch QA~~ | ~~My Pay / `canViewOwnPay` / `run_payroll` as current~~ | **Done 2026-10-06** — Attendance pay estimate + approved Daily Sheet |
+| Owner PDFs under `user-stories/pdf/` | process-close / process-pay / charts still old money path | **P1 doc** (owner-facing) — prefer the regenerated OWNER pack |
+| ~~[`qa/SHOP-DAY-RUNBOOK.md`](./SHOP-DAY-RUNBOOK.md)~~ | ~~Body still E1/F1/P1~~ | **Done** — Daily Sheet runbook |
+| ~~[`OPS/MONEY-CONTRACT.md`](../OPS/MONEY-CONTRACT.md)~~ | ~~Body still EoS/Payroll~~ | **Done 2026-10-06** — binding sections rewritten (IDs kept, retired ones marked) |
 | [`POS/`](../POS/) + [`PAYROLL/`](../PAYROLL/) flowchart packs | Historical; risk of training on retired path | **P2** — index as archive + point to daily-sheet |
 | Archify `shop-day-flops.workflow.*` | Old FLOPS claim; daily-sheet diagrams exist | **P2** — mark FLOPS historical or redeliver |
 | [`SYSTEM_GAPS.md`](../../SYSTEM_GAPS.md) | Stale scores (“domain docs ~0%”, old session) | **P2** — refresh or archive |
-| Role guides (`docs/guides/roles/*`) | Mixed Daily Sheet vs My Pay language | **P2** spot-check |
+| ~~Role guides (`docs/guides/roles/*`)~~ | ~~Mixed Daily Sheet vs My Pay language~~ | **Done 2026-10-06** — crew, ops lead, team lead, video editor docks match `permissions.js` |
 | Customer seed portal gap | [`SEPTEMBER-2026-SEED.md`](./SEPTEMBER-2026-SEED.md) should state clearly: CRM yes, portal login no | **P2** (clarify) |
 | September wipe before go-live | Owner decision not recorded as signed-off | **P1 ops decision** |
 
@@ -113,7 +130,7 @@ Canonical Daily Sheet path is now in stories + runbook + MONEY-CONTRACT (2026-10
 
 ## Continue checklist (ordered)
 
-1. **Doc cutover (P1)** — Rewrite shop-day user stories + runbook + MONEY-CONTRACT body + owner PDFs to Daily Sheet; mark EoS/Payroll epics superseded.  
+1. **Doc cutover (P1)** — Stories, runbook, MONEY-CONTRACT, role guides done (2026-10-06). Left: legacy per-process owner PDFs under `user-stories/pdf/`.  
 2. **Owner decisions** — Wipe or keep September seed; Ops Lead money panel yes/no; Google review URLs per live branch.  
 3. **Ops blockers** — BrandTxt IP / Static IPs → `sms:egress` DELIVRD; Auth SMTP inbox proof; SA/ASA enable push → re-run push audit.  
 4. **Rewrite `e2e:lifecycle-flops`** for Daily Sheet (or retire and point at `e2e:daily-sheet-money` + a new customer→queue→POS chain).  

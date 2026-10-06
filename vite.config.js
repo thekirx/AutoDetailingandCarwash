@@ -215,6 +215,10 @@ export default defineConfig({
       '@': path.resolve(root, './src'),
     },
   },
+  server: {
+    // E2E scripts write evidence while driving the dev page; watching it full-reloads mid-check.
+    watch: { ignored: ['**/e2e-evidence/**', '**/graphify-out/**', '**/test-results/**', '**/docs/**', '**/audit/**'] },
+  },
   build: {
     rollupOptions: {
       output: {

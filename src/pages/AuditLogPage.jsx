@@ -74,7 +74,7 @@ export default function AuditLogPage() {
       className="hakum-audit"
       eyebrow="Governance"
       title="Audit log"
-      breadcrumbs={[{ label: 'Ops', to: '/operations/console' }, { label: 'Audit' }]}
+      breadcrumbs={[{ label: 'Ops', to: '/operations/audit' }, { label: 'Audit' }]}
       description="Super Admin and Admin actions on people, branches, services, and related ops mutations."
       actions={
         <Button variant="outline" className="min-h-11" onClick={load} disabled={loading}>

@@ -8,7 +8,7 @@ import { NOTIFY_EVENTS, branchLabel } from '../src/lib/notifyRouting.js'
 import { hydrateBookingForNotify } from './notifyBooking.mjs'
 import { notifyRecipients, resolveStaffRecipients } from './webPush.mjs'
 
-export const OPS_EVENTS = ['crew_assigned', 'sheet_submitted', 'sheet_reviewed', 'cash_advance_submitted']
+export const OPS_EVENTS = ['crew_assigned', 'sheet_submitted', 'sheet_reviewed', 'cash_advance_submitted', 'attendance_location_alert']
 
 /** Replayed calls for old records are ignored. */
 const FRESH_MS = 10 * 60_000
@@ -48,6 +48,13 @@ export function buildOpsEventCopy(event, c = {}) {
         title: 'Cash advance request',
         body: `${c.employee || 'Employee'} · ${pesos(c.amountMinor)} @ ${c.branchName || 'branch'}. Release it on today's Daily Sheet.`,
         tag: `ca-req-${c.submissionId}`,
+      }
+    case 'attendance_location_alert':
+      return {
+        kind: 'attendance_location_alert',
+        title: `Time-in blocked · ${c.branchName || 'branch'}`,
+        body: `${c.staff || 'A team member'} tried to time in with a faked or tampered location. Review it on Attendance.`,
+        tag: `geo-alert-${c.alertId}`,
       }
     case 'inquiry':
       return {
@@ -152,6 +159,25 @@ const LOADERS = {
       ctx: { submissionId: id, employee: p.employee_name || actor.full_name, amountMinor: Math.round(Number(p.amount || 0) * 100), branchName: await branchName(db, branch) },
     }
   },
+
+  async attendance_location_alert(db, id, actor) {
+    const { data: alert } = await db.from('attendance_location_alerts').select('id, staff_id, branch_slug, created_at').eq('id', id).maybeSingle()
+    if (!alert) return gone
+    if (alert.staff_id !== actor.id || !fresh(alert.created_at)) return deny
+    const { data: claimed } = await db
+      .from('attendance_location_alerts')
+      .update({ pushed_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('pushed_at', null)
+      .select('id')
+    if (!claimed?.length) return deny
+    return {
+      rule: { ...NOTIFY_EVENTS.attendance_location_alert, branch: alert.branch_slug, excludeId: actor.id },
+      ctx: { alertId: id, staff: actor.full_name, branchName: await branchName(db, alert.branch_slug) },
+      // geo_clock_in already wrote the inbox rows, so this event only pushes.
+      inbox: false,
+    }
+  },
 }
 
 export async function notifyOpsEvent(db, { event, id, actor }) {
@@ -161,5 +187,5 @@ export async function notifyOpsEvent(db, { event, id, actor }) {
   if (found.error) return found
   const copy = buildOpsEventCopy(event, found.ctx)
   const recipients = await resolveStaffRecipients(db, found.rule)
-  return { ...(await notifyRecipients(db, recipients, copy)), copy }
+  return { ...(await notifyRecipients(db, recipients, copy, { inbox: found.inbox !== false })), copy }
 }

@@ -1,6 +1,6 @@
 # Epic: Operations Lead persona
 
-**Goal:** Network-wide ops (queue ∪ BA tools, all branches) with Ops Lab — **no** attendance clock, **no** Payroll register.
+**Goal:** Network-wide ops (queue ∪ BA tools, all branches) with Ops Lab — **no** attendance clock, **no** Daily Sheet approval.
 
 **Home:** `/operations/roadmap`
 
@@ -14,7 +14,7 @@
 
 - [x] Home → `/operations/roadmap`
 - [x] `canAccessOpsRoadmap` true
-- [x] Multi-branch forms / EoS capability without SA People
+- [x] Multi-branch forms without SA People
 
 **Test seam:** `tests/operationsLeadRoadmap.test.js`, `tests/rolePersonaCoverage.test.js`
 
@@ -30,7 +30,7 @@
 
 - [x] Queue view/edit; POS access
 - [x] Attendance **register** allowed; **floor clock denied** (`canUseAttendanceClock` false)
-- [x] My Pay yes; Payroll register no
+- [x] Own pay estimate on Attendance; cannot approve Daily Sheets
 - [x] Denied: People, Data Center, Cars catalog, CRM, Content
 
 **Test seam:** `tests/operationsLeadRoadmap.test.js`, `tests/permissions.test.js`, `CONTEXT.md` (Operations Lead)

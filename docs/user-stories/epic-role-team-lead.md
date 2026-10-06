@@ -40,13 +40,13 @@
 ## US-TL-03 · Quality + pay visibility
 
 **As** Team Lead  
-**I want** Failed QA marks and My Pay  
-**So that** quality and my posted pay stay visible  
+**I want** Failed QA marks and my pay estimate  
+**So that** quality and today's pay stay visible  
 
 **Acceptance**
 
 - [x] TL can mark Failed QA; Sales cannot
-- [x] `canViewOwnPay` true; Pay in overflow
+- [x] Attendance shows own pay estimate; actual pay = TL daily rate on the branch's approved Daily Sheet (My Pay retired 2026-10-01)
 - [x] No POS / Finance / People routes
 
 **Test seam:** `tests/principalQaFlows.test.js`, `tests/leftoverUxSeam.test.js`, `tests/teamLeadScope.test.js`

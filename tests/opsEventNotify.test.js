@@ -3,7 +3,7 @@
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { OPS_EVENTS, buildOpsEventCopy } from '../server/notifyOpsEvent.mjs'
+import { OPS_EVENTS, buildOpsEventCopy, notifyOpsEvent } from '../server/notifyOpsEvent.mjs'
 import { NOTIFY_EVENTS, branchLabel } from '../src/lib/notifyRouting.js'
 
 describe('buildOpsEventCopy', () => {
@@ -77,5 +77,68 @@ describe('buildOpsEventCopy', () => {
 
   it('unknown event → null', () => {
     assert.equal(buildOpsEventCopy('nope', {}), null)
+  })
+
+  it('blocked geo time-in names the person and branch; SA / ASA / BA land on Attendance', () => {
+    const c = buildOpsEventCopy('attendance_location_alert', { alertId: 'a1', staff: 'Ben', branchName: 'Bacoor' })
+    assert.equal(c.title, 'Time-in blocked · Bacoor')
+    assert.match(c.body, /^Ben tried to time in with a faked or tampered location/)
+    assert.equal(c.tag, 'geo-alert-a1')
+    assert.deepEqual(NOTIFY_EVENTS.attendance_location_alert.roles, ['BossMich', 'assistant_super_admin', 'admin'])
+  })
+})
+
+/** Chainable stand-in for the service-role client: awaited updates resolve to claimRows, staff_profiles to one SA. */
+function fakeDb({ alert, claimRows }) {
+  const writes = []
+  return {
+    writes,
+    from(table) {
+      let op = 'select'
+      const chain = {
+        select: () => chain,
+        eq: () => chain,
+        in: () => chain,
+        is: () => chain,
+        update: (patch) => {
+          op = 'update'
+          writes.push({ table, patch })
+          return chain
+        },
+        insert: async (rows) => {
+          writes.push({ table, rows })
+          return { error: null }
+        },
+        maybeSingle: async () => ({ data: table === 'attendance_location_alerts' ? alert : table === 'branches' ? { name: 'Hakum Auto Care Bacoor' } : null }),
+        then: (ok, fail) => {
+          const data = op === 'update' ? claimRows : table === 'staff_profiles' ? [{ id: 'sa1', role: 'BossMich', is_active: true }] : []
+          return Promise.resolve({ data, error: null }).then(ok, fail)
+        },
+      }
+      return chain
+    },
+  }
+}
+
+describe('notifyOpsEvent · attendance_location_alert', () => {
+  const actor = { id: 'u1', role: 'staff', full_name: 'Ben' }
+  const fresh = { id: 'a1', staff_id: 'u1', branch_slug: 'bacoor', created_at: new Date().toISOString() }
+
+  it('only the person who was blocked can trigger the push, once, while fresh', async () => {
+    const other = await notifyOpsEvent(fakeDb({ alert: fresh, claimRows: [{ id: 'a1' }] }), { event: 'attendance_location_alert', id: 'a1', actor: { ...actor, id: 'u2' } })
+    assert.equal(other.status, 403)
+    const stale = await notifyOpsEvent(fakeDb({ alert: { ...fresh, created_at: '2020-01-01T00:00:00Z' }, claimRows: [{ id: 'a1' }] }), { event: 'attendance_location_alert', id: 'a1', actor })
+    assert.equal(stale.status, 403)
+    const replay = await notifyOpsEvent(fakeDb({ alert: fresh, claimRows: [] }), { event: 'attendance_location_alert', id: 'a1', actor })
+    assert.equal(replay.status, 403)
+  })
+
+  it('claims pushed_at and skips the inbox (geo_clock_in wrote it)', async () => {
+    const db = fakeDb({ alert: fresh, claimRows: [{ id: 'a1' }] })
+    const out = await notifyOpsEvent(db, { event: 'attendance_location_alert', id: 'a1', actor })
+    assert.equal(out.copy.title, 'Time-in blocked · Bacoor')
+    assert.equal(out.targets, 1)
+    assert.ok(db.writes.some((w) => w.table === 'attendance_location_alerts' && w.patch?.pushed_at))
+    assert.equal(db.writes.some((w) => w.table === 'user_notifications'), false)
   })
 })

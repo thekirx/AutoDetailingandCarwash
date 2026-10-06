@@ -1,5 +1,8 @@
 # Hakum — Ultimate Readiness Checklist
 
+> **⚠️ Partially archived 2026-10-07.** The last campaign stamp is 2026-09-26, before the 2026-10-01 money-path cutover. Gates marked for **End of shift**, **floor payroll**, `run_payroll` and **owner daily SMS** below describe the **retired** path — treat them as historical, not as open gates. Do not block a launch on them, and do not train staff from them.
+> Current status: [`../SYSTEM_AUDIT.md`](../SYSTEM_AUDIT.md) · [`REMAINING-WORK-2026-10.md`](./REMAINING-WORK-2026-10.md) · Money path: [`../daily-sheet/README.md`](../daily-sheet/README.md)
+
 **Purpose:** Principal QA gate for soft launch → production ops.  
 **Orchestrator:** `npm run test:readiness` → [`scripts/e2e-ultimate-readiness.mjs`](../../scripts/e2e-ultimate-readiness.mjs)  
 **Bug register:** [`BUGS.md`](./BUGS.md)  

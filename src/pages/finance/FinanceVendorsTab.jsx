@@ -2,6 +2,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -23,6 +31,7 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [form, setForm] = useState({ name: '', contact: '', notes: '' })
+  const [createOpen, setCreateOpen] = useState(false)
   const onVendorsChangeRef = useRef(onVendorsChange)
   onVendorsChangeRef.current = onVendorsChange
 
@@ -62,6 +71,7 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
     else {
       toast.success('Vendor added')
       setForm({ name: '', contact: '', notes: '' })
+      setCreateOpen(false)
       load()
     }
   }
@@ -95,15 +105,19 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
         <FinanceMetricCell label="Active" value={String(metrics.active)} hint="Available on bills" tone="up" />
       </FinanceMetricStrip>
 
-      {canManage ? (
-        <FinancePanel title="Add vendor" description="Supplier name and contact for bills.">
-          <form onSubmit={save} className="grid gap-3 md:grid-cols-2">
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add vendor</DialogTitle>
+            <DialogDescription>Supplier name and contact for bills.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="vendor-name">Name</Label>
               <Input
                 id="vendor-name"
                 required
-                className="min-h-10"
+                className="min-h-11"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
@@ -112,13 +126,13 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
               <Label htmlFor="vendor-contact">Contact</Label>
               <Input
                 id="vendor-contact"
-                className="min-h-10"
+                className="min-h-11"
                 placeholder="Phone, email, or person"
                 value={form.contact}
                 onChange={(e) => setForm({ ...form, contact: e.target.value })}
               />
             </div>
-            <div className="flex flex-col gap-2 md:col-span-2">
+            <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="vendor-notes">Notes</Label>
               <Textarea
                 id="vendor-notes"
@@ -126,17 +140,28 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
               />
             </div>
-            <div className="md:col-span-2">
-              <Button type="submit" className="min-h-10 cursor-pointer">
-                <Plus data-icon="inline-start" />
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="min-h-11 cursor-pointer">
                 Add vendor
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-        </FinancePanel>
-      ) : null}
+        </DialogContent>
+      </Dialog>
 
-      <FinancePanel title="Vendors" description={`${metrics.total} supplier${metrics.total === 1 ? '' : 's'}`}>
+      <FinancePanel
+        title="Vendors"
+        description={`${metrics.total} supplier${metrics.total === 1 ? '' : 's'}`}
+        actions={canManage ? (
+          <Button type="button" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(true)}>
+            <Plus data-icon="inline-start" />
+            Add vendor
+          </Button>
+        ) : null}
+      >
         {loadError ? (
           <FinanceEmpty
             title="Vendors failed to load"
@@ -146,7 +171,7 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
         ) : !rows.length ? (
           <FinanceEmpty
             title="No vendors yet"
-            body={canManage ? 'Add a supplier above.' : 'Ask Super Admin to add vendors.'}
+            body={canManage ? 'Use Add vendor to create the first supplier.' : 'Ask Super Admin to add vendors.'}
           />
         ) : (
           <div className="finance-table-wrap">

@@ -31,7 +31,7 @@ import { opsTabSearchParams, resolveOpsTab } from '@/lib/opsShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -111,6 +111,7 @@ export default function MembershipsPage() {
   const [tierForm, setTierForm] = useState(emptyTier)
   const [milestoneForm, setMilestoneForm] = useState(emptyMilestone)
   const [assignForm, setAssignForm] = useState({ customer_id: '', tier_id: '' })
+  const [createOpen, setCreateOpen] = useState('')
   const [editingTier, setEditingTier] = useState(null)
   const [editingMilestone, setEditingMilestone] = useState(null)
   const [weightDrafts, setWeightDrafts] = useState({})
@@ -164,6 +165,7 @@ export default function MembershipsPage() {
       await createMembershipTier(tierForm)
       toast.success('Membership tier created')
       setTierForm(emptyTier)
+      setCreateOpen('')
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -213,6 +215,7 @@ export default function MembershipsPage() {
       await createLoyaltyMilestone(milestoneForm)
       toast.success('Milestone created')
       setMilestoneForm(emptyMilestone)
+      setCreateOpen('')
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -287,6 +290,7 @@ export default function MembershipsPage() {
       await assignCustomerMembership(assignForm)
       toast.success('Membership assigned')
       setAssignForm((f) => ({ ...f, customer_id: '' }))
+      setCreateOpen('')
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -446,23 +450,13 @@ export default function MembershipsPage() {
         ) : null}
 
         <TabsContent value="tiers" className="mt-6 flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add premium tier</CardTitle>
-              <CardDescription>Paid membership plans with discount and loyalty multiplier on POS spend.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={onCreateTier} className="grid gap-4 md:grid-cols-2">
-                <div className="flex flex-col gap-2"><Label>Name</Label><Input required value={tierForm.name} onChange={(e) => setTierForm({ ...tierForm, name: e.target.value })} /></div>
-                <div className="flex flex-col gap-2"><Label>Starting price (₱)</Label><Input required type="number" min="0" step="0.01" value={tierForm.starting_price} onChange={(e) => setTierForm({ ...tierForm, starting_price: e.target.value })} /></div>
-                <div className="flex flex-col gap-2"><Label>Discount %</Label><Input type="number" min="0" max="100" step="0.1" value={tierForm.discount_percent} onChange={(e) => setTierForm({ ...tierForm, discount_percent: e.target.value })} /></div>
-                <div className="flex flex-col gap-2"><Label>Loyalty multiplier</Label><Input type="number" min="0" max="10" step="0.1" value={tierForm.loyalty_multiplier} onChange={(e) => setTierForm({ ...tierForm, loyalty_multiplier: e.target.value })} /></div>
-                <div className="flex flex-col gap-2 md:col-span-2"><Label>Benefits (one per line)</Label><Textarea rows={3} value={tierForm.benefits} onChange={(e) => setTierForm({ ...tierForm, benefits: e.target.value })} placeholder={'Priority booking\nMember-only promos'} /></div>
-                <div className="flex flex-col gap-2 md:col-span-2"><Label>Included services (one per line)</Label><Textarea rows={2} value={tierForm.included_services} onChange={(e) => setTierForm({ ...tierForm, included_services: e.target.value })} placeholder="Premium Car Wash" /></div>
-                <Button type="submit" className="md:col-span-2" disabled={saving}>{saving ? 'Saving…' : 'Create tier'}</Button>
-              </form>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">Paid membership plans with discount and loyalty multiplier on POS spend.</p>
+            <Button type="button" className="min-h-11 shrink-0" onClick={() => setCreateOpen('tier')}>
+              <Plus size={16} className="mr-1.5" aria-hidden />
+              Add premium tier
+            </Button>
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             {tiers.map((tier) => (
@@ -471,7 +465,7 @@ export default function MembershipsPage() {
                   <CardTitle>{tier.name}</CardTitle>
                   <div className="flex items-center gap-2">
                     {tier.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
-                    <Button variant="ghost" size="icon-sm" onClick={() => setEditingTier({
+                    <Button variant="ghost" size="icon-sm" className="max-xl:size-11" onClick={() => setEditingTier({
                       ...tier,
                       starting_price: String(Number(tier.starting_price_minor) / 100),
                       discount_percent: String(tier.discount_percent),
@@ -490,13 +484,13 @@ export default function MembershipsPage() {
                     {(tier.benefits || []).map((b) => <li key={b}>{b}</li>)}
                   </ul>
                   <p className="text-xs text-muted-foreground">Includes: {(tier.included_services || []).join(', ') || '—'}</p>
-                  <Button variant="outline" size="sm" onClick={() => toggleTierActive(tier)}>
+                  <Button variant="outline" size="sm" className="max-xl:min-h-11" onClick={() => toggleTierActive(tier)}>
                     {tier.is_active ? 'Deactivate' : 'Activate'}
                   </Button>
                 </CardContent>
               </Card>
             ))}
-            {!tiers.length && <p className="text-sm text-muted-foreground">No tiers yet — create your first plan above.</p>}
+            {!tiers.length && <p className="text-sm text-muted-foreground">No tiers yet — use Add premium tier to create your first plan.</p>}
           </div>
         </TabsContent>
 
@@ -513,23 +507,13 @@ export default function MembershipsPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Add stamp threshold</CardTitle>
-              <CardDescription>When a customer reaches this stamp total on their card, they unlock the reward. (Spend points are separate — toggled under Program.)</CardDescription>
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+              <CardTitle>Active thresholds</CardTitle>
+              <Button type="button" className="min-h-11" onClick={() => setCreateOpen('milestone')}>
+                <Plus size={16} className="mr-1.5" aria-hidden />
+                Add stamp threshold
+              </Button>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={onCreateMilestone} className="grid gap-4 md:grid-cols-2">
-                <div className="flex flex-col gap-2"><Label>Threshold stamps</Label><Input required type="number" min="1" step="1" value={milestoneForm.threshold_points} onChange={(e) => setMilestoneForm({ ...milestoneForm, threshold_points: e.target.value })} placeholder="10" /></div>
-                <div className="flex flex-col gap-2"><Label>Sort order</Label><Input type="number" min="0" value={milestoneForm.sort_order} onChange={(e) => setMilestoneForm({ ...milestoneForm, sort_order: e.target.value })} /></div>
-                <div className="flex flex-col gap-2"><Label>Reward label</Label><Input required value={milestoneForm.reward_label} onChange={(e) => setMilestoneForm({ ...milestoneForm, reward_label: e.target.value })} placeholder="Free wash" /></div>
-                <div className="flex flex-col gap-2"><Label>Description</Label><Input value={milestoneForm.reward_description} onChange={(e) => setMilestoneForm({ ...milestoneForm, reward_description: e.target.value })} placeholder="Complimentary standard wash" /></div>
-                <Button type="submit" className="md:col-span-2" disabled={saving}><Plus data-icon="inline-start" /> Add milestone</Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>Active thresholds</CardTitle></CardHeader>
             <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -549,7 +533,7 @@ export default function MembershipsPage() {
                       <TableCell className="text-muted-foreground">{row.reward_description || '—'}</TableCell>
                       <TableCell>{row.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Off</Badge>}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => setEditingMilestone({
+                        <Button variant="ghost" size="sm" className="max-xl:min-h-11" onClick={() => setEditingMilestone({
                           ...row,
                           threshold_points: String(row.threshold_points),
                           sort_order: String(row.sort_order ?? 0),
@@ -643,50 +627,18 @@ export default function MembershipsPage() {
 
         <TabsContent value="assign" className="mt-6 flex flex-col gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Assign premium membership</CardTitle>
-              <CardDescription>
-                Link a customer to a paid tier for POS loyalty multipliers
-                {settings.memberships_enabled === false ? ' (memberships are currently disabled in Program).' : '.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={onAssignMembership} className="grid gap-4 md:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <Label>Customer</Label>
-                  <Select value={assignForm.customer_id} onValueChange={(v) => setAssignForm({ ...assignForm, customer_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                    <SelectContent>
-                      {customers.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.full_name || c.email || c.phone} · {c.loyalty_stamps ?? 0} stamps
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Tier</Label>
-                  <Select value={assignForm.tier_id} onValueChange={(v) => setAssignForm({ ...assignForm, tier_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select tier" /></SelectTrigger>
-                    <SelectContent>
-                      {activeTiers.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button type="submit" className="md:col-span-2" disabled={saving || !assignForm.customer_id || !assignForm.tier_id}>
-                  Assign membership
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Active memberships</CardTitle>
-              <CardDescription>Revoke to stop multipliers immediately on the next sale.</CardDescription>
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <CardTitle>Active memberships</CardTitle>
+                <CardDescription>
+                  Revoke to stop multipliers immediately on the next sale
+                  {settings.memberships_enabled === false ? ' (memberships are currently disabled in Program).' : '.'}
+                </CardDescription>
+              </div>
+              <Button type="button" className="min-h-11" onClick={() => setCreateOpen('assign')}>
+                <Plus size={16} className="mr-1.5" aria-hidden />
+                Assign membership
+              </Button>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <Table>
@@ -712,6 +664,7 @@ export default function MembershipsPage() {
                         <Button
                           size="sm"
                           variant="outline"
+                          className="max-xl:min-h-11"
                           disabled={saving}
                           onClick={() => onRevokeMembership(row.id)}
                         >
@@ -731,6 +684,87 @@ export default function MembershipsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={createOpen === 'tier'} onOpenChange={(open) => !open && setCreateOpen('')}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add premium tier</DialogTitle>
+            <DialogDescription>Paid membership plans with discount and loyalty multiplier on POS spend.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={onCreateTier} className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="tier-name">Name</Label><Input id="tier-name" required className="min-h-11" value={tierForm.name} onChange={(e) => setTierForm({ ...tierForm, name: e.target.value })} /></div>
+            <div className="flex flex-col gap-2"><Label htmlFor="tier-price">Starting price (₱)</Label><Input id="tier-price" required type="number" min="0" step="0.01" className="min-h-11" value={tierForm.starting_price} onChange={(e) => setTierForm({ ...tierForm, starting_price: e.target.value })} /></div>
+            <div className="flex flex-col gap-2"><Label htmlFor="tier-discount">Discount %</Label><Input id="tier-discount" type="number" min="0" max="100" step="0.1" className="min-h-11" value={tierForm.discount_percent} onChange={(e) => setTierForm({ ...tierForm, discount_percent: e.target.value })} /></div>
+            <div className="flex flex-col gap-2"><Label htmlFor="tier-mult">Loyalty multiplier</Label><Input id="tier-mult" type="number" min="0" max="10" step="0.1" className="min-h-11" value={tierForm.loyalty_multiplier} onChange={(e) => setTierForm({ ...tierForm, loyalty_multiplier: e.target.value })} /></div>
+            <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="tier-benefits">Benefits (one per line)</Label><Textarea id="tier-benefits" rows={3} value={tierForm.benefits} onChange={(e) => setTierForm({ ...tierForm, benefits: e.target.value })} placeholder={'Priority booking\nMember-only promos'} /></div>
+            <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="tier-included">Included services (one per line)</Label><Textarea id="tier-included" rows={2} value={tierForm.included_services} onChange={(e) => setTierForm({ ...tierForm, included_services: e.target.value })} placeholder="Premium Car Wash" /></div>
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen('')}>Cancel</Button>
+              <Button type="submit" className="min-h-11" disabled={saving}>{saving ? 'Saving…' : 'Create tier'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createOpen === 'milestone'} onOpenChange={(open) => !open && setCreateOpen('')}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add stamp threshold</DialogTitle>
+            <DialogDescription>When a customer reaches this stamp total on their card, they unlock the reward. Spend points are separate — toggled under Program.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={onCreateMilestone} className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2"><Label htmlFor="ms-threshold">Threshold stamps</Label><Input id="ms-threshold" required type="number" min="1" step="1" className="min-h-11" value={milestoneForm.threshold_points} onChange={(e) => setMilestoneForm({ ...milestoneForm, threshold_points: e.target.value })} placeholder="10" /></div>
+            <div className="flex flex-col gap-2"><Label htmlFor="ms-sort">Sort order</Label><Input id="ms-sort" type="number" min="0" className="min-h-11" value={milestoneForm.sort_order} onChange={(e) => setMilestoneForm({ ...milestoneForm, sort_order: e.target.value })} /></div>
+            <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="ms-label">Reward label</Label><Input id="ms-label" required className="min-h-11" value={milestoneForm.reward_label} onChange={(e) => setMilestoneForm({ ...milestoneForm, reward_label: e.target.value })} placeholder="Free wash" /></div>
+            <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="ms-desc">Description</Label><Input id="ms-desc" className="min-h-11" value={milestoneForm.reward_description} onChange={(e) => setMilestoneForm({ ...milestoneForm, reward_description: e.target.value })} placeholder="Complimentary standard wash" /></div>
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen('')}>Cancel</Button>
+              <Button type="submit" className="min-h-11" disabled={saving}>Add threshold</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createOpen === 'assign'} onOpenChange={(open) => !open && setCreateOpen('')}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign premium membership</DialogTitle>
+            <DialogDescription>Link a customer to a paid tier for POS loyalty multipliers.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={onAssignMembership} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label>Customer</Label>
+              <Select value={assignForm.customer_id} onValueChange={(v) => setAssignForm({ ...assignForm, customer_id: v })}>
+                <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                <SelectContent>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.full_name || c.email || c.phone} · {c.loyalty_stamps ?? 0} stamps
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Tier</Label>
+              <Select value={assignForm.tier_id} onValueChange={(v) => setAssignForm({ ...assignForm, tier_id: v })}>
+                <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Select tier" /></SelectTrigger>
+                <SelectContent>
+                  {activeTiers.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen('')}>Cancel</Button>
+              <Button type="submit" className="min-h-11" disabled={saving || !assignForm.customer_id || !assignForm.tier_id}>
+                Assign membership
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editingTier} onOpenChange={(open) => !open && setEditingTier(null)}>
         <DialogContent>

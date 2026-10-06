@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { isSuperAdmin } from '@/auth/permissions'
@@ -35,7 +36,7 @@ function SizeSelect({ id, value, onChange }) {
       id={id}
       value={value || 'medium'}
       onChange={(e) => onChange(e.target.value)}
-      className="flex h-9 min-w-[9rem] rounded-md border border-input bg-transparent px-3 text-sm"
+      className="flex min-h-11 min-w-[9rem] rounded-md border border-input bg-transparent px-3 text-base md:text-sm"
     >
       {PRICING_SIZES.map((sz) => (
         <option key={sz.slug} value={sz.slug}>
@@ -50,6 +51,7 @@ export default function CarsCatalogPage() {
   const { profile } = useAuth()
   const [rows, setRows] = useState([])
   const [addForm, setAddForm] = useState(emptyForm)
+  const [addOpen, setAddOpen] = useState(false)
   const [editForm, setEditForm] = useState(emptyForm)
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -125,6 +127,7 @@ export default function CarsCatalogPage() {
     clearVehicleCatalogCache()
     toast.success('Added')
     setAddForm(emptyForm)
+    setAddOpen(false)
     load()
   }
 
@@ -206,22 +209,29 @@ export default function CarsCatalogPage() {
       eyebrow="Masterlist"
       title="Cars catalog"
       description="Super Admin CRUD for the TL queue picker. Each make/model has a bay size (Small–XL) so bookings and packages auto-price; staff can override on the ticket."
+      actions={
+        <Button type="button" className="min-h-11" onClick={() => setAddOpen(true)}>
+          <Plus size={16} className="mr-1.5" aria-hidden />
+          Add make / model
+        </Button>
+      }
     >
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Add make / model</CardTitle>
-          <CardDescription>
-            Used by VehicleMakeModelFields on the floor for Team Lead and staff. Size chart:
-            Small = sedans/hatchbacks · Medium = crossovers · Large = SUVs/vans · Extra Large = full-size.
-            Seeds pricing for services, packages, and detailing; change if this shop prices the car differently.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={addRow} className="flex flex-wrap gap-3">
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add make / model</DialogTitle>
+            <DialogDescription>
+              Size chart: Small = sedans/hatchbacks · Medium = crossovers · Large = SUVs/vans · Extra Large = full-size.
+              Seeds pricing for services, packages, and detailing; change if this shop prices the car differently.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={addRow} className="flex flex-col gap-3">
             <div className="flex flex-col gap-2">
-              <Label>Make</Label>
+              <Label htmlFor="add-make">Make</Label>
               <Input
+                id="add-make"
+                className="min-h-11"
                 required
                 value={addForm.make}
                 onChange={(e) => {
@@ -232,8 +242,10 @@ export default function CarsCatalogPage() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Model</Label>
+              <Label htmlFor="add-model">Model</Label>
               <Input
+                id="add-model"
+                className="min-h-11"
                 required
                 value={addForm.model}
                 onChange={(e) => {
@@ -247,12 +259,15 @@ export default function CarsCatalogPage() {
               <Label htmlFor="add-size">Size</Label>
               <SizeSelect id="add-size" value={addForm.size_slug} onChange={(size_slug) => setAddForm({ ...addForm, size_slug })} />
             </div>
-            <Button type="submit" className="self-end" disabled={saving}>
-              {saving && !editing ? 'Saving…' : 'Add'}
-            </Button>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setAddOpen(false)}>Cancel</Button>
+              <Button type="submit" className="min-h-11" disabled={saving}>
+                {saving && !editing ? 'Saving…' : 'Add'}
+              </Button>
+            </DialogFooter>
           </form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
@@ -276,7 +291,7 @@ export default function CarsCatalogPage() {
                 id="cars-size"
                 value={sizeFilter}
                 onChange={(e) => setSizeFilter(e.target.value)}
-                className="flex h-9 min-w-[8rem] rounded-md border border-input bg-transparent px-3 text-sm"
+                className="flex min-h-11 min-w-[8rem] rounded-md border border-input bg-transparent px-3 text-base md:text-sm"
               >
                 <option value="all">All</option>
                 {PRICING_SIZES.map((sz) => (
@@ -292,7 +307,7 @@ export default function CarsCatalogPage() {
                 id="cars-active"
                 value={activeFilter}
                 onChange={(e) => setActiveFilter(e.target.value)}
-                className="flex h-9 min-w-[8rem] rounded-md border border-input bg-transparent px-3 text-sm"
+                className="flex min-h-11 min-w-[8rem] rounded-md border border-input bg-transparent px-3 text-base md:text-sm"
               >
                 <option value="all">All</option>
                 <option value="active">Active</option>

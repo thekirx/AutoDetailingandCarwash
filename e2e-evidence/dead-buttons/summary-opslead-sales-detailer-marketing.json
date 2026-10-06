@@ -1,0 +1,140 @@
+{
+  "base": "http://localhost:5173",
+  "dead": [
+    {
+      "persona": "marketing",
+      "path": "/operations/crm",
+      "button": "__none__"
+    },
+    {
+      "persona": "marketing",
+      "path": "/operations/crm",
+      "button": "Queue SMS"
+    }
+  ],
+  "errors": [
+    {
+      "persona": "marketing",
+      "path": "/operations/notifications",
+      "button": "Send broadcast",
+      "error": "Failed to fetch"
+    }
+  ],
+  "pages": [
+    {
+      "persona": "opslead",
+      "path": "/operations/roadmap",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "opslead",
+      "path": "/operations/dashboard",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "opslead",
+      "path": "/operations/queue",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "opslead",
+      "path": "/operations/kpi",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "opslead",
+      "path": "/operations/pos",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "opslead",
+      "path": "/operations/reviews",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "opslead",
+      "path": "/operations/planning",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "opslead",
+      "path": "/operations/history",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "opslead",
+      "path": "/operations/finance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "opslead",
+      "path": "/operations/audit",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "sales",
+      "path": "/operations/bookings",
+      "clicks": 10,
+      "dead": 0
+    },
+    {
+      "persona": "sales",
+      "path": "/operations/history",
+      "clicks": 1,
+      "dead": 0
+    },
+    {
+      "persona": "detailer",
+      "path": "/operations/bookings",
+      "clicks": 12,
+      "dead": 0
+    },
+    {
+      "persona": "detailer",
+      "path": "/operations/attendance",
+      "clicks": 2,
+      "dead": 0
+    },
+    {
+      "persona": "detailer",
+      "path": "/operations/my-tasks",
+      "clicks": 0,
+      "dead": 0
+    },
+    {
+      "persona": "marketing",
+      "path": "/operations/crm",
+      "clicks": 10,
+      "dead": 2
+    },
+    {
+      "persona": "marketing",
+      "path": "/operations/bookings",
+      "clicks": 8,
+      "dead": 0
+    },
+    {
+      "persona": "marketing",
+      "path": "/operations/planning",
+      "clicks": 7,
+      "dead": 0
+    },
+    {
+      "persona": "marketing",
+      "path": "/operations/notifications",
+      "clicks": 16,
+      "dead": 0
+    }
+  ],
+  "at": "2026-10-06T10:47:05.522Z"
+}

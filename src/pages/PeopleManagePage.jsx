@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Pencil, UserPlus } from 'lucide-react'
+import { Pencil, Plus, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   ROLES,
@@ -26,7 +26,7 @@ import { filterBranchesForProfile, filterPeopleForProfile, pickDefaultBranchSlug
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -111,6 +111,8 @@ export default function PeopleManagePage() {
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [roleOpen, setRoleOpen] = useState(false)
+  const [tempTlOpen, setTempTlOpen] = useState(false)
   const [dirQuery, setDirQuery] = useState('')
   const [dirBranch, setDirBranch] = useState('')
   const [dirStatus, setDirStatus] = useState('all')
@@ -260,6 +262,7 @@ export default function PeopleManagePage() {
       })
       if (error) throw error
       toast.success('Temp Team Lead set for that day')
+      setTempTlOpen(false)
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -403,15 +406,27 @@ export default function PeopleManagePage() {
 
       {isSuperAdmin(profile) ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Custom roles</CardTitle>
-            <CardDescription>
-              Option A: baseline system template + grants overlay. Assign via custom_role_key on a person (keeps profile_role enum).
-            </CardDescription>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <CardTitle>Custom roles</CardTitle>
+              <CardDescription>
+                Option A: baseline system template + grants overlay. Assign via custom_role_key on a person (keeps profile_role enum).
+              </CardDescription>
+            </div>
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setRoleOpen(true)}>
+              <Plus size={16} className="mr-1.5" aria-hidden />
+              New role
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
+            <Dialog open={roleOpen} onOpenChange={setRoleOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>New custom role</DialogTitle>
+                  <DialogDescription>Baseline system template plus a grants overlay.</DialogDescription>
+                </DialogHeader>
             <form
-              className="grid gap-3 sm:grid-cols-2"
+              className="flex flex-col gap-3"
               onSubmit={async (e) => {
                 e.preventDefault()
                 const check = validateRoleDefinition({
@@ -436,17 +451,22 @@ export default function PeopleManagePage() {
                 else {
                   toast.success('Role definition saved')
                   setRoleDefForm({ role_key: '', label: '', baseline_template: 'staff', grants: { ...DEFAULT_ASSISTANT_GRANTS } })
+                  setRoleOpen(false)
                   load()
                 }
               }}
             >
               <Input
+                aria-label="Role key"
                 placeholder="role_key (snake_case)"
+                className="min-h-11"
                 value={roleDefForm.role_key}
                 onChange={(e) => setRoleDefForm((f) => ({ ...f, role_key: e.target.value }))}
               />
               <Input
+                aria-label="Label"
                 placeholder="Label"
+                className="min-h-11"
                 value={roleDefForm.label}
                 onChange={(e) => setRoleDefForm((f) => ({ ...f, label: e.target.value }))}
               />
@@ -454,18 +474,23 @@ export default function PeopleManagePage() {
                 value={roleDefForm.baseline_template}
                 onValueChange={(baseline_template) => setRoleDefForm((f) => ({ ...f, baseline_template }))}
               >
-                <SelectTrigger><SelectValue placeholder="Baseline template" /></SelectTrigger>
+                <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Baseline template" /></SelectTrigger>
                 <SelectContent>
                   {BASELINE_TEMPLATES.map((t) => (
                     <SelectItem key={t} value={t}>{ROLE_LABELS[t] || t}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button type="submit" className="min-h-11">Save definition</Button>
-              <p className="sm:col-span-2 text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Grant keys whitelist: {ASSISTANT_GRANT_KEYS.slice(0, 6).join(', ')}…
               </p>
+              <DialogFooter>
+                <Button type="button" variant="outline" className="min-h-11" onClick={() => setRoleOpen(false)}>Cancel</Button>
+                <Button type="submit" className="min-h-11">Save definition</Button>
+              </DialogFooter>
             </form>
+              </DialogContent>
+            </Dialog>
             <ul className="space-y-2 text-sm">
               {roleDefs.map((d) => (
                 <li key={d.role_key} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
@@ -816,21 +841,33 @@ export default function PeopleManagePage() {
 
       {canCreateStaffRoleOverride(profile) ? (
         <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Temp Team Lead</CardTitle>
-            <CardDescription>
-              Assign crew as Team Lead for one Manila calendar day (branch-scoped). Super Admin can revoke.
-            </CardDescription>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <CardTitle>Temp Team Lead</CardTitle>
+              <CardDescription>
+                Assign crew as Team Lead for one Manila calendar day (branch-scoped). Super Admin can revoke.
+              </CardDescription>
+            </div>
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setTempTlOpen(true)}>
+              <Plus size={16} className="mr-1.5" aria-hidden />
+              Assign temp TL
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form onSubmit={createTempTl} className="grid gap-3 sm:grid-cols-4">
+            <Dialog open={tempTlOpen} onOpenChange={setTempTlOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Assign temp Team Lead</DialogTitle>
+                  <DialogDescription>One Manila calendar day, scoped to the branch you pick.</DialogDescription>
+                </DialogHeader>
+            <form onSubmit={createTempTl} className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-2 sm:col-span-2">
                 <Label>Crew</Label>
                 <Select
                   value={overrideForm.staff_id}
                   onValueChange={(staff_id) => setOverrideForm((f) => ({ ...f, staff_id }))}
                 >
-                  <SelectTrigger className="min-h-11"><SelectValue placeholder="Select staff" /></SelectTrigger>
+                  <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Select staff" /></SelectTrigger>
                   <SelectContent>
                     {people
                       .filter((p) => p.is_active && ['staff', 'team_lead'].includes(p.role))
@@ -848,7 +885,7 @@ export default function PeopleManagePage() {
                   value={overrideForm.branch_slug}
                   onValueChange={(branch_slug) => setOverrideForm((f) => ({ ...f, branch_slug }))}
                 >
-                  <SelectTrigger className="min-h-11"><SelectValue placeholder="Branch" /></SelectTrigger>
+                  <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Branch" /></SelectTrigger>
                   <SelectContent>
                     {branches.map((b) => (
                       <SelectItem key={b.slug} value={b.slug}>{b.name || b.slug}</SelectItem>
@@ -865,10 +902,15 @@ export default function PeopleManagePage() {
                   onChange={(e) => setOverrideForm((f) => ({ ...f, on_date: e.target.value }))}
                 />
               </div>
-              <Button type="submit" className="min-h-11 sm:col-span-4" disabled={saving}>
-                {saving ? 'Saving…' : 'Assign temp TL'}
-              </Button>
+              <DialogFooter className="sm:col-span-2">
+                <Button type="button" variant="outline" className="min-h-11" onClick={() => setTempTlOpen(false)}>Cancel</Button>
+                <Button type="submit" className="min-h-11" disabled={saving}>
+                  {saving ? 'Saving…' : 'Assign temp TL'}
+                </Button>
+              </DialogFooter>
             </form>
+              </DialogContent>
+            </Dialog>
             <ul className="space-y-2 text-sm">
               {overrides.map((row) => {
                 const name = people.find((p) => p.id === row.staff_id)?.full_name || row.staff_id.slice(0, 8)

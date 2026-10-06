@@ -8,6 +8,7 @@ import { AuthProvider } from './auth/AuthProvider'
 import AppErrorBoundary from '@/components/AppErrorBoundary'
 import CookieConsent from '@/components/CookieConsent'
 import { Toaster } from '@/components/ui/sonner'
+import { toast } from 'sonner'
 import { registerSW } from 'virtual:pwa-register'
 import './styles.css'
 import './styles/finance.css'
@@ -50,6 +51,13 @@ window.addEventListener('vite:preloadError', (event) => {
   }
   window.location.reload()
 })
+// Many button handlers await fetch() without a catch; offline, that rejection would otherwise be silent.
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason
+  if (reason?.name !== 'TypeError' || !/failed to fetch|networkerror|load failed/i.test(String(reason?.message))) return
+  toast.error('Network error — that action did not reach the server. Check your connection and try again.', { id: 'network-error' })
+})
+
 window.setTimeout(() => {
   try {
     sessionStorage.removeItem(PRELOAD_RELOAD_KEY)

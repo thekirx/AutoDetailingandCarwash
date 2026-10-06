@@ -6,14 +6,14 @@
 
 ## Dock
 
-Attendance · Tasks · Pay · Forms
+Attendance · Tasks · Forms (More: Floor, KPI)
 
 ## Daily flow
 
-1. Clock in (geo if required)  
+1. Time in (geofenced; a faked or tampered location is blocked and SA / ASA / BA are alerted)  
 2. My Tasks  
-3. Planner forms when assigned  
-4. Clock out · check My pay
+3. Planner forms when assigned (incl. Cash advance request)  
+4. Time out · Attendance shows today's wash pool estimate; actual pay is on the branch's approved Daily Sheet
 
 ## Must never see
 

@@ -6,11 +6,34 @@ import {
   buildAttendanceHeatmap,
   buildAttendanceTableRows,
   combineLocalDateAndTime,
+  geoAlertReasonText,
+  geoClientFlags,
   haversineMeters,
   isInsideGeofence,
   isLateVsShift,
   isoToLocalHhmm,
 } from '../src/lib/attendanceGeo.js'
+
+describe('geo tamper flags', () => {
+  const now = Date.parse('2026-10-06T08:00:00Z')
+
+  it('clean fresh fix → no flags', () => {
+    assert.deepEqual(geoClientFlags({ timestamp: now - 2000 }, { now }), [])
+    assert.deepEqual(geoClientFlags({}, { now }), [])
+  })
+
+  it('automation and stale / future-dated fixes are flagged', () => {
+    assert.deepEqual(geoClientFlags({ timestamp: now }, { webdriver: true, now }), ['automation'])
+    assert.deepEqual(geoClientFlags({ timestamp: now - 6 * 60_000 }, { now }), ['stale_fix'])
+    assert.deepEqual(geoClientFlags({ timestamp: now + 2 * 60_000 }, { now }), ['stale_fix'])
+  })
+
+  it('reason text is readable and passes unknown codes through', () => {
+    assert.equal(geoAlertReasonText(['pin_match', 'no_accuracy']), 'exact copy of the branch pin, no GPS accuracy')
+    assert.equal(geoAlertReasonText(['new_code']), 'new_code')
+    assert.equal(geoAlertReasonText(null), '')
+  })
+})
 
 describe('attendance geo helpers', () => {
   it('haversine: same point is 0m', () => {

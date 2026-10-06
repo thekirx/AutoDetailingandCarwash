@@ -25,7 +25,8 @@ describe('Detailing Maintenance tab contract', () => {
     assert.match(api, /action === 'serviced'/)
     assert.match(api, /team_lead/)
     assert.match(api, /WRITE_ROLES = new Set\(\['BossMich', 'assistant_super_admin', 'sales'/)
-    assert.doesNotMatch(api, /WRITE_ROLES = new Set\(\[[^\]]*admin,/)
+    // Branch Admin does the client reminding.
+    assert.match(api, /WRITE_ROLES = new Set\(\[[^\]]*'admin'\]\)/)
     assert.match(panel, /\/api\/maintenance-schedules/)
     assert.match(api, /handleMaintenanceSchedulesRequest/)
     assert.match(bookings, /maintenance-schedules/)

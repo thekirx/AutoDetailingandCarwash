@@ -2,6 +2,14 @@
 import { useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +34,7 @@ const KIND_OPTIONS = [
 
 export default function FinanceCategoriesTab({ categories, canWrite, onReload }) {
   const [form, setForm] = useState({ name: '', kind: 'general', is_chemical: false })
+  const [createOpen, setCreateOpen] = useState(false)
 
   const metrics = useMemo(() => {
     const list = categories || []
@@ -48,6 +57,7 @@ export default function FinanceCategoriesTab({ categories, canWrite, onReload })
     else {
       toast.success('Category added')
       setForm({ name: '', kind: 'general', is_chemical: false })
+      setCreateOpen(false)
       onReload?.()
     }
   }
@@ -70,15 +80,19 @@ export default function FinanceCategoriesTab({ categories, canWrite, onReload })
         <FinanceMetricCell label="Pre-approval" value={String(metrics.pre)} hint="Chemical / flagged" tone="muted" />
       </FinanceMetricStrip>
 
-      {canWrite ? (
-        <FinancePanel title="Add category" description="Kinds drive P&L grouping. Chemicals route to pre-approval. These categories are the POS daily-expense source (Phase 3).">
-          <form onSubmit={save} className="grid gap-3 md:grid-cols-[1fr_180px_auto_auto]">
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add category</DialogTitle>
+            <DialogDescription>Kinds drive P&L grouping. Chemicals route to pre-approval. These categories are the POS daily-expense source.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={save} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="cat-name">Name</Label>
               <Input
                 id="cat-name"
                 required
-                className="min-h-10"
+                className="min-h-11"
                 placeholder="e.g. Coffee and supplies"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -88,7 +102,7 @@ export default function FinanceCategoriesTab({ categories, canWrite, onReload })
               <Label htmlFor="cat-kind">Kind</Label>
               <select
                 id="cat-kind"
-                className="finance-toolbar-select min-h-10 w-full"
+                className="finance-toolbar-select min-h-11 w-full"
                 value={form.kind}
                 onChange={(e) => setForm({ ...form, kind: e.target.value })}
               >
@@ -102,34 +116,40 @@ export default function FinanceCategoriesTab({ categories, canWrite, onReload })
                 <p className="text-sm text-muted-foreground">Posted payroll grouping — not commission %.</p>
               ) : null}
             </div>
-            <div className="flex items-end gap-2 pb-2">
-              <label className="flex min-h-10 items-center gap-2 text-sm text-foreground">
-                <input
-                  type="checkbox"
-                  checked={form.is_chemical}
-                  onChange={(e) => setForm({ ...form, is_chemical: e.target.checked })}
-                />
-                Pre-approval
-              </label>
-            </div>
-            <div className="flex items-end">
-              <Button type="submit" className="min-h-10 cursor-pointer">
-                <Plus data-icon="inline-start" />
-                Add
+            <label className="flex min-h-11 items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={form.is_chemical}
+                onChange={(e) => setForm({ ...form, is_chemical: e.target.checked })}
+              />
+              Pre-approval
+            </label>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(false)}>
+                Cancel
               </Button>
-            </div>
+              <Button type="submit" className="min-h-11 cursor-pointer">
+                Add category
+              </Button>
+            </DialogFooter>
           </form>
-        </FinancePanel>
-      ) : null}
+        </DialogContent>
+      </Dialog>
 
       <FinancePanel
         title="Categories"
         description={`${metrics.total} categor${metrics.total === 1 ? 'y' : 'ies'} · POS expense kinds load from this list · kinds drive P&L grouping, not commission %`}
+        actions={canWrite ? (
+          <Button type="button" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(true)}>
+            <Plus data-icon="inline-start" />
+            Add category
+          </Button>
+        ) : null}
       >
         {!categories.length ? (
           <FinanceEmpty
             title="No categories yet"
-            body={canWrite ? 'Add a category above so bills can be classified.' : 'Ask someone with write access to add categories.'}
+            body={canWrite ? 'Use Add category so bills can be classified.' : 'Ask someone with write access to add categories.'}
           />
         ) : (
           <>

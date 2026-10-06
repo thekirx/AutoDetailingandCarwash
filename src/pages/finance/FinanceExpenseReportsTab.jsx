@@ -1,6 +1,15 @@
 /** ASA expense report composer + SA approve — dashboard chrome. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +45,7 @@ export default function FinanceExpenseReportsTab({
     notes: '',
   })
   const [busy, setBusy] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
   const [reviewNote, setReviewNote] = useState('')
 
   const load = useCallback(async () => {
@@ -117,6 +127,7 @@ export default function FinanceExpenseReportsTab({
     else {
       toast.success('Draft expense report created')
       setForm((f) => ({ ...f, amountPesos: '', notes: '', title: '' }))
+      setCreateOpen(false)
       load()
     }
   }
@@ -170,11 +181,12 @@ export default function FinanceExpenseReportsTab({
         <FinanceMetricCell label="Line total" value={formatMoney(metrics.totalMinor)} hint="All open reports" tone="ink" />
       </FinanceMetricStrip>
 
-      {canWrite ? (
-        <FinancePanel
-          title="Compose expense report"
-          description="ASA category lines. Submit creates pending_approval expenses. SA approves to pending payment; mark paid when cash leaves."
-        >
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Compose expense report</DialogTitle>
+            <DialogDescription>ASA category lines. Submit creates pending_approval expenses. SA approves to pending payment; mark paid when cash leaves.</DialogDescription>
+          </DialogHeader>
           <form onSubmit={createAndAddLine} className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="er-branch">Branch</Label>
@@ -248,16 +260,27 @@ export default function FinanceExpenseReportsTab({
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               />
             </div>
-            <Button type="submit" className="min-h-11 cursor-pointer sm:col-span-2" disabled={busy}>
-              Save draft + line
-            </Button>
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="min-h-11 cursor-pointer" disabled={busy}>
+                Save draft + line
+              </Button>
+            </DialogFooter>
           </form>
-        </FinancePanel>
-      ) : null}
+        </DialogContent>
+      </Dialog>
 
       <FinancePanel
         title="Reports"
         description="Submit → pending approval. Approve → pending payment (not on P&L until paid). Mark paid when settled."
+        actions={canWrite ? (
+          <Button type="button" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(true)}>
+            <Plus data-icon="inline-start" />
+            New expense report
+          </Button>
+        ) : null}
       >
         {isSuperAdmin(profile) ? (
           <div className="mb-4 flex flex-col gap-1.5">
@@ -268,7 +291,7 @@ export default function FinanceExpenseReportsTab({
         {!reports.length ? (
           <FinanceEmpty
             title="No expense reports yet"
-            body={canWrite ? 'Compose a draft above for the selected branch and period.' : 'No reports in this filter scope.'}
+            body={canWrite ? 'Use New expense report to draft one for the selected branch and period.' : 'No reports in this filter scope.'}
           />
         ) : (
           <ul className="finance-cue-list">

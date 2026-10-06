@@ -72,7 +72,7 @@ export default function FinanceFilters({
                 aria-invalid={rangeInvalid || undefined}
                 aria-describedby={rangeInvalid ? 'finance-range-error' : undefined}
                 onChange={(e) => onCustomRangeChange(e.target.value, customEnd)}
-                className="min-h-10"
+                className="min-h-11 xl:min-h-10"
               />
             </div>
             <div className="finance-filter-group" data-invalid={rangeInvalid || undefined}>
@@ -84,7 +84,7 @@ export default function FinanceFilters({
                 aria-invalid={rangeInvalid || undefined}
                 aria-describedby={rangeInvalid ? 'finance-range-error' : undefined}
                 onChange={(e) => onCustomRangeChange(customStart, e.target.value)}
-                className="min-h-10"
+                className="min-h-11 xl:min-h-10"
               />
             </div>
           </>

@@ -282,7 +282,7 @@ function FloorAppShell({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              <NotificationBell light homeUrl={homeUrl} homeLabel={homeLabel} />
+              <NotificationBell variant="floor" homeUrl={homeUrl} homeLabel={homeLabel} />
               <button type="button" className="floor-icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
                 <Settings size={18} />
               </button>

@@ -68,6 +68,7 @@ import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import DetailingMaintenancePanel from '@/components/DetailingMaintenancePanel'
+import BookingFloorBoard from '@/components/bookings/BookingFloorBoard'
 import { BOOKING_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -304,9 +305,13 @@ export default function BookingBoardPage() {
   const canAdvanceStatus = canAdvanceBookingStatus(profile) && !bookingsReadOnly
   const canCancelForm = canEdit && !bookingsReadOnly
   const canSeePayment = false // Bookings board ends at Successful Release — POS is separate
+  const isTeamLead = profile?.role === ROLES.TEAM_LEAD
+  // Floor roles get the Queue-style board (status cards + car cards + maintenance arrivals).
+  const floorLayout = isTeamLead || isBranchAdmin(profile)
   const [searchParams, setSearchParams] = useSearchParams()
   const shellTabs = useMemo(() => allowedBookingViews(profile, BOOKING_SHELL_TABS), [profile])
   const tab = shellTabs.some((t) => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'board'
+  const floorStage = searchParams.get('stage')
   const [bookings, setBookings] = useState([])
   const [branches, setBranches] = useState([])
   const [services, setServices] = useState([])
@@ -319,6 +324,9 @@ export default function BookingBoardPage() {
   const [kindFilter, setKindFilter] = useState('detailing')
   const [tableSort, setTableSort] = useState({ key: 'start', dir: 'asc' })
   const [tablePage, setTablePage] = useState(1)
+  // Controlled: react-big-calendar's uncontrolled wrapper drops navigation after a StrictMode remount.
+  const [calDate, setCalDate] = useState(() => new Date())
+  const [calView, setCalView] = useState(Views.WEEK)
   const [tablePageSize, setTablePageSize] = useState(BOOKING_TABLE_DEFAULT_PAGE_SIZE)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -369,7 +377,7 @@ export default function BookingBoardPage() {
 
   const load = useCallback(async () => {
     const select =
-      'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, vehicle_type, service_id, final_price_minor, price_minor, services(name, slug, pay_category)'
+      'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, vehicle_type, service_id, final_price_minor, price_minor, queue_number, services(name, slug, pay_category)'
     // Open pipeline stays on board/calendar until released/cancelled — date filter only gates terminal rows.
     const openStatuses = boardStatuses.filter((s) => isOpenBookingStatus(s))
     const closedStatuses = boardStatuses.filter((s) => !isOpenBookingStatus(s))
@@ -562,6 +570,23 @@ export default function BookingBoardPage() {
         : { key: column, dir: 'asc' }
     ))
   }
+
+  function floorNextAction(booking) {
+    if (!canAdvanceStatus) return null
+    // TL never hands off to payment or closes a paid-pending job — POS owns For payment.
+    if (isTeamLead && booking.status === 'for_payment') return null
+    const next = getBookingPrimaryNextStatus(booking.status, { canSeePayment, canCheckIn, detailingPipeline: true })
+    if (isTeamLead && next === 'for_payment') return null
+    return next
+  }
+
+  const setFloorStage = useCallback((stage) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('stage', stage)
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
 
   async function move(booking, status) {
     if (!canAdvanceStatus) return
@@ -962,20 +987,37 @@ export default function BookingBoardPage() {
             ? range.start
             : `${range.start} → ${range.end}`
 
+  const bookingGuide = (
+    <OpsGuideCard
+      title="How bookings work"
+      description="Multi-day detailing jobs stay visible until release or cancel. Wash and packages use Queue."
+      steps={BOOKING_WORKFLOW_STEPS}
+      stepIcons={{
+        'detailing-only': Sparkles,
+        'open-until-done': CalendarDays,
+        advance: ClipboardList,
+        'pos-handoff': Send,
+        maintenance: Wrench,
+      }}
+    />
+  )
+
   return (
     <OpsPageShell
       className="hakum-bookings bk-page"
       eyebrow="Hakum Auto Care"
       title="Bookings"
       description={
-        isMarketing || isBranchAdmin(profile)
+        isBranchAdmin(profile)
+          ? 'Detailing pipeline (view only) · check in paint-maintenance arrivals'
+          : isMarketing
           ? 'Read-only detailing pipeline · ceramic · tint · PPF · paint maintenance'
           : formBookingsOnly
             ? 'Detailing pipeline · ceramic · tint · PPF · wash stays on Queue'
             : `${rangeLabel} · detailing only`
       }
       icon={CalendarDays}
-      meta={<span className="tabular-nums">{rangeLabel}</span>}
+      meta={floorLayout ? null : <span className="tabular-nums">{rangeLabel}</span>}
       actions={
         <>
           {tab !== 'list' ? (
@@ -1030,23 +1072,29 @@ export default function BookingBoardPage() {
         </>
       }
     >
-      <OpsGuideCard
-        title="How bookings work"
-        description="Multi-day detailing jobs stay visible until release or cancel. Wash and packages use Queue."
-        steps={BOOKING_WORKFLOW_STEPS}
-        stepIcons={{
-          'detailing-only': Sparkles,
-          'open-until-done': CalendarDays,
-          advance: ClipboardList,
-          'pos-handoff': Send,
-          maintenance: Wrench,
-        }}
-      />
+      {floorLayout ? null : bookingGuide}
 
       <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'board' ? {} : { tab: next }, { replace: true })} className="min-w-0 flex flex-col gap-4">
         <OpsTabList tabs={shellTabs} aria-label="Bookings views" />
 
         <TabsContent value="board" className="mt-4 min-w-0">
+          {floorLayout ? (
+            <BookingFloorBoard
+              columns={visibleColumns}
+              grouped={grouped}
+              bookings={bookings}
+              stage={floorStage}
+              onStageChange={setFloorStage}
+              searchQuery={searchQuery}
+              branchFilter={branchFilter}
+              branchNameBySlug={branchNameBySlug}
+              nextActionFor={floorNextAction}
+              onAdvance={move}
+              onOpen={canEdit || canEditServicePrice ? openEdit : null}
+              onArrived={load}
+              readOnlyHint={isTeamLead ? 'Payment handoff happens at POS.' : 'View only — Team Lead moves stages.'}
+            />
+          ) : (
           <div className="bk-board">
             <p className="bk-board-hint">Tap a card to open it. Tap a stage chip to jump columns.</p>
             <div className="bk-status-strip" role="toolbar" aria-label="Filter bookings by status">
@@ -1111,6 +1159,7 @@ export default function BookingBoardPage() {
               })}
             </div>
           </div>
+          )}
         </TabsContent>
 
         <TabsContent value="list" className="mt-4 min-w-0">
@@ -1325,7 +1374,10 @@ export default function BookingBoardPage() {
                 <BigCalendar
                   localizer={localizer}
                   events={calendarEvents}
-                  defaultView={Views.WEEK}
+                  date={calDate}
+                  onNavigate={setCalDate}
+                  view={calView}
+                  onView={setCalView}
                   views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
                   dayLayoutAlgorithm="no-overlap"
                   eventPropGetter={bookingCalendarEventPropGetter}
@@ -1342,9 +1394,11 @@ export default function BookingBoardPage() {
         </TabsContent>
 
         <TabsContent value="maintenance" className="mt-4 min-w-0">
-          <DetailingMaintenancePanel branchFilter={branchFilter} />
+          <DetailingMaintenancePanel branchFilter={branchFilter} canCreateBooking={canCreate} onArrived={load} />
         </TabsContent>
       </Tabs>
+
+      {floorLayout ? bookingGuide : null}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">

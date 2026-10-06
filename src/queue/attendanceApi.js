@@ -1,10 +1,12 @@
 import { canEditAttendanceRoles, canEditAttendanceSettings } from '../auth/permissions.js'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
+import { notifyOpsEvent } from '../lib/opsEventNotify'
 import { supabase } from '../lib/supabase'
 import {
   attendanceDateRange,
+  geoAlertReasonText,
+  geoClientFlags,
   isInsideGeofence,
-  isLateVsShift,
   haversineMeters,
   mergeAttendancePeople,
   canClockAttendance,
@@ -193,7 +195,6 @@ export async function geoTimeIn({ profile, coords, branchSlug: branchOverride })
   if (!canClockAttendance(profile)) {
     throw new Error('Attendance is turned off for this account.')
   }
-  const currentProfile = await getCurrentProfile({ required: true })
   const branchSlug = branchOverride || profile?.branch_slug || getBranchScope(profile)
   if (!branchSlug || branchSlug === NO_BRANCH_SCOPE) {
     throw new Error('No branch assigned — cannot time in.')
@@ -218,33 +219,34 @@ export async function geoTimeIn({ profile, coords, branchSlug: branchOverride })
     distanceM = fence.distanceM
   }
 
-  const late = isLateVsShift(branch.shift_start)
-  const status = late ? 'late' : 'present'
-  const today = getTodayDateSafe()
-
-  const { data, error } = await supabase
-    .from('staff_attendance')
-    .upsert(
-      {
-        staff_id: currentProfile.id,
-        branch_slug: branchSlug,
-        attendance_date: today,
-        status,
-        checked_in_at: new Date().toISOString(),
-        checked_out_at: null,
-        check_in_lat: coords.latitude,
-        check_in_lng: coords.longitude,
-        source: 'geo',
-        marked_by: currentProfile.id,
-        notes: late ? `Late vs shift ${String(branch.shift_start).slice(0, 5)}` : null,
-      },
-      // ponytail: unique is (staff_id, attendance_date) — one clock row per person per day, not per branch. Clock at the selected site; include branch_slug in the unique if the same person must clock two sites same day.
-      { onConflict: 'staff_id,attendance_date' },
-    )
-    .select('id, status, checked_in_at')
-    .single()
+  // ponytail: one clock row per (staff_id, attendance_date), not per branch — see geo_clock_in upsert.
+  const { data, error } = await supabase.rpc('geo_clock_in', {
+    p_branch_slug: branchSlug,
+    p_lat: coords.latitude,
+    p_lng: coords.longitude,
+    p_accuracy_m: Number.isFinite(coords.accuracy) ? coords.accuracy : null,
+    p_client_flags: geoClientFlags(coords, { webdriver: globalThis.navigator?.webdriver === true }),
+  })
   if (error) throw formatQueueActionError(error)
+  if (!data?.ok) {
+    notifyOpsEvent('attendance_location_alert', data?.alert_id)
+    throw new Error(
+      `Time-in blocked: your location looks faked or tampered (${geoAlertReasonText(data?.reasons)}). Turn off mock-location or GPS-spoofing apps and try again at the branch. Your Super Admin, ASA and Branch Admin were notified.`,
+    )
+  }
   return { ...data, distanceM, branch }
+}
+
+/** Recent blocked time-ins for a branch (RLS: SA / ASA / Branch Admin only). */
+export async function fetchLocationAlerts(branchSlug, limit = 20) {
+  const { data, error } = await supabase
+    .from('attendance_location_alerts')
+    .select('id, staff_id, branch_slug, reasons, accuracy_m, created_at')
+    .eq('branch_slug', branchSlug)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw formatQueueActionError(error)
+  return data || []
 }
 
 export async function geoTimeOut({ profile, coords }) {
@@ -319,7 +321,7 @@ export function readBrowserPosition() {
       return
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+      (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy, timestamp: pos.timestamp }),
       (err) => reject(new Error(err.message || 'Location permission denied.')),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
