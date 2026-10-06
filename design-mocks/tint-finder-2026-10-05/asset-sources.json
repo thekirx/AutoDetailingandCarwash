@@ -1,0 +1,26 @@
+{
+  "logo-white.png": {
+    "source": "public/branding/hakum-lw-ow.png",
+    "sha256": "7bbe193da89156b3855e639423ae69dc10f30920b1eac5d002bd4042512a3860"
+  },
+  "toyota86.webp": {
+    "source": "src/assets/services/tint-toyota86.webp",
+    "sha256": "5e5328e25ae416175a4dd007398f886914ffb19d3d328ae1b1b68172de3eb230"
+  },
+  "installation.webp": {
+    "source": "src/assets/services/ceramic-tint.webp",
+    "sha256": "5e9284d750fd071bf91d4788a663818015daa6e5ae2e87b639f94015dfbe789d"
+  },
+  "wigo.webp": {
+    "source": "src/assets/services/tint-finished-wigo.webp",
+    "sha256": "14089783d298fd3b33fc86ba76105983c53181ddef1cdf4c1b657615ebfca3a0"
+  },
+  "cabin.webp": {
+    "source": "src/assets/services/tint-cabin-through-glass.webp",
+    "sha256": "5fb20d83782a71d822a3ccce271d8416a6f76af9db939aa196c6f9063dc79e22"
+  },
+  "tint-installation-poster.webp": {
+    "source": "public/video/service-proof/tint/naval-poster.webp",
+    "sha256": "4e7889c14fb707a42c370d4b7846725351524b030652c67f108785768c6ad61f"
+  }
+}
