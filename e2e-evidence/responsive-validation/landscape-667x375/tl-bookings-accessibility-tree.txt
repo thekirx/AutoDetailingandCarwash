@@ -1,0 +1,349 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 2854,
+ "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/bookings",
+ "children": [
+  {
+   "role": "banner",
+   "backendNodeId": 2945,
+   "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+   "name": "",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 3129,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Hakum Auto Care"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 3130,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "TL Test Account"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 3131,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": " · "
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 3132,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "HAKUM AUTO CARE BACOOR"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 2956,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 2961,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Settings"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 2965,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Open more menu",
+     "expanded": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 2970,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Sign out"
+    }
+   ]
+  },
+  {
+   "role": "main",
+   "backendNodeId": 2975,
+   "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+   "name": "",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 3134,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "HAKUM AUTO CARE"
+    },
+    {
+     "role": "heading",
+     "backendNodeId": 2980,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Bookings",
+     "level": 1
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 3136,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "2026-10-05 → 2026-10-11 · detailing only"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 3137,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Search bookings"
+    },
+    {
+     "role": "searchbox",
+     "backendNodeId": 2859,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Search bookings"
+    },
+    {
+     "role": "combobox",
+     "backendNodeId": 3001,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Date range",
+     "value": "This week",
+     "expanded": false,
+     "required": false,
+     "haspopup": "listbox"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 3006,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "New booking"
+    },
+    {
+     "role": "tab",
+     "backendNodeId": 3008,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Board",
+     "selected": true
+    },
+    {
+     "role": "tab",
+     "backendNodeId": 3009,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Calendar",
+     "selected": false
+    },
+    {
+     "role": "tabpanel",
+     "backendNodeId": 3010,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Board",
+     "children": [
+      {
+       "role": "button",
+       "backendNodeId": 3013,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Placeholder: 1",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 3016,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Assign: 3",
+       "pressed": true
+      },
+      {
+       "role": "button",
+       "backendNodeId": 3019,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Intake: 6",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 3022,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "In progress: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 3025,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Final check: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 3028,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Releasing: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 3031,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Payment: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 3034,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Done: 0",
+       "pressed": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 3037,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Maintenance: 22",
+       "pressed": false
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 3041,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Assign to branch",
+       "level": 2
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 3163,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "Sent to the shop"
+      },
+      {
+       "role": "generic",
+       "backendNodeId": 3043,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "",
+       "atomic": false,
+       "live": "polite",
+       "relevant": "additions text",
+       "children": [
+        {
+         "role": "button",
+         "backendNodeId": 3045,
+         "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+         "name": "NKA9234 Assign to branch Toyota Vios(medium) Paint Maintenance Sep 25, 12:47 AM · D-006",
+         "expanded": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 3058,
+         "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+         "name": "NKA9234 Assign to branch Toyota Vios(medium) Paint Maintenance Sep 25, 12:49 AM · D-007",
+         "expanded": false
+        },
+        {
+         "role": "button",
+         "backendNodeId": 3071,
+         "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+         "name": "NKA9234 Assign to branch Toyota Vios(medium) Paint Maintenance Sep 25, 12:50 AM · D-008",
+         "expanded": false
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 3191,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "How bookings work"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 3192,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Multi-day detailing jobs stay visible until release or cancel. Wash and packages use Queue."
+    },
+    {
+     "role": "button",
+     "backendNodeId": 3093,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "Show guide",
+     "expanded": false
+    }
+   ]
+  },
+  {
+   "role": "navigation",
+   "backendNodeId": 2863,
+   "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+   "name": "Primary navigation",
+   "children": [
+    {
+     "role": "link",
+     "backendNodeId": 3098,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "QUEUE",
+     "url": "http://localhost:5173/operations/queue",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 3194,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "QUEUE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 3107,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "NEW",
+     "url": "http://localhost:5173/operations/queue/new",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 3195,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "NEW"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 3112,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "ATTENDANCE",
+     "url": "http://localhost:5173/operations/attendance",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 3196,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "ATTENDANCE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 3117,
+     "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+     "name": "BOOKINGS",
+     "url": "http://localhost:5173/operations/bookings",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 3197,
+       "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+       "name": "BOOKINGS"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "region",
+   "backendNodeId": 3122,
+   "loaderId": "C4D6D89AF2887CC8B706F84AF54E8B09",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

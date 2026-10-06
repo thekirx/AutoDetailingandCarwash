@@ -1,0 +1,253 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 17114,
+ "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/attendance",
+ "children": [
+  {
+   "role": "navigation",
+   "backendNodeId": 17189,
+   "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+   "name": "Primary navigation",
+   "children": [
+    {
+     "role": "link",
+     "backendNodeId": 17192,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "QUEUE",
+     "url": "http://localhost:5173/operations/queue",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 17312,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "QUEUE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 17202,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "NEW",
+     "url": "http://localhost:5173/operations/queue/new",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 17313,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "NEW"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 17208,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "ATTENDANCE",
+     "url": "http://localhost:5173/operations/attendance",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 17314,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "ATTENDANCE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 17119,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "BOOKINGS",
+     "url": "http://localhost:5173/operations/bookings",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 17315,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "BOOKINGS"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "banner",
+   "backendNodeId": 17122,
+   "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+   "name": "",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 17316,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Hakum Auto Care"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 17317,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "TL Test Account"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 17318,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": " · "
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 17319,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "HAKUM AUTO CARE BACOOR"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 17129,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 17227,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Settings"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 17230,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Open more menu",
+     "expanded": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 17234,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Sign out"
+    }
+   ]
+  },
+  {
+   "role": "main",
+   "backendNodeId": 17121,
+   "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+   "name": "",
+   "children": [
+    {
+     "role": "navigation",
+     "backendNodeId": 17240,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "link",
+       "backendNodeId": 17242,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "Ops",
+       "url": "http://localhost:5173/operations/attendance",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 17321,
+         "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+         "name": "Ops"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 17323,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "Attendance"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 17324,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "OPERATIONS"
+    },
+    {
+     "role": "heading",
+     "backendNodeId": 17247,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Attendance",
+     "level": 1
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 17326,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Time in inside the branch geofence. Present or late crew can be assigned to floor jobs. Late arrivals still earn — at a lower wash-pool share set in Settings."
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 17327,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Manila calendar day · geofence enforced per profile"
+    },
+    {
+     "role": "tab",
+     "backendNodeId": 17262,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Time clock",
+     "selected": true
+    },
+    {
+     "role": "tab",
+     "backendNodeId": 17140,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Register",
+     "selected": false
+    },
+    {
+     "role": "tabpanel",
+     "backendNodeId": 17269,
+     "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+     "name": "Time clock",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 17328,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "Geofenced time clock"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 17329,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "Time in inside the branch radius. Late is flagged against shift start. You must be present or late before a Team Lead can assign you from Queue or Crew."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 17276,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "Time in"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 17277,
+       "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+       "name": "Time out"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "region",
+   "backendNodeId": 17309,
+   "loaderId": "2A7C0947C6057EC6A6C419DC55C8EA7D",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

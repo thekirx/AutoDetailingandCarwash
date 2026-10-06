@@ -5,7 +5,7 @@
 **Shell:** Floor (TL) / Command
 
 ## Purpose
-Advance same-day service and package tickets. Detailing stays on Bookings. Branch Admin may watch; Team Lead creates and advances.
+Advance same-day service and package tickets. Detailing (incl. paint maintenance arrivals) stays on Bookings, which uses the same status-card + car-card layout for TL/BA. Branch Admin may watch; Team Lead creates and advances.
 
 ## Layout
 ```

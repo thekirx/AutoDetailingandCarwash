@@ -1,0 +1,8 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 9119,
+ "loaderId": "B62B853438A15757A8B436CF874EAFFD",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/bookings?stage=maintenance",
+ "busy": true
+}

@@ -32,11 +32,12 @@ describe('ops shell components contract', () => {
     assert.match(shell, /tracking-\[0\.2em\] text-primary uppercase/)
   })
 
-  it('OpsTabList uses shadcn TabsList h-11 touch targets', () => {
+  it('OpsTabList triggers are 44px touch targets', () => {
     const tabs = read('src/components/ops/OpsTabBar.jsx')
     assert.match(tabs, /TabsList/)
-    assert.match(tabs, /inline-flex h-11/)
-    assert.match(tabs, /min-h-9/)
+    assert.match(tabs, /inline-flex h-\[3\.25rem\]/)
+    assert.match(tabs, /h-11 min-h-11/)
+    assert.doesNotMatch(tabs, /min-h-9/)
   })
 })
 

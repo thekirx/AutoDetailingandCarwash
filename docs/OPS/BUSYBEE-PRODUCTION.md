@@ -31,6 +31,7 @@ Never use `VITE_*` for BusyBee keys.
 | Queue / booking status SMS | `server/notifyBooking.mjs` → `busybeeSendSms` |
 | Lifecycle / visit milestones / self_test | `server/lifecycleSms.mjs` |
 | Paint-maintenance reminder rules | `server/paintMaintenanceNotify.mjs` + Notifications ReminderRules |
+| Paint-maintenance arrival (→ Vehicle intake status) | `server/maintenanceSchedulesApi.mjs` `action: 'arrive'` → `notifyBookingStatus` |
 | CRM / marketing broadcast | `server/notificationBroadcastApi.mjs` |
 | Birthday greetings | `server/birthdayGreetings.mjs` |
 | Daily Sheet submit / approve | `server/notifyOpsEvent.mjs` (`sheet_submitted`, `sheet_reviewed`) → **web push only** |

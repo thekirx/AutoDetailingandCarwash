@@ -22,6 +22,7 @@
 |------|-----|----------------|
 | C1 | Customer / public | `/book` or walk-in → queue |
 | C1b | Team Lead | `/operations/bookings` → confirm pending detailing |
+| C1c | Team Lead / BA | `/operations/bookings?stage=maintenance` → **Car arrived · Start intake** (paint maintenance → Vehicle intake; sends client a status SMS) |
 | A1 | Crew | `/operations/attendance` time-in |
 | W1 | Team Lead | `/operations/queue` waiting → Start → Final check |
 | W1b | Team Lead / BA | Send to payment → `/operations/pos` pay |

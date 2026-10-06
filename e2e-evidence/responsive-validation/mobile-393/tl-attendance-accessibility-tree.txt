@@ -1,0 +1,253 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 15981,
+ "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/attendance",
+ "children": [
+  {
+   "role": "banner",
+   "backendNodeId": 16090,
+   "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+   "name": "",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 16179,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Hakum Auto Care"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 16180,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "TL Test Account"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 15987,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": " · "
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 16181,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "HAKUM AUTO CARE BACOOR"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 15993,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 16100,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Settings"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 16103,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Open more menu",
+     "expanded": false
+    },
+    {
+     "role": "button",
+     "backendNodeId": 16107,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Sign out"
+    }
+   ]
+  },
+  {
+   "role": "main",
+   "backendNodeId": 15989,
+   "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+   "name": "",
+   "children": [
+    {
+     "role": "navigation",
+     "backendNodeId": 16114,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "link",
+       "backendNodeId": 16116,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "Ops",
+       "url": "http://localhost:5173/operations/attendance",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 16183,
+         "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+         "name": "Ops"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 16185,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "Attendance"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 16186,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "OPERATIONS"
+    },
+    {
+     "role": "heading",
+     "backendNodeId": 16121,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Attendance",
+     "level": 1
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 16188,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Time in inside the branch geofence. Present or late crew can be assigned to floor jobs. Late arrivals still earn — at a lower wash-pool share set in Settings."
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 16189,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Manila calendar day · geofence enforced per profile"
+    },
+    {
+     "role": "tab",
+     "backendNodeId": 16137,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Time clock",
+     "selected": true
+    },
+    {
+     "role": "tab",
+     "backendNodeId": 16002,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Register",
+     "selected": false
+    },
+    {
+     "role": "tabpanel",
+     "backendNodeId": 16144,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "Time clock",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 16192,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "Geofenced time clock"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 16193,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "Time in inside the branch radius. Late is flagged against shift start. You must be present or late before a Team Lead can assign you from Queue or Crew."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 16151,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "Time in"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 16152,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "Time out"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "navigation",
+   "backendNodeId": 16004,
+   "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+   "name": "Primary navigation",
+   "children": [
+    {
+     "role": "link",
+     "backendNodeId": 16155,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "QUEUE",
+     "url": "http://localhost:5173/operations/queue",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 16196,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "QUEUE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 16008,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "NEW",
+     "url": "http://localhost:5173/operations/queue/new",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 16197,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "NEW"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 16165,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "ATTENDANCE",
+     "url": "http://localhost:5173/operations/attendance",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 16198,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "ATTENDANCE"
+      }
+     ]
+    },
+    {
+     "role": "link",
+     "backendNodeId": 16168,
+     "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+     "name": "BOOKINGS",
+     "url": "http://localhost:5173/operations/bookings",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 16199,
+       "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+       "name": "BOOKINGS"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "region",
+   "backendNodeId": 16172,
+   "loaderId": "04350409BF98D42D9E093E67FD06EBC3",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

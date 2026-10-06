@@ -5,10 +5,12 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ROLES, canDiscountPosSale } from '../src/auth/permissions.js'
 import {
+  assertBranchAdminCart,
   buildPosSalePayload,
   detachHandoffFromCart,
   openHandoffInCart,
   parsePosDraft,
+  sanitizeBranchAdminCart,
   serializePosDraft,
   summarizePosCart,
 } from '../src/lib/posSale.js'
@@ -95,6 +97,44 @@ describe('POS combined checkout — roles and shell', () => {
     assert.match(pos, /canDiscountPosSale\(profile\)/)
     assert.match(pos, /openHandoffInCart/)
     assert.match(pos, /detachHandoffFromCart/)
+    assert.match(pos, /sanitizeBranchAdminCart/)
+    assert.match(pos, /assertBranchAdminCart/)
     assert.match(pos, /writePosDraft\(branch, \{[^}]*activeHandoff/)
+  })
+
+  it('Branch Admin cart keeps ticket + merch and strips walk-in services / discounts', () => {
+    const dirty = [
+      ticketLine,
+      coffee,
+      walkInService,
+      {
+        ...coffee,
+        key: 'p-disc',
+        list_price_minor: 15000,
+        unit_price_minor: 10000,
+        adhoc_discount_applied: true,
+        adhoc_discount_reason: 'friend',
+      },
+    ]
+    const clean = sanitizeBranchAdminCart(dirty)
+    assert.deepEqual(clean.map((l) => l.key), ['handoff-h1', 'p-coffee', 'p-disc'])
+    assert.equal(clean.find((l) => l.key === 'p-disc').unit_price_minor, 15000)
+    assert.equal(clean.find((l) => l.key === 'p-disc').adhoc_discount_applied, false)
+    assert.equal(assertBranchAdminCart(dirty, { isBranchAdmin: true }).ok, false)
+    assert.equal(assertBranchAdminCart([ticketLine, coffee], { isBranchAdmin: true }).ok, true)
+    assert.equal(assertBranchAdminCart([ticketLine, coffee], { isBranchAdmin: false }).ok, true)
+    assert.match(
+      assertBranchAdminCart([{ ...coffee, adhoc_discount_applied: true }], { isBranchAdmin: true }).error,
+      /cannot discount/i,
+    )
+  })
+
+  it('RPC migration enforces Branch Admin merch-only at complete_pos_sale', () => {
+    const sql = readFileSync(join(root, 'supabase/migrations/20261005140000_ba_pos_merch_only.sql'), 'utf8')
+    assert.match(sql, /assert_branch_admin_pos_cart/)
+    assert.match(sql, /Branch Admin sells merch and coffee only/)
+    assert.match(sql, /cannot apply POS discounts/)
+    assert.match(sql, /perform public\.assert_branch_admin_pos_cart/)
+    assert.match(sql, /do not skip via membership\/award flags/)
   })
 })
