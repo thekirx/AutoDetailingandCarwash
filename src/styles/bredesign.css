@@ -2367,19 +2367,23 @@
   display: none;
 }
 
-/* The clip opens and closes on the Hakum mark; the copy steps aside for it
-   rather than sitting on top of it. Hidden from assistive tech too while it is
-   out, so a screen reader is not told about a heading nobody can see. */
-.bredesign .bd-hero-in {
-  transition: opacity 0.55s ease, transform 0.55s ease;
+/* Option A: copy clears the logo frames, while the buttons remain available. */
+.bredesign .bd-hero h1,
+.bredesign .bd-hero-lede {
+  transition: opacity 0.35s ease;
 }
-.bredesign .bd-hero-in.is-logo-moment {
+.bredesign .bd-hero.is-logo-moment h1,
+.bredesign .bd-hero.is-logo-moment .bd-hero-lede {
   opacity: 0;
-  transform: translateY(10px);
   pointer-events: none;
 }
+.bredesign .bd-hero-cta { justify-self: center; }
+.bredesign .bd-hero::after { transition: opacity 0.35s ease; }
+.bredesign .bd-hero.is-logo-moment::after { opacity: 0.25; }
 @media (prefers-reduced-motion: reduce) {
-  .bredesign .bd-hero-in {
+  .bredesign .bd-hero h1,
+  .bredesign .bd-hero-lede,
+  .bredesign .bd-hero::after {
     transition: none;
   }
 }

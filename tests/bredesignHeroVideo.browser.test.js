@@ -34,6 +34,8 @@ describe('BreDESIGN hero video fallback', () => {
       const poster = hero.querySelector('.bd-hero-poster')
       return {
         paused: video?.paused,
+        headlineOpacity: Number(getComputedStyle(hero.querySelector('h1')).opacity),
+        paragraphOpacity: Number(getComputedStyle(hero.querySelector('.bd-hero-lede')).opacity),
         controls: video?.controls,
         posterVisible: poster ? Number.parseFloat(getComputedStyle(poster).opacity) === 1 : false,
         posterAboveVideo: poster && video ? poster.compareDocumentPosition(video) === Node.DOCUMENT_POSITION_PRECEDING : false,
@@ -41,6 +43,8 @@ describe('BreDESIGN hero video fallback', () => {
     })
 
     assert.equal(state.paused, true)
+    assert.equal(state.headlineOpacity, 1)
+    assert.equal(state.paragraphOpacity, 1)
     assert.equal(state.controls, false)
     assert.equal(state.posterVisible, true)
     assert.equal(state.posterAboveVideo, true)
