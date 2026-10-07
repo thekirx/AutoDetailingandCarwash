@@ -28,9 +28,27 @@ for (const width of [1440, 393, 320]) {
         return req.continue()
       })
       await page.goto(`${origin}/services/tint`, { waitUntil: 'networkidle2' })
+      const cookie = await page.$('.cookie-consent-secondary')
+      if (cookie) await cookie.click()
       // Must be available before answering any quiz questions.
       assert.ok(await page.$('#tint-comparison'), 'Tint page must offer the full comparison before completing the quiz')
       assert.equal(await page.$$eval('#tint-comparison table', els => els.length), 2)
+      assert.ok(await page.$('#tint-comparison #tint-certification'), 'Certification belongs with the comparison tables')
+      assert.deepEqual(await page.$$eval('#tint-certification .cert-films li', els => els.map(e => e.textContent)), ['HC35 NANO', 'HC25 NANO', 'HC15 NANO', 'HC05 NANO'])
+      assert.deepEqual(await page.$$eval('#tint-certification .cert-links a', els => els.map(e => e.href)), [
+        'https://www.skincancer.org/recommended-products/',
+        'https://www.clearpro.com/project/window-film-certified-by-the-skincancerfoundation-for-ultimate-uv-protection/',
+      ])
+      await page.$eval('#tint-certification', el => el.scrollIntoView({ block: 'center' }))
+      await page.waitForFunction(() => { const img = document.querySelector('#tint-certification img'); return img.complete && img.naturalWidth > 0 })
+      assert.equal(await page.evaluate(() => document.querySelector('#tint-certification').getBoundingClientRect().top >= document.querySelector('[data-tint-package="pro"]').getBoundingClientRect().bottom), true)
+      const certification = await page.$('#tint-certification .cert-card')
+      const cardHeight = await certification.evaluate(el => Math.ceil(el.getBoundingClientRect().height))
+      await page.setViewport({ width, height: Math.max(900, cardHeight + 220) })
+      await page.$eval('#tint-certification', el => el.scrollIntoView({ block: 'start' }))
+      await certification.screenshot({ path: `/tmp/hakum-tint-certification-${width}.png` })
+      await page.setViewport({ width, height: 900 })
+
       for (const pkg of expected) {
         const selector = `[data-tint-package="${pkg.id}"]`
         assert.deepEqual(await page.$$eval(`${selector} thead th:not(:first-child) b`, els => els.map(e => e.textContent)), pkg.codes)
@@ -59,8 +77,6 @@ for (const width of [1440, 393, 320]) {
         assert.ok(Math.abs(scroll.labelShift) < 2, 'Row labels must remain visible when scrolling')
         await page.$eval('[data-tint-package="ceramic"] .bd-cmp', el => { el.scrollLeft = 0 })
       }
-      const cookie = await page.$('.cookie-consent-secondary')
-      if (cookie) await cookie.click()
       await page.$eval('#tint-comparison', el => el.scrollIntoView({ block: 'start' }))
       await page.screenshot({ path: `/tmp/hakum-tint-comparison-${width}.png` })
       if (width === 1440) {

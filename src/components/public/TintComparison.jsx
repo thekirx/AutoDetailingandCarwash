@@ -1,3 +1,4 @@
+import TintCertification from './TintCertification'
 import { TINT_VEHICLES, tintPeso } from '../../lib/tintFinder'
 import './home/PpfPackagesSection.css'
 import './TintComparison.css'
@@ -88,6 +89,7 @@ export default function TintComparison({ config }) {
             </div>
           )
         })}
+        <TintCertification packageName={config.packages.pro.name} />
         <p className="bd-tint-comparison-note">Prices cover all windows, including the windshield. VLT values are for the film only; factory glass affects the final reading. Final price confirmed at the branch.</p>
       </div>
     </section>

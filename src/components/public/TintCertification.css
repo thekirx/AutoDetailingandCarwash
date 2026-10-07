@@ -1,0 +1,46 @@
+.bredesign .tint-certification { margin-top: 36px; scroll-margin-top: 110px; }
+.bredesign .tint-certification .cert-card {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 48px;
+  padding: 48px;
+  border: 1px solid #334474;
+  border-radius: 16px;
+  background: linear-gradient(115deg, #08133f, #0b1948);
+  align-items: center;
+}
+.bredesign .tint-certification .cert-seal {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 12px;
+  padding: 22px;
+}
+.bredesign .tint-certification .cert-seal img { display: block; width: 160px; height: auto; }
+.bredesign .tint-certification .cert-label { color: var(--bd-accent); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.bredesign .tint-certification .cert-body h3 { font-size: clamp(32px, 3.5vw, 50px); margin: 16px 0 22px; line-height: 1.02; }
+.bredesign .tint-certification .cert-body h3 em { color: var(--bd-accent); }
+.bredesign .tint-certification .cert-copy { max-width: 66ch; font-size: 16px; line-height: 1.7; }
+.bredesign .tint-certification .cert-fact { display: flex; align-items: center; gap: 24px; margin: 24px 0; padding: 18px 0; border-block: 1px solid #334474; }
+.bredesign .tint-certification .cert-fact strong { font-size: 26px; font-weight: 800; color: var(--bd-paper); white-space: nowrap; }
+.bredesign .tint-certification .cert-fact span { font-size: 13px; line-height: 1.6; max-width: 42ch; }
+.bredesign .tint-certification .cert-films p { font-size: 12px; color: var(--bd-accent); font-weight: 700; }
+.bredesign .tint-certification .cert-films ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 28px; padding: 0; list-style: none; }
+.bredesign .tint-certification .cert-films li { padding: 8px 12px; border: 1px solid #334474; border-radius: 6px; color: var(--bd-paper); font-size: 12px; font-weight: 700; }
+.bredesign .tint-certification .cert-links { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; }
+.bredesign .tint-certification .cert-source { font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+.bredesign .tint-certification .cert-links .bd-btn { min-height: 48px; font-size: 12px; padding-inline: 20px; }
+.bredesign .tint-certification a:focus-visible { outline: 2px solid var(--bd-accent); outline-offset: 5px; }
+@media (max-width: 760px) {
+  .bredesign .tint-certification .cert-card { grid-template-columns: minmax(0, 1fr); padding: 24px; gap: 28px; }
+  .bredesign .tint-certification .cert-body { min-width: 0; }
+  .bredesign .tint-certification .cert-body h3 { font-size: clamp(24px, 7.4vw, 30px); }
+  .bredesign .tint-certification .cert-seal { width: 160px; justify-self: center; padding: 16px; }
+  .bredesign .tint-certification .cert-seal img { width: 115px; }
+  .bredesign .tint-certification .cert-fact { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .bredesign .tint-certification .cert-copy { font-size: 15px; }
+  .bredesign .tint-certification .cert-links { flex-direction: column; align-items: flex-start; gap: 20px; }
+  .bredesign .tint-certification .cert-links .bd-btn { width: 100%; font-size: 11px; }
+}

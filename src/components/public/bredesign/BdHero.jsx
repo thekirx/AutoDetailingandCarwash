@@ -179,7 +179,7 @@ export default function BdHero() {
   const poster = isPortrait ? portraitPoster : heroPoster
   const av1Src = isPortrait ? PORTRAIT_AV1_BY_TIER[portraitTierFor(tier)] : AV1_BY_TIER[tier]
   const h264Src = isPortrait ? portrait1080H264 : H264_BY_TIER[h264TierFor(tier)]
-  /* Give the mark its opening and closing frames. Buttons stay available;
+  /* Give the mark its opening and closing frames. All copy clears the mark;
      blocked playback reveals the copy over the static poster. */
   const [playing, setPlaying] = useState(false)
   const [logoMoment, setLogoMoment] = useState(!isPortrait)
@@ -271,7 +271,7 @@ export default function BdHero() {
           <br />
           <em>matter</em>
         </h1>
-        <div className="bd-cta-row bd-hero-cta">
+        <div className="bd-cta-row bd-hero-cta" aria-hidden={hideCopy || undefined} inert={hideCopy || undefined}>
           <Link className="bd-btn bd-btn-primary" to="/services">
             See what we do
           </Link>

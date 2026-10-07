@@ -2367,10 +2367,19 @@
   display: none;
 }
 
-/* Option A: copy clears the logo frames, while the buttons remain available. */
+/* Option A: all copy and actions clear the logo frames. */
 .bredesign .bd-hero h1,
 .bredesign .bd-hero-lede {
   transition: opacity 0.35s ease;
+}
+.bredesign .bd-hero-cta {
+  transition: opacity 0.35s ease, visibility 0s;
+}
+.bredesign .bd-hero.is-logo-moment .bd-hero-cta {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s ease, visibility 0s 0.35s;
 }
 .bredesign .bd-hero.is-logo-moment h1,
 .bredesign .bd-hero.is-logo-moment .bd-hero-lede {
@@ -2383,6 +2392,8 @@
 @media (prefers-reduced-motion: reduce) {
   .bredesign .bd-hero h1,
   .bredesign .bd-hero-lede,
+  .bredesign .bd-hero-cta,
+  .bredesign .bd-hero.is-logo-moment .bd-hero-cta,
   .bredesign .bd-hero::after {
     transition: none;
   }
