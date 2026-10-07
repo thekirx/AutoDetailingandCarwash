@@ -1,3 +1,4 @@
+import TintComparison from './TintComparison'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, RotateCcw, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -84,7 +85,7 @@ export default function TintFinder() {
   const results=step===4?recommendTint(config,answers):[]
   const move=n=>{setSelected(n<4?answers[TINT_QUESTIONS[n].key] || null:null);setBooking(null);setStep(n)}
   const next=()=>{setAnswers(a=>({...a,[q.key]:selected}));setSelected(answers[TINT_QUESTIONS[step+1]?.key] || null);setStep(s=>s+1)}
-  return <section className="tf-section" id="tint-finder" aria-labelledby="tint-finder-title">
+  return <><section className="tf-section" id="tint-finder" aria-labelledby="tint-finder-title">
     {isApprovalPreview && <aside className="tf-approval-review" aria-label="Client design choices"><span>Client review · A / Original</span><nav><a href="/tint-designs/index.html">All designs</a>{['B','C','D','E'].map(id=><a key={id} href={`/tint-designs/option-${id.toLowerCase()}.html`}>{id}</a>)}</nav></aside>}
     <div className="bd-shell">
       <div className="tf-section-head"><div><p className="bd-eyebrow">Find your film</p><h2 id="tint-finder-title">Your drive. <em>Your tint.</em></h2></div><p>Four quick questions. The right combinations for your comfort, priorities and vehicle.</p></div>
@@ -120,4 +121,6 @@ export default function TintFinder() {
       </div>}
     </div>
   </section>
+  <TintComparison config={config} />
+  </>
 }

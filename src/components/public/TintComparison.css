@@ -1,0 +1,92 @@
+/* Tint comparison uses the same table language as the PPF packages. */
+.bredesign .bd-tint-comparison {
+  scroll-margin-top: 110px;
+}
+.bredesign .bd-tint-comparison-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.bredesign .bd-tint-comparison-head h2 {
+  margin-bottom: 20px;
+}
+.bredesign .bd-tint-comparison-head > a {
+  flex-shrink: 0;
+}
+.bredesign .bd-tint-package {
+  margin-top: clamp(36px, 5vw, 64px);
+}
+.bredesign .bd-tint-package-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.bredesign .bd-tint-package-head h3 {
+  margin: 0;
+  font-size: clamp(1.3rem, 2.4vw, 2rem);
+  line-height: 1.1;
+}
+.bredesign .bd-tint-package-head p {
+  margin: 0;
+  color: var(--bd-accent);
+  font-size: 14px;
+  font-weight: 700;
+}
+.bredesign .bd-tint-comparison .bd-cmp {
+  overscroll-behavior-x: contain;
+}
+.bredesign .bd-tint-comparison .bd-cmp:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 4px;
+}
+.bredesign .bd-tint-comparison table {
+  min-width: 760px;
+  table-layout: fixed;
+}
+.bredesign .bd-tint-comparison thead th:first-child {
+  width: 28%;
+}
+.bredesign .bd-tint-comparison thead th span {
+  display: block;
+  margin-top: 8px;
+  color: var(--bd-ink-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+.bredesign .bd-tint-comparison tbody th small {
+  display: block;
+  margin-top: 5px;
+  color: var(--bd-ink-2);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.bredesign .bd-tint-comparison [data-tint-price] td {
+  font-weight: 700;
+}
+.bredesign .bd-tint-scroll-hint {
+  display: none;
+  margin: 12px 0 0;
+  color: var(--bd-ink-2);
+  font-size: 12px;
+}
+.bredesign .bd-tint-comparison-note {
+  margin: 24px 0 0;
+  max-width: 85ch;
+  color: var(--bd-ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+@media (max-width: 767px) {
+  .bredesign .bd-tint-comparison-head,
+  .bredesign .bd-tint-package-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .bredesign .bd-tint-scroll-hint { display: block; }
+  .bredesign .bd-tint-comparison thead th:first-child { width: 170px; }
+  .bredesign .bd-tint-comparison tbody th { font-size: 13px; }
+}
