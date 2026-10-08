@@ -102,9 +102,31 @@ The chain had been verified link by link and **never end to end**. `sales ↔ li
 checked. A screen that renders a stale or wrong figure leaves the database correct and every other
 gate green.
 
-`npm run check:sheet-ui` (`scripts/check-sheet-ui.mjs`) signs in as Super Admin, opens
-Finance → Daily sheets for a pinned range, reads the rendered table and compares every figure to the
-stored totals. **Result: 60 of 60 sheets, all four money columns, every figure identical.**
+`npm run check:sheet-ui` (`scripts/check-sheet-ui.mjs`) runs two phases, because Finance is back
+office and POS is the surface a shop day actually runs on:
+
+- **Phase 1 — Finance.** Signs in as Super Admin, opens Finance → Daily sheets for a pinned range,
+  reads the rendered table and compares every figure to the stored totals.
+  **Result: 60 of 60 sheets, all four money columns, every figure identical.**
+- **Phase 2 — the till.** Signs in as the **Branch Admin** (`admin@hakumautocare.com`, branch
+  `bacoor`), opens `/operations/pos?tab=sheet&date=2026-09-30` and compares the summary panel.
+  This is a different component with a different money formatter, so a disagreement here would be
+  invisible to phase 1. **Result: 4 of 4 figures identical** (`Net sales ₱39,052.50`,
+  `Expenses (₱1,515.00)`, `Salaries (₱7,914.63)`, `Net profit ₱29,622.87`).
+
+  Two details this phase had to get right, both now locked by tests:
+
+  - **The sign convention differs.** `DailySheetPanel` renders `<Money minor={-totals.expensesMinor} />`,
+    so Expenses and Salaries appear as negatives of the stored positive totals. Comparing them
+    straight through would have reported a discrepancy on every sheet.
+  - **The role is a representativeness choice, not a permission requirement.** `canEditDailySheet`
+    admits `BossMich` as well as `admin` (`src/lib/dailySheet.js:41`), so a Super Admin *would* have
+    rendered the summary. An earlier version of this test claimed otherwise; it was wrong and was
+    corrected by reading the gate instead of assuming it. What the Branch Admin adds is branch
+    scoping — a sheet from the wrong branch would render different figures and be caught. The silent
+    failure the guard exists for is the other one: `resolvePosShellTab` drops `tab=sheet` to
+    `checkout` **with no error** for any role that fails the gate, so an unrendered summary is a
+    hard failure, never a pass.
 
 Getting there took three false passes, each now locked by a test:
 
@@ -113,6 +135,12 @@ Getting there took three false passes, each now locked by a test:
 | compared **1 of 60** sheets | the tab defaults to `status=submitted` — a review inbox by design, not a bug; the check must ask for `status=all` |
 | compared **0 of 60** and said "nothing to compare" | the Finance skeleton reads as an empty table; an empty table must never be a pass, and the readiness wait must key on the loading state |
 | reported **60 discrepancies** | the screen renders the branch *slug* when the name is missing from its options (bacoor); keying only on the name mismatches every such row |
+
+Adding phase 2 then **broke one of those proofs**, which the mutation harness caught: phase 1's
+empty-table guard asserted a bare `/NOT VERIFIED/`, and phase 2 introduced a second `NOT VERIFIED`
+line that satisfied it. The assertion is now anchored to its own sentence, so mutating phase 1's
+text back into a "PASS" turns the suite red again. A proof that silently stops proving anything is
+worse than no proof, and only mutation-testing finds that class of bug.
 
 To close the remaining gap honestly: close one real shop day end to end, then re-run
 `npm run audit:db` and `npm run check:sheet-ui`.
@@ -135,7 +163,7 @@ To close the remaining gap honestly: close one real shop day end to end, then re
 | `scripts/_september-shots.mjs` (read-only, SA / ASA / BA ×2 / TL, 375 + 1440) | **22/22** on production |
 | `supabase/tests/daily_flow_role_probe.sql` (rolled back) | **20/20** |
 | `e2e:role-qa` | **52/52** (Branch Admin denied Queue by design) |
-| `e2e:role-qa-wave` | **179/179** (2026-10-08). First run read 166/169 with `fatal: Execution context was destroyed` and an immediate re-run gave 179/179 — a navigation race, not a product fault. **BUG-064, closed**: `scripts/lib/safe-evaluate.mjs` retries the race instead of letting it abort the run and silently drop ~10 checks. A gate that fails for reasons unrelated to the product is a gate people learn to ignore |
+| `e2e:role-qa-wave` | **179/179** (2026-10-08). First run read 166/169 with `fatal: Execution context was destroyed` and an immediate re-run gave 179/179 — a navigation race, not a product fault. **BUG-064, closed**: `scripts/lib/safe-evaluate.mjs` retries the race instead of letting it abort the run and silently drop ~10 checks. A gate that fails for reasons unrelated to the product is a gate people learn to ignore. **BUG-067 (2026-10-09) — BUG-064 came back through the other door.** BUG-064 guarded `page.evaluate` and left `page.goto` bare, so a transient `ERR_ABORTED` on `/operations/attendance` unwound to the top-level catch and ended a run at **87/87**. The total falling is the tell: checks that never ran cannot fail. Every navigation now goes through `gotoRoute()`, which retries and returns a result, so an unloadable route is a failure of *that route* and the walk continues. `tests/roleQaHarness.test.js` fails if any `page.goto` outside that helper is unguarded. Re-ran 2026-10-09: **179/179, 178/179, 179/179** — the single failure was no longer opaque, it named itself (`marketing.console … @/operations/bookings`), which is what located it |
 | `e2e:ui-money` | **5/5** (rewritten for the Daily Sheet) |
 | `e2e:ui-p0` | **9/9** |
 | `e2e:integrity` | **PASS** |

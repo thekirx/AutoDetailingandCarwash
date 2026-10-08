@@ -66,6 +66,35 @@ function fail(name, detail = '') {
   console.error('✖', name, detail)
 }
 
+/**
+ * Navigate to a route, retrying a transient abort, and never throwing.
+ *
+ * BUG-064 fixed this for `page.evaluate` and left `page.goto` bare, so the same
+ * failure came back through a different door. Observed 2026-10-09:
+ * `net::ERR_ABORTED at http://127.0.0.1:5191/operations/attendance` unwound to
+ * the top-level catch, printed `fatal`, and ended the wave at **87/87** — every
+ * check after that point silently never ran. A collapsed total is the tell:
+ * checks that never ran cannot fail, so a short run that looks green is worse
+ * than a red one.
+ *
+ * So navigation gets the same contract as evaluate: retry the race, and if it
+ * still will not load, hand the caller a failure for that ONE route so the walk
+ * continues instead of the run dying.
+ */
+async function gotoRoute(page, url, attempts = 3) {
+  let last = 'unknown'
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      return { ok: true, url: page.url() }
+    } catch (err) {
+      last = String(err?.message || err).slice(0, 200)
+      await new Promise((r) => setTimeout(r, 750))
+    }
+  }
+  return { ok: false, why: last }
+}
+
 function isDeniedWall(url) {
   return /access-denied|forbidden|\/403/i.test(url)
 }
@@ -145,10 +174,28 @@ async function shot(page, name) {
  */
 function collectErrors(page) {
   const bucket = []
+  // A bare "401" is not actionable. The wave walks a dozen dock routes before it
+  // reports, so each error has to carry the route it was seen on — otherwise a
+  // failure names a role but not the call that failed. This is the difference
+  // between BUG-064 (a red wave nobody could act on) and a diagnosable one.
+  const where = () => {
+    try { return new URL(page.url()).pathname } catch { return String(page.url()) }
+  }
   page.on('console', (msg) => {
-    if (msg.type() === 'error') bucket.push(`console: ${msg.text().slice(0, 300)}`)
+    if (msg.type() === 'error') bucket.push(`console @${where()}: ${msg.text().slice(0, 300)}`)
   })
-  page.on('pageerror', (err) => bucket.push(`pageerror: ${String(err?.message || err).slice(0, 300)}`))
+  page.on('pageerror', (err) => bucket.push(`pageerror @${where()}: ${String(err?.message || err).slice(0, 300)}`))
+  // The console message for a failed fetch is always the same useless string —
+  // "Failed to load resource: the server responded with a status of 401" — and it
+  // names neither the URL nor the status. Listen on the wire so the offending
+  // request is actually identifiable. Scoped to 401/403 on purpose: widening it
+  // to every 4xx/5xx would drag in dev-server 404s that are not product faults
+  // and turn a diagnostic into noise.
+  page.on('response', (res) => {
+    const status = res.status()
+    if (status !== 401 && status !== 403) return
+    bucket.push(`http ${status} @${where()} ${res.url().slice(0, 300)}`)
+  })
   return {
     take: () => bucket.splice(0, bucket.length),
   }
@@ -186,14 +233,23 @@ async function clearSession(page, base) {
   } catch {
     /* ignore */
   }
-  await page.goto(`${base}/operations/login`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  // A login page that will not load means the session is not actually clear, so
+  // the next persona would inherit the last one's identity. Report it rather
+  // than letting the following checks quietly test the wrong role.
+  const cleared = await gotoRoute(page, `${base}/operations/login`)
+  if (!cleared.ok) throw new Error(`could not reach the login page to clear the session: ${cleared.why}`)
   await new Promise((r) => setTimeout(r, 300))
 }
 
 async function opsLogin(page, base, email, password) {
-  await page.goto(`${base}/operations/login`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  const nav = await gotoRoute(page, `${base}/operations/login`)
+  if (!nav.ok) return false
   await dismissCookieBanner(page)
-  await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 20000 })
+  const ready = await page
+    .waitForSelector('input[type="email"], input[name="email"]', { timeout: 20000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!ready) return false
   const emailSel = await page.$('input[type="email"], input[name="email"]')
   const passSel = await page.$('input[type="password"], input[name="password"]')
   if (!emailSel || !passSel) return false
@@ -216,7 +272,8 @@ async function opsLogin(page, base, email, password) {
 }
 
 async function customerLogin(page, base, email, password) {
-  await page.goto(`${base}/signin`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  const nav = await gotoRoute(page, `${base}/signin`)
+  if (!nav.ok) return false
   await dismissCookieBanner(page)
   await new Promise((r) => setTimeout(r, 400))
   const usedChip = await safeEvaluate(page, () => {
@@ -363,10 +420,16 @@ try {
     // Every page this role is handed must actually open.
     const dock = dockFor(profile)
     for (const to of dock) {
-      await page.goto(`${base}${to}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      const label = `${persona.id}.open.${to.replace(/[/?=&]/g, '-')}`
+      const nav = await gotoRoute(page, `${base}${to}`)
+      if (!nav.ok) {
+        // One unloadable route is a failure of that route, not of the wave.
+        fail(label, `${to} did not load: ${nav.why}`)
+        await shot(page, `${label}-FAIL`)
+        continue
+      }
       await waitSettled(page)
       const url = page.url()
-      const label = `${persona.id}.open.${to.replace(/[/?=&]/g, '-')}`
       if (isLoginWallUrl(url) || isDeniedWall(url)) {
         fail(label, `${to} is in ${persona.role}'s own nav but blocked at ${url}`)
         await shot(page, `${label}-FAIL`)
@@ -386,16 +449,22 @@ try {
 
     // The denied surface must actually deny.
     if (persona.deny) {
-      await page.goto(`${base}${persona.deny}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-      await waitSettled(page)
-      const url = page.url()
-      const stillOpen = new URL(url).pathname === persona.deny && !isDeniedWall(url)
-      if (stillOpen) {
-        fail(`${persona.id}.deny`, `${persona.deny} opened for ${persona.role}`)
-        await shot(page, `${persona.id}-deny-FAIL`)
+      const nav = await gotoRoute(page, `${base}${persona.deny}`)
+      if (!nav.ok) {
+        // Cannot prove the wall holds if the page will not load. Say so for
+        // this check only; the rest of the wave still has to run.
+        fail(`${persona.id}.deny`, `${persona.deny} did not load, so denial is unproven: ${nav.why}`)
       } else {
-        pass(`${persona.id}.deny`, url)
-        await shot(page, `${persona.id}-deny`)
+        await waitSettled(page)
+        const url = page.url()
+        const stillOpen = new URL(url).pathname === persona.deny && !isDeniedWall(url)
+        if (stillOpen) {
+          fail(`${persona.id}.deny`, `${persona.deny} opened for ${persona.role}`)
+          await shot(page, `${persona.id}-deny-FAIL`)
+        } else {
+          pass(`${persona.id}.deny`, url)
+          await shot(page, `${persona.id}-deny`)
+        }
       }
     }
 
@@ -405,31 +474,39 @@ try {
     // settled 2026-10-04), so its lane grant is unreachable — see BUG-055.
     const canReachQueue = allowRoute(profile, 'queue')
     if (canSeeForPaymentLane(profile) && canReachQueue) {
-      await page.goto(`${base}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-      await waitSettled(page)
-      // The board labels the lane "PAYMENT" (STATUS_SHORT_LABELS) with the
-      // hint "Collect at POS" — not "For Payment", which is the status label
-      // used elsewhere. Matching the wrong one gave a false negative.
-      const lane = await safeEvaluate(page, () =>
-        /collect at pos/i.test(document.body?.innerText || '') ||
-        /\bpayment\b/i.test(document.body?.innerText || ''),
-      )
-      if (lane) pass(`${persona.id}.forPaymentLane`, 'lane visible')
-      else fail(`${persona.id}.forPaymentLane`, 'console tier cannot see the For Payment lane')
-      await shot(page, `${persona.id}-for-payment-lane`)
+      const nav = await gotoRoute(page, `${base}/operations/queue`)
+      if (!nav.ok) {
+        fail(`${persona.id}.forPaymentLane`, `/operations/queue did not load: ${nav.why}`)
+      } else {
+        await waitSettled(page)
+        // The board labels the lane "PAYMENT" (STATUS_SHORT_LABELS) with the
+        // hint "Collect at POS" — not "For Payment", which is the status label
+        // used elsewhere. Matching the wrong one gave a false negative.
+        const lane = await safeEvaluate(page, () =>
+          /collect at pos/i.test(document.body?.innerText || '') ||
+          /\bpayment\b/i.test(document.body?.innerText || ''),
+        )
+        if (lane) pass(`${persona.id}.forPaymentLane`, 'lane visible')
+        else fail(`${persona.id}.forPaymentLane`, 'console tier cannot see the For Payment lane')
+        await shot(page, `${persona.id}-for-payment-lane`)
+      }
     } else if (!canReachQueue) {
       pass(`${persona.id}.noForPaymentLane`, 'Queue denied, so the lane is not reachable either')
     } else {
       // The other half of the same gate: a role that must not see it, does not.
-      await page.goto(`${base}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-      await waitSettled(page)
-      if (!isDeniedWall(page.url())) {
-        const lane = await safeEvaluate(page, () => /collect at pos/i.test(document.body?.innerText || ''))
-        if (lane) {
-          fail(`${persona.id}.noForPaymentLane`, `${persona.role} must not see the For Payment lane`)
-          await shot(page, `${persona.id}-for-payment-leak-FAIL`)
-        } else {
-          pass(`${persona.id}.noForPaymentLane`, 'lane hidden')
+      const nav = await gotoRoute(page, `${base}/operations/queue`)
+      if (!nav.ok) {
+        fail(`${persona.id}.noForPaymentLane`, `/operations/queue did not load: ${nav.why}`)
+      } else {
+        await waitSettled(page)
+        if (!isDeniedWall(page.url())) {
+          const lane = await safeEvaluate(page, () => /collect at pos/i.test(document.body?.innerText || ''))
+          if (lane) {
+            fail(`${persona.id}.noForPaymentLane`, `${persona.role} must not see the For Payment lane`)
+            await shot(page, `${persona.id}-for-payment-leak-FAIL`)
+          } else {
+            pass(`${persona.id}.noForPaymentLane`, 'lane hidden')
+          }
         }
       }
     }
@@ -439,29 +516,37 @@ try {
     // Branch Admin while the route denies them (BUG-054); the route is the one
     // that is enforced, so it is the one the harness must hold the product to.
     if (allowRoute(profile, 'finance')) {
-      await page.goto(`${base}/operations/finance`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-      await waitSettled(page)
-      const url = page.url()
-      if (isDeniedWall(url)) {
-        fail(`${persona.id}.finance`, `${url} — allowRoute allows finance but the route denies`)
+      const nav = await gotoRoute(page, `${base}/operations/finance`)
+      if (!nav.ok) {
+        fail(`${persona.id}.finance`, `/operations/finance did not load: ${nav.why}`)
       } else {
-        pass(`${persona.id}.finance`, url)
-        await shot(page, `${persona.id}-finance`)
+        await waitSettled(page)
+        const url = page.url()
+        if (isDeniedWall(url)) {
+          fail(`${persona.id}.finance`, `${url} — allowRoute allows finance but the route denies`)
+        } else {
+          pass(`${persona.id}.finance`, url)
+          await shot(page, `${persona.id}-finance`)
+        }
       }
     }
 
     if (!canWriteFinance(profile)) {
       // A role that cannot write the books must not find a write affordance.
-      await page.goto(`${base}/operations/finance`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-      await waitSettled(page)
-      const write = await safeEvaluate(page, () =>
-        /add vendor|new vendor|post to books|approve sheet/i.test(document.body?.innerText || ''),
-      )
-      if (write && !isDeniedWall(page.url())) {
-        fail(`${persona.id}.financeWriteHidden`, `${persona.role} cannot write finance but sees a write control`)
-        await shot(page, `${persona.id}-finance-write-FAIL`)
+      const nav = await gotoRoute(page, `${base}/operations/finance`)
+      if (!nav.ok) {
+        fail(`${persona.id}.financeWriteHidden`, `/operations/finance did not load: ${nav.why}`)
       } else {
-        pass(`${persona.id}.financeWriteHidden`, 'no write affordance')
+        await waitSettled(page)
+        const write = await safeEvaluate(page, () =>
+          /add vendor|new vendor|post to books|approve sheet/i.test(document.body?.innerText || ''),
+        )
+        if (write && !isDeniedWall(page.url())) {
+          fail(`${persona.id}.financeWriteHidden`, `${persona.role} cannot write finance but sees a write control`)
+          await shot(page, `${persona.id}-finance-write-FAIL`)
+        } else {
+          pass(`${persona.id}.financeWriteHidden`, 'no write affordance')
+        }
       }
     }
   }
@@ -470,7 +555,11 @@ try {
   await clearSession(page, base)
   await opsLogin(page, base, OPS_DEMO_ACCOUNTS[0].email, OPS_DEMO_ACCOUNTS[0].password)
   for (const r of RETIRED_ROUTES) {
-    await page.goto(`${base}${r.from}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const nav = await gotoRoute(page, `${base}${r.from}`)
+    if (!nav.ok) {
+      fail(`retired.${r.from}`, `${r.from} did not load, so the redirect is unproven: ${nav.why}`)
+      continue
+    }
     await waitSettled(page)
     const url = new URL(page.url())
     const landed = `${url.pathname}${url.search}`
@@ -497,7 +586,11 @@ try {
     pass('customer.signin', page.url())
     await shot(page, 'customer-account')
     for (const to of ['/account', '/account/queue', '/account/bookings', '/account/loyalty']) {
-      await page.goto(`${base}${to}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      const nav = await gotoRoute(page, `${base}${to}`)
+      if (!nav.ok) {
+        fail(`customer.open.${to}`, `${to} did not load: ${nav.why}`)
+        continue
+      }
       await waitSettled(page)
       const url = page.url()
       if (isLoginWallUrl(url) || isDeniedWall(url) || !new URL(url).pathname.startsWith('/account')) {
@@ -508,15 +601,19 @@ try {
         await shot(page, `customer-${to.replace(/\W+/g, '-')}`)
       }
     }
-    await page.goto(`${base}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-    await waitSettled(page)
-    const u = page.url()
-    if (new URL(u).pathname.startsWith('/operations/queue') && !isDeniedWall(u)) {
-      fail('customer.deny.ops', u)
-      await shot(page, 'customer-deny-ops-FAIL')
+    const opsNav = await gotoRoute(page, `${base}/operations/queue`)
+    if (!opsNav.ok) {
+      fail('customer.deny.ops', `/operations/queue did not load, so the wall is unproven: ${opsNav.why}`)
     } else {
-      pass('customer.deny.ops', u)
-      await shot(page, 'customer-deny-ops')
+      await waitSettled(page)
+      const u = page.url()
+      if (new URL(u).pathname.startsWith('/operations/queue') && !isDeniedWall(u)) {
+        fail('customer.deny.ops', u)
+        await shot(page, 'customer-deny-ops-FAIL')
+      } else {
+        pass('customer.deny.ops', u)
+        await shot(page, 'customer-deny-ops')
+      }
     }
   } else {
     fail('customer.signin', page.url())
@@ -526,7 +623,11 @@ try {
   // ── Public utilities stay reachable without a session ──────────────────
   await clearSession(page, base)
   for (const to of ['/book', '/contact', '/complaints', '/queue', '/branches', '/events', '/services']) {
-    await page.goto(`${base}${to}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const nav = await gotoRoute(page, `${base}${to}`)
+    if (!nav.ok) {
+      fail(`public.${to}`, `${to} did not load: ${nav.why}`)
+      continue
+    }
     await waitSettled(page)
     const url = page.url()
     if (isLoginWallUrl(url)) {

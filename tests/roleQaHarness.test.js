@@ -219,3 +219,79 @@ test('the previous role pack no longer pins boss/asa to the removed console rout
     'e2e-role-qa.mjs still sends boss/asa to /operations/console, which no longer exists',
   )
 })
+
+test('a console failure names the route it happened on', () => {
+  // Observed 2026-10-09: `admin.console` failed with three bare
+  //   "Failed to load resource: the server responded with a status of 401"
+  // and named no route at all. The harness walks ten dock pages before it reads
+  // the bucket, so a role-scoped message is not actionable — this is the same
+  // defect class as BUG-064, where a red wave told nobody what to fix.
+  //
+  // Both handlers must carry the route, and the route must be read at event time
+  // (`page.url()`), not captured once at attach time, or every error would be
+  // attributed to whichever page happened to be open when collectErrors ran.
+  assert.match(HARNESS_CODE, /const where = \(\) =>/, 'a helper must resolve the current route')
+  // Anchored to the helper's own body. A bare /page\.url\(\)/ elsewhere in the
+  // file satisfies a file-wide match — an earlier version of this assertion did
+  // exactly that, and the mutation it was supposed to catch sailed through.
+  // It then survived a second version too: where()'s catch branch also calls
+  // page.url(), so presence alone cannot tell "reads the route" from "ignores it".
+  // The property that actually matters is that the route is *derived* from the
+  // live URL, so that is what gets asserted.
+  const whereBody = HARNESS_CODE.match(/const where = \(\) => \{[\s\S]*?\n\s*\}/)?.[0] || ''
+  assert.ok(whereBody, 'the where() helper must have a body to inspect')
+  assert.match(
+    whereBody,
+    /new URL\(page\.url\(\)\)\.pathname/,
+    'where() must derive the route from the live page URL, not return a constant',
+  )
+  assert.match(HARNESS_CODE, /console @\$\{where\(\)\}/, 'console errors must carry their route')
+  assert.match(HARNESS_CODE, /pageerror @\$\{where\(\)\}/, 'page errors must carry their route')
+  // And the bucket must still be drained per persona, or attribution accumulates
+  // into the next role and the message points at the wrong walk.
+  assert.match(HARNESS_CODE, /errors\.take\(\)/, 'the bucket must still be drained per persona')
+  assert.match(HARNESS_CODE, /favicon\|ResizeObserver/, 'benign noise must still be filtered')
+  // The console string for a failed fetch names neither URL nor status, so the
+  // harness has to listen on the wire or the 401 is permanently unactionable.
+  // Scoped to 401/403 — widening it to all 4xx/5xx would drag in dev-server 404s
+  // that are not product faults.
+  assert.match(HARNESS_CODE, /page\.on\('response'/, 'auth failures must be captured from the wire')
+  assert.match(HARNESS_CODE, /http \$\{status\} @\$\{where\(\)\}/, 'the failing URL must be reported')
+  assert.match(
+    HARNESS_CODE,
+    /status !== 401 && status !== 403/,
+    'only auth failures belong in the bucket, or dev-server 404s become product faults',
+  )
+})
+
+test('no navigation in the harness can throw into the top-level catch', () => {
+  // BUG-064 routed `evaluate` through safeEvaluate and left `page.goto` bare, so
+  // the same defect came back through a different door on 2026-10-09:
+  // `net::ERR_ABORTED at /operations/attendance` unwound to the top-level catch,
+  // printed `fatal`, and ended the wave at 87/87 — every check after that point
+  // silently never ran. A collapsed total is the tell, and a short run that looks
+  // green is worse than a red one.
+  //
+  // So: every `page.goto` must either be the single retrying call inside
+  // gotoRoute, or be individually .catch()ed. This walks the source rather than
+  // grepping for a symbol, because the defect is *where* the call sits.
+  const lines = HARNESS_CODE.split('\n')
+  const offenders = []
+  let inHelper = false
+  for (const line of lines) {
+    if (/async function gotoRoute\(/.test(line)) inHelper = true
+    if (!inHelper && /await page\.goto\(/.test(line) && !/\.catch\(/.test(line)) {
+      offenders.push(line.trim())
+    }
+    if (inHelper && /^\}/.test(line)) inHelper = false
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `an unguarded page.goto would truncate the whole wave: ${offenders.join(' | ')}`,
+  )
+  // The helper must actually retry rather than swallow on the first attempt.
+  assert.match(HARNESS_CODE, /async function gotoRoute\(page, url, attempts = 3\)/)
+  assert.match(HARNESS_CODE, /for \(let i = 0; i < attempts; i\+\+\)/, 'gotoRoute must retry')
+  assert.match(HARNESS_CODE, /return \{ ok: false, why: last \}/, 'gotoRoute must report why it gave up')
+})

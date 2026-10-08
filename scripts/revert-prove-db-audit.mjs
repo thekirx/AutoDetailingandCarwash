@@ -22,6 +22,7 @@ const SUITES = [
   'tests/apiRouteContract.test.js',
   'tests/dailySheetReconciliation.test.js',
   'tests/sheetUiConsistency.test.js',
+  'tests/roleQaHarness.test.js',
 ]
 
 function runSuite() {
@@ -37,7 +38,7 @@ function runSuite() {
   return { red: false, out: '' }
 }
 
-const MUTATIONS = [
+const ALL_MUTATIONS = [
   {
     name: 'a read asks for more rows than PostgREST returns',
     from: ".select('id, total_minor').lt('total_minor', 0).limit(20)",
@@ -83,8 +84,8 @@ const MUTATIONS = [
   {
     file: 'scripts/e2e-role-qa-wave.mjs',
     name: 'the QA harness goes back to a bare page.evaluate in an assertion',
-    from: 'const lane = await safeEvaluate(page, () =>\n        /collect at pos/i',
-    to: 'const lane = await page.evaluate(() =>\n        /collect at pos/i',
+    from: 'const lane = await safeEvaluate(page, () =>\n          /collect at pos/i',
+    to: 'const lane = await page.evaluate(() =>\n          /collect at pos/i',
   },
   {
     file: 'scripts/lib/safe-evaluate.mjs',
@@ -180,7 +181,127 @@ const MUTATIONS = [
     from: 'labelToSlug.set(b.slug, b.slug)',
     to: 'labelToSlug.set(b.slug, b.name)',
   },
+  // Phase 2: the till. Each of these is a way the POS comparison could report
+  // PASS while comparing the wrong thing, or nothing at all.
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the till is checked as Super Admin instead of the Branch Admin who works the till',
+    from: "a.id === 'admin'",
+    to: "a.id === 'superadmin'",
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the till is checked on today, which no seeded sheet covers',
+    from: 'tab=sheet&date=${posDate}',
+    to: 'tab=sheet',
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the till comparison stops flipping the Expenses sign',
+    from: "['Expenses', want?.expenses, -1]",
+    to: "['Expenses', want?.expenses, 1]",
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the till comparison stops flipping the Salaries sign',
+    from: "['Salaries', want?.salaries, -1]",
+    to: "['Salaries', want?.salaries, 1]",
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the till comparison negates Net profit',
+    from: "['Net profit', want?.profit, 1]",
+    to: "['Net profit', want?.profit, -1]",
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the POS branch treats a summary that never rendered as a pass',
+    from: 'if (!Object.keys(summary).length || !want) {',
+    to: 'if (false) {',
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'an unrendered POS summary stops reporting the page errors it saw',
+    from: 'page errors: ${posErrors.slice',
+    to: 'page errors: (hidden)',
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'phase 2 reuses the Super Admin session instead of its own context',
+    from: 'await browser.createBrowserContext()',
+    to: 'await browser.newPage()',
+  },
+  {
+    file: 'scripts/e2e-role-qa-wave.mjs',
+    name: 'a console failure goes back to naming no route at all',
+    from: '`console @${where()}: ${msg.text().slice(0, 300)}`',
+    to: '`console: ${msg.text().slice(0, 300)}`',
+  },
+  {
+    file: 'scripts/e2e-role-qa-wave.mjs',
+    name: 'a page error goes back to naming no route at all',
+    from: '`pageerror @${where()}: ${String(err?.message || err).slice(0, 300)}`',
+    to: '`pageerror: ${String(err?.message || err).slice(0, 300)}`',
+  },
+  {
+    file: 'scripts/e2e-role-qa-wave.mjs',
+    name: 'the route is captured once instead of at event time, blaming the wrong page',
+    from: 'return new URL(page.url()).pathname',
+    to: 'return "the page"',
+  },
+  {
+    file: 'scripts/e2e-role-qa-wave.mjs',
+    name: 'the dock walk goes back to a bare page.goto that can kill the whole wave',
+    from: 'const nav = await gotoRoute(page, `${base}${to}`)',
+    to: "await page.goto(`${base}${to}`, { waitUntil: 'domcontentloaded', timeout: 60000 })",
+  },
+  {
+    file: 'scripts/e2e-role-qa-wave.mjs',
+    name: 'auth failures stop being captured, so the 401 loses its URL again',
+    from: "page.on('response', (res) => {",
+    to: "page.on('responseDISABLED', (res) => {",
+  },
+  {
+    file: 'scripts/e2e-role-qa-wave.mjs',
+    name: 'the bucket widens to every 4xx/5xx, turning dev-server 404s into product faults',
+    from: 'if (status !== 401 && status !== 403) return',
+    to: 'if (status < 200) return',
+  },
+  {
+    file: 'scripts/e2e-role-qa-wave.mjs',
+    name: 'gotoRoute stops retrying and gives up on the first abort',
+    from: 'for (let i = 0; i < attempts; i++) {',
+    to: 'for (let i = 0; i < 1; i++) {',
+  },
+  {
+    file: 'scripts/e2e-role-qa-wave.mjs',
+    name: 'gotoRoute stops saying why it gave up, so failures become unactionable again',
+    from: 'return { ok: false, why: last }',
+    to: 'return { ok: false }',
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'an unrendered POS summary is announced as a pass',
+    from: 'NOT VERIFIED — the POS summary did not render',
+    to: 'PASS — the POS summary did not render',
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the till summary is read through a selector that matches nothing',
+    from: ".ds-summary .ds-row",
+    to: ".ds-summary .ds-nothing-matches-this",
+  },
 ]
+
+// An optional substring filter (`node scripts/revert-prove-db-audit.mjs till`)
+// narrows the run while iterating on one area. The unfiltered run stays the gate:
+// a filtered run proves the named mutations and nothing else.
+const filter = process.argv[2] || ''
+const MUTATIONS = filter ? ALL_MUTATIONS.filter((m) => m.name.includes(filter)) : ALL_MUTATIONS
+if (!MUTATIONS.length) {
+  console.error(`no mutation name matches "${filter}" — nothing was proved`)
+  process.exit(1)
+}
 
 let failures = 0
 

@@ -44,7 +44,8 @@ test('the check asks for every sheet, not just the review queue', () => {
 test('an empty table is never a pass', () => {
   assert.match(CODE, /if\s*\(!rows\.length\)\s*\{/, 'the empty-table branch must exist')
   assert.match(CODE, /failures\+\+/, 'the empty-table branch must count as a failure')
-  assert.match(CODE, /NOT VERIFIED/, 'it must say plainly that nothing was compared')
+  assert.match(CODE, /NOT VERIFIED — the table rendered no rows, so nothing could be compared\./,
+    'it must say plainly that nothing was compared')
   // And it must wait for the table rather than reading the skeleton.
   assert.match(CODE, /waitForSheetsTable/, 'it must wait for the sheets table to finish loading')
   assert.match(CODE, /loading/,
@@ -69,6 +70,56 @@ test('coverage is reported, and partial coverage is called out', () => {
   for (const field of ['net', 'expenses', 'salaries', 'profit']) {
     assert.ok(CODE.includes(`['${field}'`), `the ${field} column must be compared`)
   }
+})
+
+test('the till is checked with a Branch Admin on a pinned past date', () => {
+  // Finance is back office; POS is the surface a shop day actually runs on. It
+  // renders the same sheet through a different component and formatter, so it
+  // needs its own comparison.
+  //
+  // The role is a representativeness choice, NOT a permission requirement.
+  // `canEditDailySheet` admits BossMich as well as `admin`
+  // (`src/lib/dailySheet.js:41`), so signing in as Super Admin would have
+  // rendered the summary too. This claim was originally wrong here and was
+  // caught by reading the gate rather than assuming it.
+  //
+  // What the Branch Admin adds is branch scoping: it only sees its own branch,
+  // so a sheet from the wrong branch would render different figures and be
+  // caught. The silent failure this phase has to survive is the OTHER one —
+  // `resolvePosShellTab` drops `tab=sheet` to `checkout` with no error for any
+  // role that fails the gate, which is why an unrendered summary is a failure.
+  assert.match(CODE, /id === 'admin'/,
+    "phase 2 must sign in as the Branch Admin demo account (id 'admin'), not the Super Admin")
+  assert.match(CODE, /tab=sheet&date=\$\{posDate\}/,
+    'POS must be opened on a pinned past date, otherwise only today renders')
+  assert.match(CODE, /createBrowserContext/,
+    'phase 2 needs its own browser context so it does not reuse the Super Admin session')
+  assert.match(CODE, /\.ds-summary \.ds-row/,
+    'the summary rows must be read through their stable class hooks')
+})
+
+test('the till comparison honours the POS sign convention', () => {
+  // DailySheetPanel renders `<Money minor={-totals.expensesMinor} />` — expenses
+  // and salaries are shown as negatives. Comparing them straight against the
+  // stored positive totals would report a discrepancy on every sheet.
+  assert.match(CODE, /const posChecks = \[/, 'the POS comparison must be an explicit field list')
+  assert.match(CODE, /\['Expenses',\s*want\??\.expenses,\s*-1\]/,
+    'Expenses must be compared with the sign flipped')
+  assert.match(CODE, /\['Salaries',\s*want\??\.salaries,\s*-1\]/,
+    'Salaries must be compared with the sign flipped')
+  assert.match(CODE, /\['Net profit',\s*want\??\.profit,\s*1\]/,
+    'Net profit is not negated and must be compared as stored')
+})
+
+test('a till summary that never rendered is not a pass', () => {
+  assert.match(CODE, /if\s*\(!Object\.keys\(summary\)\.length\s*\|\|\s*!want\)/,
+    'the POS branch must check that the summary actually rendered')
+  assert.match(CODE, /NOT VERIFIED — the POS summary did not render/,
+    'it must say plainly that nothing was compared at the till')
+  // Anchored to the diagnostic line, not a bare `posErrors.slice`, so it cannot
+  // be satisfied by some unrelated use of the array in the same file.
+  assert.match(CODE, /page errors: \$\{posErrors\.slice/,
+    'a missing summary must report the page errors it saw')
 })
 
 test('the check writes nothing', () => {

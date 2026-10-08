@@ -268,6 +268,102 @@ try {
       console.log('figures that WERE shown, not the whole month.')
     }
   }
+
+    // ── Phase 2: the till ────────────────────────────────────────────────
+    // Finance is back office. The surface that actually matters on a shop day
+    // is POS, where the Branch Admin closes the day. It renders the same sheet
+    // through a different component and a different money formatter, so a
+    // disagreement here would be invisible to phase 1.
+    //
+    // POS accepts ?date= for a past day (PosPage.jsx passes `date` through as
+    // `initialDate`, and DailySheetPanel accepts any date <= today), so a
+    // seeded sheet can be opened at the till and checked like any other.
+    console.log('\n--- phase 2: POS daily sheet (the till) ---')
+    const posDate = '2026-09-30'
+    const posBranch = 'bacoor'
+    const ctx = await browser.createBrowserContext()
+    const posPage = await ctx.newPage()
+    await posPage.setViewport({ width: 1440, height: 1000 })
+    const posErrors = []
+    posPage.on('pageerror', (e) => posErrors.push(String(e?.message || e).slice(0, 160)))
+
+    const ba = OPS_DEMO_ACCOUNTS.find((a) => a.id === 'admin')
+    if (!ba) throw new Error('no Branch Admin demo account to check the till with')
+    await posPage.goto(`${base}/operations/login`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await dismissCookieBanner(posPage)
+    await posPage.waitForSelector('input[type="email"], input[name="email"]', { timeout: 20000 })
+    const pEmail = await posPage.$('input[type="email"], input[name="email"]')
+    const pPass = await posPage.$('input[type="password"]')
+    await pEmail.click({ clickCount: 3 })
+    await pEmail.type(ba.email, { delay: 5 })
+    await pPass.click({ clickCount: 3 })
+    await pPass.type(ba.password, { delay: 5 })
+    await posPage.click('button[type="submit"]')
+    await posPage.waitForFunction(() => location.pathname.startsWith('/operations') && !location.pathname.startsWith('/operations/login'), { timeout: 60000 }).catch(() => null)
+
+    const posTarget = `${base}/operations/pos?tab=sheet&date=${posDate}`
+    await posPage.goto(posTarget, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await dismissCookieBanner(posPage)
+
+    const want = expected.get(`${posDate}|${posBranch}`)
+    // The panel renders Expenses and Salaries as negatives of the stored
+    // totals (`<Money minor={-totals.expensesMinor} />`), so the sign must be
+    // flipped before comparing or every figure looks wrong.
+    const posChecks = [
+      ['Net sales', want?.net, 1],
+      ['Expenses', want?.expenses, -1],
+      ['Salaries', want?.salaries, -1],
+      ['Net profit', want?.profit, 1],
+    ]
+    // Wait for the labels this phase actually compares, not for a row count.
+    // Counting rows either burns the whole 40s whenever the panel renders
+    // exactly four rows, or breaks early on a panel that renders five rows but
+    // not these four — and then silently compares whatever happened to arrive.
+    const WANTED = posChecks.map(([label]) => label)
+    let summary = {}
+    for (let i = 0; i < 40; i++) {
+      summary = await safeEvaluate(posPage, () => {
+        const out = {}
+        for (const row of document.querySelectorAll('.ds-summary .ds-row')) {
+          const spans = row.querySelectorAll('span')
+          if (spans.length >= 2) out[spans[0].innerText.trim()] = spans[spans.length - 1].innerText.trim()
+        }
+        return out
+      }).catch(() => ({}))
+      if (!want || WANTED.every((k) => typeof summary[k] === 'string')) break
+      await new Promise((r) => setTimeout(r, 1000))
+    }
+    await posPage.screenshot({ path: join(root, 'e2e-evidence', 'db-audit', 'sheet-pos.png') }).catch(() => null)
+
+    if (!Object.keys(summary).length || !want) {
+      failures++
+      console.log('NOT VERIFIED — the POS summary did not render, or no such sheet exists in the DB.')
+      console.log(`  posDate=${posDate} branch=${posBranch} renderedRows=${Object.keys(summary).length} dbSheet=${Boolean(want)}`)
+      const missing = WANTED.filter((k) => !(k in summary))
+      if (missing.length) console.log(`  missing labels: ${missing.join(', ')}`)
+      console.log(`  page errors: ${posErrors.slice(0, 3).join(' | ') || '(none)'}`)
+    } else {
+      const posProblems = []
+      for (const [label, stored, sign] of posChecks) {
+        const rendered = summary[label]
+        const got = parseMoney(rendered)
+        if (got === null) { posProblems.push({ label, rendered, why: 'unparseable' }); continue }
+        const expectedMinor = stored * sign
+        if (Math.abs(got - expectedMinor) > 0.5) {
+          posProblems.push({ label, rendered, renderedMinor: got, dbMinor: expectedMinor, deltaPHP: (got - expectedMinor) / 100 })
+        }
+      }
+      console.log(`sheet ${posBranch}/${posDate} at the till:`)
+      for (const [label] of posChecks) console.log(`   ${label.padEnd(12)} rendered ${summary[label]}`)
+      if (posProblems.length) {
+        failures++
+        console.log(`\n${posProblems.length} POS DISCREPANCY(IES):`)
+        for (const p of posProblems) console.log('  ', JSON.stringify(p))
+      } else {
+        console.log('\nOK — every figure on the till matches the stored sheet.')
+      }
+    }
+    await ctx.close().catch(() => null)
 } catch (err) {
   failures++
   console.error('\nFAILED:', err?.message || err)
