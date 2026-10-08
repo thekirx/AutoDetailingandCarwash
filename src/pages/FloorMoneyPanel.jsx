@@ -51,7 +51,7 @@ function ShareBars({ title, rows, empty }) {
                 </span>
               </div>
               <div className="mt-1 h-2 rounded-full bg-muted">
-                <div className="h-2 rounded-full bg-[#052699]" style={{ width: `${r.share}%` }} />
+                <div className="h-2 rounded-full bg-primary" style={{ width: `${r.share}%` }} />
               </div>
             </li>
           ))}
@@ -144,8 +144,11 @@ export default function FloorMoneyPanel({
   const today = preset === 'today'
   const vs = today ? 'vs yesterday' : 'vs prior period'
   const chartConfig = {
-    today: { label: today ? 'Today' : 'This period', color: '#052699' },
-    prior: { label: today ? 'Yesterday' : 'Prior period', color: '#b9b9b0' },
+    // Reference the tokens rather than repeating the hex: the brand navy is
+    // also --color-brand-primary and --status-paid, so a brand change would
+    // otherwise leave this chart showing last season's colour.
+    today: { label: today ? 'Today' : 'This period', color: 'var(--color-brand-primary)' },
+    prior: { label: today ? 'Yesterday' : 'Prior period', color: 'var(--color-chart-prior)' },
   }
   const hourly = m.hourly.filter((r) => (r.hour >= 7 && r.hour <= 21) || r.today || r.prior)
   const hasHourly = hourly.some((r) => r.today || r.prior)

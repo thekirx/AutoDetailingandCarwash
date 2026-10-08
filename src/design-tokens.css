@@ -107,6 +107,11 @@
   --status-absent: #64748b;
   --status-absent-soft: #f1f5f9;
 
+  /* Chart series. The floor money panel compares a current period against the
+     prior one, so the comparison series needs its own grey — it is deliberately
+     NOT the brand navy, which already means "today"/"paid". */
+  --color-chart-prior: #b9b9b0;
+
   /* Customer PWA aliases (fold --capp-* into brand) */
   --capp-ink: var(--color-surface-cinematic);
   --capp-navy: var(--color-brand-primary);
