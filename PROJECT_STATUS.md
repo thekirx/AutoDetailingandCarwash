@@ -1,7 +1,7 @@
 # Project Status
 
 **Last Updated:** 2026-10-08 (Asia/Manila) — deep read-only production DB audit; read-only guarantee proven by tests + revert-prove
-**Current Branch:** `audit/2026-10-08-closeout` (13 commits ahead of `origin/main`; nothing pushed)
+**Current Branch:** `audit/2026-10-08-closeout` (unpushed; commit the doc and the count changes, so read `git rev-list --count origin/main..HEAD` rather than trusting a number here)
 **Overall Status:** **READY_WITH_OPS_BLOCKERS** · money reconciles in production · push **0 of 19 staff enrolled** · 2 POS handoffs (₱5,397.50) stranded
 
 ## Executive Summary
