@@ -8,6 +8,12 @@ const assets = [
   { name: 'mobile', path: '../src/assets/hero/mobile-hero.mp4', width: 1080, height: 1920 },
 ]
 
+// ffprobe ships with ffmpeg and is not installed everywhere. This file used to
+// be skipped entirely (the runner only discovered *.test.js), so the hero video
+// was never checked at all. Now that it is discovered, skip loudly-but-quietly
+// where ffprobe is absent instead of failing the suite for a missing binary.
+const hasFfprobe = spawnSync('ffprobe', ['-version'], { encoding: 'utf8' }).status === 0
+
 function inspectMedia(relativePath) {
   const path = fileURLToPath(new URL(relativePath, import.meta.url))
   const result = spawnSync('ffprobe', [
@@ -22,14 +28,18 @@ function inspectMedia(relativePath) {
 }
 
 for (const asset of assets) {
-  test(`${asset.name} hero video is silent, H.264, and correctly sized`, () => {
-    const streams = inspectMedia(asset.path)
-    const video = streams.find((stream) => stream.codec_type === 'video')
+  test(
+    `${asset.name} hero video is silent, H.264, and correctly sized`,
+    { skip: hasFfprobe ? false : 'ffprobe not installed (ffmpeg/ffprobe missing)' },
+    () => {
+      const streams = inspectMedia(asset.path)
+      const video = streams.find((stream) => stream.codec_type === 'video')
 
-    assert.ok(video, `${asset.name} hero is missing its video stream`)
-    assert.equal(video.codec_name, 'h264')
-    assert.equal(video.width, asset.width)
-    assert.equal(video.height, asset.height)
-    assert.equal(streams.some((stream) => stream.codec_type === 'audio'), false)
-  })
+      assert.ok(video, `${asset.name} hero is missing its video stream`)
+      assert.equal(video.codec_name, 'h264')
+      assert.equal(video.width, asset.width)
+      assert.equal(video.height, asset.height)
+      assert.equal(streams.some((stream) => stream.codec_type === 'audio'), false)
+    },
+  )
 }

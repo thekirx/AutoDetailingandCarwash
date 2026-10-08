@@ -1,6 +1,7 @@
 /**
  * Customer portal data (service role) — JWT customer → history / garage / queue / loyalty.
- * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone
+ * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review
+ * (kept in step with mutateCustomerPortal by scripts/check-portal-actions.mjs)
  */
 import { createClient } from '@supabase/supabase-js'
 import { getQueueCounts, buildVisitProgress, formatQueueNumber, normalizePlate } from '../src/queue/queueLogic.js'

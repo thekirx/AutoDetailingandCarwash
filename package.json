@@ -32,7 +32,13 @@
     "archify": "node scripts/archify.mjs",
     "sms:egress": "node scripts/check-busybee-egress.mjs",
     "sms:handset": "node scripts/smoke-busybee.mjs",
-    "ops:daily-ops": "node scripts/ops-admin-daily-ops.mjs"
+    "ops:daily-ops": "node scripts/ops-admin-daily-ops.mjs",
+    "check:live-queue": "node scripts/check-live-queue-path.mjs",
+    "check:planning": "node scripts/check-planning.mjs",
+    "check:portal": "node scripts/check-portal-actions.mjs",
+    "check:settings-auth": "node scripts/check-user-settings-auth.mjs",
+    "check:customer": "node scripts/customer-regression-check.mjs",
+    "check": "npm run check:planning && npm run check:portal && npm run check:settings-auth && npm run check:customer && npm run check:live-queue"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
