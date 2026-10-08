@@ -53,6 +53,21 @@ export function canStaffUpdateBookingStatus(staff, booking, opts = {}) {
     return true
   }
 
+  // Detailer: works the detailing pipeline in their own branch. Mirrors the
+  // Team Lead arm — same branch scope, same payment-lane exclusion.
+  if (staff.role === 'detailer') {
+    if (!staff.branch_slug || staff.branch_slug !== branch) return false
+    if (String(opts.nextStatus || '') === 'for_payment') return false
+    return true
+  }
+
+  // Operations Lead: all-branch scope (branch_slug is null). Same payment-lane
+  // exclusion — POS owns For payment.
+  if (staff.role === 'operations_lead') {
+    if (String(opts.nextStatus || '') === 'for_payment') return false
+    return true
+  }
+
   // Branch Admin: Bookings + Queue are view-only.
   if (staff.role === 'admin') return false
 

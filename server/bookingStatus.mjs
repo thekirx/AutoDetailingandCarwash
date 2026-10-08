@@ -28,7 +28,7 @@ function userClient(token) {
   })
 }
 
-const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'sales', 'team_lead', 'assistant_super_admin', 'operations_lead'])
+const ALLOWED = new Set(['admin', 'BossMich', 'marketing', 'sales', 'team_lead', 'detailer', 'assistant_super_admin', 'operations_lead'])
 
 async function ensureExperienceListId(db) {
   // Reuse existing Experience list on any board (migration + prior completes).
@@ -166,7 +166,7 @@ export async function handleBookingStatusRequest(req, res) {
       return json(res, 403, { error: 'Not allowed to update this booking' })
     }
 
-    // for_payment must create a POS handoff — never bare-update status
+    // for_payment must create a POS handoff â€” never bare-update status
     if (isPaymentHandoffStatus(status)) {
       if (!canEnterPaymentHandoff(existing.status)) {
         return json(res, 400, {
