@@ -24,6 +24,7 @@
     "e2e:ui-money": "node scripts/e2e-ui-money.mjs",
     "e2e:money-path": "node scripts/e2e-money-path-ui.mjs",
     "e2e:role-qa": "node scripts/e2e-role-qa.mjs",
+    "e2e:role-qa-wave": "node scripts/e2e-role-qa-wave.mjs",
     "e2e:nav-walk": "node scripts/e2e-nav-walk.mjs",
     "e2e:push-real": "node scripts/e2e-push-real.mjs",
     "e2e:lifecycle-flops": "node scripts/e2e-lifecycle-flops.mjs",

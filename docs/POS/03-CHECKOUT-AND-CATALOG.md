@@ -12,7 +12,14 @@
 
 **Honest limit:** Handoff without `booking.service_id` blocks checkout (`posCartBlocksCheckout` / `missing_service`). BA cannot invent a service id — TL/SA must fix the ticket.
 
-**Who sends to payment:** UI/RPC gate is admin-side (`canSeeForPaymentLane` / BA+SA+ASA). TL typically stops at final check unless owner changes that standard.
+**Who sends to payment:** the UI/RPC gate is `canSeeForPaymentLane` (console tier: SA + ASA + Branch Admin, plus Operations Lead). TL typically stops at final check unless the owner changes that standard.
+
+> **Unresolved (BUG-055).** Branch Admin is console-tier for this gate but is
+> **denied the Queue page** (BUG-043, closed 2026-10-04: Queue = SA / ASA / TL /
+> Ops Lead). So today a Branch Admin cannot actually open the board that renders
+> the For Payment lane — the grant is unreachable. The owner must choose: give
+> Branch Admin the Queue, or drop their For Payment grant. Until then, treat
+> "BA sends to payment at the counter" as **not proven** — the TL/SA/ASA lane is.
 
 ### B. Walk-in catalog (manual POS)
 

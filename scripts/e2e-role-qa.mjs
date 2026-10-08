@@ -254,8 +254,11 @@ const PERSONAS = [
   { id: 'tl', wave: 'B', home: '/operations/queue', allow: ['/operations/attendance', '/operations/bookings'], deny: '/operations/pos' },
   { id: 'admin', wave: 'B', home: '/operations/pos', allow: ['/operations/inventory', '/operations/bookings'], deny: '/operations/finance' },
   { id: 'crew1', wave: 'B', home: '/operations/attendance', allow: ['/operations/my-tasks'], deny: '/operations/pos' },
-  { id: 'boss', wave: 'C', home: '/operations/console', allow: ['/operations/finance', '/operations/settings/daily-sheet'], deny: null },
-  { id: 'asa', wave: 'C', home: '/operations/console', allow: ['/operations/queue'], deny: null },
+  // BossMich and the ASA land on the Floor Board; /operations/console was
+  // removed from the router, so pinning these two personas there made them fail
+  // every run (BUG-053). See scripts/e2e-role-qa-wave.mjs for the maintained pack.
+  { id: 'boss', wave: 'C', home: '/operations/dashboard', allow: ['/operations/finance', '/operations/settings/daily-sheet'], deny: null },
+  { id: 'asa', wave: 'C', home: '/operations/dashboard', allow: ['/operations/queue'], deny: null },
   { id: 'opslead', wave: 'C', home: '/operations/roadmap', allow: ['/operations/dashboard', '/operations/pos'], deny: '/operations/people' },
   { id: 'investor', wave: 'C', home: '/operations/finance', allow: [], deny: '/operations/pos' },
   { id: 'sales', wave: 'D', home: '/operations/bookings', allow: ['/operations/history'], deny: '/operations/queue' },
