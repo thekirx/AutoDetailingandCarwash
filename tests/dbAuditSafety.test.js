@@ -149,6 +149,39 @@ test('push_subscriptions is keyed on user_id, not staff_id', () => {
   )
 })
 
+test('sheet drift is split by whether the sheet is seeded', () => {
+  // September 2026 is the seeded demo month. Its 60 sheets carry 100+
+  // arithmetic inconsistencies that are artifacts of how the seed writes
+  // gross/net/byMethod — NOT production money bugs. Reporting them at High
+  // would cry wolf about money that is not at risk and would bury a genuine
+  // drift on any other day. BUG-065.
+  //
+  // Asserted on the SEVERITY each finding is emitted at, not on its wording. An
+  // earlier version of this test matched a prose fragment and failed on a
+  // missing "s" — a string-existence check that proves nothing about behaviour.
+  const infoNote = /note\(\s*'Info',\s*'dailysheet',\s*'seeded September sheets do not reconcile/
+  const highNote = /note\(\s*'High',\s*'dailysheet',\s*'a sheet outside the seeded month does not reconcile/
+  assert.match(CODE, infoNote,
+    'seed-month drift must be emitted as Info — it is a seed artifact, not a money bug')
+  assert.doesNotMatch(
+    CODE,
+    /note\(\s*'(Critical|High)',\s*'dailysheet',\s*'seeded September sheets/,
+    'seed-month drift must never be escalated to a money severity',
+  )
+  assert.match(CODE, highNote,
+    'drift outside the seeded month must still be reported, and at High')
+  assert.match(CODE, /BUG-065/, 'the audit should point at the bug that records this gap')
+})
+
+test('the audit reads the columns the sheet reconciliation needs', () => {
+  // Without `totals` and `opening_float_minor` the reconciliation silently
+  // inspects nothing and reports "0 sheets checked" as if all were clean.
+  const sel = /fetchAll\(\s*'daily_sheets',\s*'([^']+)'/s.exec(CODE)
+  assert.ok(sel, 'the audit must read daily_sheets through fetchAll')
+  assert.match(sel[1], /totals/, 'expectedCash reconciliation needs the totals block')
+  assert.match(sel[1], /opening_float_minor/, 'the cash formula needs the opening float')
+})
+
 test('the stranded-handoff check reads booking_id and created_at', () => {
   // Omitting these made the audit report two bookings as deleted that both
   // exist — a false Critical.

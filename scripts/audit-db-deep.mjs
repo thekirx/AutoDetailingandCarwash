@@ -311,7 +311,7 @@ if (want('money')) {
       count: stuck.length,
       totalPHP: (totalPHP / 100).toFixed(2),
       detail,
-      hint: 'Branch Admin can still ring these up from POS; until then the money is neither booked nor reconciled.',
+      hint: 'Do NOT ring these up. Investigate provenance first: 2026-09-29 is a manual POS test day and both rows trace to placeholder customers that never transacted (BUG-061). Ringing them up would post test data into the real books.',
     })
     const missingBooking = detail.filter((d) => d.bookingStatus === 'MISSING')
     if (missingBooking.length) {
@@ -514,7 +514,10 @@ if (want('auth')) {
 
 if (want('dailysheet')) {
   console.log('\n--- daily sheet integrity ---')
-  const { rows: sheetRows } = await fetchAll('daily_sheets', 'id, branch, business_date, status')
+  const { rows: sheetRows } = await fetchAll(
+    'daily_sheets',
+    'id, branch, business_date, status, opening_float_minor, counted_cash_minor, totals',
+  )
   const sheets = sheetRows
   const byStatus = {}
   for (const s of sheets || []) byStatus[s.status] = (byStatus[s.status] || 0) + 1
@@ -551,6 +554,56 @@ if (want('dailysheet')) {
   if (approvedNoPosts.length) {
     note('Medium', 'dailysheet', 'approved sheets with no posted expense lines (empty sheets are legal)', {
       count: approvedNoPosts.length,
+    })
+  }
+
+  // ── Does each sheet agree with the money it claims? ──────────────────────
+  // Every other check in this audit looks at one link of the chain at a time.
+  // This one asks whether a sheet's `totals` block actually matches the sales it
+  // is supposed to summarise, and whether its own arithmetic holds. A sheet
+  // could approve a figure the POS never recorded and everything else stays
+  // green.
+  const byMethodSum = (t) => (t.byMethod ? Object.values(t.byMethod).reduce((a, b) => a + (Number(b) || 0), 0) : null)
+  const n = (v) => Number(v || 0)
+  const sheetDrift = []
+  for (const sh of sheets || []) {
+    const t = sh.totals || {}
+    // Expected cash is derived from the sheets that DO balance, so it is the
+    // live formula rather than one invented to fit.
+    if (t.expectedCashMinor !== undefined && t.cashMinor !== undefined) {
+      const expectCash = n(t.cashMinor) - n(t.totalExpensesMinor) + n(sh.opening_float_minor) + n(t.caRepaidMinor)
+      if (expectCash !== n(t.expectedCashMinor)) {
+        sheetDrift.push({ branch: sh.branch, date: sh.business_date, why: 'expectedCash', deltaPHP: (expectCash - n(t.expectedCashMinor)) / 100 })
+      }
+    }
+    if (t.netMinor !== undefined && t.grossMinor !== undefined && n(t.grossMinor) - n(t.discountsMinor) !== n(t.netMinor)) {
+      sheetDrift.push({ branch: sh.branch, date: sh.business_date, why: 'net != gross - discounts', deltaPHP: (n(t.grossMinor) - n(t.discountsMinor) - n(t.netMinor)) / 100 })
+    }
+    const bm = byMethodSum(t)
+    if (bm !== null && bm !== n(t.grossMinor)) {
+      sheetDrift.push({ branch: sh.branch, date: sh.business_date, why: 'byMethod != gross', deltaPHP: (bm - n(t.grossMinor)) / 100 })
+    }
+  }
+  // September is the seeded test month, so drift there is a seed artifact and
+  // not a production money bug. Reporting it as one would cry wolf on money
+  // that is not at risk, and would bury a genuine drift on another day.
+  const seeded = (d) => String(d || '').startsWith('2026-09')
+  const seededDrift = sheetDrift.filter((d) => seeded(d.date))
+  const realDrift = sheetDrift.filter((d) => !seeded(d.date))
+  if (realDrift.length) {
+    note('High', 'dailysheet', 'a sheet outside the seeded month does not reconcile', {
+      count: realDrift.length, detail: realDrift.slice(0, 10),
+    })
+  } else {
+    note('Info', 'dailysheet', 'every non-seeded sheet reconciles internally', {
+      checked: (sheets || []).filter((s) => !seeded(s.business_date)).length,
+    })
+  }
+  if (seededDrift.length) {
+    note('Info', 'dailysheet', 'seeded September sheets do not reconcile (seed artifact, not a money bug)', {
+      count: seededDrift.length,
+      detail: seededDrift.slice(0, 5),
+      note: 'scripts/seed/september2026Db.mjs writes gross/net/byMethod by a different rule than it writes the sales. The demo month is therefore not a faithful model of a real sheet. See BUG-065.',
     })
   }
 

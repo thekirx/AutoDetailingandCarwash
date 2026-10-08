@@ -14,7 +14,7 @@ September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month
 
 Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 (BUG-048 — **closed on production 2026-10-05**: live 405 / 401). **BUG-048 can no longer recur silently**: `tests/apiRouteContract.test.js` fails the build if any `/api/*` path the app calls has neither a serverless function nor a `vercel.json` rewrite, and if any rewrite points at an operation its gateway does not export. That class of break was invisible to build, lint and unit tests — it only existed on the deployed host.
 
-Fresh evidence: **2026-10-08** unit **1658/1658** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
+Fresh evidence: **2026-10-09** unit **1666/1666** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
 Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change). Shop-day **markdown** + **owner HTML/PDF pack** teach Daily Sheet; legacy `user-stories/pdf/process-*` may still be stale.
 
@@ -56,11 +56,31 @@ new money cannot strand. The 4 stuck rows date to 2026-07-07/10, the window when
 is not recurring.** The lesson generalises: a reference search over application code cannot
 establish that a table is unused when database functions can reach it.
 
-The audit itself first produced three *wrong* readings, all from PostgREST: a `.limit(5000)`
-that silently returned 1000 of 1,312 bookings, a guessed `service_name` column that returned
-null and looked like deleted bookings, and a `staff_id` lookup on a table keyed on `user_id`
-that returned zero rows and read as "nobody enrolled". Each is now locked by a test, so the
-audit cannot silently regress into reporting a confident wrong number.
+**Correction, 2026-10-09 — BUG-061 downgraded to Low.** I first filed the two incomplete POS hand-offs
+(₱5,397.50) as a High unbooked-revenue blocker and told the reader to ring them up at POS. **That
+advice would have been wrong.** The only customers behind them are `Walk-in · ABC124`
+(phone `0912345678`) and `test run` (phone `09999999999`, first/last name literally test/run), both
+auto-created minutes before their hand-off, and **neither has ever produced a single sale**.
+2026-09-29 is the *only* hand-off day with anything incomplete, and it is *only* days where 100% of
+customers look like placeholders. Ringing them up would post **₱5,100 of test data into the real
+books**. They are stale rows to void or archive, not revenue to collect. Confirm it was a POS test
+day before touching them.
+
+## Daily Sheet verification status (2026-10-09)
+
+**The POS → Daily Sheet → Finance approve → books path has never run on real data.** All **60 of 60**
+`daily_sheets` are September 2026, which is the seeded demo month. Real POS activity is **9 sales**
+(4 August, 5 July) and **not one of them has a Daily Sheet**. Every "money reconciles" result to date
+validates POS ↔ line items and seed arithmetic — never a sheet a Branch Admin closes at 6pm.
+
+A full reconciliation (`npm run audit:db`, or `scripts/probe-daily-sheets.mjs`) compares each sheet's
+`totals` block against the real `sales` for that branch/day, plus its own arithmetic. It found **108
+discrepancies — all of them in the seeded month**, so none is a production money bug, and the audit
+now reports them as `Info` seed artifacts while still escalating any drift outside September to
+`High`. Side effect worth knowing: **the seeded demo month is not a faithful model of a real sheet**,
+which is a problem for training material and for anyone demoing the Daily Sheet.
+
+To close this honestly: close one real shop day end to end and re-run the probe.
 
 ## SMS product policy (always)
 

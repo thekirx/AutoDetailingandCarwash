@@ -1,12 +1,365 @@
 {
   "ok": false,
   "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
-  "at": "2026-10-08T15:58:54.305Z",
+  "at": "2026-10-08T16:13:51.555Z",
   "bySeverity": {
-    "Info": 2,
-    "High": 1
+    "Info": 54,
+    "High": 2,
+    "Low": 2
   },
   "findings": [
+    {
+      "severity": "Info",
+      "section": "connect",
+      "message": "connected with service role",
+      "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
+      "sample": 1
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "staff_profiles",
+      "rows": 25
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "branches",
+      "rows": 32
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "customers",
+      "rows": 918
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "bookings",
+      "rows": 1312
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "vehicles",
+      "rows": 945
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "services",
+      "rows": 58
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "sales",
+      "rows": 1307
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "sale_line_items",
+      "rows": 1461
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "expenses",
+      "rows": 357
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "transactions",
+      "rows": 14
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "daily_sheets",
+      "rows": 60
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "daily_sheet_lines",
+      "rows": 379
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "staff_attendance",
+      "rows": 299
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "queue_assignments",
+      "rows": 1418
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "active_customer_queue",
+      "rows": 9
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "pos_handoffs",
+      "rows": 14
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "pos_ready_tickets",
+      "rows": 2
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "loyalty_ledger",
+      "rows": 14
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "ops_forms",
+      "rows": 6
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "ops_form_submissions",
+      "rows": 3
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "events",
+      "rows": 2
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "blogs",
+      "rows": 2
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "audit_logs",
+      "rows": 385
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "product_branch_stock",
+      "rows": 240
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "service_reviews",
+      "rows": 0
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "push_subscriptions",
+      "rows": 3
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "vendors",
+      "rows": 0
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "expense_reports",
+      "rows": 0
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "membership_tiers",
+      "rows": 1
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "notification_broadcasts",
+      "rows": 1
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "sms_events",
+      "rows": 222
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "plan_cards",
+      "rows": 2
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "vehicles",
+      "rows": 945
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "vehicle_catalog",
+      "rows": 492
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "sales",
+      "total": 1307,
+      "paid": 1293,
+      "paidTotalMinor": 162482200,
+      "paidTotalPHP": "1624822.00"
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "every sale with line items reconciles",
+      "checked": 1307
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "transactions",
+      "total": 14,
+      "live": 14,
+      "liveTotalMinor": 3314850,
+      "liveTotalPHP": "33148.50"
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "POS handoffs",
+      "total": 14,
+      "completed": 12,
+      "withoutTransaction": 0
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "sales carrying a transaction_id",
+      "count": 0,
+      "hint": "if sales and transactions both hold the same money, confirm only one is summed in reports"
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "currency",
+      "currency": "PHP"
+    },
+    {
+      "severity": "High",
+      "section": "money",
+      "message": "POS handoffs that never completed (stranded at the counter)",
+      "count": 2,
+      "totalPHP": "5397.50",
+      "detail": [
+        {
+          "amountPHP": "297.50",
+          "created": "2026-09-29",
+          "bookingStatus": "for_payment",
+          "branch": "bacoor"
+        },
+        {
+          "amountPHP": "5100.00",
+          "created": "2026-09-29",
+          "bookingStatus": "for_payment",
+          "branch": "bacoor"
+        }
+      ],
+      "hint": "Branch Admin can still ring these up from POS; until then the money is neither booked nor reconciled."
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "every settleable transaction agrees with its handoff",
+      "checked": 2
+    },
+    {
+      "severity": "Low",
+      "section": "money",
+      "message": "transactions in a status no code path can settle",
+      "count": 4,
+      "detail": [
+        {
+          "txn": "c22d6ddc",
+          "txnStatus": "pending",
+          "handoff": "5959bef6",
+          "amountPHP": "1200.00",
+          "created": "2026-07-07"
+        },
+        {
+          "txn": "f3d1cfed",
+          "txnStatus": "pending",
+          "handoff": "1490fa3e",
+          "amountPHP": "500.00",
+          "created": "2026-07-07"
+        },
+        {
+          "txn": "d1dedae0",
+          "txnStatus": "pending",
+          "handoff": "73646c27",
+          "amountPHP": "350.00",
+          "created": "2026-07-07"
+        },
+        {
+          "txn": "8b6b0091",
+          "txnStatus": "pending",
+          "handoff": "e4ffc7da",
+          "amountPHP": "350.00",
+          "created": "2026-07-10"
+        }
+      ],
+      "settleableStatuses": [
+        "pending_payment"
+      ],
+      "note": "complete_pos_sale settles only status=pending_payment. These rows sit in `pending` and can never transition. They were created by 20260707132730 (the only migration version that inserted `pending`), corrected by 20260715153235 — so this is historical residue and is NOT recurring. No money is at risk: `sales` is the money source of truth and no app report reads this table."
+    },
+    {
+      "severity": "Low",
+      "section": "money",
+      "message": "transactions with no payment method recorded",
+      "count": 14,
+      "of": 14,
+      "note": "Presentational only: nothing reports from this table, and the settled amount lives on `sales.payment_method`."
+    },
+    {
+      "severity": "Info",
+      "section": "bookings",
+      "message": "status distribution (paged, complete)",
+      "total": 1312,
+      "confirmed": 6,
+      "completed": 1172,
+      "waiting": 13,
+      "for_payment": 4,
+      "cancelled": 84,
+      "pending": 11,
+      "in_progress": 6,
+      "no_show": 16
+    },
+    {
+      "severity": "Info",
+      "section": "integrity",
+      "message": "open queue rows (paged)",
+      "count": 9
+    },
     {
       "severity": "Info",
       "section": "auth",
@@ -46,6 +399,92 @@
       "activeStaff": 19,
       "enrolled": 0,
       "note": "Ops blocker: no phone alert reaches the floor. The endpoint resolves on production and the subscribe handler keys the row on the auth uid, so this is an enrollment gap, not a broken path. Enabling it is a per-device browser action and is NOT automatable."
+    },
+    {
+      "severity": "Info",
+      "section": "dailysheet",
+      "message": "sheet status distribution",
+      "approved": 58,
+      "returned": 1,
+      "submitted": 1
+    },
+    {
+      "severity": "Info",
+      "section": "dailysheet",
+      "message": "every non-seeded sheet reconciles internally",
+      "checked": 0
+    },
+    {
+      "severity": "Info",
+      "section": "dailysheet",
+      "message": "seeded September sheets do not reconcile (seed artifact, not a money bug)",
+      "count": 60,
+      "detail": [
+        {
+          "branch": "bacoor",
+          "date": "2026-09-11",
+          "why": "expectedCash",
+          "deltaPHP": 500
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-09-11",
+          "why": "net != gross - discounts",
+          "deltaPHP": 1000
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-09-11",
+          "why": "byMethod != gross",
+          "deltaPHP": -1096
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-09-13",
+          "why": "byMethod != gross",
+          "deltaPHP": -205
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-09-12",
+          "why": "byMethod != gross",
+          "deltaPHP": -120
+        }
+      ],
+      "note": "scripts/seed/september2026Db.mjs writes gross/net/byMethod by a different rule than it writes the sales. The demo month is therefore not a faithful model of a real sheet. See BUG-065."
+    },
+    {
+      "severity": "Info",
+      "section": "content",
+      "message": "services",
+      "total": 58,
+      "publishedOrActive": 27
+    },
+    {
+      "severity": "Info",
+      "section": "content",
+      "message": "blog posts",
+      "total": 2,
+      "publishedOrActive": 2
+    },
+    {
+      "severity": "Info",
+      "section": "content",
+      "message": "events",
+      "total": 2,
+      "publishedOrActive": 1
+    },
+    {
+      "severity": "Info",
+      "section": "content",
+      "message": "blogs sample checked",
+      "ok": true
+    },
+    {
+      "severity": "Info",
+      "section": "audit",
+      "message": "audit_logs rows",
+      "rows": 385
     }
   ]
 }

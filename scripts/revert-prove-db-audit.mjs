@@ -20,6 +20,7 @@ const SUITES = [
   'tests/transactionsSettlement.test.js',
   'tests/safeEvaluate.test.js',
   'tests/apiRouteContract.test.js',
+  'tests/dailySheetReconciliation.test.js',
 ]
 
 function runSuite() {
@@ -121,6 +122,24 @@ const MUTATIONS = [
     name: 'a gateway operation is renamed out from under its rewrite',
     from: "'push-subscribe': handlePushSubscribeRequest",
     to: "'push-subscribe-v2': handlePushSubscribeRequest",
+  },
+  {
+    file: 'scripts/audit-db-deep.mjs',
+    name: 'seed-month sheet drift is escalated to a money severity',
+    from: "note('Info', 'dailysheet', 'seeded September sheets do not reconcile",
+    to: "note('High', 'dailysheet', 'seeded September sheets do not reconcile",
+  },
+  {
+    file: 'scripts/audit-db-deep.mjs',
+    name: 'the sheet reconciliation loses the totals column',
+    from: "'id, branch, business_date, status, opening_float_minor, counted_cash_minor, totals'",
+    to: "'id, branch, business_date, status'",
+  },
+  {
+    file: 'scripts/audit-db-deep.mjs',
+    name: 'the audit goes back to advising staff to ring up the stranded hand-offs',
+    from: 'Do NOT ring these up.',
+    to: 'Branch Admin can still ring these up from POS.',
   },
 ]
 
