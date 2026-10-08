@@ -1,8 +1,8 @@
 # Project Status
 
-**Last Updated:** 2026-10-07 (Asia/Manila) — principal full-system audit; gates re-verified, doc/money-contract drift fixed  
-**Current Branch:** `main`  
-**Overall Status:** **READY_WITH_OPS_BLOCKERS** · shop-day **docs + owner pack aligned** · push **routing OK / 0 staff devices** · SMS **not tested**
+**Last Updated:** 2026-10-08 (Asia/Manila) — deep read-only production DB audit; read-only guarantee proven by tests + revert-prove
+**Current Branch:** `audit/2026-10-08-closeout` (12 commits ahead of `origin/main`; nothing pushed)
+**Overall Status:** **READY_WITH_OPS_BLOCKERS** · money reconciles in production · push **0 of 19 staff enrolled** · 2 POS handoffs (₱5,397.50) stranded
 
 ## Executive Summary
 
@@ -14,13 +14,41 @@ September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month
 
 Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 (BUG-048 — **closed on production 2026-10-05**: live 405 / 401).
 
-Fresh evidence: **2026-10-07** unit **1518/1518** and lint **0** / build **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
+Fresh evidence: **2026-10-08** unit **1646/1646** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
 Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change). Shop-day **markdown** + **owner HTML/PDF pack** teach Daily Sheet; legacy `user-stories/pdf/process-*` may still be stale.
 
 Production messaging remains **open**: BrandTxt ErrorCode **11** (server IP not whitelisted); Auth SMTP unproven. **Owner daily SMS is intentionally disabled** — Daily Sheet submit / approve use web push.
 
 Canonical audit: [`docs/SYSTEM_AUDIT.md`](docs/SYSTEM_AUDIT.md) · Daily Sheet guide: [`docs/daily-sheet/README.md`](docs/daily-sheet/README.md) · Bugs: [`docs/qa/BUGS.md`](docs/qa/BUGS.md) · Architecture: [`docs/architecture/shop-day-flops.workflow.html`](docs/architecture/shop-day-flops.workflow.html)
+
+## Production database audit (2026-10-08)
+
+Read-only pass over production with the service-role key, because the anon role cannot see
+the RLS-protected rows that matter most. **Nothing was written.** The read-only property is
+asserted, not trusted: `tests/dbAuditSafety.test.js` (10 tests) fails the build if a mutating
+call appears, and `scripts/revert-prove-db-audit.mjs` reintroduces each bug class and requires
+the suite to go red. Report: [`e2e-evidence/db-audit/db-audit.json`](e2e-evidence/db-audit/db-audit.json).
+
+| Area | Result |
+|------|--------|
+| Sales | 1,307 sales, 1,293 paid, **₱1,624,822.00** |
+| Sale lines | **1,307 / 1,307** reconcile to their sale |
+| Currency | uniform PHP; **0** sales carry a `transaction_id` (no double-count) |
+| Bookings | 1,312 total — completed 1,172, cancelled 84, no_show 16, waiting 13, pending 11, for_payment 4, confirmed 6, in_progress 6 |
+| Staff | 25 rows, 19 active, 1 BossMich; no unknown roles |
+| Daily Sheets | 60 total (58 approved, 1 returned, 1 submitted); no negative money, no duplicate branch/day sheets, no cash advances posted to expenses |
+
+Three findings, all in [`docs/qa/BUGS.md`](docs/qa/BUGS.md): **BUG-061** 2 POS handoffs
+stranded since 2026-09-29 (**₱5,397.50** unbooked — operational, needs a Branch Admin to ring
+them up); **BUG-062** push enrollment **0 of 19**, with 3 orphan subscriptions; **BUG-063** the
+dead `transactions` ledger holding ₱33,148.50, left in place pending owner approval to drop.
+
+The audit itself first produced three *wrong* readings, all from PostgREST: a `.limit(5000)`
+that silently returned 1000 of 1,312 bookings, a guessed `service_name` column that returned
+null and looked like deleted bookings, and a `staff_id` lookup on a table keyed on `user_id`
+that returned zero rows and read as "nobody enrolled". Each is now locked by a test, so the
+audit cannot silently regress into reporting a confident wrong number.
 
 ## SMS product policy (always)
 

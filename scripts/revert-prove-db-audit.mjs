@@ -1,0 +1,86 @@
+/**
+ * Revert-prove harness for the db-audit safety tests.
+ *
+ * Proves each new assertion actually catches the bug it claims to catch. A test
+ * that cannot fail is worse than no test, because it reports safety it has not
+ * verified. For each mutation: apply the bug, run the suite, require it to go
+ * RED, restore the original bytes, require it to go GREEN.
+ *
+ *   node scripts/revert-prove-db-audit.mjs
+ */
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { execFileSync } from 'node:child_process'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+const target = join(root, 'scripts', 'audit-db-deep.mjs')
+const original = readFileSync(target, 'utf8')
+
+function runSuite() {
+  try {
+    execFileSync(process.execPath, ['--test', 'tests/dbAuditSafety.test.js'], {
+      cwd: root, stdio: 'pipe', encoding: 'utf8',
+    })
+    return { red: false, out: '' }
+  } catch (err) {
+    return { red: true, out: `${err.stdout || ''}${err.stderr || ''}` }
+  }
+}
+
+const MUTATIONS = [
+  {
+    name: 'a read asks for more rows than PostgREST returns',
+    from: ".select('id, total_minor').lt('total_minor', 0).limit(20)",
+    to: ".select('id, total_minor').lt('total_minor', 0).limit(2000)",
+  },
+  {
+    name: 'an inline read loses its limit and silently truncates',
+    from: `.from('expenses')\n    .select('id, title, created_at')\n    .gt('created_at', '2099-01-01')\n    .limit(20)`,
+    to: `.from('expenses')\n    .select('id, title, created_at')\n    .gt('created_at', '2099-01-01')`,
+  },
+  {
+    name: 'fetchAll stops gating through the read-only guard',
+    from: "  assertReadOnly(`fetchAll(${table})`, `${table} ${columns}`)\n",
+    to: '',
+  },
+  {
+    name: 'count stops gating through the read-only guard',
+    from: "  assertReadOnly(`count(${table})`, `select * from ${table}`)\n",
+    to: '',
+  },
+  {
+    name: 'a money-mutating RPC is introduced',
+    from: "async function count(table, filters) {",
+    to: "async function count(table, filters) {\n  await db.rpc('submit_daily_sheet', { p_id: 1 })",
+  },
+]
+
+let failures = 0
+
+for (const m of MUTATIONS) {
+  if (!original.includes(m.from)) {
+    console.log(`SKIP  ${m.name} — anchor text not found; the mutation no longer matches this file`)
+    failures++
+    continue
+  }
+  writeFileSync(target, original.replace(m.from, m.to), 'utf8')
+  const bad = runSuite()
+  writeFileSync(target, original, 'utf8')
+  const good = runSuite()
+
+  if (bad.red && !good.red) {
+    const which = [...bad.out.matchAll(/^✖ (.+?) \([\d.]+ms\)/gm)]
+      .map((m) => m[1])
+      .join(' | ')
+    console.log(`PROVED  ${m.name}`)
+    console.log(`        caught by: ${which || '(NO TEST REPORTED A FAILURE — proof is incomplete)'}`)
+    if (!which) failures++
+  } else {
+    console.log(`NOT PROVED  ${m.name} — red=${bad.red} greenAfterRestore=${!good.red}`)
+    failures++
+  }
+}
+
+console.log(failures === 0 ? '\nALL MUTATIONS PROVED' : `\n${failures} MUTATION(S) NOT PROVED`)
+process.exit(failures === 0 ? 0 : 1)
