@@ -24,6 +24,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer'
 import { isOpsAuthedUrl, isLoginWallUrl } from './screenshotAuth.mjs'
+import { safeEvaluate as safeEvaluateImpl } from './lib/safe-evaluate.mjs'
 import {
   OPS_DEMO_ACCOUNTS,
   CUSTOMER_DEMO_ACCOUNT,
@@ -123,6 +124,15 @@ async function waitSettled(page) {
   await new Promise((r) => setTimeout(r, 400))
 }
 
+/**
+ * `page.evaluate` dies with "Execution context was destroyed" whenever a route
+ * guard redirects while it is running. That is a race, not a product fault,
+ * and one unguarded call used to abort the entire wave through the top-level
+ * `fail('fatal')` — losing every remaining check for that persona and reporting
+ * a red run for a passing app. See scripts/lib/safe-evaluate.mjs.
+ */
+const safeEvaluate = (page, fn) => safeEvaluateImpl(page, fn, () => waitSettled(page))
+
 async function shot(page, name) {
   const file = join(outDir, `${name}.png`)
   await page.screenshot({ path: file, fullPage: true }).catch(() => null)
@@ -209,7 +219,7 @@ async function customerLogin(page, base, email, password) {
   await page.goto(`${base}/signin`, { waitUntil: 'domcontentloaded', timeout: 60000 })
   await dismissCookieBanner(page)
   await new Promise((r) => setTimeout(r, 400))
-  const usedChip = await page.evaluate(() => {
+  const usedChip = await safeEvaluate(page, () => {
     const chip = [...document.querySelectorAll('.hakum-demo-chip')].find((b) =>
       /demo\.customer|Demo customer/i.test(b.textContent || ''),
     )
@@ -224,7 +234,7 @@ async function customerLogin(page, base, email, password) {
     await new Promise((r) => setTimeout(r, 800))
     if (page.url().includes('/account')) return true
   }
-  await page.evaluate(() => {
+  await safeEvaluate(page, () => {
     const btn = [...document.querySelectorAll('button')].find((b) =>
       /Use email or plate instead/i.test(b.textContent || ''),
     )
@@ -400,7 +410,7 @@ try {
       // The board labels the lane "PAYMENT" (STATUS_SHORT_LABELS) with the
       // hint "Collect at POS" — not "For Payment", which is the status label
       // used elsewhere. Matching the wrong one gave a false negative.
-      const lane = await page.evaluate(() =>
+      const lane = await safeEvaluate(page, () =>
         /collect at pos/i.test(document.body?.innerText || '') ||
         /\bpayment\b/i.test(document.body?.innerText || ''),
       )
@@ -414,7 +424,7 @@ try {
       await page.goto(`${base}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await waitSettled(page)
       if (!isDeniedWall(page.url())) {
-        const lane = await page.evaluate(() => /collect at pos/i.test(document.body?.innerText || ''))
+        const lane = await safeEvaluate(page, () => /collect at pos/i.test(document.body?.innerText || ''))
         if (lane) {
           fail(`${persona.id}.noForPaymentLane`, `${persona.role} must not see the For Payment lane`)
           await shot(page, `${persona.id}-for-payment-leak-FAIL`)
@@ -444,7 +454,7 @@ try {
       // A role that cannot write the books must not find a write affordance.
       await page.goto(`${base}/operations/finance`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await waitSettled(page)
-      const write = await page.evaluate(() =>
+      const write = await safeEvaluate(page, () =>
         /add vendor|new vendor|post to books|approve sheet/i.test(document.body?.innerText || ''),
       )
       if (write && !isDeniedWall(page.url())) {

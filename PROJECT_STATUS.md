@@ -14,7 +14,7 @@ September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month
 
 Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 (BUG-048 — **closed on production 2026-10-05**: live 405 / 401).
 
-Fresh evidence: **2026-10-08** unit **1651/1651** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
+Fresh evidence: **2026-10-08** unit **1654/1654** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
 Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change). Shop-day **markdown** + **owner HTML/PDF pack** teach Daily Sheet; legacy `user-stories/pdf/process-*` may still be stale.
 
@@ -80,6 +80,7 @@ audit cannot silently regress into reporting a confident wrong number.
 | `scripts/_september-shots.mjs` (read-only, SA / ASA / BA ×2 / TL, 375 + 1440) | **22/22** on production |
 | `supabase/tests/daily_flow_role_probe.sql` (rolled back) | **20/20** |
 | `e2e:role-qa` | **52/52** (Branch Admin denied Queue by design) |
+| `e2e:role-qa-wave` | **179/179** (2026-10-08). First run read 166/169 with `fatal: Execution context was destroyed` and an immediate re-run gave 179/179 — a navigation race, not a product fault. **BUG-064, closed**: `scripts/lib/safe-evaluate.mjs` retries the race instead of letting it abort the run and silently drop ~10 checks. A gate that fails for reasons unrelated to the product is a gate people learn to ignore |
 | `e2e:ui-money` | **5/5** (rewritten for the Daily Sheet) |
 | `e2e:ui-p0` | **9/9** |
 | `e2e:integrity` | **PASS** |

@@ -15,7 +15,11 @@ import { execFileSync } from 'node:child_process'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const SUITES = ['tests/dbAuditSafety.test.js', 'tests/transactionsSettlement.test.js']
+const SUITES = [
+  'tests/dbAuditSafety.test.js',
+  'tests/transactionsSettlement.test.js',
+  'tests/safeEvaluate.test.js',
+]
 
 function runSuite() {
   for (const suite of SUITES) {
@@ -72,6 +76,24 @@ const MUTATIONS = [
     name: 'the POS settle predicate drifts from what the hand-off creates',
     from: "where t.status = 'pending_payment'",
     to: "where t.status = 'pending'",
+  },
+  {
+    file: 'scripts/e2e-role-qa-wave.mjs',
+    name: 'the QA harness goes back to a bare page.evaluate in an assertion',
+    from: 'const lane = await safeEvaluate(page, () =>\n        /collect at pos/i',
+    to: 'const lane = await page.evaluate(() =>\n        /collect at pos/i',
+  },
+  {
+    file: 'scripts/lib/safe-evaluate.mjs',
+    name: 'safeEvaluate stops retrying and rethrows the navigation race',
+    from: "      if (!isNavigationRace(err)) throw err",
+    to: "      if (!isNavigationRace(err)) throw err\n      throw err",
+  },
+  {
+    file: 'scripts/lib/safe-evaluate.mjs',
+    name: 'safeEvaluate swallows genuine errors instead of rethrowing them',
+    from: "      if (!isNavigationRace(err)) throw err",
+    to: "      if (!isNavigationRace(err)) return false",
   },
 ]
 
