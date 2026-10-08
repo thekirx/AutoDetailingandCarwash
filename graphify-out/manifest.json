@@ -102,9 +102,9 @@
     "semantic_hash": "81bd7b0af60d5948f04d7c1e1c81d318"
   },
   "package.json": {
-    "mtime": 1791447332.1228483,
-    "seen": 1791448549.41283,
-    "ast_hash": "69f0909025a2ee568432c816da8c7f14",
+    "mtime": 1791449629.296956,
+    "seen": 1791449865.4430816,
+    "ast_hash": "ba840055d7cc55eb73225b21fcff826b",
     "semantic_hash": ""
   },
   "schema.sql": {
@@ -198,16 +198,16 @@
     "semantic_hash": "4cc7076430bfc4134f2fa5e9e5fed783"
   },
   "scripts/check-planning.mjs": {
-    "mtime": 1785061244.7919834,
-    "seen": 1789446852.7405834,
-    "ast_hash": "81e1753d620e8434ccd6b9a8c6f08513",
-    "semantic_hash": "81e1753d620e8434ccd6b9a8c6f08513"
+    "mtime": 1791449587.475922,
+    "seen": 1791449865.443172,
+    "ast_hash": "931ed2bf8926ddea4fcb175c80aadcb7",
+    "semantic_hash": ""
   },
   "scripts/check-portal-actions.mjs": {
-    "mtime": 1785061244.1894383,
-    "seen": 1789446852.7405849,
-    "ast_hash": "4857fbd58eeb0b755307d91b811b5f28",
-    "semantic_hash": "4857fbd58eeb0b755307d91b811b5f28"
+    "mtime": 1791449379.6721137,
+    "seen": 1791449865.4431748,
+    "ast_hash": "222748a0b3d4c944a636290f81378d9d",
+    "semantic_hash": ""
   },
   "scripts/check-session.mjs": {
     "mtime": 1785061244.6234658,
@@ -486,10 +486,10 @@
     "semantic_hash": "a5d772308816045a1bc1e7edc0789406"
   },
   "scripts/run-unit-tests.mjs": {
-    "mtime": 1788870756.5569606,
-    "seen": 1789446852.7406538,
-    "ast_hash": "4b6b7c3aec9e530855889200d57963ef",
-    "semantic_hash": "4b6b7c3aec9e530855889200d57963ef"
+    "mtime": 1791449281.047769,
+    "seen": 1791449865.443336,
+    "ast_hash": "7fbf0252fc636f29fbc15e2075b95f13",
+    "semantic_hash": ""
   },
   "scripts/screenshot-audit.mjs": {
     "mtime": 1790916012.2991345,
@@ -648,9 +648,9 @@
     "semantic_hash": "c10b196e03e11bbe723405bd813eaaf4"
   },
   "server/customerPortal.mjs": {
-    "mtime": 1790864379.8291664,
-    "seen": 1790931295.9834194,
-    "ast_hash": "c56312a66029cff7b7dc7f8d444447ca",
+    "mtime": 1791449434.4586396,
+    "seen": 1791449865.4434965,
+    "ast_hash": "34224d8b74dbfcfb95e75840ec3bcad3",
     "semantic_hash": ""
   },
   "server/customerSignIn.mjs": {
@@ -2310,8 +2310,8 @@
     "semantic_hash": ""
   },
   "src/pages/PlanningBoardPage.jsx": {
-    "mtime": 1787913156.3669317,
-    "seen": 1789446852.7410922,
+    "mtime": 1791449616.5222483,
+    "seen": 1791449865.4442592,
     "ast_hash": "a5ab9c973a1decbb5cf9900083b7f19e",
     "semantic_hash": "a5ab9c973a1decbb5cf9900083b7f19e"
   },
@@ -4188,10 +4188,10 @@
     "semantic_hash": ""
   },
   "tests/hero-video-assets.test.mjs": {
-    "mtime": 1788754715.9524622,
-    "seen": 1789446852.7416687,
-    "ast_hash": "77ab098f677065f27f9bb0de755c41b9",
-    "semantic_hash": "77ab098f677065f27f9bb0de755c41b9"
+    "mtime": 1791449263.051797,
+    "seen": 1791449865.4451754,
+    "ast_hash": "d890dbe38e79424f517c4ab3fe83d7c5",
+    "semantic_hash": ""
   },
   "tests/homeBranches.test.js": {
     "mtime": 1788754715.9524622,
@@ -5694,10 +5694,10 @@
     "semantic_hash": ""
   },
   "docs/POS/05-PAYROLL-CONNECTION.md": {
-    "mtime": 1788760238.7049096,
-    "seen": 1789446852.7421117,
-    "ast_hash": "7e5b0d388912e115eaad134320f639ca",
-    "semantic_hash": "7e5b0d388912e115eaad134320f639ca"
+    "mtime": 1791450788.8109896,
+    "seen": 1791450889.5630636,
+    "ast_hash": "e5a0311e9bf3c2a9d75549d5ffdcce40",
+    "semantic_hash": ""
   },
   "docs/POS/06-SETTINGS.md": {
     "mtime": 1787465536.1025355,
@@ -6012,10 +6012,10 @@
     "semantic_hash": "309c1e132bc42ab282718a8b820922bd"
   },
   "docs/guides/pages/console.md": {
-    "mtime": 1788518291.5790749,
-    "seen": 1789446852.7421865,
-    "ast_hash": "407215f065315de1093b0d95570d34c3",
-    "semantic_hash": "407215f065315de1093b0d95570d34c3"
+    "mtime": 1791450693.299786,
+    "seen": 1791450889.5631971,
+    "ast_hash": "d7a2bd0be3fc6d17166269861982c092",
+    "semantic_hash": ""
   },
   "docs/guides/pages/crew-kpi.md": {
     "mtime": 1788518291.6140218,
@@ -6036,9 +6036,9 @@
     "semantic_hash": "8a953f546e2ad3f243608c0e7b245653"
   },
   "docs/guides/pages/finance-reports.md": {
-    "mtime": 1790663671.7452571,
-    "seen": 1790663770.6409326,
-    "ast_hash": "126ac92f9a1c328e45a4cd746e89ad0f",
+    "mtime": 1791450767.749477,
+    "seen": 1791450889.5632057,
+    "ast_hash": "2277f8bf18e66963c97e209d5cdc7cab",
     "semantic_hash": ""
   },
   "docs/guides/pages/floor-board.md": {
@@ -6096,16 +6096,16 @@
     "semantic_hash": "b5f67d6c19a95db202dbe4dddd060750"
   },
   "docs/guides/pages/queue.md": {
-    "mtime": 1791431273.195922,
-    "seen": 1791444160.4661975,
-    "ast_hash": "fe32b2303eb4eb7deadf57c1dc935c11",
+    "mtime": 1791450662.3610342,
+    "seen": 1791450889.563227,
+    "ast_hash": "1083a104add3ddaf0fb509ea1c8cb9ee",
     "semantic_hash": ""
   },
   "docs/guides/pages/settings.md": {
-    "mtime": 1788518291.5937364,
-    "seen": 1789446852.742209,
-    "ast_hash": "63562ca959c338995bba0fd3d0530659",
-    "semantic_hash": "63562ca959c338995bba0fd3d0530659"
+    "mtime": 1791450704.8230886,
+    "seen": 1791450889.5632288,
+    "ast_hash": "4778e1fe2170d32aadaa33b1b0e3ac6a",
+    "semantic_hash": ""
   },
   "docs/guides/roles/branch-admin.md": {
     "mtime": 1791431273.1822512,
@@ -6276,9 +6276,9 @@
     "semantic_hash": "cdd4ece52db7569bb61d96ec07cd472b"
   },
   "docs/qa/BUGS.md": {
-    "mtime": 1791448395.4489405,
-    "seen": 1791448549.4170997,
-    "ast_hash": "c40828fa329ef6a546e78de4655eb857",
+    "mtime": 1791449662.126378,
+    "seen": 1791449865.446153,
+    "ast_hash": "4c7e6013d0b3c1c1612c868b05cb9fc2",
     "semantic_hash": ""
   },
   "docs/qa/RESULTS.md": {
@@ -6534,10 +6534,10 @@
     "semantic_hash": "8531057a7032a05b974662dae5c62148"
   },
   "docs/user-stories/epic-finance.md": {
-    "mtime": 1787891287.0880766,
-    "seen": 1789446852.7423155,
-    "ast_hash": "7ee1fcf19c5a6a38b45a09c57aee5710",
-    "semantic_hash": "7ee1fcf19c5a6a38b45a09c57aee5710"
+    "mtime": 1791450799.2686791,
+    "seen": 1791450889.563405,
+    "ast_hash": "af79c6f4c9f33a8bf7bab1850fdd5a0c",
+    "semantic_hash": ""
   },
   "docs/user-stories/epic-notifications-inquiries.md": {
     "mtime": 1787891287.0880766,
@@ -6546,10 +6546,10 @@
     "semantic_hash": "367ab600b2f48666c5174149dd525f53"
   },
   "docs/user-stories/epic-ops-lab-console.md": {
-    "mtime": 1787891287.101522,
-    "seen": 1789446852.7423186,
-    "ast_hash": "5dcc6b15c14404cdc659d799c5c72aa4",
-    "semantic_hash": "5dcc6b15c14404cdc659d799c5c72aa4"
+    "mtime": 1791450799.2686791,
+    "seen": 1791450889.5634089,
+    "ast_hash": "86bc05a38b443ef2c698b978ea8a75dc",
+    "semantic_hash": ""
   },
   "docs/user-stories/epic-payroll.md": {
     "mtime": 1791196064.8359363,
@@ -6594,9 +6594,9 @@
     "semantic_hash": ""
   },
   "docs/user-stories/epic-role-leadership.md": {
-    "mtime": 1791284916.3533015,
-    "seen": 1791285727.4392626,
-    "ast_hash": "a703789bc586ea543103d2b862bce130",
+    "mtime": 1791450799.2749345,
+    "seen": 1791450889.563425,
+    "ast_hash": "c799ccfa987aa285a14f60db39e14a47",
     "semantic_hash": ""
   },
   "docs/user-stories/epic-role-operations-lead.md": {
@@ -6612,10 +6612,10 @@
     "semantic_hash": ""
   },
   "docs/user-stories/epic-role-video-editor.md": {
-    "mtime": 1787891287.101522,
-    "seen": 1789446852.7423341,
-    "ast_hash": "dc2b9d6619c8bed6f58d94818723394a",
-    "semantic_hash": "dc2b9d6619c8bed6f58d94818723394a"
+    "mtime": 1791450799.2686791,
+    "seen": 1791450889.563431,
+    "ast_hash": "2f865925258dc045044f66164e7f506a",
+    "semantic_hash": ""
   },
   "docs/user-stories/epic-roles-detailer-sales-marketing.md": {
     "mtime": 1791284972.217396,
@@ -6738,9 +6738,9 @@
     "semantic_hash": "742e9c75f600316cccde3f530270c20f"
   },
   "docs/user-stories/roles-matrix.md": {
-    "mtime": 1791196090.8488522,
-    "seen": 1791196207.3771465,
-    "ast_hash": "24766f47b0de935cfe84cfca695d6eb6",
+    "mtime": 1791450799.260877,
+    "seen": 1791450889.5634773,
+    "ast_hash": "29df634a477ea77bfdcc2ea2b110e258",
     "semantic_hash": ""
   },
   "docs/user-stories/shop-day-flow.md": {
@@ -7584,9 +7584,9 @@
     "semantic_hash": ""
   },
   "src/pages/FloorMoneyPanel.jsx": {
-    "mtime": 1791122184.666406,
-    "seen": 1791123463.9634788,
-    "ast_hash": "6603a185f9262614965630627029a625",
+    "mtime": 1791450023.1008482,
+    "seen": 1791450315.5105786,
+    "ast_hash": "f8b2f76f1866e7e05c29e67353cb0827",
     "semantic_hash": ""
   },
   "src/pages/finance/FinanceBillForm.jsx": {
@@ -7965,6 +7965,18 @@
     "mtime": 1791447279.905684,
     "seen": 1791448549.417123,
     "ast_hash": "e9850cb3ed7946ced44a3acbe02e954a",
+    "semantic_hash": ""
+  },
+  "tests/designTokenConsistency.test.js": {
+    "mtime": 1791450187.2597058,
+    "seen": 1791450315.5112665,
+    "ast_hash": "7e72c430b61be005953b52dac4ce2adc",
+    "semantic_hash": ""
+  },
+  "tests/docCutover.test.js": {
+    "mtime": 1791450562.4478915,
+    "seen": 1791450889.5623953,
+    "ast_hash": "8269c29a90e81222f02f1cb15af2fb15",
     "semantic_hash": ""
   }
 }
