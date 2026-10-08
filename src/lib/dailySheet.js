@@ -6,6 +6,7 @@ import { rollupSales, salesCompareWindow, topItems, vsPrior } from './salesSumma
 import { paidSalesToBacoorRows } from './posSellables.js'
 import { buildPayrollPreview } from './payroll.js'
 import { normalizeCompensationSettings } from './compensation.js'
+import { normalizeAssistantGrants } from '../auth/permissions.js'
 
 export const SHEET_STATUSES = Object.freeze(['draft', 'submitted', 'approved', 'returned'])
 export const LINE_KINDS = Object.freeze(['expense', 'salary', 'ca_release', 'ca_repay'])
@@ -18,10 +19,20 @@ export const SHEET_STATUS_LABELS = Object.freeze({
   returned: 'Returned',
 })
 
-/** Same as SQL asa_has_grant: a key that was never set counts as granted. */
+/**
+ * Same rule as SQL asa_has_grant: a key that was never set falls back to the
+ * product default, and finance_write / planning_edit / rbac_edit default to
+ * DENIED.
+ *
+ * BUG-052: this used to read `permission_grants` directly and treat ANY absent
+ * key as granted, so an ASA with `{ pos: false }` saw the Daily Sheet editor
+ * while the server refused the write. The defaults now come from
+ * permissions.js — the same table the SQL comment points at — so the two
+ * cannot drift without the parity test noticing.
+ */
 const grantOr = (profile, keys) => {
-  const g = profile?.permission_grants || {}
-  return keys.some((k) => !Object.prototype.hasOwnProperty.call(g, k) || Boolean(g[k]))
+  const grants = normalizeAssistantGrants(profile?.permission_grants)
+  return keys.some((k) => Boolean(grants[k]))
 }
 
 /** Mirrors SQL daily_sheet_can_edit (branch access is enforced server-side). */
