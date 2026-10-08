@@ -14,7 +14,7 @@ September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month
 
 Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 (BUG-048 — **closed on production 2026-10-05**: live 405 / 401). **BUG-048 can no longer recur silently**: `tests/apiRouteContract.test.js` fails the build if any `/api/*` path the app calls has neither a serverless function nor a `vercel.json` rewrite, and if any rewrite points at an operation its gateway does not export. That class of break was invisible to build, lint and unit tests — it only existed on the deployed host.
 
-Fresh evidence: **2026-10-09** unit **1668/1668** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
+Fresh evidence: **2026-10-09** unit **1674/1674** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
 Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change). Shop-day **markdown** + **owner HTML/PDF pack** teach Daily Sheet; legacy `user-stories/pdf/process-*` may still be stale.
 
@@ -93,8 +93,29 @@ locked by tests plus revert-prove.
 
 **The seeded demo month is a faithful model of a real sheet** — the earlier claim that it was not is
 retracted. What seed data still cannot establish is that real trading produces a real sheet. The
-audit now flags that gap directly. To close it honestly: close one real shop day end to end, then
-re-run `npm run audit:db`.
+audit now flags that gap directly.
+
+## The last link: database → screen (2026-10-09)
+
+The chain had been verified link by link and **never end to end**. `sales ↔ line items` ✓,
+`sales + lines → stored totals` ✓, and `stored totals → **the screen an owner reads**` — never
+checked. A screen that renders a stale or wrong figure leaves the database correct and every other
+gate green.
+
+`npm run check:sheet-ui` (`scripts/check-sheet-ui.mjs`) signs in as Super Admin, opens
+Finance → Daily sheets for a pinned range, reads the rendered table and compares every figure to the
+stored totals. **Result: 60 of 60 sheets, all four money columns, every figure identical.**
+
+Getting there took three false passes, each now locked by a test:
+
+| False pass | Why it looked fine |
+|---|---|
+| compared **1 of 60** sheets | the tab defaults to `status=submitted` — a review inbox by design, not a bug; the check must ask for `status=all` |
+| compared **0 of 60** and said "nothing to compare" | the Finance skeleton reads as an empty table; an empty table must never be a pass, and the readiness wait must key on the loading state |
+| reported **60 discrepancies** | the screen renders the branch *slug* when the name is missing from its options (bacoor); keying only on the name mismatches every such row |
+
+To close the remaining gap honestly: close one real shop day end to end, then re-run
+`npm run audit:db` and `npm run check:sheet-ui`.
 
 ## SMS product policy (always)
 

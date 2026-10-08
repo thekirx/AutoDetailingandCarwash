@@ -40,7 +40,8 @@
     "check:customer": "node scripts/customer-regression-check.mjs",
     "check": "npm run check:planning && npm run check:portal && npm run check:settings-auth && npm run check:customer && npm run check:live-queue",
     "audit:db": "node scripts/audit-db-deep.mjs",
-    "audit:db:prove": "node scripts/revert-prove-db-audit.mjs"
+    "audit:db:prove": "node scripts/revert-prove-db-audit.mjs",
+    "check:sheet-ui": "node scripts/check-sheet-ui.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

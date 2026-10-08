@@ -64,6 +64,7 @@ export default [
       'scripts/e2e-ui-forms.mjs',
       'scripts/e2e-role-qa.mjs',
       'scripts/e2e-role-qa-wave.mjs',
+      'scripts/check-sheet-ui.mjs',
       'scripts/e2e-nav-walk.mjs',
       'scripts/e2e-push-real.mjs',
       'scripts/push-audit-events.mjs',

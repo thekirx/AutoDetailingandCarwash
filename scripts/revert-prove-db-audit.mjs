@@ -21,6 +21,7 @@ const SUITES = [
   'tests/safeEvaluate.test.js',
   'tests/apiRouteContract.test.js',
   'tests/dailySheetReconciliation.test.js',
+  'tests/sheetUiConsistency.test.js',
 ]
 
 function runSuite() {
@@ -158,6 +159,26 @@ const MUTATIONS = [
     name: 'the sheet probe stops feeding real sales into the comparison',
     from: 'sales: daySales,',
     to: 'sales: [],',
+  },
+  // The DB -> screen check. Each of these was a real way it passed while
+  // verifying nothing.
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the UI check falls back to the review inbox and compares 1 of 60',
+    from: 'branch=all&status=all',
+    to: 'branch=all',
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the UI check treats an empty table as a pass',
+    from: 'NOT VERIFIED — the table rendered no rows, so nothing could be compared.',
+    to: 'PASS — the table rendered no rows, so nothing could be compared.',
+  },
+  {
+    file: 'scripts/check-sheet-ui.mjs',
+    name: 'the UI check stops resolving a branch label back to its slug',
+    from: 'labelToSlug.set(b.slug, b.slug)',
+    to: 'labelToSlug.set(b.slug, b.name)',
   },
 ]
 
