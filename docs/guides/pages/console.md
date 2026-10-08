@@ -1,7 +1,9 @@
 ﻿# Console
 
-**Route:** `/operations/console`  
-**Roles:** SA, ASA (grant), BA as allowed  
+> **Retired — route removed.** `/operations/console` no longer exists in `src/App.jsx`. Super Admin and the Assistant Super Admin now land on the **Floor Board** (`/operations/dashboard`). Branch Admin has no console surface at all.
+
+**Route:** ~~`/operations/console`~~ — **removed**  
+**Roles:** ~~SA, ASA (grant), BA as allowed~~ → Floor Board is SA / ASA; Branch Admin lands on POS  
 **Shell:** Command
 
 ## Purpose

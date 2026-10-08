@@ -1,10 +1,12 @@
 # Finance and Reports
 
+> **Partly retired 2026-10-01.** End of Shift and the Payroll register were replaced by the **Daily Sheet**. There is no shift-close review queue to accept, reject or lock — a sheet is submitted by the branch and approved here, or returned with a note.
+
 **Route:** `/operations/finance` (+ reports tab)  
 **Shell:** Command
 
 ## Purpose
-Cash flow, sales, P&L, purchases, shift closes, quotes, vendors, categories. Income is **paid POS** only — never close overrides.
+Cash flow, sales, P&L, purchases, Daily Sheets, quotes, vendors, categories. Income is **paid POS** only — never close overrides.
 
 Two jobs, modeled on the owner's Xero and Square:
 

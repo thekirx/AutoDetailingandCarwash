@@ -1,11 +1,11 @@
 # Queue
 
 **Route:** `/operations/queue`  
-**Roles:** TL primary; SA/ASA/BA/Ops Lead  
+**Roles:** TL primary; SA / ASA (queue_all) / Ops Lead — **Branch Admin is denied**  
 **Shell:** Floor (TL) / Command
 
 ## Purpose
-Advance same-day service and package tickets. Detailing (incl. paint maintenance arrivals) stays on Bookings, which uses the same status-card + car-card layout for TL/BA. Branch Admin may watch; Team Lead creates and advances.
+Advance same-day service and package tickets. Detailing (incl. paint maintenance arrivals) stays on Bookings, which uses the same status-card + car-card layout for TL/BA. Team Lead creates and advances; Branch Admin watches the branch from Bookings and collects payment at POS, not from the Queue board.
 
 ## Layout
 ```

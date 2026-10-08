@@ -1,5 +1,7 @@
 # Epic: Video Editor persona
 
+
+> **Updated 2026-10-08.** "Posted pay" is RETIRED with the Payroll cutover (2026-10-01). Video Editor scope is Calendar + assigned tasks.
 **Goal:** Calendar + assigned tasks + posted pay — no bay money tools.
 
 **Home:** `/operations/planning?tab=calendar`

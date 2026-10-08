@@ -1,5 +1,7 @@
 # Epic: Leadership personas (Super Admin, ASA, Investor)
 
+
+> **Updated 2026-10-08.** Home is the Floor Board (/operations/dashboard); the Console route was removed from the router.
 **Goal:** Network books and grants without confusing investor read-only with SA write.
 
 ## US-SA-01 · Super Admin (`BossMich`)
@@ -10,7 +12,7 @@
 
 **Acceptance**
 
-- [x] Home → `/operations/console`
+- [x] Home -> /operations/dashboard (Floor Board; the Console route was removed)
 - [x] Finance (incl. Daily sheets approve / return / reopen) + People + Data Center + Cars
 - [x] No floor attendance clock; no pay estimate (approves crew pay on the Daily Sheet instead)
 - [x] Command nav never links a denied page
@@ -27,7 +29,7 @@
 
 **Acceptance**
 
-- [x] Home → `/operations/console`
+- [x] Home -> /operations/dashboard (Floor Board; the Console route was removed)
 - [x] Default grants ≈ SA minus SA-only (`cars`, `data-center`)
 - [x] Denied grants block CRM / Content / console / notifications / queue chrome
 - [x] `branches_all` independent of `queue_all`

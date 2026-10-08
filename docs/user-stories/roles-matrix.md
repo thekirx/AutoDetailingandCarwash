@@ -1,5 +1,7 @@
 # Roles matrix (every persona)
 
+
+> **Updated 2026-10-08.** The Console home is gone — Super Admin and ASA now land on the Floor Board (/operations/dashboard). Payroll settings are retired; write access lives on the Daily Sheet.
 Canonical landing + epic map for **all** `ROLES` in `src/auth/permissions.js`, plus **customer** (portal, not an ops role).
 
 | Role slug | Display | Home after login | Primary epic(s) |

@@ -1,5 +1,7 @@
 # Epic: Finance & books
 
+
+> **Updated 2026-10-08.** Shift close is RETIRED — replaced by the Daily Sheet (2026-10-01). Scope is P&L, purchases, Daily Sheets and reports.
 **Goal:** Single books hub — P&L, purchases, shift close, reports — filter-scoped and fail-visible.
 
 ## US-FIN-01 · Finance dashboard

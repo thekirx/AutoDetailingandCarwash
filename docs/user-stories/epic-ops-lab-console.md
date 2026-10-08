@@ -1,5 +1,7 @@
 # Epic: Ops Lab, Data Center, Console & Floor Board
 
+
+> **Updated 2026-10-08.** The Console page is RETIRED — /operations/console was removed from the router. Ops Lab, Data Center and the Floor Board remain; Super Admin and ASA land on the Floor Board.
 **Goal:** Network tools for SA / Ops Lead — not Branch Admin money paths.
 
 ## US-OPSLAB-01 · Ops Lab roadmap

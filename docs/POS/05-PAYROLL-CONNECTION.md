@@ -1,5 +1,7 @@
 # 05 — POS → Payroll connection (strict)
 
+> **Retired 2026-10-01.** Replaced by the Daily Sheet. `run_payroll` is revoked by migration `20261001090000_daily_sheet.sql`; crew pay is submitted on each branch's Daily Sheet and approved in Finance → Daily sheets. This file is kept for the record of how the old connection worked — **do not build against it**. See [docs/daily-sheet/README.md](../daily-sheet/README.md).
+
 ## The non-negotiable rule
 
 **Floor payroll pays from paid POS sales + attendance (and ceramic expense keys / optional CA deduct).**  
