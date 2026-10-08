@@ -19,6 +19,7 @@ const SUITES = [
   'tests/dbAuditSafety.test.js',
   'tests/transactionsSettlement.test.js',
   'tests/safeEvaluate.test.js',
+  'tests/apiRouteContract.test.js',
 ]
 
 function runSuite() {
@@ -94,6 +95,32 @@ const MUTATIONS = [
     name: 'safeEvaluate swallows genuine errors instead of rethrowing them',
     from: "      if (!isNavigationRace(err)) throw err",
     to: "      if (!isNavigationRace(err)) return false",
+  },
+  // The BUG-048 guard. Each of these reproduces a real way the deployed app can
+  // 404 while every unit test still passes.
+  {
+    file: 'vercel.json',
+    name: 'the /api/push-subscribe rewrite goes missing',
+    from: '"source": "/api/push-subscribe"',
+    to: '"source": "/api/push-subscribe-RENAMED"',
+  },
+  {
+    file: 'api/public-inquiry.js',
+    name: "BUG-048 itself: the gateway loses its defaultOperation",
+    from: "createGateway(operations, { defaultOperation: 'complaints' })",
+    to: 'createGateway(operations)',
+  },
+  {
+    file: 'api/data-center.js',
+    name: 'BUG-048 itself: the data-center gateway loses its defaultOperation',
+    from: "createGateway(operations, { defaultOperation: 'data-center' })",
+    to: 'createGateway(operations)',
+  },
+  {
+    file: 'api/notifications.js',
+    name: 'a gateway operation is renamed out from under its rewrite',
+    from: "'push-subscribe': handlePushSubscribeRequest",
+    to: "'push-subscribe-v2': handlePushSubscribeRequest",
   },
 ]
 

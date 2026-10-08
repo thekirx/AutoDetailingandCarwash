@@ -483,21 +483,29 @@ if (want('auth')) {
   // when three people are.
   const { rows: subs } = await fetchAll('push_subscriptions', 'id, user_id, role, branch_slug, created_at')
   const activeIds = new Set(allStaff.filter((s) => s.is_active && !s.is_archived).map((s) => s.id))
+  const anyStaffIds = new Set(allStaff.map((s) => s.id))
   const enrolledActive = subs.filter((s) => activeIds.has(s.user_id))
-  const orphanSubs = subs.filter((s) => !activeIds.has(s.user_id))
+  const inactiveStaffSubs = subs.filter((s) => !activeIds.has(s.user_id) && anyStaffIds.has(s.user_id))
+  // Not "orphans". Every row in production belongs to the demo customer
+  // account, which is a customer and correctly absent from staff_profiles.
+  // Calling these orphans implied corrupted data and hid the real signal: the
+  // push path works, nobody on staff has simply never enabled it.
+  const nonStaffSubs = subs.filter((s) => !anyStaffIds.has(s.user_id))
 
   note('Info', 'auth', 'push enrollment (paged, keyed on user_id)', {
     activeStaff: activeIds.size,
     subscriptionRows: subs.length,
     enrolledActiveStaff: enrolledActive.length,
     notEnrolled: activeIds.size - enrolledActive.length,
-    orphanSubscriptions: orphanSubs.length,
+    nonStaffSubscriptions: nonStaffSubs.length,
+    inactiveStaffSubscriptions: inactiveStaffSubs.length,
+    nonStaffRoles: [...new Set(nonStaffSubs.map((s) => s.role))],
   })
   if (activeIds.size - enrolledActive.length > 0) {
     note('High', 'auth', 'most active staff have no push subscription', {
       activeStaff: activeIds.size,
       enrolled: enrolledActive.length,
-      note: 'Ops blocker: no phone alert reaches the floor. Enrollment is a device action and is NOT automatable.',
+      note: 'Ops blocker: no phone alert reaches the floor. The endpoint resolves on production and the subscribe handler keys the row on the auth uid, so this is an enrollment gap, not a broken path. Enabling it is a per-device browser action and is NOT automatable.',
     })
   }
 }
