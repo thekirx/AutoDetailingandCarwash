@@ -102,9 +102,9 @@
     "semantic_hash": "81bd7b0af60d5948f04d7c1e1c81d318"
   },
   "package.json": {
-    "mtime": 1791449629.296956,
-    "seen": 1791449865.4430816,
-    "ast_hash": "ba840055d7cc55eb73225b21fcff826b",
+    "mtime": 1791472714.6588786,
+    "seen": 1791472973.9044108,
+    "ast_hash": "e16f614fafe6d3f5ab9c1394fcc1d1ce",
     "semantic_hash": ""
   },
   "schema.sql": {
@@ -396,8 +396,8 @@
     "semantic_hash": "21aca3f8a115606b3a9c66c8f9d2b8ea"
   },
   "scripts/e2e-ultimate-readiness.mjs": {
-    "mtime": 1791431273.1890724,
-    "seen": 1791444160.4637752,
+    "mtime": 1791468150.3906295,
+    "seen": 1791472973.9046278,
     "ast_hash": "038c94b9e13addde84de14b8108876fe",
     "semantic_hash": ""
   },
@@ -894,8 +894,8 @@
     "semantic_hash": ""
   },
   "src/auth/permissions.js": {
-    "mtime": 1791431273.195922,
-    "seen": 1791444160.4640145,
+    "mtime": 1791468150.3979335,
+    "seen": 1791472973.9048774,
     "ast_hash": "1601051e6f1cb98d4006482cbdd557c5",
     "semantic_hash": ""
   },
@@ -3972,8 +3972,8 @@
     "semantic_hash": "768eac42ce8e1446c8e10c489318ca5e"
   },
   "tests/commandCategories.test.js": {
-    "mtime": 1791431273.1822512,
-    "seen": 1791444160.4652705,
+    "mtime": 1791468150.3906295,
+    "seen": 1791472973.9064841,
     "ast_hash": "b3d1c73280489a5fdd5669f719cbed15",
     "semantic_hash": ""
   },
@@ -4482,8 +4482,8 @@
     "semantic_hash": ""
   },
   "tests/permissions.test.js": {
-    "mtime": 1791431273.1822512,
-    "seen": 1791444160.4654932,
+    "mtime": 1791468150.3906295,
+    "seen": 1791472973.906728,
     "ast_hash": "b948c26469675179a4b190a62547fe83",
     "semantic_hash": ""
   },
@@ -5064,9 +5064,9 @@
     "semantic_hash": "983fbeb6e7617283c5643ec1912d89f8"
   },
   "PROJECT_STATUS.md": {
-    "mtime": 1791347129.2950716,
-    "seen": 1791347342.5042768,
-    "ast_hash": "0d015868f0e90e6aea5327adffff6d58",
+    "mtime": 1791472992.6407218,
+    "seen": 1791473068.4895983,
+    "ast_hash": "c24ab0111042b0ae82c87aaadba003ff",
     "semantic_hash": ""
   },
   "SECURITY_AUDIT.md": {
@@ -5994,8 +5994,8 @@
     "semantic_hash": "056b9e0452031a02e675a4f7717147b9"
   },
   "docs/guides/pages/bookings-maintenance.md": {
-    "mtime": 1791431273.1890724,
-    "seen": 1791444160.4661493,
+    "mtime": 1791468150.3906295,
+    "seen": 1791472973.907506,
     "ast_hash": "5e906df4d86b1c2fd7ddc7cdb1a6a436",
     "semantic_hash": ""
   },
@@ -6096,8 +6096,8 @@
     "semantic_hash": "b5f67d6c19a95db202dbe4dddd060750"
   },
   "docs/guides/pages/queue.md": {
-    "mtime": 1791450662.3610342,
-    "seen": 1791450889.563227,
+    "mtime": 1791468150.3979335,
+    "seen": 1791472973.9075596,
     "ast_hash": "1083a104add3ddaf0fb509ea1c8cb9ee",
     "semantic_hash": ""
   },
@@ -6108,8 +6108,8 @@
     "semantic_hash": ""
   },
   "docs/guides/roles/branch-admin.md": {
-    "mtime": 1791431273.1822512,
-    "seen": 1791444160.466204,
+    "mtime": 1791468150.3906295,
+    "seen": 1791472973.9075654,
     "ast_hash": "e9fd98bff72961ca5c09ae0202f73ef1",
     "semantic_hash": ""
   },
@@ -6276,9 +6276,9 @@
     "semantic_hash": "cdd4ece52db7569bb61d96ec07cd472b"
   },
   "docs/qa/BUGS.md": {
-    "mtime": 1791449662.126378,
-    "seen": 1791449865.446153,
-    "ast_hash": "4c7e6013d0b3c1c1612c868b05cb9fc2",
+    "mtime": 1791472662.9203134,
+    "seen": 1791472973.9076622,
+    "ast_hash": "1efd511d6869c962c6f966e9c8f0f4a6",
     "semantic_hash": ""
   },
   "docs/qa/RESULTS.md": {
@@ -7848,8 +7848,8 @@
     "semantic_hash": ""
   },
   "scripts/_tl-responsive-validation.mjs": {
-    "mtime": 1791431273.195922,
-    "seen": 1791444160.4636307,
+    "mtime": 1791468150.3979335,
+    "seen": 1791472973.9044733,
     "ast_hash": "85b140fd418f085f9f5ef479e029c89c",
     "semantic_hash": ""
   },
@@ -7977,6 +7977,24 @@
     "mtime": 1791450562.4478915,
     "seen": 1791450889.5623953,
     "ast_hash": "8269c29a90e81222f02f1cb15af2fb15",
+    "semantic_hash": ""
+  },
+  "scripts/audit-db-deep.mjs": {
+    "mtime": 1791472903.0556252,
+    "seen": 1791472973.9044824,
+    "ast_hash": "75f84450c7559c4e9dbcfc09dd683289",
+    "semantic_hash": ""
+  },
+  "scripts/revert-prove-db-audit.mjs": {
+    "mtime": 1791472538.568049,
+    "seen": 1791472973.9046814,
+    "ast_hash": "41d55e45f2b1396e377b85fd169adbcb",
+    "semantic_hash": ""
+  },
+  "tests/dbAuditSafety.test.js": {
+    "mtime": 1791472515.843337,
+    "seen": 1791472973.9065404,
+    "ast_hash": "71af705320b4b11304b927d251c444ba",
     "semantic_hash": ""
   }
 }
