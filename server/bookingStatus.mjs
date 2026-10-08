@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { notifyBookingPhotosReady, notifyBookingStatus } from './notifyBooking.mjs'
 import { canStaffUpdateBookingStatus } from './bookingStatusAccess.mjs'
+import { transitionAllowedForRole } from './bookingStatusTransitions.mjs'
 import { canEnterPaymentHandoff, isPaymentHandoffStatus } from './queuePaymentHandoff.mjs'
 import {
   assertDetailingCompletionOutcome,
@@ -166,7 +167,17 @@ export async function handleBookingStatusRequest(req, res) {
       return json(res, 403, { error: 'Not allowed to update this booking' })
     }
 
-    // for_payment must create a POS handoff â€” never bare-update status
+    // State machine: the service role bypasses bookings RLS, so the ladder has
+    // to be enforced here or a caller could skip Final checking (the QA gate
+    // that carries the money handoff) and land straight on completed.
+    // 400 = invalid transition, distinct from the 403 above (bad scope).
+    if (!transitionAllowedForRole(existing.status, status, staff.role)) {
+      return json(res, 400, {
+        error: `Cannot move a booking from ${existing.status} to ${status}. Refresh and try the next step.`,
+      })
+    }
+
+    // for_payment must create a POS handoff — never bare-update status
     if (isPaymentHandoffStatus(status)) {
       if (!canEnterPaymentHandoff(existing.status)) {
         return json(res, 400, {
