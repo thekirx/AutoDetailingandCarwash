@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Back-of-house and account surfaces have nothing to index and are gated
+# anyway; keeping them out of the crawl budget stops them being surfaced
+# through link equity from the public pages.
+Disallow: /operations
+Disallow: /app
+Disallow: /account
+Disallow: /signin
+Disallow: /signup
+Disallow: /403
+Disallow: /404
+
+# The in-store shop-floor TV board renders a live count for a wall display.
+Disallow: /queue/*/tv
+
+Sitemap: https://auto-detailingand-carwash.vercel.app/sitemap.xml

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { usePageMeta } from '@/lib/pageMeta'
+import { buildSiteJsonLd, usePageMeta } from '@/lib/pageMeta'
 
 const PAGE_META = {
   '/': {
@@ -21,7 +21,11 @@ const PAGE_META = {
   '/403': { title: 'Access denied', description: 'You do not have access to that Hakum Auto Care page.' },
 }
 
-/** Sets document title / OG tags for public marketing pages. */
+// The shop floor board is a content-free display for the in-store TV, not a
+// page anyone should land on from a search result.
+const NOINDEX_PATHS = /^\/queue\/[^/]+\/tv\/?$/
+
+/** Sets document title / OG tags / JSON-LD for public marketing pages. */
 export default function PublicPageMeta() {
   const { pathname } = useLocation()
   const meta = PAGE_META[pathname] || {
@@ -29,10 +33,17 @@ export default function PublicPageMeta() {
     description: PAGE_META['/'].description,
   }
 
+  // The organisation + site graph rides on every public page; branch-level
+  // nodes are added by BranchesPage under its own @id.
+  const siteJsonLd = buildSiteJsonLd()
+
   usePageMeta({
     title: meta.title,
     description: meta.description,
     path: pathname,
+    noindex: NOINDEX_PATHS.test(pathname),
+    jsonLd: siteJsonLd,
+    jsonLdId: 'hakum-site',
   })
 
   useEffect(() => {

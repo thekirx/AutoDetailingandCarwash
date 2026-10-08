@@ -6,6 +6,7 @@ import { submitPublicInquiry } from '@/lib/publicInquiryApi'
 import FormLegalNotice from '@/components/FormLegalNotice'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import useReveal from '../components/public/bredesign/useReveal'
+import { usePageMeta } from '../lib/pageMeta'
 import { BlogListSection } from './BlogPage'
 
 export default function EventsPage() {
@@ -16,6 +17,13 @@ export default function EventsPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '' })
   const [status, setStatus] = useState('idle')
   const [guard, setGuard] = useState(() => createPublicFormGuard())
+
+  usePageMeta({
+    title: 'Events & Blog',
+    description:
+      'Hakum Auto Care events, registrations, car care stories, and blog posts in Bacoor and Batangas.',
+    path: '/events',
+  })
 
   useEffect(() => {
     supabase

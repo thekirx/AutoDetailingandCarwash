@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { shareFormUrl } from '@/lib/opsForms'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 import { submitPublicInquiry } from '@/lib/publicInquiryApi'
+import { usePageMeta } from '@/lib/pageMeta'
 import FormLegalNotice from '@/components/FormLegalNotice'
 
 export default function EventSharePage() {
@@ -15,6 +16,16 @@ export default function EventSharePage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '' })
   const [status, setStatus] = useState('idle')
   const [guard, setGuard] = useState(() => createPublicFormGuard())
+
+  // Event share links are pasted into Facebook, Messenger and WhatsApp. Before
+  // this, every one of them scraped as "Hakum Auto Care · Hakum Auto Care" with
+  // the homepage blurb (BUG-051).
+  usePageMeta({
+    title: event?.title,
+    description: event?.description || 'Hakum Auto Care event — dates, branch, and registration.',
+    path: slug ? `/events/${slug}` : '/events',
+    image: event?.banner_url || '/og-image.png',
+  })
 
   useEffect(() => {
     if (!slug) return

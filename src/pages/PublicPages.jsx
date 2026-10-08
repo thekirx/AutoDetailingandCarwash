@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { usePublicBranches, branchCityName, branchLabel, fetchPublicBranchHours } from '../lib/branches'
 import { MAIN_LINE, branchDirections, branchPhone, buildHomeBranchCards } from '../lib/homeBranches'
@@ -7,7 +7,7 @@ import { SERVICES, WASH_SERVICES } from '../components/public/bredesign/content'
 import { useLoopRail, loopSlides } from '../components/public/bredesign/useLoopRail'
 import { LoopArrows, LoopBar, LoopStage } from '../components/public/bredesign/LoopRail'
 import { formatStartingPrice, useStartingPrices, WASH_CARD_SERVICE_SLUG } from '../lib/serviceStartingPrices'
-import { usePageMeta } from '../lib/pageMeta'
+import { buildLocalBusinessJsonLd, usePageMeta } from '../lib/pageMeta'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import { ContactChannels, ContactCollab, ContactSocials } from './ContactPage'
 import useReveal from '../components/public/bredesign/useReveal'
@@ -151,10 +151,27 @@ export function BranchesPage() {
   const [hoursBySlug, setHoursBySlug] = useState({})
   const visibleBranches = branches.length ? branches : FALLBACK_VISIBLE_BRANCHES
 
+  // Branch nodes carry their own phone, landmark address and real opening
+  // hours, so the map/local results read the same facts the card shows.
+  const branchJsonLd = useMemo(
+    () =>
+      buildLocalBusinessJsonLd({
+        branches: visibleBranches.map((b) => ({
+          ...b,
+          phone: branchPhone(b.slug)?.display?.replace(/\s+/g, ''),
+        })),
+        hoursBySlug,
+      }),
+    [visibleBranches, hoursBySlug],
+  )
+
   usePageMeta({
     title: 'Branches',
-    description: 'Find Hakum Auto Care branches across Cavite and Batangas. Get directions, call, or open the live queue.',
+    description:
+      'Find Hakum Auto Care branches in Bacoor and Batangas. Get directions, call, or open the live queue.',
     path: '/branches',
+    jsonLd: branchJsonLd,
+    jsonLdId: 'hakum-branches',
   })
 
   useEffect(() => {
@@ -283,8 +300,17 @@ function BranchSiteCard({ branch, hours = [] }) {
       </div>
 
       <dl className="bd-site-facts">
-        <dt>Address</dt>
-        <dd>{branch.address || 'Address coming soon'}</dd>
+        {/* The street addresses are still landmarks ("RFC Molino", "PNP
+            Batangas") pending the owner's real ones — Unresolved decision #9.
+            Printing "Address coming soon" on the page that ranks for local
+            searches reads as a broken shop, so the row is simply absent when
+            there is nothing to print; the directions buttons below carry it. */}
+        {branch.address ? (
+          <>
+            <dt>Address</dt>
+            <dd>{branch.address}</dd>
+          </>
+        ) : null}
         <dt>Hours</dt>
         <dd>
           {comingSoon ? 'Opening soon — ask us for updates' : summary || 'Queue times vary by branch load'}

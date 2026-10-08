@@ -2,11 +2,21 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import { supabase } from '@/lib/supabase'
+import { usePageMeta } from '@/lib/pageMeta'
 
 export default function BlogPostPage() {
   const { slug } = useParams()
   const [post, setPost] = useState(null)
   const [error, setError] = useState('')
+
+  // Post links get pasted into Facebook and WhatsApp; before this every one of
+  // them scraped as the homepage (BUG-051).
+  usePageMeta({
+    title: post?.title,
+    description: post?.excerpt,
+    path: slug ? `/blog/${slug}` : '/events',
+    image: post?.cover_url || '/og-image.png',
+  })
 
   useEffect(() => {
     if (!slug) return
