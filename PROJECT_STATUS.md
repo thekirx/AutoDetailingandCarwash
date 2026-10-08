@@ -14,7 +14,7 @@ September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month
 
 Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 (BUG-048 — **closed on production 2026-10-05**: live 405 / 401).
 
-Fresh evidence: **2026-10-08** unit **1646/1646** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
+Fresh evidence: **2026-10-08** unit **1651/1651** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
 Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change). Shop-day **markdown** + **owner HTML/PDF pack** teach Daily Sheet; legacy `user-stories/pdf/process-*` may still be stale.
 
@@ -41,8 +41,20 @@ the suite to go red. Report: [`e2e-evidence/db-audit/db-audit.json`](e2e-evidenc
 
 Three findings, all in [`docs/qa/BUGS.md`](docs/qa/BUGS.md): **BUG-061** 2 POS handoffs
 stranded since 2026-09-29 (**₱5,397.50** unbooked — operational, needs a Branch Admin to ring
-them up); **BUG-062** push enrollment **0 of 19**, with 3 orphan subscriptions; **BUG-063** the
-dead `transactions` ledger holding ₱33,148.50, left in place pending owner approval to drop.
+them up); **BUG-062** push enrollment **0 of 19**, with 3 orphan subscriptions; **BUG-063** 4
+`transactions` rows (₱2,400) stuck in a status no code path can settle — historical residue from a
+defect already fixed on 2026-07-15, no money at risk.
+
+**Correction, 2026-10-08.** This audit initially recorded `transactions` as a *dead* ledger with zero
+references, because the reference search covered `src/`, `server/` and `api/` only. That was wrong:
+the write path is in the database, not the app. `complete_pos_sale` settles the table
+(`20260819081507…sql:155`) and the queue hand-off function creates rows in it
+(`20260812133000…sql:233`). Chasing that produced a real contract now pinned by tests: the hand-off
+creates `pending_payment` and the POS settles exactly `pending_payment`, so the two ends agree and
+new money cannot strand. The 4 stuck rows date to 2026-07-07/10, the window when migration
+`20260707132730` inserted `pending` instead; `20260715153235` corrected it. **The defect is fixed and
+is not recurring.** The lesson generalises: a reference search over application code cannot
+establish that a table is unused when database functions can reach it.
 
 The audit itself first produced three *wrong* readings, all from PostgREST: a `.limit(5000)`
 that silently returned 1000 of 1,312 bookings, a guessed `service_name` column that returned

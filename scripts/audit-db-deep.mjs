@@ -191,7 +191,7 @@ if (want('money')) {
   )
   const { rows: txns } = await fetchAll(
     'transactions',
-    'id, type, amount_minor, currency, payment_method, status, occurred_at, is_archived, pos_handoff_id',
+    'id, type, amount_minor, currency, payment_method, status, occurred_at, is_archived, pos_handoff_id, booking_id, created_at',
   )
   // The select must include booking_id and created_at. Leaving them out made this
   // check report "booking no longer exists" for two bookings that both exist —
@@ -321,22 +321,78 @@ if (want('money')) {
     note('Info', 'money', 'no stranded POS handoffs', { completed: completedHandoffs.length })
   }
 
-  // 7. The `transactions` table: does the app still write it? It is absent from
-  //    src/ and server/ entirely, so anything stuck there is inert residue.
-  const stuckTx = txns.filter((t) => !['completed'].includes(t.status) && !t.is_archived)
-  if (stuckTx.length) {
-    note('Info', 'money', 'rows stuck in the legacy `transactions` table', {
-      stuck: stuckTx.length,
-      byStatus: stuckTx.reduce((a, t) => ({ ...a, [t.status]: (a[t.status] || 0) + 1 }), {}),
-      note: 'No source file reads `transactions`; this table is a dead ledger, not the live money path.',
+  // 7. `transactions` reconciliation.
+  //
+  //    The first version of this audit called `transactions` a DEAD LEDGER on
+  //    the strength of a reference search across src/, server/ and api/. That
+  //    search was too narrow and the conclusion was wrong: the write path is
+  //    in the DATABASE, not the app.
+  //
+  //      20260819081507_complete_pos_sale_settle_txn.sql:155
+  //        update public.transactions t set status = 'completed' ...
+  //      20260812133000_hakum_ops_redesign_followup.sql:233
+  //        insert into public.transactions (...) values (..., 'pending_payment')
+  //
+  //    So the table is live and the real question is whether the two records of
+  //    the same money agree. A handoff that reads `completed` while its
+  //    transaction still reads unsettled is money recorded twice, disagreeing.
+  const handoffById = new Map(handoffs.map((h) => [h.id, h]))
+  const settleable = new Set(['pending_payment'])
+  // Split the mismatch by whether the row could ever have settled. A settled
+  // hand-off whose transaction is still `pending_payment` is a real
+  // reconciliation failure — the POS took the money and the ledger disagrees.
+  // A row in any other status is historical residue: it cannot transition at
+  // all, which is a different and much smaller problem. Reporting both at once
+  // double-counts the same rows and cries wolf about money that is not at risk.
+  const liveMismatch = []
+  const residue = []
+  for (const t of txns) {
+    if (t.is_archived) continue
+    const h = t.pos_handoff_id ? handoffById.get(t.pos_handoff_id) : null
+    if (!h) continue
+    const hDone = h.status === 'completed'
+    const tDone = t.status === 'completed'
+    if (hDone && !tDone) {
+      const row = {
+        txn: String(t.id).slice(0, 8),
+        txnStatus: t.status,
+        handoff: String(h.id).slice(0, 8),
+        amountPHP: (Number(t.amount_minor || 0) / 100).toFixed(2),
+        created: String(t.created_at || '').slice(0, 10),
+      }
+      // complete_pos_sale settles ONLY `pending_payment`. Anything else is dead.
+      if (settleable.has(t.status)) liveMismatch.push(row)
+      else residue.push(row)
+    }
+  }
+
+  if (liveMismatch.length) {
+    note('High', 'money', 'handoff completed but its transaction never settled', {
+      count: liveMismatch.length,
+      detail: liveMismatch.slice(0, 10),
+      hint: 'The sale is paid and the handoff is completed, yet a settleable transaction is still open.',
+    })
+  } else {
+    note('Info', 'money', 'every settleable transaction agrees with its handoff', {
+      checked: txns.filter((t) => t.pos_handoff_id && settleable.has(t.status)).length,
     })
   }
+
+  if (residue.length) {
+    note('Low', 'money', 'transactions in a status no code path can settle', {
+      count: residue.length,
+      detail: residue.slice(0, 10),
+      settleableStatuses: [...settleable],
+      note: 'complete_pos_sale settles only status=pending_payment. These rows sit in `pending` and can never transition. They were created by 20260707132730 (the only migration version that inserted `pending`), corrected by 20260715153235 — so this is historical residue and is NOT recurring. No money is at risk: `sales` is the money source of truth and no app report reads this table.',
+    })
+  }
+
   const noMethod = txns.filter((t) => !t.payment_method)
   if (noMethod.length) {
     note('Low', 'money', 'transactions with no payment method recorded', {
       count: noMethod.length,
       of: txns.length,
-      note: 'Dead ledger, but it shows cash/gcash/card was never captured on this path.',
+      note: 'Presentational only: nothing reports from this table, and the settled amount lives on `sales.payment_method`.',
     })
   }
 }

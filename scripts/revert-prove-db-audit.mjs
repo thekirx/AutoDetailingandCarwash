@@ -14,18 +14,20 @@ import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const target = join(root, 'scripts', 'audit-db-deep.mjs')
-const original = readFileSync(target, 'utf8')
+
+const SUITES = ['tests/dbAuditSafety.test.js', 'tests/transactionsSettlement.test.js']
 
 function runSuite() {
-  try {
-    execFileSync(process.execPath, ['--test', 'tests/dbAuditSafety.test.js'], {
-      cwd: root, stdio: 'pipe', encoding: 'utf8',
-    })
-    return { red: false, out: '' }
-  } catch (err) {
-    return { red: true, out: `${err.stdout || ''}${err.stderr || ''}` }
+  for (const suite of SUITES) {
+    try {
+      execFileSync(process.execPath, ['--test', suite], {
+        cwd: root, stdio: 'pipe', encoding: 'utf8',
+      })
+    } catch (err) {
+      return { red: true, out: `${err.stdout || ''}${err.stderr || ''}` }
+    }
   }
+  return { red: false, out: '' }
 }
 
 const MUTATIONS = [
@@ -54,19 +56,39 @@ const MUTATIONS = [
     from: "async function count(table, filters) {",
     to: "async function count(table, filters) {\n  await db.rpc('submit_daily_sheet', { p_id: 1 })",
   },
+  {
+    name: 'the audit calls `transactions` a dead ledger again',
+    from: "  const settleable = new Set(['pending_payment'])",
+    to: "  note('Info', 'money', 'dead ledger, nothing reads it')\n  const settleable = new Set(['pending_payment'])",
+  },
+  {
+    file: 'supabase/migrations/20260812133000_hakum_ops_redesign_followup.sql',
+    name: 'the hand-off function inserts a status POS cannot settle',
+    from: "'Queue ticket pending payment', release_time, 'pending_payment'",
+    to: "'Queue ticket pending payment', release_time, 'pending'",
+  },
+  {
+    file: 'supabase/migrations/20260819081507_complete_pos_sale_settle_txn.sql',
+    name: 'the POS settle predicate drifts from what the hand-off creates',
+    from: "where t.status = 'pending_payment'",
+    to: "where t.status = 'pending'",
+  },
 ]
 
 let failures = 0
 
 for (const m of MUTATIONS) {
+  const relPath = m.file || 'scripts/audit-db-deep.mjs'
+  const abs = join(root, relPath)
+  const original = readFileSync(abs, 'utf8')
   if (!original.includes(m.from)) {
-    console.log(`SKIP  ${m.name} — anchor text not found; the mutation no longer matches this file`)
+    console.log(`SKIP  ${m.name} — anchor text not found in ${relPath}`)
     failures++
     continue
   }
-  writeFileSync(target, original.replace(m.from, m.to), 'utf8')
+  writeFileSync(abs, original.replace(m.from, m.to), 'utf8')
   const bad = runSuite()
-  writeFileSync(target, original, 'utf8')
+  writeFileSync(abs, original, 'utf8')
   const good = runSuite()
 
   if (bad.red && !good.red) {

@@ -1,11 +1,11 @@
 {
   "ok": false,
   "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
-  "at": "2026-10-08T15:16:10.591Z",
+  "at": "2026-10-08T15:33:36.151Z",
   "bySeverity": {
     "Info": 52,
     "High": 2,
-    "Low": 1
+    "Low": 2
   },
   "findings": [
     {
@@ -289,13 +289,48 @@
     {
       "severity": "Info",
       "section": "money",
-      "message": "rows stuck in the legacy `transactions` table",
-      "stuck": 6,
-      "byStatus": {
-        "pending": 4,
-        "pending_payment": 2
-      },
-      "note": "No source file reads `transactions`; this table is a dead ledger, not the live money path."
+      "message": "every settleable transaction agrees with its handoff",
+      "checked": 2
+    },
+    {
+      "severity": "Low",
+      "section": "money",
+      "message": "transactions in a status no code path can settle",
+      "count": 4,
+      "detail": [
+        {
+          "txn": "c22d6ddc",
+          "txnStatus": "pending",
+          "handoff": "5959bef6",
+          "amountPHP": "1200.00",
+          "created": "2026-07-07"
+        },
+        {
+          "txn": "f3d1cfed",
+          "txnStatus": "pending",
+          "handoff": "1490fa3e",
+          "amountPHP": "500.00",
+          "created": "2026-07-07"
+        },
+        {
+          "txn": "d1dedae0",
+          "txnStatus": "pending",
+          "handoff": "73646c27",
+          "amountPHP": "350.00",
+          "created": "2026-07-07"
+        },
+        {
+          "txn": "8b6b0091",
+          "txnStatus": "pending",
+          "handoff": "e4ffc7da",
+          "amountPHP": "350.00",
+          "created": "2026-07-10"
+        }
+      ],
+      "settleableStatuses": [
+        "pending_payment"
+      ],
+      "note": "complete_pos_sale settles only status=pending_payment. These rows sit in `pending` and can never transition. They were created by 20260707132730 (the only migration version that inserted `pending`), corrected by 20260715153235 — so this is historical residue and is NOT recurring. No money is at risk: `sales` is the money source of truth and no app report reads this table."
     },
     {
       "severity": "Low",
@@ -303,7 +338,7 @@
       "message": "transactions with no payment method recorded",
       "count": 14,
       "of": 14,
-      "note": "Dead ledger, but it shows cash/gcash/card was never captured on this path."
+      "note": "Presentational only: nothing reports from this table, and the settled amount lives on `sales.payment_method`."
     },
     {
       "severity": "Info",
