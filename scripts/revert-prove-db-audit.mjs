@@ -23,6 +23,7 @@ const SUITES = [
   'tests/dailySheetReconciliation.test.js',
   'tests/sheetUiConsistency.test.js',
   'tests/roleQaHarness.test.js',
+  'tests/bookings401Probe.test.js',
 ]
 
 function runSuite() {
@@ -284,6 +285,32 @@ const ALL_MUTATIONS = [
     name: 'an unrendered POS summary is announced as a pass',
     from: 'NOT VERIFIED — the POS summary did not render',
     to: 'PASS — the POS summary did not render',
+  },
+  // The BUG-067 probe. A diagnostic that could write to production, or that stops
+  // building its own route list, would quietly become useless or dangerous.
+  {
+    file: 'scripts/probe-bookings-401.mjs',
+    name: 'the BUG-067 probe grows a write',
+    from: "const failures = []",
+    to: "const failures = []\n  await page.evaluate(() => fetch('/x', { method: 'DELETE' }))",
+  },
+  {
+    file: 'scripts/probe-bookings-401.mjs',
+    name: 'the probe hardcodes one route and stops covering the rest of the dock',
+    from: 'const targets = MODE === \'walk\' ? dock : Array(VISITS).fill(ROUTE)',
+    to: "const targets = Array(VISITS).fill('/operations/dashboard')",
+  },
+  {
+    file: 'scripts/probe-bookings-401.mjs',
+    name: 'the probe stops reading the wire, so the 401 loses its URL again',
+    from: "page.on('response', (res) => {",
+    to: "page.on('responseOFF', (res) => {",
+  },
+  {
+    file: 'scripts/probe-bookings-401.mjs',
+    name: 'a null result starts reading as a pass',
+    from: 'The race did not reproduce in this window — that is a null result, not a clearance.',
+    to: 'All clear — no issues found.',
   },
   {
     file: 'scripts/check-sheet-ui.mjs',
