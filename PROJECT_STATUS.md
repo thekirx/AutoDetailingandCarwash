@@ -14,7 +14,7 @@ September 2026 test month (2026-10-04): Bacoor + Batangas have a realistic month
 
 Fixed while doing it: Team Leads without a customer record could not reach Final check (P0, production); Floor Board 500 for ASA and slow money pages (read policies now evaluate once per query, same access); public Complaints / Partnership / Events forms and SA Data Center 404 (BUG-048 — **closed on production 2026-10-05**: live 405 / 401). **BUG-048 can no longer recur silently**: `tests/apiRouteContract.test.js` fails the build if any `/api/*` path the app calls has neither a serverless function nor a `vercel.json` rewrite, and if any rewrite points at an operation its gateway does not export. That class of break was invisible to build, lint and unit tests — it only existed on the deployed host.
 
-Fresh evidence: **2026-10-09** unit **1666/1666** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
+Fresh evidence: **2026-10-09** unit **1668/1668** (2 skipped) and lint **0**, re-verified against the current working tree. Prior **2026-10-04**: nav walk **84/84**, role matrix **52/52**, money UI **5/5**, P0 UI **9/9**, data integrity **PASS**, Daily Sheet live smoke **17/17**, money dashboards **39/39**. Daily Sheet money path **38/38** (2026-10-02). Role×story matrix: [`docs/qa/ROLE-STORY-EVIDENCE.md`](docs/qa/ROLE-STORY-EVIDENCE.md).
 
 Future branch: production Dasma is `dasmarinas` (coming soon); staff hire works on coming-soon; junk `crudtest-*` branches archived. Opening day = flip Active in Branches (no code change). Shop-day **markdown** + **owner HTML/PDF pack** teach Daily Sheet; legacy `user-stories/pdf/process-*` may still be stale.
 
@@ -70,17 +70,31 @@ day before touching them.
 
 **The POS → Daily Sheet → Finance approve → books path has never run on real data.** All **60 of 60**
 `daily_sheets` are September 2026, which is the seeded demo month. Real POS activity is **9 sales**
-(4 August, 5 July) and **not one of them has a Daily Sheet**. Every "money reconciles" result to date
-validates POS ↔ line items and seed arithmetic — never a sheet a Branch Admin closes at 6pm.
+(4 August, 5 July) and **not one of them has a Daily Sheet**. The close-of-day path a Branch Admin
+runs at 6pm has never been exercised by real trading.
 
-A full reconciliation (`npm run audit:db`, or `scripts/probe-daily-sheets.mjs`) compares each sheet's
-`totals` block against the real `sales` for that branch/day, plus its own arithmetic. It found **108
-discrepancies — all of them in the seeded month**, so none is a production money bug, and the audit
-now reports them as `Info` seed artifacts while still escalating any drift outside September to
-`High`. Side effect worth knowing: **the seeded demo month is not a faithful model of a real sheet**,
-which is a problem for training material and for anyone demoing the Daily Sheet.
+**Correction, 2026-10-09 — a previous version of this document reported "108 discrepancies" across
+the sheets. Every one of those 108 was a bug in my own audit, not in the app.** The reconciliation
+had reimplemented the sheet arithmetic and got it wrong three times:
 
-To close this honestly: close one real shop day end to end and re-run the probe.
+| My assertion | The app's actual rule (`src/lib/salesSummary.js` `rollupSales`) | Sheets wrongly flagged |
+|---|---|---|
+| `net == gross − discounts` | `net = gross − discounts − **refunds**` | 6 (every day with a refund) |
+| `byMethod == gross` | `byMethod` sums **paid** sales, so it equals **net** | 46 |
+| `expectedCash = cash − expenses + float + caRepaid` | also subtracts **caReleased** | every sheet that released a cash advance |
+
+Recomputed with the app's own `computeSheetTotals()` from `src/lib/dailySheet.js`, **all 60 sheets
+match exactly — 0 mismatches.** The sheet arithmetic is correct, and it is now verified against
+stored production data rather than asserted about it.
+
+Both the audit and the probe now **import** that function instead of restating it. A reimplemented
+invariant drifts from the thing it exists to watch; an imported one cannot, and that import is now
+locked by tests plus revert-prove.
+
+**The seeded demo month is a faithful model of a real sheet** — the earlier claim that it was not is
+retracted. What seed data still cannot establish is that real trading produces a real sheet. The
+audit now flags that gap directly. To close it honestly: close one real shop day end to end, then
+re-run `npm run audit:db`.
 
 ## SMS product policy (always)
 

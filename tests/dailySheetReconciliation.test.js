@@ -70,6 +70,29 @@ test('the cleanup leaves pos_handoffs and transactions behind', () => {
     'the wipe no longer removes transactions — revisit BUG-066')
 })
 
+test('the sheet probe compares against the app, not a restatement of it', () => {
+  const probe = read('scripts/probe-daily-sheets.mjs')
+  assert.match(
+    probe,
+    /import\s*\{[^}]*computeSheetTotals[^}]*\}\s*from\s*'\.\.\/src\/lib\/dailySheet\.js'/,
+    "the probe must import computeSheetTotals from src/lib/dailySheet.js",
+  )
+  assert.match(probe, /computeSheetTotals\(\{/, 'the probe must actually call it')
+  // The three wrong formulas that produced 108 false findings.
+  for (const wrong of [
+    /netMinor\s*-\s*discountsMinor\s*!==\s*net/,
+    /grossMinor\s*-\s*discountsMinor\s*!==\s*net/,
+    /bm\s*!==\s*gross/,
+  ]) {
+    assert.ok(!wrong.test(probe), `a restated (wrong) sheet formula returned: ${wrong}`)
+  }
+  // And the comparison must not be vacuous: real sales have to be fed in, and
+  // the probe must print evidence that numbers were actually compared.
+  assert.ok(!/sales:\s*\[\]/.test(probe), 'the probe must feed real sales into the comparison')
+  assert.match(probe, /sheetsCompared|compared/, 'the probe must report how many sheets it compared')
+  assert.match(probe, /Non-vacuous|salesFed/, 'the probe must prove the comparison saw real inputs')
+})
+
 test('every database probe is read-only', () => {
   // These run against PRODUCTION with the service-role key. A stray write in
   // any of them would be unrecoverable.

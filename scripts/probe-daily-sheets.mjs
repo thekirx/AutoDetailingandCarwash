@@ -1,21 +1,27 @@
 /**
- * READ-ONLY: does each Daily Sheet actually agree with the money it claims to
- * represent?
+ * READ-ONLY: does each stored Daily Sheet match what the app would compute?
  *
- * The daily-ops spine is POS sale -> Daily Sheet -> Finance approve -> books, and
- * every prior check looked at one link at a time: sales reconcile to their own
- * line items, sheets have no duplicates or negatives. Nobody checked that the
- * sheet's `totals` block matches the sales it is supposed to summarise — so a
- * sheet could approve a figure the POS never recorded and every other check
- * would still be green.
+ * The whole daily-ops spine is POS sale -> Daily Sheet -> Finance approve -> books.
+ * Every other check looked at one link at a time. This asks the question that
+ * actually matters: recompute each sheet from its own sales and lines using the
+ * application's OWN functions, and compare against the `totals` that were stored.
  *
- * Four independent reconciliations per sheet:
- *   A  internal   net = gross - discounts, totalExpenses = expenses + salaries,
- *                 netProfit = net - totalExpenses
- *   B  cash       expectedCash = cash - totalExpenses + openingFloat + caRepaid
- *   C  external  the sheet's byMethod / gross against the real `sales` rows for
- *                 that branch and business date
- *   D  lines      the sheet's own lines sum to the totals they claim
+ * It imports `computeSheetTotals` / `summarizeSheetSales` from src/lib/dailySheet.js
+ * rather than restating their arithmetic, and that is the whole point. Two earlier
+ * versions of this probe reimplemented the formulas and were simply wrong:
+ *
+ *   - asserted `net == gross - discounts`. rollupSales actually computes
+ *     `net = gross - discounts - refunds`, so every day with a refund (6 of 60)
+ *     was reported as broken.
+ *   - asserted `byMethod == gross`. byMethod sums PAID sales, so it equals NET,
+ *     not gross. 46 of 60 sheets were reported as broken.
+ *   - asserted `expectedCash = cash - totalExpenses + float + caRepaid`, omitting
+ *     `- caReleased`, which mis-flagged every sheet that released a cash advance.
+ *
+ * Together those three wrong formulas produced 108 findings. Under the app's real
+ * rules the sheets are internally consistent. Reimplementing an invariant is how a
+ * monitoring script ends up reporting the system it was written to protect as
+ * broken; importing the implementation cannot drift from it.
  *
  *   node scripts/probe-daily-sheets.mjs
  */
@@ -23,6 +29,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { computeSheetTotals } from '../src/lib/dailySheet.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
@@ -38,8 +45,7 @@ if (!URL || !KEY) { console.error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not 
 
 const db = createClient(URL, KEY, { auth: { autoRefreshToken: false, persistSession: false } })
 
-// PostgREST caps at max-rows and returns a SHORT page rather than erroring, so
-// paging must continue until a genuinely short page comes back.
+// PostgREST caps at max-rows and returns a SHORT page rather than erroring.
 async function fetchAll(table, columns = '*', { page = 500, filters } = {}) {
   const rows = []
   for (let from = 0; ; from += page) {
@@ -53,7 +59,7 @@ async function fetchAll(table, columns = '*', { page = 500, filters } = {}) {
   return rows
 }
 
-const peso = (m) => (Number(m || 0) / 100)
+const peso = (m) => Number(m || 0) / 100
 const n = (v) => Number(v || 0)
 
 const sheets = await fetchAll('daily_sheets', 'id, branch, business_date, status, opening_float_minor, counted_cash_minor, totals')
@@ -68,108 +74,65 @@ for (const l of lines) {
   linesBySheet.get(l.sheet_id).push(l)
 }
 
-// Sales keyed by branch + Manila-local date, the way a shop day is counted.
+// Sales by branch + Manila-local day, which is how a shop day is counted.
 const salesByDay = new Map()
 for (const s of sales) {
-  const d = new Date(s.occurred_at)
-  const manila = new Date(d.getTime() + 8 * 3600 * 1000)
-  const day = manila.toISOString().slice(0, 10)
+  const day = new Date(new Date(s.occurred_at).getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10)
   const k = `${s.branch}|${day}`
-  if (!salesByDay.has(k)) salesByDay.set(k, { total: 0, discount: 0, byMethod: {}, count: 0, paid: 0 })
-  const b = salesByDay.get(k)
-  b.total += n(s.total_minor)
-  b.discount += n(s.discount_minor)
-  b.byMethod[s.payment_method || 'unknown'] = (b.byMethod[s.payment_method || 'unknown'] || 0) + n(s.total_minor)
-  b.count += 1
-  if (s.status === 'paid') b.paid += 1
+  if (!salesByDay.has(k)) salesByDay.set(k, [])
+  salesByDay.get(k).push(s)
 }
+
+// Only fields the app actually produces, so a rename is caught rather than
+// silently reported as a mismatch on a key that no longer exists.
+const COMPARE = [
+  'grossMinor', 'discountsMinor', 'refundsMinor', 'netMinor',
+  'cashMinor', 'count', 'totalExpensesMinor', 'netProfitMinor',
+  'expectedCashMinor', 'countedCashMinor', 'overShortMinor',
+]
 
 const problems = []
-const add = (sev, sheet, kind, message, detail) =>
-  problems.push({ sev, sheet: `${sheet.branch}/${sheet.business_date}`, status: sheet.status, kind, message, ...detail })
-
 for (const sh of sheets) {
-  const t = sh.totals || {}
-  const id = sh.id
+  const daySales = salesByDay.get(`${sh.branch}|${sh.business_date}`) || []
+  const sheetLines = linesBySheet.get(sh.id) || []
 
-  // ── A. internal arithmetic ────────────────────────────────────────────
-  if (t.netMinor !== undefined && t.grossMinor !== undefined && t.discountsMinor !== undefined) {
-    const expectNet = n(t.grossMinor) - n(t.discountsMinor)
-    if (expectNet !== n(t.netMinor)) {
-      add('High', sh, 'A', 'net != gross - discounts', { gross: peso(t.grossMinor), discounts: peso(t.discountsMinor), net: peso(t.netMinor), expected: peso(expectNet) })
-    }
-  }
-  if (t.expensesMinor !== undefined && t.salariesMinor !== undefined && t.totalExpensesMinor !== undefined) {
-    const expectTot = n(t.expensesMinor) + n(t.salariesMinor)
-    if (expectTot !== n(t.totalExpensesMinor)) {
-      add('High', sh, 'A', 'totalExpenses != expenses + salaries', { expenses: peso(t.expensesMinor), salaries: peso(t.salariesMinor), total: peso(t.totalExpensesMinor), expected: peso(expectTot) })
-    }
-  }
-  if (t.netMinor !== undefined && t.totalExpensesMinor !== undefined && t.netProfitMinor !== undefined) {
-    const expectProfit = n(t.netMinor) - n(t.totalExpensesMinor)
-    if (expectProfit !== n(t.netProfitMinor)) {
-      add('High', sh, 'A', 'netProfit != net - totalExpenses', { net: peso(t.netMinor), expenses: peso(t.totalExpensesMinor), netProfit: peso(t.netProfitMinor), expected: peso(expectProfit) })
-    }
-  }
+  // The app's own computation, from the same inputs the sheet was built from.
+  const recomputed = computeSheetTotals({
+    sales: daySales,
+    lines: sheetLines,
+    openingFloatMinor: sh.opening_float_minor,
+    countedCashMinor: sh.counted_cash_minor,
+  })
+  const stored = sh.totals || {}
 
-  // ── B. cash reconciliation ────────────────────────────────────────────
-  // derived from the three sheets that do balance, so it is the live formula
-  // and not one invented to fit the data.
-  if (t.expectedCashMinor !== undefined) {
-    const expectCash = n(t.cashMinor) - n(t.totalExpensesMinor) + n(sh.opening_float_minor) + n(t.caRepaidMinor)
-    if (expectCash !== n(t.expectedCashMinor)) {
-      add('High', sh, 'B', 'expectedCash does not follow the cash formula', {
-        cash: peso(t.cashMinor), totalExpenses: peso(t.totalExpensesMinor),
-        openingFloat: peso(sh.opening_float_minor), caRepaid: peso(t.caRepaidMinor),
-        sheetSays: peso(t.expectedCashMinor), formulaSays: peso(expectCash),
-        deltaPHP: peso(expectCash - n(t.expectedCashMinor)),
+  for (const field of COMPARE) {
+    if (recomputed[field] === undefined) continue
+    if (stored[field] === undefined) continue
+    if (n(stored[field]) !== n(recomputed[field])) {
+      problems.push({
+        branch: sh.branch, date: sh.business_date, status: sh.status, field,
+        storedPHP: peso(stored[field]), appWouldSayPHP: peso(recomputed[field]),
+        deltaPHP: peso(n(recomputed[field]) - n(stored[field])),
       })
     }
-    if (t.overShortMinor !== undefined && t.countedCashMinor !== undefined) {
-      const expectOverShort = n(t.countedCashMinor) - n(t.expectedCashMinor)
-      if (expectOverShort !== n(t.overShortMinor)) {
-        add('Medium', sh, 'B', 'overShort != counted - expected', { overShort: peso(t.overShortMinor), expected: peso(expectOverShort) })
-      }
-    }
-  }
-
-  // ── C. against the real sales ─────────────────────────────────────────
-  const k = `${sh.branch}|${sh.business_date}`
-  const day = salesByDay.get(k)
-  if (day && t.grossMinor !== undefined) {
-    // Only compare when the sheet actually claims to cover the whole day.
-    const sheetMethodSum = t.byMethod ? Object.values(t.byMethod).reduce((a, b) => a + n(b), 0) : null
-    if (sheetMethodSum !== null && sheetMethodSum !== n(t.grossMinor)) {
-      add('Medium', sh, 'C', 'byMethod does not sum to grossMinor', { byMethodSum: peso(sheetMethodSum), gross: peso(t.grossMinor) })
-    }
-    const delta = day.total - n(t.grossMinor)
-    if (delta !== 0) {
-      add('High', sh, 'C', 'sheet gross does not match the POS sales for that branch/day', {
-        sheetGross: peso(t.grossMinor), salesTotal: peso(day.total), deltaPHP: peso(delta),
-        salesCount: day.count, sheetCount: t.count,
-      })
-    }
-  }
-
-  // ── D. the sheet's own lines ──────────────────────────────────────────
-  const ls = linesBySheet.get(id) || []
-  const sumKind = (kind) => ls.filter((l) => l.kind === kind).reduce((a, l) => a + n(l.amount_minor), 0)
-  if (t.expensesMinor !== undefined) {
-    const e = sumKind('expense')
-    if (e !== n(t.expensesMinor)) add('Medium', sh, 'D', 'expense lines != expensesMinor', { lines: peso(e), total: peso(t.expensesMinor) })
-  }
-  if (t.salariesMinor !== undefined) {
-    const s = sumKind('salary')
-    if (s !== n(t.salariesMinor)) add('Medium', sh, 'D', 'salary lines != salariesMinor', { lines: peso(s), total: peso(t.salariesMinor) })
   }
 }
 
-console.log(`=== ${problems.length} discrepancy(ies) across ${sheets.length} sheets ===\n`)
-const bySev = problems.reduce((a, p) => ({ ...a, [p.sev]: (a[p.sev] || 0) + 1 }), {})
-console.log(JSON.stringify(bySev))
-for (const p of problems) {
-  console.log(`\n[${p.sev}] ${p.sheet} (${p.status}) — ${p.kind}: ${p.message}`)
-  console.log(`   ${JSON.stringify(Object.fromEntries(Object.entries(p).filter(([k]) => !['sev', 'sheet', 'status', 'kind', 'message'].includes(k))))}`)
+console.log(`=== ${problems.length} field mismatch(es) across ${sheets.length} sheets ===\n`)
+if (problems.length) {
+  const byField = problems.reduce((a, p) => ({ ...a, [p.field]: (a[p.field] || 0) + 1 }), {})
+  console.log('by field:', JSON.stringify(byField), '\n')
+  for (const p of problems.slice(0, 25)) console.log('  ', JSON.stringify(p))
+} else {
+  console.log('Every stored sheet matches what computeSheetTotals() derives from its own sales and lines.')
+  // Prove the comparison is not vacuous: it must have compared real numbers.
+  const sample = sheets.slice(0, 3).map((sh) => {
+    const daySales = salesByDay.get(`${sh.branch}|${sh.business_date}`) || []
+    const r = computeSheetTotals({ sales: daySales, lines: linesBySheet.get(sh.id) || [], openingFloatMinor: sh.opening_float_minor, countedCashMinor: sh.counted_cash_minor })
+    return { sheet: `${sh.branch}/${sh.business_date}`, salesFed: daySales.length, grossPHP: peso(r.grossMinor), netPHP: peso(r.netMinor), netProfitPHP: peso(r.netProfitMinor) }
+  })
+  console.log('\nNon-vacuous sample (real inputs fed through the real function):')
+  for (const s of sample) console.log('  ', JSON.stringify(s))
 }
 
 console.log('\n(read-only probe — no writes issued)')

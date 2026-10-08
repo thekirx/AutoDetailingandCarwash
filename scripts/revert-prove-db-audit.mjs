@@ -125,9 +125,15 @@ const MUTATIONS = [
   },
   {
     file: 'scripts/audit-db-deep.mjs',
-    name: 'seed-month sheet drift is escalated to a money severity',
-    from: "note('Info', 'dailysheet', 'seeded September sheets do not reconcile",
-    to: "note('High', 'dailysheet', 'seeded September sheets do not reconcile",
+    name: 'the audit stops flagging that no sheet exists for real trading',
+    from: "note('High', 'dailysheet', 'every Daily Sheet is from the seeded demo month",
+    to: "note('Info', 'dailysheet', 'every Daily Sheet is from the seeded demo month",
+  },
+  {
+    file: 'scripts/audit-db-deep.mjs',
+    name: 'the audit stops importing the app sheet arithmetic',
+    from: "import { computeSheetTotals } from '../src/lib/dailySheet.js'",
+    to: "const computeSheetTotals = () => ({})",
   },
   {
     file: 'scripts/audit-db-deep.mjs',
@@ -140,6 +146,18 @@ const MUTATIONS = [
     name: 'the audit goes back to advising staff to ring up the stranded hand-offs',
     from: 'Do NOT ring these up.',
     to: 'Branch Admin can still ring these up from POS.',
+  },
+  {
+    file: 'scripts/probe-daily-sheets.mjs',
+    name: 'the sheet probe stops importing the app arithmetic',
+    from: "import { computeSheetTotals } from '../src/lib/dailySheet.js'",
+    to: "const computeSheetTotals = () => ({})",
+  },
+  {
+    file: 'scripts/probe-daily-sheets.mjs',
+    name: 'the sheet probe stops feeding real sales into the comparison',
+    from: 'sales: daySales,',
+    to: 'sales: [],',
   },
 ]
 

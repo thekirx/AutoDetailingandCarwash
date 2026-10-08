@@ -14,6 +14,9 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+// The app's own sheet arithmetic, imported so it cannot drift from what runs in
+// the browser. See the dailysheet section for why this is imported, not restated.
+import { computeSheetTotals } from '../src/lib/dailySheet.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = join(root, 'e2e-evidence', 'db-audit')
@@ -557,53 +560,76 @@ if (want('dailysheet')) {
     })
   }
 
-  // ── Does each sheet agree with the money it claims? ──────────────────────
-  // Every other check in this audit looks at one link of the chain at a time.
-  // This one asks whether a sheet's `totals` block actually matches the sales it
-  // is supposed to summarise, and whether its own arithmetic holds. A sheet
-  // could approve a figure the POS never recorded and everything else stays
-  // green.
-  const byMethodSum = (t) => (t.byMethod ? Object.values(t.byMethod).reduce((a, b) => a + (Number(b) || 0), 0) : null)
-  const n = (v) => Number(v || 0)
-  const sheetDrift = []
+  // ── Does each sheet agree with what the app itself would compute? ────────
+  // This imports `computeSheetTotals` rather than restating its arithmetic, and
+  // that is deliberate. An earlier version reimplemented the formulas and was
+  // wrong three times: it asserted `net == gross - discounts` (rollupSales uses
+  // `net = gross - discounts - refunds`), `byMethod == gross` (byMethod sums
+  // PAID sales, so it equals net), and omitted `- caReleased` from expectedCash.
+  // Those three mistakes produced 108 findings, every one of them false. A
+  // reimplemented invariant drifts from the thing it watches; an imported one
+  // cannot. See BUG-065.
+  const { rows: allSales } = await fetchAll(
+    'sales',
+    'id, branch, status, payment_method, total_minor, discount_minor, occurred_at',
+  )
+  const { rows: allLines } = await fetchAll('daily_sheet_lines', 'id, sheet_id, kind, amount_minor')
+
+  const salesByDay = new Map()
+  for (const s of allSales || []) {
+    const day = new Date(new Date(s.occurred_at).getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+    const k = `${s.branch}|${day}`
+    if (!salesByDay.has(k)) salesByDay.set(k, [])
+    salesByDay.get(k).push(s)
+  }
+  const linesBySheet = new Map()
+  for (const l of allLines || []) {
+    if (!linesBySheet.has(l.sheet_id)) linesBySheet.set(l.sheet_id, [])
+    linesBySheet.get(l.sheet_id).push(l)
+  }
+
+  const COMPARE = ['grossMinor', 'discountsMinor', 'refundsMinor', 'netMinor', 'cashMinor', 'count', 'totalExpensesMinor', 'netProfitMinor', 'expectedCashMinor', 'overShortMinor']
+  const drift = []
+  let compared = 0
   for (const sh of sheets || []) {
-    const t = sh.totals || {}
-    // Expected cash is derived from the sheets that DO balance, so it is the
-    // live formula rather than one invented to fit.
-    if (t.expectedCashMinor !== undefined && t.cashMinor !== undefined) {
-      const expectCash = n(t.cashMinor) - n(t.totalExpensesMinor) + n(sh.opening_float_minor) + n(t.caRepaidMinor)
-      if (expectCash !== n(t.expectedCashMinor)) {
-        sheetDrift.push({ branch: sh.branch, date: sh.business_date, why: 'expectedCash', deltaPHP: (expectCash - n(t.expectedCashMinor)) / 100 })
+    const stored = sh.totals || {}
+    if (stored.grossMinor === undefined) continue
+    const recomputed = computeSheetTotals({
+      sales: salesByDay.get(`${sh.branch}|${sh.business_date}`) || [],
+      lines: linesBySheet.get(sh.id) || [],
+      openingFloatMinor: sh.opening_float_minor,
+      countedCashMinor: sh.counted_cash_minor,
+    })
+    compared++
+    for (const field of COMPARE) {
+      if (recomputed[field] === undefined || stored[field] === undefined) continue
+      if (Number(stored[field]) !== Number(recomputed[field])) {
+        drift.push({
+          branch: sh.branch, date: sh.business_date, status: sh.status, field,
+          deltaPHP: (Number(recomputed[field]) - Number(stored[field])) / 100,
+        })
       }
     }
-    if (t.netMinor !== undefined && t.grossMinor !== undefined && n(t.grossMinor) - n(t.discountsMinor) !== n(t.netMinor)) {
-      sheetDrift.push({ branch: sh.branch, date: sh.business_date, why: 'net != gross - discounts', deltaPHP: (n(t.grossMinor) - n(t.discountsMinor) - n(t.netMinor)) / 100 })
-    }
-    const bm = byMethodSum(t)
-    if (bm !== null && bm !== n(t.grossMinor)) {
-      sheetDrift.push({ branch: sh.branch, date: sh.business_date, why: 'byMethod != gross', deltaPHP: (bm - n(t.grossMinor)) / 100 })
-    }
   }
-  // September is the seeded test month, so drift there is a seed artifact and
-  // not a production money bug. Reporting it as one would cry wolf on money
-  // that is not at risk, and would bury a genuine drift on another day.
-  const seeded = (d) => String(d || '').startsWith('2026-09')
-  const seededDrift = sheetDrift.filter((d) => seeded(d.date))
-  const realDrift = sheetDrift.filter((d) => !seeded(d.date))
-  if (realDrift.length) {
-    note('High', 'dailysheet', 'a sheet outside the seeded month does not reconcile', {
-      count: realDrift.length, detail: realDrift.slice(0, 10),
+  if (drift.length) {
+    note('High', 'dailysheet', 'a stored sheet does not match what the app computes from its own sales and lines', {
+      count: drift.length, sheets: compared, detail: drift.slice(0, 10),
     })
   } else {
-    note('Info', 'dailysheet', 'every non-seeded sheet reconciles internally', {
-      checked: (sheets || []).filter((s) => !seeded(s.business_date)).length,
+    note('Info', 'dailysheet', 'every stored sheet matches the app\'s own totals for its sales and lines', {
+      sheetsCompared: compared,
+      note: 'Recomputed with computeSheetTotals() from src/lib/dailySheet.js, not a restatement of its rules.',
     })
   }
-  if (seededDrift.length) {
-    note('Info', 'dailysheet', 'seeded September sheets do not reconcile (seed artifact, not a money bug)', {
-      count: seededDrift.length,
-      detail: seededDrift.slice(0, 5),
-      note: 'scripts/seed/september2026Db.mjs writes gross/net/byMethod by a different rule than it writes the sales. The demo month is therefore not a faithful model of a real sheet. See BUG-065.',
+
+  // Whether any of this is REAL trading is a separate question. Until one real
+  // shop day is closed, the daily-ops path is unproven even though it is
+  // internally consistent. BUG-065.
+  const seededSheets = (sheets || []).filter((s) => String(s.business_date || '').startsWith('2026-09')).length
+  if (compared > 0 && seededSheets === compared) {
+    note('High', 'dailysheet', 'every Daily Sheet is from the seeded demo month — the close-of-day path is unproven on real trading', {
+      sheets: compared, seededSheets,
+      note: 'No sheet exists for any real POS sale, so sheet arithmetic has only ever been validated against seed data. Close one real shop day and re-run this audit. BUG-065.',
     })
   }
 

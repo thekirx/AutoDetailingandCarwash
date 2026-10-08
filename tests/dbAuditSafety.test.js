@@ -149,28 +149,30 @@ test('push_subscriptions is keyed on user_id, not staff_id', () => {
   )
 })
 
-test('sheet drift is split by whether the sheet is seeded', () => {
-  // September 2026 is the seeded demo month. Its 60 sheets carry 100+
-  // arithmetic inconsistencies that are artifacts of how the seed writes
-  // gross/net/byMethod — NOT production money bugs. Reporting them at High
-  // would cry wolf about money that is not at risk and would bury a genuine
-  // drift on any other day. BUG-065.
-  //
-  // Asserted on the SEVERITY each finding is emitted at, not on its wording. An
-  // earlier version of this test matched a prose fragment and failed on a
-  // missing "s" — a string-existence check that proves nothing about behaviour.
-  const infoNote = /note\(\s*'Info',\s*'dailysheet',\s*'seeded September sheets do not reconcile/
-  const highNote = /note\(\s*'High',\s*'dailysheet',\s*'a sheet outside the seeded month does not reconcile/
-  assert.match(CODE, infoNote,
-    'seed-month drift must be emitted as Info — it is a seed artifact, not a money bug')
-  assert.doesNotMatch(
+test('the audit imports the app sheet arithmetic instead of restating it', () => {
+  // The single most valuable thing this file does not let regress. Three
+  // earlier versions restated computeSheetTotals' rules and every one was
+  // wrong: net omits refunds, byMethod sums paid sales so it equals net, and
+  // expectedCash subtracts caReleased. Together they produced 108 findings, all
+  // false, against 60 sheets that were actually correct. A reimplemented
+  // invariant drifts from the thing it exists to watch; an imported one cannot.
+  assert.match(
     CODE,
-    /note\(\s*'(Critical|High)',\s*'dailysheet',\s*'seeded September sheets/,
-    'seed-month drift must never be escalated to a money severity',
+    /import\s*\{[^}]*computeSheetTotals[^}]*\}\s*from\s*'\.\.\/src\/lib\/dailySheet\.js'/,
+    "the audit must import computeSheetTotals from src/lib/dailySheet.js",
   )
-  assert.match(CODE, highNote,
-    'drift outside the seeded month must still be reported, and at High')
-  assert.match(CODE, /BUG-065/, 'the audit should point at the bug that records this gap')
+  assert.match(CODE, /computeSheetTotals\(\{/, 'the audit must actually call it')
+  assert.match(CODE, /does not match what the app computes from its own sales and lines/,
+    'drift must be reported as stored-vs-recomputed')
+
+  // The specific wrong formulas must not come back.
+  for (const wrong of [
+    /grossMinor\)\s*-\s*n\(t\.discountsMinor\)\s*!==\s*n\(t\.netMinor\)/,
+    /bm\s*!==\s*n\(t\.grossMinor\)/,
+    /\+\s*n\(t\.caRepaidMinor\)\s*$/m,
+  ]) {
+    assert.ok(!wrong.test(CODE), `a restated (wrong) sheet formula returned: ${wrong}`)
+  }
 })
 
 test('the audit reads the columns the sheet reconciliation needs', () => {
@@ -178,8 +180,27 @@ test('the audit reads the columns the sheet reconciliation needs', () => {
   // inspects nothing and reports "0 sheets checked" as if all were clean.
   const sel = /fetchAll\(\s*'daily_sheets',\s*'([^']+)'/s.exec(CODE)
   assert.ok(sel, 'the audit must read daily_sheets through fetchAll')
-  assert.match(sel[1], /totals/, 'expectedCash reconciliation needs the totals block')
-  assert.match(sel[1], /opening_float_minor/, 'the cash formula needs the opening float')
+  assert.match(sel[1], /totals/, 'the sheet comparison needs the stored totals block')
+  assert.match(sel[1], /opening_float_minor/, 'computeSheetTotals needs the opening float')
+  assert.match(sel[1], /counted_cash_minor/, 'over/short cannot be recomputed without the counted cash')
+})
+
+test('the audit flags that no sheet exists for real trading', () => {
+  // Internal consistency is not the same as proven. A sheet that reconciles
+  // proves the arithmetic; it does not prove real trading ever produces one.
+  // Asserted on the SEVERITY, not just the wording: a mutation that keeps the
+  // message but drops it to Info is exactly the regression worth catching,
+  // because it turns a High verification gap into background noise.
+  assert.match(
+    CODE,
+    /note\(\s*'High',\s*'dailysheet',\s*'every Daily Sheet is from the seeded demo month/,
+    'the unproven-close-of-day gap must stay High (BUG-065)',
+  )
+  assert.doesNotMatch(
+    CODE,
+    /note\(\s*'Info',\s*'dailysheet',\s*'every Daily Sheet is from the seeded demo month/,
+    'the gap must not be demoted to Info',
+  )
 })
 
 test('the stranded-handoff check reads booking_id and created_at', () => {
