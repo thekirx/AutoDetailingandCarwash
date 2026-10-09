@@ -34,3 +34,26 @@ graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
 # their posters are committed; the originals live in Google Drive, because
 # 164MB of masters is weight the repository would carry forever.
 public/video/service-proof/*/source/
+
+# Brand book and vendor API PDFs are kept locally / in Drive, too heavy for the repo.
+Brand Assets/**/*.pdf
+/Busybee Brandtxt - API Documentation.pdf
+
+# Local skill notes and scratch files at the repo root.
+/Security (2).md
+/api-designer.md
+/backend-developer (1).md
+/bestpracticeskill.md
+/bugskill.md
+/cleancode.md
+/fullstack-developer.md
+/kaizen.md
+/mobile-developer.md
+/optimizer.md
+/planskill.md
+/principal-system-audit-SKILL.md
+/security.md
+/seo.md
+/ui-designer.md
+/list.title
+/tmp-*
