@@ -1,4 +1,16 @@
+## 2026-10-10 — POS customer accounts can no longer lose their history
+
+- **Critical:** re-entering a known customer’s phone at POS re-mounts their CRM record onto the Auth uid and deleted the old row — but only moved `bookings`/`vehicles`/`sales`. A `loyalty_ledger` row made the delete fail silently (error never read, request still answered 200, leaving a duplicate customer row); with no loyalty row the delete **cascaded away** memberships and birthday perks. The remount now moves every customer-referencing table, verifies each move, and deletes the old row last — a failure returns 409 naming the table rather than a clean link.
+- The move list is now checked against the migrations themselves (`tests/customerRemountIntegrity.test.js`), so adding a `customer_id` FK without adding the table fails the build instead of losing the row.
+- `scripts/probe-remount-blast-radius.mjs` (read-only) reports how many customers are one re-provision away from corrupted history.
+
 # Changelog
+
+## 2026-10-09 - POS Sell: Waiting to pay first and larger, Sales today below
+
+- Sell tab order is now Waiting to pay, then the catalogue and order panel, then Sales today. Counter staff (SA, ASA, BA) see the cars to charge first.
+- Waiting to pay tickets are larger (queue number, plate, car and customer, amount) and wrap into a grid instead of a sideways strip. Each shows how long the car has waited; 20 min or more turns amber and is counted in the header. Six show at once, then "Show N more waiting".
+- Helpers `waitMinutes` / `formatWaitMinutes` and a layout-order seam in `tests/posInsights.test.js`.
 
 ## 2026-10-09 - Finance categories and vendors: full edit for SA and ASA, and add them from New bill
 

@@ -27,6 +27,8 @@ const SUITES = [
   'tests/strandedHandoffsProbe.test.js',
   'tests/voidPosTestHandoffs.test.js',
   'tests/posInsights.test.js',
+  'tests/customerRemountIntegrity.test.js',
+  'tests/remountBlastRadiusProbe.test.js',
 ]
 
 function runSuite() {
@@ -391,6 +393,35 @@ const ALL_MUTATIONS = [
     name: 'the Sell tab silently stops rendering Sales today',
     from: '<PosStatsBoard stats={todaySummary} compact />',
     to: '{false && <PosStatsBoard stats={todaySummary} compact />}',
+  },
+  // Customer remount data loss. The remount re-points a handful of tables and
+  // then deletes the old customers row; anything it forgets is either blocked by
+  // a restrict FK (silent failure, duplicate row, request still answers 200) or
+  // cascaded away (memberships and birthday perks destroyed by re-entering a
+  // phone number at POS).
+  {
+    file: 'server/provisionCustomer.mjs',
+    name: 'the customer remount forgets the loyalty ledger',
+    from: "  'loyalty_ledger',\n",
+    to: '',
+  },
+  {
+    file: 'server/provisionCustomer.mjs',
+    name: 'the customer remount forgets memberships',
+    from: "  'customer_memberships',\n",
+    to: '',
+  },
+  {
+    file: 'server/provisionCustomer.mjs',
+    name: 'the old-row delete goes unchecked again',
+    from: "    const { error: deleteError } = await admin.from('customers').delete().eq('id', fromId)\n",
+    to: "    await admin.from('customers').delete().eq('id', fromId)\n",
+  },
+  {
+    file: 'scripts/probe-remount-blast-radius.mjs',
+    name: 'the blast-radius probe passes a fabricated result into readOrFail',
+    from: 'const rows = readOrFail(`${table} read`, res) || []',
+    to: 'const rows = readOrFail(`${table} read`, { data: null, error: res.error }) || []',
   },
   {
     file: 'scripts/check-sheet-ui.mjs',

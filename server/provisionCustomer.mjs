@@ -350,7 +350,40 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
   }
 }
 
-/** Move CRM + FK rows onto Auth uid when invite/create could not pin CRM id. */
+/**
+ * Every table whose `customer_id` references `customers(id)` and therefore has
+ * to be re-pointed before the old row can go away.
+ *
+ * `set null` tables are included deliberately: leaving them to cascade would
+ * quietly unlink a customer's notes, reviews and finance quotes from the person
+ * they belong to, which is the history this remount exists to preserve.
+ *
+ * Kept in sync with the migrations by tests/customerRemountIntegrity.test.js,
+ * which derives the list from the SQL and fails when a new customer FK appears
+ * here. Do not add a table without adding it there too.
+ */
+export const CUSTOMER_REFERENCING_TABLES = new Set([
+  'bookings',
+  'vehicles',
+  'sales',
+  'loyalty_ledger',
+  'customer_memberships',
+  'customer_birthday_perks',
+  'service_reviews',
+  'customer_notes',
+  'finance_quotes',
+  'vehicle_maintenance_schedules',
+])
+
+/**
+ * Move CRM + FK rows onto the Auth uid when invite/create could not pin the CRM id.
+ *
+ * The old row is deleted LAST and only if every move landed. Deleting earlier
+ * would cascade memberships and birthday perks away and would fail outright on
+ * the `loyalty_ledger` restrict FK — and because PostgREST returns `{ error }`
+ * rather than throwing, an unchecked delete used to leave a second orphaned
+ * `customers` row behind while the request still answered 200.
+ */
 async function remountCustomerOntoAuthUid(admin, { fromId, toId, first, last, fullName, phone, email }) {
   const { data: old } = await admin.from('customers').select('*').eq('id', fromId).maybeSingle()
   const { error: upsertError } = await admin.from('customers').upsert(
@@ -370,14 +403,36 @@ async function remountCustomerOntoAuthUid(admin, { fromId, toId, first, last, fu
   )
   if (upsertError) throw Object.assign(new Error(upsertError.message), { status: 400 })
 
-  await Promise.all([
-    admin.from('bookings').update({ customer_id: toId }).eq('customer_id', fromId),
-    admin.from('vehicles').update({ customer_id: toId }).eq('customer_id', fromId),
-    admin.from('sales').update({ customer_id: toId }).eq('customer_id', fromId),
-  ])
+  // Re-point every referencing row before touching the old row. A failure here
+  // must abort: deleting anyway is what destroys loyalty and membership history.
+  const failed = []
+  await Promise.all(
+    [...CUSTOMER_REFERENCING_TABLES].map(async (table) => {
+      const { error } = await admin
+        .from(table)
+        .update({ customer_id: toId })
+        .eq('customer_id', fromId)
+      if (error) failed.push(`${table}: ${error.message}`)
+    }),
+  )
+  if (failed.length) {
+    throw Object.assign(
+      new Error(`Could not move this customer's history onto the new account (${failed.join('; ')}). The old record was left in place.`),
+      { status: 409 },
+    )
+  }
 
   if (fromId !== toId) {
-    await admin.from('customers').delete().eq('id', fromId)
+    const { error: deleteError } = await admin.from('customers').delete().eq('id', fromId)
+    if (deleteError) {
+      // The old row still exists, so this customer now has two records. Say so
+      // instead of reporting a clean link — the next lookup would pick one at
+      // random and show the wrong history.
+      throw Object.assign(
+        new Error(`Linked, but the previous customer record could not be merged (${deleteError.message}). Do not re-enter this customer until it is reconciled.`),
+        { status: 409 },
+      )
+    }
   }
 }
 
