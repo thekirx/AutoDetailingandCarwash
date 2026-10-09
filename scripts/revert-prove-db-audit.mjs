@@ -32,6 +32,7 @@ const SUITES = [
   'tests/dailySheetApprovalLadder.test.js',
   'tests/probeReadIntegrity.test.js',
   'tests/dailySheetIsManualTask.test.js',
+  'tests/sheetPostedExpenseProtection.test.js',
 ]
 
 function runSuite() {
@@ -517,6 +518,44 @@ const ALL_MUTATIONS = [
     name: 'a Branch Admin loses the right to file a daily sheet',
     from: /if \(role === 'BossMich' \|\| role === 'admin'\) return true/,
     to: "if (role === 'BossMich') return true",
+  },
+  // Money posted by an approved Daily Sheet must not be deletable behind the
+  // sheet's back, and the Books route must not be the only control on it.
+  {
+    file: 'src/pages/finance/FinancePurchasesTab.jsx',
+    name: 'Finance deletes a bill an approved sheet depends on',
+    from: / {4}if \(row\.daily_sheet_line_id\) \{[\s\S]{0,300}?\n {4}\}\n/,
+    to: '',
+  },
+  {
+    file: 'src/pages/finance/FinancePurchasesTab.jsx',
+    name: 'the expense delete stops being scoped to non-sheet rows',
+    from: /\.is\('daily_sheet_line_id', null\)/,
+    to: '',
+  },
+  {
+    file: 'src/pages/finance/FinancePurchasesTab.jsx',
+    name: 'deleting money stops leaving an audit row',
+    from: /await writeAudit\(\{[\s\S]{0,320}?\}\)\n/,
+    to: '',
+  },
+  {
+    file: 'supabase/migrations/20261010120000_protect_daily_sheet_posted_expenses.sql',
+    name: 'the DELETE policy stops excluding sheet-posted expenses',
+    from: /using \(\r?\n {2}daily_sheet_line_id is null\r?\n {2}and \(\r?\n {4}public\.is_super_admin\(\)/,
+    to: 'using (\r\n  (\r\n    public.is_super_admin()',
+  },
+  {
+    file: 'supabase/migrations/20261010120000_protect_daily_sheet_posted_expenses.sql',
+    name: 'the UPDATE policy stops excluding sheet-posted expenses',
+    from: /using \(\r?\n {2}daily_sheet_line_id is null\r?\n {2}and \(\r?\n {4}public\.is_super_admin\(\)/,
+    to: 'using (\r\n  (\r\n    public.is_super_admin()',
+  },
+  {
+    file: 'supabase/migrations/20261010120000_protect_daily_sheet_posted_expenses.sql',
+    name: 'Branch Admin gets expense DELETE back',
+    from: /create policy "expenses_delete"\r?\non public\.expenses[\s\S]{0,400}?;/,
+    to: 'create policy "expenses_delete"\r\non public.expenses\r\nfor delete\r\nto authenticated\r\nusing (\r\n  public.is_admin()\r\n  or public.is_super_admin()\r\n);',
   },
   {
     file: 'scripts/check-sheet-ui.mjs',

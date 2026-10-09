@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { formatMoney } from '@/queue/queueApi'
 import { downloadCsv, formatFinanceWindow } from '@/lib/financeData'
+import { writeAudit } from '@/lib/audit'
 import {
   FinanceEmpty,
   FinanceMetricCell,
@@ -132,10 +133,34 @@ export default function FinancePurchasesTab({
 
   async function remove(row) {
     if (!canWrite) return
+    // An expense with a daily_sheet_line_id is one an approved Daily Sheet is
+    // computed from. Deleting it leaves the sheet reading "approved" with
+    // figures that no longer exist in the books. The sanctioned way back is
+    // Super Admin reopening the sheet, which voids and re-approves properly.
+    if (row.daily_sheet_line_id) {
+      toast.error('This bill was posted by an approved daily sheet. Reopen that sheet to change it.')
+      return
+    }
     if (!window.confirm(`Delete "${row.title}"? This cannot be undone.`)) return
-    const { error } = await supabase.from('expenses').delete().eq('id', row.id)
+    // Scoped in the query as well as the guard above: a JS-only check is not a
+    // control, because a direct PostgREST call skips this component entirely.
+    const { data, error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('id', row.id)
+      .is('daily_sheet_line_id', null)
+      .select('id')
     if (error) toast.error(error.message)
-    else {
+    else if (!data || data.length === 0) {
+      toast.error('This bill was posted by an approved daily sheet. Reopen that sheet to change it.')
+    } else {
+      await writeAudit({
+        action: 'finance.expense.delete',
+        entityType: 'expense',
+        entityId: row.id,
+        summary: `Deleted expense "${row.title}"`,
+        meta: { amount_minor: row.amount_minor ?? null, branch: row.branch ?? null },
+      })
       toast.success('Expense deleted')
       onReload?.()
     }
