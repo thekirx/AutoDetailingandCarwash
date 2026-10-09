@@ -11,6 +11,8 @@ import {
   resolvePosShellTab,
   summarizePendingHandoffs,
   summarizeTodayPos,
+  waitMinutes,
+  formatWaitMinutes,
 } from '../src/lib/posInsights.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -23,6 +25,18 @@ describe('posInsights', () => {
     ])
     assert.equal(summary.count, 2)
     assert.equal(summary.totalMinor, 75000)
+  })
+
+  it('labels how long a car has waited to pay', () => {
+    const now = Date.parse('2026-10-09T10:00:00Z')
+    assert.equal(waitMinutes('2026-10-09T09:47:30Z', now), 12)
+    assert.equal(waitMinutes('2026-10-09T10:05:00Z', now), 0)
+    assert.equal(waitMinutes(null, now), null)
+    assert.equal(waitMinutes('not a date', now), null)
+    assert.deepEqual(
+      [0, 12, 60, 65, 1440, 14646, null].map(formatWaitMinutes),
+      ['Just now', '12 min', '1 h', '1 h 5 min', '1 day', '10 days', ''],
+    )
   })
 
   it('summarizes today POS stats', () => {
@@ -75,6 +89,34 @@ describe('POS redesign seams', () => {
     assert.match(pos, /OpsPageShell/)
     assert.match(pos, /hakum-pos/)
     assert.match(pos, /canWritePosSettings/)
+  })
+
+  it('Sell tab puts Waiting to pay and the catalogue first, Sales today below them', () => {
+    const pos = readFileSync(join(root, 'src/pages/PosPage.jsx'), 'utf8')
+    const count = (needle) => pos.split(needle).length - 1
+
+    // The first version of this test compared three `indexOf` positions and
+    // nothing else. Revert-proving it showed that was a fake guard: wrapping
+    // the stats board in `{false && ...}` removes "Sales today" from the Sell
+    // tab entirely — a user-visible regression — while every test stayed green,
+    // because the JSX text never moved. String position is not rendering.
+    //
+    // So: each panel must appear exactly once (a second occurrence elsewhere in
+    // the file means it has moved to another tab), and the stats board must not
+    // sit behind a condition.
+    assert.equal(count('<PosOpenTickets'), 1, 'Waiting to pay must render in exactly one place')
+    assert.equal(count('<PosStatsBoard'), 1, 'Sales today must render in exactly one place')
+
+    const tickets = pos.indexOf('<PosOpenTickets')
+    const order = pos.indexOf('aria-label="Current order"')
+    const stats = pos.indexOf('<PosStatsBoard')
+    assert.ok(tickets > 0 && order > tickets && stats > order, 'tickets, then catalogue, then stats')
+
+    const statsLine = pos.split(/\r?\n/).find((l) => l.includes('<PosStatsBoard')) || ''
+    assert.ok(
+      !/&&|\?/.test(statsLine),
+      `Sales today must render unconditionally in the Sell tab, found: ${statsLine.trim()}`,
+    )
   })
 
   it('PosSettingsPage delegates to shared panel', () => {

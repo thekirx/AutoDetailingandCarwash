@@ -26,6 +26,7 @@ const SUITES = [
   'tests/bookings401Probe.test.js',
   'tests/strandedHandoffsProbe.test.js',
   'tests/voidPosTestHandoffs.test.js',
+  'tests/posInsights.test.js',
 ]
 
 function runSuite() {
@@ -381,6 +382,15 @@ const ALL_MUTATIONS = [
     name: 'the void leaves no audit trail',
     from: 'insert into public.queue_events (booking_id, branch, old_status, new_status, notes)',
     to: '-- insert into public.queue_events',
+  },
+  // The Sell-tab layout guard. This mutation is here because the test it
+  // protects shipped broken: comparing three indexOf positions passed while the
+  // Sell tab had stopped rendering "Sales today" at all.
+  {
+    file: 'src/pages/PosPage.jsx',
+    name: 'the Sell tab silently stops rendering Sales today',
+    from: '<PosStatsBoard stats={todaySummary} compact />',
+    to: '{false && <PosStatsBoard stats={todaySummary} compact />}',
   },
   {
     file: 'scripts/check-sheet-ui.mjs',
