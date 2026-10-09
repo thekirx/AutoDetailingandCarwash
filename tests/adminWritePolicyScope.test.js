@@ -162,6 +162,36 @@ describe('no policy leaves Branch Admin able to destroy customer or money data',
     }
   })
 
+  it('Branch Admin cannot address a notification to anyone else', () => {
+    const offenders = POLICIES.filter(
+      (p) => p.table === 'public.user_notifications' && p.cmd === 'insert' && /is_admin\(\)/.test(p.text),
+    )
+    assert.deepEqual(
+      offenders.map((p) => `${p.name} from ${p.file}`),
+      [],
+      'with check (is_admin()) puts no constraint on user_id, so a BA can notify the owner',
+    )
+  })
+
+  it('the notification insert policy lets only Super Admin address someone else', () => {
+    const p = POLICIES.find((x) => x.table === 'public.user_notifications' && x.cmd === 'insert')
+    assert.ok(p, 'no insert policy on user_notifications at all')
+    assert.match(p.text, /is_super_admin\(\)/)
+    assert.match(p.text, /user_id\s*=\s*\(\s*select\s+auth\.uid\(\)\s*\)/)
+  })
+
+  it('the app_settings split stays deliberate — attendance_roles is Super Admin only', () => {
+    for (const cmd of ['insert', 'update', 'delete']) {
+      const p = POLICIES.find((x) => x.table === 'public.app_settings' && x.cmd === cmd)
+      assert.ok(p, `no ${cmd} policy on app_settings`)
+      assert.match(
+        p.text,
+        /key\s*=\s*'attendance_roles'\s+and\s+public\.is_super_admin\(\)/,
+        `app_settings ${cmd} must keep attendance_roles Super Admin only`,
+      )
+    }
+  })
+
   it('Branch Admin keeps the access its job needs', () => {
     // Removing DELETE must not break the queue and POS, which create and update
     // customers all day. The grant is a role array, not is_admin(), so assert on

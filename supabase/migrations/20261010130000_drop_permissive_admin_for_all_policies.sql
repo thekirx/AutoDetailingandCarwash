@@ -107,11 +107,34 @@ drop policy if exists "Admins manage expenses" on public.expenses;
 -- place; 20261010120000 already restricts UPDATE and DELETE to Super Admin and
 -- an ASA with finance_write, and excludes daily_sheet_line_id rows.
 
+-- --------------------------------------------------- user_notifications insert
+-- "Admins insert notifications" is `with check (public.is_admin())` with nothing
+-- constraining user_id, so a Branch Admin can insert a notification addressed to
+-- ANY user — including the owner. The app's own fan-out goes through
+-- security-definer RPCs and is unaffected by this policy; only a direct
+-- PostgREST insert is narrowed. Only Super Admin may address someone else.
+drop policy if exists "Admins insert notifications" on public.user_notifications;
+
+create policy "user_notifications_insert"
+on public.user_notifications
+for insert
+to authenticated
+with check (
+  public.is_super_admin()
+  or user_id = (select auth.uid())
+);
+
 commit;
 
 -- After this, and with 20261010120000 applied, a Branch Admin may:
---   customers    SELECT / INSERT / UPDATE     NOT DELETE
---   transactions SELECT                      NOT INSERT / UPDATE / DELETE
---   expenses     SELECT / INSERT             NOT UPDATE / DELETE
+--   customers       SELECT / INSERT / UPDATE        NOT DELETE
+--   transactions    SELECT                         NOT INSERT / UPDATE / DELETE
+--   expenses        SELECT / INSERT                 NOT UPDATE / DELETE
+--   user_notifications INSERT, addressed to self    NOT to anyone else
+--
+-- NOT changed, because these are scoped deliberately rather than left over:
+--   app_settings    INSERT / UPDATE / DELETE, except the `attendance_roles` key
+--                   which is Super Admin only. That split was written on purpose.
+--
 -- Any behaviour change on the POS hand-off flow means a read policy was missing,
 -- not that these grants should come back — add the SELECT, not the FOR ALL.
