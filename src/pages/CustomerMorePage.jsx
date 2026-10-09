@@ -4,22 +4,24 @@ import {
   Bell,
   Cake,
   CalendarDays,
-  CalendarPlus,
   Camera,
   Car,
+  ChevronRight,
   Gift,
   KeyRound,
   LifeBuoy,
   LogOut,
   Mail,
   MessageSquare,
-  Pencil,
+  Moon,
+  Newspaper,
   Phone,
   Plus,
-  Trash2,
   UserRound,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
+import { useCustomerAppTheme } from '@/lib/customerAppTheme'
+import Sheet, { SheetActions } from '@/components/customer/Sheet'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
@@ -60,6 +62,7 @@ export default function CustomerMorePage() {
   const { user, profile: authProfile, signOut } = useAuth()
   const [portal, setPortal] = useState(null)
   const [smsOptIn, setSmsOptIn] = useState(null)
+  const [signingOut, setSigningOut] = useState(false)
 
   const meta = TAB_TITLES[tab]
   usePageMeta({ title: meta ? meta[0] : 'Settings', description: 'Manage your Hakum account.', path: CUSTOMER_MORE_PATH })
@@ -80,7 +83,24 @@ export default function CustomerMorePage() {
 
   if (tab && meta) {
     return (
-      <CustomerAppFrame title={meta[0]} subtitle={meta[1]} backTo={CUSTOMER_MORE_PATH}>
+      <CustomerAppFrame
+        title={meta[0]}
+        subtitle={meta[1]}
+        backTo={CUSTOMER_MORE_PATH}
+        backLabel="Me"
+        actions={
+          tab === 'garage' ? (
+            <button
+              type="button"
+              className="capp-icon-btn"
+              aria-label="Add a car"
+              onClick={() => setParams({ tab: 'garage', add: '1' }, { replace: true })}
+            >
+              <Plus size={20} strokeWidth={2} aria-hidden />
+            </button>
+          ) : null
+        }
+      >
         {tab === 'account' ? <AccountSection profile={profile} onUpdated={load} /> : null}
         {tab === 'garage' ? (
           <GarageSection
@@ -99,8 +119,8 @@ export default function CustomerMorePage() {
 
   return (
     <CustomerAppFrame
-      title="Settings"
-      backTo="/account"
+      title="Me"
+      navTitle={fullName || 'Me'}
       actions={<NotificationBell variant="capp" homeUrl={`${CUSTOMER_MORE_PATH}?tab=alerts`} homeLabel="Notifications" />}
       cols
     >
@@ -118,30 +138,124 @@ export default function CustomerMorePage() {
         </span>
       </Link>
 
-      <div className="capp-group">
-        <Row icon={UserRound} title="My profile" chevron to={`${CUSTOMER_MORE_PATH}?tab=account`} />
-        <Row icon={Car} title="My cars" end={vehicles.length ? `${vehicles.length}` : ''} chevron to={`${CUSTOMER_MORE_PATH}?tab=garage`} />
-        <Row icon={Bell} title="Notifications" chevron to={`${CUSTOMER_MORE_PATH}?tab=alerts`} />
-        <Row icon={MessageSquare} title="SMS alerts" end={smsOptIn == null ? '' : smsOptIn ? 'On' : 'Off'} chevron to={`${CUSTOMER_MORE_PATH}?tab=alerts`} />
-      </div>
+      <section className="capp-section" aria-label="Garage">
+        <SectionHead title="Garage" />
+        <div className="capp-group">
+          <Row icon={Car} title="My cars" end={vehicles.length ? `${vehicles.length}` : ''} chevron to={`${CUSTOMER_MORE_PATH}?tab=garage`} />
+        </div>
+      </section>
 
-      <div className="capp-group">
-        <Row icon={Gift} title="Loyalty program" chevron to={CUSTOMER_LOYALTY_PATH} />
-        <Row icon={CalendarDays} title="Events" chevron to="/account/events" />
-        <Row icon={LifeBuoy} title="Help and support" chevron to="/contact" />
-      </div>
+      <section className="capp-section" aria-label="Account">
+        <SectionHead title="Account" />
+        <div className="capp-group">
+          <Row icon={UserRound} title="My profile" chevron to={`${CUSTOMER_MORE_PATH}?tab=account`} />
+          <Row icon={Bell} title="Notifications" sub="Push alerts and your inbox" chevron to={`${CUSTOMER_MORE_PATH}?tab=alerts`} />
+          <SmsRow smsOptIn={smsOptIn} setSmsOptIn={setSmsOptIn} />
+          <AppearanceRow />
+        </div>
+      </section>
+
+      <section className="capp-section" aria-label="More">
+        <SectionHead title="More" />
+        <div className="capp-group">
+          <Row icon={Gift} title="Rewards" chevron to={CUSTOMER_LOYALTY_PATH} />
+          <Row icon={CalendarDays} title="Events" chevron to="/account/events" />
+          <Row icon={Newspaper} title="Blog" chevron to="/account/blog" />
+          <Row icon={LifeBuoy} title="Help and support" chevron to="/contact" />
+        </div>
+      </section>
 
       <div className="capp-group capp-span">
-        <Row
-          icon={LogOut}
-          title={<span className="capp-link--danger">Sign out</span>}
-          onClick={async () => {
-            await signOut()
-            navigate('/signin', { replace: true })
-          }}
-        />
+        <Row icon={LogOut} className="capp-row-danger" title={<span className="capp-link--danger">Sign out</span>} onClick={() => setSigningOut(true)} />
       </div>
+
+      <Sheet open={signingOut} onClose={() => setSigningOut(false)} label="Sign out">
+        <SheetActions
+          heading="Sign out of Hakum?"
+          sub="You'll need your phone number and PIN to sign back in."
+          onCancel={() => setSigningOut(false)}
+          actions={[
+            {
+              label: 'Sign out',
+              danger: true,
+              onClick: async () => {
+                setSigningOut(false)
+                await signOut()
+                navigate('/signin', { replace: true })
+              },
+            },
+          ]}
+        />
+      </Sheet>
     </CustomerAppFrame>
+  )
+}
+
+/** Text-message alerts, switched in the row itself (same user_metadata flag as the Notifications screen). */
+function SmsRow({ smsOptIn, setSmsOptIn }) {
+  const [busy, setBusy] = useState(false)
+  async function toggle() {
+    const next = !smsOptIn
+    setBusy(true)
+    try {
+      await saveSmsOptIn(next)
+      setSmsOptIn(next)
+      toast.success(next ? 'SMS alerts on' : 'SMS alerts off')
+    } catch (err) {
+      toast.error(err.message || 'Could not save SMS preference')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="capp-row is-static">
+      <span className="capp-row-icon" aria-hidden>
+        <MessageSquare size={18} strokeWidth={1.75} />
+      </span>
+      <span className="capp-row-body">
+        <strong>Text messages</strong>
+        <em>Reminders and status updates</em>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={Boolean(smsOptIn)}
+        aria-label="SMS alerts"
+        disabled={busy || smsOptIn == null}
+        className={`capp-switch${smsOptIn ? ' is-on' : ''}`}
+        onClick={toggle}
+      >
+        <span />
+      </button>
+    </div>
+  )
+}
+
+/** Light or dark for the app on this device. Dark is the website's navy and the default. */
+function AppearanceRow() {
+  const [appTheme, setAppTheme] = useCustomerAppTheme()
+  const { setTheme } = useTheme()
+  function pick(next) {
+    setAppTheme(next)
+    // Keep the site-wide class in step so the sign-in screens and website match the choice.
+    setTheme(next)
+  }
+  return (
+    <div className="capp-row is-static">
+      <span className="capp-row-icon" aria-hidden>
+        <Moon size={18} strokeWidth={1.75} />
+      </span>
+      <span className="capp-row-body">
+        <strong>Appearance</strong>
+      </span>
+      <span className="capp-mini-seg" role="radiogroup" aria-label="Appearance">
+        {['light', 'dark'].map((t) => (
+          <button key={t} type="button" role="radio" aria-checked={appTheme === t} onClick={() => pick(t)}>
+            {t === 'light' ? 'Light' : 'Dark'}
+          </button>
+        ))}
+      </span>
+    </div>
   )
 }
 
@@ -272,7 +386,10 @@ function AccountSection({ profile, onUpdated }) {
 }
 
 function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, startAdding = false }) {
+  const navigate = useNavigate()
   const [adding, setAdding] = useState(startAdding)
+  const [picked, setPicked] = useState(null)
+  const [confirming, setConfirming] = useState(false)
   const editing = vehicles.find((v) => v.id === editId) || null
   const showForm = adding || Boolean(editing)
 
@@ -280,11 +397,16 @@ function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, startAddin
     if (startAdding) setAdding(true)
   }, [startAdding])
 
+  function closeSheet() {
+    setPicked(null)
+    setConfirming(false)
+  }
+
   async function remove(v) {
-    if (!window.confirm(`Remove ${v.plate_number} from your garage?`)) return
+    closeSheet()
     try {
       await portalAction('archive-vehicle', { vehicle_id: v.id })
-      toast.success('Car removed')
+      toast.success(`${v.plate_number} removed`)
       onUpdated?.()
     } catch (err) {
       toast.error(err.message)
@@ -295,38 +417,23 @@ function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, startAddin
 
   return (
     <>
-      {vehicles.length ? (
-        <div className="capp-list">
+      {vehicles.length && !showForm ? (
+        <div className="capp-group capp-garage">
           {vehicles.map((v) => (
-            <article key={v.id} className={`capp-card${editing?.id === v.id ? ' is-active' : ''}`}>
-              <div className="capp-card-row">
-                {v.photo_url ? (
-                  <img className="capp-thumb" src={v.photo_url} alt="" />
-                ) : (
-                  <span className="capp-row-icon" aria-hidden>
-                    {v.icon ? vehicleIconGlyph(v.icon) : <Car size={18} strokeWidth={1.75} />}
-                  </span>
-                )}
-                <div className="capp-row-body">
-                  <strong className="capp-plate">{v.plate_number}</strong>
-                  <p className="capp-meta">{[v.vehicle_make, v.vehicle_model, v.color].filter(Boolean).join(' · ') || 'Saved vehicle'}</p>
-                </div>
-              </div>
-              <div className="capp-actions" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-                <Link className="capp-btn capp-btn-fill" to={`${CUSTOMER_BOOK_PATH}?vehicle=${v.id}`}>
-                  <CalendarPlus size={15} strokeWidth={1.75} aria-hidden />
-                  Book
-                </Link>
-                <button type="button" className="capp-btn capp-btn-ghost" onClick={() => onEdit(v.id)}>
-                  <Pencil size={15} strokeWidth={1.75} aria-hidden />
-                  Edit
-                </button>
-                <button type="button" className="capp-btn capp-btn-ghost" onClick={() => remove(v)}>
-                  <Trash2 size={15} strokeWidth={1.75} aria-hidden />
-                  Remove
-                </button>
-              </div>
-            </article>
+            <button key={v.id} type="button" className="capp-row" onClick={() => setPicked(v)}>
+              {v.photo_url ? (
+                <img className="capp-thumb" src={v.photo_url} alt="" />
+              ) : (
+                <span className="capp-row-icon" aria-hidden>
+                  {v.icon ? vehicleIconGlyph(v.icon) : <Car size={18} strokeWidth={1.75} />}
+                </span>
+              )}
+              <span className="capp-row-body">
+                <strong className="capp-plate">{v.plate_number}</strong>
+                <em>{[v.vehicle_make, v.vehicle_model, v.color].filter(Boolean).join(' · ') || 'Saved vehicle'}</em>
+              </span>
+              <ChevronRight className="capp-row-chevron" size={18} strokeWidth={1.75} aria-hidden />
+            </button>
           ))}
         </div>
       ) : !showForm ? (
@@ -356,6 +463,42 @@ function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, startAddin
           Add a car
         </button>
       )}
+
+      <Sheet open={Boolean(picked)} onClose={closeSheet} label={picked ? `${picked.plate_number} actions` : 'Car actions'}>
+        {picked ? (
+          confirming ? (
+            <SheetActions
+              heading={`Remove ${picked.plate_number}?`}
+              sub="It leaves your garage. Past visits stay in your history."
+              onCancel={closeSheet}
+              actions={[{ label: 'Remove from garage', danger: true, onClick: () => remove(picked) }]}
+            />
+          ) : (
+            <SheetActions
+              heading={<span className="capp-plate">{picked.plate_number}</span>}
+              sub={[picked.vehicle_make, picked.vehicle_model, picked.color].filter(Boolean).join(' · ')}
+              onCancel={closeSheet}
+              actions={[
+                {
+                  label: 'Book this car',
+                  onClick: () => {
+                    closeSheet()
+                    navigate(`${CUSTOMER_BOOK_PATH}?vehicle=${picked.id}`)
+                  },
+                },
+                {
+                  label: 'Edit details',
+                  onClick: () => {
+                    closeSheet()
+                    onEdit(picked.id)
+                  },
+                },
+                { label: 'Remove', danger: true, onClick: () => setConfirming(true) },
+              ]}
+            />
+          )
+        ) : null}
+      </Sheet>
     </>
   )
 }
@@ -518,10 +661,8 @@ function CarForm({ vehicle, onDone, onCancel }) {
 }
 
 function AlertsSection({ phone, smsOptIn, setSmsOptIn }) {
-  const { theme, setTheme, resolvedTheme } = useTheme()
   const { rows, markRead } = useUserNotifications()
   const [smsBusy, setSmsBusy] = useState(false)
-  const dark = resolvedTheme === 'dark' || theme === 'dark'
 
   async function toggleSms(next) {
     setSmsBusy(true)
@@ -590,18 +731,6 @@ function AlertsSection({ phone, smsOptIn, setSmsOptIn }) {
         <button type="button" className="capp-btn capp-btn-ghost" disabled={smsBusy || !smsOptIn} onClick={sendTestSms}>
           {smsBusy ? 'Sending…' : 'Send test text'}
         </button>
-      </section>
-
-      <section className="capp-card" aria-label="Appearance">
-        <SectionHead title="Appearance" note="app and website" />
-        <div className="capp-two">
-          <button type="button" className={`capp-btn ${!dark ? 'capp-btn-fill' : 'capp-btn-ghost'}`} onClick={() => setTheme('light')}>
-            Light
-          </button>
-          <button type="button" className={`capp-btn ${dark ? 'capp-btn-fill' : 'capp-btn-ghost'}`} onClick={() => setTheme('dark')}>
-            Dark
-          </button>
-        </div>
       </section>
 
       <section className="capp-section" aria-label="Recent alerts">

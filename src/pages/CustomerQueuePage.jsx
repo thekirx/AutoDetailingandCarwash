@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Car, MapPin } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Car, Droplets, MapPin } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import { Badge, QueueStats, Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
 import VisitProgress from '@/components/customer/VisitProgress'
@@ -10,6 +10,7 @@ import { branchDistanceKm } from '@/lib/branchGeo'
 import { fetchPortal } from '@/lib/customerPortalClient'
 import { formatDistanceKm, loadCustomerPin, resolveCustomerQueueBranch } from '@/lib/customerLocation'
 import { CUSTOMER_QUEUE_PATH, queueCountsFromRow } from '@/lib/liveQueuePath'
+import { customerVisitPath } from '@/lib/customerAccountNav'
 import { usePageMeta } from '@/lib/pageMeta'
 import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
 
@@ -68,16 +69,40 @@ export default function CustomerQueuePage() {
     setParams({ branch: slug }, { replace: true })
   }
 
+  /* Two or three branches fit a segmented switch; more fall back to the list below it. */
+  const segmented = branches.length > 1 && branches.length <= 3
+
   return (
-    <CustomerAppFrame title="Live queue" subtitle="Real-time view of the current queue." backTo="/account" cols>
-      <div className="capp-row is-static capp-branch-card capp-span">
+    <CustomerAppFrame
+      title="Live queue"
+      subtitle="Cars on the floor right now."
+      onRefresh={reload}
+      cols
+    >
+      {segmented ? (
+        <div className="capp-seg capp-span" role="tablist" aria-label="Branch" style={{ '--n': branches.length, '--i': Math.max(0, branches.findIndex((b) => b.slug === selectedSlug)) }}>
+          <span className="capp-seg-thumb" aria-hidden />
+          {branches.map((b) => (
+            <button
+              key={b.slug}
+              type="button"
+              role="tab"
+              aria-selected={b.slug === selectedSlug}
+              onClick={() => selectBranch(b.slug)}
+            >
+              {branchShortName(b.name)}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div className={`capp-row is-static capp-branch-card capp-span${segmented ? ' is-segmented' : ''}`}>
         <span className="capp-row-icon" aria-hidden>
           <MapPin size={18} strokeWidth={1.75} />
         </span>
         <div className="capp-row-body">
           <strong>{selectedBranch ? branchShortName(selectedBranch.name) : 'Branch'}</strong>
           <em>{selectedBranch?.address || 'Pick a branch to plan your arrival.'}</em>
-          {branchesLoading && !branches.length ? null : (
+          {(branchesLoading && !branches.length) || segmented ? null : (
             <select className="capp-select mt-2" aria-label="Branch" value={selectedSlug} onChange={(e) => selectBranch(e.target.value)}>
               {branches.map((b) => {
                 const km = pin ? branchDistanceKm(pin, b) : null
@@ -128,7 +153,7 @@ export default function CustomerQueuePage() {
         ) : carsHere.length ? (
           <div className="capp-list">
             {carsHere.map((b) => (
-              <article key={b.id} className="capp-card capp-queue-car">
+              <Link key={b.id} className="capp-card capp-queue-car" to={customerVisitPath(b.id)}>
                 <div className="capp-card-row">
                   <div className="min-w-0">
                     <p className="capp-eyebrow">{b.queue_label || 'Ticket'}</p>
@@ -140,7 +165,7 @@ export default function CustomerQueuePage() {
                   <Badge status={b.status} label={b.visit?.label || b.status} />
                 </div>
                 <VisitProgress visit={b.visit} />
-              </article>
+              </Link>
             ))}
           </div>
         ) : (
@@ -151,6 +176,16 @@ export default function CustomerQueuePage() {
           </div>
         )}
       </section>
+
+      <div className="capp-walkin capp-span">
+        <span className="capp-row-icon" aria-hidden>
+          <Droplets size={18} strokeWidth={1.75} />
+        </span>
+        <span>
+          <strong>Walk-in wash &amp; detailing</strong>
+          No booking needed. Drive in and we&apos;ll add you to the queue.
+        </span>
+      </div>
 
       <section className="capp-section capp-span" aria-label="Other branches">
         <SectionHead title="Other branches" />

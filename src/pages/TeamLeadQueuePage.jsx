@@ -170,10 +170,17 @@ function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage, isFif
           </div>
 
           <div className="qmgr-meta-block">
-            <p className="qmgr-meta-label">Notes</p>
-            <p className={`qmgr-notes ${ticket.notes ? '' : 'text-muted-foreground'}`}>
-              {ticket.notes || 'No notes'}
-            </p>
+            <p className="qmgr-meta-label">Service notes</p>
+            <div className="grid gap-3">
+              {(ticket.service_notes || [ticket]).map((line) => (
+                <div key={line.booking_id}>
+                  <p className="mb-1 text-sm font-semibold text-foreground">{line.service_name || 'Service'}</p>
+                  <p className={`qmgr-notes ${line.notes?.trim() ? '' : 'text-muted-foreground'}`}>
+                    {line.notes?.trim() ? line.notes : 'No notes'}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="qmgr-meta-block">

@@ -8,7 +8,31 @@ export async function fetchPortal() {
   const body = await res.json().catch(() => ({}))
   if (res.status === 401) throw new Error('Session expired. Sign in again.')
   if (!res.ok) throw new Error(body.error || 'Unable to load account.')
+  rememberActiveVisit(body)
   return body
+}
+
+const ACTIVE_KEY = 'hakum-active-visit'
+export const ACTIVE_VISIT_EVENT = 'hakum:active-visit'
+
+/** The dock shows a live dot on Queue while a car is on the floor; every portal load refreshes it. */
+function rememberActiveVisit(body) {
+  if (typeof window === 'undefined') return
+  const active = Array.isArray(body?.bookings) && body.bookings.length > 0
+  try {
+    window.sessionStorage.setItem(ACTIVE_KEY, active ? '1' : '0')
+  } catch {
+    /* storage blocked: the dot just stays off */
+  }
+  window.dispatchEvent(new Event(ACTIVE_VISIT_EVENT))
+}
+
+export function hasActiveVisit() {
+  try {
+    return window.sessionStorage.getItem(ACTIVE_KEY) === '1'
+  } catch {
+    return false
+  }
 }
 
 /** POST /api/customer-portal — add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review */

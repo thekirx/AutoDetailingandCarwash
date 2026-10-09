@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Cake, CalendarDays, CalendarPlus, Car, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
+import { Cake, CalendarDays, CalendarPlus, Car, ChevronRight, Newspaper, Radio, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatMoney } from '@/queue/queueApi'
 import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
 import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
 import { supabase } from '@/lib/supabase'
-import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH } from '@/lib/customerAccountNav'
+import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH, customerVisitPath } from '@/lib/customerAccountNav'
 import CustomerPinControl from '@/components/customer/CustomerPinControl'
 import { branchDistanceKm } from '@/lib/branchGeo'
 import { branchLabel, fetchPortal, greeting, initials, portalAction } from '@/lib/customerPortalClient'
@@ -18,7 +18,7 @@ import NotificationBell from '@/components/NotificationBell'
 import ActiveVisitCard from '@/components/customer/ActiveVisitCard'
 import BranchWeather from '@/components/customer/BranchWeather'
 import StampTrack from '@/components/customer/StampTrack'
-import { Badge, Pills, QueueStats, Row, SectionHead, Skeleton, Tile } from '@/components/customer/CustomerUi'
+import { Badge, Pills, QueueStats, Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
 import {
   Dialog,
   DialogContent,
@@ -86,6 +86,18 @@ const ACTIVITY_TABS = [
   { id: 'history', label: 'Past visits' },
   { id: 'purchases', label: 'Purchases' },
 ]
+
+/** One round shortcut in the phone's quick-action row. */
+function QuickAction({ icon: Icon, title, to }) {
+  return (
+    <Link className="capp-quick-item" to={to}>
+      <span className="capp-quick-icon" aria-hidden>
+        <Icon size={22} strokeWidth={1.75} />
+      </span>
+      {title}
+    </Link>
+  )
+}
 
 export default function CustomerAccountPage() {
   const { profile: authProfile, user, session, loading: authLoading } = useAuth()
@@ -220,6 +232,7 @@ export default function CustomerAccountPage() {
   return (
     <CustomerAppFrame
       cols
+      navTitle="Home"
       className="capp-account-home"
       hero={
         <header className="capp-hero">
@@ -319,17 +332,23 @@ export default function CustomerAccountPage() {
           <Skeleton />
         </div>
       ) : activeVisit ? (
-        <ActiveVisitCard className="capp-phone-only" visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
+        <ActiveVisitCard variant="live" className="capp-phone-only" visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
       ) : (
-        <div className="capp-empty capp-span capp-home-action capp-phone-only">
-          <strong>No active visit</strong>
-          Book a service to track your car on the floor.
-          <div className="capp-empty-actions">
-            <Link className="capp-btn capp-btn-fill" to={CUSTOMER_BOOK_PATH}>
-              <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />
-              Book a service
-            </Link>
+        <div className="capp-live-card is-empty capp-span capp-phone-only">
+          <div className="capp-live-top">
+            <p className="capp-eyebrow">Your car</p>
+            <span className="capp-badge capp-badge--idle">Not on the floor</span>
           </div>
+          <h2 className="capp-live-title">No active visit</h2>
+          <p className="capp-live-sub">Book PPF, ceramic or tint ahead, or drive in for a wash.</p>
+          <Link className="capp-btn capp-btn-light capp-btn-block" to={CUSTOMER_BOOK_PATH}>
+            <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />
+            Book a service
+          </Link>
+          <Link className="capp-live-alt" to={queueHref}>
+            <Radio size={15} strokeWidth={1.9} aria-hidden />
+            Walk in? See the live queue
+          </Link>
         </div>
       )}
 
@@ -355,21 +374,66 @@ export default function CustomerAccountPage() {
         </div>
       ) : null}
 
-      <div className={`capp-tiles capp-span capp-phone-only${!activeVisit ? ' capp-home-quick' : ''}`}>
-        {activeVisit ? <Tile icon={CalendarPlus} title="Book a service" sub="Schedule your visit" to={CUSTOMER_BOOK_PATH} /> : null}
-        {/* Adding a car lives inside My cars; with none saved, the tile opens
-            straight on the add form. */}
-        <Tile
+      {/* Adding a car lives inside My cars; with none saved, the shortcut opens
+          straight on the add form ("Add your first car"). */}
+      <nav className="capp-quick capp-span capp-phone-only" aria-label="Shortcuts">
+        <QuickAction icon={CalendarPlus} title="Book" to={CUSTOMER_BOOK_PATH} />
+        <QuickAction icon={Radio} title="Queue" to={queueHref} />
+        <QuickAction
           icon={Car}
           title="My cars"
-          sub={vehicles.length ? `${vehicles.length} saved` : 'Add your first car'}
           to={vehicles.length ? `${CUSTOMER_MORE_PATH}?tab=garage` : `${CUSTOMER_MORE_PATH}?tab=garage&add=1`}
         />
-        <Tile icon={CalendarDays} title="Events" sub="Meets and promos" to="/account/events" />
-      </div>
+        <QuickAction icon={CalendarDays} title="Events" to="/account/events" />
+      </nav>
+      {!vehicles.length && !loading ? <p className="capp-quick-note capp-span capp-phone-only">Add your first car in My cars and booking is one tap.</p> : null}
 
       {loyalty && loyalty.stampsEnabled !== false ? (
-        <Link className="capp-card capp-loyalty-home capp-span" to={CUSTOMER_LOYALTY_PATH}>
+        <section className="capp-section capp-span capp-phone-only" aria-label="Rewards">
+          <SectionHead title="Rewards" to={CUSTOMER_LOYALTY_PATH} linkLabel="See all" />
+          <Link className="capp-pass-mini" to={CUSTOMER_LOYALTY_PATH}>
+            <span className="capp-pass-mini-n">
+              {loyalty.completed ?? 0}
+              <small> / {loyalty.cardSlots ?? 10} stamps</small>
+            </span>
+            <ChevronRight className="capp-pass-mini-chev" size={20} strokeWidth={2} aria-hidden />
+            <span className="capp-pass-mini-p">
+              {loyalty.nextMilestone
+                ? `${Math.max(0, Number(loyalty.nextMilestone.threshold_points) - Number(loyalty.completed || 0))} more to ${loyalty.nextMilestone.reward_label}`
+                : loyalty.encouragement || 'Thanks for coming back.'}
+            </span>
+            <span className="capp-pass-mini-segs" style={{ '--n': loyalty.cardSlots ?? 10 }} aria-hidden>
+              {Array.from({ length: Number(loyalty.cardSlots) || 10 }, (_, i) => {
+                const gift = (loyalty.milestones || []).some((m) => Number(m.threshold_points) === i + 1)
+                return <i key={i} className={`${i < (loyalty.completed ?? 0) ? 'is-on' : ''}${gift ? ' is-gift' : ''}`} />
+              })}
+            </span>
+          </Link>
+        </section>
+      ) : null}
+
+      <section className="capp-section capp-span capp-phone-only" aria-label="From Hakum">
+        <SectionHead title="From Hakum" />
+        <div className="capp-feed">
+          <Link className="capp-feed-card" to="/account/blog">
+            <span className="capp-feed-icon" aria-hidden>
+              <Newspaper size={20} strokeWidth={1.75} />
+            </span>
+            <strong>Car care articles</strong>
+            <em>Tips from the Hakum team</em>
+          </Link>
+          <Link className="capp-feed-card" to="/account/events">
+            <span className="capp-feed-icon" aria-hidden>
+              <CalendarDays size={20} strokeWidth={1.75} />
+            </span>
+            <strong>Events and promos</strong>
+            <em>Meets, clinics and deals</em>
+          </Link>
+        </div>
+      </section>
+
+      {loyalty && loyalty.stampsEnabled !== false ? (
+        <Link className="capp-card capp-loyalty-home capp-span capp-desk-only" to={CUSTOMER_LOYALTY_PATH}>
           <div className="capp-card-row">
             <div className="min-w-0">
               <p className="capp-eyebrow">Loyalty</p>
@@ -393,7 +457,7 @@ export default function CustomerAccountPage() {
           <span className="capp-loyalty-link">View rewards <span aria-hidden="true">↗</span></span>
         </Link>
       ) : (
-        <Link className="capp-card capp-span" to={CUSTOMER_LOYALTY_PATH}>
+        <Link className="capp-card capp-span capp-desk-only" to={CUSTOMER_LOYALTY_PATH}>
           <p className="capp-eyebrow">Loyalty</p>
           <h2 className="capp-title">Loyalty program</h2>
           <p className="capp-meta">Rewards and perks</p>
@@ -430,7 +494,7 @@ export default function CustomerAccountPage() {
         )}
       </section>
 
-      <section className="capp-section" aria-label="Live queue">
+      <section className="capp-section capp-desk-only" aria-label="Live queue">
         <SectionHead
           title="Live queue"
           note={selectedBranch ? (nearestSlug === selectedBranch ? 'Nearest to you' : branchLabel(branches, selectedBranch)) : 'Choose a branch'}
@@ -563,7 +627,7 @@ export default function CustomerAccountPage() {
               history.slice(0, 8).map((row) => (
                 <Row
                   key={row.id}
-                  as="article"
+                  to={customerVisitPath(row.id)}
                   icon={CalendarDays}
                   title={row.vehicle_plate || 'Visit'}
                   sub={`${formatWhen(row.created_at || row.scheduled_start)} · ${branchLabel(branches, row.branch) || row.branch}`}

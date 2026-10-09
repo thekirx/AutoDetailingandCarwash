@@ -59,8 +59,10 @@ export function buildOpsEventCopy(event, c = {}) {
     case 'inquiry':
       return {
         kind: 'inquiry',
-        title: c.kind === 'complaint' ? 'New customer complaint' : 'New partnership inquiry',
-        body: c.kind === 'complaint'
+        title: c.kind === 'tint_finder' ? 'New tint booking request' : c.kind === 'complaint' ? 'New customer complaint' : 'New partnership inquiry',
+        body: c.kind === 'tint_finder'
+          ? `${c.name || 'Customer'} @ ${c.branch || 'Hakum'} · Review in Settings → Tint Finder`
+          : c.kind === 'complaint'
           ? `${c.name || 'Customer'} · ${c.category || 'complaint'}${c.branch ? ` @ ${c.branch}` : ''}`
           : `${c.name || 'Someone'} · ${c.city || 'site'}`,
         tag: `inquiry-${c.id}`,

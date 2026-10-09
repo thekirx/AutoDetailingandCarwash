@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
+import { useBackOr } from '@/lib/useBackOr'
 import { Skeleton } from '@/components/customer/CustomerUi'
 import { supabase } from '@/lib/supabase'
 
@@ -18,6 +19,7 @@ function formatDate(iso) {
 }
 
 export default function CustomerBlogPage() {
+  const back = useBackOr('/account/more')
   const [posts, setPosts] = useState([])
   const [active, setActive] = useState(null)
   const [error, setError] = useState('')
@@ -49,7 +51,7 @@ export default function CustomerBlogPage() {
   }
 
   return (
-    <CustomerAppFrame title="Blog" subtitle="Tips, stories, and everything automotive." backTo="/account" cols>
+    <CustomerAppFrame title="Blog" subtitle="Tips, stories, and everything automotive." onBack={back} cols>
       {loading && !error ? (
         <div className="capp-span">
           <Skeleton n={2} />

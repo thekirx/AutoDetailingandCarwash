@@ -1,9 +1,11 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
 
+import TintFinder from '../components/public/TintFinder'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import ServiceBottomCta from '../components/public/bredesign/ServiceBottomCta'
 import ServiceFaqSection from '../components/public/bredesign/ServiceFaqSection'
 import ServiceProofSection from '../components/public/bredesign/ServiceProofSection'
+import TalkToUsButton from '../components/public/bredesign/TalkToUsButton'
 import useReveal from '../components/public/bredesign/useReveal'
 import { IMAGES, SERVICE_POINT_CARDS, WASH_GALLERY_PAGES, WASH_SERVICES, WHY_SECTIONS } from '../components/public/bredesign/content'
 import { LoopArrows, LoopBar, LoopStage } from '../components/public/bredesign/LoopRail'
@@ -37,6 +39,12 @@ const CLEARPRO_FIGURES = [
  * so putting it anywhere a reader has not asked about film is a lot of loading
  * for a page that is about something else. */
 
+/* The tint page leads with the Finder's promise rather than the homepage's
+   "Why" headline (client sign-off, 9 Oct 2026). */
+const HERO_OVERRIDES = {
+  tint: { eyebrow: 'Nano ceramic tint', headline: ['The right shade', 'for how you drive.'] },
+}
+
 const TITLES = {
   ppf: 'Paint Protection Film',
   ceramic: 'Ceramic Coating',
@@ -49,7 +57,7 @@ const TITLES = {
 const SECONDARY_CTA = {
   ppf: { label: 'See packages', href: '#ppf-packages' },
   ceramic: { label: 'See packages', href: '#ceramic' },
-  tint: { label: 'All services', to: '/services' },
+  tint: { label: 'Find my tint', href: '#tint-finder' },
   'wash-detailing': { label: 'All services', to: '/services' },
 }
 
@@ -328,6 +336,7 @@ export default function ServiceDetailPage() {
 
   // An unknown slug is not a broken page — it is someone who wants the menu.
   if (!section) return <Navigate to="/services" replace />
+  const hero = { eyebrow: section.eyebrow, headline: section.headline, ...HERO_OVERRIDES[slug] }
 
   return (
     <>
@@ -335,20 +344,22 @@ export default function ServiceDetailPage() {
         <PpfInformationSection />
       ) : (
         <BdPageHero
-          eyebrow={section.eyebrow}
+          eyebrow={hero.eyebrow}
           title={slug === 'wash-detailing' ? <><span>Premium Wash &amp; </span><br /><em>Detailing.</em></> :
             <>
-              {section.headline.slice(0, -1).map((line) => (
+              {hero.headline.slice(0, -1).map((line) => (
                 <span key={line}>
                   {line}
                   <br />
                 </span>
               ))}
-              <em>{section.headline[section.headline.length - 1]}</em>
+              <em>{hero.headline[hero.headline.length - 1]}</em>
             </>}
           image={section.image}
         />
       )}
+
+      {slug === 'tint' ? <TintFinder /> : null}
 
       {slug === 'wash-detailing' ? <WashServiceRail /> : <ServiceDetail slug={slug} section={section} />}
 
@@ -376,6 +387,7 @@ export default function ServiceDetailPage() {
           bookState={detail.bookState}
         />
       )}
+      <TalkToUsButton />
     </>
   )
 }

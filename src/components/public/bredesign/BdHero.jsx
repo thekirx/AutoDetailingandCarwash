@@ -8,6 +8,7 @@ import {
   portraitTierFor,
 } from '../../../lib/heroTier'
 import { fetchHomeStats, STAT_BASE, STATIC_STATS, withBase } from '../../../lib/homeStats'
+import { isHeroLogoMoment } from '../../../lib/homeHero'
 
 import heroPoster from '../../../assets/hero/hakum-desktop-poster.webp'
 import portrait1080Av1 from '../../../assets/hero/bredesign-hero-portrait-1080.av1.mp4'
@@ -178,38 +179,61 @@ export default function BdHero() {
   const poster = isPortrait ? portraitPoster : heroPoster
   const av1Src = isPortrait ? PORTRAIT_AV1_BY_TIER[portraitTierFor(tier)] : AV1_BY_TIER[tier]
   const h264Src = isPortrait ? portrait1080H264 : H264_BY_TIER[h264TierFor(tier)]
-  /* Only the poster swap follows playback now. The copy used to step aside
-     while the clip showed its Hakum mark; it sits at the foot of the frame and
-     no longer covers the mark, so it stays up the whole time. */
+  /* Give the mark its opening and closing frames. All copy clears the mark;
+     blocked playback reveals the copy over the static poster. */
   const [playing, setPlaying] = useState(false)
+  const [logoMoment, setLogoMoment] = useState(!isPortrait)
+  const [videoBlocked, setVideoBlocked] = useState(false)
   const videoRef = useRef(null)
+  const hideCopy = logoMoment && !videoBlocked && !videoFailed
 
   useEffect(() => {
     const node = videoRef.current
     if (!node) return undefined
 
-    const onPlay = () => setPlaying(true)
-    const onStop = () => setPlaying(false)
+    const syncLogoMoment = () => setLogoMoment(isHeroLogoMoment(
+      isPortrait ? 'mobile' : 'hakum-desktop', node.currentTime, 0.75,
+    ))
+    const onPlay = () => {
+      setPlaying(true)
+      setVideoBlocked(false)
+      syncLogoMoment()
+    }
+    const onStop = () => {
+      setPlaying(false)
+      setVideoBlocked(true)
+    }
+
+    syncLogoMoment()
 
     node.addEventListener('playing', onPlay)
     node.addEventListener('pause', onStop)
     node.addEventListener('ended', onStop)
+    node.addEventListener('timeupdate', syncLogoMoment)
+    node.addEventListener('seeked', syncLogoMoment)
+    node.addEventListener('loadedmetadata', syncLogoMoment)
 
     // Autoplay can be refused — Safari's per-site setting, Low Power Mode, a
     // reduced-motion preference. Asking explicitly and ignoring the rejection
     // means the copy falls back to visible rather than the page looking empty.
     const attempt = node.play()
-    if (attempt && typeof attempt.catch === 'function') attempt.catch(() => setPlaying(false))
+    if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {
+      setPlaying(false)
+      setVideoBlocked(true)
+    })
 
     return () => {
       node.removeEventListener('playing', onPlay)
       node.removeEventListener('pause', onStop)
       node.removeEventListener('ended', onStop)
+      node.removeEventListener('timeupdate', syncLogoMoment)
+      node.removeEventListener('seeked', syncLogoMoment)
+      node.removeEventListener('loadedmetadata', syncLogoMoment)
     }
-  }, [videoFailed, orientation])
+  }, [videoFailed, orientation, isPortrait])
 
   return (
-    <section className="bd-hero" id="top">
+    <section className={`bd-hero${hideCopy ? ' is-logo-moment' : ''}`} id="top">
       {!videoFailed ? (
         <video
           /* A changed <source> is ignored by a playing video; a new key
@@ -242,12 +266,12 @@ export default function BdHero() {
       />
 
       <div className="bd-shell bd-hero-in">
-        <h1>
+        <h1 aria-hidden={hideCopy || undefined}>
           Clean cars
           <br />
           <em>matter</em>
         </h1>
-        <div className="bd-cta-row bd-hero-cta">
+        <div className="bd-cta-row bd-hero-cta" aria-hidden={hideCopy || undefined} inert={hideCopy || undefined}>
           <Link className="bd-btn bd-btn-primary" to="/services">
             See what we do
           </Link>
@@ -255,7 +279,7 @@ export default function BdHero() {
             Our story
           </a>
         </div>
-        <p className="bd-hero-lede">
+        <p className="bd-hero-lede" aria-hidden={hideCopy || undefined}>
           From ceramic coating to paint protection film, our team approaches every vehicle the same
           way: like it matters. That means showroom-level attention to every panel, every time — not
           just for the cars that look brand new, but for every vehicle that comes through our doors.

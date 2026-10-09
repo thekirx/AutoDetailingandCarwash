@@ -1,3 +1,4 @@
+import { buildTintLead, validateTintConfig } from '../src/lib/tintFinder.js'
 import { createClient } from '@supabase/supabase-js'
 import { json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { notifyStaffEvent } from './notifyOpsEvent.mjs'
@@ -121,10 +122,26 @@ export async function handlePublicInquiryRequest(req, res) {
     const body = await readJsonBody(req)
 
     const build = builders[text(body.kind)]
-    if (!build) return json(res, 400, { error: 'Unknown inquiry type.' })
+    if (!build && text(body.kind) !== 'tint_finder') return json(res, 400, { error: 'Unknown inquiry type.' })
 
     const blocked = guardError(body)
     if (blocked) return json(res, 400, { error: blocked })
+
+    if (text(body.kind) === 'tint_finder') {
+      const db = admin()
+      const { data: settings, error: configError } = await db.from('tint_finder_settings').select('config').eq('id', 1).single()
+      if (configError || validateTintConfig(settings?.config)) return json(res, 503, { error: 'Tint booking is temporarily unavailable. Please message the branch.' })
+      const { row, error: invalid } = buildTintLead(body, settings.config)
+      if (invalid) return json(res, 400, { error: invalid })
+      const { data: branch, error: branchError } = await db.from('branches').select('slug').eq('slug', row.branch).eq('is_public', true).eq('is_active', true).eq('is_archived', false).eq('coming_soon', false).maybeSingle()
+      if (branchError || !branch) return json(res, 400, { error: 'Choose an available branch.' })
+      const { data: saved, error } = await db.from('tint_finder_leads').insert(row).select('id').single()
+      if (error) return json(res, 500, { error: 'We could not send your request. Please try again.' })
+      try {
+        await notifyStaffEvent(db, 'inquiry', { id: saved.id, kind: 'tint_finder', name: row.name, branch: row.branch }, { roles: ['super_admin'], urls: ['/operations/settings/tint-finder'] })
+      } catch { /* Saved to the Tint Finder staff inbox; push is best effort. */ }
+      return json(res, 200, { ok: true })
+    }
 
     const { table, row, error: invalid } = build(body)
     if (invalid) return json(res, 400, { error: invalid })

@@ -32,9 +32,9 @@ export function getHeroVideoVariant(viewportWidth) {
   return viewportWidth <= HERO_MOBILE_MAX_WIDTH ? 'mobile' : 'desktop'
 }
 
-export function isHeroLogoMoment(variant, currentTime) {
+export function isHeroLogoMoment(variant, currentTime, closingLead = 0) {
   const window = HERO_LOGO_WINDOWS[variant] || HERO_LOGO_WINDOWS.desktop
-  return currentTime < window.opensUntil || currentTime >= window.closesFrom
+  return currentTime < window.opensUntil || currentTime >= window.closesFrom - closingLead
 }
 
 export function hasHeroLogoMomentRestarted(variant, previousTime, currentTime) {
