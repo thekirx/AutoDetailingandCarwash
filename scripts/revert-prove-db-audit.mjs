@@ -29,6 +29,7 @@ const SUITES = [
   'tests/posInsights.test.js',
   'tests/customerRemountIntegrity.test.js',
   'tests/remountBlastRadiusProbe.test.js',
+  'tests/dailySheetApprovalLadder.test.js',
 ]
 
 function runSuite() {
@@ -423,6 +424,57 @@ const ALL_MUTATIONS = [
     from: 'const rows = readOrFail(`${table} read`, res) || []',
     to: 'const rows = readOrFail(`${table} read`, { data: null, error: res.error }) || []',
   },
+  // The daily-sheet money ladder. Expenses are copied into the books at approve
+  // time, so anything that lets a sheet be edited, submitted or approved out of
+  // order makes the sheet and the books disagree.
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'an approved daily sheet becomes editable again',
+    from: / {2}if v_status in \('submitted', 'approved'\) then\r?\n {4}raise exception 'This sheet is %[^\n]*\r?\n {2}end if;\r?\n/,
+    to: '',
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'a draft or returned sheet submits without the status gate',
+    from: / {2}if s\.status not in \('draft', 'returned'\) then\r?\n {4}raise exception 'Only draft or returned sheets can be submitted';\r?\n {2}end if;\r?\n/,
+    to: '',
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'review stops requiring a submitted sheet',
+    from: / {2}if s\.status <> 'submitted' then raise exception 'Only submitted sheets can be reviewed'; end if;\r?\n/,
+    to: '',
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'approving a daily sheet twice posts the expenses twice',
+    from: /on conflict \(daily_sheet_line_id\) where daily_sheet_line_id is not null do nothing;/,
+    to: '-- no conflict guard: every approval inserts again',
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'the already-approved short-circuit no longer returns posted 0',
+    from: / {2}if s\.status = 'approved' and v_action = 'approve' then\r?\n {4}return jsonb_build_object\('id', s\.id, 'status', 'approved', 'posted', 0\);\r?\n {2}end if;\r?\n/,
+    to: '',
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'client-supplied totals beat the server arithmetic at submit',
+    from: /totals = coalesce\(s\.totals, '\{\}'::jsonb\) \|\| v_totals/,
+    to: "totals = coalesce(payload->'totals', s.totals)",
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'reopening an approved sheet stops voiding the posted expense rows',
+    from: / {2}delete from public\.expenses\r?\n {2}where daily_sheet_line_id in \(select id from public\.daily_sheet_lines where sheet_id = s\.id\);\r?\n {2}get diagnostics v_voided = row_count;\r?\n/,
+    to: '  -- posted rows are left behind\r\n',
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'any role can reopen an approved daily sheet',
+    from: / {2}if public\.current_user_role\(\) is distinct from 'BossMich' then\r?\n {4}raise exception using errcode = '42501', message = 'Only Super Admin may reopen an approved sheet';\r?\n {2}end if;\r?\n/,
+    to: '',
+  },
   {
     file: 'scripts/check-sheet-ui.mjs',
     name: 'the till summary is read through a selector that matches nothing',
@@ -473,7 +525,11 @@ for (const m of MUTATIONS) {
   const relPath = m.file || 'scripts/audit-db-deep.mjs'
   const abs = join(root, relPath)
   const original = readFileSync(abs, 'utf8')
-  if (!original.includes(m.from)) {
+  // Anchors are either a literal string or a RegExp. RegExps are required for
+  // anything spanning lines in a CRLF checkout — a literal "\n" never matches.
+  const isRe = m.from instanceof RegExp
+  const matches = isRe ? m.from.test(original) : original.includes(m.from)
+  if (!matches) {
     console.log(`SKIP  ${m.name} — anchor text not found in ${relPath}`)
     failures++
     continue
