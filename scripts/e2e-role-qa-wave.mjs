@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer'
 import { isOpsAuthedUrl, isLoginWallUrl } from './screenshotAuth.mjs'
 import { safeEvaluate as safeEvaluateImpl } from './lib/safe-evaluate.mjs'
+import { collectErrors } from './lib/collect-errors.mjs'
 import {
   OPS_DEMO_ACCOUNTS,
   CUSTOMER_DEMO_ACCOUNT,
@@ -171,35 +172,9 @@ async function shot(page, name) {
 /**
  * Console/page errors seen since the last reset. A role can render "successfully"
  * while the page throws behind it, so every navigation reports its own bucket.
+ * Lives in lib/ so it can be driven against a real page in tests — see
+ * tests/authFailureRecorder.test.js.
  */
-function collectErrors(page) {
-  const bucket = []
-  // A bare "401" is not actionable. The wave walks a dozen dock routes before it
-  // reports, so each error has to carry the route it was seen on — otherwise a
-  // failure names a role but not the call that failed. This is the difference
-  // between BUG-064 (a red wave nobody could act on) and a diagnosable one.
-  const where = () => {
-    try { return new URL(page.url()).pathname } catch { return String(page.url()) }
-  }
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') bucket.push(`console @${where()}: ${msg.text().slice(0, 300)}`)
-  })
-  page.on('pageerror', (err) => bucket.push(`pageerror @${where()}: ${String(err?.message || err).slice(0, 300)}`))
-  // The console message for a failed fetch is always the same useless string —
-  // "Failed to load resource: the server responded with a status of 401" — and it
-  // names neither the URL nor the status. Listen on the wire so the offending
-  // request is actually identifiable. Scoped to 401/403 on purpose: widening it
-  // to every 4xx/5xx would drag in dev-server 404s that are not product faults
-  // and turn a diagnostic into noise.
-  page.on('response', (res) => {
-    const status = res.status()
-    if (status !== 401 && status !== 403) return
-    bucket.push(`http ${status} @${where()} ${res.url().slice(0, 300)}`)
-  })
-  return {
-    take: () => bucket.splice(0, bucket.length),
-  }
-}
 
 async function clearSession(page, base) {
   await page.goto(`${base}/operations/login`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => null)

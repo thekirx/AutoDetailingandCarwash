@@ -27,6 +27,14 @@ const HARNESS = read('scripts/e2e-role-qa-wave.mjs')
 /** Comments explain these very routes; strip them before asserting on them. */
 const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 const HARNESS_CODE = stripComments(HARNESS)
+/**
+ * The recorder moved out of the harness on 2026-10-10 so a real browser can drive
+ * it in tests/authFailureRecorder.test.js. Its internals are asserted here against
+ * the module and the call site against the harness — checking only the harness
+ * would pass just as happily if the recorder were deleted outright.
+ */
+const RECORDER = read('scripts/lib/collect-errors.mjs')
+const RECORDER_CODE = stripComments(RECORDER)
 
 /** Mirrors routeKey() in the harness — if this drifts, the harness drifts. */
 function routeKey(url) {
@@ -148,8 +156,12 @@ test('a deny cannot be satisfied by simply staying on the page', () => {
 })
 
 test('the harness collects console errors instead of trusting a clean render', () => {
-  assert.match(HARNESS, /page\.on\('console'/)
-  assert.match(HARNESS, /page\.on\('pageerror'/)
+  // The listeners themselves moved into the shared recorder on 2026-10-10; what
+  // still has to be true here is that the harness attaches that recorder and
+  // fails the persona on what it finds.
+  assert.match(HARNESS, /collectErrors\(page\)/)
+  assert.match(RECORDER, /page\.on\('console'/)
+  assert.match(RECORDER, /page\.on\('pageerror'/)
   assert.match(HARNESS, /errors\.take\(\)/)
   assert.match(HARNESS, /console`/, 'console errors must actually fail the check')
 })
@@ -230,7 +242,13 @@ test('a console failure names the route it happened on', () => {
   // Both handlers must carry the route, and the route must be read at event time
   // (`page.url()`), not captured once at attach time, or every error would be
   // attributed to whichever page happened to be open when collectErrors ran.
-  assert.match(HARNESS_CODE, /const where = \(\) =>/, 'a helper must resolve the current route')
+  assert.match(
+    HARNESS_CODE,
+    /import \{ collectErrors \} from '\.\/lib\/collect-errors\.mjs'/,
+    'the wave must use the shared recorder, not a private copy of it',
+  )
+  assert.match(HARNESS_CODE, /collectErrors\(page\)/, 'the wave must attach the shared recorder')
+  assert.match(RECORDER_CODE, /const where = \(\) =>/, 'a helper must resolve the current route')
   // Anchored to the helper's own body. A bare /page\.url\(\)/ elsewhere in the
   // file satisfies a file-wide match — an earlier version of this assertion did
   // exactly that, and the mutation it was supposed to catch sailed through.
@@ -238,15 +256,15 @@ test('a console failure names the route it happened on', () => {
   // page.url(), so presence alone cannot tell "reads the route" from "ignores it".
   // The property that actually matters is that the route is *derived* from the
   // live URL, so that is what gets asserted.
-  const whereBody = HARNESS_CODE.match(/const where = \(\) => \{[\s\S]*?\n\s*\}/)?.[0] || ''
+  const whereBody = RECORDER_CODE.match(/const where = \(\) => \{[\s\S]*?\n\s*\}/)?.[0] || ''
   assert.ok(whereBody, 'the where() helper must have a body to inspect')
   assert.match(
     whereBody,
     /new URL\(page\.url\(\)\)\.pathname/,
     'where() must derive the route from the live page URL, not return a constant',
   )
-  assert.match(HARNESS_CODE, /console @\$\{where\(\)\}/, 'console errors must carry their route')
-  assert.match(HARNESS_CODE, /pageerror @\$\{where\(\)\}/, 'page errors must carry their route')
+  assert.match(RECORDER_CODE, /console @\$\{where\(\)\}/, 'console errors must carry their route')
+  assert.match(RECORDER_CODE, /pageerror @\$\{where\(\)\}/, 'page errors must carry their route')
   // And the bucket must still be drained per persona, or attribution accumulates
   // into the next role and the message points at the wrong walk.
   assert.match(HARNESS_CODE, /errors\.take\(\)/, 'the bucket must still be drained per persona')
@@ -255,12 +273,35 @@ test('a console failure names the route it happened on', () => {
   // harness has to listen on the wire or the 401 is permanently unactionable.
   // Scoped to 401/403 — widening it to all 4xx/5xx would drag in dev-server 404s
   // that are not product faults.
-  assert.match(HARNESS_CODE, /page\.on\('response'/, 'auth failures must be captured from the wire')
-  assert.match(HARNESS_CODE, /http \$\{status\} @\$\{where\(\)\}/, 'the failing URL must be reported')
+  assert.match(RECORDER_CODE, /page\.on\('response'/, 'auth failures must be captured from the wire')
+  assert.match(RECORDER_CODE, /http \$\{status\} \$\{method\} @\$\{where\(\)\}/, 'the failing request must be reported with its method and URL')
   assert.match(
-    HARNESS_CODE,
+    RECORDER_CODE,
     /status !== 401 && status !== 403/,
     'only auth failures belong in the bucket, or dev-server 404s become product faults',
+  )
+})
+
+test('an auth failure records whether a token was attached, not just that one 401', () => {
+  // BUG-067 stayed unresolvable for exactly one reason: a request that went out
+  // carrying somebody's stale token and one that went out with no token at all
+  // produced *identical* evidence, and those two need completely different fixes.
+  // So the digest is not decoration — without it the next occurrence buys nothing.
+  // The behaviour itself is pinned against a real browser in
+  // tests/authFailureRecorder.test.js; these assertions stop the field being
+  // dropped from the source later.
+  assert.match(RECORDER_CODE, /\[auth:\$\{fp\}\]/, 'the record must carry a token digest or "none"')
+  assert.match(RECORDER_CODE, /createHash\('sha256'\)/, 'the digest must be a hash, not the token')
+  assert.ok(
+    !/bucket\.push\([^)]*headers\.authorization\s*[,)]/.test(RECORDER_CODE),
+    'the raw Authorization header must never be pushed into the evidence bucket',
+  )
+  // Chrome prints a generic resource-load error for the same 401. Recording it too
+  // means the persona's report leads with the copy that names neither URL nor method.
+  assert.match(
+    RECORDER_CODE,
+    /Failed to load resource\.\*\\b\(401\|403\)\\b/,
+    'the generic 401/403 console line must be suppressed in favour of the wire record',
   )
 })
 
