@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Car, MapPin } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { CalendarDays, Car, Check, ChevronLeft, ChevronRight, Droplets, MapPin, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
@@ -13,14 +13,16 @@ import { pointsLabel } from '@/lib/loyaltyPoints'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
 import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import { usePageMeta } from '@/lib/pageMeta'
-import { CUSTOMER_BOOK_PATH } from '@/lib/customerAccountNav'
+import { CUSTOMER_BOOK_PATH, customerVisitPath } from '@/lib/customerAccountNav'
+import { CUSTOMER_QUEUE_PATH } from '@/lib/liveQueuePath'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
-import { Pills, Row, Skeleton } from '@/components/customer/CustomerUi'
+import { Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
+import Sheet from '@/components/customer/Sheet'
 import ceramicPhoto from '@/assets/services/ceramic.webp'
 import maintenancePhoto from '@/assets/services/detailing.webp'
 import tintPhoto from '@/assets/services/ceramic-tint.webp'
-import ppfPhoto from '@/assets/services/paint-protection-film.webp'
+import ppfPhoto from '@/assets/services/ppf-clearpro-install.webp'
 
 const SERVICE_PHOTOS = { 'ceramic-coating': ceramicPhoto, 'paint-maintenance': maintenancePhoto, 'nano-ceramic-tint': tintPhoto, 'ceramic-tint': tintPhoto, 'paint-protection-film': ppfPhoto, ppf: ppfPhoto }
 
@@ -33,6 +35,15 @@ function isoDay(date) {
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
+}
+
+/* Hourly slots for the When step; "Another time" keeps the free time field. */
+const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00']
+
+function slotLabel(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number)
+  const d = new Date(2000, 0, 1, h, m)
+  return d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
 }
 
 function nextDays(n = 7) {
@@ -72,6 +83,13 @@ export default function CustomerBookPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [day, setDay] = useState(isoDay(new Date()))
   const [time, setTime] = useState('10:00')
+  const [otherTime, setOtherTime] = useState(false)
+  const [flowOpen, setFlowOpen] = useState(false)
+  const [step, setStep] = useState(0)
+  const [sent, setSent] = useState(false)
+  const [branchOpen, setBranchOpen] = useState(false)
+  const [otherCar, setOtherCar] = useState(false)
+  const openedFromLink = useRef(false)
   const days = useMemo(() => nextDays(7), [])
 
   const branches = portal?.branches || []
@@ -127,6 +145,11 @@ export default function CustomerBookPage() {
         ),
       )
       setLoading(false)
+      // A link that names a service (website buttons, "Book maintenance") opens the steps straight away.
+      if (serviceId && !openedFromLink.current) {
+        openedFromLink.current = true
+        setFlowOpen(true)
+      }
     })
     return () => {
       cancelled = true
@@ -160,6 +183,43 @@ export default function CustomerBookPage() {
         : ''
   const sizeLabel = PRICING_SIZES.find((s) => s.slug === form.vehicle_type)?.label || form.vehicle_type
   const branchRow = branches.find((b) => b.slug === form.branch)
+  const savedCar = vehicles.find((v) => v.plate_number === form.vehicle_plate) || null
+  const showCarFields = otherCar || !vehicles.length || !savedCar
+  const bookings = portal?.bookings || []
+
+  /* The steps this service needs: a package only when it has them. */
+  const steps = [...(packages.length ? ['package'] : []), 'car', 'when', 'review']
+  const stepId = steps[Math.min(step, steps.length - 1)]
+  const stepReady =
+    stepId === 'package'
+      ? Boolean(form.package_id)
+      : stepId === 'car'
+        ? !plateValidationError(form.vehicle_plate)
+        : stepId === 'when'
+          ? Boolean(day && time)
+          : Boolean(form.customer_first_name && form.customer_phone)
+
+  function openFlow(serviceId) {
+    setForm((f) => ({ ...f, service_id: serviceId, package_id: '' }))
+    setStep(0)
+    setSent(false)
+    setError('')
+    setFlowOpen(true)
+  }
+
+  function closeFlow() {
+    setFlowOpen(false)
+    if (sent) navigate('/account', { replace: true })
+  }
+
+  function next() {
+    setError('')
+    if (stepId === 'car') {
+      const plateError = plateValidationError(form.vehicle_plate)
+      if (plateError) return setError(plateError)
+    }
+    setStep((n) => Math.min(n + 1, steps.length - 1))
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -194,7 +254,7 @@ export default function CustomerBookPage() {
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || 'Booking failed')
       toast.success('Booking requested. We will confirm by SMS.')
-      navigate('/account', { replace: true })
+      setSent(true)
     } catch (err) {
       setError(err.message)
       toast.error(err.message)
@@ -203,214 +263,405 @@ export default function CustomerBookPage() {
     }
   }
 
+  const stepTitles = { package: 'Pick a package', car: 'Which car?', when: 'When?', review: 'Check and send' }
+
   return (
-    <CustomerAppFrame title="Book a service" subtitle="Choose a branch, service, and time." backTo="/account">
-      <form className="capp-section capp-booking-refined" onSubmit={submit} noValidate={false}>
-        <label className="capp-row is-static" style={{ cursor: 'default' }}>
-          <span className="capp-row-icon" aria-hidden>
-            <MapPin size={18} strokeWidth={1.75} />
-          </span>
-          <span className="capp-row-body">
-            <strong>{branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : 'Branch'}</strong>
-            <em>{branchRow?.address || 'Choose where to bring your car'}</em>
-            <select
-              className="capp-select mt-2"
-              required
-              aria-label="Branch"
-              value={form.branch}
-              onChange={(e) => set('branch', e.target.value)}
-            >
-              <option value="">Select branch</option>
-              {branches.map((b) => (
-                <option key={b.slug} value={b.slug}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </span>
-        </label>
+    <CustomerAppFrame title="Book" subtitle="Protection services are booked ahead. Pick one to start." navTitle="Book">
+      <button type="button" className="capp-row capp-branch-pick" onClick={() => setBranchOpen(true)} disabled={!branches.length}>
+        <span className="capp-row-icon" aria-hidden>
+          <MapPin size={18} strokeWidth={1.75} />
+        </span>
+        <span className="capp-row-body">
+          <strong>{branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : 'Branch'}</strong>
+          <em>{branchRow?.address || 'Choose where to bring your car'}</em>
+        </span>
+        <span className="capp-row-end">Change</span>
+      </button>
 
-        <div className="capp-sect">
-          <h2>Select a detailing service</h2>
+      <div className="capp-sect">
+        <h2>Select a detailing service</h2>
+      </div>
+      {loading ? (
+        <Skeleton n={3} />
+      ) : (
+        <div className="capp-svc-list" role="list" aria-label="Service">
+          {services.map((s, i) => (
+            <button key={s.id} type="button" role="listitem" className="capp-svc" onClick={() => openFlow(s.id)}>
+              {SERVICE_PHOTOS[s.slug] ? <img className="capp-svc-bg" src={SERVICE_PHOTOS[s.slug]} alt="" loading="lazy" /> : null}
+              <span className="capp-no" aria-hidden>
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <span className="capp-svc-in">
+                <span className="min-w-0">
+                  <strong>{s.name}</strong>
+                  {s.points_award > 0 ? <em>Earn {pointsLabel(s.points_award)}</em> : null}
+                </span>
+                <span className="capp-svc-from">
+                  From
+                  <b>{formatSizePriceRange(s, formatPeso)}</b>
+                </span>
+              </span>
+            </button>
+          ))}
+          {!services.length ? <div className="capp-empty">No detailing services are open for booking right now.</div> : null}
         </div>
-        {loading ? (
-          <Skeleton n={3} />
-        ) : (
-          <div className="capp-list" role="radiogroup" aria-label="Service">
-            {services.map((s) => {
-              const active = s.id === form.service_id
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  className={`capp-service${active ? ' is-active' : ''}`}
-                  onClick={() => setForm((f) => ({ ...f, service_id: s.id, package_id: '' }))}
-                >
-                  {SERVICE_PHOTOS[s.slug] ? <img className="capp-service-photo" src={SERVICE_PHOTOS[s.slug]} alt="" loading="lazy" /> : null}
-                  <span className="capp-row-body">
-                    <strong>{s.name}</strong>
-                    {s.description ? <em>{s.description}</em> : null}
-                    {s.points_award > 0 ? <em>Earn {pointsLabel(s.points_award)}</em> : null}
-                  </span>
-                  <span className="capp-price">
-                    {active ? sizeLabel : 'From'}
-                    <b>{active ? formatPeso(resolveServicePriceMinor(s, form.vehicle_type)) : formatSizePriceRange(s, formatPeso)}</b>
-                  </span>
-                </button>
-              )
-            })}
-            {!services.length ? <div className="capp-empty">No detailing services are open for booking right now.</div> : null}
-          </div>
-        )}
+      )}
 
-        {packages.length ? (
-          <div className="capp-sect">
-            <h2>Choose a package</h2>
-            <div className="capp-list" role="radiogroup" aria-label="Package">
-              {packages.map((pkg) => {
-                const active = pkg.id === form.package_id
-                return (
+      <div className="capp-walkin">
+        <span className="capp-row-icon" aria-hidden>
+          <Droplets size={18} strokeWidth={1.75} />
+        </span>
+        <span>
+          <strong>Washing or detailing?</strong>
+          Those are walk-in only. <Link to={CUSTOMER_QUEUE_PATH}>See the live queue →</Link>
+        </span>
+      </div>
+
+      <section className="capp-section" aria-label="Your bookings">
+        <SectionHead title="Your bookings" />
+        <div className="capp-group">
+          {bookings.length ? (
+            bookings.map((b) => (
+              <Row
+                key={b.id}
+                icon={CalendarDays}
+                title={[b.service_name, b.vehicle_plate].filter(Boolean).join(' · ') || 'Booking'}
+                sub={b.visit?.label || b.status}
+                chevron
+                to={customerVisitPath(b.id)}
+              />
+            ))
+          ) : (
+            <Row icon={CalendarDays} title="No upcoming bookings" sub="Bookings you request show up here." />
+          )}
+        </div>
+      </section>
+
+      {!vehicles.length && !loading ? (
+        <Row icon={Car} title="Save this car to your garage" sub="Next time it is one tap." chevron to="/account/more?tab=garage" />
+      ) : null}
+
+      <Sheet open={branchOpen} onClose={() => setBranchOpen(false)} title="Branch">
+        <div className="capp-opts" role="radiogroup" aria-label="Branch">
+          {branches.map((b) => (
+            <button
+              key={b.slug}
+              type="button"
+              role="radio"
+              aria-checked={b.slug === form.branch}
+              className="capp-opt"
+              onClick={() => {
+                set('branch', b.slug)
+                setBranchOpen(false)
+              }}
+            >
+              <span className="capp-opt-rd" aria-hidden />
+              <span className="capp-row-body">
+                <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '')}</strong>
+                {b.address ? <em>{b.address}</em> : null}
+              </span>
+            </button>
+          ))}
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={flowOpen}
+        onClose={closeFlow}
+        full
+        label="Book a service"
+        title={<span className="capp-flow-count">{sent ? 'Done' : `Step ${step + 1} of ${steps.length}`}</span>}
+        footer={
+          sent ? (
+            <button type="button" className="capp-btn capp-btn-fill capp-btn-block" onClick={closeFlow}>
+              Done
+            </button>
+          ) : (
+            <div className="capp-flow-cta">
+              {step > 0 ? (
+                <button type="button" className="capp-flow-back" onClick={() => setStep((n) => n - 1)} aria-label="Back">
+                  <ChevronLeft size={20} strokeWidth={2} aria-hidden />
+                </button>
+              ) : null}
+              {stepId === 'review' ? (
+                <button key="submit" type="submit" form="capp-book-form" className="capp-btn capp-btn-fill capp-btn-block" disabled={busy || loading || !stepReady}>
+                  {busy ? 'Submitting…' : 'Request booking'}
+                </button>
+              ) : (
+                <button key="next" type="button" className="capp-btn capp-btn-fill capp-btn-block" onClick={next} disabled={!stepReady}>
+                  Continue
+                  <ChevronRight size={16} strokeWidth={2} aria-hidden />
+                </button>
+              )}
+            </div>
+          )
+        }
+      >
+        <div className="capp-flow-bar" style={{ '--n': steps.length }} aria-hidden>
+          {steps.map((id, i) => (
+            <i key={id} className={sent || i <= step ? 'is-on' : ''} />
+          ))}
+        </div>
+        {sent ? (
+          <div className="capp-flow-done" role="status">
+            <span className="capp-flow-check" aria-hidden>
+              <Check size={40} strokeWidth={2.6} />
+            </span>
+            <h3>Request sent</h3>
+            <p>
+              {branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : 'The branch'} will confirm by text. You&apos;ll find it under Book → Your bookings.
+            </p>
+          </div>
+        ) : (
+          <form id="capp-book-form" className="capp-flow" onSubmit={submit} noValidate={false}>
+            <span className="capp-no" aria-hidden>
+              {String(step + 1).padStart(2, '0')}
+            </span>
+            <h3 className="capp-flow-h">{stepId === 'package' && selected ? selected.name : stepTitles[stepId]}</h3>
+
+            {stepId === 'package' ? (
+              <>
+                <p className="capp-flow-sub">Pick a package. Final price depends on your car&apos;s size.</p>
+                <div className="capp-opts" role="radiogroup" aria-label="Package">
+                  {packages.map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={pkg.id === form.package_id}
+                      className="capp-opt"
+                      onClick={() => set('package_id', pkg.id)}
+                    >
+                      <span className="capp-opt-rd" aria-hidden />
+                      <span className="capp-row-body">
+                        <strong>{pkg.name}</strong>
+                        {pkg.description ? <em>{pkg.description}</em> : null}
+                        {pkg.points_award > 0 ? <em>Earn {pointsLabel(pkg.points_award)}</em> : null}
+                      </span>
+                      <span className="capp-opt-price">{pkg.price_minor > 0 ? formatPeso(pkg.price_minor) : 'Ask for price'}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {stepId === 'car' ? (
+              <>
+                <p className="capp-flow-sub">{vehicles.length ? 'From your garage.' : 'The plate exactly as it appears on the car.'}</p>
+                {vehicles.length ? (
+                  <div className="capp-opts" role="radiogroup" aria-label="Saved cars">
+                    {vehicles.map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={!otherCar && savedCar?.id === v.id}
+                        className="capp-opt"
+                        onClick={() => {
+                          setOtherCar(false)
+                          applyVehicle(v)
+                        }}
+                      >
+                        <span className="capp-opt-rd" aria-hidden />
+                        <span className="capp-row-body">
+                          <strong className="capp-plate">{v.plate_number}</strong>
+                          <em>{[v.vehicle_make, v.vehicle_model, v.color].filter(Boolean).join(' · ') || 'Saved car'}</em>
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={showCarFields}
+                      className="capp-opt is-dashed"
+                      onClick={() => {
+                        setOtherCar(true)
+                        setForm((f) => ({ ...f, vehicle_plate: '', vehicle_make: '', vehicle_model: '' }))
+                      }}
+                    >
+                      <span className="capp-opt-rd is-plus" aria-hidden>
+                        <Plus size={14} strokeWidth={2.4} />
+                      </span>
+                      <span className="capp-row-body">
+                        <strong>Another car</strong>
+                      </span>
+                    </button>
+                  </div>
+                ) : null}
+                {showCarFields ? (
+                  <div className="capp-card">
+                    <label className="capp-field">
+                      <span>Plate / sticker</span>
+                      <input
+                        required
+                        autoComplete="off"
+                        autoCapitalize="characters"
+                        value={form.vehicle_plate}
+                        onChange={(e) => set('vehicle_plate', e.target.value.toUpperCase())}
+                        placeholder="ABC 1234 or CS 123456"
+                      />
+                      <p className="capp-field-hint">{PLATE_FIELD_HINT}</p>
+                    </label>
+                    <VehicleMakeModelFields
+                      make={form.vehicle_make}
+                      model={form.vehicle_model}
+                      onMakeChange={(vehicle_make) => set('vehicle_make', vehicle_make)}
+                      onModelChange={(vehicle_model) => set('vehicle_model', vehicle_model)}
+                      onSizeSuggest={(size) => set('vehicle_type', size)}
+                      variant="public"
+                      makeLabel="Brand"
+                      modelLabel="Model"
+                    />
+                  </div>
+                ) : null}
+                <label className="capp-field">
+                  <span>Car size</span>
+                  <select required value={form.vehicle_type} onChange={(e) => set('vehicle_type', e.target.value)}>
+                    {PRICING_SIZES.map((sz) => (
+                      <option key={sz.slug} value={sz.slug}>
+                        {sz.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {selected ? (
+                  <p className="capp-meta">
+                    {selected.name}
+                    {selectedPackage ? ` · ${selectedPackage.name}` : ''} for {sizeLabel}: <b>{quote}</b>
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+
+            {stepId === 'when' ? (
+              <>
+                <p className="capp-flow-sub">
+                  {branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : 'Pick a branch'}.{' '}
+                  <button type="button" className="capp-link" onClick={() => setBranchOpen(true)}>
+                    Change
+                  </button>
+                </p>
+                <div className="capp-days" role="radiogroup" aria-label="Date">
+                  {days.map((d) => {
+                    const id = isoDay(d)
+                    const active = id === day
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        className={`capp-day${active ? ' is-active' : ''}`}
+                        onClick={() => setDay(id)}
+                      >
+                        <small>{d.toLocaleDateString('en-PH', { weekday: 'short' })}</small>
+                        <b>{d.getDate()}</b>
+                        <small>{d.toLocaleDateString('en-PH', { month: 'short' })}</small>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="capp-sect">
+                  <h2>Time</h2>
+                </div>
+                <div className="capp-slots" role="radiogroup" aria-label="Time">
+                  {TIME_SLOTS.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      role="radio"
+                      aria-checked={!otherTime && time === t}
+                      className="capp-slot"
+                      onClick={() => {
+                        setOtherTime(false)
+                        setTime(t)
+                      }}
+                    >
+                      {slotLabel(t)}
+                    </button>
+                  ))}
                   <button
-                    key={pkg.id}
                     type="button"
                     role="radio"
-                    aria-checked={active}
-                    className={`capp-service${active ? ' is-active' : ''}`}
-                    onClick={() => set('package_id', pkg.id)}
+                    aria-checked={otherTime || !TIME_SLOTS.includes(time)}
+                    className="capp-slot is-wide"
+                    onClick={() => setOtherTime(true)}
                   >
-                    <span className="capp-row-body">
-                      <strong>{pkg.name}</strong>
-                      {pkg.description ? <em>{pkg.description}</em> : null}
-                      {pkg.points_award > 0 ? <em>Earn {pointsLabel(pkg.points_award)}</em> : null}
-                    </span>
-                    <span className="capp-price">
-                      {pkg.price_minor > 0 ? <b>{formatPeso(pkg.price_minor)}</b> : <b>Ask for price</b>}
-                    </span>
+                    Another time
                   </button>
-                )
-              })}
-            </div>
-          </div>
-        ) : null}
+                </div>
+                {otherTime || !TIME_SLOTS.includes(time) ? (
+                  <label className="capp-field">
+                    <span>Preferred time</span>
+                    <input type="time" required value={time} onChange={(e) => setTime(e.target.value)} step={900} />
+                  </label>
+                ) : null}
+              </>
+            ) : null}
 
-        <div className="capp-sect">
-          <h2>Your car</h2>
-        </div>
-        {vehicles.length ? (
-          <Pills
-            label="Saved cars"
-            items={vehicles.map((v) => ({ id: v.id, label: v.plate_number }))}
-            value={vehicles.find((v) => v.plate_number === form.vehicle_plate)?.id || ''}
-            onChange={(id) => applyVehicle(vehicles.find((v) => v.id === id))}
-          />
-        ) : null}
-        <div className="capp-card">
-          <label className="capp-field">
-            <span>Plate / sticker</span>
-            <input
-              required
-              autoComplete="off"
-              autoCapitalize="characters"
-              value={form.vehicle_plate}
-              onChange={(e) => set('vehicle_plate', e.target.value.toUpperCase())}
-              placeholder="ABC 1234 or CS 123456"
-            />
-            <p className="capp-field-hint">{PLATE_FIELD_HINT}</p>
-          </label>
-          <VehicleMakeModelFields
-            make={form.vehicle_make}
-            model={form.vehicle_model}
-            onMakeChange={(vehicle_make) => set('vehicle_make', vehicle_make)}
-            onModelChange={(vehicle_model) => set('vehicle_model', vehicle_model)}
-            onSizeSuggest={(size) => set('vehicle_type', size)}
-            variant="public"
-            makeLabel="Brand"
-            modelLabel="Model"
-          />
-          <label className="capp-field">
-            <span>Car size</span>
-            <select required value={form.vehicle_type} onChange={(e) => set('vehicle_type', e.target.value)}>
-              {PRICING_SIZES.map((sz) => (
-                <option key={sz.slug} value={sz.slug}>
-                  {sz.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {selected ? (
-            <p className="capp-meta">
-              {selected.name}{selectedPackage ? ` · ${selectedPackage.name}` : ''} for {sizeLabel}: <b>{quote}</b>
-            </p>
-          ) : null}
-        </div>
+            {stepId === 'review' ? (
+              <>
+                <p className="capp-flow-sub">We&apos;ll text you once the branch confirms.</p>
+                <dl className="capp-sum">
+                  <div>
+                    <dt>Service</dt>
+                    <dd>{selected?.name || '—'}</dd>
+                  </div>
+                  {selectedPackage ? (
+                    <div>
+                      <dt>Package</dt>
+                      <dd>{selectedPackage.name}</dd>
+                    </div>
+                  ) : null}
+                  <div>
+                    <dt>Car</dt>
+                    <dd>{[form.vehicle_plate, sizeLabel].filter(Boolean).join(' · ')}</dd>
+                  </div>
+                  <div>
+                    <dt>When</dt>
+                    <dd>
+                      {new Date(`${day}T00:00`).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' })} · {slotLabel(time)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Branch</dt>
+                    <dd>{branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Price</dt>
+                    <dd className="capp-sum-price">{quote || '—'}</dd>
+                  </div>
+                </dl>
+                <div className="capp-sect">
+                  <h2>Contact</h2>
+                </div>
+                <div className="capp-card">
+                  <div className="capp-two">
+                    <label className="capp-field">
+                      <span>First name</span>
+                      <input required value={form.customer_first_name} onChange={(e) => set('customer_first_name', e.target.value)} />
+                    </label>
+                    <label className="capp-field">
+                      <span>Last name</span>
+                      <input required value={form.customer_last_name} onChange={(e) => set('customer_last_name', e.target.value)} />
+                    </label>
+                  </div>
+                  <label className="capp-field">
+                    <span>Mobile</span>
+                    <input required inputMode="tel" value={form.customer_phone} onChange={(e) => set('customer_phone', e.target.value)} />
+                  </label>
+                </div>
+              </>
+            ) : null}
 
-        <div className="capp-sect">
-          <h2>Select date and time</h2>
-        </div>
-        <div className="capp-days" role="radiogroup" aria-label="Date">
-          {days.map((d) => {
-            const id = isoDay(d)
-            const active = id === day
-            return (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                className={`capp-day${active ? ' is-active' : ''}`}
-                onClick={() => setDay(id)}
-              >
-                <small>{d.toLocaleDateString('en-PH', { weekday: 'short' })}</small>
-                <b>{d.getDate()}</b>
-                <small>{d.toLocaleDateString('en-PH', { month: 'short' })}</small>
-              </button>
-            )
-          })}
-        </div>
-        <label className="capp-field">
-          <span>Preferred time</span>
-          <input type="time" required value={time} onChange={(e) => setTime(e.target.value)} step={900} />
-        </label>
-
-        <div className="capp-sect">
-          <h2>Contact</h2>
-        </div>
-        <div className="capp-card">
-          <div className="capp-two">
-            <label className="capp-field">
-              <span>First name</span>
-              <input required value={form.customer_first_name} onChange={(e) => set('customer_first_name', e.target.value)} />
-            </label>
-            <label className="capp-field">
-              <span>Last name</span>
-              <input required value={form.customer_last_name} onChange={(e) => set('customer_last_name', e.target.value)} />
-            </label>
-          </div>
-          <label className="capp-field">
-            <span>Mobile</span>
-            <input required inputMode="tel" value={form.customer_phone} onChange={(e) => set('customer_phone', e.target.value)} />
-          </label>
-        </div>
-
-        {error ? (
-          <p className="capp-field-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="capp-booking-summary">
-          {selected ? <div className="capp-booking-recap"><span><small>Selected service · {sizeLabel}</small><strong>{selected.name}{selectedPackage ? ` · ${selectedPackage.name}` : ''}</strong></span><b>{quote}</b></div> : null}
-        <button type="submit" className="capp-btn capp-btn-accent capp-btn-block" disabled={busy || loading}>
-          {busy ? 'Submitting…' : 'Request booking'}
-          <ArrowRight size={16} strokeWidth={2} aria-hidden />
-        </button>
-        </div>
-        {!vehicles.length && !loading ? (
-          <Row icon={Car} title="Save this car to your garage" sub="Next time it is one tap." chevron to="/account/more?tab=garage" />
-        ) : null}
-      </form>
+            {error ? (
+              <p className="capp-field-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+          </form>
+        )}
+      </Sheet>
     </CustomerAppFrame>
   )
 }

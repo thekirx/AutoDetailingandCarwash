@@ -31,6 +31,7 @@ const CustomerAccountPage = lazy(() => import('./pages/CustomerAccountPage'))
 const CustomerQueuePage = lazy(() => import('./pages/CustomerQueuePage'))
 const CustomerBookPage = lazy(() => import('./pages/CustomerBookPage'))
 const CustomerLoyaltyPage = lazy(() => import('./pages/CustomerLoyaltyPage'))
+const CustomerVisitPage = lazy(() => import('./pages/CustomerVisitPage'))
 const CustomerMorePage = lazy(() => import('./pages/CustomerMorePage'))
 const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
 
@@ -155,6 +156,8 @@ export default function App() {
             <Route path="/account/book" element={<CustomerBookPage />} />
             <Route path="/account/loyalty" element={<CustomerLoyaltyPage />} />
             <Route path="/account/more" element={<CustomerMorePage />} />
+            <Route path="/account/visit" element={<CustomerVisitPage />} />
+            <Route path="/account/visit/:id" element={<CustomerVisitPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>

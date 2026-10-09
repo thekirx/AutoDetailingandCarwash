@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Clock, MapPin } from 'lucide-react'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
+import { useBackOr } from '@/lib/useBackOr'
 import { Pills, Skeleton } from '@/components/customer/CustomerUi'
 import { supabase } from '@/lib/supabase'
 
@@ -25,6 +26,7 @@ function formOpen(ev) {
 }
 
 export default function CustomerEventsPage() {
+  const back = useBackOr('/account/more')
   const [events, setEvents] = useState([])
   const [forms, setForms] = useState([])
   const [active, setActive] = useState(null)
@@ -86,7 +88,7 @@ export default function CustomerEventsPage() {
   }
 
   return (
-    <CustomerAppFrame title="Events" subtitle="Join our upcoming events and activities." backTo="/account" cols>
+    <CustomerAppFrame title="Events" subtitle="Join our upcoming events and activities." onBack={back} cols>
       <div className="capp-span">
         <Pills items={FILTERS} value={filter} onChange={setFilter} label="Events" />
       </div>

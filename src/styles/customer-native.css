@@ -1,0 +1,1962 @@
+/* ==========================================================================
+   Customer app — "feels like an app", in the website's colours
+   Approved 2026-10-09 from design-mocks/customer-app-native-2026-10-09/
+
+   Colour is bredesign.css value for value: navy ground #020A31, panels
+   #08133F / #0D1B52, hairlines #16255C, paper ink #F1F1ED, sky accent #9DB4FF,
+   #052699 pills with white text. That is the default ("Dark"); "Light" in Me
+   swaps to the warm paper ground. Type follows the site too: uppercase italic
+   Benzin titles, uppercase tracked pill buttons, Gilmer 800 eyebrow labels
+   after a short rule, near-square outlined panels, 01/02 numbering.
+
+   Presentation only: no field, fetch or endpoint changes. The shell (tokens,
+   large titles, compact bar, dock, screen transitions) is phone-only, below
+   860px; desktop keeps the editorial layout. Components that also render on
+   desktop (sheets, service cards, the pass, the timeline) are unscoped and
+   ride on the --capp-* tokens each width already sets.
+   ========================================================================== */
+
+/* ---------- Tokens ------------------------------------------------------ */
+@media (max-width: 859px) {
+  .capp[data-app-theme='dark'],
+  .capp-sheet-layer[data-app-theme='dark'] {
+    --capp-bg: #020a31;
+    --capp-surface: #08133f;
+    --capp-surface-2: #0d1b52;
+    --capp-fill: rgba(157, 180, 255, 0.08);
+    --capp-line: #16255c;
+    --capp-line-strong: #24357a;
+    --capp-ink: #f1f1ed;
+    --capp-steel: #8f9ac4;
+    --capp-accent: #9db4ff;
+    --capp-accent-soft: rgba(157, 180, 255, 0.14);
+    --capp-btn: #052699;
+    --capp-btn-ink: #ffffff;
+    --capp-on-accent: #cfe0ff;
+    --capp-dock-bg: rgba(8, 19, 63, 0.86);
+    --capp-bar: rgba(2, 10, 49, 0.82);
+    --capp-panel: #08133f;
+    --capp-ok: #5bd48f;
+    --capp-warn: #f2b84b;
+    --capp-bad: #ff8a7a;
+    --capp-glow: transparent;
+    --capp-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+    --capp-radius: 0.375rem;
+    --capp-radius-sm: 0.375rem;
+    color-scheme: dark;
+  }
+
+  .capp[data-app-theme='light'],
+  .capp-sheet-layer[data-app-theme='light'] {
+    --capp-bg: #f1f1ed;
+    --capp-surface: #ffffff;
+    --capp-surface-2: #e8edff;
+    --capp-fill: rgba(2, 10, 49, 0.05);
+    --capp-line: rgba(5, 38, 153, 0.12);
+    --capp-line-strong: rgba(5, 38, 153, 0.24);
+    --capp-ink: #020a31;
+    --capp-steel: #4b5563;
+    --capp-accent: #052699;
+    --capp-accent-soft: rgba(5, 38, 153, 0.08);
+    --capp-btn: #052699;
+    --capp-btn-ink: #ffffff;
+    --capp-on-accent: #052699;
+    --capp-dock-bg: rgba(255, 255, 255, 0.9);
+    --capp-bar: rgba(241, 241, 237, 0.86);
+    --capp-panel: #020a31;
+    --capp-ok: #0b6446;
+    --capp-warn: #7a4f00;
+    --capp-bad: #b02418;
+    --capp-glow: transparent;
+    --capp-shadow: 0 14px 34px rgba(2, 10, 49, 0.14);
+    --capp-radius: 0.375rem;
+    --capp-radius-sm: 0.375rem;
+    color-scheme: light;
+  }
+}
+
+/* Desktop sheets sit over the editorial navy page, so they take its tokens. */
+@media (min-width: 860px) {
+  .capp-sheet-layer {
+    --capp-bg: #020a31;
+    --capp-surface: #08133f;
+    --capp-surface-2: #0d1b52;
+    --capp-fill: rgba(157, 180, 255, 0.08);
+    --capp-line: #16255c;
+    --capp-line-strong: #3d51a0;
+    --capp-ink: #f1f1ed;
+    --capp-steel: #8e99c6;
+    --capp-accent: #9db4ff;
+    --capp-accent-soft: rgba(157, 180, 255, 0.14);
+    --capp-btn: #052699;
+    --capp-btn-ink: #ffffff;
+    --capp-on-accent: #cfe0ff;
+    --capp-panel: #08133f;
+    --capp-ok: #5bd48f;
+    --capp-bad: #ff8a7a;
+    --capp-radius: 0.375rem;
+    color-scheme: dark;
+  }
+}
+
+/* ---------- Shared components (all widths) ------------------------------ */
+
+.capp-btn-light {
+  border: 0;
+  background: #fff;
+  color: #052699;
+}
+
+.capp-no {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.1rem;
+  height: 1.75rem;
+  padding: 0 0.4rem;
+  background: #052699;
+  color: #fff;
+  font: italic 800 0.875rem/1 var(--capp-display, 'Benzin', sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Walk-in note: what doesn't need a booking. */
+.capp-walkin {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border: 1.5px dashed var(--capp-line-strong);
+  border-radius: var(--capp-radius);
+  color: var(--capp-steel);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.capp-walkin strong {
+  display: block;
+  color: var(--capp-ink);
+  font-size: 0.95rem;
+}
+
+.capp-walkin a {
+  color: var(--capp-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* Segmented branch switch. */
+.capp-seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr));
+  padding: 3px;
+  border: 1px solid var(--capp-line);
+  border-radius: 999px;
+  background: var(--capp-surface);
+}
+
+.capp-seg button {
+  position: relative;
+  z-index: 1;
+  min-height: 2.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--capp-steel);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.25s;
+}
+
+.capp-seg button[aria-selected='true'] {
+  color: #fff;
+}
+
+.capp-seg-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / var(--n, 2));
+  border-radius: 999px;
+  background: #052699;
+  transform: translateX(calc(var(--i, 0) * 100%));
+  transition: transform 0.4s var(--capp-ease);
+}
+
+/* Book: one photo card per bookable service. */
+.capp-svc-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.capp-svc {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 11.5rem;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--capp-line);
+  border-radius: var(--capp-radius);
+  background: #020a31;
+  color: #fff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.18s var(--capp-ease), border-color 0.18s;
+}
+
+.capp-svc:active {
+  transform: scale(0.98);
+}
+
+.capp-svc:hover {
+  border-color: #9db4ff;
+}
+
+.capp-svc-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.capp-svc::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(2, 10, 49, 0) 25%, rgba(2, 10, 49, 0.92) 100%);
+}
+
+.capp-svc .capp-no {
+  position: absolute;
+  z-index: 2;
+  top: 0.75rem;
+  left: 0.75rem;
+}
+
+.capp-svc-in {
+  position: absolute;
+  z-index: 2;
+  left: 1rem;
+  right: 1rem;
+  bottom: 0.9rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.capp-svc-in strong {
+  display: block;
+  font: italic 800 1.25rem/0.95 var(--capp-display);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.capp-svc-in em {
+  display: block;
+  margin-top: 0.3rem;
+  font-style: normal;
+  font-size: 0.8rem;
+  color: rgba(241, 241, 237, 0.82);
+}
+
+.capp-svc-from {
+  flex: none;
+  text-align: right;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(241, 241, 237, 0.8);
+}
+
+.capp-svc-from b {
+  display: block;
+  margin-top: 0.15rem;
+  font: italic 800 1.05rem/1.1 var(--capp-display);
+  letter-spacing: 0;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.capp-branch-pick {
+  width: 100%;
+  text-align: left;
+}
+
+.capp-branch-pick .capp-row-end {
+  color: var(--capp-accent);
+  font-weight: 700;
+}
+
+/* Radio options inside sheets (package, car, branch). */
+.capp-opts {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.capp-opt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--capp-line);
+  border-radius: var(--capp-radius);
+  background: var(--capp-surface);
+  color: var(--capp-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+}
+
+.capp-opt[aria-checked='true'] {
+  border-color: var(--capp-accent);
+  background: var(--capp-surface-2);
+}
+
+.capp-opt.is-dashed {
+  border-style: dashed;
+  border-color: var(--capp-line-strong);
+  background: transparent;
+}
+
+.capp-opt .capp-row-body strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.capp-opt .capp-row-body em {
+  display: block;
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--capp-steel);
+}
+
+.capp-opt-rd {
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 2px solid var(--capp-line-strong);
+  border-radius: 50%;
+  color: var(--capp-accent);
+}
+
+.capp-opt[aria-checked='true'] .capp-opt-rd {
+  border-color: var(--capp-accent);
+  background: #052699;
+}
+
+.capp-opt[aria-checked='true'] .capp-opt-rd::after {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.capp-opt[aria-checked='true'] .capp-opt-rd.is-plus::after {
+  display: none;
+}
+
+.capp-opt[aria-checked='true'] .capp-opt-rd.is-plus {
+  color: #fff;
+}
+
+.capp-opt-price {
+  font: italic 800 0.9rem/1.2 var(--capp-display);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Booking steps. */
+.capp-flow-count {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--capp-steel);
+}
+
+.capp-flow-bar {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+  gap: 4px;
+  margin: 0 0 1rem;
+}
+
+.capp-flow-bar i {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--capp-line-strong);
+  transition: background 0.3s;
+}
+
+.capp-flow-bar i.is-on {
+  background: var(--capp-accent);
+}
+
+.capp-flow {
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+  animation: capp-step-in 0.36s var(--capp-ease);
+}
+
+.capp-flow .capp-no {
+  justify-self: start;
+}
+
+.capp-flow-h {
+  margin: 0;
+  font: italic 800 1.65rem/0.95 var(--capp-display);
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  color: var(--capp-ink);
+}
+
+.capp-flow-sub {
+  margin: -0.35rem 0 0.2rem;
+  font-size: 0.9rem;
+  color: var(--capp-steel);
+}
+
+.capp-flow-cta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.6rem;
+}
+
+.capp-flow-cta > :only-child {
+  grid-column: 1 / -1;
+}
+
+.capp-flow-back {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid var(--capp-line-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--capp-ink);
+  cursor: pointer;
+}
+
+.capp-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.capp-slot {
+  min-height: 2.9rem;
+  border: 1px solid var(--capp-line);
+  border-radius: var(--capp-radius);
+  background: var(--capp-surface);
+  color: var(--capp-ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.capp-slot.is-wide {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--capp-steel);
+}
+
+.capp-slot[aria-checked='true'] {
+  border-color: var(--capp-accent);
+  background: var(--capp-surface-2);
+  color: var(--capp-accent);
+}
+
+.capp-flow-done {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem 1rem;
+  text-align: center;
+}
+
+.capp-flow-done h3 {
+  margin: 0.6rem 0 0;
+  font: italic 800 1.6rem/1 var(--capp-display);
+  text-transform: uppercase;
+  color: var(--capp-ink);
+}
+
+.capp-flow-done p {
+  max-width: 30ch;
+  margin: 0;
+  color: var(--capp-steel);
+}
+
+.capp-flow-check {
+  display: grid;
+  place-items: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--capp-ok, #5bd48f) 16%, transparent);
+  color: var(--capp-ok, #5bd48f);
+  animation: capp-pop 0.6s var(--capp-ease);
+}
+
+/* Summary list (review step, visit details). */
+.capp-sum {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--capp-line);
+  border-radius: var(--capp-radius);
+  background: var(--capp-surface);
+}
+
+.capp-sum div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.92rem;
+}
+
+.capp-sum div + div {
+  border-top: 1px solid var(--capp-line);
+}
+
+.capp-sum dt {
+  color: var(--capp-steel);
+}
+
+.capp-sum dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+  color: var(--capp-ink);
+}
+
+.capp-sum-price {
+  font: italic 800 1rem var(--capp-display);
+}
+
+/* Sheets. */
+.capp-sheet-layer {
+  --capp-display: var(--font-display, 'Benzin', 'Arial Black', sans-serif);
+  --capp-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  font-family: var(--font-body, 'Gilmer', sans-serif);
+  color: var(--capp-ink);
+}
+
+.capp-sheet-layer.is-open {
+  pointer-events: auto;
+}
+
+.capp-sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 24, 0.55);
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+
+.capp-sheet-layer.is-open .capp-sheet-scrim {
+  opacity: 1;
+}
+
+.capp-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 92dvh;
+  border-top: 1px solid var(--capp-line);
+  border-radius: 1.4rem 1.4rem 0 0;
+  background: var(--capp-bg);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.3);
+  transform: translateY(105%);
+  transition: transform 0.45s var(--capp-ease);
+  outline: none;
+}
+
+.capp-sheet.is-full {
+  height: 92dvh;
+}
+
+.capp-sheet-layer.is-open .capp-sheet {
+  transform: translateY(0);
+}
+
+.capp-sheet.is-dragging {
+  transition: none;
+}
+
+.capp-sheet-grab {
+  flex: none;
+  display: grid;
+  place-items: center;
+  height: 1.4rem;
+  cursor: grab;
+  touch-action: none;
+}
+
+.capp-sheet-grab::before {
+  content: '';
+  width: 2.4rem;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--capp-line-strong);
+}
+
+.capp-sheet-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1.25rem 0.75rem;
+  touch-action: none;
+}
+
+.capp-sheet-title {
+  font: italic 800 1.3rem/1 var(--capp-display);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+.capp-sheet-x {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--capp-surface-2);
+  color: var(--capp-ink);
+  cursor: pointer;
+}
+
+.capp-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.capp-sheet-foot {
+  flex: none;
+  padding: 0.75rem 1.25rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--capp-line);
+  background: var(--capp-bg);
+}
+
+html.capp-sheet-open {
+  overflow: hidden;
+}
+
+@media (min-width: 860px) {
+  .capp-sheet {
+    top: 50%;
+    bottom: auto;
+    left: 50%;
+    right: auto;
+    width: min(32rem, calc(100vw - 3rem));
+    max-height: min(46rem, 88vh);
+    border: 1px solid var(--capp-line);
+    border-radius: 0.75rem;
+    opacity: 0;
+    transform: translate(-50%, -46%);
+    transition: transform 0.35s var(--capp-ease), opacity 0.25s;
+  }
+
+  .capp-sheet.is-full {
+    height: min(46rem, 88vh);
+  }
+
+  .capp-sheet-layer.is-open .capp-sheet {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  .capp-sheet-grab {
+    display: none;
+  }
+
+  .capp-sheet-head {
+    padding-top: 1.1rem;
+  }
+}
+
+/* Action list (car actions, sign out). */
+.capp-acts {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.capp-acts-grp {
+  overflow: hidden;
+  border: 1px solid var(--capp-line);
+  border-radius: 0.875rem;
+  background: var(--capp-surface);
+}
+
+.capp-acts-t {
+  padding: 0.95rem 1rem 0.85rem;
+  border-bottom: 1px solid var(--capp-line);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--capp-steel);
+}
+
+.capp-acts-t strong {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 1rem;
+  color: var(--capp-ink);
+}
+
+.capp-acts-grp button {
+  display: block;
+  width: 100%;
+  min-height: 3.4rem;
+  border: 0;
+  background: none;
+  color: var(--capp-accent);
+  font: inherit;
+  font-size: 1.02rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.capp-acts-grp button + button {
+  border-top: 1px solid var(--capp-line);
+}
+
+.capp-acts-grp button.is-danger {
+  color: var(--capp-bad, #ff8a7a);
+}
+
+.capp-acts-grp button.is-cancel {
+  font-weight: 800;
+}
+
+.capp-acts-grp button:active {
+  background: var(--capp-fill);
+}
+
+/* Rewards: the stamp card as a wallet pass. */
+.capp-pass {
+  --capp-ink: #f1f1ed;
+  --capp-steel: #c4cee7;
+  --capp-line-strong: rgba(241, 241, 237, 0.28);
+  --capp-surface: #08133f;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.25rem;
+  border: 1px solid #16255c;
+  border-radius: 0.5rem;
+  background: radial-gradient(120% 90% at 100% 0%, #1b3fc4 0%, #052699 38%, #020a31 100%);
+  color: #f1f1ed;
+  box-shadow: inset 0 1px 0 rgba(157, 180, 255, 0.14), 0 22px 48px rgba(2, 10, 49, 0.35);
+}
+
+.capp-pass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%);
+  transform: translateX(-100%);
+  animation: capp-sheen 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.capp-pass-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.capp-pass-head img {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -0.6rem 0 -0.6rem -0.6rem;
+  object-fit: contain;
+}
+
+.capp-pass-head span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9db4ff;
+}
+
+.capp-pass-count {
+  margin: 0.4rem 0 0;
+  color: rgba(241, 241, 237, 0.75);
+  font-size: 0.95rem;
+}
+
+.capp-pass-count b {
+  margin-right: 0.35rem;
+  font: italic 800 3.4rem/0.9 var(--capp-display);
+  color: #fff;
+}
+
+.capp-pass-line {
+  margin: -0.4rem 0 0;
+  color: rgba(241, 241, 237, 0.86);
+  font-size: 0.92rem;
+}
+
+.capp-pass .capp-stamp {
+  border-color: rgba(241, 241, 237, 0.28);
+  color: rgba(241, 241, 237, 0.5);
+}
+
+.capp-pass .capp-stamp.is-on {
+  border-color: #f1f1ed;
+  background: #f1f1ed;
+  color: #052699;
+}
+
+.capp-pass .capp-stamp.is-gift {
+  border-color: #e7c976;
+  background: transparent;
+  color: #e7c976;
+}
+
+.capp-pass .capp-stamp-gift {
+  background: #052699;
+}
+
+.capp-pass-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed rgba(241, 241, 237, 0.24);
+  font-size: 0.8rem;
+  color: rgba(241, 241, 237, 0.7);
+}
+
+.capp-pass-foot b {
+  display: block;
+  font: italic 800 1.05rem/1.2 var(--capp-display);
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.capp-pass-foot .is-end {
+  text-align: right;
+}
+
+.capp-next {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0.5rem 0.5rem 0.9rem;
+  border: 1px solid var(--capp-line);
+  border-radius: var(--capp-radius);
+  background: var(--capp-surface);
+}
+
+.capp-next .capp-row {
+  border: 0;
+  background: transparent;
+  padding-left: 0;
+}
+
+.capp-next .capp-row-icon {
+  display: none;
+}
+
+.capp-ring {
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  background: conic-gradient(var(--capp-accent) calc(var(--p, 0) * 1%), var(--capp-line) 0);
+}
+
+.capp-ring::after {
+  content: '';
+  grid-area: 1 / 1;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--capp-surface);
+}
+
+.capp-ring b {
+  grid-area: 1 / 1;
+  z-index: 1;
+  font: italic 800 0.72rem var(--capp-display);
+  color: var(--capp-accent);
+}
+
+/* Visit detail timeline. */
+.capp-visit-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.capp-visit-ticket {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--capp-steel);
+}
+
+.capp-timeline {
+  margin: 0;
+  padding: 0.25rem 0 0;
+  list-style: none;
+}
+
+.capp-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr);
+  gap: 0.85rem;
+  padding-bottom: 1.25rem;
+}
+
+.capp-timeline li::before {
+  content: '';
+  position: absolute;
+  left: calc(0.8rem - 1px);
+  top: 1.6rem;
+  bottom: 0;
+  width: 2px;
+  background: var(--capp-line-strong);
+}
+
+.capp-timeline li:last-child::before {
+  display: none;
+}
+
+.capp-timeline li.is-done::before {
+  background: var(--capp-accent);
+}
+
+.capp-timeline-dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 2px solid var(--capp-line-strong);
+  border-radius: 50%;
+  background: var(--capp-bg);
+  color: #fff;
+}
+
+.capp-timeline li.is-done .capp-timeline-dot {
+  border-color: #052699;
+  background: #052699;
+}
+
+.capp-timeline li.is-current .capp-timeline-dot {
+  border-color: var(--capp-accent);
+  box-shadow: 0 0 0 5px var(--capp-accent-soft);
+}
+
+.capp-timeline li.is-current .capp-timeline-dot::after {
+  content: '';
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--capp-accent);
+  animation: capp-pulse 1.6s infinite;
+}
+
+.capp-timeline strong {
+  display: block;
+  font-size: 1rem;
+  color: var(--capp-ink);
+}
+
+.capp-timeline li.is-current strong {
+  font-family: var(--capp-display);
+  font-style: italic;
+  text-transform: uppercase;
+}
+
+.capp-timeline li.is-todo strong {
+  font-weight: 500;
+  color: var(--capp-steel);
+}
+
+.capp-timeline em {
+  display: block;
+  font-style: normal;
+  font-size: 0.85rem;
+  color: var(--capp-steel);
+}
+
+.capp-mini-seg {
+  display: inline-grid;
+  grid-auto-flow: column;
+  padding: 2px;
+  border: 1px solid var(--capp-line);
+  border-radius: 999px;
+  background: var(--capp-fill, transparent);
+}
+
+.capp-mini-seg button {
+  min-height: 2rem;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--capp-steel);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.capp-mini-seg button[aria-checked='true'] {
+  background: #052699;
+  color: #fff;
+}
+
+.capp-row-danger .capp-row-icon {
+  color: var(--capp-bad, #ff7b8a);
+}
+
+.capp-dock-ind {
+  display: none;
+}
+
+@keyframes capp-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes capp-pulse {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes capp-sheen {
+  0%,
+  60% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes capp-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   Phone / PWA shell
+   ========================================================================== */
+@media (max-width: 859px) {
+  .capp[data-app-theme] {
+    background: var(--capp-bg);
+  }
+
+  .capp[data-app-theme] .capp-stage {
+    background: var(--capp-bg);
+  }
+
+  .capp-desk-only,
+  .capp .capp-desk-only {
+    display: none !important;
+  }
+
+  /* ---- Type: the website's rules ---- */
+  .capp[data-app-theme] .capp-title,
+  .capp[data-app-theme] .capp-hero h1 {
+    letter-spacing: -0.025em;
+    line-height: 0.92;
+  }
+
+  .capp[data-app-theme] .capp-sect h2,
+  .capp-sheet-layer[data-app-theme] .capp-sect h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--capp-accent);
+  }
+
+  .capp[data-app-theme] .capp-sect h2::before,
+  .capp-sheet-layer[data-app-theme] .capp-sect h2::before {
+    content: '';
+    flex: none;
+    width: 1.5rem;
+    height: 2px;
+    background: currentColor;
+  }
+
+  .capp[data-app-theme] .capp-sect h2 small {
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--capp-steel);
+  }
+
+  .capp[data-app-theme] .capp-sect .capp-link {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .capp[data-app-theme] .capp-eyebrow,
+  .capp-sheet-layer[data-app-theme] .capp-eyebrow {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .capp[data-app-theme] .capp-eyebrow::before {
+    width: 1.4rem;
+  }
+
+  /* ---- Buttons: uppercase tracked pills ---- */
+  .capp[data-app-theme] .capp-btn,
+  .capp-sheet-layer[data-app-theme] .capp-btn {
+    min-height: 3rem;
+    padding: 0.7rem 1.2rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .capp[data-app-theme] .capp-btn-fill,
+  .capp[data-app-theme] .capp-btn-accent,
+  .capp-sheet-layer[data-app-theme] .capp-btn-fill,
+  .capp-sheet-layer[data-app-theme] .capp-btn-accent {
+    border: 0;
+    background: #052699;
+    color: #fff;
+  }
+
+  .capp[data-app-theme] .capp-btn-fill:hover:not(:disabled),
+  .capp[data-app-theme] .capp-btn-accent:hover:not(:disabled),
+  .capp-sheet-layer[data-app-theme] .capp-btn-fill:hover:not(:disabled) {
+    background: #0a32c2;
+    filter: none;
+  }
+
+  .capp[data-app-theme] .capp-btn-ghost,
+  .capp-sheet-layer[data-app-theme] .capp-btn-ghost {
+    border: 1px solid var(--capp-line-strong);
+    background: transparent;
+    color: var(--capp-ink);
+  }
+
+  .capp[data-app-theme] .capp-btn-light {
+    background: #fff;
+    color: #052699;
+  }
+
+  /* ---- Panels: near-square, outlined, no drop shadow ---- */
+  .capp[data-app-theme] .capp-card,
+  .capp[data-app-theme] .capp-group,
+  .capp[data-app-theme] .capp-empty,
+  .capp[data-app-theme] .capp-stats,
+  .capp-sheet-layer[data-app-theme] .capp-card {
+    border: 1px solid var(--capp-line);
+    border-radius: var(--capp-radius);
+    background: var(--capp-surface);
+    box-shadow: none;
+  }
+
+  .capp[data-app-theme] .capp-scroll > .capp-row,
+  .capp[data-app-theme] .capp-section > .capp-row,
+  .capp[data-app-theme] .capp-list > .capp-row {
+    border: 1px solid var(--capp-line);
+    border-radius: var(--capp-radius);
+    background: var(--capp-surface);
+    box-shadow: none;
+  }
+
+  .capp[data-app-theme] .capp-row-icon {
+    border-radius: 50%;
+    background: var(--capp-accent-soft);
+    color: var(--capp-accent);
+  }
+
+  .capp[data-app-theme] .capp-badge {
+    border: 1px solid currentColor;
+    background: transparent;
+    font-size: 0.625rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--capp-accent);
+  }
+
+  .capp[data-app-theme] .capp-badge--ok {
+    color: var(--capp-ok);
+  }
+
+  .capp[data-app-theme] .capp-badge--warn {
+    color: var(--capp-warn);
+  }
+
+  .capp[data-app-theme] .capp-day,
+  .capp-sheet-layer[data-app-theme] .capp-day {
+    border: 1px solid var(--capp-line);
+    border-radius: var(--capp-radius);
+    background: var(--capp-surface);
+    box-shadow: none;
+  }
+
+  .capp[data-app-theme] .capp-day.is-active,
+  .capp-sheet-layer[data-app-theme] .capp-day.is-active {
+    border-color: #052699;
+    background: #052699;
+    color: #fff;
+  }
+
+  .capp[data-app-theme] .capp-switch.is-on,
+  .capp-sheet-layer[data-app-theme] .capp-switch.is-on {
+    background: #052699;
+    box-shadow: inset 0 0 0 1px #9db4ff;
+  }
+
+  /* ---- Large title (tab and pushed screens without a photo) ---- */
+  .capp[data-app-theme] .capp-top {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'back . actions'
+      'copy copy copy';
+    row-gap: 0.4rem;
+    padding: calc(max(0.85rem, env(safe-area-inset-top, 0px)) + 0.35rem) 1.25rem 0.4rem;
+    background: none;
+    color: var(--capp-ink);
+  }
+
+  .capp[data-app-theme] .capp-top.is-root {
+    grid-template-areas: 'copy copy actions';
+    padding-top: calc(max(0.85rem, env(safe-area-inset-top, 0px)) + 1.6rem);
+  }
+
+  .capp[data-app-theme] .capp-top .capp-back {
+    grid-area: back;
+    margin-left: -0.6rem;
+  }
+
+  .capp[data-app-theme] .capp-top-copy,
+  .capp[data-app-theme] .capp-top-copy.is-plain {
+    grid-area: copy;
+  }
+
+  .capp[data-app-theme] .capp-top-actions {
+    grid-area: actions;
+  }
+
+  .capp[data-app-theme] .capp-top h1 {
+    font: italic 800 2.15rem/0.92 var(--capp-display);
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+    color: var(--capp-ink);
+    text-shadow: none;
+    overflow-wrap: anywhere;
+  }
+
+  .capp[data-app-theme] .capp-top p {
+    margin-top: 0.55rem;
+    font-size: 0.92rem;
+    white-space: normal;
+    color: var(--capp-steel);
+    text-shadow: none;
+  }
+
+  .capp[data-app-theme] .capp-top .capp-back,
+  .capp[data-app-theme] .capp-top .capp-icon-btn,
+  .capp[data-app-theme] .capp-top .capp-avatar {
+    border: 1px solid var(--capp-line);
+    background: var(--capp-surface);
+    color: var(--capp-ink);
+    backdrop-filter: none;
+  }
+
+  .capp[data-app-theme] .capp-top + .capp-scroll > :first-child {
+    margin-top: 0;
+  }
+
+  /* ---- Compact bar: fades in once the large title scrolls away ---- */
+  .capp-navbar {
+    position: fixed;
+    z-index: 45;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem;
+    min-height: calc(env(safe-area-inset-top, 0px) + 3rem);
+    padding: env(safe-area-inset-top, 0px) 0.75rem 0;
+    border-bottom: 1px solid transparent;
+    color: var(--capp-ink);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, background 0.2s, border-color 0.2s;
+  }
+
+  .capp-navbar.is-solid {
+    opacity: 1;
+    pointer-events: auto;
+    border-bottom-color: var(--capp-line);
+    background: var(--capp-bar);
+    backdrop-filter: saturate(1.6) blur(20px);
+    -webkit-backdrop-filter: saturate(1.6) blur(20px);
+  }
+
+  .capp-navbar-title {
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .capp-navbar-side {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .capp-navbar-side.is-end {
+    justify-content: flex-end;
+  }
+
+  .capp-navbar-side .capp-icon-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 0;
+    background: none;
+    color: var(--capp-ink);
+  }
+
+  .capp-navbar-back {
+    display: inline-flex;
+    align-items: center;
+    margin-left: -0.35rem;
+    padding: 0.35rem 0;
+    border: 0;
+    background: none;
+    color: var(--capp-accent);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  /* ---- Home: photo header with the live card lifted over the seam ---- */
+  .capp[data-app-theme] .capp-hero {
+    padding-bottom: 4.6rem;
+  }
+
+  .capp[data-app-theme] .capp-hero h1 {
+    font-size: clamp(2.4rem, 12vw, 2.9rem);
+  }
+
+  .capp[data-app-theme] .capp-hero + .capp-scroll > .capp-live-card:first-child,
+  .capp[data-app-theme] .capp-hero + .capp-scroll > :first-child {
+    margin-top: -3.4rem;
+  }
+
+  .capp-live-card {
+    position: relative;
+    z-index: 2;
+    overflow: hidden;
+    display: grid;
+    gap: 0.25rem;
+    padding: 1.1rem 1.1rem 1rem;
+    border: 1px solid #16255c;
+    border-radius: 0.5rem;
+    background: var(--capp-panel, #08133f);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(157, 180, 255, 0.14), 0 22px 44px rgba(2, 6, 28, 0.42);
+  }
+
+  .capp-live-card::before {
+    content: '';
+    position: absolute;
+    right: -4rem;
+    top: -4rem;
+    width: 12rem;
+    height: 12rem;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(64, 110, 255, 0.38), transparent);
+    pointer-events: none;
+  }
+
+  .capp-live-card > * {
+    position: relative;
+  }
+
+  .capp-live-card.is-done {
+    border-color: #0f7a55;
+    background: linear-gradient(135deg, #0b6446, #08402e);
+  }
+
+  .capp-live-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .capp-live-card .capp-eyebrow {
+    margin: 0;
+    color: #9db4ff;
+  }
+
+  .capp-live-card .capp-badge {
+    color: #8fe3b3;
+  }
+
+  .capp-live-card .capp-badge--warn {
+    color: #f2c46b;
+  }
+
+  .capp-live-card .capp-badge--idle {
+    color: #9db4ff;
+  }
+
+  .capp-live-plate,
+  .capp-live-title {
+    margin: 0.65rem 0 0;
+    font: italic 800 2.1rem/0.95 var(--capp-display);
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  .capp-live-title {
+    font-size: 1.5rem;
+    letter-spacing: -0.025em;
+  }
+
+  .capp-live-sub {
+    margin: 0.2rem 0 0.4rem;
+    font-size: 0.9rem;
+    color: rgba(241, 241, 237, 0.82);
+  }
+
+  .capp-live-now {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .capp-live-now strong {
+    font-size: 1.15rem;
+  }
+
+  .capp-live-now span {
+    font-size: 0.8rem;
+    color: rgba(241, 241, 237, 0.68);
+  }
+
+  .capp-live-rail {
+    display: grid;
+    grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 0.55rem;
+  }
+
+  .capp-live-rail i {
+    position: relative;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  .capp-live-rail i.is-done {
+    background: #9db4ff;
+  }
+
+  .capp-live-rail i.is-current::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 55%;
+    border-radius: 3px;
+    background: #fff;
+    animation: capp-grow 2.4s ease-in-out infinite alternate;
+  }
+
+  .capp-live-labels {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.45rem;
+    font-size: 0.75rem;
+    color: rgba(241, 241, 237, 0.68);
+  }
+
+  .capp-live-labels span:first-child {
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .capp-live-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+  }
+
+  .capp-live-round {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    color: #fff;
+  }
+
+  .capp-live-card.is-empty .capp-btn {
+    margin-top: 0.6rem;
+  }
+
+  .capp-live-alt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.55rem;
+    padding: 0.35rem;
+    color: #c9d3ff;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  /* Badges on navy panels keep their on-navy colours in both themes. */
+  .capp[data-app-theme] .capp-live-card .capp-badge,
+  .capp[data-app-theme] .capp-queue-car .capp-badge {
+    color: #8fe3b3;
+  }
+
+  .capp[data-app-theme] .capp-live-card .capp-badge--warn,
+  .capp[data-app-theme] .capp-queue-car .capp-badge--warn {
+    color: #f2c46b;
+  }
+
+  .capp[data-app-theme] .capp-live-card .capp-badge--idle,
+  .capp[data-app-theme] .capp-live-card .capp-badge--info,
+  .capp[data-app-theme] .capp-queue-car .capp-badge--info {
+    color: #9db4ff;
+  }
+
+  .capp[data-app-theme] .capp-queue-car {
+    --capp-ink: #fff;
+    --capp-steel: #bac4df;
+    --capp-accent: #9db4ff;
+    --capp-line: #354168;
+  }
+
+  /* Quick actions: four round shortcuts. */
+  .capp-quick {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .capp-quick-item {
+    display: grid;
+    justify-items: center;
+    gap: 0.45rem;
+    color: var(--capp-ink);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.16s var(--capp-ease);
+  }
+
+  .capp-quick-item:active {
+    transform: scale(0.94);
+  }
+
+  .capp-quick-icon {
+    display: grid;
+    place-items: center;
+    width: 3.6rem;
+    height: 3.6rem;
+    border: 1px solid var(--capp-line-strong);
+    border-radius: 50%;
+    color: var(--capp-accent);
+  }
+
+  .capp-quick-note {
+    margin: -0.4rem 0 0;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--capp-steel);
+  }
+
+  /* Rewards summary on Home. */
+  .capp-pass-mini {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.2rem 0.75rem;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid #16255c;
+    border-radius: 0.5rem;
+    background: linear-gradient(135deg, #052699, #020a31);
+    color: #fff;
+    text-decoration: none;
+    box-shadow: inset 0 1px 0 rgba(157, 180, 255, 0.14);
+  }
+
+  .capp-pass-mini-n {
+    font: italic 800 1.9rem/1 var(--capp-display);
+  }
+
+  .capp-pass-mini-n small {
+    font: 500 0.92rem var(--font-body, sans-serif);
+    color: rgba(241, 241, 237, 0.72);
+  }
+
+  .capp-pass-mini-chev {
+    grid-row: 1 / 3;
+    grid-column: 2;
+    opacity: 0.65;
+  }
+
+  .capp-pass-mini-p {
+    font-size: 0.875rem;
+    color: rgba(241, 241, 237, 0.82);
+  }
+
+  .capp-pass-mini-segs {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(var(--n, 10), minmax(0, 1fr));
+    gap: 3px;
+    margin-top: 0.6rem;
+  }
+
+  .capp-pass-mini-segs i {
+    height: 7px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  .capp-pass-mini-segs i.is-on {
+    background: #fff;
+  }
+
+  .capp-pass-mini-segs i.is-gift {
+    background: rgba(231, 201, 118, 0.5);
+  }
+
+  .capp-pass-mini-segs i.is-on.is-gift {
+    background: #e7c976;
+  }
+
+  /* From Hakum: blog and events, side by side. */
+  .capp-feed {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .capp-feed-card {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.9rem;
+    border: 1px solid var(--capp-line);
+    border-radius: var(--capp-radius);
+    background: var(--capp-surface);
+    color: var(--capp-ink);
+    text-decoration: none;
+  }
+
+  .capp-feed-card strong {
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  .capp-feed-card em {
+    font-style: normal;
+    font-size: 0.8rem;
+    color: var(--capp-steel);
+  }
+
+  .capp-feed-icon {
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    background: var(--capp-accent-soft);
+    color: var(--capp-accent);
+  }
+
+  /* Queue: your car on the floor is a navy panel you can open. */
+  .capp[data-app-theme] .capp-queue-car {
+    display: grid;
+    gap: 0.75rem;
+    border-color: #16255c;
+    background: var(--capp-panel, #08133f);
+    color: #fff;
+    text-decoration: none;
+  }
+
+  .capp[data-app-theme] .capp-branch-card.is-segmented .capp-row-icon {
+    display: none;
+  }
+
+  /* ---- Me ---- */
+  .capp[data-app-theme] .capp-profile {
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+
+  .capp[data-app-theme] .capp-profile .capp-avatar {
+    width: 4rem;
+    height: 4rem;
+    border: 0;
+    background: linear-gradient(135deg, #052699, #3b6bff);
+    color: #fff;
+    font: italic 800 1.35rem var(--capp-display);
+  }
+
+  .capp[data-app-theme] .capp-profile .capp-title {
+    font-size: 1.5rem !important;
+  }
+
+  .capp[data-app-theme] .capp-garage .capp-plate {
+    font-size: 1.05rem;
+  }
+
+  /* ---- Floating dock with a sliding pill ---- */
+  .capp[data-app-theme] .capp-dock {
+    border-color: var(--capp-line);
+    background: var(--capp-dock-bg);
+    box-shadow: 0 14px 34px rgba(2, 10, 49, 0.3);
+    backdrop-filter: saturate(1.6) blur(20px);
+    -webkit-backdrop-filter: saturate(1.6) blur(20px);
+  }
+
+  .capp-dock-ind {
+    position: absolute;
+    z-index: 0;
+    top: 0.4rem;
+    bottom: 0.4rem;
+    left: 0.4rem;
+    display: block;
+    width: calc((100% - 0.8rem - 0.6rem) / 5);
+    border-radius: 1.2rem;
+    background: #052699;
+    box-shadow: 0 6px 16px rgba(5, 38, 153, 0.4);
+    transform: translateX(calc(var(--i, 0) * (100% + 0.15rem)));
+    transition: transform 0.45s var(--capp-ease), opacity 0.2s;
+  }
+
+  .capp[data-app-theme] .capp-dock-item {
+    position: relative;
+    z-index: 1;
+    color: var(--capp-steel);
+  }
+
+  .capp[data-app-theme] .capp-dock-item-primary,
+  .capp[data-app-theme] .capp-dock-item-primary:hover {
+    background: transparent;
+    color: #fff;
+  }
+
+  .capp-dock-live {
+    position: absolute;
+    top: 0.35rem;
+    left: calc(50% + 0.45rem);
+    width: 0.55rem;
+    height: 0.55rem;
+    border: 2px solid var(--capp-surface);
+    border-radius: 50%;
+    background: #2fbf71;
+  }
+
+  /* ---- Pull to refresh ---- */
+  .capp-ptr {
+    display: grid;
+    place-items: end center;
+    overflow: hidden;
+    padding-top: env(safe-area-inset-top, 0px);
+    color: var(--capp-steel);
+    transition: height 0.25s var(--capp-ease);
+  }
+
+  .capp-ptr.is-busy svg {
+    animation: capp-spin 0.8s linear infinite;
+  }
+
+  /* ---- Screen transitions ---- */
+  .capp-enter-push > :not(.capp-dock):not(.capp-navbar) {
+    animation: capp-push-in 0.42s var(--capp-ease) both;
+  }
+
+  .capp-enter-pop > :not(.capp-dock):not(.capp-navbar) {
+    animation: capp-pop-in 0.38s var(--capp-ease) both;
+  }
+
+  .capp-enter-tab > :not(.capp-dock):not(.capp-navbar) {
+    animation: capp-tab-in 0.22s ease both;
+  }
+}
+
+@media (min-width: 860px) {
+  .capp-navbar,
+  .capp-ptr {
+    display: none;
+  }
+
+  .capp-svc-list {
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  }
+}
+
+@keyframes capp-grow {
+  from {
+    width: 25%;
+  }
+  to {
+    width: 70%;
+  }
+}
+
+@keyframes capp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes capp-push-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes capp-pop-in {
+  from {
+    opacity: 0.4;
+    transform: translateX(-28%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes capp-tab-in {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capp-enter-push > *,
+  .capp-enter-pop > *,
+  .capp-enter-tab > *,
+  .capp-flow,
+  .capp-pass::before,
+  .capp-live-rail i.is-current::after,
+  .capp-timeline li.is-current .capp-timeline-dot::after,
+  .capp-flow-check {
+    animation: none !important;
+  }
+
+  .capp-sheet,
+  .capp-sheet-scrim,
+  .capp-dock-ind,
+  .capp-seg-thumb {
+    transition: none !important;
+  }
+}
