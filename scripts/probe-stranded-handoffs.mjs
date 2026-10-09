@@ -28,28 +28,45 @@ if (!URL || !KEY) { console.error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not 
 
 const db = createClient(URL, KEY, { auth: { autoRefreshToken: false, persistSession: false } })
 
+/**
+ * PostgREST returns `{ data: null, error }` rather than throwing, so a bad
+ * column or a denied select silently yields null. That is not an empty result,
+ * it is a broken read — and this probe's output decides what a destructive
+ * cleanup may delete, so a broken read has to stop the run instead of being
+ * rendered as "no such row".
+ *
+ * This is not hypothetical: the customer read selected `name`, which does not
+ * exist (it is `full_name`). The error was never surfaced, so every customer
+ * printed MISSING and the seed marker silently evaluated false. The verdict was
+ * still right for these rows only because the plate marker carried it.
+ */
+function readOrFail(label, res) {
+  if (res.error) throw new Error(`${label} read failed: ${res.error.message}`)
+  return res.data
+}
+
 // The same markers wipe-september-2026.sql keys on.
 const SEED_EMAIL = /@sep2026\.hakum\.test|@seed\.hakum\.test/i
 const SEED_PLATE = /^ZZ[BT]\d{4}$/
 
-const { data: handoffs } = await db
+const handoffs = readOrFail('pos_handoffs', await db
   .from('pos_handoffs')
   .select('id, booking_id, customer_id, amount_minor, status, created_at, branch')
-  .eq('status', 'pending')
+  .eq('status', 'pending'))
 
 console.log(`pending hand-offs: ${handoffs?.length ?? 0}\n`)
 
 for (const h of handoffs || []) {
-  const { data: b } = await db
+  const b = readOrFail('bookings', await db
     .from('bookings')
     .select('id, status, branch, customer_id, vehicle_plate, notes, created_at')
     .eq('id', h.booking_id)
-    .maybeSingle()
-  const { data: c } = await db
+    .maybeSingle())
+  const c = readOrFail('customers', await db
     .from('customers')
-    .select('id, email, name')
+    .select('id, email, full_name')
     .eq('id', h.customer_id)
-    .maybeSingle()
+    .maybeSingle())
 
   const emailSeeded = SEED_EMAIL.test(c?.email || '')
   const plateSeeded = SEED_PLATE.test(b?.vehicle_plate || '')
@@ -58,8 +75,10 @@ for (const h of handoffs || []) {
   console.log('---')
   console.log(`  hand-off : ${h.id.slice(0, 8)}  PHP ${(h.amount_minor / 100).toFixed(2)}  branch ${h.branch}`)
   console.log(`  created  : ${String(h.created_at).slice(0, 10)}`)
-  console.log(`  booking  : ${b ? `status=${b.status} plate=${b.vehicle_plate} created=${String(b.created_at).slice(0, 10)}` : 'MISSING'}`)
-  console.log(`  customer : ${c ? `${c.email} | ${c.name}` : 'MISSING'}`)
+  // "NO ROW" now means the read succeeded and the row is genuinely absent —
+  // a failed read would have thrown above, so the two can no longer be confused.
+  console.log(`  booking  : ${b ? `status=${b.status} plate=${b.vehicle_plate} created=${String(b.created_at).slice(0, 10)}` : 'NO ROW'}`)
+  console.log(`  customer : ${c ? `${c.email} | ${c.full_name}` : 'NO ROW'}`)
   console.log(`  in 2026-09 : ${inSeedMonth}`)
   console.log(`  seed email  : ${emailSeeded}`)
   console.log(`  seed plate  : ${plateSeeded}`)

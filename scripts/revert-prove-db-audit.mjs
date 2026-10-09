@@ -24,6 +24,8 @@ const SUITES = [
   'tests/sheetUiConsistency.test.js',
   'tests/roleQaHarness.test.js',
   'tests/bookings401Probe.test.js',
+  'tests/strandedHandoffsProbe.test.js',
+  'tests/voidPosTestHandoffs.test.js',
 ]
 
 function runSuite() {
@@ -311,6 +313,74 @@ const ALL_MUTATIONS = [
     name: 'a null result starts reading as a pass',
     from: 'The race did not reproduce in this window — that is a null result, not a clearance.',
     to: 'All clear — no issues found.',
+  },
+  // The stranded-hand-off probe. Its verdict decides what a destructive wipe may
+  // delete, so a silently broken read is worse than no probe at all.
+  {
+    file: 'scripts/probe-stranded-handoffs.mjs',
+    name: 'the handoff probe reads a column that does not exist again',
+    from: ".select('id, email, full_name')",
+    to: ".select('id, email, name')",
+  },
+  {
+    file: 'scripts/probe-stranded-handoffs.mjs',
+    name: 'readOrFail swallows the PostgREST error again, so every customer reads as absent',
+    from: 'if (res.error) throw new Error(`${label} read failed: ${res.error.message}`)',
+    to: 'if (res.error) return null',
+  },
+  {
+    file: 'scripts/probe-stranded-handoffs.mjs',
+    name: 'the customer read bypasses the error-raising helper',
+    from: "readOrFail('customers', await db",
+    to: 'await db',
+  },
+  // The void migration. Each guard here is the reason it is safe to run against
+  // production at all, so each one is mutated in turn.
+  {
+    file: 'supabase/migrations/20261009030000_void_20260929_pos_test_handoffs.sql',
+    name: 'the void stops guarding the hand-off count',
+    from: 'if (select count(*) from unnest(target_handoff_ids)) <> 2 then',
+    to: 'if false then',
+  },
+  {
+    file: 'supabase/migrations/20261009030000_void_20260929_pos_test_handoffs.sql',
+    name: 'the void stops guarding the booking count',
+    from: 'if (select count(*) from unnest(group_ids)) <> 3 then',
+    to: 'if false then',
+  },
+  {
+    file: 'supabase/migrations/20261009030000_void_20260929_pos_test_handoffs.sql',
+    name: 'the void stops checking for attached sales',
+    from: 'if (select count(*) from public.sales s where s.booking_id = any(group_ids)) <> 0 then',
+    to: 'if false then',
+  },
+  {
+    file: 'supabase/migrations/20261009030000_void_20260929_pos_test_handoffs.sql',
+    name: 'the void stops expanding to visit-group siblings, stranding one ticket per visit',
+    from: 'or b.visit_group_id in (',
+    to: 'or false in (',
+  },
+  {
+    file: 'supabase/migrations/20261009030000_void_20260929_pos_test_handoffs.sql',
+    name: 'the void cancels the hand-off but leaves its transaction pending',
+    // Anchored with the update's own indentation and terminating semicolon. The
+    // bare `where t.pos_handoff_id = any(target_handoff_ids)` also appears in the
+    // earlier guard, and String.replace takes the FIRST match — so an unanchored
+    // mutation edits the guard and leaves the update untouched, proving nothing.
+    from: "   where t.pos_handoff_id = any(target_handoff_ids)\n     and t.status = 'pending_payment';",
+    to: "   where false\n     and t.status = 'pending_payment';",
+  },
+  {
+    file: 'supabase/migrations/20261009030000_void_20260929_pos_test_handoffs.sql',
+    name: 'the void cancels the tickets but leaves them visible on the board',
+    from: 'is_archived = true,',
+    to: 'is_archived = false,',
+  },
+  {
+    file: 'supabase/migrations/20261009030000_void_20260929_pos_test_handoffs.sql',
+    name: 'the void leaves no audit trail',
+    from: 'insert into public.queue_events (booking_id, branch, old_status, new_status, notes)',
+    to: '-- insert into public.queue_events',
   },
   {
     file: 'scripts/check-sheet-ui.mjs',
