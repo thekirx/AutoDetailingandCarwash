@@ -8,8 +8,9 @@ export function hrefForCalendarItem(resource) {
   if (type === 'event' && resource.event?.id) {
     return `/operations/planning?tab=events&event=${resource.event.id}`
   }
-  if (type === 'booking' && resource.booking?.id) {
-    return `/operations/bookings?id=${resource.booking.id}`
+  if (type === 'booking' && resource.booking?.scheduled_start) {
+    const day = new Date(resource.booking.scheduled_start).toLocaleDateString('en-CA')
+    return `/operations/bookings?tab=table&date=${day}`
   }
   if (type === 'form' && resource.submission?.form_id) {
     return `/operations/planning?tab=forms&results=${resource.submission.form_id}`

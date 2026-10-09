@@ -66,15 +66,6 @@ const STATUS_COPY = {
     opsTitle: 'Final checking',
     opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} final check @ ${b.branch_name || b.branch}`,
   },
-  for_releasing: {
-    kind: 'booking_status',
-    title: 'Ready for release',
-    sms: (b) =>
-      `Hakum: ${b.vehicle_plate || 'Your vehicle'} (${b.service_name || 'service'}) is ready for release at ${b.branch_name || b.branch}.`,
-    body: (b) => `${b.vehicle_plate || 'Your vehicle'} (${b.service_name || 'service'}) is ready for release.`,
-    opsTitle: 'For releasing',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} releasing @ ${b.branch_name || b.branch}`,
-  },
   for_payment: {
     kind: 'booking_status',
     title: 'Ready for payment',
@@ -101,16 +92,6 @@ const STATUS_COPY = {
     body: (b) => `Your ${b.service_name || 'service'} booking at ${b.branch_name || b.branch} was cancelled.`,
     opsTitle: 'Booking cancelled',
     opsBody: (b) => `${b.vehicle_plate || 'Ticket'} cancelled @ ${b.branch_name || b.branch}`,
-  },
-  redo: {
-    kind: 'booking_status',
-    title: 'We are redoing your service',
-    sms: (b) =>
-      `Hakum: Sorry — redoing ${b.service_name || 'service'} on ${b.vehicle_plate || 'your car'} at ${b.branch_name || b.branch}. We will update you.`,
-    body: (b) =>
-      `We are sorry. We are redoing ${b.service_name || 'service'} on ${b.vehicle_plate || 'your vehicle'} at ${b.branch_name || b.branch}.`,
-    opsTitle: 'Redo on floor',
-    opsBody: (b) => `${b.vehicle_plate || 'Vehicle'} redo @ ${b.branch_name || b.branch}`,
   },
   photos_ready: {
     kind: 'booking_photos',
@@ -150,11 +131,21 @@ export async function hydrateBookingForNotify(db, booking) {
 }
 
 
+/**
+ * Failed QA is internal: no customer or ops notice on the fail itself, nor on the
+ * redo pass back through In progress / Final checking (redo_at stays stamped).
+ * For payment and completed still notify.
+ */
+export function isSilentRedoNotify(booking, status = booking?.status) {
+  if (status === 'redo') return true
+  return Boolean(booking?.redo_at) && (status === 'in_progress' || status === 'final_checking')
+}
+
 /** Customer-facing inbox/SMS/push payload. */
 export function buildBookingNotifyPayload(booking, status, templates = null) {
   const key = status || booking?.status
   const copy = STATUS_COPY[key]
-  if (!booking || !copy) return null
+  if (!booking || !copy || isSilentRedoNotify(booking, key)) return null
   const tplKey = bookingTemplateKey(key, 'customer')
   if (templates && !templateEnabled(templates, tplKey)) return null
   const tpl = templates?.[tplKey]
@@ -170,7 +161,7 @@ export function buildBookingNotifyPayload(booking, status, templates = null) {
     sms: applyTemplateText(tpl?.sms_body, vars, copy.sms(booking)),
     // Floor statuses → live queue; booking lifecycle / photos stay on account home
     url: userId
-      ? ['waiting', 'in_progress', 'final_checking', 'for_releasing', 'for_payment', 'redo'].includes(key)
+      ? ['waiting', 'in_progress', 'final_checking', 'for_payment'].includes(key)
         ? '/account/queue'
         : '/account'
       : '/book',
@@ -191,7 +182,7 @@ export function buildOpsNotifyRule(booking, status = booking?.status) {
 export function buildOpsNotifyCopy(booking, status, templates = null) {
   const key = status || booking?.status
   const copy = STATUS_COPY[key]
-  if (!booking || !copy) return null
+  if (!booking || !copy || isSilentRedoNotify(booking, key)) return null
   const tplKey = bookingTemplateKey(key, 'ops')
   if (templates && !templateEnabled(templates, tplKey)) return null
   const tpl = templates?.[tplKey]
@@ -247,6 +238,7 @@ export async function isSmsNotificationsEnabled(db = admin()) {
  * After booking create/status change: SMS + customer inbox/push + ops inbox/push.
  */
 export async function notifyBookingStatus(booking, status = booking?.status) {
+  if (isSilentRedoNotify(booking, status)) return { skipped: true, reason: 'redo_silent' }
   const db = admin()
   const hydrated = await hydrateBookingForNotify(db, booking)
   let templates = null

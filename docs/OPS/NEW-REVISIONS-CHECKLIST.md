@@ -42,7 +42,7 @@ This audit found **0 GAP** items against the brief after P0–P7. Residuals are 
 ## Principal decisions (read before the checklist)
 
 1. **Salary:** Owner asked BA to “generate / modify / push” daily salary. Product ships **BA draft extras on End of Shift** + **SA/ASA confirm** on Payroll. BA never posts `payroll_runs`. Documented in money contract C4/G3.
-2. **Ready for Release → POS:** Owner wording maps to `for_releasing` then lounge **`for_payment`** → POS. Two steps on purpose (release ≠ cash drawer).
+2. **Ready for Release → POS:** Retired 2026-10-09 at the owner's request (redundant with payment). `final_checking` goes straight to **`for_payment`** → POS. Legacy `for_releasing` rows still render and can only be completed or cancelled.
 3. **Detailing status names:** Enum IDs stay `pending` / `confirmed` / …; UI labels are mapped (Placeholder, Assign to branch, …).
 4. **Owner SMS:** Fires **after Finance accepts** close (trusted numbers), not on raw POS submit. Needs `OWNER_SMS_PHONE` or active BossMich `phone`.
 5. **Weather:** Optional in brief → **DECLINED** (no PII geo forecast in customer app).
@@ -71,7 +71,7 @@ This audit found **0 GAP** items against the brief after P0–P7. Residuals are 
 |---|-----------|--------|----------|
 | D1 | Tint / coating / PPF / paint-maintenance on detailing board | **LIVE** | `BookingBoardPage` + pay_category / detailing family |
 | D2 | Status pipeline (Placeholder → … → Completed) | **LIVE (mapped)** | `detailingBoardStatuses.js` labels ↔ enum |
-| D3 | Ready for Release → POS | **LIVE (mapped)** | `for_releasing` → `for_payment` → POS (not collapsed) |
+| D3 | Ready for Release → POS | **RETIRED 2026-10-09** | `final_checking` → `for_payment` → POS; no releasing step |
 | D4 | Completed outcomes: no issues / complaints addressed / unhappy | **LIVE** | `bookings.completion_outcome` + complete dialog |
 | D5 | Outcomes 2–3 → investigation ticket | **LIVE** | Experience `plan_cards` via `bookingStatus.mjs` |
 | D6 | SMS + push on status change | **LIVE** | `notifyBooking.mjs` (honors mute/disable) |

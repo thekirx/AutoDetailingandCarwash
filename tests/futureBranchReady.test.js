@@ -52,7 +52,8 @@ describe('future branch readiness', () => {
   it('People form requires a branch for detailer and video editor', () => {
     assert.equal(showBranchPicker('detailer'), true)
     assert.equal(showBranchPicker('video_editor'), true)
-    assert.equal(showBranchPicker('investor'), false)
+    assert.equal(showBranchPicker('investor'), true)
+    assert.equal(usesMultiBranch('investor'), true)
     assert.equal(usesMultiBranch('admin'), true)
     assert.equal(usesMultiBranch('detailer'), false)
   })

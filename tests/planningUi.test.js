@@ -103,6 +103,9 @@ assert.match(styles, /\.command-shell \.ops-page-chrome[\s\S]*max-width:\s*min\(
 assert.match(styles, /\.command-shell \.ops-page-chrome[\s\S]*overflow-x:\s*hidden/)
 assert.match(styles, /\.planning-lane-board[\s\S]*minmax\(0,\s*1fr\)/)
 assert.match(styles, /\.planning-lane-board-scroll/)
+for (const rule of styles.matchAll(/([^{}]+)\{[^}]*position:\s*fixed[^}]*\}/g)) {
+  assert.doesNotMatch(rule[1], /\.planner-cal-(toolbar|dow)\s*(,|$)/, 'calendar parts must not share the task scrim overlay')
+}
 assert.match(
   readFileSync(join(root, 'src/layouts/OperationsLayout.jsx'), 'utf8'),
   /SidebarInset className="min-w-0 overflow-x-hidden"/,

@@ -120,23 +120,28 @@ describe('Negative allowRoute denials', () => {
     assert.equal(allowRoute(p, 'my-tasks'), true)
   })
 
-  it('sales denied pos/finance/queue', () => {
+  it('sales denied pos/finance/new ticket; views queue + crm', () => {
     const p = profile(ROLES.SALES)
     assert.equal(allowRoute(p, 'bookings'), true)
     assert.equal(allowRoute(p, 'history'), true)
     assert.equal(allowRoute(p, 'pos'), false)
     assert.equal(allowRoute(p, 'finance'), false)
-    assert.equal(allowRoute(p, 'queue'), false)
+    assert.equal(allowRoute(p, 'queue'), true)
+    assert.equal(allowRoute(p, 'queue-new'), false)
+    assert.equal(allowRoute(p, 'crm'), true)
   })
 
-  it('investor finance hub only (reports live under Finance tab)', () => {
+  it('investor: Floor Board, POS (view), Finance + Reports only', () => {
     const p = profile(ROLES.INVESTOR)
-    assert.deepEqual(allowedKeys(p).sort(), ['finance', 'reports'].sort())
+    assert.deepEqual(allowedKeys(p).sort(), ['dashboard', 'finance', 'pos', 'reports'])
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/finance'],
+      ['/operations/dashboard', '/operations/pos', '/operations/finance'],
     )
     assert.equal(allowRoute(p, 'reports'), true)
+    for (const key of ['queue', 'queue-new', 'bookings', 'people', 'settings', 'inventory', 'attendance', 'kpi']) {
+      assert.equal(allowRoute(p, key), false, key)
+    }
   })
 
   it('every ROLES value has home, nav, and home route allowed', () => {

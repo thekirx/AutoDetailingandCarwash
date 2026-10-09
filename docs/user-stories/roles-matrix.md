@@ -9,10 +9,10 @@ Canonical landing + epic map for **all** `ROLES` in `src/auth/permissions.js`, p
 | `BossMich` | Super Admin | `/operations/console` | [Leadership](./epic-role-leadership.md), money path |
 | `assistant_super_admin` | ASA | `/operations/console` | [Leadership](./epic-role-leadership.md), grants in [People](./epic-people.md) |
 | `admin` | Branch Admin | `/operations/pos` | [Branch Admin](./epic-role-branch-admin.md) |
-| `operations_lead` | Operations Lead | `/operations/roadmap` | [Ops Lead](./epic-role-operations-lead.md) |
+| `operations_lead` | Operations Lead | `/operations/queue` (no Floor Board, CRM view only) | [Ops Lead](./epic-role-operations-lead.md) |
 | `team_lead` | Team Lead | `/operations/queue` | [Team Lead](./epic-role-team-lead.md) |
 | `staff` | Crew | `/operations/attendance` | [Crew](./epic-role-crew.md) |
-| `sales` | Sales | `/operations/bookings` | [Detailer / Sales / Marketing](./epic-roles-detailer-sales-marketing.md) |
+| `sales` | Sales | `/operations/bookings` (+ Queue view all branches, CRM view only) | [Detailer / Sales / Marketing](./epic-roles-detailer-sales-marketing.md) |
 | `marketing` | Marketing | `/operations/crm` | [Detailer / Sales / Marketing](./epic-roles-detailer-sales-marketing.md) |
 | `detailer` | Detailer | `/operations/bookings` | [Detailer / Sales / Marketing](./epic-roles-detailer-sales-marketing.md) |
 | `video_editor` | Video Editor | `/operations/planning?tab=calendar` | [Video Editor](./epic-role-video-editor.md) |

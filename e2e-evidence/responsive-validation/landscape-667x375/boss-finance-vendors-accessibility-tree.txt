@@ -1,0 +1,512 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 9117,
+ "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/finance?tab=vendors",
+ "children": [
+  {
+   "role": "main",
+   "backendNodeId": 9191,
+   "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+   "name": "",
+   "children": [
+    {
+     "role": "button",
+     "backendNodeId": 9192,
+     "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+     "name": "Toggle Sidebar"
+    },
+    {
+     "role": "navigation",
+     "backendNodeId": 9198,
+     "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 9417,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Ops"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 9419,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Finance"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 9420,
+     "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+     "name": "Operations · cost · profit · stock"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 9134,
+     "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+     "name": "Open command menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 9137,
+     "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 9140,
+     "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+     "name": "Account menu",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "main",
+     "backendNodeId": 9215,
+     "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 9424,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "BOOKS · HAKUM AUTO CARE"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 9218,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Vendors",
+       "level": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 9426,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Supplier contacts for bills · Sep 7, 2026 – Oct 6, 2026 · All branches"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 9125,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "NET PROFIT"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 9126,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "₱923,209"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 9127,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "SEP 7, 2026 – OCT 6, 2026"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 9427,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Can edit"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 9428,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "How Finance works"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 9429,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Income from POS, expenses from bills, crew pay from approved Daily Sheets. Open a step if you are new to books."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 9146,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Show guide",
+       "expanded": false
+      },
+      {
+       "role": "search",
+       "backendNodeId": 9239,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Finance filters",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 9431,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "REPORTING WINDOW"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9432,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "Sep 7, 2026 – Oct 6, 2026"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9433,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "BRANCH"
+        },
+        {
+         "role": "combobox",
+         "backendNodeId": 9131,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "BRANCH",
+         "value": "All branches",
+         "expanded": false,
+         "haspopup": "menu",
+         "children": [
+          {
+           "role": "option",
+           "backendNodeId": 9253,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "All branches",
+           "selected": true
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9256,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Hakum Auto Care Bacoor",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9259,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Hakum Auto Care Batangas",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9262,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Hakum Auto Care Dasmariñas",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9265,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Corporate (HQ)",
+           "selected": false
+          }
+         ]
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9434,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "PERIOD"
+        },
+        {
+         "role": "combobox",
+         "backendNodeId": 9122,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "PERIOD",
+         "value": "Last 30 days",
+         "expanded": false,
+         "haspopup": "menu",
+         "children": [
+          {
+           "role": "option",
+           "backendNodeId": 9276,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Today",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9279,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Yesterday",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9282,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "This week",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9285,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Last 7 days",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9288,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Last 30 days",
+           "selected": true
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9291,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "This month",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9294,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Last month",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9297,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "This quarter",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9300,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Last 3 months",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9303,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Last 6 months",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9306,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "This year",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9309,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Custom",
+           "selected": false
+          }
+         ]
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9435,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "COMPARE"
+        },
+        {
+         "role": "combobox",
+         "backendNodeId": 9123,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "COMPARE",
+         "value": "None",
+         "expanded": false,
+         "haspopup": "menu",
+         "children": [
+          {
+           "role": "option",
+           "backendNodeId": 9320,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "None",
+           "selected": true
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9323,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Previous period",
+           "selected": false
+          },
+          {
+           "role": "option",
+           "backendNodeId": 9326,
+           "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+           "name": "Previous year",
+           "selected": false
+          }
+         ]
+        },
+        {
+         "role": "button",
+         "backendNodeId": 9330,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "Refresh finance data"
+        }
+       ]
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 9339,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Home",
+       "description": "Accounts watchlist, profit this year, sheets waiting",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 9346,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Daily sheets",
+       "description": "Approve or return each branch day",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 9355,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Sales",
+       "description": "Gross, net, refunds and discounts vs the last period",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 9361,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Bills",
+       "description": "Bills and expenses by account",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 9367,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Profit and loss",
+       "description": "Income vs expenses by account, month or branch",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 9375,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "Reports",
+       "description": "Sales, operations, and retention exports",
+       "selected": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 9380,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "More finance pages",
+       "description": "Reports, quotes, vendors, and settings",
+       "expanded": false,
+       "haspopup": "menu"
+      },
+      {
+       "role": "tabpanel",
+       "backendNodeId": 9385,
+       "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+       "name": "",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 9444,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "VENDORS"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9445,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "0"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9446,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "Directory"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9447,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "ACTIVE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9448,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "0"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9449,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "Available on bills"
+        },
+        {
+         "role": "heading",
+         "backendNodeId": 9399,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "Vendors",
+         "level": 2
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9451,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "0 suppliers"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 9402,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "Add vendor"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9453,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "No vendors yet"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 9454,
+         "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+         "name": "Use Add vendor to create the first supplier."
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "heading",
+   "backendNodeId": 9411,
+   "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+   "name": "Go to",
+   "level": 2
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 9456,
+   "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+   "name": "Jump to an operations page"
+  },
+  {
+   "role": "region",
+   "backendNodeId": 9413,
+   "loaderId": "1A326A9EEB54FB2ECAA8FBBF2D18DDE3",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

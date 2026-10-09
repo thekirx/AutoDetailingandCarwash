@@ -6,7 +6,7 @@
 
 ## Nav (sidebar)
 
-Dashboard · Bookings · Attendance · POS · Inventory · Reviews · Planner · Ops Lab · History · Audit  
+Dashboard · Bookings · Attendance · POS · Inventory · Reviews · Planner · History · Audit  
 (Queue is **not** in BA nav — wash status is Team Lead / SA / ASA / Ops Lead.)
 
 ## Daily flow

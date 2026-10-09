@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { buildBookingNotifyPayload, buildOpsNotifyCopy, buildOpsNotifyRule } from '../server/notifyBooking.mjs'
+import { buildBookingNotifyPayload, buildOpsNotifyCopy, buildOpsNotifyRule, isSilentRedoNotify, notifyBookingStatus } from '../server/notifyBooking.mjs'
 import { normalizePhMobile } from '../server/busybee.mjs'
 
 assert.equal(normalizePhMobile('09171234567'), '639171234567')
@@ -33,18 +33,27 @@ assert.equal(checking.kind, 'booking_status')
 assert.equal(checking.url, '/account/queue')
 assert.match(checking.sms, /final QC|final checking/i)
 
-const releasing = buildBookingNotifyPayload(booking, 'for_releasing')
-assert.equal(releasing.kind, 'booking_status')
-assert.equal(releasing.url, '/account/queue')
-assert.match(releasing.sms, /releas|ready|pick/i)
-assert.match(releasing.sms, /Ceramic Coating/)
+// For releasing is retired: no copy, nothing sent.
+assert.equal(buildBookingNotifyPayload(booking, 'for_releasing'), null)
+assert.equal(buildOpsNotifyCopy(booking, 'for_releasing'), null)
 
 assert.equal(buildBookingNotifyPayload(booking, 'nope'), null)
 
-const redo = buildBookingNotifyPayload(booking, 'redo')
-assert.equal(redo.kind, 'booking_status')
-assert.equal(redo.url, '/account/queue')
-assert.match(redo.sms, /redoing/i)
+// Failed QA is silent: the fail itself and the redo pass (redo_at stamped) send nothing.
+const failed = { ...booking, redo_at: '2026-10-09T05:00:00Z' }
+assert.equal(isSilentRedoNotify(booking, 'redo'), true)
+assert.equal(buildBookingNotifyPayload(booking, 'redo'), null)
+assert.equal(buildOpsNotifyCopy(booking, 'redo'), null)
+for (const status of ['in_progress', 'final_checking']) {
+  assert.equal(isSilentRedoNotify(failed, status), true, status)
+  assert.equal(buildBookingNotifyPayload(failed, status), null, status)
+  assert.equal(buildOpsNotifyCopy(failed, status), null, `${status} ops`)
+  assert.ok(buildBookingNotifyPayload(booking, status), `${status} still notifies without a fail`)
+}
+// The money steps after a redo still reach the customer.
+assert.ok(buildBookingNotifyPayload(failed, 'for_payment'))
+assert.ok(buildBookingNotifyPayload(failed, 'completed'))
+assert.deepEqual(await notifyBookingStatus(failed, 'redo'), { skipped: true, reason: 'redo_silent' })
 
 const photos = buildBookingNotifyPayload(booking, 'photos_ready')
 assert.equal(photos.kind, 'booking_photos')

@@ -154,7 +154,6 @@ export const DETAILING_VISIT_STEPS = [
   { key: 'waiting', label: 'Intake' },
   { key: 'in_progress', label: 'In progress' },
   { key: 'final_checking', label: 'Checking' },
-  { key: 'for_releasing', label: 'Releasing' },
   { key: 'for_payment', label: 'Payment' },
 ]
 
@@ -170,7 +169,8 @@ function visitStepIndex(status, steps) {
     const booked = steps.findIndex((s) => s.key === 'pending' || s.key === 'confirmed')
     return booked >= 0 ? booked : 0
   }
-  const idx = steps.findIndex((s) => s.key === normalized)
+  const key = normalized === 'for_releasing' ? 'for_payment' : normalized
+  const idx = steps.findIndex((s) => s.key === key)
   return idx >= 0 ? idx : 0
 }
 
@@ -216,7 +216,7 @@ export function getOpsBoardStatuses(profile, { family } = {}) {
   if (canSeeForPaymentLane(profile)) lanes.push('for_payment')
   if (canViewRedoLane(profile)) lanes.push('redo')
   if (String(family || '').toLowerCase() === 'detailing') {
-    const detailing = ['confirmed', 'for_releasing', ...lanes.filter((s) => s !== 'confirmed')]
+    const detailing = ['confirmed', ...lanes.filter((s) => s !== 'confirmed')]
     return [...new Set(detailing)]
   }
   return lanes
@@ -231,8 +231,9 @@ export const QUEUE_STATUS_TRANSITIONS = {
   confirmed: ['waiting', 'cancelled'],
   waiting: ['in_progress', 'cancelled'],
   in_progress: ['final_checking', 'cancelled'],
-  final_checking: ['for_releasing', 'completed', 'cancelled'],
-  for_releasing: ['for_payment', 'completed', 'cancelled'],
+  final_checking: ['completed', 'cancelled'],
+  // Retired lane: legacy rows can only close out (or go to POS via sendTicketToPayment).
+  for_releasing: ['completed', 'cancelled'],
   for_payment: [],
   redo: ['in_progress'],
   completed: [],
@@ -457,7 +458,6 @@ export const BOOKING_PRIMARY_ACTION_LABELS = {
   waiting: 'Start intake',
   in_progress: 'Start work',
   final_checking: 'Mark final checking',
-  for_releasing: 'Mark for releasing',
   completed: 'Mark completed',
   for_payment: 'Send to payment',
 }

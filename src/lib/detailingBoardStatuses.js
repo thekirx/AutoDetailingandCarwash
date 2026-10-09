@@ -6,7 +6,6 @@ export const DETAILING_BOARD_STATUSES = [
   { id: 'waiting', label: 'Vehicle intake', shortLabel: 'Intake', hint: 'Car arrived on floor', tone: 'is-intake' },
   { id: 'in_progress', label: 'In progress', shortLabel: 'In progress', hint: 'Work in progress', tone: 'is-progress' },
   { id: 'final_checking', label: 'Final checking', shortLabel: 'Final check', hint: 'QC in progress', tone: 'is-check' },
-  { id: 'for_releasing', label: 'For releasing', shortLabel: 'Releasing', hint: 'Ready to release', tone: 'is-release' },
   { id: 'for_payment', label: 'For payment', shortLabel: 'Payment', hint: 'Collect at POS', tone: 'is-pay' },
   { id: 'completed', label: 'Completed', shortLabel: 'Done', hint: 'Released to customer', tone: 'is-done' },
 ]
@@ -17,8 +16,9 @@ export const SALES_BOARD_STATUSES = [
   'cancelled',
 ]
 
-const LABEL_BY_ID = Object.fromEntries(DETAILING_BOARD_STATUSES.map((s) => [s.id, s.label]))
-const SHORT_BY_ID = Object.fromEntries(DETAILING_BOARD_STATUSES.map((s) => [s.id, s.shortLabel]))
+// Retired lane: kept only so old for_releasing rows still render a label.
+const LABEL_BY_ID = { ...Object.fromEntries(DETAILING_BOARD_STATUSES.map((s) => [s.id, s.label])), for_releasing: 'For releasing' }
+const SHORT_BY_ID = { ...Object.fromEntries(DETAILING_BOARD_STATUSES.map((s) => [s.id, s.shortLabel])), for_releasing: 'Releasing' }
 
 /** Display label for board / queue — detailing pipeline names when applicable. */
 export function detailingBoardStatusLabel(status, { detailing = true } = {}) {
@@ -33,6 +33,7 @@ export function detailingBoardStatusShortLabel(status) {
 }
 
 export function nextDetailingBoardStatus(status) {
+  if (status === 'for_releasing') return 'for_payment'
   const order = DETAILING_BOARD_STATUSES.map((s) => s.id)
   const i = order.indexOf(String(status || ''))
   if (i < 0 || i >= order.length - 1) return null

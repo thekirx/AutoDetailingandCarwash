@@ -109,7 +109,7 @@ describe('POS checkout workflow seam', () => {
     assert.doesNotMatch(pos, /\/operations\/payroll/)
     assert.doesNotMatch(pos, /SHELL_TABS = \[[^\]]*'services'/)
     const insights = readFileSync(join(root, 'src/lib/posInsights.js'), 'utf8')
-    assert.match(insights, /POS_SHELL_TABS = Object\.freeze\(\['checkout', 'sheet', 'dashboard'\]\)/)
+    assert.match(insights, /POS_SHELL_TABS = Object\.freeze\(\['checkout', 'sheet', 'history', 'dashboard'\]\)/)
     assert.match(pos, /writeAudit/)
     assert.match(pos, /notify-pos/)
     assert.match(pos, /buildVisitHandoffCartLines/)

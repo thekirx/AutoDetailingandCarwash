@@ -1,0 +1,1341 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 7909,
+ "loaderId": "88A1B5343123E56878DE9D48882DD176",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/crm?tab=sms",
+ "children": [
+  {
+   "role": "main",
+   "backendNodeId": 7981,
+   "loaderId": "88A1B5343123E56878DE9D48882DD176",
+   "name": "",
+   "children": [
+    {
+     "role": "button",
+     "backendNodeId": 7982,
+     "loaderId": "88A1B5343123E56878DE9D48882DD176",
+     "name": "Toggle Sidebar"
+    },
+    {
+     "role": "navigation",
+     "backendNodeId": 7989,
+     "loaderId": "88A1B5343123E56878DE9D48882DD176",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 8312,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Ops"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 8314,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "CRM"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 8315,
+     "loaderId": "88A1B5343123E56878DE9D48882DD176",
+     "name": "Operations · cost · profit · stock"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 7926,
+     "loaderId": "88A1B5343123E56878DE9D48882DD176",
+     "name": "Open command menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 7929,
+     "loaderId": "88A1B5343123E56878DE9D48882DD176",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 7932,
+     "loaderId": "88A1B5343123E56878DE9D48882DD176",
+     "name": "Account menu",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "main",
+     "backendNodeId": 8006,
+     "loaderId": "88A1B5343123E56878DE9D48882DD176",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 8319,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "CRM"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 8011,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Customer CRM",
+       "level": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 8321,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Directory, smart visit groups, behavior insights, and SMS. Expense categories can be created here when you have Finance write access."
+      },
+      {
+       "role": "link",
+       "backendNodeId": 8015,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Memberships",
+       "url": "http://localhost:5173/operations/memberships",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 8322,
+         "loaderId": "88A1B5343123E56878DE9D48882DD176",
+         "name": "Memberships"
+        }
+       ]
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7921,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Register account"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 8324,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "How CRM works"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 8325,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Find customers, segment by visits, read sales insights, and send SMS from one screen."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7935,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Show guide",
+       "expanded": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 8030,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Directory",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 8037,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Smart groups",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 8043,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "Insights",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 8047,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "SMS",
+       "selected": true
+      },
+      {
+       "role": "tabpanel",
+       "backendNodeId": 8050,
+       "loaderId": "88A1B5343123E56878DE9D48882DD176",
+       "name": "SMS",
+       "children": [
+        {
+         "role": "region",
+         "backendNodeId": 8051,
+         "loaderId": "88A1B5343123E56878DE9D48882DD176",
+         "name": "SMS",
+         "children": [
+          {
+           "role": "StaticText",
+           "backendNodeId": 8331,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Templates, BusyBee send, and SMS event log."
+          },
+          {
+           "role": "status",
+           "backendNodeId": 7924,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "",
+           "atomic": true,
+           "live": "polite",
+           "relevant": "additions text",
+           "children": [
+            {
+             "role": "StaticText",
+             "backendNodeId": 8332,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Status SMS automation"
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8333,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "When on, customers get BusyBee SMS on booking received, queue status, payment ready, and completed. BrandTxt has whitelisted office egress "
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8334,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "180.190.249.189"
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8335,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": " — keep this on for local/status SMS; Vercel production still needs its own static IPs."
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8336,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Shop gate:"
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8337,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": " "
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8338,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Enabled"
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8339,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Provider: "
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8340,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "IP not whitelisted on BrandTxt — ask BusyBee to add this machine’s egress IP (or keep shop SMS off)."
+            },
+            {
+             "role": "button",
+             "backendNodeId": 8064,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Turn SMS off"
+            }
+           ]
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8342,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Send / queue SMS"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8343,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "One-off BusyBee send (still uses live provider)."
+          },
+          {
+           "role": "form",
+           "backendNodeId": 7914,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "",
+           "children": [
+            {
+             "role": "StaticText",
+             "backendNodeId": 8344,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Phone"
+            },
+            {
+             "role": "textbox",
+             "backendNodeId": 7915,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Phone",
+             "multiline": false,
+             "readonly": false,
+             "required": true
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8345,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Use template"
+            },
+            {
+             "role": "combobox",
+             "backendNodeId": 8076,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "",
+             "value": "__none__",
+             "expanded": false,
+             "required": false,
+             "haspopup": "listbox"
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8349,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Type"
+            },
+            {
+             "role": "combobox",
+             "backendNodeId": 8082,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "",
+             "value": "promo",
+             "expanded": false,
+             "required": false,
+             "haspopup": "listbox"
+            },
+            {
+             "role": "StaticText",
+             "backendNodeId": 8353,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Message"
+            },
+            {
+             "role": "textbox",
+             "backendNodeId": 7918,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Message",
+             "multiline": true,
+             "readonly": false,
+             "required": true
+            },
+            {
+             "role": "button",
+             "backendNodeId": 8091,
+             "loaderId": "88A1B5343123E56878DE9D48882DD176",
+             "name": "Queue SMS"
+            }
+           ]
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8355,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Templates"
+          },
+          {
+           "role": "button",
+           "backendNodeId": 8095,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "New template"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8357,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Name"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8358,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Type"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8359,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Body"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8360,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "No templates yet."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8361,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Recent SMS events"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8362,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "When"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8363,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Phone"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8364,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Type"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8365,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8366,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Message"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8367,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 7:27:53 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8368,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09999999999"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8369,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8370,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8371,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: ABC7643 (Full Exterior Detailing) is ready — please proceed to payment."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8372,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 7:27:40 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8373,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09999999999"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8374,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8375,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8376,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: ABC7643 (Full Exterior Detailing) is on final QC. Almost ready."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8377,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 7:27:23 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8378,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09999999999"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8379,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8380,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8381,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: Working on your Glass Detailing for ABC7643 now."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8382,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 7:24:08 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8383,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09999999999"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8384,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8385,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8386,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: ABC7643 checked in for Glass Detailing at Bacoor. You are in queue."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8387,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 7:24:02 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8388,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09999999999"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8389,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8390,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8391,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi test, your Hakum account login is your phone number (09999999999). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8392,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 5:22:38 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8393,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "0986542718"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8394,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8395,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8396,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi Walk-in, your Hakum account login is your phone number (0986542718). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8397,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 4:14:58 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8398,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "0912345678"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8399,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8400,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8401,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: Working on your Carwash for ABC124 now."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8402,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 4:14:43 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8403,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "0912345678"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8404,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8405,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8406,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: ABC124 checked in for Carwash at bacoor. You are in queue."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8407,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 4:12:59 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8408,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "0912345678"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8409,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8410,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8411,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: Working on your Carwash for ABC124 now."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8412,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 4:03:41 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8413,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "0912345678"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8414,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8415,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8416,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: ABC124 checked in for Carwash at bacoor. You are in queue."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8417,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 4:03:34 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8418,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "0912345678"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8419,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8420,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8421,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi Walk-in, your Hakum account login is your phone number (0912345678). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8422,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 11:19:24 AM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8423,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09159446244"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8424,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_received"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8425,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8426,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: We got your Paint Protection Film (PPF) for ABC1234 at batangas. We will confirm soon."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8427,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/29/2026, 12:28:52 AM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8428,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09180000001"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8429,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "birthday_greeting"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8430,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8431,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum Auto Care: Happy birthday Demo Customer! Your free birthday service is ready. Visit any branch to claim it."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8432,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/27/2026, 11:22:07 AM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8433,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8434,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8435,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8436,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi QA, your Hakum account login is your phone number (09189990923). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8437,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/27/2026, 11:22:06 AM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8438,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8439,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8440,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8441,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi QA, your Hakum account login is your phone number (09189990923). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8442,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/27/2026, 11:22:05 AM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8443,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8444,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "post_service_completed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8445,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "pending"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8446,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Thank you for choosing Hakum Auto Care Bacoor. Your Full Care Package is now completed."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8447,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/27/2026, 11:22:04 AM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8448,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8449,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8450,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8451,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi QA, your Hakum account login is your phone number (09189990923). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8452,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/27/2026, 11:22:02 AM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8453,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8454,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8455,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8456,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: NKA09274 checked in for Paint Maintenance at bacoor. You are in queue."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8457,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/27/2026, 11:22:01 AM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8458,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8459,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_confirm"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8460,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8461,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: Paint Maintenance CONFIRMED for NKA09274 at bacoor, 9/28/2026, 1:21:58 PM. See you!"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8462,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/27/2026, 11:22:00 AM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8463,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8464,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_received"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8465,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8466,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: We got your Paint Maintenance for NKA09274 at bacoor. We will confirm soon."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8467,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/26/2026, 9:38:10 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8468,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8469,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8470,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8471,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi QA, your Hakum account login is your phone number (09189990923). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8472,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/26/2026, 9:38:09 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8473,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8474,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8475,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8476,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi QA, your Hakum account login is your phone number (09189990923). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8477,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/26/2026, 9:38:08 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8478,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8479,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "post_service_completed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8480,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "pending"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8481,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Thank you for choosing Hakum Auto Care Bacoor. Your Full Care Package is now completed."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8482,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/26/2026, 9:38:07 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8483,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8484,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8485,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8486,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi QA, your Hakum account login is your phone number (09189990923). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8487,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/26/2026, 9:38:05 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8488,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8489,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_status"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8490,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8491,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: NKA09264 checked in for Paint Maintenance at bacoor. You are in queue."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8492,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/26/2026, 9:38:04 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8493,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8494,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_confirm"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8495,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8496,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: Paint Maintenance CONFIRMED for NKA09264 at bacoor, 9/27/2026, 11:38:02 PM. See you!"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8497,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/26/2026, 9:38:03 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8498,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8499,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "booking_received"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8500,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8501,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum: We got your Paint Maintenance for NKA09264 at bacoor. We will confirm soon."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8502,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/24/2026, 8:33:20 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8503,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09625294043"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8504,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "self_test_shop_gate_1790253198047"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8505,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8506,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum Auto Care: Test alert for this number. Visit updates will arrive here when SMS is on."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8507,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/24/2026, 8:18:13 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8508,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09625294043"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8509,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "self_test_qa_1790252291799"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8510,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "failed"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8511,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hakum Auto Care: Test alert for this number. Visit updates will arrive here when SMS is on."
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8512,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "9/24/2026, 5:24:03 PM"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8513,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "09189990923"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8514,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "account_invite"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8515,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "queued"
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 8516,
+           "loaderId": "88A1B5343123E56878DE9D48882DD176",
+           "name": "Hi QA, your Hakum account login is your phone number (09189990923). Open Hakum → Sign in with your phone, then set a password (ask your Team Lead if you need a reset email on file)."
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "heading",
+   "backendNodeId": 8306,
+   "loaderId": "88A1B5343123E56878DE9D48882DD176",
+   "name": "Go to",
+   "level": 2
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 8518,
+   "loaderId": "88A1B5343123E56878DE9D48882DD176",
+   "name": "Jump to an operations page"
+  },
+  {
+   "role": "region",
+   "backendNodeId": 8308,
+   "loaderId": "88A1B5343123E56878DE9D48882DD176",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

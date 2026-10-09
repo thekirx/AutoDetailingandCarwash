@@ -11,7 +11,7 @@ Full design system: [docs/design-system/README.md](design-system/README.md) · R
 | Super Admin (`BossMich`) | Full sidebar |
 | Assistant Super Admin | Grant-filtered sidebar |
 | Branch Admin (`admin`) | Branch-scoped sidebar; POS primary CTA |
-| Operations Lead | Network ops; Ops Lab home |
+| Operations Lead | Network ops; Queue home (no Floor Board); CRM view only |
 | Investor | Slim: Finance only |
 
 **Pattern:** collapsible inset sidebar, Hakum wordmark, breadcrumbs + Cmd/Ctrl+K + notifications + account in topbar. Dense SaaS tables OK. Mobile = drawer, not phone stage.

@@ -1,22 +1,23 @@
 # Epic: Ops Lab, Data Center, Console & Floor Board
 
 
-> **Updated 2026-10-08.** The Console page is RETIRED — /operations/console was removed from the router. Ops Lab, Data Center and the Floor Board remain; Super Admin and ASA land on the Floor Board.
+> **Updated 2026-10-09.** Ops Lab is RETIRED: the `/operations/roadmap` page, nav links and `/api/notify-ops-lab` were removed and old links redirect home. The Console page was retired on 2026-10-08. Data Center and the Floor Board remain; Super Admin, ASA and Ops Lead land on the Floor Board.
+
 **Goal:** Network tools for SA / Ops Lead — not Branch Admin money paths.
 
-## US-OPSLAB-01 · Ops Lab roadmap
+## US-OPSLAB-01 · Ops Lab roadmap (retired 2026-10-09)
 
 **As** Operations Lead  
-**I want** `/operations/roadmap`  
-**So that** custom types/statuses notify peers without touching payroll  
+**I want** one planning surface (the Planner) instead of a separate roadmap  
+**So that** tasks, forms and events live in one place  
 
 **Acceptance**
 
-- [x] `canAccessOpsRoadmap` for Ops Lead / allowed roles
-- [x] Ops Lead: planner + POS + queue, all branches, **no** attendance clock
-- [x] Roadmap page + audited actions seams
+- [x] No Ops Lab link for any role; `/operations/roadmap` redirects to the role home
+- [x] Ops Lead: Floor Board home, planner + POS + queue, all branches, **no** attendance clock
+- [x] Old `ops_lab.*` in-app notifications deleted; `ops_roadmap_*` / `ops_lab_*` tables kept as history
 
-**Test seam:** `tests/operationsLeadRoadmap.test.js`, `CONTEXT.md` (Operations Lead)
+**Test seam:** `tests/operationsLead.test.js`, `CONTEXT.md` (Operations Lead)
 
 ---
 

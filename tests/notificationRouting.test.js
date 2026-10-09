@@ -68,13 +68,13 @@ describe('copy builders use the routing table', () => {
   const booking = { id: 'b1', branch: 'bacoor', vehicle_plate: 'ABC123', customer_id: 'c1', service_name: 'Wash' }
 
   it('ops booking copy carries the event url list', () => {
-    for (const status of ['pending', 'waiting', 'for_payment', 'completed', 'cancelled', 'redo', 'photos_ready']) {
+    for (const status of ['pending', 'waiting', 'for_payment', 'completed', 'cancelled', 'photos_ready']) {
       assert.deepEqual(buildOpsNotifyCopy(booking, status).urls, NOTIFY_EVENTS[bookingOpsEvent(status)].urls, status)
     }
   })
 
   it('customer booking copy opens a customer route', () => {
-    for (const status of ['pending', 'confirmed', 'waiting', 'in_progress', 'for_payment', 'completed', 'cancelled', 'redo', 'photos_ready']) {
+    for (const status of ['pending', 'confirmed', 'waiting', 'in_progress', 'for_payment', 'completed', 'cancelled', 'photos_ready']) {
       assert.ok(customerRouteOk(buildBookingNotifyPayload(booking, status).url), status)
     }
   })

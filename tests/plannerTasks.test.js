@@ -134,7 +134,8 @@ describe('planner tasks', () => {
   it('maps calendar clicks to owning routes', () => {
     assert.equal(hrefForCalendarItem({ type: 'planning', card: { id: 'c1' } }), '/operations/planning?tab=board&card=c1')
     assert.equal(hrefForCalendarItem({ type: 'event', event: { id: 'e1' } }), '/operations/planning?tab=events&event=e1')
-    assert.equal(hrefForCalendarItem({ type: 'booking', booking: { id: 'b1' } }), '/operations/bookings?id=b1')
+    const start = new Date(2026, 8, 14, 10, 30).toISOString()
+    assert.equal(hrefForCalendarItem({ type: 'booking', booking: { id: 'b1', scheduled_start: start } }), '/operations/bookings?tab=table&date=2026-09-14')
     assert.equal(hrefForCalendarItem({ type: 'form', submission: { form_id: 'f1' } }), '/operations/planning?tab=forms&results=f1')
   })
 

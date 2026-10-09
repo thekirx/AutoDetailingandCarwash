@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Cake, CarFront, ClipboardList, Gift, Link2, Lock, MapPin, Minus, Plus, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, Volume2, VolumeX, X } from 'lucide-react'
+import { Cake, CarFront, ClipboardList, Gift, History, Link2, Lock, MapPin, Minus, Plus, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, Volume2, VolumeX, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, canDiscountPosSale, canSeeAllBranches, canWriteFinance, canWritePosSettings, getBranchScopeList, isAdmin, isBranchAdmin } from '@/auth/permissions'
+import { canAccessPos, canDiscountPosSale, canSeeAllBranches, canWriteFinance, canWritePosSettings, getBranchScopeList, isAdmin, isBranchAdmin, isInvestor } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
@@ -46,8 +46,14 @@ import {
 import { canEditDailySheet } from '@/lib/dailySheet'
 import PosSettingsPanel from '@/pages/pos/PosSettingsPanel'
 import DailySheetPanel from '@/pages/pos/DailySheetPanel'
+import PosReadOnlyView from '@/pages/pos/PosReadOnlyView'
+import PosSheetHistory from '@/pages/pos/PosSheetHistory'
 import PosTodayPanel from '@/pages/pos/PosTodayPanel'
 import { PosGuideCard, PosOpenTickets, PosStatsBoard } from '@/pages/pos/PosPanels'
+import PosTicketCustomer from '@/pages/pos/PosTicketCustomer'
+import { useIdentityMatch } from '@/pages/pos/useIdentityMatch'
+import { customerFormError, customerFormValues, hasCustomerInput, ticketFormValues, ticketNeedsCustomer } from '@/lib/posTicketCustomer'
+import { saveCustomerForSale } from '@/lib/posTicketCustomerApi'
 
 /**
  * The order panel sits beside the catalogue from 1024px up. Below that the
@@ -73,6 +79,11 @@ function usePosSplitView() {
 }
 
 export default function PosPage() {
+  const { profile } = useAuth()
+  return isInvestor(profile) ? <PosReadOnlyView profile={profile} /> : <PosCounterPage />
+}
+
+function PosCounterPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const branchAdmin = isBranchAdmin(profile)
@@ -109,6 +120,7 @@ export default function PosPage() {
   const [guestLastName, setGuestLastName] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
+  const [customerSaving, setCustomerSaving] = useState(false)
   const [discountPercent, setDiscountPercent] = useState('')
   const [discountAmountPesos, setDiscountAmountPesos] = useState('')
   const [discountReason, setDiscountReason] = useState('')
@@ -191,7 +203,7 @@ export default function PosPage() {
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
       supabase
         .from('pos_handoffs')
-        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, vehicle_plate, vehicle_make, vehicle_model, service_id, final_price_minor, price_minor, vehicle_type, status, queue_number, visit_group_id)')
+        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, customer_phone, customer_email, vehicle_plate, vehicle_make, vehicle_model, service_id, final_price_minor, price_minor, vehicle_type, status, queue_number, visit_group_id)')
         .eq('status', 'pending')
         .eq('branch', branch)
         .order('created_at', { ascending: true }),
@@ -480,8 +492,29 @@ export default function PosPage() {
   const cartTotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price_minor, 0)
   const cartSummary = useMemo(() => summarizePosCart(cart), [cart])
   const ticketBooking = activeHandoff?.bookings || null
-  // A ticket's customer comes from the booking — keep the sale on that customer and plate.
-  const customerLockedToTicket = Boolean(activeHandoff && ticketBooking?.customer_id)
+  // Team Leads no longer take name/contact: Branch Admin records them here, once per ticket.
+  const ticketNeedsContact = Boolean(activeHandoff && ticketNeedsCustomer(ticketBooking))
+  const needsCustomerForm = ticketNeedsContact && canProvisionCustomer
+  // A ticket's real customer comes from the booking — keep the sale on that customer and plate.
+  const customerLockedToTicket = Boolean(activeHandoff && ticketBooking?.customer_id && !needsCustomerForm)
+  const captureEnabled = canProvisionCustomer && (needsCustomerForm || (!activeHandoff && !linkedCustomer))
+  const identity = useIdentityMatch({
+    phone: guestPhone,
+    email: guestEmail,
+    enabled: captureEnabled,
+    scope: activeHandoff?.id || 'walk-in',
+    onFound: (customer) => {
+      const v = customerFormValues(customer)
+      setGuestFirstName(v.first)
+      setGuestLastName(v.last)
+      setGuestName([v.first, v.last].filter(Boolean).join(' '))
+      setGuestPhone((current) => v.phone || current)
+      setGuestEmail((current) => v.email || current)
+    },
+  })
+  const captureError = captureEnabled
+    ? customerFormError({ first: guestFirstName, phone: guestPhone, email: guestEmail, matched: identity.status === 'found' })
+    : ''
 
   // Cash tendered → change due, and the quick-cash chips a cashier reaches for.
   const cashTenderedMinor = parsePesosToMinor(cashTendered)
@@ -727,6 +760,87 @@ export default function PosPage() {
     setActiveHandoff(null)
     setCart((current) => detachHandoffFromCart(current))
     clearCustomerLink()
+    setGuestName('')
+    setGuestFirstName('')
+    setGuestLastName('')
+    setGuestPhone('')
+    setGuestEmail('')
+  }
+
+  function setGuestField(key, value) {
+    if (key === 'first') {
+      setGuestFirstName(value)
+      setGuestName([value, guestLastName].filter(Boolean).join(' '))
+    } else if (key === 'last') {
+      setGuestLastName(value)
+      setGuestName([guestFirstName, value].filter(Boolean).join(' '))
+    } else if (key === 'phone') {
+      setGuestPhone(value)
+    } else if (key === 'email') {
+      setGuestEmail(value)
+    }
+  }
+
+  /**
+   * Create-or-link the customer from the capture form and (for a queue ticket) move the ticket
+   * onto them. Resolves { ok, customerId }; a blank form is a guest sale and is fine.
+   */
+  async function commitCustomer() {
+    const values = { first: guestFirstName.trim(), last: guestLastName.trim(), phone: guestPhone.trim(), email: guestEmail.trim() }
+    // A name alone is a guest sale (it goes in the sale note); an account needs a phone or email.
+    if (!captureEnabled || !hasCustomerInput(values) || (!values.phone && !values.email)) return { ok: true, customerId }
+    if (identity.status === 'checking') {
+      toast.message('Still checking for an existing account — try again in a moment.')
+      return { ok: false }
+    }
+    if (identity.status === 'conflict') {
+      toast.error(identity.message)
+      return { ok: false }
+    }
+    const problem = customerFormError({ ...values, matched: identity.status === 'found' })
+    if (problem) {
+      toast.error(`${problem} Or clear the customer fields to sell as a guest.`)
+      return { ok: false }
+    }
+    setCustomerSaving(true)
+    try {
+      const saved = await saveCustomerForSale({ bookingId: activeHandoff?.booking_id || null, form: values })
+      const id = saved.customer_id
+      setCustomerId(id)
+      setLinkedCustomer({
+        id,
+        full_name: saved.full_name,
+        phone: saved.phone || values.phone,
+        plate: ticketBooking?.vehicle_plate || '',
+        source: activeHandoff ? 'handoff' : 'account',
+      })
+      if (activeHandoff) {
+        setActiveHandoff((current) =>
+          current
+            ? {
+                ...current,
+                bookings: {
+                  ...current.bookings,
+                  customer_id: id,
+                  customer_name: saved.full_name,
+                  customer_phone: saved.phone || values.phone,
+                  customer_email: saved.email || values.email || null,
+                },
+              }
+            : current,
+        )
+      }
+      refreshMembershipForCustomer(id)
+      refreshBirthdayPerk(id)
+      refreshLoyaltyReady(id)
+      toast.success(saved.created ? `Account created · ${saved.full_name}` : `Linked · ${saved.full_name}`)
+      return { ok: true, customerId: id }
+    } catch (err) {
+      toast.error(err.message || 'Could not save the customer.')
+      return { ok: false }
+    } finally {
+      setCustomerSaving(false)
+    }
   }
 
   /** Clear the walk-in lines; a queue handoff keeps its locked line. */
@@ -769,6 +883,18 @@ export default function PosPage() {
 
   async function loadHandoff(row) {
     const booking = row.bookings || {}
+    // One customer at a time: add-ons rung up for the open ticket must not slide onto another car.
+    const carriedAddOns = cart.filter((line) => !line.from_handoff).reduce((sum, line) => sum + (Number(line.quantity) || 0), 0)
+    if (
+      activeHandoff &&
+      activeHandoff.id !== row.id &&
+      carriedAddOns > 0 &&
+      !window.confirm(
+        `${formatQueueTicket(activeHandoff.bookings)} has ${carriedAddOns} add-on item${carriedAddOns === 1 ? '' : 's'} in the order. Move them to ${formatQueueTicket(booking)}?\n\nChoose Cancel to finish ${formatQueueTicket(activeHandoff.bookings)} first.`,
+      )
+    ) {
+      return
+    }
     const serviceId = booking.service_id
     const svc = serviceId ? services.find((s) => s.id === serviceId) : null
     if (booking.vehicle_type) setHandoffVehicleSize(booking.vehicle_type)
@@ -780,20 +906,26 @@ export default function PosPage() {
     setActiveHandoff(row)
     if (!branchLocked) setBranch(row.branch || branch)
     const cid = booking.customer_id || ''
+    const needsContact = ticketNeedsCustomer(booking)
     setCustomerId(cid)
     setLinkedCustomer(
-      cid
+      cid && !needsContact
         ? {
             id: cid,
             full_name: booking.customer_name || 'Queue customer',
-            phone: '',
+            phone: booking.customer_phone || '',
             plate: booking.vehicle_plate || '',
             source: 'handoff',
           }
         : null,
     )
-    setGuestName(booking.customer_name || '')
-    setGuestPhone('')
+    // Capture form starts from whatever the ticket already holds (usually nothing).
+    const prefill = needsContact ? ticketFormValues(booking) : { first: '', last: '', phone: '', email: '' }
+    setGuestFirstName(prefill.first)
+    setGuestLastName(prefill.last)
+    setGuestName([prefill.first, prefill.last].filter(Boolean).join(' '))
+    setGuestPhone(prefill.phone)
+    setGuestEmail(prefill.email)
     setCustomerSearch('')
     setCustomerHits([])
     setTab(branchAdmin ? 'merch' : 'bay')
@@ -815,7 +947,7 @@ export default function PosPage() {
       toast.message('Queue ticket has no linked service — checkout will record the amount without loyalty stamps.')
     }
     setCartOpen(true)
-    if (cid) {
+    if (cid && !needsContact) {
       refreshMembershipForCustomer(cid)
       refreshBirthdayPerk(cid)
       refreshLoyaltyReady(cid)
@@ -894,41 +1026,15 @@ export default function PosPage() {
     }
     setSaving(true)
     const handoff = activeHandoff
-    let resolvedCustomerId = customerId
 
-    // Admin+ only: create customer account on paid walk-in (idempotent via provision API)
-    if (!resolvedCustomerId && canProvisionCustomer && guestPhone.trim().length >= 10) {
-      try {
-        const token = await getAccessTokenFresh()
-        if (token) {
-          const res = await fetch('/api/provision-customer', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({
-              customer_name:
-                [guestFirstName.trim(), guestLastName.trim()].filter(Boolean).join(' ') ||
-                guestName.trim() ||
-                'Walk-in customer',
-              customer_first_name: guestFirstName.trim() || undefined,
-              customer_last_name: guestLastName.trim() || undefined,
-              customer_email: guestEmail.trim() || undefined,
-              customer_phone: guestPhone.trim(),
-              site_origin: window.location.origin,
-              allow_walk_in_name: true,
-            }),
-          })
-          const body = await res.json().catch(() => ({}))
-          if (res.ok && body.customer_id) {
-            resolvedCustomerId = body.customer_id
-            toast.message(body.created ? 'Customer account created' : 'Linked existing customer')
-          } else if (!res.ok && !body.customer_id) {
-            toast.warning(body.error || 'Could not create customer — sale continues as walk-in')
-          }
-        }
-      } catch (err) {
-        toast.warning(err.message || 'Customer provision skipped')
-      }
+    // Branch Admin / Admin: create-or-link the customer (phone / email dedupe) before the sale,
+    // so the ticket, the sale and the customer's history all name the same person.
+    const committed = await commitCustomer()
+    if (!committed.ok) {
+      setSaving(false)
+      return
     }
+    const resolvedCustomerId = committed.customerId || customerId
 
     const noteParts = []
     const walkInLabel = [
@@ -1057,8 +1163,8 @@ export default function PosPage() {
   if (!canAccessPos(profile)) return <Navigate to="/operations/access-denied" replace />
 
 
-  function setShellTab(next) {
-    setSearchParams(next === 'checkout' ? {} : { tab: next }, { replace: true })
+  function setShellTab(next, extra = {}) {
+    setSearchParams(next === 'checkout' ? {} : { tab: next, ...extra }, { replace: true })
   }
 
   /**
@@ -1162,9 +1268,20 @@ export default function PosPage() {
                     <span className="font-mono tabular-nums">{formatQueueTicket(ticketBooking)}</span>
                     <span className="font-mono tracking-wide uppercase">{ticketBooking?.vehicle_plate || 'No plate'}</span>
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {ticketBooking?.customer_name || 'Customer'} · payment links to this booking
-                  </p>
+                  {ticketNeedsContact ? (
+                    <p className="text-xs text-muted-foreground">
+                      {[ticketBooking?.customer_phone, ticketBooking?.customer_email].filter(Boolean).join(' · ') ||
+                        'Customer not added yet'}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="truncate text-sm font-medium">{ticketBooking?.customer_name || 'Customer'}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {[ticketBooking?.customer_phone, ticketBooking?.customer_email].filter(Boolean).join(' · ') ||
+                          'Payment links to this booking'}
+                      </p>
+                    </>
+                  )}
                   {customerLockedToTicket ? customerPerks : null}
                 </div>
                 <Button
@@ -1183,6 +1300,26 @@ export default function PosPage() {
                 <Lock className="size-3 shrink-0" aria-hidden />
                 Set by the Team Lead. Ask them to change the job or price.
               </p>
+            </section>
+          ) : null}
+
+          {needsCustomerForm ? (
+            <section aria-label="Customer" className="shrink-0 space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+              <div>
+                <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">Customer</p>
+                <p className="text-sm font-semibold">Who is paying for {formatQueueTicket(ticketBooking)}?</p>
+              </div>
+              <PosTicketCustomer
+                idPrefix="pos-ticket-cust"
+                values={{ first: guestFirstName, last: guestLastName, phone: guestPhone, email: guestEmail }}
+                onChange={setGuestField}
+                match={identity}
+                error={captureError}
+                disabled={saving || customerSaving}
+                saving={customerSaving}
+                canSave={hasCustomerInput({ phone: guestPhone, email: guestEmail }) && !captureError && identity.status !== 'conflict' && identity.status !== 'checking'}
+                onSave={commitCustomer}
+              />
             </section>
           ) : null}
 
@@ -1328,71 +1465,23 @@ export default function PosPage() {
                       ))}
                     </ul>
                   )}
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-first" className="text-xs text-muted-foreground">
-                        First name
-                      </Label>
-                      <Input
-                        id="pos-guest-first"
-                        className="min-h-11"
-                        placeholder="First"
-                        value={guestFirstName}
-                        onChange={(e) => {
-                          setGuestFirstName(e.target.value)
-                          setGuestName([e.target.value, guestLastName].filter(Boolean).join(' '))
-                        }}
-                        autoComplete="given-name"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-last" className="text-xs text-muted-foreground">
-                        Last name
-                      </Label>
-                      <Input
-                        id="pos-guest-last"
-                        className="min-h-11"
-                        placeholder="Last"
-                        value={guestLastName}
-                        onChange={(e) => {
-                          setGuestLastName(e.target.value)
-                          setGuestName([guestFirstName, e.target.value].filter(Boolean).join(' '))
-                        }}
-                        autoComplete="family-name"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-phone" className="text-xs text-muted-foreground">
-                        Number
-                      </Label>
-                      <Input
-                        id="pos-guest-phone"
-                        className="min-h-11"
-                        placeholder="09…"
-                        inputMode="tel"
-                        value={guestPhone}
-                        onChange={(e) => setGuestPhone(e.target.value)}
-                        autoComplete="tel"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="pos-guest-email" className="text-xs text-muted-foreground">
-                        Email <span className="font-normal">(optional)</span>
-                      </Label>
-                      <Input
-                        id="pos-guest-email"
-                        className="min-h-11"
-                        placeholder="name@…"
-                        type="email"
-                        value={guestEmail}
-                        onChange={(e) => setGuestEmail(e.target.value)}
-                        autoComplete="email"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-muted-foreground">
-                    Search to link an existing account. With a phone number, Admin / Super Admin creates a customer on payment if none exists.
-                  </p>
+                  {canProvisionCustomer ? (
+                    <PosTicketCustomer
+                      idPrefix="pos-guest"
+                      values={{ first: guestFirstName, last: guestLastName, phone: guestPhone, email: guestEmail }}
+                      onChange={setGuestField}
+                      match={identity}
+                      error={captureError}
+                      disabled={saving || customerSaving}
+                      saving={customerSaving}
+                      canSave={hasCustomerInput({ phone: guestPhone, email: guestEmail }) && !captureError && identity.status !== 'conflict' && identity.status !== 'checking'}
+                      onSave={commitCustomer}
+                    />
+                  ) : (
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      Search to link an existing account. Only Admin or Super Admin can create a new customer.
+                    </p>
+                  )}
                 </>
               )}
             </div>
@@ -1715,7 +1804,7 @@ export default function PosPage() {
           aria-label="POS sections"
           tabs={[
             { id: 'checkout', label: 'Sell', icon: ShoppingBag, badge: handoffs.length || undefined },
-            ...(canSheet ? [{ id: 'sheet', label: 'Daily sheet', icon: ClipboardList }] : []),
+            ...(canSheet ? [{ id: 'sheet', label: 'Daily sheet', icon: ClipboardList }, { id: 'history', label: 'Sheet history', icon: History }] : []),
             { id: 'dashboard', label: 'Today' },
             ...(showSettingsTab ? [{ id: POS_SETTINGS_TAB, label: 'Settings', icon: Settings2 }] : []),
           ]}
@@ -1726,6 +1815,11 @@ export default function PosPage() {
         {canSheet ? (
           <TabsContent value="sheet" className="mt-0 outline-none">
             {shellTab === 'sheet' && branch ? <DailySheetPanel branch={branch} branchLabel={branchLabel} profile={profile} initialDate={searchParams.get('date')} /> : null}
+          </TabsContent>
+        ) : null}
+        {canSheet ? (
+          <TabsContent value="history" className="mt-0 outline-none">
+            {shellTab === 'history' && branch ? <PosSheetHistory branch={branch} branchLabel={branchLabel} onOpenSheet={(date) => setShellTab('sheet', { date })} /> : null}
           </TabsContent>
         ) : null}
         <TabsContent value="dashboard" className="mt-0 outline-none">

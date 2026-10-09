@@ -26,7 +26,6 @@ export const DETAILING_FLOOR_LIVE_STATUSES = Object.freeze([
   'in_progress',
   'final_checking',
   'redo',
-  'for_releasing',
   'for_payment',
 ])
 
@@ -63,7 +62,6 @@ function emptyLaneCounts() {
     waiting: 0,
     in_progress: 0,
     final_checking: 0,
-    for_releasing: 0,
     for_payment: 0,
     redo: 0,
     completed: 0,

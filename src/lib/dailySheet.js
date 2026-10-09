@@ -398,6 +398,14 @@ const pesosOrNull = (text) => {
   return Number.isFinite(n) ? Math.round(n * 100) : null
 }
 
+/** "Oct 9, 2026 October 9, 2026 Friday" so a search for "oct 9" or "friday" finds the sheet. */
+const spokenDates = (date) => {
+  const d = new Date(`${String(date).slice(0, 10)}T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) return ''
+  const f = (o) => d.toLocaleDateString('en-PH', { timeZone: 'UTC', ...o })
+  return [f({ month: 'short', day: 'numeric', year: 'numeric' }), f({ month: 'long', day: 'numeric', year: 'numeric' }), f({ weekday: 'long' })].join(' ')
+}
+
 /** Finance › Daily sheets client-side filters on top of the status / branch / date query. */
 export function filterSheets(rows = [], { search = '', submitter = '', minNet = '', maxNet = '', overShortOnly = false, branchName = (s) => s } = {}) {
   const q = String(search || '').trim().toLowerCase()
@@ -410,7 +418,7 @@ export function filterSheets(rows = [], { search = '', submitter = '', minNet = 
     if (max != null && net > max) return false
     if (overShortOnly && !amount(r?.totals?.overShortMinor)) return false
     if (!q) return true
-    return [r.business_date, r.branch, branchName(r.branch), r.staff_profiles?.full_name, r.notes, r.review_note]
+    return [r.business_date, spokenDates(r.business_date), r.branch, branchName(r.branch), r.staff_profiles?.full_name, r.notes, r.review_note]
       .some((v) => String(v || '').toLowerCase().includes(q))
   })
 }
@@ -465,6 +473,60 @@ export function closeOfDaySlip({ sheet = {}, lines = [], sales = [], branchLabel
     rows,
     totals: t,
   }
+}
+
+const shiftDays = (date, n) => {
+  const d = new Date(`${date}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+/** Monday of the week (Mon to Sun, the shop's pay week) for a YYYY-MM-DD business date. */
+export const weekStart = (date) => shiftDays(date, -((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7))
+
+/** History date window for a quick preset, ending today. */
+export function sheetHistoryRange(preset, today) {
+  if (preset === 'week') return { from: weekStart(today), to: today }
+  if (preset === 'month') return { from: `${today.slice(0, 8)}01`, to: today }
+  if (preset === 'last30') return { from: shiftDays(today, -29), to: today }
+  return { from: shiftDays(today, -89), to: today }
+}
+
+/**
+ * History grouping: rows into one bucket per week (Mon start), month or day, newest first, with totals.
+ * `approved` / `pending` count sheets by status; money totals include every sheet in the bucket.
+ */
+export function groupSheetsByPeriod(rows = [], period = 'week') {
+  const keyOf = (r) => {
+    const d = String(r.business_date).slice(0, 10)
+    return period === 'month' ? d.slice(0, 7) : period === 'day' ? d : weekStart(d)
+  }
+  const buckets = new Map()
+  for (const r of rows || []) {
+    const key = keyOf(r)
+    const b = buckets.get(key) || { key, rows: [], count: 0, approved: 0, pending: 0, netMinor: 0, expensesMinor: 0, salariesMinor: 0, netProfitMinor: 0, overShortMinor: 0 }
+    const t = r.totals || {}
+    b.rows.push(r)
+    b.count += 1
+    if (r.status === 'approved') b.approved += 1
+    if (r.status === 'submitted') b.pending += 1
+    b.netMinor += amount(t.netMinor)
+    b.expensesMinor += amount(t.expensesMinor)
+    b.salariesMinor += amount(t.salariesMinor)
+    b.netProfitMinor += amount(t.netProfitMinor)
+    b.overShortMinor += amount(t.overShortMinor)
+    buckets.set(key, b)
+  }
+  return [...buckets.values()]
+    .map((b) => ({ ...b, rows: b.rows.sort((a, c) => String(c.business_date).localeCompare(String(a.business_date))) }))
+    .sort((a, b) => b.key.localeCompare(a.key))
+}
+
+/** "Oct 5 \u2013 Oct 11, 2026" / "October 2026" / "Friday, Oct 9, 2026". */
+export function sheetPeriodLabel(key, period) {
+  const fmt = (d, o) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-PH', { timeZone: 'UTC', ...o })
+  if (period === 'month') return fmt(`${key}-01`, { month: 'long', year: 'numeric' })
+  if (period === 'day') return fmt(key, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })
+  return `${fmt(key, { month: 'short', day: 'numeric' })} \u2013 ${fmt(shiftDays(key, 6), { month: 'short', day: 'numeric', year: 'numeric' })}`
 }
 
 /** Distinct submitters for the "Submitted by" filter. */

@@ -1,0 +1,309 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 27784,
+ "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/planning?tab=events",
+ "children": [
+  {
+   "role": "main",
+   "backendNodeId": 27859,
+   "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+   "name": "",
+   "children": [
+    {
+     "role": "button",
+     "backendNodeId": 27860,
+     "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+     "name": "Toggle Sidebar"
+    },
+    {
+     "role": "navigation",
+     "backendNodeId": 27866,
+     "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 28065,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Ops"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28067,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Planner"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 28068,
+     "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+     "name": "Operations · cost · profit · stock"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 27795,
+     "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+     "name": "Open command menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 27798,
+     "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 27801,
+     "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+     "name": "Account menu",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "main",
+     "backendNodeId": 27883,
+     "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 28072,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "SHOP FLOOR"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 27886,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Planner",
+       "level": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28074,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Assign work, attach a form to an event, review proof."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28075,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "How planner works"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28076,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Board lists, review, calendar, and configure stay on this screen. Lane CSS keeps the kanban usable on phones."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 27806,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Show guide",
+       "expanded": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 27898,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Board",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 27904,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Calendar",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 27916,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Forms",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 27810,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Events",
+       "selected": true
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 27811,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Review",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 27812,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Configure",
+       "selected": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28078,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Events"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28079,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Share links and optional attached smart forms."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 27945,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Create event form"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 27946,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "New event"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 27954,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Stay tuned",
+       "level": 3
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28083,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "8/19/2026, 9:41:29 PM"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28084,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Published"
+      },
+      {
+       "role": "link",
+       "backendNodeId": 27959,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Open page",
+       "url": "http://localhost:5173/events/stay-tuned",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 28085,
+         "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+         "name": "Open page"
+        }
+       ]
+      },
+      {
+       "role": "button",
+       "backendNodeId": 27960,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Copy link"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 27961,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Unpublish"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 27964,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Hakum Saturday Meet",
+       "level": 3
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28089,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "8/15/2026, 5:00:00 PM"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28090,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": " · bacoor"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28091,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Draft"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 28092,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Events RSVP"
+      },
+      {
+       "role": "link",
+       "backendNodeId": 27970,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Open page",
+       "url": "http://localhost:5173/events/hakum-saturday-meet",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 28093,
+         "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+         "name": "Open page"
+        }
+       ]
+      },
+      {
+       "role": "button",
+       "backendNodeId": 27971,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Copy link"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 27972,
+       "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+       "name": "Publish"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "heading",
+   "backendNodeId": 28059,
+   "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+   "name": "Go to",
+   "level": 2
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 28117,
+   "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+   "name": "Jump to an operations page"
+  },
+  {
+   "role": "region",
+   "backendNodeId": 28061,
+   "loaderId": "830124D36A4E31056DB8CC2B5F5FE1CA",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

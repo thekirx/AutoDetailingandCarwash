@@ -169,13 +169,14 @@ test('the Books hub opens for finance or reports, and for nothing else', () => {
 
 // ── The For Payment lane ─────────────────────────────────────────────────
 
-test('the For Payment lane is console tier plus the operations lead', () => {
+test('the For Payment lane is console tier, the operations lead, and the read-only investor', () => {
   // Documented contract: "Team Lead never sees the For Payment lane; console
-  // tier does" — console tier is SA / ASA / Branch Admin.
-  for (const role of [ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN, ROLES.ADMIN, ROLES.OPERATIONS_LEAD]) {
-    assert.equal(canSeeForPaymentLane(profile(role)), true, `${role} is console tier and must see it`)
+  // tier does" (console tier is SA / ASA / Branch Admin). The investor sees the
+  // lane on the Floor Board but has no POS write path (RLS + RPC role checks).
+  for (const role of [ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN, ROLES.ADMIN, ROLES.OPERATIONS_LEAD, ROLES.INVESTOR]) {
+    assert.equal(canSeeForPaymentLane(profile(role)), true, `${role} must see it`)
   }
-  for (const role of [ROLES.STAFF, ROLES.DETAILER, ROLES.TEAM_LEAD, ROLES.SALES, ROLES.MARKETING, ROLES.VIDEO_EDITOR, ROLES.INVESTOR]) {
+  for (const role of [ROLES.STAFF, ROLES.DETAILER, ROLES.TEAM_LEAD, ROLES.SALES, ROLES.MARKETING, ROLES.VIDEO_EDITOR]) {
     assert.equal(canSeeForPaymentLane(profile(role)), false, `${role} must not see pending payments`)
   }
   // A Team Lead is explicitly the excluded case (BUG-049 fixed this lane).

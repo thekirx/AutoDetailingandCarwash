@@ -1,72 +1,72 @@
 {
  "role": "RootWebArea",
- "backendNodeId": 11388,
- "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+ "backendNodeId": 11923,
+ "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
  "name": "Hakum Auto Care",
  "url": "http://localhost:5173/operations/queue",
  "children": [
   {
    "role": "navigation",
-   "backendNodeId": 11489,
-   "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+   "backendNodeId": 12024,
+   "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
    "name": "Primary navigation",
    "children": [
     {
      "role": "link",
-     "backendNodeId": 11492,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12027,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "QUEUE",
      "url": "http://localhost:5173/operations/queue",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 11681,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12217,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "QUEUE"
       }
      ]
     },
     {
      "role": "link",
-     "backendNodeId": 11502,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12037,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "NEW",
      "url": "http://localhost:5173/operations/queue/new",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 11682,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12218,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "NEW"
       }
      ]
     },
     {
      "role": "link",
-     "backendNodeId": 11508,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12043,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "ATTENDANCE",
      "url": "http://localhost:5173/operations/attendance",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 11683,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12219,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "ATTENDANCE"
       }
      ]
     },
     {
      "role": "link",
-     "backendNodeId": 11393,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12049,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "BOOKINGS",
      "url": "http://localhost:5173/operations/bookings",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 11684,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12220,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "BOOKINGS"
       }
      ]
@@ -75,125 +75,125 @@
   },
   {
    "role": "banner",
-   "backendNodeId": 11409,
-   "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+   "backendNodeId": 11943,
+   "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
    "name": "",
    "children": [
     {
      "role": "StaticText",
-     "backendNodeId": 11685,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12221,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Hakum Auto Care"
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11686,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12222,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "TL Test Account"
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11687,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12223,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": " · "
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11688,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12224,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "HAKUM AUTO CARE BACOOR"
     },
     {
      "role": "button",
-     "backendNodeId": 11414,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11948,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Notifications",
      "expanded": false,
      "haspopup": "menu"
     },
     {
      "role": "button",
-     "backendNodeId": 11527,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12063,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Settings"
     },
     {
      "role": "button",
-     "backendNodeId": 11530,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12066,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Open more menu",
      "expanded": false
     },
     {
      "role": "button",
-     "backendNodeId": 11534,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12070,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Sign out"
     }
    ]
   },
   {
    "role": "main",
-   "backendNodeId": 11420,
-   "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+   "backendNodeId": 11954,
+   "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
    "name": "",
    "children": [
     {
      "role": "heading",
-     "backendNodeId": 11539,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12075,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Car Wash Queue",
      "level": 1
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11691,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12227,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Today"
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11394,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11928,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": " · services & packages · detailing on Bookings"
     },
     {
      "role": "button",
-     "backendNodeId": 11540,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12076,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Refresh queue"
     },
     {
      "role": "link",
-     "backendNodeId": 11545,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12081,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Add",
      "url": "http://localhost:5173/operations/queue/new",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 11692,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12228,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "Add"
       }
      ]
     },
     {
      "role": "searchbox",
-     "backendNodeId": 11395,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11929,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": ""
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11693,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12229,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "DATE"
     },
     {
      "role": "combobox",
-     "backendNodeId": 11396,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11930,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "DATE",
      "value": "Today",
      "expanded": false,
@@ -201,29 +201,29 @@
      "children": [
       {
        "role": "option",
-       "backendNodeId": 11563,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12099,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "Today",
        "selected": true
       },
       {
        "role": "option",
-       "backendNodeId": 11566,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12102,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "Yesterday",
        "selected": false
       },
       {
        "role": "option",
-       "backendNodeId": 11569,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12105,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "This week",
        "selected": false
       },
       {
        "role": "option",
-       "backendNodeId": 11572,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12108,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "All dates",
        "selected": false
       }
@@ -231,14 +231,14 @@
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11694,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12230,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "DURATION"
     },
     {
      "role": "combobox",
-     "backendNodeId": 11397,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11931,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "DURATION",
      "value": "Any duration",
      "expanded": false,
@@ -246,36 +246,36 @@
      "children": [
       {
        "role": "option",
-       "backendNodeId": 11582,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12118,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "Any duration",
        "selected": true
       },
       {
        "role": "option",
-       "backendNodeId": 11585,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12121,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "Under 30m",
        "selected": false
       },
       {
        "role": "option",
-       "backendNodeId": 11588,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12124,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "30-60m",
        "selected": false
       },
       {
        "role": "option",
-       "backendNodeId": 11591,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12127,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "1-2h",
        "selected": false
       },
       {
        "role": "option",
-       "backendNodeId": 11594,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12130,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "Over 2h",
        "selected": false
       }
@@ -283,75 +283,75 @@
     },
     {
      "role": "DisclosureTriangle",
-     "backendNodeId": 11601,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12137,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Plate / phone history",
      "expanded": false
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11696,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12232,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "Waiting"
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11697,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12233,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": " avg "
     },
     {
      "role": "StaticText",
-     "backendNodeId": 11698,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
-     "name": "1408h 25m"
+     "backendNodeId": 12234,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
+     "name": "1412h 14m"
     },
     {
      "role": "button",
-     "backendNodeId": 11618,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12154,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "WAITING 2",
      "pressed": true
     },
     {
      "role": "button",
-     "backendNodeId": 11433,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11967,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "IN PROGRESS 0",
      "pressed": false
     },
     {
      "role": "button",
-     "backendNodeId": 11434,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11968,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "FINAL CHECK 0",
      "pressed": false
     },
     {
      "role": "button",
-     "backendNodeId": 11622,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 12158,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "COMPLETED 0",
      "pressed": false
     },
     {
      "role": "button",
-     "backendNodeId": 11435,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11969,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "CANCELLED 0",
      "pressed": false
     },
     {
      "role": "button",
-     "backendNodeId": 11436,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11970,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "ALL 2",
      "pressed": false
     },
     {
      "role": "generic",
-     "backendNodeId": 11406,
-     "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+     "backendNodeId": 11940,
+     "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
      "name": "",
      "atomic": false,
      "live": "polite",
@@ -359,15 +359,15 @@
      "children": [
       {
        "role": "button",
-       "backendNodeId": 11627,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12163,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "TGD2134 NEXT WAITING Toyota Fortuner(medium) Q-007 · Service",
        "expanded": false
       },
       {
        "role": "button",
-       "backendNodeId": 11638,
-       "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+       "backendNodeId": 12174,
+       "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
        "name": "DRE8762 WAITING Honda City(medium) Q-008 · Service",
        "expanded": false
       }
@@ -377,8 +377,8 @@
   },
   {
    "role": "region",
-   "backendNodeId": 11678,
-   "loaderId": "9A6CB4213D4DBA87668092D1F7D59D81",
+   "backendNodeId": 12214,
+   "loaderId": "2F503B1C423425095A2B86E92C6B3F66",
    "name": "Notifications alt+T",
    "atomic": false,
    "live": "polite",

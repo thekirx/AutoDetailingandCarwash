@@ -43,7 +43,7 @@ Each epic links acceptance criteria to seam tests in `tests/`.
 | Planner & My Tasks | [epic-planner.md](./epic-planner.md) |
 | CRM, inventory & catalog | [epic-crm-inventory.md](./epic-crm-inventory.md) |
 | Notifications, inquiries & reviews | [epic-notifications-inquiries.md](./epic-notifications-inquiries.md) |
-| Ops Lab, Data Center, Console | [epic-ops-lab-console.md](./epic-ops-lab-console.md) |
+| Data Center, Floor Board (Ops Lab and Console retired) | [epic-ops-lab-console.md](./epic-ops-lab-console.md) |
 | Remaining pages (KPI, History, Memberships, Settings, Audit, Content) | [epic-remaining-ops-pages.md](./epic-remaining-ops-pages.md) |
 
 ## Definition of Done (any story)

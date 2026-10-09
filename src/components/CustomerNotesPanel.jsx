@@ -82,7 +82,7 @@ export default function CustomerNotesPanel({
         {isRegularGuest(notes) ? <Badge variant="secondary">Regular</Badge> : null}
       </div>
       {notes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No notes yet — add likes, dislikes, or preferences.</p>
+        <p className="text-sm text-muted-foreground">{canWrite ? 'No notes yet. Add likes, dislikes, or preferences.' : 'No guest notes yet.'}</p>
       ) : (
         <ul className="space-y-2">
           {notes.map((n) => (

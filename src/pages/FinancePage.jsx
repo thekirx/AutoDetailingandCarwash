@@ -226,6 +226,11 @@ export default function FinancePage() {
   const onVendorsChange = useCallback((rows) => {
     setVendors((rows || []).filter((v) => v.is_active))
   }, [])
+  const onCatalogAdd = useCallback(({ vendor, category }) => {
+    const byName = (a, b) => a.name.localeCompare(b.name)
+    if (vendor) setVendors((list) => [...list, vendor].sort(byName))
+    if (category) setCategories((list) => [...list, category].sort(byName))
+  }, [])
 
   const load = useCallback(async () => {
     if (datePreset === 'custom' && !customRangeCheck.ok) {
@@ -651,6 +656,7 @@ export default function FinancePage() {
             range={queryRange}
             loading={loading}
             onReload={load}
+            onCatalogAdd={onCatalogAdd}
             accountFilter={extras.acct}
             onAccountFilter={(next) => patchSearch({ extras: { ...extras, acct: next } })}
           />
@@ -675,7 +681,11 @@ export default function FinancePage() {
         </TabsContent>
 
         <TabsContent value="shift-close" className="finance-tab-panel">
-          <FinanceShiftCloseTab range={queryRange} branchFilter={branchFilter} />
+          <FinanceShiftCloseTab
+            range={queryRange}
+            branchFilter={branchFilter}
+            sheetsHref={profile?.role === ROLES.INVESTOR ? '/operations/pos?tab=history' : undefined}
+          />
         </TabsContent>
 
         <TabsContent value="expense-reports" className="finance-tab-panel">

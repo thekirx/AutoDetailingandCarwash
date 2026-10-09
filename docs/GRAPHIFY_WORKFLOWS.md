@@ -37,8 +37,8 @@ pending → confirmed | waiting | cancelled
 confirmed → waiting | cancelled
 waiting → in_progress | cancelled
 in_progress → final_checking | cancelled
-final_checking → for_releasing | completed | cancelled
-for_releasing → for_payment | completed | cancelled
+final_checking → completed | cancelled
+for_releasing → completed | cancelled   (retired lane, legacy rows only)
 for_payment → (empty — POS owns it via send_queue_ticket_to_payment)
 redo → in_progress
 completed | cancelled → terminal
@@ -55,7 +55,7 @@ Send to POS: `send_queue_ticket_to_payment` → `pos_handoffs` → POS pending t
 
 ```
 pending (Placeholder) → confirmed (Assign to branch) → waiting (Vehicle intake)
-→ in_progress → final_checking → for_releasing → for_payment → completed
+→ in_progress → final_checking → for_payment → completed
 ```
 
 Sales/Marketing may also set `cancelled`. Terminal for date filters: `completed`, `cancelled` (`BOOKING_TERMINAL_STATUSES`). Extra enum values `no_show` and `redo` exist in DB; Queue uses `redo`, detailing board does not list `no_show`.
@@ -122,7 +122,7 @@ Not PostgREST. Session/service as each handler already does.
 | /api/booking-status | Staff status + SMS |
 | /api/maintenance-schedules | Paint maintenance |
 | /api/push-subscribe, /api/send-push | Web push |
-| /api/notify-booking, notify-ops-form, notify-planner, notify-pos, notify-ops-event, notify-ops-lab | In-app/push/SMS |
+| /api/notify-booking, notify-ops-form, notify-planner, notify-pos, notify-ops-event | In-app/push/SMS |
 | /api/lifecycle-sms | Customer lifecycle SMS |
 | /api/busybee | BrandTxt / BusyBee |
 | /api/notification-settings, notification-broadcast, notification-broadcast-kinds, notification-templates | Comms admin |
@@ -143,10 +143,10 @@ Floor money still goes **PostgREST RPC**, not these routes.
 
 Upsert needs INSERT+SELECT+UPDATE on storage policies.
 
-## Planner / Ops Lab / attendance (short)
+## Planner / attendance (short)
 
-- Planner: `plan_cards` → lists → boards; proof in `plan-proofs`; Review tab accept/send-back.
-- Ops Lab: `/operations/roadmap` — `ops_lab_types` / `ops_lab_statuses` / `ops_roadmap_*`; notify via `/api/notify-ops-lab`.
+- Planner: `plan_cards` → lists → boards; proof in `plan-proofs`; Review tab accept/send-back. DB `can_edit_planning()` = SA, BA, Ops Lead, ASA with `planning_edit`; `can_submit_ops_form(kind)` mirrors `canSubmitOpsFormKind`.
+- Ops Lab (`/operations/roadmap`) retired 2026-10-09; the route redirects home. `ops_lab_*` / `ops_roadmap_*` tables kept as history.
 - Attendance: `staff_attendance` + geofence trigger `enforce_staff_attendance_geofence`. Operations Lead has **no** clock. Floor wash pool uses bay `staff` with attendance weight > 0.
 
 ## Customer portal vs staff

@@ -519,7 +519,6 @@ role_tab(
         "Queue",
         "Attendance",
         "Planner",
-        "Ops Lab (view)",
         "History",
         "Audit",
         "Reviews",
@@ -540,7 +539,7 @@ role_tab(
             "Command never links a page I cannot open",
             [
                 "Opens checkout first",
-                "Allowed: floor, queue, attendance, POS + Daily Sheet, reviews, planner, Ops Lab, history, audit",
+                "Allowed: floor, queue, attendance, POS + Daily Sheet, reviews, planner, history, audit",
                 "Denied: finance, CRM, people, console, inventory, bookings board",
             ],
         ),
@@ -633,23 +632,24 @@ role_tab(
     "role-ops",
     "Ops Lead",
     "Operations Lead — network help across branches without owning Daily Sheet approve.",
-    "Ops Lab roadmap",
+    "Queue (all branches)",
     [
-        "Ops Lab",
         "Queue (network)",
         "POS help",
+        "CRM (view only, with Team Lead ticket notes)",
         "Attendance register (view)",
         "Planner",
     ],
-    ["Floor clock", "Finance Daily Sheet approve", "People", "Data Center"],
+    ["Floor Board", "Floor clock", "CRM edits or SMS", "Finance Daily Sheet approve", "People", "Data Center"],
     join_stories(
         story(
             "Operations Lead",
-            "Ops Lab as home and network-wide floor help",
+            "the network Queue as home and network-wide floor help",
             "I cover Team Lead and Branch Admin work across branches without owning money approve",
             [
-                "Opens Ops Lab roadmap",
+                "Opens the Queue (no Floor Board)",
                 "Can use queue and POS across branches",
+                "Reads CRM customers and the notes Team Leads type on tickets, without editing",
                 "Can see the attendance register but cannot floor-clock",
                 "No Finance approve / People / Data Center",
             ],
@@ -662,8 +662,8 @@ role_tab(
     "Sales",
     "Detailing pipeline across branches.",
     "Detailing bookings",
-    ["Bookings", "Planner", "History", "Notifications"],
-    ["Wash queue as home", "Daily Sheet approve", "People"],
+    ["Bookings", "Queue (view, all branches)", "CRM (view only)", "History"],
+    ["Wash queue edits", "CRM edits or SMS", "Daily Sheet approve", "People"],
     join_stories(
         story(
             "Sales",
@@ -678,6 +678,16 @@ role_tab(
             [
                 "Statuses from assigned through completed",
                 "Paid detailing lands in the right sales bucket",
+            ],
+        ),
+        story(
+            "Sales",
+            "to watch the Queue for every branch and look customers up in CRM",
+            "I can answer customers about any car without changing wash work or customer records",
+            [
+                "Queue shows all branches with a branch filter",
+                "Wash tickets are view only; detailing tickets open the Bookings editor",
+                "CRM is view only: no edits, vehicles, messages, or SMS",
             ],
         ),
     ),
@@ -951,10 +961,10 @@ add_tab(
             ["Route gated", "Failed QA is Team Lead / Owner — not Sales"],
         ),
         story(
-            "Operations Lead / Owner",
-            "Ops Lab, Console, Data Center",
-            "ops coordination and imports stay in the right hands",
-            ["Ops Lab for Ops Lead", "Data Center owner-only"],
+            "Owner",
+            "Data Center",
+            "imports and exports stay in the right hands",
+            ["Data Center owner-only"],
         ),
         story(
             "Owner or assistant",

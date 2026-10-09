@@ -18,7 +18,7 @@ const EXPECTED_HOMES = Object.freeze({
   [ROLES.SUPER_ADMIN]: '/operations/dashboard',
   [ROLES.ASSISTANT_SUPER_ADMIN]: '/operations/dashboard',
   [ROLES.ADMIN]: '/operations/pos',
-  [ROLES.OPERATIONS_LEAD]: '/operations/roadmap',
+  [ROLES.OPERATIONS_LEAD]: '/operations/queue',
   [ROLES.TEAM_LEAD]: '/operations/queue',
   [ROLES.STAFF]: '/operations/attendance',
   [ROLES.SALES]: '/operations/bookings',

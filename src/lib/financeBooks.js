@@ -197,6 +197,52 @@ export function buildBillRows(header, lines) {
   return { ok: true, error: '', rows, totalMinor: rows.reduce((s, r) => s + r.total_minor, 0) }
 }
 
+/** expense_categories.kind values (CHECK constraint); kinds group the P&L. */
+export const ACCOUNT_KINDS = [
+  { value: 'general', label: 'General' },
+  { value: 'payroll', label: 'Payroll / salary (P&L bucket)' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'utilities', label: 'Utilities' },
+  { value: 'chemicals', label: 'Chemicals' },
+  { value: 'equipment', label: 'Equipment' },
+]
+
+/** Shift-close review posts salaries to code 14; the database refuses recoding, re-kinding, archiving or deleting it. */
+export const SALARY_ACCOUNT_CODE = '14'
+export const isSalaryAccount = (c) => String(c?.code ?? '') === SALARY_ACCOUNT_CODE
+
+export const accountLabel = (c) => `${c.code ? `${c.code} · ` : ''}${c.name}`
+
+/** Account form → expense_categories row. Chemicals always need pre-approval. */
+export function buildAccountRow(form) {
+  const fail = (error) => ({ ok: false, error, row: null })
+  const name = String(form?.name || '').trim()
+  if (!name) return fail('Enter the account name.')
+  if (name.length > 80) return fail('Name is too long (80 characters max).')
+  const code = String(form?.code || '').trim()
+  if (code.length > 10) return fail('Code is too long (10 characters max).')
+  const kind = ACCOUNT_KINDS.some((k) => k.value === form?.kind) ? form.kind : 'general'
+  return { ok: true, error: '', row: { name, code: code || null, kind, is_chemical: Boolean(form?.is_chemical) || kind === 'chemicals' } }
+}
+
+/** Pickers for new spend: active accounts in code order, plus any archived one already on the record being edited. */
+export function activeAccounts(categories = [], keepIds = []) {
+  const keep = new Set(keepIds.filter(Boolean))
+  return (categories || [])
+    .filter((c) => !c.is_archived || keep.has(c.id))
+    .sort((a, b) => (Number(a.code) || 999) - (Number(b.code) || 999) || a.name.localeCompare(b.name))
+}
+
+/** Postgres errors on accounts / vendors → what to do next. */
+export function catalogWriteError(error, noun = 'category') {
+  const msg = String(error?.message || '')
+  if (error?.code === '23505') return /code/i.test(msg) ? 'Another category already uses that code.' : `Another ${noun} already has that name.`
+  if (error?.code === '23503') return `This ${noun} is on existing bills or reports, so it can't be deleted. Archive it to hide it from new bills instead.`
+  if (error?.code === '23514' && /Account 14/.test(msg)) return msg
+  if (error?.code === '42501' || /row-level security/i.test(msg)) return `You need Finance write access to change ${noun}s.`
+  return msg || `Could not save the ${noun}. Check your connection and try again.`
+}
+
 export const DISCOUNTS_ROW = 'Discounts and adjustments'
 
 /**

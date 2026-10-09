@@ -3,6 +3,7 @@
  * so callers must enforce branch scope here.
  */
 import { isCrmSafeBookingStatus, isSalesBoardBookingStatus } from './crmBookingStatus.mjs'
+import { isBookingBoardRow } from '../src/lib/serviceKinds.js'
 
 function hasAsaGrant(staff, key) {
   const grants = staff?.permission_grants
@@ -39,11 +40,11 @@ export function canStaffUpdateBookingStatus(staff, booking, opts = {}) {
   // Marketing: Bookings view is read-only.
   if (staff.role === 'marketing') return false
 
-  // Sales: assigned to all branches — full detailing board pipeline, any branch.
+  // Sales: assigned to all branches — detailing board pipeline only, any branch. Wash is view only.
   if (staff.role === 'sales') {
     const next = opts.nextStatus
     if (!next || !isSalesBoardBookingStatus(next)) return false
-    return true
+    return isBookingBoardRow(booking)
   }
 
   if (staff.role === 'team_lead') {

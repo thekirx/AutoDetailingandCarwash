@@ -1,0 +1,195 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 359,
+ "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/notifications",
+ "children": [
+  {
+   "role": "main",
+   "backendNodeId": 426,
+   "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+   "name": "",
+   "children": [
+    {
+     "role": "button",
+     "backendNodeId": 427,
+     "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+     "name": "Toggle Sidebar"
+    },
+    {
+     "role": "navigation",
+     "backendNodeId": 434,
+     "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 493,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Ops"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 495,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Notifications"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 496,
+     "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+     "name": "Operations · cost · profit · stock"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 368,
+     "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+     "name": "Open command menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 371,
+     "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 374,
+     "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+     "name": "Account menu",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "main",
+     "backendNodeId": 366,
+     "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 500,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "OPERATIONS"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 455,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Notifications",
+       "level": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 502,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "All shop push and SMS copy, paint-maintenance reminders, and customer broadcasts. Super Admin can edit every template."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 503,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Paint maintenance program"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 504,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Ceramic Coating and PPF enroll one 6-month reminder per plate. Booking"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 378,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": " "
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 379,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Paint Maintenance"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 364,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": " for that car resets the clock — never a second active schedule."
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 465,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Reminders",
+       "selected": true
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 365,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Templates",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 381,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Broadcast",
+       "selected": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 508,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "Active rules"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 509,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "0 rules"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 383,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "New reminder"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 511,
+       "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+       "name": "No rules yet. Default fallback is push every 6 months for the paint-maintenance program."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "heading",
+   "backendNodeId": 487,
+   "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+   "name": "Go to",
+   "level": 2
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 513,
+   "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+   "name": "Jump to an operations page"
+  },
+  {
+   "role": "region",
+   "backendNodeId": 489,
+   "loaderId": "F3AB42FF077CD25A9572EB90D94D152C",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

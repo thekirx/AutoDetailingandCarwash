@@ -1,0 +1,1289 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 12522,
+ "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/branches",
+ "children": [
+  {
+   "role": "region",
+   "backendNodeId": 13128,
+   "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  },
+  {
+   "role": "dialog",
+   "backendNodeId": 13135,
+   "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+   "name": "New branch",
+   "description": "Slug is the permanent ID used in queue URLs, bookings, and staff scope.",
+   "modal": false,
+   "children": [
+    {
+     "role": "heading",
+     "backendNodeId": 13137,
+     "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+     "name": "New branch",
+     "level": 2
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 13557,
+     "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+     "name": "Slug is the permanent ID used in queue URLs, bookings, and staff scope."
+    },
+    {
+     "role": "form",
+     "backendNodeId": 12543,
+     "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 13558,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Name"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 12542,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Name",
+       "focused": true,
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13559,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Code"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 12544,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Code",
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13560,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Slug"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 12545,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Slug",
+       "description": "Lowercase letters, numbers, and hyphens",
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13561,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Becomes "
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13562,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "/queue/imus"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13563,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": " and "
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13564,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "/queue/imus/tv"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13565,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": " — no extra TV setup."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13566,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Status"
+      },
+      {
+       "role": "radio",
+       "backendNodeId": 12549,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Active Book + queue",
+       "checked": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13567,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Active"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13568,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Book + queue"
+      },
+      {
+       "role": "radio",
+       "backendNodeId": 12550,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Coming soon Announce only",
+       "checked": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13569,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Coming soon"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13570,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Announce only"
+      },
+      {
+       "role": "radio",
+       "backendNodeId": 12551,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Inactive Hidden",
+       "checked": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13571,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Inactive"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13572,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Hidden"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13573,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Find place in the Philippines"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 12546,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Find place in the Philippines",
+       "multiline": false,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 13178,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Use my location"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13575,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Search or tap the map to drop a pin"
+      },
+      {
+       "role": "generic",
+       "backendNodeId": 13186,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "",
+       "children": [
+        {
+         "role": "button",
+         "backendNodeId": 13203,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Marker"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13210,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Zoom in",
+         "description": "Zoom in"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13212,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Zoom out",
+         "description": "Zoom out"
+        },
+        {
+         "role": "link",
+         "backendNodeId": 13218,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " Leaflet",
+         "description": "A JavaScript library for interactive maps",
+         "url": "https://leafletjs.com/",
+         "children": [
+          {
+           "role": "StaticText",
+           "backendNodeId": 13578,
+           "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+           "name": " Leaflet"
+          }
+         ]
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13579,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13581,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " © OpenStreetMap"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13582,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Address"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 12547,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Address",
+       "multiline": false,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13583,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Google review link"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 12548,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Google review link",
+       "multiline": false,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13584,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "A thumbs up on the customer's visit opens this page. One link per branch."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13585,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Operating hours"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13586,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Asia/Manila shop day. Public /branches shows this schedule and open/closed now."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13587,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": " Preview: Daily 8 AM–6 PM"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13588,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Sun"
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 12552,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Closed",
+       "checked": false
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13241,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Sun opens",
+       "value": "08:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13245,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 8,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13591,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13247,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13593,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13249,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 1,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13250,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13251,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Sun closes",
+       "value": "18:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13255,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 6,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13596,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13257,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13598,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13259,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 2,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13260,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13600,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Mon"
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 12553,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Closed",
+       "checked": false
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13265,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Mon opens",
+       "value": "08:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13269,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 8,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13603,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13271,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13605,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13273,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 1,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13274,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13275,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Mon closes",
+       "value": "18:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13279,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 6,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13608,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13281,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13610,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13283,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 2,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13284,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13612,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Tue"
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 12554,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Closed",
+       "checked": false
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13289,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Tue opens",
+       "value": "08:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13293,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 8,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13615,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13295,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13617,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13297,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 1,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13298,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13299,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Tue closes",
+       "value": "18:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13303,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 6,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13620,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13305,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13622,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13307,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 2,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13308,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13624,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Wed"
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 12555,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Closed",
+       "checked": false
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13313,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Wed opens",
+       "value": "08:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13317,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 8,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13627,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13319,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13629,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13321,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 1,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13322,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13323,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Wed closes",
+       "value": "18:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13327,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 6,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13632,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13329,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13634,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13331,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 2,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13332,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13636,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Thu"
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 12556,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Closed",
+       "checked": false
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13337,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Thu opens",
+       "value": "08:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13341,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 8,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13639,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13343,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13641,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13345,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 1,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13346,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13347,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Thu closes",
+       "value": "18:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13351,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 6,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13644,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13353,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13646,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13355,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 2,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13356,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13648,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Fri"
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 12557,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Closed",
+       "checked": false
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13361,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Fri opens",
+       "value": "08:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13365,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 8,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13651,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13367,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13653,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13369,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 1,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13370,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13371,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Fri closes",
+       "value": "18:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13375,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 6,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13656,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13377,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13658,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13379,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 2,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13380,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 13660,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Sat"
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 12558,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Closed",
+       "checked": false
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13385,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Sat opens",
+       "value": "08:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13389,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 8,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13663,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13391,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13665,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13393,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 1,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13394,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "InputTime",
+       "backendNodeId": 13395,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Sat closes",
+       "value": "18:00",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13399,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Hours Hours",
+         "value": 6,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13668,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13401,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 13670,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 13403,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "AM/PM AM/PM",
+         "value": 2,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 13404,
+         "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+         "name": "Show time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "button",
+       "backendNodeId": 13405,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Cancel"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 13406,
+       "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+       "name": "Create branch"
+      }
+     ]
+    },
+    {
+     "role": "button",
+     "backendNodeId": 13407,
+     "loaderId": "48ADBA14F5845E978FDF7EAB8B46251A",
+     "name": "Close"
+    }
+   ]
+  }
+ ]
+}

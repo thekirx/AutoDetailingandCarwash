@@ -1,4 +1,4 @@
-﻿# Attendance
+# Attendance
 
 **Route:** `/operations/attendance`  
 **Shell:** Floor (crew/TL) / Command

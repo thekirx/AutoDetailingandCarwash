@@ -37,6 +37,25 @@
 
 ---
 
+## US-SALES-02 · Sales watches the Queue and reads CRM
+
+**As** sales  
+**I want** the Queue for every branch (with a branch filter) and CRM lookups  
+**So that** I can answer customers about any car without changing wash work or customer records  
+
+**Acceptance**
+
+- [x] Queue + CRM in Sales nav and dock; Bookings stays home
+- [x] Queue shows all branches; branch filter narrows to one
+- [x] Wash tickets are view only; detailing tickets open the Bookings editor (status, service, price) and closing returns to Queue
+- [x] No New ticket; `/operations/queue/new`, Floor Board and KPI stay refused
+- [x] CRM view only: no edit customer, add vehicle, message, register, or SMS tab
+- [x] `/api/booking-status` and `bookings` RLS refuse Sales writes on non-detailing bookings
+
+**Test seam:** `tests/salesRole.test.js`, `tests/bookingStatusRoles.test.js`, `scripts/check-sales-queue-crm.mjs` (browser), migration `20261009160000_sales_detailing_only_writes.sql`
+
+---
+
 ## US-MKT-01 · Marketing scope
 
 **As** marketing  

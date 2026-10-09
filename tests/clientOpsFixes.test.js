@@ -39,7 +39,7 @@ describe('client ops fixes batch', () => {
     assert.equal(DETAILING_BOARD_STATUSES[1].label, 'Assign to branch')
     assert.equal(DETAILING_BOARD_STATUSES[2].label, 'Vehicle intake')
     assert.equal(nextDetailingBoardStatus('pending'), 'confirmed')
-    assert.equal(nextDetailingBoardStatus('final_checking'), 'for_releasing')
+    assert.equal(nextDetailingBoardStatus('final_checking'), 'for_payment')
     assert.ok(DETAILING_BOARD_STATUSES.length >= 7)
   })
 

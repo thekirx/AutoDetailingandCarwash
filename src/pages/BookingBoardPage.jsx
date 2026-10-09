@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar'
 import { format, getDay, parse, startOfWeek } from 'date-fns'
 import { enUS } from 'date-fns/locale'
@@ -293,8 +293,12 @@ function selectItems(options = []) {
   return Object.fromEntries(options.map((o) => [o.value, o.label]))
 }
 
+const BOOKING_ROW_SELECT =
+  'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, vehicle_type, service_id, final_price_minor, price_minor, queue_number, services(name, slug, pay_category)'
+
 export default function BookingBoardPage() {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const canEdit = canEditBookings(profile)
   const canCreate = canCreateBookings(profile)
   const canEditServicePrice = canModifyBookingServicePrice(profile)
@@ -316,16 +320,17 @@ export default function BookingBoardPage() {
   const [branches, setBranches] = useState([])
   const [services, setServices] = useState([])
   const [branchFilter, setBranchFilter] = useState(canSeeAllBranches(profile) ? 'all' : (getBranchScopeList(profile)?.[0] || 'all'))
-  const [datePreset, setDatePreset] = useState('week')
-  const [customStart, setCustomStart] = useState('')
-  const [customEnd, setCustomEnd] = useState('')
+  const linkedDay = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('date') || '') ? searchParams.get('date') : ''
+  const [datePreset, setDatePreset] = useState(linkedDay ? 'custom' : 'week')
+  const [customStart, setCustomStart] = useState(linkedDay)
+  const [customEnd, setCustomEnd] = useState(linkedDay)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [kindFilter, setKindFilter] = useState('detailing')
   const [tableSort, setTableSort] = useState({ key: 'start', dir: 'asc' })
   const [tablePage, setTablePage] = useState(1)
   // Controlled: react-big-calendar's uncontrolled wrapper drops navigation after a StrictMode remount.
-  const [calDate, setCalDate] = useState(() => new Date())
+  const [calDate, setCalDate] = useState(() => (linkedDay ? new Date(`${linkedDay}T00:00:00`) : new Date()))
   const [calView, setCalView] = useState(Views.WEEK)
   const [tablePageSize, setTablePageSize] = useState(BOOKING_TABLE_DEFAULT_PAGE_SIZE)
   const [formOpen, setFormOpen] = useState(false)
@@ -376,8 +381,7 @@ export default function BookingBoardPage() {
   const branchScope = useMemo(() => resolveBranchFilter(profile, branchFilter), [profile, branchFilter])
 
   const load = useCallback(async () => {
-    const select =
-      'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, vehicle_type, service_id, final_price_minor, price_minor, queue_number, services(name, slug, pay_category)'
+    const select = BOOKING_ROW_SELECT
     // Open pipeline stays on board/calendar until released/cancelled — date filter only gates terminal rows.
     const openStatuses = boardStatuses.filter((s) => isOpenBookingStatus(s))
     const closedStatuses = boardStatuses.filter((s) => !isOpenBookingStatus(s))
@@ -785,6 +789,33 @@ export default function BookingBoardPage() {
     // ponytail: fire once from the URL; openCreate closes over current services.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canCreate, formServices, searchParams])
+
+  // Queue deep link: /operations/bookings?open=<id>&from=queue opens the editor, closing returns to Queue.
+  const openFromUrl = searchParams.get('open') || ''
+  const openedFromUrl = useRef('')
+  const returnToQueue = useRef(false)
+  useEffect(() => {
+    if (!openFromUrl || openedFromUrl.current === openFromUrl || !canEdit || !services.length) return
+    openedFromUrl.current = openFromUrl
+    supabase
+      .from('bookings')
+      .select(BOOKING_ROW_SELECT)
+      .eq('id', openFromUrl)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) return toast.error(error.message)
+        if (!data || !isBookingBoardRow(data)) return toast.error('That ticket is not a detailing booking.')
+        returnToQueue.current = searchParams.get('from') === 'queue'
+        openEdit(data)
+      })
+    // ponytail: fire once per id; openEdit closes over current services.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openFromUrl, canEdit, services])
+  useEffect(() => {
+    if (formOpen || !returnToQueue.current) return
+    returnToQueue.current = false
+    navigate('/operations/queue')
+  }, [formOpen, navigate])
 
   async function lookupExistingCustomer(identifier) {
     const raw = String(identifier || '').trim()

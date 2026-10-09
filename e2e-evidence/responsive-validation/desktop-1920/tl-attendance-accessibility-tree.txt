@@ -1,72 +1,72 @@
 {
  "role": "RootWebArea",
- "backendNodeId": 17340,
- "loaderId": "5A500A8943664F28127A894029C929A3",
+ "backendNodeId": 17858,
+ "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
  "name": "Hakum Auto Care",
  "url": "http://localhost:5173/operations/attendance",
  "children": [
   {
    "role": "navigation",
-   "backendNodeId": 17415,
-   "loaderId": "5A500A8943664F28127A894029C929A3",
+   "backendNodeId": 17932,
+   "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
    "name": "Primary navigation",
    "children": [
     {
      "role": "link",
-     "backendNodeId": 17418,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17935,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "QUEUE",
      "url": "http://localhost:5173/operations/queue",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 17539,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 18056,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "QUEUE"
       }
      ]
     },
     {
      "role": "link",
-     "backendNodeId": 17428,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17945,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "NEW",
      "url": "http://localhost:5173/operations/queue/new",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 17540,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 18057,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "NEW"
       }
      ]
     },
     {
      "role": "link",
-     "backendNodeId": 17434,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17951,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "ATTENDANCE",
      "url": "http://localhost:5173/operations/attendance",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 17541,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 18058,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "ATTENDANCE"
       }
      ]
     },
     {
      "role": "link",
-     "backendNodeId": 17440,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17957,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "BOOKINGS",
      "url": "http://localhost:5173/operations/bookings",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 17542,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 18059,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "BOOKINGS"
       }
      ]
@@ -75,165 +75,165 @@
   },
   {
    "role": "banner",
-   "backendNodeId": 17349,
-   "loaderId": "5A500A8943664F28127A894029C929A3",
+   "backendNodeId": 17865,
+   "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
    "name": "",
    "children": [
     {
      "role": "StaticText",
-     "backendNodeId": 17543,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 18060,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Hakum Auto Care"
     },
     {
      "role": "StaticText",
-     "backendNodeId": 17544,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 18061,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "TL Test Account"
     },
     {
      "role": "StaticText",
-     "backendNodeId": 17545,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 18062,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": " · "
     },
     {
      "role": "StaticText",
-     "backendNodeId": 17546,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 18063,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "HAKUM AUTO CARE BACOOR"
     },
     {
      "role": "button",
-     "backendNodeId": 17354,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17872,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Notifications",
      "expanded": false,
      "haspopup": "menu"
     },
     {
      "role": "button",
-     "backendNodeId": 17454,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17971,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Settings"
     },
     {
      "role": "button",
-     "backendNodeId": 17457,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17974,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Open more menu",
      "expanded": false
     },
     {
      "role": "button",
-     "backendNodeId": 17461,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17978,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Sign out"
     }
    ]
   },
   {
    "role": "main",
-   "backendNodeId": 17346,
-   "loaderId": "5A500A8943664F28127A894029C929A3",
+   "backendNodeId": 17864,
+   "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
    "name": "",
    "children": [
     {
      "role": "navigation",
-     "backendNodeId": 17467,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17984,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Breadcrumb",
      "children": [
       {
        "role": "link",
-       "backendNodeId": 17469,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 17986,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "Ops",
        "url": "http://localhost:5173/operations/attendance",
        "children": [
         {
          "role": "StaticText",
-         "backendNodeId": 17548,
-         "loaderId": "5A500A8943664F28127A894029C929A3",
+         "backendNodeId": 18065,
+         "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
          "name": "Ops"
         }
        ]
       },
       {
        "role": "StaticText",
-       "backendNodeId": 17550,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 18067,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "Attendance"
       }
      ]
     },
     {
      "role": "StaticText",
-     "backendNodeId": 17551,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 18068,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "OPERATIONS"
     },
     {
      "role": "heading",
-     "backendNodeId": 17474,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17991,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Attendance",
      "level": 1
     },
     {
      "role": "StaticText",
-     "backendNodeId": 17553,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 18070,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Time in inside the branch geofence. Present or late crew can be assigned to floor jobs. Late arrivals still earn — at a lower wash-pool share set in Settings."
     },
     {
      "role": "StaticText",
-     "backendNodeId": 17554,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 18071,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Manila calendar day · geofence enforced per profile"
     },
     {
      "role": "tab",
-     "backendNodeId": 17489,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 18006,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Time clock",
      "selected": true
     },
     {
      "role": "tab",
-     "backendNodeId": 17364,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 17882,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Register",
      "selected": false
     },
     {
      "role": "tabpanel",
-     "backendNodeId": 17496,
-     "loaderId": "5A500A8943664F28127A894029C929A3",
+     "backendNodeId": 18013,
+     "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
      "name": "Time clock",
      "children": [
       {
        "role": "StaticText",
-       "backendNodeId": 17555,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 18072,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "Geofenced time clock"
       },
       {
        "role": "StaticText",
-       "backendNodeId": 17556,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 18073,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "Time in inside the branch radius. Late is flagged against shift start. You must be present or late before a Team Lead can assign you from Queue or Crew."
       },
       {
        "role": "button",
-       "backendNodeId": 17503,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 18020,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "Time in"
       },
       {
        "role": "button",
-       "backendNodeId": 17504,
-       "loaderId": "5A500A8943664F28127A894029C929A3",
+       "backendNodeId": 18021,
+       "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
        "name": "Time out"
       }
      ]
@@ -242,8 +242,8 @@
   },
   {
    "role": "region",
-   "backendNodeId": 17536,
-   "loaderId": "5A500A8943664F28127A894029C929A3",
+   "backendNodeId": 18053,
+   "loaderId": "783B2C15F0859D821B5169F2EF7CAA9E",
    "name": "Notifications alt+T",
    "atomic": false,
    "live": "polite",

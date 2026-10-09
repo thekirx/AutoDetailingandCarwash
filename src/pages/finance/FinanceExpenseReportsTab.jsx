@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { NamedSelect } from '@/components/ui/named-select'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
+import { activeAccounts } from '@/lib/financeBooks'
 import { isSuperAdmin } from '@/auth/permissions'
 import { toast } from 'sonner'
 import {
@@ -235,7 +236,7 @@ export default function FinanceExpenseReportsTab({
                 id="er-category"
                 value={form.category_id}
                 onChange={(category_id) => setForm((f) => ({ ...f, category_id }))}
-                options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                options={activeAccounts(categories, [form.category_id]).map((c) => ({ value: c.id, label: c.name }))}
               />
             </div>
             <div className="flex flex-col gap-1.5">

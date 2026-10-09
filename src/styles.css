@@ -3561,6 +3561,8 @@ html:has(.tv-board) {
 }
 .queue-lane-board-fit .floor-lane-body {
   gap: 0.4rem;
+  /* Rows size to each card; auto rows let a full lane squeeze cards until text overlaps. */
+  grid-auto-rows: max-content;
 }
 .queue-ticket-compact {
   padding: 0.55rem;
@@ -6437,6 +6439,17 @@ a.home-branch-card:hover { background:#052699; }
   color: var(--planner-ink);
   box-shadow: inset 3px 0 0 var(--planner-navy);
 }
+.planner-v2-row-link {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  border-radius: 0.25rem;
+}
+.planner-v2-row-link:hover { text-decoration: underline; }
+.planner-v2-row-link:focus-visible {
+  outline: 2px solid var(--planner-navy);
+  outline-offset: 3px;
+}
 .planner-v2-cols {
   display: grid;
   gap: 0.75rem;
@@ -8090,8 +8103,6 @@ button.bk-ticket-compact {
   cursor: not-allowed;
   opacity: 0.55;
 }
-.planner-cal-toolbar,
-.planner-cal-dow,
 .planner-task-scrim {
   position: fixed;
   inset: 0;

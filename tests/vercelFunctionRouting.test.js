@@ -20,7 +20,6 @@ const expected = {
   '/api/notify-planner': '/api/notifications?operation=notify-planner',
   '/api/notify-pos': '/api/notifications?operation=notify-pos',
   '/api/pos-announce': '/api/notifications?operation=pos-announce',
-  '/api/notify-ops-lab': '/api/notifications?operation=notify-ops-lab',
   '/api/notify-ops-event': '/api/notifications?operation=notify-ops-event',
   '/api/notification-broadcast': '/api/notifications?operation=notification-broadcast',
   '/api/notification-broadcast-kinds': '/api/notifications?operation=notification-broadcast-kinds',

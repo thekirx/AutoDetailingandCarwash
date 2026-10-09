@@ -1,7 +1,8 @@
 import { plateValidationError } from './customerAuth.js'
 
 /**
- * Team Lead walk-in tickets: name is optional; plate + phone are required.
+ * Team Lead walk-in tickets: plate + service only. Name and contact are captured by the
+ * Branch Admin at POS (a returning plate still brings its customer along).
  * bookings.customer_name / customers.full_name stay NOT NULL — we store a
  * stable walk-in label that can be replaced later when CRM collects a real name.
  */
@@ -61,8 +62,9 @@ export function validateQueueTicketIdentity({
   service_ids,
   service_id,
 } = {}) {
+  // Team Leads no longer collect contact — Branch Admin adds it at POS. A phone, if given, must be real.
   const phoneDigits = String(customer_phone || '').replace(/\D/g, '')
-  if (phoneDigits.length < 10) return 'Phone number is required (at least 10 digits).'
+  if (phoneDigits && phoneDigits.length < 10) return 'Phone number must be at least 10 digits.'
   const plateError = plateValidationError(vehicle_plate)
   if (plateError) return plateError
   const ids = Array.isArray(service_ids) && service_ids.length

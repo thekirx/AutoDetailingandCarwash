@@ -1003,7 +1003,14 @@ export async function createQueueTicket(form) {
 
   const profile = await getCurrentProfile({ required: true })
   const displayName = resolveQueueCustomerDisplayName(form)
-  const { customerId, displayName: resolvedName } = await ensureCustomer(form, displayName)
+  // Team Leads don't collect contact: a known plate brings its customer, otherwise the ticket
+  // stays customer-less (Walk-in · plate) until Branch Admin saves the customer at POS.
+  const hasContact = String(form.customer_phone || '').replace(/\D/g, '').length >= 10
+  const { customerId, displayName: resolvedName } = form.customer_id
+    ? { customerId: form.customer_id, displayName: form.customer_name?.trim() || displayName }
+    : hasContact
+      ? await ensureCustomer(form, displayName)
+      : { customerId: null, displayName }
   // Server may keep an existing CRM name when walk-in placeholder would overwrite it
   const customerName = resolvedName || displayName
   let vehicleId = form.vehicle_id || null
@@ -1014,7 +1021,7 @@ export async function createQueueTicket(form) {
     const { error: attachError } = await supabase
       .from('vehicles')
       .update({
-        customer_id: customerId,
+        ...(customerId ? { customer_id: customerId } : {}),
         vehicle_make: form.vehicle_make?.trim() || '',
         vehicle_model: form.vehicle_model?.trim() || '',
         vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
@@ -1030,7 +1037,8 @@ export async function createQueueTicket(form) {
     const { data: vehicle, error: vehicleError } = await supabase
       .from('vehicles')
       .upsert({
-        customer_id: customerId,
+        // Never null out the owner of a plate that is already on file.
+        ...(customerId ? { customer_id: customerId } : {}),
         plate_number: form.vehicle_plate.trim().toUpperCase(),
         normalized_plate_number: normalizedPlate,
         vehicle_make: form.vehicle_make?.trim() || '',
@@ -1071,7 +1079,8 @@ export async function createQueueTicket(form) {
     vehicle_id: vehicleId,
     customer_name: customerName,
     customer_email: form.customer_email?.trim() || null,
-    customer_phone: form.customer_phone.trim(),
+    // bookings.customer_phone is NOT NULL — '' until Branch Admin saves the customer at POS.
+    customer_phone: (form.customer_phone || '').trim(),
     vehicle_make: form.vehicle_make?.trim() || '',
     vehicle_model: form.vehicle_model?.trim() || '',
     vehicle_year: form.vehicle_year ? Number(form.vehicle_year) : null,
@@ -1193,10 +1202,6 @@ export async function updateTicketStatus(ticket, nextStatus) {
   if (nextStatus === 'final_checking') {
     patch.final_checking_at = now
     if (profile?.id) patch.final_checked_by = profile.id
-  }
-  if (nextStatus === 'for_releasing') {
-    // ponytail: reuse final_checking_at stamp; dedicated column not required for board
-    patch.final_checking_at = ticket.final_checking_at || now
   }
   if (nextStatus === 'for_payment') patch.for_payment_at = now
   if (nextStatus === 'completed') patch.completed_at = now
@@ -1337,7 +1342,7 @@ export async function addServiceToVisit(ticket, service, { priceMinor = null } =
     vehicle_id: ticket.vehicle_id,
     customer_name: ticket.customer_name,
     customer_email: ticket.customer_email || null,
-    customer_phone: ticket.customer_phone || null,
+    customer_phone: ticket.customer_phone || '',
     vehicle_make: ticket.vehicle_make || '',
     vehicle_model: ticket.vehicle_model || '',
     vehicle_year: ticket.vehicle_year || null,
@@ -1445,11 +1450,6 @@ export async function markTicketRedo(ticket, reason = '') {
       prior_staff_ids: priorStaffIds,
     },
   })
-  try {
-    await notifyBookingClient(ticket.booking_id, 'redo')
-  } catch {
-    /* ignore */
-  }
 }
 
 export async function updateTicketPrice(ticket, amountMinor, reason, userId) {

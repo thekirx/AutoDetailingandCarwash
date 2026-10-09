@@ -23,7 +23,7 @@ function statusVariant(status) {
   return 'outline'
 }
 
-export default function FinanceShiftCloseTab({ range, branchFilter }) {
+export default function FinanceShiftCloseTab({ range, branchFilter, sheetsHref = '/operations/finance?tab=sheets' }) {
   const [rows, setRows] = useState([])
   const [payrollRuns, setPayrollRuns] = useState([])
   const [fieldConfig, setFieldConfig] = useState([])
@@ -116,7 +116,7 @@ export default function FinanceShiftCloseTab({ range, branchFilter }) {
         description="Read-only history from before Daily Sheets. New days are closed and approved in Daily sheets."
         actions={
           <Button asChild variant="outline" className="min-h-11">
-            <Link to="/operations/finance?tab=sheets">Open Daily sheets</Link>
+            <Link to={sheetsHref}>Open Daily sheets</Link>
           </Button>
         }
       >

@@ -27,7 +27,6 @@ export const NOTIFY_EVENTS = {
   review: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.OPERATIONS_LEAD, R.ADMIN], urls: ['/operations/reviews'] },
   complaint: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/planning?tab=forms'] },
   pos: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/pos'] },
-  ops_lab: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN, R.OPERATIONS_LEAD], urls: ['/operations/roadmap'] },
   planner_task: {
     roles: [...EMPLOYEES, R.SUPER_ADMIN],
     urls: ['/operations/my-tasks', '/operations/planning', '/operations/bookings'],

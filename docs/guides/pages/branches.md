@@ -1,4 +1,4 @@
-﻿# Branches
+# Branches
 
 **Route:** `/operations/branches`  
 **Shell:** Command

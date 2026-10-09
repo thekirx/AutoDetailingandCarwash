@@ -10,7 +10,8 @@ describe('Queue ticket edit modal (TL board)', () => {
   it('board opens modal for queue editors instead of navigating away', () => {
     const ops = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
     assert.match(ops, /QueueTicketEditModal/)
-    assert.match(ops, /onOpen=\{canManageQueue \? setEditBookingId/)
+    assert.match(ops, /onOpen=\{canOpenTicket\(ticket\) \? \(\) => openTicket\(ticket\)/)
+    assert.match(ops, /if \(canManageQueue\) setEditBookingId\(ticket\.booking_id\)/)
     assert.match(ops, /editBookingId/)
   })
 

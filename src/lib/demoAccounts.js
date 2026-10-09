@@ -27,7 +27,7 @@ export const OPS_DEMO_ACCOUNTS = [
     label: 'Operations Lead',
     email: 'opslead@hakumautocare.com',
     password: 'HakumOpsLead2026!',
-    hint: 'All branches · Ops Lab · no clock',
+    hint: 'All branches · Queue home · CRM view only · no clock',
   },
   {
     id: 'tl',
@@ -90,7 +90,14 @@ export const OPS_DEMO_ACCOUNTS = [
     label: 'Investor',
     email: 'investor@hakumautocare.com',
     password: 'HakumInvest2026!',
-    hint: 'Finance + reports read-only',
+    hint: 'Bacoor read-only: Floor, POS, Finance, Reports',
+  },
+  {
+    id: 'investor2',
+    label: 'Investor (Batangas)',
+    email: 'investor2@hakumautocare.com',
+    password: 'HakumInvest2026!',
+    hint: 'Batangas read-only: Floor, POS, Finance, Reports',
   },
 ]
 

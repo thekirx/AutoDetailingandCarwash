@@ -35,7 +35,9 @@
 
 `waiting` → `in_progress` → `final_checking` → send to payment → `for_payment` → POS pay → `completed`.
 
-Cancel allowed through `for_releasing`. Redo: mark → `redo` → `in_progress`.
+Cancel allowed up to `for_payment`. Redo (Failed QA): mark → `redo` → `in_progress`. Failed QA and the redo pass (`in_progress` / `final_checking` while `redo_at` is set) send no customer SMS and no ops push; `for_payment` and `completed` still notify.
+
+Detailing: `final_checking` → Send to payment (Sales / Admin / SA) → `for_payment`. There is no separate "For releasing" step.
 
 ## Safety
 

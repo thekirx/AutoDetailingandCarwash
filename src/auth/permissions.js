@@ -1,10 +1,12 @@
 /** Single source of truth for Hakum RBAC. BossMich = Super Admin; assistant_super_admin = lesser elevated. */
 
+import { isBookingBoardRow } from '../lib/serviceKinds.js'
+
 export const ROLES = {
   SUPER_ADMIN: 'BossMich',
   ASSISTANT_SUPER_ADMIN: 'assistant_super_admin',
   ADMIN: 'admin',
-  /** Network-wide ops: TL∪BA surface, all branches, planner, roadmap; no attendance clock. */
+  /** Network-wide ops: TL∪BA surface, all branches, planner; no attendance clock. */
   OPERATIONS_LEAD: 'operations_lead',
   TEAM_LEAD: 'team_lead',
   SALES: 'sales',
@@ -175,6 +177,11 @@ export function isAssistantSuperAdmin(profile) {
 
 export function isOperationsLead(profile) {
   return profile?.role === ROLES.OPERATIONS_LEAD
+}
+
+/** Read-only, branch-scoped: Floor Board, POS (view), Finance + Reports. */
+export function isInvestor(profile) {
+  return profile?.role === ROLES.INVESTOR
 }
 
 /** Console-tier: owner, assistant, or branch admin */
@@ -441,15 +448,21 @@ export function canCreateBookings(profile) {
   return isSuperAdmin(profile) || profile?.role === ROLES.SALES || profile?.role === ROLES.TEAM_LEAD
 }
 
+/** CRM view. Sales and Operations Lead read it; writes need canEditCrm. */
 export function canAccessCrm(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'crm')
-  return profile?.role === ROLES.MARKETING
+  return has(profile, [ROLES.MARKETING, ROLES.SALES, ROLES.OPERATIONS_LEAD])
+}
+
+/** CRM writes: edit customer, add vehicle, message, SMS, guest notes. Sales and Operations Lead are view only. */
+export function canEditCrm(profile) {
+  return canAccessCrm(profile) && !has(profile, [ROLES.SALES, ROLES.OPERATIONS_LEAD])
 }
 
 /** @deprecated SMS lives under CRM; kept for redirects */
 export function canAccessMarketing(profile) {
-  return canAccessCrm(profile)
+  return canEditCrm(profile)
 }
 
 /** Bookings view: Sales, Super Admin/ASA, Marketing (readonly), Detailer, TL (ticket), Branch Admin (readonly). */
@@ -512,17 +525,6 @@ export function canEditPlanning(profile) {
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'planning_edit')
 }
 
-/** Ops Lab — plans / roadmaps / solutions board (SA · ASA · BA · Operations Lead). */
-export function canAccessOpsRoadmap(profile) {
-  if (!profile?.role) return false
-  return (
-    isSuperAdmin(profile) ||
-    isAssistantSuperAdmin(profile) ||
-    isBranchAdmin(profile) ||
-    isOperationsLead(profile)
-  )
-}
-
 /**
  * Who may submit an ops form kind (staff fill). SA edits templates but does not fill cash advance.
  * Equipment repairs: crew (staff) only. Cash advance: all employees except Super Admin.
@@ -570,6 +572,17 @@ export function canAccessQueuePage(profile) {
   return canEditQueueOperations(profile)
 }
 
+/** Queue board view: the four queue roles plus Sales (all branches, read only except detailing). */
+export function canViewQueueBoard(profile) {
+  return canAccessQueuePage(profile) || profile?.role === ROLES.SALES
+}
+
+/** Who may open a ticket from the Queue board. Sales only works detailing tickets (Bookings editor). */
+export function canEditQueueTicket(profile, ticket) {
+  if (canEditQueueOperations(profile)) return true
+  return profile?.role === ROLES.SALES && isBookingBoardRow(ticket)
+}
+
 /** Adding a service line to a queue ticket follows the same four roles. */
 export function canAddQueueService(profile) {
   return canAccessQueuePage(profile)
@@ -580,9 +593,10 @@ export function canViewQueueOperations(profile) {
   return has(profile, QUEUE_VIEWER_ROLES)
 }
 
-/** Floor Board (/operations/dashboard): queue viewers except Team Lead, who works from Queue. */
+/** Floor Board (/operations/dashboard): queue viewers except Team Lead and Operations Lead, who work from Queue. Investor: view only. */
 export function canAccessFloorBoard(profile) {
-  return canViewQueueOperations(profile) && profile?.role !== ROLES.TEAM_LEAD
+  if (isInvestor(profile)) return true
+  return canViewQueueOperations(profile) && !has(profile, [ROLES.TEAM_LEAD, ROLES.OPERATIONS_LEAD])
 }
 
 const TEAM_LEAD_BOOKING_VIEWS = Object.freeze(['board', 'calendar'])
@@ -615,7 +629,7 @@ export function canPushFinalCheckToPayment(profile) {
 
 /** Legacy TL port: Team Lead never sees the For Payment lane; console tier does. */
 export function canSeeForPaymentLane(profile) {
-  return isAdmin(profile) || isOperationsLead(profile)
+  return isAdmin(profile) || isOperationsLead(profile) || isInvestor(profile)
 }
 
 /** Super Admin / ASA(queue_all) / Operations Lead may pull tickets back. Branch Admin is view-only. */
@@ -727,8 +741,10 @@ export function groupOperationsNav(items = []) {
 
 /** Nav items for the shared ops shell — filtered by role + grants. */
 export function getOperationsNav(profile) {
-  if (profile?.role === ROLES.INVESTOR) {
+  if (isInvestor(profile)) {
     return [
+      nav('Floor Board', '/operations/dashboard', 'Gauge', 'floor'),
+      nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
       nav('Finance', '/operations/finance', 'Wallet', 'books'),
     ]
   }
@@ -761,6 +777,8 @@ export function getOperationsNav(profile) {
   if (profile?.role === ROLES.SALES) {
     return [
       nav('Bookings', '/operations/bookings', 'Kanban', 'floor'),
+      nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
+      nav('CRM', '/operations/crm', 'Contact', 'customers'),
       nav('History', '/operations/history', 'History', 'work'),
     ]
   }
@@ -775,22 +793,20 @@ export function getOperationsNav(profile) {
       nav('Inventory', '/operations/inventory', 'Package', 'counter'),
       nav('Reviews', '/operations/reviews', 'Star', 'customers'),
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
-      nav('Ops Lab', '/operations/roadmap', 'Map', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
       nav('Audit', '/operations/audit', 'ScrollText', 'company'),
     ]
   }
 
-  // Operations Lead: network-wide BA∪TL ops, no personal clock; roadmap owner.
+  // Operations Lead: network-wide BA∪TL ops, no personal clock.
   if (isOperationsLead(profile)) {
     return [
-      nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
       nav('Queue', '/operations/queue', 'ClipboardList', 'floor'),
       nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
       nav('POS', '/operations/pos', 'ShoppingCart', 'counter'),
+      nav('CRM', '/operations/crm', 'Contact', 'customers'),
       nav('Reviews', '/operations/reviews', 'Star', 'customers'),
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
-      nav('Ops Lab', '/operations/roadmap', 'Map', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
       nav('Finance', '/operations/finance', 'Wallet', 'books'),
       nav('Audit', '/operations/audit', 'ScrollText', 'company'),
@@ -858,9 +874,6 @@ export function getOperationsNav(profile) {
   }
   if (canViewPlanning(profile)) {
     items.push(nav('Planner', '/operations/planning', 'Columns3', 'work'))
-  }
-  if (canAccessOpsRoadmap(profile)) {
-    items.push(nav('Ops Lab', '/operations/roadmap', 'Map', 'work'))
   }
   if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF && !isSuperAdmin(profile)) {
     items.push(nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'))
@@ -931,17 +944,16 @@ export function getBranchAdminMore(profile) {
   if (canViewPlanning(profile)) {
     more.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
   }
-  if (canAccessOpsRoadmap(profile)) {
-    more.push({ label: 'Ops Lab', to: '/operations/roadmap', icon: 'Map' })
-  }
   return more
 }
 
-/** Sales thumb dock — form bookings only (Hakum floor shell). */
+/** Sales thumb dock — Bookings home, Queue + CRM views (Hakum floor shell). */
 export function getSalesDock(profile) {
   if (!isSalesRole(profile)) return []
   return [
     { label: 'Bookings', to: '/operations/bookings', icon: 'Kanban', primary: true, end: true },
+    { label: 'Queue', to: '/operations/queue', icon: 'ClipboardList', end: true },
+    { label: 'CRM', to: '/operations/crm', icon: 'Contact' },
     { label: 'History', to: '/operations/history', icon: 'History' },
   ]
 }
@@ -1019,9 +1031,8 @@ export function redirectForRole(role) {
     return '/operations/dashboard'
   }
   if (role === ROLES.ADMIN) return '/operations/pos'
-  if (role === ROLES.OPERATIONS_LEAD) return '/operations/roadmap'
   if (role === ROLES.STAFF) return '/operations/attendance'
-  if (role === ROLES.TEAM_LEAD) return '/operations/queue'
+  if (role === ROLES.TEAM_LEAD || role === ROLES.OPERATIONS_LEAD) return '/operations/queue'
   if (role === ROLES.SALES) return '/operations/bookings'
   if (role === ROLES.MARKETING) return '/operations/crm'
   if (role === ROLES.VIDEO_EDITOR) return '/operations/planning?tab=calendar'
@@ -1041,17 +1052,19 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'inventory',
   'reviews',
   'planning',
-  'roadmap',
   'history',
   'audit',
 ])
 
+/** Investor chrome: read-only surfaces only. Writes are refused by RLS / RPC role checks too. */
+export const INVESTOR_ROUTE_KEYS = Object.freeze(['dashboard', 'pos', 'finance', 'reports'])
+
 /** Route allow helpers for App.jsx */
 export function allowRoute(profile, key) {
   if (isBranchAdmin(profile)) return BRANCH_ADMIN_ROUTE_KEYS.includes(key)
+  if (isInvestor(profile)) return INVESTOR_ROUTE_KEYS.includes(key)
   const map = {
     planning: canViewPlanning,
-    roadmap: canAccessOpsRoadmap,
     people: canManagePeople,
     branches: canManageBranches,
     cars: canManageVehicleCatalog,
@@ -1059,7 +1072,7 @@ export function allowRoute(profile, key) {
     'data-center': canAccessDataCenter,
     inquiries: canAccessInquiries,
     dashboard: canAccessFloorBoard,
-    queue: canAccessQueuePage,
+    queue: canViewQueueBoard,
     'queue-new': canEditQueueOperations,
     crew: () => false,
     attendance: canAccessAttendance,

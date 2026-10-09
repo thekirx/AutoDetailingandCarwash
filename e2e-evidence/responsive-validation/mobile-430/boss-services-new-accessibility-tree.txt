@@ -1,0 +1,320 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 26935,
+ "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/inventory?tab=bay",
+ "children": [
+  {
+   "role": "region",
+   "backendNodeId": 27469,
+   "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  },
+  {
+   "role": "dialog",
+   "backendNodeId": 27476,
+   "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+   "name": "Add service or package",
+   "description": "Creates rows on the POS Services & packages tab. Packages = mixed services or custom price.",
+   "modal": false,
+   "children": [
+    {
+     "role": "heading",
+     "backendNodeId": 27478,
+     "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+     "name": "Add service or package",
+     "level": 2
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 27870,
+     "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+     "name": "Creates rows on the POS Services & packages tab. Packages = mixed services or custom price."
+    },
+    {
+     "role": "form",
+     "backendNodeId": 26947,
+     "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 27871,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Name"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 26946,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "",
+       "focused": true,
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27872,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Slug"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 26948,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "auto-from-name",
+       "multiline": false,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27873,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Category"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 27486,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "",
+       "value": "general",
+       "expanded": false,
+       "required": false,
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27877,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Catalog price (₱)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 26950,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "",
+       "valuetext": "",
+       "disabled": true,
+       "required": true,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27878,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Uses Medium (or first enabled size) as catalog price."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27879,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Salary % (optional)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 26951,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Blank = global wash pool",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 100,
+       "valuemin": 0
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27880,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Paid through the Daily Sheet crew pay (replaces the global wash-pool % for this SKU). Blank = company wash pool."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27881,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Duration (minutes)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 26952,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "",
+       "value": 60,
+       "valuetext": "60",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27883,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "SLA (minutes, optional)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 26953,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Red in queue/KPI if over",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27884,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Points earned"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 26954,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Points earned",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 1000,
+       "valuemin": 0
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27885,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Package of"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 27522,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "",
+       "value": "none",
+       "expanded": false,
+       "required": false,
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27889,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Description"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 26956,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Shown on packages / custom notes",
+       "multiline": false,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 26961,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Size pricing (Small · Medium · Large · Extra Large)",
+       "checked": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 27891,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Matches Cars catalog sizes. Off = flat price. On = all four tiers (typing Medium prefills Small/Large/XL at detailing ratios 0.85 / 1.2 / 1.4)."
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 26962,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Small",
+       "checked": true
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 26957,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "0.00",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 26963,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Medium",
+       "checked": true
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 26958,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "0.00",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 26964,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Large",
+       "checked": true
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 26959,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "0.00",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 26965,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Extra Large",
+       "checked": true
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 26960,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "0.00",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "button",
+       "backendNodeId": 27563,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Cancel"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 27564,
+       "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+       "name": "Create"
+      }
+     ]
+    },
+    {
+     "role": "button",
+     "backendNodeId": 27565,
+     "loaderId": "F0A00C4B81871880BA85ABFFFD3D38EA",
+     "name": "Close"
+    }
+   ]
+  }
+ ]
+}

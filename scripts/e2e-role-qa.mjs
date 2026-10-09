@@ -259,7 +259,7 @@ const PERSONAS = [
   // every run (BUG-053). See scripts/e2e-role-qa-wave.mjs for the maintained pack.
   { id: 'boss', wave: 'C', home: '/operations/dashboard', allow: ['/operations/finance', '/operations/settings/daily-sheet'], deny: null },
   { id: 'asa', wave: 'C', home: '/operations/dashboard', allow: ['/operations/queue'], deny: null },
-  { id: 'opslead', wave: 'C', home: '/operations/roadmap', allow: ['/operations/dashboard', '/operations/pos'], deny: '/operations/people' },
+  { id: 'opslead', wave: 'C', home: '/operations/dashboard', allow: ['/operations/queue', '/operations/pos'], deny: '/operations/people' },
   { id: 'investor', wave: 'C', home: '/operations/finance', allow: [], deny: '/operations/pos' },
   { id: 'sales', wave: 'D', home: '/operations/bookings', allow: ['/operations/history'], deny: '/operations/queue' },
   { id: 'detailer', wave: 'D', home: '/operations/bookings', allow: ['/operations/attendance'], deny: '/operations/queue' },

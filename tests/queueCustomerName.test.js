@@ -43,10 +43,15 @@ describe('queueCustomerName', () => {
     )
   })
 
-  it('requires phone, plate, and at least one catalog item', () => {
+  it('needs only plate and a catalog item — contact is captured at POS', () => {
+    assert.equal(validateQueueTicketIdentity({ vehicle_plate: 'ABC 1234', service_ids: ['svc-1'] }), null)
+    assert.match(
+      validateQueueTicketIdentity({ vehicle_plate: 'ABC 1234', service_ids: [] }),
+      /service/,
+    )
     assert.match(
       validateQueueTicketIdentity({ customer_phone: '0917', vehicle_plate: 'ABC', service_ids: ['1'] }),
-      /Phone/,
+      /Phone number must be/,
     )
     assert.match(
       validateQueueTicketIdentity({ customer_phone: '09171234567', vehicle_plate: '', service_ids: ['1'] }),

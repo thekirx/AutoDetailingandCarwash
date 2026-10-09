@@ -6,7 +6,7 @@
 
 ## Nav
 
-Floor Board · Queue · Bookings · Attendance · KPI · POS · Inventory · CRM · Reviews · Memberships · Finance · Planner · Ops Lab · History · Notifications · People · Branches · Cars · Content · Audit · Data Center · Inquiries · Settings
+Floor Board · Queue · Bookings · Attendance · KPI · POS · Inventory · CRM · Reviews · Memberships · Finance · Planner · History · Notifications · People · Branches · Cars · Content · Audit · Data Center · Inquiries · Settings
 
 Retired from this nav: **Console** (off since the Floor Board became the landing surface) and **Payroll / Crew** (`canAccessConsole()` returns `false`; `crew` is denied).
 

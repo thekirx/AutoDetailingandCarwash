@@ -38,24 +38,50 @@ export async function loadAccounts() {
   return (data || []).sort((a, b) => String(a.code || '99').localeCompare(String(b.code || '99')))
 }
 
+/**
+ * Roles without staff_profiles read (investor) get null name joins. Fill them from
+ * staff_display_names (name + role only, branch-scoped). No-op when every name is present.
+ */
+export async function fillStaffNames(sheets) {
+  const rows = (sheets || []).filter(Boolean)
+  const missing = new Set()
+  for (const s of rows) {
+    if (s.submitted_by && !s.staff_profiles) missing.add(s.submitted_by)
+    for (const l of s.daily_sheet_lines || []) if (l.staff_id && !l.staff_profiles) missing.add(l.staff_id)
+  }
+  if (!missing.size) return sheets
+  const { data } = await supabase.rpc('staff_display_names', { p_ids: [...missing] })
+  const byId = new Map((data || []).map((p) => [p.id, { full_name: p.full_name, role: p.role }]))
+  for (const s of rows) {
+    if (s.submitted_by && !s.staff_profiles) s.staff_profiles = byId.get(s.submitted_by) || null
+    for (const l of s.daily_sheet_lines || []) if (l.staff_id && !l.staff_profiles) l.staff_profiles = byId.get(l.staff_id) || null
+  }
+  return sheets
+}
+
+const SHEET_SELECT =
+  '*, staff_profiles!daily_sheets_submitted_by_fkey(full_name), daily_sheet_lines(*, staff_profiles(full_name, role), expense_categories(name, code))'
+
 export async function loadSheet(branch, date) {
   const { data, error } = await supabase
     .from('daily_sheets')
-    .select('*, staff_profiles!daily_sheets_submitted_by_fkey(full_name), daily_sheet_lines(*, staff_profiles(full_name, role), expense_categories(name, code))')
+    .select(SHEET_SELECT)
     .eq('branch', branch)
     .eq('business_date', date)
     .maybeSingle()
   if (error) throw error
+  await fillStaffNames([data])
   return data
 }
 
 export async function loadSheetById(id) {
   const { data, error } = await supabase
     .from('daily_sheets')
-    .select('*, staff_profiles!daily_sheets_submitted_by_fkey(full_name), daily_sheet_lines(*, staff_profiles(full_name, role), expense_categories(name, code))')
+    .select(SHEET_SELECT)
     .eq('id', id)
     .maybeSingle()
   if (error) throw error
+  await fillStaffNames([data])
   return data
 }
 
@@ -153,7 +179,7 @@ export async function listSheets({ status = 'all', branch = 'all', from, to, lim
   if (to) q = q.lte('business_date', to)
   const { data, error } = await q
   if (error) throw error
-  return data || []
+  return fillStaffNames(data || [])
 }
 
 /** Friendly message when the Daily Sheet migration has not been applied yet. */

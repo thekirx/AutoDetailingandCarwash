@@ -1,0 +1,294 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 7005,
+ "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/notifications",
+ "children": [
+  {
+   "role": "region",
+   "backendNodeId": 7396,
+   "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  },
+  {
+   "role": "dialog",
+   "backendNodeId": 7402,
+   "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+   "name": "New reminder rule",
+   "description": "Scope: whole network, one branch, one service, or service × branch. Tap tokens to insert into title or message. Prefer Paint Maintenance for Ceramic/PPF cycles. SMS uses each customer's mobile on file.",
+   "modal": false,
+   "children": [
+    {
+     "role": "heading",
+     "backendNodeId": 7404,
+     "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+     "name": "New reminder rule",
+     "level": 2
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 7536,
+     "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+     "name": "Scope: whole network, one branch, one service, or service × branch. Tap tokens to insert into title or message. Prefer "
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 7537,
+     "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+     "name": "Paint Maintenance"
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 7538,
+     "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+     "name": " for Ceramic/PPF cycles. SMS uses each customer's mobile on file."
+    },
+    {
+     "role": "form",
+     "backendNodeId": 7016,
+     "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 7539,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Scope"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 7013,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Scope",
+       "value": "Whole network — All detailing services · all branches",
+       "expanded": false,
+       "focused": true,
+       "required": false,
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7543,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Channel"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 7022,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Channel",
+       "value": "Push",
+       "expanded": false,
+       "required": false,
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7547,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Every (months)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 7019,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Every (months)",
+       "value": 6,
+       "valuetext": "6",
+       "required": false,
+       "valuemax": 24,
+       "valuemin": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7549,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Title"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7550,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "43"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7551,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "/"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7552,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "65"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 7020,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Title",
+       "value": "Hakum Auto Care: Time for paint maintenance",
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7430,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{name}",
+       "description": "Customer first/full name"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7431,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{plate}",
+       "description": "Vehicle plate"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7432,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{service}",
+       "description": "Service name"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7433,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{branch}",
+       "description": "Branch name"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7434,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{when}",
+       "description": "Scheduled date and time"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7435,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{appUrl}",
+       "description": "Download or book link"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7560,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Message"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7561,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "96"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7562,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "/"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7563,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "200"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 7021,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Message",
+       "value": "Hi {name}, {plate} is due for paint maintenance. Book your next visit at hakumautocare.com/book.",
+       "multiline": true,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7442,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{name}",
+       "description": "Customer first/full name"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7443,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{plate}",
+       "description": "Vehicle plate"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7444,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{service}",
+       "description": "Service name"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7445,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{branch}",
+       "description": "Branch name"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7446,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{when}",
+       "description": "Scheduled date and time"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7447,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "{appUrl}",
+       "description": "Download or book link"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 7571,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Push body capped at 200 characters."
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 7023,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Enabled",
+       "checked": true
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7451,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Cancel"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 7452,
+       "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+       "name": "Save reminder"
+      }
+     ]
+    },
+    {
+     "role": "button",
+     "backendNodeId": 7453,
+     "loaderId": "19BC8E493E9E8ECFA0A6898946FF7519",
+     "name": "Close"
+    }
+   ]
+  }
+ ]
+}

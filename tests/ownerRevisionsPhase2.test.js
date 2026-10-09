@@ -101,7 +101,7 @@ describe('progress photo notify seam', () => {
   })
 })
 
-describe('calendar colors + for_releasing stays separate', () => {
+describe('calendar colors + Final checking hands straight to payment', () => {
   it('eventPropGetter colors by pay_category / slug', () => {
     const ceramic = bookingCalendarStyle({ services: { slug: 'ceramic-coating', pay_category: 'detailing' } })
     const tint = bookingCalendarStyle({ services: { slug: 'nano-ceramic-tint', pay_category: 'detailing' } })
@@ -114,17 +114,12 @@ describe('calendar colors + for_releasing stays separate', () => {
     assert.ok(getter.style?.backgroundColor)
   })
 
-  it('does not collapse for_releasing into for_payment', () => {
+  it('drops the redundant For releasing lane', () => {
     const ids = DETAILING_BOARD_STATUSES.map((s) => s.id)
-    assert.ok(ids.includes('for_releasing'))
-    assert.ok(ids.includes('for_payment'))
-    assert.equal(ids.indexOf('for_releasing') < ids.indexOf('for_payment'), true)
+    assert.ok(!ids.includes('for_releasing'))
+    assert.equal(ids.indexOf('for_payment'), ids.indexOf('final_checking') + 1)
     assert.equal(
       getBookingPrimaryNextStatus('final_checking', { detailingPipeline: true }),
-      'for_releasing',
-    )
-    assert.equal(
-      getBookingPrimaryNextStatus('for_releasing', { detailingPipeline: true }),
       'for_payment',
     )
   })

@@ -1,0 +1,114 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 22510,
+ "loaderId": "F78061810D248DD574B846171916E6F6",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/crm?tab=sms",
+ "children": [
+  {
+   "role": "region",
+   "backendNodeId": 22919,
+   "loaderId": "F78061810D248DD574B846171916E6F6",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  },
+  {
+   "role": "dialog",
+   "backendNodeId": 22926,
+   "loaderId": "F78061810D248DD574B846171916E6F6",
+   "name": "New template",
+   "description": "Saved copy for campaigns and queue sends.",
+   "modal": false,
+   "children": [
+    {
+     "role": "heading",
+     "backendNodeId": 22928,
+     "loaderId": "F78061810D248DD574B846171916E6F6",
+     "name": "New template",
+     "level": 2
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 23156,
+     "loaderId": "F78061810D248DD574B846171916E6F6",
+     "name": "Saved copy for campaigns and queue sends."
+    },
+    {
+     "role": "form",
+     "backendNodeId": 22526,
+     "loaderId": "F78061810D248DD574B846171916E6F6",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 23157,
+       "loaderId": "F78061810D248DD574B846171916E6F6",
+       "name": "Name"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 22525,
+       "loaderId": "F78061810D248DD574B846171916E6F6",
+       "name": "Name",
+       "focused": true,
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 23158,
+       "loaderId": "F78061810D248DD574B846171916E6F6",
+       "name": "Type"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 22934,
+       "loaderId": "F78061810D248DD574B846171916E6F6",
+       "name": "",
+       "value": "promo",
+       "expanded": false,
+       "required": false,
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 23162,
+       "loaderId": "F78061810D248DD574B846171916E6F6",
+       "name": "Body"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 22528,
+       "loaderId": "F78061810D248DD574B846171916E6F6",
+       "name": "Body",
+       "multiline": true,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "button",
+       "backendNodeId": 22943,
+       "loaderId": "F78061810D248DD574B846171916E6F6",
+       "name": "Cancel"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 22944,
+       "loaderId": "F78061810D248DD574B846171916E6F6",
+       "name": "Save template"
+      }
+     ]
+    },
+    {
+     "role": "button",
+     "backendNodeId": 22945,
+     "loaderId": "F78061810D248DD574B846171916E6F6",
+     "name": "Close"
+    }
+   ]
+  }
+ ]
+}

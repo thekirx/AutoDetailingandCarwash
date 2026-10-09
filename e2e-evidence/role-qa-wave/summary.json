@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "passed": 179,
+  "total": 179,
+  "byRole": {
+    "login": {
+      "pass": 11,
+      "fail": 0
+    },
+    "boss": {
+      "pass": 28,
+      "fail": 0
+    },
+    "asa": {
+      "pass": 28,
+      "fail": 0
+    },
+    "admin": {
+      "pass": 14,
+      "fail": 0
+    },
+    "opslead": {
+      "pass": 18,
+      "fail": 0
+    },
+    "tl": {
+      "pass": 13,
+      "fail": 0
+    },
+    "sales": {
+      "pass": 7,
+      "fail": 0
+    },
+    "crew1": {
+      "pass": 11,
+      "fail": 0
+    },
+    "detailer": {
+      "pass": 8,
+      "fail": 0
+    },
+    "marketing": {
+      "pass": 10,
+      "fail": 0
+    },
+    "video": {
+      "pass": 7,
+      "fail": 0
+    },
+    "investor": {
+      "pass": 7,
+      "fail": 0
+    },
+    "retired": {
+      "pass": 4,
+      "fail": 0
+    },
+    "customer": {
+      "pass": 6,
+      "fail": 0
+    },
+    "public": {
+      "pass": 7,
+      "fail": 0
+    }
+  },
+  "failed": [],
+  "evidence": "e2e-evidence/role-qa-wave",
+  "at": "2026-10-08T18:46:34.464Z"
+}

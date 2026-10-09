@@ -4,7 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { authCreateUserIdForCrm, buildProvisionInviteMessage } from './provisionSms.mjs'
-import { phoneLoginEmail, plateValidationError } from '../src/lib/customerAuth.js'
+import { canonicalPhMobile, phoneLoginEmail, phoneLoginEmailAliases, plateValidationError } from '../src/lib/customerAuth.js'
 import {
   mergeCustomerDisplayName,
   resolveQueueCustomerDisplayName,
@@ -65,6 +65,93 @@ async function notifyCustomer(admin, { phone, email, message, eventType = 'accou
   return { channel: email ? 'email+sms' : 'sms', email: email || null }
 }
 
+const CUSTOMER_COLUMNS = 'id, email, phone, full_name, first_name, last_name'
+const SYNTHETIC_EMAIL = /@customers\.hakumautocare\.com$/i
+const looksLikeEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+
+/** Phone and email are both unique identifiers — find whoever already owns each. */
+async function findCustomerMatches(admin, { phone, email }) {
+  let byPhone = null
+  let byEmail = null
+  const canon = phone ? canonicalPhMobile(phone) : ''
+  if (canon.length >= 10) {
+    const variants = [...new Set([phone, canon, canon.startsWith('0') ? `63${canon.slice(1)}` : ''].filter(Boolean))]
+    const { data } = await admin
+      .from('customers')
+      .select(CUSTOMER_COLUMNS)
+      .eq('role', 'customer')
+      .eq('is_archived', false)
+      .in('phone', variants)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    byPhone = data || null
+    if (!byPhone) {
+      // Phone-only accounts keep a synthetic login email even when the phone column is blank.
+      const { data: legacy } = await admin
+        .from('customers')
+        .select(CUSTOMER_COLUMNS)
+        .eq('role', 'customer')
+        .eq('is_archived', false)
+        .in('email', phoneLoginEmailAliases(phone))
+        .limit(1)
+        .maybeSingle()
+      byPhone = legacy || null
+    }
+  }
+  if (email) {
+    const { data } = await admin
+      .from('customers')
+      .select(CUSTOMER_COLUMNS)
+      .eq('role', 'customer')
+      .eq('is_archived', false)
+      .ilike('email', email.replace(/[\\%_]/g, '\\$&'))
+      .limit(1)
+      .maybeSingle()
+    byEmail = data || null
+  }
+  return { byPhone, byEmail }
+}
+
+/** What the POS shows when it autofills — never leaks the synthetic phone-login address. */
+function publicCustomer(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    full_name: row.full_name || '',
+    first_name: row.first_name || '',
+    last_name: row.last_name || '',
+    phone: row.phone || '',
+    email: row.email && !SYNTHETIC_EMAIL.test(row.email) ? row.email : '',
+  }
+}
+
+function identityConflictError(byPhone, byEmail) {
+  return Object.assign(
+    new Error(
+      `That phone belongs to ${byPhone?.full_name || 'another customer'} but that email belongs to ${byEmail?.full_name || 'another customer'}. Use one customer's phone and email.`,
+    ),
+    { status: 409 },
+  )
+}
+
+/**
+ * Phone and email must point at the same person (or nobody). Returns the matched row, or null
+ * when both are free; throws 409 when they belong to different customers or to someone other
+ * than the pinned customer_id.
+ */
+export function resolveCustomerIdentity({ byPhone, byEmail, pinnedId = null }) {
+  if (byPhone && byEmail && byPhone.id !== byEmail.id) throw identityConflictError(byPhone, byEmail)
+  const matched = byPhone || byEmail || null
+  if (pinnedId && matched && matched.id !== pinnedId) {
+    throw Object.assign(
+      new Error(`That ${byPhone ? 'phone' : 'email'} already belongs to ${matched.full_name || 'another customer'}.`),
+      { status: 409 },
+    )
+  }
+  return matched
+}
+
 /**
  * @param {{ accessToken: string, body: object, siteOrigin: string }} args
  */
@@ -72,7 +159,8 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
   const admin = adminClient()
   await assertQueueEditor(admin, accessToken)
 
-  const phone = String(body.customer_phone || body.phone || '').trim()
+  const phoneInput = String(body.customer_phone || body.phone || '').trim()
+  const phone = canonicalPhMobile(phoneInput).length >= 10 ? canonicalPhMobile(phoneInput) : phoneInput
   const first = String(body.customer_first_name || body.first_name || '').trim()
   const last = String(body.customer_last_name || body.last_name || '').trim()
   const emailRaw = String(body.customer_email || body.email || '').trim().toLowerCase()
@@ -80,7 +168,22 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
   const plate = String(body.vehicle_plate || body.plate || '').trim().toUpperCase() || null
   const allowWalkInName = body.allow_walk_in_name === true || body.allow_walk_in_name === 'true'
 
+  if (email && !looksLikeEmail(email)) throw Object.assign(new Error('Enter a valid email address.'), { status: 400 })
+
+  // Autofill: report who owns this phone / email without creating anything.
+  if (body.lookup_only === true || body.lookup_only === 'true') {
+    const { byPhone, byEmail } = await findCustomerMatches(admin, { phone, email })
+    if (byPhone && byEmail && byPhone.id !== byEmail.id) {
+      return { found: true, conflict: identityConflictError(byPhone, byEmail).message }
+    }
+    const hit = byPhone || byEmail
+    return { found: Boolean(hit), match: byPhone ? 'phone' : byEmail ? 'email' : null, customer: publicCustomer(hit) }
+  }
+
   if (!phone) throw Object.assign(new Error('Phone number is required.'), { status: 400 })
+  if (canonicalPhMobile(phone).length < 10) {
+    throw Object.assign(new Error('Enter a valid phone number.'), { status: 400 })
+  }
   if (plate) {
     const plateError = plateValidationError(plate)
     if (plateError) throw Object.assign(new Error(plateError), { status: 400 })
@@ -103,29 +206,17 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
   const loginEmail = email || phoneLoginEmail(phone)
   const redirectTo = `${siteOrigin.replace(/\/$/, '')}/account/set-password`
 
-  // Prefer existing CRM row by phone
+  // One person = one account. Phone and email each identify a customer; they must agree.
   let customerId = body.customer_id || null
-  let existingFullName = null
-  if (!customerId) {
-    const { data: byPhone } = await admin
-      .from('customers')
-      .select('id, email, phone, full_name, first_name, last_name')
-      .eq('role', 'customer')
-      .eq('phone', phone)
-      .eq('is_archived', false)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    customerId = byPhone?.id || null
-    existingFullName = byPhone?.full_name || null
-  } else {
-    const { data: byId } = await admin
-      .from('customers')
-      .select('full_name, first_name, last_name')
-      .eq('id', customerId)
-      .maybeSingle()
-    existingFullName = byId?.full_name || null
+  const { byPhone, byEmail } = await findCustomerMatches(admin, { phone, email })
+  const matched = resolveCustomerIdentity({ byPhone, byEmail, pinnedId: customerId })
+  if (!customerId) customerId = matched?.id || null
+  let existing = matched
+  if (customerId && !existing) {
+    const { data: byId } = await admin.from('customers').select(CUSTOMER_COLUMNS).eq('id', customerId).maybeSingle()
+    existing = byId || null
   }
+  const existingFullName = existing?.full_name || null
 
   fullName = mergeCustomerDisplayName(fullName, existingFullName)
 
@@ -140,6 +231,9 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
     .ilike('email', loginEmail)
     .limit(1)
     .maybeSingle()
+  if (byLoginEmail?.id && customerId && byLoginEmail.id !== customerId) {
+    throw Object.assign(new Error('That email already belongs to another customer.'), { status: 409 })
+  }
   if (byLoginEmail?.id) {
     const { data: existingAuth } = await admin.auth.admin.getUserById(byLoginEmail.id)
     authUser = existingAuth?.user || null
@@ -198,15 +292,16 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
       first,
       last,
       fullName,
-      phone,
-      email: email || loginEmail,
+      phone: existing?.phone || phone,
+      email: email || existing?.email || loginEmail,
     })
     customerId = authUser.id
   } else if (customerId) {
     const customerPatch = {
       full_name: fullName,
-      phone,
-      email: email || loginEmail,
+      // Keep the established number / real email; only fill what the account lacks.
+      phone: existing?.phone || phone,
+      email: email || existing?.email || loginEmail,
       updated_at: new Date().toISOString(),
     }
     // Keep prior first/last when TL leaves name blank on a returning plate/phone
@@ -237,16 +332,19 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
     email,
   })
 
-  const notify = await notifyCustomer(admin, { phone, email, message })
+  // Only a brand-new account gets the set-password invite; a returning customer is just linked.
+  const notify = createdAuth ? await notifyCustomer(admin, { phone, email, message }) : null
 
   return {
     customer_id: customerId,
     auth_user_id: authUser.id,
     login_email: authUser.email || loginEmail,
     full_name: fullName,
+    phone: existing?.phone || phone,
+    email: email || (existing?.email && !SYNTHETIC_EMAIL.test(existing.email) ? existing.email : ''),
     created: createdAuth,
     created_auth: createdAuth,
-    notified: true,
+    notified: createdAuth,
     notify,
     // ponytail: never expose action_link in browser responses
   }

@@ -1,20 +1,24 @@
 /** POS dashboard helpers — stats, pending queue, plain-language workflow copy. */
 
 // Pay queue lives on the checkout page; a legacy ?tab=pending link resolves there.
-export const POS_SHELL_TABS = Object.freeze(['checkout', 'sheet', 'dashboard'])
+export const POS_SHELL_TABS = Object.freeze(['checkout', 'sheet', 'history', 'dashboard'])
 export const POS_SETTINGS_TAB = 'settings'
 const LEGACY_POS_TABS = Object.freeze({ expenses: 'sheet' })
 
+/** View-only POS (investor): today's numbers + Daily Sheet history. */
+export const POS_READ_ONLY_TABS = Object.freeze(['dashboard', 'history'])
+
 /** Tabs shown in the shell; Daily sheet / settings only for roles that can use them. */
-export function posVisibleShellTabs({ canSettings = false, canSheet = true } = {}) {
-  const tabs = POS_SHELL_TABS.filter((t) => canSheet || t !== 'sheet')
+export function posVisibleShellTabs({ canSettings = false, canSheet = true, readOnly = false } = {}) {
+  if (readOnly) return [...POS_READ_ONLY_TABS]
+  const tabs = POS_SHELL_TABS.filter((t) => canSheet || (t !== 'sheet' && t !== 'history'))
   return canSettings ? [...tabs, POS_SETTINGS_TAB] : tabs
 }
 
-export function resolvePosShellTab(tabParam, { canSettings = false, canSheet = true } = {}) {
-  const allowed = posVisibleShellTabs({ canSettings, canSheet })
+export function resolvePosShellTab(tabParam, { canSettings = false, canSheet = true, readOnly = false } = {}) {
+  const allowed = posVisibleShellTabs({ canSettings, canSheet, readOnly })
   const tab = LEGACY_POS_TABS[tabParam] || tabParam
-  return allowed.includes(tab) ? tab : 'checkout'
+  return allowed.includes(tab) ? tab : allowed[0]
 }
 
 /** Queue ticket label shown on the counter, e.g. Q-007. */

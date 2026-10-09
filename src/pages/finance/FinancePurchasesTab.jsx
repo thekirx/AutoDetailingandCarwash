@@ -46,6 +46,7 @@ export default function FinancePurchasesTab({
   range,
   loading,
   onReload,
+  onCatalogAdd,
   accountFilter = '',
   onAccountFilter,
 }) {
@@ -221,6 +222,7 @@ export default function FinancePurchasesTab({
             categories={categories}
             vendors={vendors}
             writableBranches={writableBranches}
+            onCatalogAdd={onCatalogAdd}
             onCancel={() => setShowForm(false)}
             onSaved={() => {
               setShowForm(false)

@@ -1,0 +1,320 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 33426,
+ "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/inventory?tab=bay",
+ "children": [
+  {
+   "role": "region",
+   "backendNodeId": 34215,
+   "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  },
+  {
+   "role": "dialog",
+   "backendNodeId": 34222,
+   "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+   "name": "Add service or package",
+   "description": "Creates rows on the POS Services & packages tab. Packages = mixed services or custom price.",
+   "modal": false,
+   "children": [
+    {
+     "role": "heading",
+     "backendNodeId": 34224,
+     "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+     "name": "Add service or package",
+     "level": 2
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 34649,
+     "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+     "name": "Creates rows on the POS Services & packages tab. Packages = mixed services or custom price."
+    },
+    {
+     "role": "form",
+     "backendNodeId": 33453,
+     "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 34650,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Name"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 33452,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "",
+       "focused": true,
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34651,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Slug"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 33454,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "auto-from-name",
+       "multiline": false,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34652,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Category"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 34232,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "",
+       "value": "general",
+       "expanded": false,
+       "required": false,
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34656,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Catalog price (₱)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 33456,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "",
+       "valuetext": "",
+       "disabled": true,
+       "required": true,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34657,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Uses Medium (or first enabled size) as catalog price."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34658,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Salary % (optional)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 33457,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Blank = global wash pool",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 100,
+       "valuemin": 0
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34659,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Paid through the Daily Sheet crew pay (replaces the global wash-pool % for this SKU). Blank = company wash pool."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34660,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Duration (minutes)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 33458,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "",
+       "value": 60,
+       "valuetext": "60",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34662,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "SLA (minutes, optional)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 33459,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Red in queue/KPI if over",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34663,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Points earned"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 33460,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Points earned",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 1000,
+       "valuemin": 0
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34664,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Package of"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 34269,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "",
+       "value": "none",
+       "expanded": false,
+       "required": false,
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34668,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Description"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 33462,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Shown on packages / custom notes",
+       "multiline": false,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 33467,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Size pricing (Small · Medium · Large · Extra Large)",
+       "checked": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 34670,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Matches Cars catalog sizes. Off = flat price. On = all four tiers (typing Medium prefills Small/Large/XL at detailing ratios 0.85 / 1.2 / 1.4)."
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 33468,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Small",
+       "checked": true
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 33463,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "0.00",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 33469,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Medium",
+       "checked": true
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 33464,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "0.00",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 33470,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Large",
+       "checked": true
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 33465,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "0.00",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "checkbox",
+       "backendNodeId": 33471,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Extra Large",
+       "checked": true
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 33466,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "0.00",
+       "valuetext": "",
+       "required": false,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "button",
+       "backendNodeId": 34309,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Cancel"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 34310,
+       "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+       "name": "Create"
+      }
+     ]
+    },
+    {
+     "role": "button",
+     "backendNodeId": 34311,
+     "loaderId": "CF775BC1B2B109787EF7010961FEBE72",
+     "name": "Close"
+    }
+   ]
+  }
+ ]
+}

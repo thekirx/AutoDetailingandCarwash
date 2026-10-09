@@ -1,0 +1,1874 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 24177,
+ "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/inventory?tab=bay",
+ "children": [
+  {
+   "role": "main",
+   "backendNodeId": 24252,
+   "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+   "name": "",
+   "children": [
+    {
+     "role": "button",
+     "backendNodeId": 24253,
+     "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+     "name": "Toggle Sidebar"
+    },
+    {
+     "role": "navigation",
+     "backendNodeId": 24259,
+     "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 24690,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Ops"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24692,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Inventory"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 24693,
+     "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+     "name": "Operations · cost · profit · stock"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 24190,
+     "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+     "name": "Open command menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 24193,
+     "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 24196,
+     "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+     "name": "Account menu",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "main",
+     "backendNodeId": 24276,
+     "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 24697,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "CATALOG"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 24280,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Inventory",
+       "level": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24699,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Create bay services and packages, multi-day detailing, merch stock, and branch restock / Sunday recon."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24700,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "How inventory works"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24701,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Catalog tabs feed POS and Bookings. Branch stock keeps merch counts honest."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 24201,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Hide guide",
+       "expanded": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24703,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "1"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24704,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Services and packages"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24705,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Bay wash tiers and combo packages feed POS Sell and the queue. Size pricing and included services live here."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24706,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "2"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24707,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Detailing catalog"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24708,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Multi-day ceramic, PPF, and interior jobs use detailing pay categories. Bookings board reads these rows."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24709,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "3"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24710,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Merch and sellables"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24711,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Coffee, shirts, and add-ons that POS sells under Merch. Family tags control which tile group they appear in."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24712,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "4"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24713,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Branch stock"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 24714,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Restock arrivals and Sunday leftover recon per branch. Low stock blocks POS merch sales for that branch."
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 24330,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Services & packages",
+       "selected": true
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 24336,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Detailing",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 24343,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Merch / sellables",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 24348,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Branch stock",
+       "selected": false
+      },
+      {
+       "role": "tabpanel",
+       "backendNodeId": 24354,
+       "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+       "name": "Services & packages",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 24715,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Same-day bay work. Packages can bundle services or use a custom price. Flat price by default; size pricing optional."
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24716,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Services & packages"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24717,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "9"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24718,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " active item"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24719,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "s"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24720,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " in this tab"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24362,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Add service or package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24722,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Name"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24723,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Category"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24724,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Price"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24725,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Duration / SLA"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24726,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Status"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24727,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Actions"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24728,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Mobile Detailing"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24729,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "mobile-detailing"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24730,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Service (general)"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24731,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "SERVICE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24732,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱2,125–₱3,500"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24733,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "S"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24734,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24735,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱2,125"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24736,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "M"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24737,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24738,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱2,500"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24739,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "L"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24740,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24741,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱3,000"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24742,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "E"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24743,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24744,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱3,500"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24745,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "120m"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24746,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Inactive"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24398,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Edit"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24399,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Activate"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24400,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Archive"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24750,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Carwash"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24751,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "premium-car-wash"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24752,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "1"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24753,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " points"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24754,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Service (wash)"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24755,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "SERVICE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24756,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱298–₱490"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24757,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "S"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24758,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24759,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱298"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24760,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "M"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24761,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24762,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱350"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24763,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "L"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24764,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24765,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱420"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24766,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "E"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24767,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24768,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱490"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24769,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "45m"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24770,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24422,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Edit"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24423,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24424,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Archive"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24774,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Interior Detailing"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24775,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "interior-detailing"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24776,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Service (general)"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24777,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "SERVICE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24778,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱1,275–₱2,100"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24779,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "S"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24780,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24781,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱1,275"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24782,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "M"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24783,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24784,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱1,500"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24785,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "L"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24786,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24787,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱1,800"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24788,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "E"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24789,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24790,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱2,100"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24791,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "120m"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24792,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24445,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Edit"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24446,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24447,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Archive"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24796,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Full Exterior Detailing"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24797,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "full-exterior-detailing"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24798,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Service (general)"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24799,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "SERVICE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24800,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱2,125–₱3,500"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24801,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "S"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24802,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24803,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱2,125"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24804,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "M"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24805,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24806,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱2,500"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24807,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "L"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24808,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24809,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱3,000"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24810,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "E"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24811,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24812,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱3,500"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24813,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "180m"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24814,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24468,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Edit"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24469,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24470,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Archive"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24818,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Glass Detailing"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24819,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "glass-detailing"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24820,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Service (add-on)"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24821,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "SERVICE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24822,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱425–₱700"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24823,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "S"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24824,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24825,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱425"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24826,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "M"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24827,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24828,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱500"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24829,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "L"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24830,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24831,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱600"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24832,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "E"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24833,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24834,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱700"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24835,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "45m"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24836,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24491,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Edit"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24492,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24493,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Archive"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24840,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Engine Wash"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24841,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "engine-wash"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24842,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Service (add-on)"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24843,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "SERVICE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24844,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱680–₱1,120"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24845,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "S"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24846,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24847,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱680"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24848,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "M"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24849,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24850,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱800"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24851,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "L"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24852,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24853,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱960"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24854,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "E"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24855,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24856,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱1,120"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24857,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "60m"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24858,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24514,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Edit"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24515,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24516,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Archive"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24862,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Express Wash Package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24863,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "express-wash-package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24864,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "2"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24865,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " points"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24866,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Includes: "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24867,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Carwash · Glass Detailing"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24868,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24869,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "PACKAGE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24870,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱680–₱1,120"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24871,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "S"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24872,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24873,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱680"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24874,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "M"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24875,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24876,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱800"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24877,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "L"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24878,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24879,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱960"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24880,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "E"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24881,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24882,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱1,120"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24883,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "60m"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24884,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24539,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Edit"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24540,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24541,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Archive"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24888,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Full Care Package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24889,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "full-care-package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24890,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Includes: "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24891,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Carwash · Interior Detailing · Engine Wash"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24892,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24893,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "PACKAGE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24894,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱3,825–₱6,300"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24895,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "S"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24896,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24897,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱3,825"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24898,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "M"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24899,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24900,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱4,500"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24901,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "L"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24902,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24903,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱5,400"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24904,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "E"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24905,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24906,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱6,300"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24907,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "120m"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24908,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24563,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Edit"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24564,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24565,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Archive"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24912,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Hakum Custom Package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24913,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "hakum-custom-package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24914,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Package"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24915,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "PACKAGE"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24916,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱850–₱1,400"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24917,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "S"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24918,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24919,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱850"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24920,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "M"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24921,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24922,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱1,000"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24923,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "L"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24924,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24925,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱1,200"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24926,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "E"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24927,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24928,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "₱1,400"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24929,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "60m"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24930,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24586,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Edit"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24587,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24588,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Archive"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24934,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Vehicle sizes"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24935,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Pricing sizes: Small · Medium · Large · Extra Large. Used on queue / POS / bookings."
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24936,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": " "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24937,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Super Admin and Assistant Super Admin can CRUD."
+        },
+        {
+         "role": "form",
+         "backendNodeId": 24182,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "",
+         "children": [
+          {
+           "role": "StaticText",
+           "backendNodeId": 24938,
+           "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+           "name": "Slug"
+          },
+          {
+           "role": "textbox",
+           "backendNodeId": 24183,
+           "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+           "name": "Slug",
+           "multiline": false,
+           "readonly": false,
+           "required": true
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 24939,
+           "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+           "name": "Label"
+          },
+          {
+           "role": "textbox",
+           "backendNodeId": 24184,
+           "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+           "name": "Label",
+           "multiline": false,
+           "readonly": false,
+           "required": true
+          },
+          {
+           "role": "StaticText",
+           "backendNodeId": 24940,
+           "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+           "name": "Order"
+          },
+          {
+           "role": "spinbutton",
+           "backendNodeId": 24185,
+           "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+           "name": "Order",
+           "value": 0,
+           "valuetext": "0",
+           "required": false,
+           "valuemax": 0,
+           "valuemin": 0
+          },
+          {
+           "role": "button",
+           "backendNodeId": 24609,
+           "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+           "name": "Add size"
+          }
+         ]
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24943,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Label"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24944,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Slug"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24945,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Status"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24946,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Actions"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24947,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Small"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24948,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "small"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24949,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24625,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24951,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Medium"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24952,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "medium"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24953,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24632,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24955,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Large"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24956,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "large"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24957,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24639,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24959,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Extra Large"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24960,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "extra_large"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24961,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 24646,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Deactivate"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24963,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Sedan"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24964,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "sedan"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24965,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Off"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24966,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "SUV"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24967,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "suv"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24968,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Off"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24969,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Pickup"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24970,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "pickup"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24971,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Off"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24972,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Van"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24973,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "van"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24974,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Off"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24975,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Motorcycle"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24976,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "motorcycle"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24977,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Off"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24978,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Other"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24979,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "other"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 24980,
+         "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+         "name": "Off"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "heading",
+   "backendNodeId": 24684,
+   "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+   "name": "Go to",
+   "level": 2
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 24982,
+   "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+   "name": "Jump to an operations page"
+  },
+  {
+   "role": "region",
+   "backendNodeId": 24686,
+   "loaderId": "8D484D26F40C6DEE6634FF3A6C2D526E",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

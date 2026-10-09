@@ -10,8 +10,11 @@ import { NamedSelect } from '@/components/ui/named-select'
 import { supabase } from '@/lib/supabase'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { formatAccounting } from '@/lib/dailySheet'
-import { billLineMinor, buildBillRows } from '@/lib/financeBooks'
+import { activeAccounts, billLineMinor, buildBillRows } from '@/lib/financeBooks'
+import FinanceAccountDialog from './FinanceAccountDialog'
+import FinanceVendorDialog from './FinanceVendorDialog'
 
+const NEW = '__new__'
 const blankLine = (branch = '', category_id = '') => ({ item: '', description: '', quantity: '1', unit_price: '', category_id, branch })
 
 function fromRow(row) {
@@ -37,17 +40,21 @@ function fromRow(row) {
 
 const accountLabel = (c) => `${c.code ? `${c.code} · ` : ''}${c.name}${c.is_chemical ? ' (needs approval)' : ''}`
 
-export default function FinanceBillForm({ editing = null, categories, vendors, writableBranches, onSaved, onCancel }) {
+export default function FinanceBillForm({ editing = null, categories, vendors, writableBranches, onSaved, onCancel, onCatalogAdd }) {
   const defaultBranch = writableBranches[0]?.slug || ''
   const [header, setHeader] = useState(() =>
     editing ? fromRow(editing).header : { vendor_id: '', date: getLocalCalendarDate(), due_date: '', reference: '' },
   )
   const [lines, setLines] = useState(() => (editing ? fromRow(editing).lines : [blankLine(defaultBranch), blankLine(defaultBranch)]))
   const [saving, setSaving] = useState(false)
+  const [adding, setAdding] = useState(null)
 
-  const accountOptions = useMemo(() => categories.map((c) => ({ value: c.id, label: accountLabel(c) })), [categories])
+  const accountOptions = useMemo(
+    () => [...activeAccounts(categories, [editing?.category_id]).map((c) => ({ value: c.id, label: accountLabel(c) })), { value: NEW, label: '+ New category…' }],
+    [categories, editing],
+  )
   const branchOptions = useMemo(() => writableBranches.map((b) => ({ value: b.slug, label: b.name })), [writableBranches])
-  const vendorOptions = useMemo(() => vendors.map((v) => ({ value: v.id, label: v.name })), [vendors])
+  const vendorOptions = useMemo(() => [...vendors.map((v) => ({ value: v.id, label: v.name })), { value: NEW, label: '+ New vendor…' }], [vendors])
   const totalMinor = lines.reduce((s, l) => s + (Number.isFinite(billLineMinor(l)) ? billLineMinor(l) : 0), 0)
 
   const setLine = (i, patch) => setLines((list) => list.map((l, j) => (j === i ? { ...l, ...patch } : l)))
@@ -80,12 +87,18 @@ export default function FinanceBillForm({ editing = null, categories, vendors, w
   }
 
   return (
+    <>
     <form onSubmit={save} className="flex flex-col gap-5" noValidate>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="bill-from">From</Label>
-          <NamedSelect id="bill-from" value={header.vendor_id} onChange={(v) => setHeader({ ...header, vendor_id: v })} options={vendorOptions} placeholder="Choose a vendor" className="min-h-11" />
-          {vendorOptions.length ? null : <p className="text-xs text-muted-foreground">No vendors yet. Add one in Finance › Vendors first.</p>}
+          <NamedSelect id="bill-from" value={header.vendor_id} onChange={(v) => (v === NEW ? setAdding({ kind: 'vendor' }) : setHeader({ ...header, vendor_id: v }))} options={vendorOptions} placeholder="Choose a vendor" className="min-h-11" />
+          {vendors.length ? null : (
+            <Button type="button" variant="link" className="h-auto min-h-11 w-fit cursor-pointer p-0 text-xs" onClick={() => setAdding({ kind: 'vendor' })}>
+              <Plus data-icon="inline-start" />
+              No vendors yet. Add the first one
+            </Button>
+          )}
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="bill-date">Date</Label>
@@ -135,7 +148,7 @@ export default function FinanceBillForm({ editing = null, categories, vendors, w
               </div>
               <div className="col-span-2 flex flex-col gap-1 lg:col-span-1">
                 <Label htmlFor={id('acct')} className="lg:sr-only">Account</Label>
-                <NamedSelect id={id('acct')} value={l.category_id} onChange={(v) => setLine(i, { category_id: v })} options={accountOptions} placeholder="Account" className="min-h-11" />
+                <NamedSelect id={id('acct')} value={l.category_id} onChange={(v) => (v === NEW ? setAdding({ kind: 'account', line: i }) : setLine(i, { category_id: v }))} options={accountOptions} placeholder="Account" className="min-h-11" />
               </div>
               <div className="flex flex-col gap-1">
                 <Label htmlFor={id('branch')} className="lg:sr-only">Branch</Label>
@@ -186,5 +199,23 @@ export default function FinanceBillForm({ editing = null, categories, vendors, w
         </Button>
       </div>
     </form>
+
+    <FinanceVendorDialog
+        open={adding?.kind === 'vendor'}
+        onOpenChange={(open) => { if (!open) setAdding(null) }}
+        onSaved={(vendor) => {
+          onCatalogAdd?.({ vendor })
+          setHeader((h) => ({ ...h, vendor_id: vendor.id }))
+        }}
+      />
+      <FinanceAccountDialog
+        open={adding?.kind === 'account'}
+        onOpenChange={(open) => { if (!open) setAdding(null) }}
+        onSaved={(category) => {
+          onCatalogAdd?.({ category })
+          setLine(adding.line, { category_id: category.id })
+        }}
+      />
+    </>
   )
 }

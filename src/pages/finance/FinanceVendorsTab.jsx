@@ -2,22 +2,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
-import { normalizeVendorPayload } from '@/lib/financeCorporate'
+import { catalogWriteError } from '@/lib/financeBooks'
 import { toast } from 'sonner'
+import FinanceVendorDialog from './FinanceVendorDialog'
 import {
   FinanceEmpty,
   FinanceMetricCell,
@@ -30,8 +20,7 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
-  const [form, setForm] = useState({ name: '', contact: '', notes: '' })
-  const [createOpen, setCreateOpen] = useState(false)
+  const [dialog, setDialog] = useState(null)
   const onVendorsChangeRef = useRef(onVendorsChange)
   onVendorsChangeRef.current = onVendorsChange
 
@@ -61,35 +50,20 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
     return { total: rows.length, active }
   }, [rows])
 
-  async function save(event) {
-    event.preventDefault()
-    if (!canManage) return toast.error('Only Super Admin / ASA with finance write can manage vendors')
-    const payload = normalizeVendorPayload(form)
-    if (!payload) return toast.error('Vendor name is required')
-    const { error } = await supabase.from('vendors').insert(payload)
-    if (error) toast.error(error.message)
-    else {
-      toast.success('Vendor added')
-      setForm({ name: '', contact: '', notes: '' })
-      setCreateOpen(false)
-      load()
-    }
-  }
-
   async function toggleActive(row) {
     if (!canManage) return
     const { error } = await supabase
       .from('vendors')
       .update({ is_active: !row.is_active, updated_at: new Date().toISOString() })
       .eq('id', row.id)
-    if (error) toast.error(error.message)
+    if (error) toast.error(catalogWriteError(error, 'vendor'))
     else load()
   }
 
   async function remove(row) {
-    if (!canManage || !window.confirm(`Delete vendor "${row.name}"?`)) return
+    if (!canManage || !window.confirm(`Delete vendor "${row.name}"? Bills from them will show no vendor. Deactivate instead to keep the name on old bills.`)) return
     const { error } = await supabase.from('vendors').delete().eq('id', row.id)
-    if (error) toast.error(error.message)
+    if (error) toast.error(catalogWriteError(error, 'vendor'))
     else {
       toast.success('Vendor deleted')
       load()
@@ -105,58 +79,18 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
         <FinanceMetricCell label="Active" value={String(metrics.active)} hint="Available on bills" tone="up" />
       </FinanceMetricStrip>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add vendor</DialogTitle>
-            <DialogDescription>Supplier name and contact for bills.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-name">Name</Label>
-              <Input
-                id="vendor-name"
-                required
-                className="min-h-11"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="vendor-contact">Contact</Label>
-              <Input
-                id="vendor-contact"
-                className="min-h-11"
-                placeholder="Phone, email, or person"
-                value={form.contact}
-                onChange={(e) => setForm({ ...form, contact: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label htmlFor="vendor-notes">Notes</Label>
-              <Textarea
-                id="vendor-notes"
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-            </div>
-            <DialogFooter className="sm:col-span-2">
-              <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" className="min-h-11 cursor-pointer">
-                Add vendor
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <FinanceVendorDialog
+        open={Boolean(dialog)}
+        onOpenChange={(open) => { if (!open) setDialog(null) }}
+        editing={dialog?.row || null}
+        onSaved={load}
+      />
 
       <FinancePanel
         title="Vendors"
         description={`${metrics.total} supplier${metrics.total === 1 ? '' : 's'}`}
         actions={canManage ? (
-          <Button type="button" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(true)}>
+          <Button type="button" className="min-h-11 cursor-pointer" onClick={() => setDialog({ row: null })}>
             <Plus data-icon="inline-start" />
             Add vendor
           </Button>
@@ -197,11 +131,14 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
                       </Badge>
                     </TableCell>
                     {canManage ? (
-                      <TableCell className="space-x-1">
+                      <TableCell className="space-x-1 whitespace-nowrap">
+                        <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setDialog({ row })}>
+                          Edit
+                        </Button>
                         <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => toggleActive(row)}>
                           {row.is_active ? 'Deactivate' : 'Activate'}
                         </Button>
-                        <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => remove(row)}>
+                        <Button size="sm" variant="ghost" className="cursor-pointer" aria-label={`Delete ${row.name}`} onClick={() => remove(row)}>
                           <Trash2 data-icon="inline-start" />
                         </Button>
                       </TableCell>

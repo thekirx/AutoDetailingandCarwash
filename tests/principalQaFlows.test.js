@@ -28,11 +28,10 @@ describe('C4 detailing pipeline contract', () => {
       'waiting',
       'in_progress',
       'final_checking',
-      'for_releasing',
       'for_payment',
       'completed',
     ])
-    assert.match(detailingBoardStatusLabel('for_releasing'), /releas/i)
+    assert.match(detailingBoardStatusLabel('for_releasing'), /releas/i, 'legacy rows keep a label')
     assert.match(DETAILING_BOARD_STATUSES[0].label, /placeholder/i)
   })
 })

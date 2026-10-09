@@ -28,15 +28,18 @@ describe('system notification catalog', () => {
       'waiting',
       'in_progress',
       'final_checking',
-      'for_releasing',
       'for_payment',
       'completed',
       'cancelled',
-      'redo',
     ]
     for (const status of statuses) {
       assert.ok(templateByKey(bookingTemplateKey(status, 'customer')), status)
       assert.ok(templateByKey(bookingTemplateKey(status, 'ops')), `${status} ops`)
+    }
+    // Failed QA is silent and For releasing is retired: no templates to edit.
+    for (const status of ['redo', 'for_releasing']) {
+      assert.equal(templateByKey(bookingTemplateKey(status, 'customer')), null, status)
+      assert.equal(templateByKey(bookingTemplateKey(status, 'ops')), null, `${status} ops`)
     }
     assert.ok(templateByKey(bookingTemplateKey('photos_ready', 'customer')), 'photos_ready')
     assert.ok(templateByKey('birthday.greeting'))
@@ -76,12 +79,6 @@ describe('system notification catalog', () => {
   it('builds a lookup map', () => {
     const map = templatesByKeyMap()
     assert.equal(map['booking.completed.customer'].title, 'Service complete')
-  })
-
-  it('Failed QA customer default is an apology', () => {
-    const t = templateByKey('booking.redo.customer')
-    assert.match(t.body, /sorry/i)
-    assert.match(t.sms_body, /sorry/i)
   })
 
   it('migration creates birthday perk + template tables', async () => {

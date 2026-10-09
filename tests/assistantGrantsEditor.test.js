@@ -17,7 +17,7 @@ import {
 } from '../src/auth/permissions.js'
 
 const ROUTE_KEYS = [
-  'planning', 'roadmap', 'people', 'branches', 'cars', 'audit', 'data-center', 'inquiries', 'dashboard',
+  'planning', 'people', 'branches', 'cars', 'audit', 'data-center', 'inquiries', 'dashboard',
   'queue', 'queue-new', 'attendance', 'kpi', 'my-tasks', 'pos', 'inventory', 'finance', 'crm',
   'bookings', 'reviews', 'reports', 'memberships', 'settings', 'content', 'notifications', 'history',
 ]

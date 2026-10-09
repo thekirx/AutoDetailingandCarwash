@@ -48,6 +48,18 @@ Metrics come from `sales` rows with status paid or refunded (helpers in `src/lib
 
 Change chips compare with Square's "vs" window: Today vs the same weekday last week up to the same time; Week, Month, Quarter, Year vs the previous period up to the same day and time; any other range vs the equal-length previous window. A chip reads N/A when the prior value is 0. Tips and fees are not shown because Hakum records neither.
 
+## Categories, vendors and the New bill form
+
+Super Admin and ASA with the **Finance write** grant (`canEditFinanceBooks`, matching `expense_categories` / `vendors` RLS) manage both lists. Everyone else sees them read only.
+
+- **Categories** (`?tab=categories`, the chart of accounts behind bills, expense reports and POS sheet lines): Add, Edit (code, name, kind, needs approval), Archive / Restore, Delete. Codes are unique and set the order in every picker. Kind sets the P&L group. Chemicals always need approval.
+- **In use means archive, not delete.** A category already on bills or expense reports can't be deleted; the error offers **Archive**. Archived categories stay on old bills and the P&L but leave the New bill, expense report and POS sheet pickers (a line that already uses one keeps showing it).
+- **Account 14 (Employee Salary and Incentives)** is where shift-close review posts salaries (`review_daily_sheet`), so it can be renamed but keeps code 14, kind Payroll, and stays active. A database trigger enforces this.
+- **Vendors** (`?tab=vendors`): Add, Edit, Deactivate / Activate, Delete. Deleting a vendor leaves its old bills with no vendor, so deactivate to keep the name.
+- **New bill:** the From list ends with **+ New vendor…** and every Account list with **+ New category…**. Each opens the same form as the tabs, saves, and picks the new entry on the bill without leaving it.
+
+Migration `20261009180000_expense_categories_crud.sql`. Check: `node scripts/check-finance-categories.mjs` (writes, then removes its QA rows).
+
 ## Paid by kind
 
 Overview shows package / service / detailing / PPF / merch buckets from `finance_daily_line_kind` (paid lines only). Zero buckets hide.

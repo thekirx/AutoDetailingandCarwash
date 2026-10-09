@@ -28,8 +28,10 @@ import {
   filterTicketsByFamily,
   queueFamilyForProfile,
   QUEUE_FAMILIES,
+  QUEUE_FAMILY_DETAILING,
+  ticketQueueFamily,
 } from '../lib/queueFamilies'
-import { canAccessPos, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, ROLES, isSuperAdmin } from '../auth/permissions'
+import { allowRoute, canAccessPos, canEditQueueTicket, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, isInvestor, isSalesRole, ROLES, isSuperAdmin } from '../auth/permissions'
 import {
   DEFAULT_COMPENSATION_RULES,
   normalizeCompensationSettings,
@@ -183,7 +185,7 @@ function MetricCard({ label, value, icon: Icon, tone = 'blue', to, hint }) {
   )
 }
 
-function TicketCard({ ticket, timingWarnings, onOpen, compact = false }) {
+function TicketCard({ ticket, timingWarnings, onOpen, compact = false, viewOnly = false }) {
   const warn = isSuspiciousTiming(ticket, timingWarnings)
   const linked = (ticket.linked_booking_ids?.length || 1) > 1
   const plate = String(ticket.vehicle_plate || '').trim().toUpperCase() || 'No plate'
@@ -218,6 +220,13 @@ function TicketCard({ ticket, timingWarnings, onOpen, compact = false }) {
       >
         {body}
       </button>
+    )
+  }
+  if (viewOnly) {
+    return (
+      <div className={`floor-ticket queue-ticket-card bk-ticket-compact ${compact ? 'queue-ticket-compact' : ''}`} aria-label={`View only · ${label}`}>
+        {body}
+      </div>
     )
   }
   return (
@@ -293,7 +302,7 @@ function useOperationsSnapshot(branchFilter = 'all', family = 'wash') {
 
 export function OperationsDashboardPage() {
   const { profile, canViewQueueOperations } = useAuth()
-  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
+  if (!canViewQueueOperations && !isInvestor(profile)) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   // Network floor for BossMich / ASA with all-branch scope
   if (canSeeAllBranches(profile)) return <SuperAdminFloorBoard />
@@ -305,7 +314,10 @@ function ScopedFloorDashboard() {
   const isTeamLeadFloor = [ROLES.TEAM_LEAD, ROLES.STAFF].includes(profile?.role)
   const seeAll = canSeeAllBranches(profile)
   const seeRedo = canViewRedoLane(profile)
-  const canOpenPos = canAccessPos(profile)
+  const investor = isInvestor(profile)
+  const canOpenPos = canAccessPos(profile) || investor
+  const queueLink = (opts) => (allowRoute(profile, 'queue') ? operationsQueueHref(opts) : undefined)
+  const bookingsLink = (href) => (allowRoute(profile, 'bookings') ? href : undefined)
   const canViewFloorSales = profile?.role !== ROLES.STAFF
   const scopeList = getBranchScopeList(profile)
   const [branchFilter, setBranchFilter] = useState(() => {
@@ -410,7 +422,7 @@ function ScopedFloorDashboard() {
     loadSales()
   }, [reload, loadSales])
 
-  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
+  if (!canViewQueueOperations && !investor) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={refreshAll} />
 
@@ -444,10 +456,12 @@ function ScopedFloorDashboard() {
   return (
     <OpsPageShell
       className="hakum-dashboard"
-      eyebrow={profile?.role === ROLES.STAFF ? 'Crew' : profile?.role === 'admin' ? 'Branch Admin' : 'Team Lead'}
+      eyebrow={investor ? 'Investor · view only' : profile?.role === ROLES.STAFF ? 'Crew' : profile?.role === 'admin' ? 'Branch Admin' : 'Team Lead'}
       title={isTeamLeadFloor ? 'Floor' : 'Queue View'}
       description={
-        profile?.role === 'admin'
+        investor
+          ? `Cars on the floor, cars waiting to pay, and paid sales · ${branchLabel}. View only.`
+          : profile?.role === 'admin'
           ? 'High-level floor summary — waiting cars, final checks, and tickets ready for POS.'
           : isTeamLeadFloor
             ? profile?.role === ROLES.STAFF
@@ -497,7 +511,7 @@ function ScopedFloorDashboard() {
           label="Waiting"
           value={counts.waiting}
           icon={Clock3}
-          to={operationsQueueHref({ lane: 'waiting', branch: branchFilter })}
+          to={queueLink({ lane: 'waiting', branch: branchFilter })}
           hint="Jump to waiting lane"
         />
         <MetricCard
@@ -505,7 +519,7 @@ function ScopedFloorDashboard() {
           value={counts.in_progress}
           icon={CarFront}
           tone="green"
-          to={operationsQueueHref({ lane: 'in_progress', branch: branchFilter })}
+          to={queueLink({ lane: 'in_progress', branch: branchFilter })}
           hint="Jump to in progress"
         />
         <MetricCard
@@ -513,7 +527,7 @@ function ScopedFloorDashboard() {
           value={counts.final_checking}
           icon={BadgeCheck}
           tone="amber"
-          to={operationsQueueHref({ lane: 'final_checking', branch: branchFilter })}
+          to={queueLink({ lane: 'final_checking', branch: branchFilter })}
           hint="Jump to final check"
         />
         {!isTeamLeadFloor ? (
@@ -522,8 +536,8 @@ function ScopedFloorDashboard() {
             value={filteredHandoffs.filter((h) => h.status === 'pending').length}
             icon={Send}
             tone="amber"
-            to={canOpenPos ? '/operations/pos' : operationsQueueHref({ branch: branchFilter })}
-            hint={canOpenPos ? 'Open POS checkout' : 'Open queue board'}
+            to={canOpenPos ? '/operations/pos' : queueLink({ branch: branchFilter })}
+            hint={investor ? 'Open POS' : canOpenPos ? 'Open POS checkout' : allowRoute(profile, 'queue') ? 'Open queue board' : undefined}
           />
         ) : null}
         {seeRedo ? (
@@ -532,7 +546,7 @@ function ScopedFloorDashboard() {
             value={counts.redo}
             icon={ShieldAlert}
             tone="amber"
-            to={operationsQueueHref({ lane: 'redo', branch: branchFilter })}
+            to={queueLink({ lane: 'redo', branch: branchFilter })}
             hint="Jump to redo lane"
           />
         ) : null}
@@ -540,26 +554,26 @@ function ScopedFloorDashboard() {
           label="Total Active"
           value={counts.total}
           icon={ClipboardList}
-          to={operationsQueueHref({ branch: branchFilter })}
+          to={queueLink({ branch: branchFilter })}
           hint="Open full board"
         />
       </div>
       </div>
       <div className="mt-3">
         <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">Detailing pipeline</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           <MetricCard
             label="Assign / booked"
             value={detailingCounts.confirmed || 0}
             icon={ClipboardList}
-            to={`/operations/bookings?tab=board${branchFilter && branchFilter !== 'all' ? `&branch=${encodeURIComponent(branchFilter)}` : ''}`}
+            to={bookingsLink(`/operations/bookings?tab=board${branchFilter && branchFilter !== 'all' ? `&branch=${encodeURIComponent(branchFilter)}` : ''}`)}
             hint="Open bookings board"
           />
           <MetricCard
             label="Intake"
             value={detailingCounts.waiting || 0}
             icon={Clock3}
-            to="/operations/bookings?tab=board"
+            to={bookingsLink('/operations/bookings?tab=board')}
             hint="Open bookings"
           />
           <MetricCard
@@ -567,7 +581,7 @@ function ScopedFloorDashboard() {
             value={detailingCounts.in_progress || 0}
             icon={CarFront}
             tone="green"
-            to="/operations/bookings?tab=board"
+            to={bookingsLink('/operations/bookings?tab=board')}
             hint="Open bookings"
           />
           <MetricCard
@@ -575,14 +589,7 @@ function ScopedFloorDashboard() {
             value={detailingCounts.final_checking || 0}
             icon={BadgeCheck}
             tone="amber"
-            to="/operations/bookings?tab=board"
-            hint="Open bookings"
-          />
-          <MetricCard
-            label="Releasing"
-            value={detailingCounts.for_releasing || 0}
-            icon={Send}
-            to="/operations/bookings?tab=board"
+            to={bookingsLink('/operations/bookings?tab=board')}
             hint="Open bookings"
           />
           <MetricCard
@@ -590,7 +597,7 @@ function ScopedFloorDashboard() {
             value={detailingCounts.for_payment || 0}
             icon={Wallet}
             tone="amber"
-            to="/operations/bookings?tab=board"
+            to={bookingsLink('/operations/bookings?tab=board')}
             hint="Open bookings"
           />
         </div>
@@ -651,13 +658,15 @@ function ScopedFloorDashboard() {
         </Panel>
       )}
       {!isTeamLeadFloor ? (
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr] sm:mt-5 sm:gap-5">
+        <div className={investor ? 'mt-4 sm:mt-5' : 'mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr] sm:mt-5 sm:gap-5'}>
+        {investor ? null : (
         <Panel title="Crew Availability" icon={Users}>
           <div className="grid gap-4 sm:grid-cols-2">
             <CrewList title="Available" rows={availableStaff} empty="No available staff" />
             <CrewList title="Busy" rows={busyStaff} empty="No busy staff" busy />
           </div>
         </Panel>
+        )}
         <Panel title="Recently Sent To Payment" icon={Send}>
           <div className="grid gap-3">
               {filteredHandoffs.length ? filteredHandoffs.slice(0, 8).map((handoff) => {
@@ -759,10 +768,13 @@ export function OperationsQueuePage() {
 
 function OperationsQueueBoardPage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
+  const navigate = useNavigate()
   const seeAll = canSeeAllBranches(profile)
   const scopeList = getBranchScopeList(profile)
   const [searchParams, setSearchParams] = useSearchParams()
-  const queueFamily = queueFamilyForProfile(searchParams.get('family'), profile)
+  // Sales watches wash + detailing; detailing lanes add Assigned to Branch (confirmed).
+  const salesView = isSalesRole(profile)
+  const queueFamily = salesView ? QUEUE_FAMILY_DETAILING : queueFamilyForProfile(searchParams.get('family'), profile)
   const familyMeta = QUEUE_FAMILIES.find((f) => f.id === queueFamily) || QUEUE_FAMILIES[0]
   const requestedLane = parseQueueLaneParam(searchParams.get('lane'))
   const view = searchParams.get('view') === 'table' ? 'table' : 'board'
@@ -781,7 +793,21 @@ function OperationsQueueBoardPage() {
   const [tablePageSize, setTablePageSize] = useState(BOOKING_TABLE_DEFAULT_PAGE_SIZE)
   const { activeQueue, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter, queueFamily)
   const boardStatuses = useMemo(() => getOpsBoardStatuses(profile, { family: queueFamily }), [profile, queueFamily])
-  const familyQueue = useMemo(() => filterTicketsByFamily(activeQueue || [], queueFamily), [activeQueue, queueFamily])
+  const familyQueue = useMemo(
+    () =>
+      salesView
+        ? (activeQueue || []).filter((t) => t.status !== 'confirmed' || ticketQueueFamily(t) === QUEUE_FAMILY_DETAILING)
+        : filterTicketsByFamily(activeQueue || [], queueFamily),
+    [activeQueue, queueFamily, salesView],
+  )
+  const canOpenTicket = useCallback((ticket) => canEditQueueTicket(profile, ticket), [profile])
+  const openTicket = useCallback(
+    (ticket) => {
+      if (canManageQueue) setEditBookingId(ticket.booking_id)
+      else if (canEditQueueTicket(profile, ticket)) navigate(`/operations/bookings?open=${ticket.booking_id}&from=queue`)
+    },
+    [canManageQueue, navigate, profile],
+  )
   const visibleQueue = useMemo(
     () => familyQueue.filter((ticket) => boardStatuses.includes(ticket.status)),
     [familyQueue, boardStatuses],
@@ -872,7 +898,7 @@ function OperationsQueueBoardPage() {
     fetchBranches().then(setBranches).catch(() => setBranches([]))
   }, [seeAll, scopeList])
 
-  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
+  if (!canViewQueueOperations && !salesView) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
 
@@ -902,7 +928,11 @@ function OperationsQueueBoardPage() {
       className="hakum-queue queue-board queue-board--fill"
       eyebrow="Floor"
       title="Queue"
-      description="Same-day floor until POS. Tap a lane header to focus."
+      description={
+        salesView
+          ? 'All branches, wash and detailing. Wash tickets are view only. Tap a detailing ticket to work it in Bookings.'
+          : 'Same-day floor until POS. Tap a lane header to focus.'
+      }
       icon={CarFront}
       meta={
         live ? (
@@ -994,7 +1024,7 @@ function OperationsQueueBoardPage() {
         <div className="bk-table">
           <div className="bk-table-toolbar">
           <div>
-              <p className="bk-table-count">{familyMeta.shortLabel} ledger</p>
+              <p className="bk-table-count">{salesView ? 'Floor' : familyMeta.shortLabel} ledger</p>
               <p className="bk-table-range">
                 {tableSlice.total
                   ? `${tableSlice.from}–${tableSlice.to} of ${tableSlice.total} cars`
@@ -1028,10 +1058,8 @@ function OperationsQueueBoardPage() {
                 tableSlice.rows.map((ticket) => (
                   <TableRow
                     key={ticket.booking_id}
-                    className={canManageQueue ? 'cursor-pointer' : undefined}
-                    onClick={() => {
-                      if (canManageQueue) setEditBookingId(ticket.booking_id)
-                    }}
+                    className={canOpenTicket(ticket) ? 'cursor-pointer' : undefined}
+                    onClick={() => openTicket(ticket)}
                   >
                     <TableCell>
                       <div className="font-semibold uppercase tabular-nums text-foreground">{ticket.vehicle_plate || 'No plate'}</div>
@@ -1052,17 +1080,17 @@ function OperationsQueueBoardPage() {
                       {ticket.assigned_staff_name || 'Unassigned'}
                     </TableCell>
                     <TableCell className="q-col-open">
-                      {canManageQueue ? (
+                      {canOpenTicket(ticket) ? (
                         <Button
                           type="button"
                           variant="outline"
                           className="min-h-11 cursor-pointer"
                           onClick={(event) => {
                             event.stopPropagation()
-                            setEditBookingId(ticket.booking_id)
+                            openTicket(ticket)
                           }}
                         >
-                          Open ticket
+                          {canManageQueue ? 'Open ticket' : 'Open booking'}
                         </Button>
                       ) : (
                         <span className="text-xs text-muted-foreground">View only</span>
@@ -1187,7 +1215,8 @@ function OperationsQueueBoardPage() {
                           key={ticket.booking_id}
                           ticket={ticket}
                           timingWarnings={timingWarnings}
-                          onOpen={canManageQueue ? setEditBookingId : undefined}
+                          onOpen={canOpenTicket(ticket) ? () => openTicket(ticket) : undefined}
+                          viewOnly={salesView}
                           compact
                         />
                       ))
@@ -1241,7 +1270,6 @@ export function QueueTicketPage() {
 /* The New ticket form as four short steps. */
 const NEW_TICKET_STEPS = [
   { key: 'vehicle', label: 'Vehicle', title: 'Vehicle', icon: CarFront },
-  { key: 'customer', label: 'Customer', title: 'Customer contact', icon: UserPlus },
   { key: 'services', label: 'Services', title: 'Services & price', icon: ClipboardList },
   { key: 'review', label: 'Review', title: 'Review & create', icon: BadgeCheck },
 ]
@@ -1437,10 +1465,6 @@ export function NewQueueTicketPage() {
   const stepError = (index) => {
     const key = NEW_TICKET_STEPS[index]?.key
     if (key === 'vehicle') return plateValidationError(form.vehicle_plate) || ''
-    if (key === 'customer') {
-      const phoneDigits = String(form.customer_phone || '').replace(/\D/g, '')
-      return phoneDigits.length < 10 ? 'Phone number is required (at least 10 digits).' : ''
-    }
     if (key === 'services') {
       if (!form.service_ids?.length) return 'Select at least one service or package.'
       if (!(Number.isFinite(parsedFormPrice) && parsedFormPrice > 0)) return 'Enter the final price in pesos.'
@@ -1512,7 +1536,7 @@ export function NewQueueTicketPage() {
       className="hakum-new-ticket"
       eyebrow="Create Queue Ticket"
       title="Add vehicle to queue"
-      description="Four quick steps: vehicle, customer, services, then review. Detailing jobs belong on Bookings."
+      description="Three quick steps: vehicle, services, then review. The Branch Admin adds the customer at payment. Detailing jobs belong on Bookings."
     >
       <div className="ntw">
         <ol className="ntw-steps" aria-label="New ticket steps">
@@ -1615,16 +1639,6 @@ export function NewQueueTicketPage() {
               </>
             ) : null}
 
-            {stepKey === 'customer' ? (
-              <>
-                <FormField label="Phone number *" value={form.customer_phone} onChange={update('customer_phone')} type="tel" />
-                <FormField label="Email (optional)" value={form.customer_email} onChange={update('customer_email')} type="email" />
-                <FormField label="First name (optional)" value={form.customer_first_name} onChange={update('customer_first_name')} />
-                <FormField label="Last name (optional)" value={form.customer_last_name} onChange={update('customer_last_name')} />
-                <p className="sm:col-span-2 text-xs text-muted-foreground">No name yet? Ticket shows as Walk-in · plate. CRM can fill the name later.</p>
-              </>
-            ) : null}
-
             {stepKey === 'services' ? (
               <>
                 <ServiceKindPicker
@@ -1647,7 +1661,8 @@ export function NewQueueTicketPage() {
                 {showFormLowPriceWarning && <p className="sm:col-span-2 floor-alert floor-alert-warn">Please confirm this amount is correct. Did you mean a higher peso amount?</p>}
                 <label className="sm:col-span-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
                   Notes
-                  <textarea value={form.notes} onChange={update('notes')} className="floor-control floor-control-area" />
+                  <textarea value={form.notes} onChange={update('notes')} className="floor-control floor-control-area" aria-describedby="ntw-notes-hint" />
+                  <span id="ntw-notes-hint" className="mt-1 block text-xs font-normal tracking-normal normal-case">Shows on the customer&apos;s CRM profile under Notes.</span>
                 </label>
               </>
             ) : null}
@@ -1658,13 +1673,11 @@ export function NewQueueTicketPage() {
                   ['Plate', form.vehicle_plate || '—', 0],
                   ['Vehicle', [form.vehicle_year, form.vehicle_make, form.vehicle_model, form.vehicle_color].filter(Boolean).join(' ') || '—', 0],
                   ['Car size', sizeLabel || '—', 0],
-                  ['Phone', form.customer_phone || '—', 1],
-                  ['Name', customerName || 'Walk-in', 1],
-                  ['Email', form.customer_email || '—', 1],
-                  ['Services', selectedServiceNames.join(', ') || '—', 2],
-                  ['Branch', branchLabel || '—', 2],
-                  ['Final price', form.final_price ? `₱${Number(parsedFormPrice || 0).toLocaleString()}` : '—', 2],
-                  ['Notes', form.notes || '—', 2],
+                  ['Customer', customerName || 'Added at payment by the Branch Admin', 0],
+                  ['Services', selectedServiceNames.join(', ') || '—', 1],
+                  ['Branch', branchLabel || '—', 1],
+                  ['Final price', form.final_price ? `₱${Number(parsedFormPrice || 0).toLocaleString()}` : '—', 1],
+                  ['Notes', form.notes || '—', 1],
                 ].map(([label, value, editStep]) => (
                   <div key={label} className="ntw-review-row">
                     <dt>{label}</dt>

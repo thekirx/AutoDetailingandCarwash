@@ -1,0 +1,720 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 38181,
+ "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/memberships?tab=tiers",
+ "children": [
+  {
+   "role": "link",
+   "backendNodeId": 38259,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Hakum Auto Care home",
+   "url": "http://localhost:5173/operations/dashboard"
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38593,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "ADMIN CONSOLE"
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38594,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "FLOOR"
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38272,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Floor Board",
+   "url": "http://localhost:5173/operations/dashboard",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38595,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Floor Board"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38278,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Queue",
+   "url": "http://localhost:5173/operations/queue",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38596,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Queue"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38288,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Bookings",
+   "url": "http://localhost:5173/operations/bookings",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38597,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Bookings"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38295,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Attendance",
+   "url": "http://localhost:5173/operations/attendance",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38598,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Attendance"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38301,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "KPI",
+   "url": "http://localhost:5173/operations/kpi",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38599,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "KPI"
+    }
+   ]
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38600,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "COUNTER"
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38313,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "POS",
+   "url": "http://localhost:5173/operations/pos",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38601,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "POS"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38320,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Inventory",
+   "url": "http://localhost:5173/operations/inventory",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38602,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Inventory"
+    }
+   ]
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38603,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "CUSTOMERS"
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38332,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "CRM",
+   "url": "http://localhost:5173/operations/crm",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38604,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "CRM"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38341,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Reviews",
+   "url": "http://localhost:5173/operations/reviews",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38605,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Reviews"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38346,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Memberships",
+   "url": "http://localhost:5173/operations/memberships",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38606,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Memberships"
+    }
+   ]
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38607,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "BOOKS"
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38356,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Finance",
+   "url": "http://localhost:5173/operations/finance",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38608,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Finance"
+    }
+   ]
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38609,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "WORK"
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38366,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Planner",
+   "url": "http://localhost:5173/operations/planning",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38610,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Planner"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38373,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Ops Lab",
+   "url": "http://localhost:5173/operations/roadmap",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38611,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Ops Lab"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38380,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "History",
+   "url": "http://localhost:5173/operations/history",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38612,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "History"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38387,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Notifications",
+   "url": "http://localhost:5173/operations/notifications",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38613,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Notifications"
+    }
+   ]
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38614,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "COMPANY"
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38397,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "People",
+   "url": "http://localhost:5173/operations/people",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38615,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "People"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38405,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Branches",
+   "url": "http://localhost:5173/operations/branches",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38616,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Branches"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38416,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Cars",
+   "url": "http://localhost:5173/operations/cars",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38617,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Cars"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38426,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Content",
+   "url": "http://localhost:5173/operations/content",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38618,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Content"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38434,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Audit",
+   "url": "http://localhost:5173/operations/audit",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38619,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Audit"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38442,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Data Center",
+   "url": "http://localhost:5173/operations/data-center",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38620,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Data Center"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38449,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Inquiries",
+   "url": "http://localhost:5173/operations/inquiries",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38621,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Inquiries"
+    }
+   ]
+  },
+  {
+   "role": "link",
+   "backendNodeId": 38455,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Settings",
+   "url": "http://localhost:5173/operations/settings",
+   "children": [
+    {
+     "role": "StaticText",
+     "backendNodeId": 38622,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Settings"
+    }
+   ]
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38623,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "BossMich"
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38624,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Super Admin"
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38625,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": " · "
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38626,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "All branches"
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38627,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "bossmich@hakumautocare.com"
+  },
+  {
+   "role": "button",
+   "backendNodeId": 38467,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Account"
+  },
+  {
+   "role": "button",
+   "backendNodeId": 38473,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Sign out"
+  },
+  {
+   "role": "main",
+   "backendNodeId": 38479,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "",
+   "children": [
+    {
+     "role": "button",
+     "backendNodeId": 38481,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Toggle Sidebar"
+    },
+    {
+     "role": "navigation",
+     "backendNodeId": 38488,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 38631,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Ops"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 38633,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Memberships"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 38634,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Operations · cost · profit · stock"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 38493,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Open command menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 38504,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 38509,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "Account menu",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "main",
+     "backendNodeId": 38513,
+     "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 38638,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "MEMBERSHIP"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 38518,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Plans and loyalty",
+       "level": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 38640,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Super Admin controls the whole loyalty program — stamps, points, memberships, carwash-only earn, and per-service scores. POS honors these settings live."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 38641,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "How memberships work"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 38642,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Program toggles, tiers, stamp milestones, and service weights feed POS and CRM on the next checkout."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 38530,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Show guide",
+       "expanded": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 38536,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Program",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 38542,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Premium plans",
+       "selected": true
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 38186,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Stamp thresholds",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 38551,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Service scoring",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 38558,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Assign members",
+       "selected": false
+      },
+      {
+       "role": "tabpanel",
+       "backendNodeId": 38562,
+       "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+       "name": "Premium plans",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 38649,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Paid membership plans with discount and loyalty multiplier on POS spend."
+        },
+        {
+         "role": "button",
+         "backendNodeId": 38565,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Add premium tier"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38651,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Platinum"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38652,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 38575,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Edit Platinum"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38653,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "₱9,999"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38654,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Loyalty multiplier ×"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38655,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "1.5"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38656,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": " · "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38657,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "10"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38658,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "% off"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38660,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Priority booking"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38662,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Member-only promos"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38664,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Loyalty multiplier"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38665,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Includes: "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 38666,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Premium Car Wash"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 38187,
+         "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+         "name": "Deactivate"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "heading",
+   "backendNodeId": 38588,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Go to",
+   "level": 2
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 38669,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Jump to an operations page"
+  },
+  {
+   "role": "region",
+   "backendNodeId": 38590,
+   "loaderId": "FA71CA24D5BB35941958B91DC7FFE1B9",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

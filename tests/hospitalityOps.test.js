@@ -25,10 +25,11 @@ describe('customer notes', () => {
 
   it('queue/CRM/inquiries wire customer_notes', () => {
     const q = readFileSync(join(root, 'src/components/QueueTicketEditor.jsx'), 'utf8')
-    const c = readFileSync(join(root, 'src/pages/CrmPage.jsx'), 'utf8')
+    const c = readFileSync(join(root, 'src/pages/crm/CustomerProfileDialog.jsx'), 'utf8')
     const i = readFileSync(join(root, 'src/pages/InquiriesPage.jsx'), 'utf8')
     assert.match(q, /CustomerNotesPanel/)
     assert.match(c, /value="notes"/)
+    assert.match(c, /CustomerNotesPanel/)
     assert.match(i, /Promote to customer note/)
     assert.doesNotMatch(readFileSync(join(root, 'src/pages/PublicQueuePage.jsx'), 'utf8'), /customer_notes/)
   })

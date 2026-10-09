@@ -1,6 +1,6 @@
 /* global document, window, location, getComputedStyle */
 /**
- * Read-only responsive validation of Team Lead pages (+ Branch Admin Bookings) across the
+ * Read-only responsive validation of Team Lead pages (+ BA Bookings, SA Branches) across the
  * 8-viewport matrix and one landscape phone. Real logins, real data, writes blocked.
  *   BASE_URL=http://localhost:5173 node scripts/_tl-responsive-validation.mjs
  *   SHOTS_ONLY=tl node scripts/_tl-responsive-validation.mjs
@@ -28,6 +28,23 @@ const PAGES = {
     ['attendance', '/operations/attendance'],
   ],
   admin: [['bookings', '/operations/bookings']],
+  // Third item: button text to click before auditing (opens a modal).
+  boss: [
+    ['branches', '/operations/branches'],
+    ['branches-new', '/operations/branches', 'New branch'],
+    ['services', '/operations/inventory?tab=bay'],
+    ['services-new', '/operations/inventory?tab=bay', 'Add service or package'],
+    ['memberships-tiers', '/operations/memberships?tab=tiers'],
+    ['memberships-tier-new', '/operations/memberships?tab=tiers', 'Add premium tier'],
+    ['finance-vendors', '/operations/finance?tab=vendors'],
+    ['finance-vendor-new', '/operations/finance?tab=vendors', 'Add vendor'],
+    ['notifications', '/operations/notifications'],
+    ['notifications-rule-new', '/operations/notifications', 'New reminder'],
+    ['sms', '/operations/crm?tab=sms'],
+    ['sms-template-new', '/operations/crm?tab=sms', 'New template'],
+    ['planning-events', '/operations/planning?tab=events'],
+    ['planning-event-new', '/operations/planning?tab=events', 'New event'],
+  ],
 }
 const VIEWPORTS = [
   { dir: 'mobile-375', width: 375, height: 667, touch: true, phone: true },
@@ -80,6 +97,10 @@ function audit({ touch, phone }) {
       const cs = getComputedStyle(el)
       // Inline links inside running text are exempt (WCAG 2.5.8 inline exception).
       if (el.tagName === 'A' && cs.display === 'inline' && el.closest('p, li')) continue
+      // Draggable map pin: tapping anywhere on the map moves it too, so the pin is not the only target.
+      if (el.classList.contains('leaflet-marker-icon')) continue
+      // Map tile credits are required attribution text, not actions.
+      if (el.closest('.leaflet-control-attribution')) continue
       let r = el.getBoundingClientRect()
       // A wrapping label focuses/toggles its input, so the label is the hit area (not for select popups).
       if (el.tagName === 'INPUT' && el.closest('label')) {
@@ -98,9 +119,23 @@ function audit({ touch, phone }) {
       if (px < 16) smallFonts.push(`${el.tagName.toLowerCase()} "${label(el)}" ${px}px`)
     }
   }
+  // Clipped overflow: page scrollWidth misses boxes cut off by an overflow:hidden parent.
+  const clipped = []
+  for (const el of document.querySelectorAll('main *, [role="dialog"] *')) {
+    const r = el.getBoundingClientRect()
+    if (r.right <= window.innerWidth + 2 || !visible(el)) continue
+    let scroller = false
+    for (let n = el.parentElement; n; n = n.parentElement) {
+      // Only deliberate horizontal scrollers (a vertical scroller also computes overflow-x:auto),
+      // plus map tile panes, which overdraw their clipped container by design.
+      if (n.classList.contains('overflow-x-auto') || n.matches('[role="tablist"], [data-slot="table-container"], .finance-tabs-rail, .leaflet-container')) { scroller = true; break }
+    }
+    if (!scroller) clipped.push(`${el.tagName.toLowerCase()} "${label(el).slice(0, 24)}" right=${Math.round(r.right)}`)
+  }
   return {
     url: location.pathname + location.search,
-    overflow: document.documentElement.scrollWidth - window.innerWidth,
+    overflow: Math.max(document.documentElement.scrollWidth - window.innerWidth, clipped.length ? 99 : 0),
+    clipped: clipped.slice(0, 3),
     denied: /access-denied/.test(location.pathname),
     loading: /Loading…|Loading maintenance/.test(document.querySelector('main')?.innerText || ''),
     small,
@@ -142,7 +177,7 @@ try {
     await page.click('button[type="submit"]')
     await page.waitForFunction(() => location.pathname.startsWith('/operations') && !location.pathname.includes('login'), { timeout: 60000 })
 
-    for (const [name, url] of pages) {
+    for (const [name, url, clickText] of pages) {
       if (pageOnly && !pageOnly.has(name)) continue
       for (const vp of VIEWPORTS) {
         if (vpOnly && !vpOnly.has(vp.dir)) continue
@@ -153,10 +188,20 @@ try {
         await page.goto(`${base}${url}`, { waitUntil: 'networkidle2' }).catch(() => null)
         await page.waitForFunction(() => document.querySelector('main h1, main h2'), { timeout: 30000 }).catch(() => null)
         await new Promise((r) => setTimeout(r, 1200))
+        if (clickText) {
+          const opened = await page.evaluate((text) => {
+            const btn = [...document.querySelectorAll('button')].find((b) => b.innerText.trim() === text)
+            btn?.click()
+            return Boolean(btn)
+          }, clickText)
+          if (!opened) problems.push(`no "${clickText}" button`)
+          await new Promise((r) => setTimeout(r, 900))
+        }
         const state = await page.evaluate(audit, { touch: vp.touch, phone: vp.phone })
         const stem = `${id}-${name}`
         // Capture only: unroll inner scroll containers so fullPage shows everything (audit already ran).
-        await page.evaluate(() => {
+        // Modals stay as rendered (viewport shot) — unrolling would push a centered dialog off-screen.
+        if (!clickText) await page.evaluate(() => {
           for (const el of document.querySelectorAll('body *')) {
             const cs = getComputedStyle(el)
             if (!/(auto|scroll)/.test(cs.overflowY) || el.scrollHeight <= el.clientHeight + 2) continue
@@ -167,7 +212,7 @@ try {
             }
           }
         })
-        await page.screenshot({ path: join(dir, `${stem}-full-page.png`), fullPage: true })
+        await page.screenshot({ path: join(dir, `${stem}-full-page.png`), fullPage: !clickText })
         const tree = await page.accessibility.snapshot({ interestingOnly: true }).catch(() => null)
         writeFileSync(join(dir, `${stem}-accessibility-tree.txt`), JSON.stringify(tree, null, 1))
         writeFileSync(
@@ -175,7 +220,7 @@ try {
           `# ${stem} @ ${vp.dir}\n\nTouch targets under 44px: ${state.small.length}\n\n${state.small.map((s) => `- ${s}`).join('\n')}\n\nForm controls under 16px (phone): ${state.smallFonts.length}\n\n${state.smallFonts.map((s) => `- ${s}`).join('\n')}\n`,
         )
         const issues = [...problems]
-        if (state.overflow > 2) issues.push(`overflow ${state.overflow}px`)
+        if (state.overflow > 2) issues.push(`overflow ${state.overflow}px ${state.clipped.join('; ')}`)
         if (state.denied) issues.push('access denied')
         if (state.loading) issues.push('still loading')
         if (state.small.length) issues.push(`${state.small.length} small targets: ${state.small.slice(0, 4).join('; ')}`)

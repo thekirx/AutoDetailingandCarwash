@@ -26,10 +26,11 @@ describe('Floor status cards → queue lanes', () => {
     assert.equal(operationsQueueHref({ branch: 'all' }), '/operations/queue')
   })
 
-  it('dashboard status MetricCards link into the queue board', () => {
-    assert.match(page, /operationsQueueHref\(\{ lane: 'waiting'/)
-    assert.match(page, /operationsQueueHref\(\{ lane: 'in_progress'/)
-    assert.match(page, /operationsQueueHref\(\{ lane: 'final_checking'/)
+  it('dashboard status MetricCards link into the queue board when the viewer may open it', () => {
+    assert.match(page, /queueLink\(\{ lane: 'waiting'/)
+    assert.match(page, /queueLink\(\{ lane: 'in_progress'/)
+    assert.match(page, /queueLink\(\{ lane: 'final_checking'/)
+    assert.match(page, /allowRoute\(profile, 'queue'\) \? operationsQueueHref\(opts\) : undefined/)
     assert.match(page, /floor-metric-card-link/)
     assert.match(page, /Jump to waiting lane/)
   })

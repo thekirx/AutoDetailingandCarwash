@@ -106,9 +106,10 @@ assert(!staffErr && staff?.role === 'sales', staffErr?.message || `role=${staff?
 assert(staff.branch_slug === 'bacoor', `branch=${staff.branch_slug}`)
 assert(redirectForRole(staff.role) === '/operations/bookings', 'home')
 assert(allowRoute({ role: ROLES.SALES, branch_slug: staff.branch_slug }, 'bookings'))
-assert(!allowRoute({ role: ROLES.SALES }, 'queue'))
+assert(allowRoute({ role: ROLES.SALES }, 'queue'), 'sales views the queue')
+assert(!allowRoute({ role: ROLES.SALES }, 'queue-new'))
 assert(!allowRoute({ role: ROLES.SALES }, 'pos'))
-assert(!allowRoute({ role: ROLES.SALES }, 'crm'))
+assert(allowRoute({ role: ROLES.SALES }, 'crm'), 'sales views crm')
 assert(canCheckInFormBooking({ role: ROLES.SALES }), 'sales may check in form bookings')
 results.push('rbac.home+gates: ok')
 
@@ -118,9 +119,10 @@ results.push(`branches.read: ${branches.length}`)
 
 const { data: services, error: svcErr } = await client
   .from('services')
-  .select('id, name')
+  .select('id, name, slug, pay_category')
   .eq('is_active', true)
   .eq('is_archived', false)
+  .eq('pay_category', 'detailing')
   .limit(5)
 assert(!svcErr && services?.length, svcErr?.message || 'no services')
 results.push(`services.read: ${services.length}`)
@@ -166,7 +168,7 @@ results.push('bookings.direct_status_blocked: ok')
 assert(
   canStaffUpdateBookingStatus(
     { role: 'sales', branch_slug: 'bacoor' },
-    { branch: 'bacoor', status: 'pending' },
+    { branch: 'bacoor', status: 'pending', services: services[0] },
     { nextStatus: 'confirmed' },
   ),
 )
@@ -178,7 +180,7 @@ results.push('api.confirm: ok')
 assert(
   canStaffUpdateBookingStatus(
     { role: 'sales', branch_slug: 'bacoor' },
-    { branch: 'bacoor', status: 'confirmed' },
+    { branch: 'bacoor', status: 'confirmed', services: services[0] },
     { nextStatus: 'waiting' },
   ),
   'sales detailing board includes waiting',
@@ -191,7 +193,7 @@ results.push('api.waiting: ok')
 assert(
   !canStaffUpdateBookingStatus(
     { role: 'sales', branch_slug: 'bacoor' },
-    { branch: 'bacoor', status: 'waiting' },
+    { branch: 'bacoor', status: 'waiting', services: services[0] },
     { nextStatus: 'for_payment' },
   ),
   'sales must not send to payment',

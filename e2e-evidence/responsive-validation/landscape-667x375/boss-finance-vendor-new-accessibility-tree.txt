@@ -1,0 +1,113 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 14480,
+ "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/finance?tab=vendors",
+ "children": [
+  {
+   "role": "region",
+   "backendNodeId": 14783,
+   "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  },
+  {
+   "role": "dialog",
+   "backendNodeId": 14790,
+   "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+   "name": "Add vendor",
+   "description": "Supplier name and contact for bills.",
+   "modal": false,
+   "children": [
+    {
+     "role": "heading",
+     "backendNodeId": 14792,
+     "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+     "name": "Add vendor",
+     "level": 2
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 14853,
+     "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+     "name": "Supplier name and contact for bills."
+    },
+    {
+     "role": "form",
+     "backendNodeId": 14496,
+     "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 14854,
+       "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+       "name": "Name"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 14495,
+       "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+       "name": "Name",
+       "focused": true,
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 14855,
+       "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+       "name": "Contact"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 14497,
+       "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+       "name": "Contact",
+       "multiline": false,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 14856,
+       "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+       "name": "Notes"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 14498,
+       "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+       "name": "Notes",
+       "multiline": true,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 14804,
+       "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+       "name": "Cancel"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 14805,
+       "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+       "name": "Add vendor"
+      }
+     ]
+    },
+    {
+     "role": "button",
+     "backendNodeId": 14806,
+     "loaderId": "062BF19F90C9C3E53C1497835A5153D3",
+     "name": "Close"
+    }
+   ]
+  }
+ ]
+}

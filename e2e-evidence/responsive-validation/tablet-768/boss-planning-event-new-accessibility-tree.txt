@@ -1,0 +1,459 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 29771,
+ "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/planning?tab=events",
+ "children": [
+  {
+   "role": "region",
+   "backendNodeId": 30307,
+   "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  },
+  {
+   "role": "dialog",
+   "backendNodeId": 30313,
+   "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+   "name": "New event",
+   "description": "Creates a public page you can share. Attach a form if people need to RSVP.",
+   "modal": false,
+   "children": [
+    {
+     "role": "heading",
+     "backendNodeId": 30315,
+     "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+     "name": "New event",
+     "level": 2
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 30517,
+     "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+     "name": "Creates a public page you can share. Attach a form if people need to RSVP."
+    },
+    {
+     "role": "form",
+     "backendNodeId": 29783,
+     "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 30518,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Title"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 29782,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Title",
+       "focused": true,
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 30519,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Description"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 29784,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Description",
+       "multiline": true,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 30520,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Branch"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 29780,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "",
+       "value": "Hakum Auto Care Bacoor",
+       "expanded": false,
+       "haspopup": "menu",
+       "children": [
+        {
+         "role": "option",
+         "backendNodeId": 30331,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "All / none",
+         "selected": false
+        },
+        {
+         "role": "option",
+         "backendNodeId": 30334,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Hakum Auto Care Bacoor",
+         "selected": true
+        },
+        {
+         "role": "option",
+         "backendNodeId": 30337,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Hakum Auto Care Batangas",
+         "selected": false
+        },
+        {
+         "role": "option",
+         "backendNodeId": 30340,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Hakum HQ / Office",
+         "selected": false
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 30521,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Published"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 30344,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "",
+       "value": "yes",
+       "expanded": false,
+       "required": false,
+       "haspopup": "listbox"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 30525,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Starts"
+      },
+      {
+       "role": "DateTime",
+       "backendNodeId": 29786,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Starts",
+       "invalid": "true",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30354,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Month Month",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30527,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "/"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30356,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Day Day",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 31,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30529,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "/"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30358,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Year Year",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 275760,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30531,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30360,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Hours Hours",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30533,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30362,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30535,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30364,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "AM/PM AM/PM",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 30365,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Show local date and time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 30537,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Ends"
+      },
+      {
+       "role": "DateTime",
+       "backendNodeId": 29787,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Ends",
+       "children": [
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30371,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Month Month",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30539,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "/"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30373,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Day Day",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 31,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30541,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "/"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30375,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Year Year",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 275760,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30543,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30377,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Hours Hours",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 12,
+         "valuemin": 1
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30545,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": ":"
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30379,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Minutes Minutes",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 59,
+         "valuemin": 0
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 30547,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": " "
+        },
+        {
+         "role": "spinbutton",
+         "backendNodeId": 30381,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "AM/PM AM/PM",
+         "value": 0,
+         "valuetext": "",
+         "required": false,
+         "valuemax": 2,
+         "valuemin": 1
+        },
+        {
+         "role": "button",
+         "backendNodeId": 30382,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Show local date and time picker",
+         "haspopup": "menu"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 30549,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Optional form for attendees"
+      },
+      {
+       "role": "combobox",
+       "backendNodeId": 29781,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Optional form for attendees",
+       "value": "No form",
+       "expanded": false,
+       "haspopup": "menu",
+       "children": [
+        {
+         "role": "option",
+         "backendNodeId": 30391,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "No form",
+         "selected": true
+        },
+        {
+         "role": "option",
+         "backendNodeId": 30394,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Customer complaint",
+         "selected": false
+        },
+        {
+         "role": "option",
+         "backendNodeId": 30397,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Detailing inquiry",
+         "selected": false
+        },
+        {
+         "role": "option",
+         "backendNodeId": 30400,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Employee Cash Advance",
+         "selected": false
+        },
+        {
+         "role": "option",
+         "backendNodeId": 30403,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Equipment Repairs",
+         "selected": false
+        },
+        {
+         "role": "option",
+         "backendNodeId": 30406,
+         "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+         "name": "Events RSVP",
+         "selected": false
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 30550,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Shown on the public event page when set. Publish the form + enable its public link to accept answers."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 30411,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Cancel"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 30412,
+       "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+       "name": "Create event"
+      }
+     ]
+    },
+    {
+     "role": "button",
+     "backendNodeId": 30413,
+     "loaderId": "1E04D796C0F17B49480D0305464E9D0A",
+     "name": "Close"
+    }
+   ]
+  }
+ ]
+}

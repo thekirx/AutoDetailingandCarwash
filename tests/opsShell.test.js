@@ -143,8 +143,9 @@ describe('ops shell adoption — CRM, memberships, reviews', () => {
     assert.match(page, /OpsTabList/)
     assert.match(page, /const CRM_SHELL_TABS = Object\.freeze\(\[/)
     assert.match(page, /resolveOpsTab/)
-    assert.match(page, /canAccessQueuePage/)
-    assert.match(page, /value="notes"/)
+    assert.match(page, /CustomerProfileDialog/)
+    assert.match(read('src/pages/crm/CustomerProfileDialog.jsx'), /canAccessQueuePage/)
+    assert.match(read('src/pages/crm/CustomerProfileDialog.jsx'), /value="notes"/)
 
     for (const id of ['directory', 'groups', 'insights', 'sms']) {
       assert.match(page, new RegExp(`id: '${id}'`))
@@ -238,7 +239,6 @@ describe('ops shell adoption — phase 7 admin + secondary + floor', () => {
     ['Notifications', 'src/pages/NotificationsPage.jsx', 'hakum-notifications'],
     ['Content', 'src/pages/ContentAdminPage.jsx', 'hakum-content'],
     ['Inquiries', 'src/pages/InquiriesPage.jsx', 'hakum-inquiries'],
-    ['Ops Lab', 'src/pages/OpsRoadmapPage.jsx', 'hakum-ops-lab'],
     ['Attendance', 'src/pages/AttendancePage.jsx', 'hakum-attendance'],
     ['POS', 'src/pages/PosPage.jsx', 'hakum-pos'],
   ]

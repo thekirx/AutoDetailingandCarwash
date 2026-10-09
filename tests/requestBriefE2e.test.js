@@ -97,10 +97,10 @@ describe('request.md roles + planner', () => {
     const investorNav = getOperationsNav({ role: ROLES.INVESTOR })
     assert.deepEqual(
       investorNav.map((i) => i.to),
-      ['/operations/finance'],
+      ['/operations/dashboard', '/operations/pos', '/operations/finance'],
     )
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'people'), false)
-    assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'pos'), false)
+    assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'pos'), true)
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'reports'), true)
   })
 
@@ -126,19 +126,17 @@ describe('request.md detailing pipeline + Failed QA', () => {
         'Vehicle intake',
         'In progress',
         'Final checking',
-        'For releasing',
         'For payment',
         'Completed',
       ],
     )
   })
 
-  it('TL can Failed QA; sales cannot; apology copy is editable', () => {
+  it('TL can Failed QA; sales cannot; Failed QA sends no notice', () => {
     assert.equal(canMarkFailedQa({ role: ROLES.TEAM_LEAD }), true)
     assert.equal(canMarkFailedQa({ role: ROLES.SALES }), false)
     const copy = read('src/lib/notificationTemplates.js')
-    assert.match(copy, /booking\.redo\.customer/)
-    assert.match(copy, /We are sorry/)
+    assert.doesNotMatch(copy, /booking\.redo\./)
     const editor = read('src/components/QueueTicketEditor.jsx')
     assert.match(editor, /Failed QA/)
   })

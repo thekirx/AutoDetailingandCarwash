@@ -152,11 +152,11 @@ describe('finance leftover source scans', () => {
 
   it('does not invent commission editors on Finance', () => {
     const page = read('src/pages/FinancePage.jsx')
-    const cats = read('src/pages/finance/FinanceCategoriesTab.jsx')
+    const cats = read('src/pages/finance/FinanceAccountDialog.jsx')
     const lib = read('src/lib/financeData.js')
     assert.doesNotMatch(page, /wash_pool_pct/)
     assert.match(cats, /not commission %/)
-    assert.match(cats, /P&L bucket/)
+    assert.match(read('src/lib/financeBooks.js'), /P&L bucket/)
     assert.match(lib, /Crew pay is not in this statement/)
     assert.doesNotMatch(lib, /\/operations\/payroll/)
   })

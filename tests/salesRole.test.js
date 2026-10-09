@@ -7,7 +7,16 @@ import {
   ROLES,
   allowRoute,
   canAccessBookingBoard,
+  canAccessCrm,
+  canAccessMarketing,
   canAccessPos,
+  canAddQueueService,
+  canEditCrm,
+  canEditQueueOperations,
+  canEditQueueTicket,
+  canSeeAllBranches,
+  canViewQueueBoard,
+  canViewQueueOperations,
   canCheckInFormBooking,
   canCreateBookings,
   canEditBookings,
@@ -33,18 +42,13 @@ const sales = { role: ROLES.SALES, branch_slug: 'bacoor' }
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('sales role — detailing bookings board', () => {
-  it('lands on bookings with bookings + history dock/nav', () => {
+  it('lands on bookings; nav/dock add Queue + CRM views', () => {
     assert.equal(isSalesRole(sales), true)
     assert.equal(isFormBookingsOnlyRole(sales), true)
     assert.equal(redirectForRole(ROLES.SALES), '/operations/bookings')
-    assert.deepEqual(
-      getOperationsNav(sales).map((i) => i.to),
-      ['/operations/bookings', '/operations/history'],
-    )
-    assert.deepEqual(
-      getSalesDock(sales).map((i) => i.to),
-      ['/operations/bookings', '/operations/history'],
-    )
+    const expected = ['/operations/bookings', '/operations/queue', '/operations/crm', '/operations/history']
+    assert.deepEqual(getOperationsNav(sales).map((i) => i.to), expected)
+    assert.deepEqual(getSalesDock(sales).map((i) => i.to), expected)
     assert.equal(canAccessBookingBoard(sales), true)
     assert.equal(canEditBookings(sales), true)
     assert.equal(canCreateBookings(sales), true)
@@ -57,8 +61,8 @@ describe('sales role — detailing bookings board', () => {
     assert.equal(canCheckInFormBooking({ role: ROLES.MARKETING }), false)
   })
 
-  it('allowRoute matrix: bookings yes, everything else no', () => {
-    const allowed = ['bookings']
+  it('allowRoute matrix: bookings, queue view, crm view; everything else no', () => {
+    const allowed = ['bookings', 'queue', 'crm', 'history']
     const denied = [
       'console',
       'planning',
@@ -68,19 +72,37 @@ describe('sales role — detailing bookings board', () => {
       'audit',
       'data-center',
       'dashboard',
-      'queue',
       'queue-new',
       'crew',
       'kpi',
       'my-tasks',
       'pos',
       'finance',
-      'crm',
       'reports',
       'memberships',
     ]
     for (const key of allowed) assert.equal(allowRoute(sales, key), true, key)
     for (const key of denied) assert.equal(allowRoute(sales, key), false, key)
+  })
+
+  it('Queue: all branches, wash view only, detailing tickets editable; CRM view only', () => {
+    const wash = { booking_id: 'w', service_pay_category: 'wash' }
+    const pkg = { booking_id: 'p', service_pay_category: 'package' }
+    const detailing = { booking_id: 'd', service_pay_category: 'detailing' }
+    assert.equal(canViewQueueBoard(sales), true)
+    assert.equal(canSeeAllBranches(sales), true)
+    assert.equal(canEditQueueOperations(sales), false, 'no wash status / assign / new ticket')
+    assert.equal(canAddQueueService(sales), false)
+    assert.equal(canViewQueueOperations(sales), false, 'no Floor Board / KPI via Queue')
+    assert.equal(canEditQueueTicket(sales, wash), false)
+    assert.equal(canEditQueueTicket(sales, pkg), false)
+    assert.equal(canEditQueueTicket(sales, detailing), true)
+    assert.equal(canEditQueueTicket({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' }, wash), true)
+    assert.equal(canEditQueueTicket({ role: ROLES.MARKETING }, detailing), false)
+    assert.equal(canAccessCrm(sales), true)
+    assert.equal(canEditCrm(sales), false)
+    assert.equal(canAccessMarketing(sales), false, 'SMS send / templates stay off')
+    assert.equal(canEditCrm({ role: ROLES.MARKETING }), true)
   })
 
   it('board shows detailing statuses + cancelled; Sales advances full pipeline', () => {
@@ -93,8 +115,7 @@ describe('sales role — detailing bookings board', () => {
     assert.equal(getBookingPrimaryNextStatus('confirmed', { canCheckIn: true, detailingPipeline: true }), 'waiting')
     assert.equal(getBookingPrimaryNextStatus('waiting', { detailingPipeline: true }), 'in_progress')
     assert.equal(getBookingPrimaryNextStatus('in_progress', { detailingPipeline: true }), 'final_checking')
-    assert.equal(getBookingPrimaryNextStatus('final_checking', { detailingPipeline: true }), 'for_releasing')
-    assert.equal(getBookingPrimaryNextStatus('for_releasing', { detailingPipeline: true }), 'for_payment')
+    assert.equal(getBookingPrimaryNextStatus('final_checking', { detailingPipeline: true }), 'for_payment')
     assert.equal(getBookingPrimaryNextStatus('confirmed', { canCheckIn: false, detailingPipeline: true }), null)
   })
 
@@ -104,31 +125,23 @@ describe('sales role — detailing bookings board', () => {
   })
 
   it('booking-status API allows detailing board moves on any branch (Sales is all-branches)', () => {
-    assert.equal(
-      canStaffUpdateBookingStatus(sales, { branch: 'bacoor' }, { nextStatus: 'confirmed' }),
-      true,
-    )
-    assert.equal(
-      canStaffUpdateBookingStatus(sales, { branch: 'bacoor' }, { nextStatus: 'waiting' }),
-      true,
-    )
-    assert.equal(
-      canStaffUpdateBookingStatus(sales, { branch: 'bacoor' }, { nextStatus: 'completed' }),
-      true,
-    )
-    assert.equal(
-      canStaffUpdateBookingStatus(sales, { branch: 'bacoor' }, { nextStatus: 'for_payment' }),
-      false,
-    )
+    const detailing = { pay_category: 'detailing', slug: 'ceramic-coating' }
+    const at = (branch) => ({ branch, services: detailing })
+    assert.equal(canStaffUpdateBookingStatus(sales, at('bacoor'), { nextStatus: 'confirmed' }), true)
+    assert.equal(canStaffUpdateBookingStatus(sales, at('bacoor'), { nextStatus: 'waiting' }), true)
+    assert.equal(canStaffUpdateBookingStatus(sales, at('bacoor'), { nextStatus: 'completed' }), true)
+    assert.equal(canStaffUpdateBookingStatus(sales, at('bacoor'), { nextStatus: 'for_payment' }), false)
     // Sales is assigned to all branches — can advance a booking on any branch.
+    assert.equal(canStaffUpdateBookingStatus(sales, at('batangas'), { nextStatus: 'confirmed' }), true)
+    // Wash queue tickets are view only for Sales.
     assert.equal(
-      canStaffUpdateBookingStatus(sales, { branch: 'batangas' }, { nextStatus: 'confirmed' }),
-      true,
+      canStaffUpdateBookingStatus(sales, { branch: 'bacoor', services: { pay_category: 'wash', slug: 'basic-wash' } }, { nextStatus: 'in_progress' }),
+      false,
     )
     assert.equal(
       canStaffUpdateBookingStatus(
         { role: 'marketing', branch_slug: 'bacoor' },
-        { branch: 'bacoor' },
+        at('bacoor'),
         { nextStatus: 'confirmed' },
       ),
       false,

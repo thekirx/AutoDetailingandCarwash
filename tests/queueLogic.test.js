@@ -65,7 +65,8 @@ describe('queue logic', () => {
 
     const coating = buildVisitProgress('in_progress', 'detailing')
     assert.equal(coating.kind, 'detailing')
-    assert.equal(coating.steps.length, 6)
+    assert.equal(coating.steps.length, 5)
+    assert.equal(buildVisitProgress('for_releasing', 'detailing').label, 'Payment', 'legacy releasing rows show Payment')
     assert.equal(coating.currentIndex, 2)
     assert.equal(coating.label, 'In progress')
     assert.equal(coating.steps[2].key, 'in_progress')

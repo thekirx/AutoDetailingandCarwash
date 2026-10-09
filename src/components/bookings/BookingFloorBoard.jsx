@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 const MAINTENANCE_STAGE = 'maintenance'
 
 /** Stage the floor board opens on when none is picked: first lane with cars, TL-relevant lanes first. */
-const DEFAULT_STAGE_ORDER = ['confirmed', 'waiting', 'in_progress', 'final_checking', 'for_releasing']
+const DEFAULT_STAGE_ORDER = ['confirmed', 'waiting', 'in_progress', 'final_checking']
 
 const URGENCY_LABEL = { overdue: 'Overdue', due_soon: 'Due soon', upcoming: 'Upcoming', none: 'No date' }
 

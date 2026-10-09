@@ -334,7 +334,7 @@ export async function updateStaffPerson({
   if (error) throw mapDbError(error)
   if (!data) throw new Error('Staff profile not found.')
 
-  if (['admin', 'team_lead', 'staff', 'marketing'].includes(v.role)) {
+  if (['admin', 'team_lead', 'staff', 'marketing', 'investor'].includes(v.role)) {
     const slugs = Array.isArray(branch_slugs) && branch_slugs.length
       ? branch_slugs.map(String)
       : v.branch_slug

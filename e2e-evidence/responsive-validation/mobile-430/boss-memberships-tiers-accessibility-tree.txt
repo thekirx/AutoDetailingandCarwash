@@ -1,0 +1,284 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 36093,
+ "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/memberships?tab=tiers",
+ "children": [
+  {
+   "role": "main",
+   "backendNodeId": 36157,
+   "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+   "name": "",
+   "children": [
+    {
+     "role": "button",
+     "backendNodeId": 36158,
+     "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+     "name": "Toggle Sidebar"
+    },
+    {
+     "role": "navigation",
+     "backendNodeId": 36165,
+     "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 36255,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Ops"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 36257,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Memberships"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 36258,
+     "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+     "name": "Operations · cost · profit · stock"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 36101,
+     "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+     "name": "Open command menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 36104,
+     "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 36107,
+     "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+     "name": "Account menu",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "main",
+     "backendNodeId": 36182,
+     "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 36262,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "MEMBERSHIP"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 36187,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Plans and loyalty",
+       "level": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 36264,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Super Admin controls the whole loyalty program — stamps, points, memberships, carwash-only earn, and per-service scores. POS honors these settings live."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 36265,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "How memberships work"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 36266,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Program toggles, tiers, stamp milestones, and service weights feed POS and CRM on the next checkout."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 36111,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Show guide",
+       "expanded": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 36199,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Program",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 36205,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Premium plans",
+       "selected": true
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 36209,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Stamp thresholds",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 36215,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Service scoring",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 36222,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Assign members",
+       "selected": false
+      },
+      {
+       "role": "tabpanel",
+       "backendNodeId": 36226,
+       "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+       "name": "Premium plans",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 36273,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Paid membership plans with discount and loyalty multiplier on POS spend."
+        },
+        {
+         "role": "button",
+         "backendNodeId": 36229,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Add premium tier"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36275,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Platinum"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36276,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Active"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 36237,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Edit Platinum"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36277,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "₱9,999"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36278,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Loyalty multiplier ×"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36279,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "1.5"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36280,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": " · "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36281,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "10"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36282,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "% off"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36284,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Priority booking"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36286,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Member-only promos"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36288,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Loyalty multiplier"
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36289,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Includes: "
+        },
+        {
+         "role": "StaticText",
+         "backendNodeId": 36290,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Premium Car Wash"
+        },
+        {
+         "role": "button",
+         "backendNodeId": 36247,
+         "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+         "name": "Deactivate"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "heading",
+   "backendNodeId": 36249,
+   "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+   "name": "Go to",
+   "level": 2
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 36293,
+   "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+   "name": "Jump to an operations page"
+  },
+  {
+   "role": "region",
+   "backendNodeId": 36251,
+   "loaderId": "41B821A62C00EDEAEEAF914BB81D6FED",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

@@ -18,7 +18,6 @@ const { notifyBookingStatus } = await import('../server/notifyBooking.mjs')
 const { notifyStaffEvent } = await import('../server/notifyOpsEvent.mjs')
 const { notifyOpsFormComplaint } = await import('../server/notifyOpsForm.mjs')
 const { notifyPosEvent } = await import('../server/notifyPos.mjs')
-const { notifyOpsLabActivity } = await import('../server/notifyOpsRoadmap.mjs')
 const { notifyPlannerAssignees } = await import('../server/notifyPlanner.mjs')
 
 const WASH_SERVICE = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
@@ -82,7 +81,6 @@ export async function runPushAudit({ base, db, sessions, userIds, outDir, deskto
   const reviewId = randomUUID()
   const complaintId = randomUUID()
   const saleId = randomUUID()
-  const boardId = randomUUID()
   const cardId = randomUUID()
   let inquiryId = null
 
@@ -184,12 +182,6 @@ export async function runPushAudit({ base, db, sessions, userIds, outDir, deskto
       tag: new RegExp(`^pos-sale-${saleId}$`),
       expect: { asa: '/operations/pos', admin: '/operations/pos' },
       fire: () => notifyPosEvent({ event: 'sale', branch: 'bacoor', amountMinor: 35000, entityId: saleId, actorId: userIds.boss }),
-    },
-    {
-      name: 'SA creates an Ops Lab board → ASA + BA + Ops Lead on Roadmap',
-      tag: new RegExp(`${boardId}$`),
-      expect: { asa: `/operations/roadmap?board=${boardId}`, admin: `/operations/roadmap?board=${boardId}`, opslead: `/operations/roadmap?board=${boardId}` },
-      fire: () => notifyOpsLabActivity({ event: 'board_created', boardId, boardTitle: 'Push audit board', actorName: 'Boss', actorId: userIds.boss }),
     },
     {
       name: 'planner card assigned to marketing, crew1, video → each on a page they can open',

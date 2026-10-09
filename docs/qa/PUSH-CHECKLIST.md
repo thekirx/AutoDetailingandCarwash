@@ -21,7 +21,6 @@ Branch rule: people assigned to a branch (Branch Admin, Team Lead, crew, detaile
 | Customer review | SA, ASA, Ops Lead + that branch's Branch Admin | `/operations/reviews` |
 | Staff complaint form | SA, ASA + that branch's Branch Admin (global only if no branch) | `/operations/planning?tab=forms` |
 | POS sale / expense | SA, ASA + that branch's Branch Admin (never the person who rang it) | `/operations/pos` (expenses tab for expenses) |
-| Ops Lab board / card activity | SA, ASA, Branch Admin, Ops Lead (not the actor) | `/operations/roadmap?board=…` |
 | Planner card assigned | Each assignee (marketing, video, crew, …) | A page that person can open (Planning or My tasks) |
 
 Not sent by design: owner daily close SMS (Finance accept uses web push), inbound SMS replies, crew alerts for every booking (crew hear only about cars they are assigned).
@@ -74,6 +73,6 @@ If a toast is missing: check the phone's notification settings for Hakum/Chrome,
 
 - Staff event alerts (crew assigned, Daily Sheet submit / review, cash advance request) are sent by `POST /api/notify-ops-event` right after the action succeeds in the app. The server re-checks who is allowed and picks recipients from the database; if the phone that did the action loses signal at that exact moment, that one alert is skipped (the action itself is saved).
 - The ASA (Luci, `assistant@hakumautocare.com`) has every grant on since 2026-09-29, including `finance_write`, so she gets Daily Sheet submissions like the Super Admin. Daily Sheet submissions need `finance_view`, which is on by default for every ASA.
-- DB function `resolve_ops_lab_notify_user_ids` is no longer called (Ops Lab now uses the shared recipient planner); left in place, safe to drop later.
+- Ops Lab was retired on 2026-10-09: `/api/notify-ops-lab` is gone and old `ops_lab.*` in-app rows were deleted. DB function `resolve_ops_lab_notify_user_ids` is no longer called; left in place, safe to drop later.
 - `scripts/e2e-push-notifications.mjs` and the browser matrix send real pushes to every device subscribed as the demo customer — phones signed in as the demo customer will show "E2E probe" / "In the queue · PUSHQA…" toasts while those scripts run.
 - Test bookings created by the audit are archived (bookings are soft-deleted by the `bookings_soft_delete` trigger), not physically removed.

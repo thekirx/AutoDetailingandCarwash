@@ -1,0 +1,163 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 313,
+ "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/memberships?tab=tiers",
+ "children": [
+  {
+   "role": "region",
+   "backendNodeId": 480,
+   "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  },
+  {
+   "role": "dialog",
+   "backendNodeId": 487,
+   "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+   "name": "Add premium tier",
+   "description": "Paid membership plans with discount and loyalty multiplier on POS spend.",
+   "modal": false,
+   "children": [
+    {
+     "role": "heading",
+     "backendNodeId": 489,
+     "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+     "name": "Add premium tier",
+     "level": 2
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 570,
+     "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+     "name": "Paid membership plans with discount and loyalty multiplier on POS spend."
+    },
+    {
+     "role": "form",
+     "backendNodeId": 322,
+     "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 571,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Name"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 321,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Name",
+       "focused": true,
+       "multiline": false,
+       "readonly": false,
+       "required": true
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 572,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Starting price (₱)"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 323,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Starting price (₱)",
+       "valuetext": "",
+       "required": true,
+       "valuemax": 0,
+       "valuemin": 0
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 573,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Discount %"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 324,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Discount %",
+       "value": 0,
+       "valuetext": "0",
+       "required": false,
+       "valuemax": 100,
+       "valuemin": 0
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 575,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Loyalty multiplier"
+      },
+      {
+       "role": "spinbutton",
+       "backendNodeId": 325,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Loyalty multiplier",
+       "value": 1,
+       "valuetext": "1",
+       "required": false,
+       "valuemax": 10,
+       "valuemin": 0
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 577,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Benefits (one per line)"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 326,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Benefits (one per line)",
+       "multiline": true,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 578,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Included services (one per line)"
+      },
+      {
+       "role": "textbox",
+       "backendNodeId": 327,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Included services (one per line)",
+       "multiline": true,
+       "readonly": false,
+       "required": false
+      },
+      {
+       "role": "button",
+       "backendNodeId": 329,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Cancel"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 522,
+       "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+       "name": "Create tier"
+      }
+     ]
+    },
+    {
+     "role": "button",
+     "backendNodeId": 523,
+     "loaderId": "240FC063BFA392D034B37A7653A93C4B",
+     "name": "Close"
+    }
+   ]
+  }
+ ]
+}

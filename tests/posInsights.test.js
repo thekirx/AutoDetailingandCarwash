@@ -51,7 +51,7 @@ describe('posInsights', () => {
   })
 
   it('sends old Expenses links to the Daily sheet, hidden for roles that cannot fill it', () => {
-    assert.deepEqual([...POS_SHELL_TABS], ['checkout', 'sheet', 'dashboard'])
+    assert.deepEqual([...POS_SHELL_TABS], ['checkout', 'sheet', 'history', 'dashboard'])
     assert.equal(resolvePosShellTab('expenses'), 'sheet')
     assert.equal(resolvePosShellTab('sheet', { canSheet: false }), 'checkout')
     assert.deepEqual(posVisibleShellTabs({ canSheet: false }), ['checkout', 'dashboard'])

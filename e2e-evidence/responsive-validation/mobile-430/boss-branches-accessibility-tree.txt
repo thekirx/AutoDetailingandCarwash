@@ -1,0 +1,542 @@
+{
+ "role": "RootWebArea",
+ "backendNodeId": 955,
+ "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+ "name": "Hakum Auto Care",
+ "url": "http://localhost:5173/operations/branches",
+ "children": [
+  {
+   "role": "main",
+   "backendNodeId": 1049,
+   "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+   "name": "",
+   "children": [
+    {
+     "role": "button",
+     "backendNodeId": 1050,
+     "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+     "name": "Toggle Sidebar"
+    },
+    {
+     "role": "navigation",
+     "backendNodeId": 1057,
+     "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+     "name": "Breadcrumb",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 1297,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Ops"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1299,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Branches"
+      }
+     ]
+    },
+    {
+     "role": "StaticText",
+     "backendNodeId": 1300,
+     "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+     "name": "Operations · cost · profit · stock"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 967,
+     "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+     "name": "Open command menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 970,
+     "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+     "name": "Notifications",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "button",
+     "backendNodeId": 973,
+     "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+     "name": "Account menu",
+     "expanded": false,
+     "haspopup": "menu"
+    },
+    {
+     "role": "main",
+     "backendNodeId": 1074,
+     "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+     "name": "",
+     "children": [
+      {
+       "role": "StaticText",
+       "backendNodeId": 1304,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "SITES"
+      },
+      {
+       "role": "heading",
+       "backendNodeId": 1079,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Branches",
+       "level": 1
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1306,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Active branches automatically get live queue, shop TV, booking, and staff assignment — the slug is the only switch. Coming soon sites appear on the public branches page without accepting bookings yet."
+      },
+      {
+       "role": "button",
+       "backendNodeId": 1083,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "New branch"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1308,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "All branches"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1309,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "4"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 961,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": " of "
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 962,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "32"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1310,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "After create: assign staff under"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 976,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": " "
+      },
+      {
+       "role": "link",
+       "backendNodeId": 1098,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "People",
+       "url": "http://localhost:5173/operations/people",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 977,
+         "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+         "name": "People"
+        }
+       ]
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 978,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": ". Live queue and shop TV exist as soon as the slug does — pin the TV link on the shop display."
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1311,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Search branches"
+      },
+      {
+       "role": "searchbox",
+       "backendNodeId": 963,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Search branches"
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 1107,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Current 4",
+       "selected": true
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 1109,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Active 3",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 1111,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Coming soon 1",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 1113,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Inactive 0",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 1115,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Archived 28",
+       "selected": false
+      },
+      {
+       "role": "tab",
+       "backendNodeId": 1117,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "All 32",
+       "selected": false
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1324,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Hakum Auto Care Bacoor"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1325,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "bacoor"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1326,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": " · "
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1327,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "BAC"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1328,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Active"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1329,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "RFC Molino"
+      },
+      {
+       "role": "link",
+       "backendNodeId": 1126,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Customer queue",
+       "url": "http://localhost:5173/queue/bacoor",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 1330,
+         "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+         "name": "Customer queue"
+        }
+       ]
+      },
+      {
+       "role": "link",
+       "backendNodeId": 988,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Shop TV",
+       "url": "http://localhost:5173/queue/bacoor/tv",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 1331,
+         "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+         "name": "Shop TV"
+        }
+       ]
+      },
+      {
+       "role": "button",
+       "backendNodeId": 1127,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Edit"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 1130,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "More actions for Hakum Auto Care Bacoor",
+       "expanded": false,
+       "haspopup": "menu"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1333,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Hakum Auto Care Batangas"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1334,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "batangas"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1335,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": " · "
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1336,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "BTG"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1337,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Active"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1338,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "PNP Batangas"
+      },
+      {
+       "role": "link",
+       "backendNodeId": 1139,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Customer queue",
+       "url": "http://localhost:5173/queue/batangas",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 1339,
+         "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+         "name": "Customer queue"
+        }
+       ]
+      },
+      {
+       "role": "link",
+       "backendNodeId": 996,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Shop TV",
+       "url": "http://localhost:5173/queue/batangas/tv",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 1340,
+         "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+         "name": "Shop TV"
+        }
+       ]
+      },
+      {
+       "role": "button",
+       "backendNodeId": 1140,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Edit"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 1143,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "More actions for Hakum Auto Care Batangas",
+       "expanded": false,
+       "haspopup": "menu"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1342,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Hakum Auto Care Dasmariñas"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1343,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "dasmarinas"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1344,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": " · "
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1345,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "DAS"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1346,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Coming soon"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1347,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Dasmariñas, Cavite"
+      },
+      {
+       "role": "link",
+       "backendNodeId": 1153,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Preview TV",
+       "url": "http://localhost:5173/queue/dasmarinas/tv",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 1348,
+         "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+         "name": "Preview TV"
+        }
+       ]
+      },
+      {
+       "role": "button",
+       "backendNodeId": 1155,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Edit"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 1159,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "More actions for Hakum Auto Care Dasmariñas",
+       "expanded": false,
+       "haspopup": "menu"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1350,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Hakum HQ / Office"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1351,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "hq"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1352,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": " · "
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1353,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "HQ"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1354,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Active"
+      },
+      {
+       "role": "StaticText",
+       "backendNodeId": 1355,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "No address"
+      },
+      {
+       "role": "link",
+       "backendNodeId": 1174,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Customer queue",
+       "url": "http://localhost:5173/queue/hq",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 1356,
+         "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+         "name": "Customer queue"
+        }
+       ]
+      },
+      {
+       "role": "link",
+       "backendNodeId": 1175,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Shop TV",
+       "url": "http://localhost:5173/queue/hq/tv",
+       "children": [
+        {
+         "role": "StaticText",
+         "backendNodeId": 1357,
+         "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+         "name": "Shop TV"
+        }
+       ]
+      },
+      {
+       "role": "button",
+       "backendNodeId": 1177,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "Edit"
+      },
+      {
+       "role": "button",
+       "backendNodeId": 1181,
+       "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+       "name": "More actions for Hakum HQ / Office",
+       "expanded": false,
+       "haspopup": "menu"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "heading",
+   "backendNodeId": 1291,
+   "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+   "name": "Go to",
+   "level": 2
+  },
+  {
+   "role": "StaticText",
+   "backendNodeId": 1402,
+   "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+   "name": "Jump to an operations page"
+  },
+  {
+   "role": "region",
+   "backendNodeId": 1293,
+   "loaderId": "BA099932DDED9818DDA8A401D58BE1E7",
+   "name": "Notifications alt+T",
+   "atomic": false,
+   "live": "polite",
+   "relevant": "additions text"
+  }
+ ]
+}

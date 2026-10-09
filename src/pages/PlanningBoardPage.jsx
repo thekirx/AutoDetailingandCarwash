@@ -6,6 +6,8 @@ import { canEditPlanning, canViewPlanning } from '@/auth/permissions'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { PLAN_BOARD_DETAIL_SELECT, PLAN_BOARDS_LIST_SELECT, defaultPlanListId, pickPlannerBoard, plannerTabFromSearch, plannerTabsForAccess, visiblePlannerBoards } from '@/lib/plannerBoard'
 import { hrefForCalendarItem } from '@/lib/plannerCalendar'
+import { collectPaged } from '@/lib/crmInsights'
+import { isBookingBoardRow } from '@/lib/serviceKinds'
 import { cardsFromAssigneeRows, filterPlannerCards, flattenPlannerCards, reviewItemsFromAssigneeRows } from '@/lib/plannerTasks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -136,15 +138,15 @@ export default function PlanningBoardPage() {
       setLoading(false)
       return
     }
-    const [{ data: boardRows, error: boardErr }, { data: catRows }, { data: staffRows }, { data: tplRows }, { data: reviewRows, error: reviewErr }] = await Promise.all([
+    const [{ data: boardRows, error: boardErr }, { data: catRows, error: catErr }, { data: staffRows, error: staffErr }, { data: tplRows, error: tplErr }, { data: reviewRows, error: reviewErr }] = await Promise.all([
       supabase.from('plan_boards').select(PLAN_BOARDS_LIST_SELECT).order('name'),
       catQ,
       supabase.from('staff_profiles').select('id, full_name, role').eq('is_active', true).order('full_name'),
       supabase.from('plan_checklist_templates').select('id, name, position, plan_checklist_template_items ( id, title, position )').order('position'),
       supabase.from('plan_card_assignees').select(ASSIGNEE_CARD_SELECT).eq('status', 'for_review'),
     ])
-    if (boardErr) toast.error(boardErr.message)
-    if (reviewErr) toast.error(reviewErr.message)
+    const loadErr = boardErr || catErr || staffErr || tplErr || reviewErr
+    if (loadErr) toast.error(loadErr.message)
     const visible = visiblePlannerBoards(boardRows)
     setBoards(visible)
     setCategories(catRows || [])
@@ -198,16 +200,27 @@ export default function PlanningBoardPage() {
     const m = calCursor.getMonth()
     const from = new Date(y, m, 1).toISOString()
     const to = new Date(y, m + 1, 1).toISOString()
+    const rows = ({ data, error }) => {
+      if (error) throw error
+      return data || []
+    }
     const eventsQ = supabase.from('events').select('id, title, starts_at, ends_at, is_published').gte('starts_at', from).lt('starts_at', to)
+    // Walk-in wash tickets share the bookings table; the calendar shows the same appointments as the Bookings board.
+    const bookingsPage = (start, end) =>
+      supabase
+        .from('bookings')
+        .select('id, customer_name, scheduled_start, status, services ( slug, pay_category )')
+        .eq('is_archived', false)
+        .neq('status', 'cancelled')
+        .gte('scheduled_start', from)
+        .lt('scheduled_start', to)
+        .order('id')
+        .range(start, end)
+        .then(rows)
+    let stale = false
     Promise.all([
-      canEdit ? eventsQ : eventsQ.eq('is_published', true),
-      canEdit
-        ? supabase
-            .from('bookings')
-            .select('id, customer_name, scheduled_start, status')
-            .gte('scheduled_start', from)
-            .lt('scheduled_start', to)
-        : Promise.resolve({ data: [] }),
+      (canEdit ? eventsQ : eventsQ.eq('is_published', true)).then(rows),
+      canEdit ? collectPaged(bookingsPage).then((list) => list.filter(isBookingBoardRow)) : [],
       canEdit
         ? supabase
             .from('ops_form_submissions')
@@ -215,14 +228,18 @@ export default function PlanningBoardPage() {
             .not('calendar_at', 'is', null)
             .gte('calendar_at', from)
             .lt('calendar_at', to)
-        : Promise.resolve({ data: [] }),
-    ]).then(([ev, bk, fm]) => {
-      setCalExtra({
-        events: ev.data || [],
-        bookings: bk.data || [],
-        forms: fm.data || [],
+            .then(rows)
+        : [],
+    ])
+      .then(([events, bookings, forms]) => {
+        if (!stale) setCalExtra({ events, bookings, forms })
       })
-    })
+      .catch((err) => {
+        if (!stale) toast.error(err.message)
+      })
+    return () => {
+      stale = true
+    }
   }, [calCursor, canEdit, tab])
 
   const calItems = useMemo(() => {
@@ -263,7 +280,7 @@ export default function PlanningBoardPage() {
           date: b.scheduled_start,
           title: b.customer_name || 'Booking',
           kind: 'booking',
-          href: hrefForCalendarItem({ type: 'booking', booking: { id: b.id } }),
+          href: hrefForCalendarItem({ type: 'booking', booking: b }),
         })
       })
     }
@@ -473,7 +490,11 @@ export default function PlanningBoardPage() {
                       const a = card.plan_card_assignees?.[0]
                       return (
                         <tr key={card.id} onClick={() => openCard(card.id)}>
-                          <td>{card.title}</td>
+                          <td>
+                            <button type="button" className="planner-v2-row-link" onClick={(e) => { e.stopPropagation(); openCard(card.id) }}>
+                              {card.title}
+                            </button>
+                          </td>
                           <td>{card.list_title}</td>
                           <td>{a?.staff_profiles?.full_name || '—'}</td>
                           <td>{card.due_at ? new Date(card.due_at).toLocaleDateString() : '—'}</td>

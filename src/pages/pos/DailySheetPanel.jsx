@@ -13,9 +13,11 @@ import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { ROLES } from '@/auth/permissions'
 import { downloadCsv, downloadExcel, printAsPdf } from '@/lib/financeData'
 import { listBranches } from '@/lib/adminApi'
+import { activeAccounts } from '@/lib/financeBooks'
 import {
   METHOD_LABELS,
   SHEET_STATUS_LABELS,
+  canReviewDailySheet,
   closeOfDaySlip,
   computeSheetTotals,
   formatAccounting,
@@ -292,8 +294,8 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
   const totals = check.totals
 
   const accountOptions = useMemo(
-    () => (ctx?.accounts || []).map((a) => ({ value: a.id, label: a.code ? `${a.code} · ${a.name}` : a.name })),
-    [ctx],
+    () => activeAccounts(ctx?.accounts, lines.map((l) => l.account_id)).map((a) => ({ value: a.id, label: a.code ? `${a.code} · ${a.name}` : a.name })),
+    [ctx, lines],
   )
   const staffOptions = useMemo(() => {
     const seen = new Map()
@@ -365,7 +367,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
       const saved = await persist()
       const res = await submitSheet(saved?.id || sheet?.id)
       notifyOpsEvent('sheet_submitted', res?.id)
-      toast.success('Sent for approval. You will get a push when it is approved.')
+      toast.success('Sent for approval. The Super Admin and Assistant Super Admin were notified; you will get a push when it is approved.')
       await load()
     } catch (err) {
       toast.error(sheetErrorMessage(err))
@@ -603,7 +605,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           </section>
 
           <section className="ds-card" aria-label="Cash advances">
-            <SectionHead step={4} title="Cash advances" hint="Cash given to staff, or paid back. Not a cost — it only moves drawer cash." done={check.sections.cashAdvances} />
+            <SectionHead step={4} title="Cash advances" hint="Optional: skip this if no cash was given out or paid back. Not a cost — it only moves drawer cash." done={check.sections.cashAdvances} />
             {editable && (ctx?.caRequests || []).length ? (
               <div className="mb-3 flex flex-wrap gap-2">
                 {ctx.caRequests.map((r) => (
@@ -625,7 +627,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                 ))}
               </div>
             ) : null}
-            {caLines.length === 0 ? <p className="text-sm text-muted-foreground">No cash advances.</p> : null}
+            {caLines.length === 0 ? <p className="text-sm text-muted-foreground">No cash advances today. You can leave this empty.</p> : null}
             <div className="flex flex-col gap-3">
               {caLines.map((l, i) =>
                 editable ? (
@@ -719,7 +721,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm">Everything is filled in. Submit when the shop is closed.</p>
+                <p className="text-sm">Everything is filled in. You can submit any time — sales rung up after you submit are not on this sheet.</p>
               )}
               <Button type="button" className="ds-submit min-h-12 w-full" disabled={!check.canSubmit || busy} onClick={submit}>
                 {busy ? 'Submitting…' : 'Submit for approval'}
@@ -727,7 +729,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
             </div>
           ) : null}
 
-          {review && status === 'submitted' ? (
+          {review && status === 'submitted' && canReviewDailySheet(profile) ? (
             <div className="ds-summary-actions">
               <Button type="button" className="ds-submit min-h-12 w-full" disabled={busy} onClick={() => decide('approve')}>
                 Approve

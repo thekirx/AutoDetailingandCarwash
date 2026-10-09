@@ -11,6 +11,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   canTransitionBookingStatus,
+  canHandOffToPayment,
   transitionAllowedForRole,
   BOOKING_STATUS_TRANSITIONS,
 } from '../server/bookingStatusTransitions.mjs'
@@ -19,7 +20,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(root, p), 'utf8')
 
 test('the legal detailing chain is walkable one step at a time', () => {
-  const chain = ['pending', 'confirmed', 'waiting', 'in_progress', 'final_checking', 'for_releasing']
+  const chain = ['pending', 'confirmed', 'waiting', 'in_progress', 'final_checking', 'completed']
   for (let i = 0; i < chain.length - 1; i += 1) {
     assert.equal(
       canTransitionBookingStatus(chain[i], chain[i + 1]),
@@ -64,6 +65,18 @@ test('for_payment is never a bare target — POS owns that lane', () => {
       `${from} -> for_payment must go through the handoff branch`,
     )
   }
+})
+
+test('For releasing is retired: Final checking hands straight to POS', () => {
+  assert.equal(canTransitionBookingStatus('final_checking', 'for_releasing'), false)
+  assert.equal(canHandOffToPayment('final_checking'), true)
+  assert.equal(canHandOffToPayment('for_releasing'), true, 'legacy rows can still reach POS')
+  for (const from of ['pending', 'confirmed', 'waiting', 'in_progress', 'redo', 'completed']) {
+    assert.equal(canHandOffToPayment(from), false, `${from} skips QA`)
+  }
+  assert.equal(transitionAllowedForRole('final_checking', 'for_payment', 'team_lead'), true)
+  assert.equal(transitionAllowedForRole('in_progress', 'for_payment', 'team_lead'), false)
+  assert.equal(transitionAllowedForRole('waiting', 'for_payment', 'sales'), false)
 })
 
 test('same-status is refused as a no-op', () => {

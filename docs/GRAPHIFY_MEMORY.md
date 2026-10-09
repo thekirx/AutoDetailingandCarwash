@@ -103,7 +103,7 @@ Never authorize from `user_metadata` / `raw_user_meta_data`. JWT `app_metadata` 
 
 Public: `/home`, `/services`, `/services/:slug`, `/book` (detailing), `/queue`, `/branches`, `/partnerships`, `/contact`, `/complaints`, `/events`, `/blog`, `/f/:slug` (public ops forms), legal pages. Customer: `/signin`, `/signup`, `/account/*`. Kiosk: `/queue/:branch`, `/queue/:branch/tv` (DEFINER views: `public_queue_counts`, `public_queue_numbers`, `public_queue_floor`, `public_home_stats`).
 
-Staff `/operations/*` (gated by `OpsRoleGate`): dashboard, queue, queue/new, queue/:id, attendance, kpi, my-tasks, pos, inventory, finance, payroll, my-pay, crm, bookings, planning, roadmap (Ops Lab), settings, settings/pos, settings/payroll, content, notifications, history, broadcast, reports, memberships, reviews, people, branches, cars, audit, data-center, inquiries.
+Staff `/operations/*` (gated by `OpsRoleGate`): dashboard, queue, queue/new, queue/:id, attendance, kpi, my-tasks, pos, inventory, finance, payroll, my-pay, crm, bookings, planning, settings, settings/pos, settings/payroll, content, notifications, history, broadcast, reports, memberships, reviews, people, branches, cars, audit, data-center, inquiries.
 
 Data Center is Super Admin only. Catalog/CRM importable; floor/finance export-only (PITR).
 
@@ -153,7 +153,7 @@ Singleton `loyalty_program_settings`. Stamp earn: `all_weighted` or `pay_categor
 
 ## Planner / Ops Lab
 
-Planner: `plan_cards` + categories/lists/boards. Proof photos in private `plan-proofs`. Ops Lab `/operations/roadmap`: custom types/statuses, notify peers, audited actions for SA.
+Planner: `plan_cards` + categories/lists/boards. Proof photos in private `plan-proofs`. DB `can_edit_planning()` matches the app (SA, BA, Ops Lead, ASA with `planning_edit`); staff form submit is gated by `can_submit_ops_form(kind)`. Ops Lab `/operations/roadmap` retired 2026-10-09 (redirects home; tables kept as history).
 
 ## Verification commands
 
