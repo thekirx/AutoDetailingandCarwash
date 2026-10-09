@@ -31,6 +31,7 @@ const SUITES = [
   'tests/remountBlastRadiusProbe.test.js',
   'tests/dailySheetApprovalLadder.test.js',
   'tests/probeReadIntegrity.test.js',
+  'tests/dailySheetIsManualTask.test.js',
 ]
 
 function runSuite() {
@@ -496,6 +497,26 @@ const ALL_MUTATIONS = [
     name: 'the branch-residue probe stops reading a real branch row count',
     from: /const branches = readOrFail\('branches',[\s\S]{0,160}?\) \|\| \[\]/,
     to: "const branches = readOrFail('branches', { data: null, error: null }) || []",
+  },
+  // The daily sheet is a manual BA task. If the tab stops being reachable, no
+  // close-of-day happens at all and nothing else in the app would report it.
+  {
+    file: 'src/pages/PosPage.jsx',
+    name: 'the Daily sheet tab stops being visible to a Branch Admin',
+    from: /\{ id: 'sheet', label: 'Daily sheet', icon: ClipboardList \}/,
+    to: '',
+  },
+  {
+    file: 'src/pages/PosPage.jsx',
+    name: 'the Today panel stops offering a way into the sheet',
+    from: /onOpenSheet=\{canSheet \? \(\) => setShellTab\('sheet'\) : undefined\}/,
+    to: 'onOpenSheet={undefined}',
+  },
+  {
+    file: 'src/lib/dailySheet.js',
+    name: 'a Branch Admin loses the right to file a daily sheet',
+    from: /if \(role === 'BossMich' \|\| role === 'admin'\) return true/,
+    to: "if (role === 'BossMich') return true",
   },
   {
     file: 'scripts/check-sheet-ui.mjs',
