@@ -238,3 +238,203 @@
   .bredesign .bd-tint-split .cert-copy { font-size: 13.5px; }
   .bredesign .bd-tint-split .cert-source { min-height: 44px; }
 }
+
+/* ---- Round 8 (approved 9 Oct 2026) ---- */
+/* Less dead space around the section and before the next one. */
+.bredesign #tint-comparison {
+  padding: clamp(36px, 4vw, 56px) 0 clamp(20px, 2.5vw, 32px);
+}
+.bredesign #tint-comparison + .bd-detail {
+  padding-top: clamp(24px, 3vw, 40px);
+}
+.bredesign .bd-tint-comparison .bd-tint-comparison-note {
+  margin-top: 16px;
+}
+/* A compact panel button under the heading. */
+.bredesign .bd-tint-split .bd-cmp-block {
+  padding-top: 18px;
+}
+.bredesign .bd-tint-split .bd-cmp-toggle {
+  display: inline-flex;
+  width: auto;
+  gap: 22px;
+  padding: 12px 18px;
+  border-radius: 12px;
+}
+.bredesign .bd-tint-split .bd-cmp-toggle b {
+  font-size: 15px;
+  font-style: normal;
+  letter-spacing: 0.02em;
+}
+.bredesign .bd-tint-split .bd-cmp-toggle s {
+  margin-top: 2px;
+  font-size: 12px;
+}
+.bredesign .bd-tint-split .bd-cmp-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+/* Spec cells: number over a bar. */
+.bredesign .bd-tint-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.bredesign .bd-tint-cell strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--bd-paper);
+}
+.bredesign .bd-tint-bar {
+  display: block;
+  width: min(88px, 80%);
+  height: 5px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(157, 180, 255, 0.15);
+}
+.bredesign .bd-tint-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5b7cff, #9db4ff);
+}
+/* VLT fades dark to light: how much light comes through. */
+.bredesign [data-tint-metric='vlt'] .bd-tint-bar i,
+.bredesign .bd-tint-shade dl > div:first-child .bd-tint-bar i {
+  background: linear-gradient(90deg, #3b4a7a, #d9e1ff);
+}
+/* Prices: a lead label and three tiles. */
+.bredesign .bd-tint-prices {
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+  margin: 12px 0 0;
+}
+.bredesign .bd-tint-prices-lead {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: 8px;
+}
+.bredesign .bd-tint-prices-lead b {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+.bredesign .bd-tint-prices-lead span {
+  max-width: 22ch;
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--bd-ink-2);
+}
+.bredesign .bd-tint-price {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 18px;
+  border: 1px solid var(--bd-rule);
+  border-left: 3px solid var(--bd-accent);
+  border-radius: 12px;
+  background: var(--bd-navy-2);
+}
+.bredesign .bd-tint-price dt {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--bd-ink-2);
+}
+.bredesign .bd-tint-price dd {
+  margin: 0;
+  font-family: var(--bd-body);
+  font-size: clamp(24px, 2.2vw, 30px);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--bd-paper);
+  white-space: nowrap;
+}
+.bredesign .bd-tint-shades,
+.bredesign .bd-tint-guide {
+  display: none;
+}
+@media (max-width: 760px) {
+  .bredesign .bd-tint-split .bd-cmp-toggle { width: 100%; }
+  .bredesign .bd-tint-split .bd-cmp-toggle b { font-size: 13px; white-space: nowrap; }
+  .bredesign #tint-compare-tables .bd-cmp,
+  .bredesign #tint-compare-tables .bd-tint-scroll-hint { display: none; }
+  .bredesign .bd-tint-package { margin-top: 28px; }
+  .bredesign .bd-tint-package-head {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .bredesign .bd-tint-package-head h3 { font-size: 20px; }
+  .bredesign .bd-tint-package-head p { font-size: 12px; white-space: nowrap; }
+  .bredesign .bd-tint-shades {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .bredesign .bd-tint-shade {
+    padding: 12px 14px;
+    border: 1px solid var(--bd-rule);
+    border-radius: 12px;
+    background: var(--bd-navy-2);
+  }
+  .bredesign .bd-tint-shade-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .bredesign .bd-tint-shade-head strong { font-size: 16px; color: var(--bd-paper); }
+  .bredesign .bd-tint-shade-head span { font-size: 12px; color: var(--bd-ink-2); }
+  .bredesign .bd-tint-shade dl {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin: 10px 0 0;
+  }
+  .bredesign .bd-tint-shade dl > div {
+    padding: 7px 4px 8px;
+    border-radius: 8px;
+    background: var(--bd-navy);
+    text-align: center;
+  }
+  .bredesign .bd-tint-shade dt { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--bd-accent); }
+  .bredesign .bd-tint-shade dd { margin: 2px 0 5px; font-size: 15px; font-weight: 700; color: var(--bd-paper); }
+  .bredesign .bd-tint-shade .bd-tint-bar { width: 80%; height: 4px; margin: 0 auto; }
+  .bredesign .bd-tint-guide {
+    display: block;
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--bd-ink-2);
+  }
+  .bredesign .bd-tint-guide b { color: var(--bd-paper); }
+  .bredesign .bd-tint-prices { grid-template-columns: 1fr; gap: 8px; }
+  .bredesign .bd-tint-prices-lead {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 4px 8px;
+    padding: 6px 0 0;
+  }
+  .bredesign .bd-tint-prices-lead span { max-width: none; margin: 0; }
+  .bredesign .bd-tint-price {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+  }
+  .bredesign .bd-tint-price dt { font-size: 13px; }
+  .bredesign .bd-tint-price dd { font-size: 20px; }
+}

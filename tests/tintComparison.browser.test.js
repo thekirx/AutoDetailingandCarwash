@@ -60,25 +60,25 @@ for (const width of [1440, 393, 320]) {
         }
         assert.deepEqual(await page.$$eval(`${selector} [data-tint-metric="uvr"] td`, els => els.map(e => e.textContent)), ['>99%', '>99%', '>99%', '>99%'])
         assert.deepEqual(await page.$$eval(`${selector} [data-tint-metric="warranty"] td`, els => els.map(e => e.textContent)), Array(4).fill(pkg.warranty))
+        // One price per vehicle size, shown once under the table (not repeated per shade).
         for (const [i, vehicle] of ['sedan', 'suv', 'van'].entries()) {
-          assert.deepEqual(await page.$$eval(`${selector} [data-tint-price="${vehicle}"] td`, els => els.map(e => e.textContent)), Array(4).fill(pkg.prices[i]))
+          assert.equal(await page.$eval(`${selector} [data-tint-price="${vehicle}"] dd`, e => e.textContent), pkg.prices[i])
         }
+        assert.equal(await page.$$eval(`${selector} table [data-tint-price]`, els => els.length), 0)
+        // The same figures feed the phone shade list.
+        assert.deepEqual(await page.$$eval(`${selector} .bd-tint-shade-head strong`, els => els.map(e => e.textContent)), pkg.shades)
+        assert.deepEqual(await page.$$eval(`${selector} .bd-tint-shade dl > div:first-child dd`, els => els.map(e => e.textContent)), pkg.specs[0])
       }
       assert.equal(new URL(page.url()).pathname, '/services/tint')
       assert.match(await page.title(), /Tint/)
       assert.equal(await page.$('vite-error-overlay'), null)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
-      if (width < 768) {
-        const scroll = await page.$eval('[data-tint-package="ceramic"] .bd-cmp', el => {
-          const label = el.querySelector('tbody th[scope="row"]')
-          const before = label.getBoundingClientRect().left
-          el.scrollLeft = el.scrollWidth
-          return { scrollLeft: el.scrollLeft, labelShift: label.getBoundingClientRect().left - before }
-        })
-        assert.ok(scroll.scrollLeft > 0, 'Table must scroll horizontally')
-        assert.ok(Math.abs(scroll.labelShift) < 2, 'Row labels must remain visible when scrolling')
-        await page.$eval('[data-tint-package="ceramic"] .bd-cmp', el => { el.scrollLeft = 0 })
-      }
+      // Phones get one row per shade instead of a sideways-scrolling table.
+      const shown = await page.evaluate(() => ({
+        table: getComputedStyle(document.querySelector('[data-tint-package="ceramic"] .bd-cmp')).display !== 'none',
+        list: getComputedStyle(document.querySelector('[data-tint-package="ceramic"] .bd-tint-shades')).display !== 'none',
+      }))
+      assert.deepEqual(shown, width <= 760 ? { table: false, list: true } : { table: true, list: false })
       await page.$eval('#tint-comparison', el => el.scrollIntoView({ block: 'start' }))
       await page.screenshot({ path: `/tmp/hakum-tint-comparison-${width}.png` })
       if (width === 1440) {
@@ -99,7 +99,7 @@ for (const width of [1440, 393, 320]) {
         config.packages.ceramic.warranty = '8 years'
         config.films.C30.tser = 59
         await page.reload({ waitUntil: 'networkidle2' })
-        await page.waitForFunction(() => document.querySelector('[data-tint-package="ceramic"] [data-tint-price="sedan"] td')?.textContent === '₱6,500')
+        await page.waitForFunction(() => document.querySelector('[data-tint-package="ceramic"] [data-tint-price="sedan"] dd')?.textContent === '₱6,500')
         assert.deepEqual(await page.$$eval('[data-tint-package="ceramic"] [data-tint-metric="warranty"] td', els => els.map(e => e.textContent)), ['8 years', '8 years', '8 years', '8 years'])
         assert.equal(await page.$eval('[data-tint-package="ceramic"] [data-tint-metric="tser"] td:nth-of-type(2)', el => el.textContent), '59%')
       }
