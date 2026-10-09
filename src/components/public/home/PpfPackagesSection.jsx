@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { ArrowRight, Check, ChevronDown } from 'lucide-react'
+import { ArrowRight, Check } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { PPF_FILM_BRAND, PPF_PACKAGES } from '../../../data/ppfPackages'
@@ -101,8 +100,6 @@ function CompareCell({ cell }) {
    the difference → book. Packages share one baseline so none reads as a
    required step; the Hakum recommendation is identified with a compact tag. */
 export default function PpfPackagesSection() {
-  const [compareOpen, setCompareOpen] = useState(true)
-
   return (
     <section id="ppf-packages" className="bd-packages" data-service-packages="ppf">
       <div className="bd-shell">
@@ -165,23 +162,14 @@ export default function PpfPackagesSection() {
           })}
         </div>
 
-        <div className="bd-cmp-block bd-reveal">
-          <button
-            type="button"
-            className="bd-cmp-toggle"
-            aria-expanded={compareOpen}
-            aria-controls="ppf-compare"
-            onClick={() => setCompareOpen((open) => !open)}
-          >
-            <span>
-              <b>Compare all four packages</b>
-              <s>Panel by panel, film, warranty, and what comes free</s>
-            </span>
-            <ChevronDown size={20} aria-hidden="true" />
-          </button>
+        <div className="bd-cmp-heading bd-reveal">
+          <span>
+            <b>Compare all four packages</b>
+            <s>Panel by panel, film, warranty, and what comes free</s>
+          </span>
         </div>
 
-        <div className="bd-cmp" id="ppf-compare" hidden={!compareOpen}>
+        <div className="bd-cmp" id="ppf-compare">
           <table>
             <caption className="bd-cmp-caption">Compare Paint Protection Film packages</caption>
             <thead>
