@@ -4,26 +4,55 @@ export const TINT_VEHICLES = [
   { id: 'van', label: 'Full SUV / Van / Commuter' },
 ]
 export const TINT_QUESTIONS = [
-  { key: 'night', title: 'Are you a frequent driver at night?', hint: 'Tell us a little about your time on the road.', choices: [{id:'yes',label:'Yes',description:'Often out after sunset.'},{id:'no',label:'No',description:'Most of my driving is during the day.'}] },
+  { key: 'night', title: 'Do you frequently drive at night?', hint: 'Night driving affects how dark your front windows should be.', choices: [{id:'yes',label:'Yes',description:'I’m often on the road after sunset.'},{id:'no',label:'No',description:'I drive mostly during the day.'}] },
   { key: 'eyesight', title: 'How’s your eyesight condition?', hint: 'Your comfort behind the wheel comes first.', choices: [{id:'excellent',label:'Excellent'},{id:'prescription',label:'Wear prescription'},{id:'poor',label:'Poor condition, especially at night'}] },
   { key: 'priority', title: 'What’s your priority?', hint: 'Choose what matters most to you.', choices: [{id:'privacy',label:'Privacy',description:'More privacy from the outside.'},{id:'visibility',label:'Visibility',description:'A clearer view from inside.'},{id:'balance',label:'A balance of both',description:'Privacy with comfortable visibility.'}] },
   { key: 'vehicle', title: 'What type of vehicle do you drive?', hint: 'We’ll show the full-window package price for your vehicle.', choices: TINT_VEHICLES },
 ]
-export const TINT_DISCLAIMERS = [
-  'This is a recommendation guide based on your answers. Final choice is yours and our installer will confirm on site.',
-  'The VLT shown is for the film only. The final reading on your car will be lower because most car glass already has some tint.',
-  'Darker tint reduces visibility, especially at night and in heavy rain. Please choose according to your comfort and your eyesight.',
-  "Tint rules and enforcement in the Philippines (LTO) may differ by area and can change. It is the vehicle owner’s responsibility to follow current regulations. Please ask us about legal limits before booking.",
-  'Prices are for reference and may change. Final price confirmed at the branch.',
-]
+/* Customer-facing names. The catalog keeps its own short names for staff. */
+export const TINT_PACKAGE_NAMES = { ceramic: 'Nano Ceramic Tint', pro: 'Nano Ceramic Pro Tint' }
+export const tintPackageName = (config, id) => TINT_PACKAGE_NAMES[id] || config.packages[id]?.name || id
+/* Shade names by film key, shared by the Finder and the comparison tables. */
+export const TINT_FILM_SHADES = { 'Clear Bluish': 'Clear Bluish', C30: 'Light Black', C20: 'Medium Black', C08: 'Super Black', HC35: 'Fair Black', HC25: 'Light Black', HC15: 'Medium Black', HC05: 'Super Black' }
+export const tintShade = key => TINT_FILM_SHADES[key] || key
+/* The approved suggestion (client sign-off, 9 Oct 2026): one front/rear shade
+   pair, offered in both tints (Pro first). The first matching tier wins:
+   poor eyesight → lightest; night driver, prescription or visibility → light
+   front over a medium rear; everyone else → medium front over a super black rear.
+   The pairs are catalog options, so their films and prices stay editable. */
+export const TINT_SUGGESTION_TIERS = {
+  lightest: { options: ['OPT-B', 'OPT-A'], title: 'Lightest shades', summary: 'The clearest view we offer, day and night.' },
+  light: { options: ['OPT-C', 'OPT-D'], summary: 'A clearer front for the road, a darker rear for heat and privacy.' },
+  dark: { options: ['OPT-E', 'OPT-F'], summary: 'Strong heat rejection, with real privacy in the back.' },
+}
+export function tintSuggestionTier(answers) {
+  if (answers.eyesight === 'poor') return 'lightest'
+  if (answers.night === 'yes' || answers.eyesight === 'prescription' || answers.priority === 'visibility') return 'light'
+  return 'dark'
+}
+/* "7 years" → "7-year warranty", "Lifetime" → "Lifetime warranty". */
+export const tintWarranty = w => `${String(w).replace(/^(\d+) years?$/i, '$1-year')} warranty`
 export const tintPeso = n => `₱${Number(n).toLocaleString('en-PH')}`
 export function recommendTint(config, answers) {
-  const rule = config.rules.find(r => r.eyesight === answers.eyesight && (r.priority === answers.priority || r.priority === 'any'))
-  if (!rule || !TINT_VEHICLES.some(v => v.id === answers.vehicle)) return []
-  return rule.options.map(id => {
+  if (TINT_QUESTIONS.some(q => !q.choices.some(c => c.id === answers?.[q.key]))) return []
+  return TINT_SUGGESTION_TIERS[tintSuggestionTier(answers)].options.filter(id => config.options[id]).map(id => {
     const option = config.options[id]
     return { id, ...option, price: config.packages[option.package].prices[answers.vehicle] }
   })
+}
+/* The pick, its headline and the reasons, all from the customer's own answers. */
+export function suggestTint(config, answers) {
+  const options = recommendTint(config, answers)
+  if (!options.length) return null
+  const tier = TINT_SUGGESTION_TIERS[tintSuggestionTier(answers)]
+  const lead = options[0]
+  const title = tier.title || (lead.front === lead.rear ? `${tintShade(lead.front)} on every window` : `${tintShade(lead.front)} front · ${tintShade(lead.rear)} rear`)
+  const reasons = [
+    answers.night === 'yes' ? ['You often drive at night', 'so the front windows stay lighter for a clearer view of the road.'] : ['You drive mostly during the day', 'so a darker front is still comfortable.'],
+    answers.eyesight === 'poor' ? ['Your eyesight is weaker at night', 'so we chose the lightest shades on every window.'] : answers.eyesight === 'prescription' ? ['You wear prescription glasses', 'so we kept the front lighter to avoid strain.'] : ['Your eyesight is excellent', 'so darker shades won’t make the road hard to see.'],
+    answers.priority === 'privacy' ? ['You chose privacy', 'so the rear windows get the darker shade.'] : answers.priority === 'visibility' ? ['You chose visibility', 'so we leaned towards lighter shades.'] : ['You wanted a balance', 'so the front is lighter than the rear.'],
+  ]
+  return { options, title, summary: tier.summary, reasons }
 }
 export function orderedBenefits(config, answers) {
   const first = config.benefitRules.find(r => r.eyesight === answers.eyesight && r.priority === answers.priority)?.benefits || []

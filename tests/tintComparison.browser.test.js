@@ -34,14 +34,15 @@ for (const width of [1440, 393, 320]) {
       assert.ok(await page.$('#tint-comparison'), 'Tint page must offer the full comparison before completing the quiz')
       assert.equal(await page.$$eval('#tint-comparison table', els => els.length), 2)
       assert.ok(await page.$('#tint-comparison #tint-certification'), 'Certification belongs with the comparison tables')
-      assert.deepEqual(await page.$$eval('#tint-certification .cert-films li', els => els.map(e => e.textContent)), ['HC35 NANO', 'HC25 NANO', 'HC15 NANO', 'HC05 NANO'])
-      assert.deepEqual(await page.$$eval('#tint-certification .cert-links a', els => els.map(e => e.href)), [
-        'https://www.skincancer.org/recommended-products/',
-        'https://www.clearpro.com/project/window-film-certified-by-the-skincancerfoundation-for-ultimate-uv-protection/',
-      ])
+      // Every film carries the seal, so no per-film list; one link to the Foundation's listing.
+      assert.equal(await page.$('#tint-certification .cert-films'), null)
+      assert.deepEqual(await page.$$eval('#tint-certification a', els => els.map(e => e.href)), ['https://www.skincancer.org/recommended-products/'])
+      assert.deepEqual(await page.$$eval('#tint-comparison [data-tint-package] h3', els => els.map(e => e.textContent)), ['Nano Ceramic Tint', 'Nano Ceramic Pro Tint'])
+      assert.equal(await page.$eval('#tint-comparison .bd-cmp-toggle', e => e.getAttribute('aria-expanded')), 'true')
       await page.$eval('#tint-certification', el => el.scrollIntoView({ block: 'center' }))
       await page.waitForFunction(() => { const img = document.querySelector('#tint-certification img'); return img.complete && img.naturalWidth > 0 })
-      assert.equal(await page.evaluate(() => document.querySelector('#tint-certification').getBoundingClientRect().top >= document.querySelector('[data-tint-package="pro"]').getBoundingClientRect().bottom), true)
+      // The certificate comes before the tables.
+      assert.equal(await page.evaluate(() => document.querySelector('#tint-certification').getBoundingClientRect().bottom <= document.querySelector('[data-tint-package="ceramic"]').getBoundingClientRect().top), true)
       const certification = await page.$('#tint-certification .cert-card')
       const cardHeight = await certification.evaluate(el => Math.ceil(el.getBoundingClientRect().height))
       await page.setViewport({ width, height: Math.max(900, cardHeight + 220) })
@@ -88,6 +89,10 @@ for (const width of [1440, 393, 320]) {
       await page.$eval('.tf-actions .bd-btn', el => el.click())
       await page.waitForFunction(() => document.querySelector('.tf-progress').getAttribute('aria-valuenow') === '2')
       assert.ok(await page.$('#tint-comparison'), 'Comparison remains available while using the quiz')
+      await page.click('#tint-comparison .bd-cmp-toggle')
+      assert.equal(await page.$eval('#tint-compare-tables', e => e.hidden), true)
+      await page.click('#tint-comparison .bd-cmp-toggle')
+      assert.equal(await page.$eval('#tint-compare-tables', e => e.hidden), false)
       if (width === 1440) {
         config.packages.ceramic.prices.sedan = 6500
         config.packages.ceramic.warranty = '8 years'

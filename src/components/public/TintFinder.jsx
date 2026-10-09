@@ -1,10 +1,10 @@
 import TintComparison from './TintComparison'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, RotateCcw, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Info, RotateCcw, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { isApprovalPreview } from '../../lib/approvalPreview'
 import { useTintFinderConfig } from '../../lib/tintFinderData'
-import { TINT_QUESTIONS, TINT_VEHICLES, TINT_DISCLAIMERS, recommendTint, orderedBenefits, tintPeso } from '../../lib/tintFinder'
+import { TINT_QUESTIONS, TINT_VEHICLES, orderedBenefits, suggestTint, tintPackageName, tintPeso, tintShade, tintWarranty } from '../../lib/tintFinder'
 import { usePublicBranches } from '../../lib/branches'
 import { submitPublicInquiry } from '../../lib/publicInquiryApi'
 import tintPhoto from '../../assets/services/tint-toyota86.webp'
@@ -12,10 +12,36 @@ import './TintFinder.css'
 
 const icons = import.meta.glob('../../assets/tint-finder/icon-*.png', {eager:true,query:'?url',import:'default'})
 const seal = new URL('../../assets/tint-finder/seal.png', import.meta.url).href
-const specLabels = [['vlt','VLT','Light through the film · lower is darker'],['tser','TSER','Total solar heat blocked · higher is cooler'],['irr','IRR','Infrared heat rays blocked'],['uvr','UVR','UV protection for skin and interior']]
+const specLabels = [['vlt','VLT'],['tser','TSER'],['irr','IRR'],['uvr','UVR']]
+const FREEBIES = [['wash','Premium Carwash'],['shield','Bactozero'],['peel','Old tint removal']]
 
-function FilmSpecs({film,zone}) {
-  return <div className="tf-film"><div className="tf-film-heading"><span>{zone}</span><strong>{film.name}</strong></div><dl>{specLabels.map(([key,label,caption])=><div key={key}><dt>{label}<small>{caption}</small></dt><dd>{film[key]}%</dd></div>)}</dl></div>
+/* The shade and its four numbers stay on the card; what the numbers mean is
+   one legend line under the cards. */
+function ZoneFilm({config,filmKey,zone}) {
+  const film=config.films[filmKey]
+  return <div className="tf-zone"><span className="tf-zone-label">{zone}</span><strong>{tintShade(filmKey)} <em>{film.name.replace(/ Nano$/,'')}</em></strong>
+    <dl className="tf-metrics">{specLabels.map(([key,label])=><div key={key}><dt>{label}</dt><dd>{film[key]}%</dd></div>)}</dl></div>
+}
+/* Hover or keyboard focus opens it on desktop; a tap toggles it on touch. */
+function WhySuggestion({reasons}) {
+  const [open,setOpen]=useState(false)
+  return <div className={`tf-why${open?' is-open':''}`}>
+    <button type="button" className="tf-why-btn" aria-expanded={open} aria-controls="tf-why-body" onClick={()=>setOpen(o=>!o)}>Why this suggestion? <Info size={16} aria-hidden="true"/></button>
+    <div className="tf-why-body" id="tf-why-body" role="region" aria-label="Why we suggested this tint"><b>Based on your answers</b><ul>{reasons.map(([lead,rest])=><li key={lead}><strong>{lead}</strong>, {rest}</li>)}</ul></div>
+  </div>
+}
+function FreebieIcon({name}) {
+  const common={viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true}
+  if(name==='wash') return <svg {...common}><path d="M5 17h14l-1.5-5.5A2 2 0 0 0 15.6 10H8.4a2 2 0 0 0-1.9 1.5L5 17z"/><path d="M5 17v2M19 17v2"/><circle cx="8" cy="17" r="1"/><circle cx="16" cy="17" r="1"/><path d="M8 3c0 1.5-1 2-1 3a1 1 0 0 0 2 0c0-1-1-1.5-1-3zM12 2c0 1.5-1 2-1 3a1 1 0 0 0 2 0c0-1-1-1.5-1-3zM16 3c0 1.5-1 2-1 3a1 1 0 0 0 2 0c0-1-1-1.5-1-3z"/></svg>
+  if(name==='shield') return <svg {...common}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 10h.01M15 9h.01M12 13h.01M10 15h.01M14 15h.01"/></svg>
+  return <svg {...common}><rect x="3" y="4" width="14" height="16" rx="2"/><path d="M17 8l4 3-4 3"/><path d="M7 9h6M7 13h4"/></svg>
+}
+function TintFreebies() {
+  return <section className="tf-freebies" aria-labelledby="tf-freebies-title">
+    <p className="tf-freebies-kicker">Included at no extra cost</p>
+    <h3 id="tf-freebies-title">Free with every <em>tint package.</em></h3>
+    <ul>{FREEBIES.map(([icon,label])=><li key={label}><span className="tf-freebie-icon"><FreebieIcon name={icon}/></span><strong>{label}</strong><em>Free</em></li>)}</ul>
+  </section>
 }
 function TintBenefits({config,answers,options}) {
   const showSeal = config.sealEnabled && options.every(o=>config.sealVerifiedPackages.includes(o.package))
@@ -52,7 +78,7 @@ function TintBooking({option,config,answers,onCancel}) {
   }
   return <div className="tf-booking" id="tint-booking">
     <h3 ref={heading} tabIndex={-1}>{sent?(isApprovalPreview?'Preview complete.':'Your request is with Hakum.'):'Book your tint package.'}</h3>
-    <p>{config.packages[option.package].name} · {option.front} front / {option.rear} rear · {tintPeso(option.price)}</p>
+    <p>{tintPackageName(config,option.package)} · {tintShade(option.front)} front / {tintShade(option.rear)} rear · {tintPeso(option.price)}</p>
     {sent ? <div role="status"><p>{isApprovalPreview ? 'This is a client approval demo. Nothing was sent or saved, and no appointment was created.' : 'Our team will contact you to confirm availability, your film choice and the final price. Your preferred date is a request until the branch confirms it.'}</p><button className="bd-btn bd-btn-quiet" onClick={onCancel}>Back to my results</button></div> : <form onSubmit={submit}>
       <div className="tf-form-grid">
         <label>Your name<input autoComplete="name" required maxLength={120} value={form.name} onChange={e=>set('name',e.target.value)} /></label>
@@ -82,13 +108,14 @@ export default function TintFinder() {
     hasMoved.current=true
   },[step])
   const q=TINT_QUESTIONS[step]
-  const results=step===4?recommendTint(config,answers):[]
+  const suggestion=step===4?suggestTint(config,answers):null
+  const results=suggestion?.options || []
   const move=n=>{setSelected(n<4?answers[TINT_QUESTIONS[n].key] || null:null);setBooking(null);setStep(n)}
   const next=()=>{setAnswers(a=>({...a,[q.key]:selected}));setSelected(answers[TINT_QUESTIONS[step+1]?.key] || null);setStep(s=>s+1)}
   return <><section className="tf-section" id="tint-finder" aria-labelledby="tint-finder-title">
     {isApprovalPreview && <aside className="tf-approval-review" aria-label="Client design choices"><span>Client review · A / Original</span><nav><a href="/tint-designs/index.html">All designs</a>{['B','C','D','E'].map(id=><a key={id} href={`/tint-designs/option-${id.toLowerCase()}.html`}>{id}</a>)}</nav></aside>}
     <div className="bd-shell">
-      <div className="tf-section-head"><div><p className="bd-eyebrow">Find your film</p><h2 id="tint-finder-title">Your drive. <em>Your tint.</em></h2></div><p>Four quick questions. The right combinations for your comfort, priorities and vehicle.</p></div>
+      <div className="tf-section-head"><p className="bd-eyebrow" id="tint-finder-title">Tint Finder</p><p>Four quick questions. We’ll suggest a front and rear shade, in both of our tints.</p></div>
       {step<4 ? <div className="tf-quiz">
         <div className="tf-question">
           <div className="tf-progress-label"><span>Step {step+1} of 4</span><span>Tint Finder</span></div>
@@ -99,22 +126,23 @@ export default function TintFinder() {
         </div>
         <aside className="tf-photo"><img src={tintPhoto} alt="Nano ceramic tint fitted to a Toyota 86 at Hakum"/><div><ShieldCheck size={26}/><h3>Comfort starts<br/>with the right film.</h3><p>Heat protection. Clear choices.<br/>Fitted by Hakum.</p></div></aside>
       </div> : <div className="tf-results">
-        <div className="tf-results-head"><div><h3 ref={title} tabIndex={-1}>Your tint matches.</h3><p>{TINT_VEHICLES.find(v=>v.id===answers.vehicle)?.label} · Full package, all windows including the windshield.</p></div><button className="tf-back" onClick={()=>move(3)}><ArrowLeft size={17}/>Edit answers</button></div>
+        <div className="tf-results-head"><h3 ref={title} tabIndex={-1}>Your suggested tint.</h3><button className="tf-back" onClick={()=>move(3)}><ArrowLeft size={17}/>Edit answers</button></div>
         <div className="tf-answer-summary">{TINT_QUESTIONS.map(v=><span key={v.key}><small>{v.key==='night'?'Night driving':v.key==='eyesight'?'Eyesight':v.key==='priority'?'Priority':'Vehicle'}</small>{v.choices.find(c=>c.id===answers[v.key])?.label}</span>)}</div>
-        <div className="tf-options">{results.map((o,i)=>{
-          const pkg=config.packages[o.package]
-          return <article key={o.id} className="tf-option" data-tint-option={o.id}>
-            <div className="tf-option-top"><span>Option {i+1} of {results.length}</span><span><ShieldCheck size={15}/>{pkg.warranty} warranty</span></div>
-            <h3>{pkg.name}</h3><p className="tf-match-reason">{answers.eyesight==='poor'?'Chosen with visibility and driving comfort in mind.':answers.priority==='privacy'?'A darker combination for your privacy preference.':'A combination that balances clarity, comfort and privacy.'}</p>
-            <div className="tf-price"><strong>{tintPeso(o.price)}</strong><span>Your vehicle · all windows</span></div>
-            <FilmSpecs film={config.films[o.front]} zone="Front zone"/><p className="tf-zone-caption">Windshield, driver and front passenger windows</p>
-            <FilmSpecs film={config.films[o.rear]} zone="Rear zone"/><p className="tf-zone-caption">Rear passenger windows, quarter glass and back glass</p>
-            <details className="tf-price-list"><summary>Prices by vehicle size</summary><table><caption>{pkg.name} · Full-window package</caption><tbody>{TINT_VEHICLES.map(v=><tr key={v.id} className={v.id===answers.vehicle?'is-current':''}><th scope="row">{v.label}{v.id===answers.vehicle?' · Your vehicle':''}</th><td>{tintPeso(pkg.prices[v.id])}</td></tr>)}</tbody></table></details>
-            <div className="tf-option-actions"><button className="bd-btn bd-btn-primary" onClick={()=>setBooking(o)}>Book this package<ArrowRight size={17}/></button><a className="bd-btn bd-btn-quiet" href={`mailto:sales@hakumautocare.com?subject=${encodeURIComponent("Tint package inquiry")}&body=${encodeURIComponent(`${pkg.name} — ${o.front} front / ${o.rear} rear\n${TINT_VEHICLES.find(v=>v.id===answers.vehicle)?.label} — ${tintPeso(o.price)}\nI would like to ask about this tint package.`)}`}>Message us</a></div>
+        {suggestion && <div className="tf-pick"><span className="tf-pick-tag">★ Our pick for you</span><h4>{suggestion.title}</h4><p>{suggestion.summary}</p><WhySuggestion reasons={suggestion.reasons}/></div>}
+        <div className="tf-options">{results.map(o=>{
+          const vehicle=TINT_VEHICLES.find(v=>v.id===answers.vehicle)?.label
+          return <article key={o.id} className={`tf-option${o.package==='pro'?' is-pro':''}`} data-tint-option={o.id}>
+            <h3>{tintPackageName(config,o.package)}</h3>
+            <div className="tf-warranty"><ShieldCheck size={22} aria-hidden="true"/><span><small>Covered by</small>{tintWarranty(config.packages[o.package].warranty)}</span></div>
+            <div className="tf-cert"><img src={seal} alt="" width="58" height="105" loading="lazy"/><p><strong>Skin Cancer Foundation</strong>Seal of Recommendation · effective sun protection</p></div>
+            {o.front===o.rear ? <ZoneFilm config={config} filmKey={o.front} zone="All windows"/> : <div className="tf-zones"><ZoneFilm config={config} filmKey={o.front} zone="Front windows"/><ZoneFilm config={config} filmKey={o.rear} zone="Rear windows"/></div>}
+            <div className="tf-price"><span>Your {vehicle} · all windows incl. windshield</span><strong>{tintPeso(o.price)}</strong></div>
+            <div className="tf-option-actions"><button className="bd-btn bd-btn-primary" onClick={()=>setBooking(o)}>Book this package<ArrowRight size={17}/></button></div>
           </article>
         })}</div>
-        {answers.night==='yes' && answers.eyesight==='excellent' && answers.priority==='privacy' && <p className="tf-advisory">Driving often at night? Ask our installer about a lighter front film for more comfortable visibility.</p>}
-        <div className="tf-disclaimers"><h3>Before you choose</h3>{TINT_DISCLAIMERS.map(t=><p key={t}>{t}</p>)}</div>
+        <p className="tf-legend"><b>VLT</b> light let through (lower is darker) · <b>TSER</b> total heat blocked · <b>IRR</b> infrared heat blocked · <b>UVR</b> UV blocked</p>
+        <TintFreebies/>
+        <p className="tf-fine">Your branch confirms the final shade and price. Ask us about current LTO tint limits before you book.</p>
         {booking && <TintBooking key={booking.id} option={booking} config={config} answers={answers} onCancel={()=>setBooking(null)}/>}
         <TintBenefits config={config} answers={answers} options={results}/>
         <button className="tf-back tf-restart" onClick={()=>{setAnswers({});move(0);setSelected(null)}}><RotateCcw size={17}/>Start again</button>

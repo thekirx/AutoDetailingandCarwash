@@ -2386,7 +2386,6 @@
   opacity: 0;
   pointer-events: none;
 }
-.bredesign .bd-hero-cta { justify-self: center; }
 .bredesign .bd-hero::after { transition: opacity 0.35s ease; }
 .bredesign .bd-hero.is-logo-moment::after { opacity: 0.25; }
 @media (prefers-reduced-motion: reduce) {
@@ -4520,4 +4519,53 @@
 @media (max-width: 620px) {
   .bredesign .bd-services-head { align-items: start; flex-direction: column; }
   .bredesign .bd-services-rail { --col: 82%; }
+}
+
+/* ---- "Talk to us": one floating Messenger button per service page --------
+   Sits under the site's pop-ups (z 90+) and clears the phone's home bar. */
+.bredesign .bd-talk-fab {
+  position: fixed;
+  z-index: 80;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 22px 0 16px;
+  border-radius: 999px;
+  background: var(--bd-paper);
+  color: var(--bd-navy);
+  font-family: var(--bd-display);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), 0 0 0 4px rgba(157, 180, 255, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.bredesign .bd-talk-fab svg {
+  width: 26px;
+  height: 26px;
+  color: #0866ff;
+}
+.bredesign .bd-talk-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(157, 180, 255, 0.4);
+}
+.bredesign .bd-talk-fab:focus-visible {
+  outline: 3px solid var(--bd-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .bredesign .bd-talk-fab {
+    min-height: 52px;
+    padding: 0 18px 0 14px;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bredesign .bd-talk-fab { transition: none; }
+  .bredesign .bd-talk-fab:hover { transform: none; }
 }

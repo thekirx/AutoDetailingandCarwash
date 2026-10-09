@@ -2,17 +2,8 @@
 .bredesign .bd-tint-comparison {
   scroll-margin-top: 110px;
 }
-.bredesign .bd-tint-comparison-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-}
 .bredesign .bd-tint-comparison-head h2 {
-  margin-bottom: 20px;
-}
-.bredesign .bd-tint-comparison-head > a {
-  flex-shrink: 0;
+  margin-bottom: 0;
 }
 .bredesign .bd-tint-package {
   margin-top: clamp(36px, 5vw, 64px);
@@ -80,7 +71,6 @@
   line-height: 1.6;
 }
 @media (max-width: 767px) {
-  .bredesign .bd-tint-comparison-head,
   .bredesign .bd-tint-package-head {
     flex-direction: column;
     align-items: flex-start;

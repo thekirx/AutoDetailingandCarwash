@@ -1,5 +1,7 @@
+import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import TintCertification from './TintCertification'
-import { TINT_VEHICLES, tintPeso } from '../../lib/tintFinder'
+import { TINT_VEHICLES, tintPackageName, tintPeso } from '../../lib/tintFinder'
 import './home/PpfPackagesSection.css'
 import './TintComparison.css'
 
@@ -24,33 +26,51 @@ const METRICS = [
   { id: 'uvr', label: 'UVR', description: 'Ultraviolet rejection' },
 ]
 
-/** Shares the Finder's loaded catalog so specs and prices always agree. */
+/** Shares the Finder's loaded catalog so specs and prices always agree.
+ *  The certificate leads; the tables sit in the same open/close panel as the
+ *  PPF comparison, and begin open. */
 export default function TintComparison({ config }) {
+  const [open, setOpen] = useState(true)
   return (
     <section id="tint-comparison" className="bd-packages bd-tint-comparison" aria-labelledby="tint-comparison-title">
       <div className="bd-shell">
         <div className="bd-tint-comparison-head">
-          <div>
-            <p className="bd-eyebrow">Nano ceramic tint packages</p>
-            <h2 id="tint-comparison-title">Compare every <em>tint shade.</em></h2>
-            <p className="bd-pk-sub">Light, heat protection, warranty, and pricing. All eight films, side by side.</p>
-          </div>
-          <a className="bd-btn bd-btn-quiet" href="#tint-finder">Find my tint</a>
+          <p className="bd-eyebrow">Nano ceramic tint packages</p>
+          <h2 id="tint-comparison-title">Compare every <em>tint shade.</em></h2>
         </div>
 
+        <TintCertification />
+
+        <div className="bd-cmp-block">
+          <button
+            type="button"
+            className="bd-cmp-toggle"
+            aria-expanded={open}
+            aria-controls="tint-compare-tables"
+            onClick={() => setOpen((value) => !value)}
+          >
+            <span>
+              <b>Compare all eight shades</b>
+              <s>Light, heat, UV, warranty and price, side by side</s>
+            </span>
+            <ChevronDown size={20} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div id="tint-compare-tables" hidden={!open}>
         {PACKAGES.map(({ id, films }) => {
           const pkg = config.packages[id]
           const titleId = `tint-compare-${id}`
           return (
             <div className="bd-tint-package" data-tint-package={id} key={id}>
               <div className="bd-tint-package-head">
-                <h3 id={titleId}>{pkg.name}</h3>
-                <p>From {tintPeso(pkg.prices.sedan)} <span aria-hidden="true">·</span> {pkg.warranty} warranty</p>
+                <h3 id={titleId}>{tintPackageName(config, id)}</h3>
+                <p>{pkg.warranty} warranty</p>
               </div>
               <p className="bd-tint-scroll-hint">Swipe or scroll sideways to compare all four shades.</p>
               <div className="bd-cmp" role="region" aria-labelledby={titleId} tabIndex={0}>
                 <table>
-                  <caption className="bd-cmp-caption">{pkg.name}: film specifications, warranty, and full-window package prices</caption>
+                  <caption className="bd-cmp-caption">{tintPackageName(config, id)}: film specifications, warranty, and full-window package prices</caption>
                   <thead>
                     <tr>
                       <th scope="col">Compare shades</th>
@@ -89,7 +109,7 @@ export default function TintComparison({ config }) {
             </div>
           )
         })}
-        <TintCertification packageName={config.packages.pro.name} />
+        </div>
         <p className="bd-tint-comparison-note">Prices cover all windows, including the windshield. VLT values are for the film only; factory glass affects the final reading. Final price confirmed at the branch.</p>
       </div>
     </section>

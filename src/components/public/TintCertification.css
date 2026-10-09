@@ -1,4 +1,4 @@
-.bredesign .tint-certification { margin-top: 36px; scroll-margin-top: 110px; }
+.bredesign .tint-certification { margin-top: 28px; scroll-margin-top: 110px; }
 .bredesign .tint-certification .cert-card {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
@@ -30,7 +30,7 @@
 .bredesign .tint-certification .cert-films ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 28px; padding: 0; list-style: none; }
 .bredesign .tint-certification .cert-films li { padding: 8px 12px; border: 1px solid #334474; border-radius: 6px; color: var(--bd-paper); font-size: 12px; font-weight: 700; }
 .bredesign .tint-certification .cert-links { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; }
-.bredesign .tint-certification .cert-source { font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+.bredesign .tint-certification .cert-source { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 14px; font-weight: 700; color: var(--bd-paper); text-decoration: underline; text-underline-offset: 4px; }
 .bredesign .tint-certification .cert-links .bd-btn { min-height: 48px; font-size: 12px; padding-inline: 20px; }
 .bredesign .tint-certification a:focus-visible { outline: 2px solid var(--bd-accent); outline-offset: 5px; }
 @media (max-width: 760px) {
