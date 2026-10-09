@@ -14,6 +14,7 @@ export default [
       'dev-dist',
       'docs/_assets/**',
       'design-mocks/**',
+      'tmp-*.mjs',
     ],
   },
   {
