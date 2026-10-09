@@ -30,6 +30,7 @@ const SUITES = [
   'tests/customerRemountIntegrity.test.js',
   'tests/remountBlastRadiusProbe.test.js',
   'tests/dailySheetApprovalLadder.test.js',
+  'tests/probeReadIntegrity.test.js',
 ]
 
 function runSuite() {
@@ -474,6 +475,27 @@ const ALL_MUTATIONS = [
     name: 'any role can reopen an approved daily sheet',
     from: / {2}if public\.current_user_role\(\) is distinct from 'BossMich' then\r?\n {4}raise exception using errcode = '42501', message = 'Only Super Admin may reopen an approved sheet';\r?\n {2}end if;\r?\n/,
     to: '',
+  },
+  // Read-only probes. Three of these shipped a fabricated `{ data: null }`
+  // into readOrFail and printed a clean "0 affected" for tables holding
+  // thousands of rows, which is how a live data-loss bug becomes a blank.
+  {
+    file: 'scripts/probe-branch-residue.mjs',
+    name: 'a probe fabricates its result into readOrFail again',
+    from: "const rows = readOrFail(`${table} read`, res) || []",
+    to: 'const rows = readOrFail(`${table} read`, { data: null, error: res.error }) || []',
+  },
+  {
+    file: 'scripts/probe-tl-crew-scope.mjs',
+    name: 'the crew-scope probe fabricates its staff read again',
+    from: "const staff = readOrFail('staff_profiles', await db.from('staff_profiles').select('id, full_name, role, branch_slug, is_active').limit(1000)) || []",
+    to: "const staff = readOrFail('staff_profiles', { data: null, error: null }) || []",
+  },
+  {
+    file: 'scripts/probe-branch-residue.mjs',
+    name: 'the branch-residue probe stops reading a real branch row count',
+    from: /const branches = readOrFail\('branches',[\s\S]{0,160}?\) \|\| \[\]/,
+    to: "const branches = readOrFail('branches', { data: null, error: null }) || []",
   },
   {
     file: 'scripts/check-sheet-ui.mjs',
