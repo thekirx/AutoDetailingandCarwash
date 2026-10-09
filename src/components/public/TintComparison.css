@@ -80,3 +80,67 @@
   .bredesign .bd-tint-comparison thead th:first-child { width: 170px; }
   .bredesign .bd-tint-comparison tbody th { font-size: 13px; }
 }
+
+/* The panel button carries its own look rather than borrowing the PPF
+   section's: without these rules the subtitle fell back to <s>'s default
+   strike-through and the button read as plain text. */
+.bredesign .bd-tint-comparison .bd-cmp-block {
+  margin-top: 34px;
+}
+.bredesign .bd-tint-comparison .bd-cmp-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  padding: 20px 22px;
+  border: 1px solid var(--bd-rule);
+  border-radius: 14px;
+  background: var(--bd-navy-2);
+  color: var(--bd-paper);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.bredesign .bd-tint-comparison .bd-cmp-toggle:hover {
+  border-color: var(--bd-accent);
+  background: #0d1a52;
+}
+.bredesign .bd-tint-comparison .bd-cmp-toggle:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 3px;
+}
+.bredesign .bd-tint-comparison .bd-cmp-toggle b {
+  display: block;
+  font-family: var(--bd-display);
+  font-size: clamp(1.35rem, 2.2vw, 2rem);
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  color: var(--bd-paper);
+}
+.bredesign .bd-tint-comparison .bd-cmp-toggle s {
+  display: block;
+  margin-top: 5px;
+  color: var(--bd-ink-2);
+  font-size: 13px;
+  text-decoration: none;
+}
+.bredesign .bd-tint-comparison .bd-cmp-toggle svg {
+  flex: none;
+  color: var(--bd-accent);
+  transition: transform 0.25s ease;
+}
+.bredesign .bd-tint-comparison .bd-cmp-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.bredesign .bd-tint-comparison #tint-compare-tables {
+  margin-top: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bredesign .bd-tint-comparison .bd-cmp-toggle,
+  .bredesign .bd-tint-comparison .bd-cmp-toggle svg {
+    transition: none;
+  }
+}
