@@ -61,13 +61,31 @@ test('the seed plan creates no pos_handoffs, so hand-off rows are never seed out
   )
 })
 
-test('the cleanup leaves pos_handoffs and transactions behind', () => {
-  // Recorded as a known gap, not endorsed. If someone extends the wipe to
-  // cover them, this test should be updated deliberately rather than by accident.
-  assert.doesNotMatch(WIPE, /delete\s+from\s+public\.pos_handoffs/i,
-    'the wipe no longer removes pos_handoffs — revisit BUG-066 and confirm no hand-off can dangle')
-  assert.doesNotMatch(WIPE, /delete\s+from\s+public\.transactions/i,
-    'the wipe no longer removes transactions — revisit BUG-066')
+test('the cleanup removes hand-offs and transactions only when they belong to seed data', () => {
+  // Was: "the cleanup leaves pos_handoffs and transactions behind — recorded as a known
+  // gap, not endorsed. If someone extends the wipe to cover them, this test should be
+  // updated deliberately rather than by accident." Deliberate update, 2026-10-10 (BUG-066).
+  //
+  // The gap closed by deleting them, but the property worth keeping is narrower than
+  // "never touch them": these tables hold the real hand-off history (BUG-061), so a
+  // blanket delete would be far worse than the orphan it fixes. The deletes must stay
+  // scoped to rows that actually belong to a seed booking, derived through a temp table.
+  for (const [table, temp] of [['pos_handoffs', 'seed_handoffs'], ['transactions', 'seed_transactions']]) {
+    assert.match(
+      WIPE,
+      new RegExp(`delete\\s+from\\s+public\\.${table}\\s+where\\s+id\\s+in\\s*\\(select id from ${temp}\\)`, 'i'),
+      `${table} must be deleted through ${temp}, never by an unscoped delete`,
+    )
+    assert.doesNotMatch(
+      WIPE,
+      new RegExp(`delete\\s+from\\s+public\\.${table}\\s*(;|where\\s+(?!id\\s+in))`, 'i'),
+      `${table} must never be deleted without a seed-derived scope`,
+    )
+  }
+  // The seed plan never writes a hand-off (the test above), so both temp tables are
+  // empty today. These deletes are a trap-closure, not a data repair — and the scoping
+  // is what keeps them harmless if the seed ever does gain hand-off output.
+  assert.match(WIPE, /create temp table seed_handoffs[\s\S]*?booking_id in \(select id from seed_bookings\)/i)
 })
 
 test('the sheet probe compares against the app, not a restatement of it', () => {
