@@ -192,6 +192,59 @@ describe('no policy leaves Branch Admin able to destroy customer or money data',
     }
   })
 
+  it('removing Branch Admin transaction writes is safe — RLS never applied there', () => {
+    // The queue hands a ticket to payment by inserting into `transactions`. If
+    // that insert ran as the caller, narrowing the policy would break the
+    // daily handoff. Every definition of that function is SECURITY DEFINER, so
+    // the write bypasses RLS entirely and the narrowing costs nothing.
+    //
+    // This is the "don't destroy daily operations" guarantee for the migration:
+    // if someone later adds a client-side transaction write, this fails rather
+    // than the POS breaking in production after the migration runs.
+    const files = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort()
+    const writers = []
+    for (const f of files) {
+      const body = readFileSync(join(migrationsDir, f), 'utf8')
+      for (const part of body.split(/(?=create\s+or\s+replace\s+function)/i)) {
+        if (!/insert\s+into\s+(public\.)?transactions/i.test(part)) continue
+        const name = /create\s+or\s+replace\s+function\s+([\w.]+)/i.exec(part)
+        writers.push({ file: f, fn: name ? name[1] : '(not in a function)', definer: /security\s+definer/i.test(part) })
+      }
+    }
+    assert.ok(writers.length > 0, 'no writer found — the parse is wrong, not the schema')
+    const invoker = writers.filter((w) => !w.definer)
+    assert.deepEqual(
+      invoker.map((w) => `${w.fn} in ${w.file}`),
+      [],
+      'a transaction write runs as the caller, so narrowing the RLS policy would break it',
+    )
+  })
+
+  it('nothing in the app reads or writes `transactions` through the client', () => {
+    // Confirms the same thing from the other side: no direct PostgREST call can
+    // be relying on a grant this migration removes.
+    const direct = []
+    for (const dir of ['src', 'api', 'server']) {
+      let files = []
+      try {
+        files = readdirSync(join(root, dir), { recursive: true })
+      } catch {
+        continue
+      }
+      for (const rel of files) {
+        if (!/\.(js|jsx|mjs)$/.test(rel)) continue
+        let text
+        try {
+          text = readFileSync(join(root, dir, rel), 'utf8')
+        } catch {
+          continue
+        }
+        if (/from\('transactions'\)/.test(text)) direct.push(`${dir}/${rel}`)
+      }
+    }
+    assert.deepEqual(direct, [], `direct client access to transactions: ${direct.join(', ')}`)
+  })
+
   it('Branch Admin keeps the access its job needs', () => {
     // Removing DELETE must not break the queue and POS, which create and update
     // customers all day. The grant is a role array, not is_admin(), so assert on

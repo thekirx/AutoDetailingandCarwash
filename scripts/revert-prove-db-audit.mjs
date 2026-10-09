@@ -33,6 +33,7 @@ const SUITES = [
   'tests/probeReadIntegrity.test.js',
   'tests/dailySheetIsManualTask.test.js',
   'tests/sheetPostedExpenseProtection.test.js',
+  'tests/adminWritePolicyScope.test.js',
 ]
 
 function runSuite() {
@@ -556,6 +557,22 @@ const ALL_MUTATIONS = [
     name: 'Branch Admin gets expense DELETE back',
     from: /create policy "expenses_delete"\r?\non public\.expenses[\s\S]{0,400}?;/,
     to: 'create policy "expenses_delete"\r\non public.expenses\r\nfor delete\r\nto authenticated\r\nusing (\r\n  public.is_admin()\r\n  or public.is_super_admin()\r\n);',
+  },
+  // The drop migration removes Branch Admin's transaction writes. That is only
+  // safe while every write to `transactions` runs as a definer and no app code
+  // reaches the table through PostgREST — otherwise narrowing RLS breaks the
+  // daily queue handoff.
+  {
+    file: 'supabase/migrations/20260808190000_visit_group_payment_admin_override.sql',
+    name: 'the queue handoff stops being SECURITY DEFINER, so RLS would apply to it',
+    from: /security\s+definer/i,
+    to: 'security invoker',
+  },
+  {
+    file: 'src/lib/posInsights.js',
+    name: 'app code starts writing transactions through the client',
+    from: /export const POS_LONG_WAIT_MIN = 20/,
+    to: "export const POS_LONG_WAIT_MIN = 20\n// const t = supabase.from('transactions').insert({ id: 1 })",
   },
   {
     file: 'scripts/check-sheet-ui.mjs',
