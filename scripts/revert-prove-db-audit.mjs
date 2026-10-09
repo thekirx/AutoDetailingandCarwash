@@ -412,6 +412,32 @@ if (!MUTATIONS.length) {
 
 let failures = 0
 
+// OneDrive and antivirus both hold short-lived write locks on a file they are
+// syncing, and Node surfaces those as `UNKNOWN` / `EBUSY` / `EPERM`. A bare
+// writeFileSync turns a transient lock into a dead run that leaves the mutated
+// source on disk, which is the worst possible outcome: the tree is broken and
+// nothing recorded that it was broken. Retry instead.
+const TRANSIENT = new Set(['UNKNOWN', 'EBUSY', 'EPERM', 'EACCES', 'EMFILE'])
+
+function writeText(abs, content, label, attempts = 12) {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      writeFileSync(abs, content, 'utf8')
+      return
+    } catch (err) {
+      const transient = TRANSIENT.has(err.code)
+      if (!transient || i === attempts) {
+        console.error(`\nFATAL: could not ${label} ${abs}`)
+        console.error(`  code=${err.code} after ${i} attempt(s)`)
+        console.error(`  The file is in an unknown state. Inspect it before trusting the tree.`)
+        process.exit(2)
+      }
+      // Synchronous sleep; this loop must not yield, or the restore ordering breaks.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.min(250 * i, 2000))
+    }
+  }
+}
+
 for (const m of MUTATIONS) {
   const relPath = m.file || 'scripts/audit-db-deep.mjs'
   const abs = join(root, relPath)
@@ -421,9 +447,16 @@ for (const m of MUTATIONS) {
     failures++
     continue
   }
-  writeFileSync(abs, original.replace(m.from, m.to), 'utf8')
-  const bad = runSuite()
-  writeFileSync(abs, original, 'utf8')
+  writeText(abs, original.replace(m.from, m.to), 'mutate')
+  let bad
+  try {
+    bad = runSuite()
+  } catch (err) {
+    // Never let a suite throw skip the restore. The mutation is live right now.
+    writeText(abs, original, 'restore')
+    throw err
+  }
+  writeText(abs, original, 'restore')
   const good = runSuite()
 
   if (bad.red && !good.red) {
