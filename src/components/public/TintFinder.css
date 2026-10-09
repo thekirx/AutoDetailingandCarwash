@@ -101,10 +101,6 @@
 }
 .bredesign .tf-warranty {display:inline-flex;align-self:flex-start;align-items:center;gap:10px;max-width:100%;padding:10px 16px;border-radius:10px;background:#ffd23f;color:#1a1400;font-family:var(--bd-display);font-weight:800;font-size:clamp(16px,1.6vw,20px);line-height:1;text-transform:uppercase}
 .bredesign .tf-warranty small {display:block;margin-bottom:3px;font-family:var(--bd-body);font-size:10px;font-weight:700;letter-spacing:.14em;opacity:.8}
-.bredesign .tf-cert {display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:12px;background:#fff;color:#3a4260}
-.bredesign .tf-cert img {width:52px;height:auto;flex-shrink:0}
-.bredesign .tf-cert p {margin:0;font-size:12.5px;line-height:1.35;color:#3a4260}
-.bredesign .tf-cert strong {display:block;margin-bottom:2px;font-family:var(--bd-display);font-size:15px;text-transform:uppercase;color:#1b2440}
 .bredesign .tf-zones {display:grid;gap:10px}
 .bredesign .tf-zone {padding:12px 14px;border:1px solid var(--bd-rule);border-radius:10px;background:var(--bd-navy)}
 .bredesign .tf-zone-label {display:block;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--bd-accent)}
@@ -114,28 +110,31 @@
 .bredesign .tf-metrics div {padding:7px 4px;border-radius:8px;background:var(--bd-navy-2);text-align:center}
 .bredesign .tf-metrics dt {font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--bd-accent)}
 .bredesign .tf-metrics dd {margin:2px 0 0;font-size:16px;font-weight:700;color:var(--bd-paper)}
-.bredesign .tf-price {padding-top:16px;border-top:1px solid var(--bd-rule)}
-.bredesign .tf-price span {display:block;font-size:12px}
-.bredesign .tf-price strong {display:block;margin-top:4px;font-family:var(--bd-body);font-size:clamp(30px,3vw,38px);line-height:1.05;color:var(--bd-paper)}
-.bredesign .tf-legend {margin:16px 0 0;font-size:12px;line-height:1.6}
-.bredesign .tf-legend b {color:var(--bd-paper)}
+.bredesign .tf-card-head {display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:18px;row-gap:14px;align-items:center}
+.bredesign .tf-card-head h3 {grid-column:1;grid-row:1;margin:0}
+.bredesign .tf-card-head .tf-warranty {grid-column:1;grid-row:2;align-self:start;justify-self:start}
+/* The seal runs from the top of the name to the foot of the warranty. */
+.bredesign .tf-seal-badge {grid-column:2;grid-row:1/3;align-self:stretch;display:flex;align-items:center;justify-content:center;padding:8px 10px;border-radius:12px;background:#fff}
+.bredesign .tf-seal-badge img {display:block;width:auto;height:100%;max-height:104px}
+.bredesign .tf-guide {margin:2px auto 0;max-width:46ch;text-align:center;font-size:12.5px;line-height:1.6}
+.bredesign .tf-guide b {color:var(--bd-paper)}
+.bredesign .tf-price {display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:22px;row-gap:10px;padding-top:16px;border-top:1px solid var(--bd-rule)}
+.bredesign .tf-price>span {grid-column:1/-1;font-size:12px}
+.bredesign .tf-price>strong {font-family:var(--bd-body);font-size:clamp(30px,3vw,38px);line-height:1.05;color:var(--bd-paper)}
+.bredesign .tf-card-free {align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:6px;padding-left:22px;border-left:1px solid var(--bd-rule)}
+.bredesign .tf-card-free p {margin:0;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#ffd23f}
+.bredesign .tf-card-free ul {display:grid;gap:3px;margin:0;padding:0;list-style:none}
+.bredesign .tf-card-free li {display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;line-height:1.35;color:var(--bd-paper)}
+.bredesign .tf-card-free li svg {flex-shrink:0;color:#ffd23f}
 .bredesign .tf-fine {margin:16px 0 0;font-size:12px;color:var(--bd-ink-3)}
-.bredesign .tf-freebies {position:relative;overflow:hidden;margin-top:28px;padding:clamp(22px,3vw,36px);border:1px solid #3b51a8;border-radius:18px;background:linear-gradient(120deg,#0f2275,#0a1650)}
-.bredesign .tf-freebies::after {content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,210,63,.18),transparent 70%);pointer-events:none}
-.bredesign .tf-freebies-kicker {margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#ffd23f}
-.bredesign .tf-freebies h3 {margin:0 0 22px;font-size:clamp(26px,3.4vw,44px);line-height:.95;text-transform:uppercase}
-.bredesign .tf-freebies h3 em {color:var(--bd-accent)}
-.bredesign .tf-freebies ul {position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0;padding:0;list-style:none}
-.bredesign .tf-freebies li {display:flex;flex-direction:column;gap:12px;padding:20px;border:1px solid rgba(157,180,255,.25);border-radius:14px;background:rgba(2,10,49,.55)}
-.bredesign .tf-freebie-icon {display:grid;place-items:center;width:52px;height:52px;border-radius:12px;background:var(--bd-paper);color:var(--bd-blue)}
-.bredesign .tf-freebie-icon svg {width:30px;height:30px}
-.bredesign .tf-freebies li strong {font-family:var(--bd-display);font-size:clamp(17px,1.8vw,22px);line-height:1.05;text-transform:uppercase;color:var(--bd-paper)}
-.bredesign .tf-freebies li em {align-self:flex-start;padding:4px 8px;border-radius:6px;background:#ffd23f;color:#1a1400;font-style:normal;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
 @media (max-width:760px) {
-  .bredesign .tf-freebies ul {grid-template-columns:1fr}
-  .bredesign .tf-freebies li {flex-direction:row;align-items:center;padding:14px 16px}
-  .bredesign .tf-freebies li strong {flex:1}
-  .bredesign .tf-freebie-icon {width:44px;height:44px}
-  .bredesign .tf-freebies li em {align-self:center}
   .bredesign .tf-metrics dd {font-size:15px}
+  .bredesign .tf-card-head {column-gap:12px;row-gap:10px}
+  .bredesign .tf-seal-badge {padding:6px 8px}
+  .bredesign .tf-seal-badge img {max-height:88px}
+  .bredesign .tf-card-head .tf-warranty {font-size:14px;padding:8px 11px}
+  .bredesign .tf-price {column-gap:14px}
+  .bredesign .tf-price>strong {font-size:28px}
+  .bredesign .tf-card-free {padding-left:14px}
+  .bredesign .tf-card-free li {font-size:12.5px;gap:6px}
 }

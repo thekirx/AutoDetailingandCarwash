@@ -87,6 +87,9 @@
 .bredesign .bd-tint-comparison .bd-cmp-block {
   margin-top: 34px;
 }
+.bredesign .bd-tint-split .bd-cmp-block {
+  margin-top: auto;
+}
 .bredesign .bd-tint-comparison .bd-cmp-toggle {
   display: flex;
   align-items: center;
@@ -143,4 +146,95 @@
   .bredesign .bd-tint-comparison .bd-cmp-toggle svg {
     transition: none;
   }
+}
+
+/* Heading and panel button left, certificate right, equal height. */
+.bredesign .bd-tint-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(24px, 3.5vw, 48px);
+  align-items: stretch;
+}
+.bredesign .bd-tint-split .bd-tint-comparison-head {
+  display: flex;
+  flex-direction: column;
+}
+.bredesign .bd-tint-split .bd-tint-comparison-head h2 {
+  font-size: clamp(34px, 3.6vw, 54px);
+  line-height: 0.92;
+}
+.bredesign .bd-tint-intro {
+  margin: 14px 0 0;
+  max-width: 40ch;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.bredesign .bd-tint-split .bd-cmp-block {
+  margin-top: auto;
+  padding-top: 22px;
+}
+.bredesign .bd-tint-split .bd-cmp-toggle {
+  padding: 16px 18px;
+}
+.bredesign .bd-tint-split .bd-cmp-toggle b {
+  font-size: clamp(1.05rem, 1.5vw, 1.4rem);
+}
+.bredesign .bd-tint-split .tint-certification {
+  display: flex;
+  margin-top: 0;
+}
+.bredesign .bd-tint-split .cert-card {
+  flex: 1;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 24px;
+  padding: 26px 28px;
+}
+.bredesign .bd-tint-split .cert-seal {
+  align-self: center;
+  padding: 12px;
+}
+.bredesign .bd-tint-split .cert-seal img { width: 92px; }
+.bredesign .bd-tint-split .cert-label { margin: 0; }
+.bredesign .bd-tint-split .cert-body h3 {
+  font-size: clamp(22px, 2vw, 30px);
+  margin: 8px 0 10px;
+}
+.bredesign .bd-tint-split .cert-copy {
+  margin: 0 0 4px;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.bredesign .bd-tint-comparison #tint-compare-tables {
+  margin-top: 30px;
+}
+@media (max-width: 760px) {
+  .bredesign .bd-tint-split {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  /* Let the heading's pieces join the grid so the certificate can sit
+     between the intro and the button. */
+  .bredesign .bd-tint-split .bd-tint-comparison-head { display: contents; }
+  .bredesign .bd-tint-split .bd-eyebrow { order: 1; }
+  .bredesign .bd-tint-split .bd-tint-comparison-head h2 { order: 2; margin: 0; font-size: clamp(30px, 9vw, 40px); }
+  .bredesign .bd-tint-split .bd-tint-intro { order: 3; margin: 0; }
+  .bredesign .bd-tint-split .tint-certification { order: 4; }
+  .bredesign .bd-tint-split .bd-cmp-block { order: 5; padding-top: 4px; }
+  .bredesign .bd-tint-split .cert-card {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 16px;
+    padding: 18px;
+    align-items: start;
+  }
+  .bredesign .bd-tint-split .cert-seal {
+    width: auto;
+    padding: 8px;
+    justify-self: stretch;
+    align-self: start;
+  }
+  .bredesign .bd-tint-split .cert-seal img { width: 58px; }
+  .bredesign .bd-tint-split .cert-label { font-size: 10px; }
+  .bredesign .bd-tint-split .cert-body h3 { font-size: 22px; margin: 6px 0 8px; }
+  .bredesign .bd-tint-split .cert-copy { font-size: 13.5px; }
+  .bredesign .bd-tint-split .cert-source { min-height: 44px; }
 }

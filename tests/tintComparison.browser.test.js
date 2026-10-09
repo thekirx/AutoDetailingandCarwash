@@ -39,6 +39,7 @@ for (const width of [1440, 393, 320]) {
       assert.deepEqual(await page.$$eval('#tint-certification a', els => els.map(e => e.href)), ['https://www.skincancer.org/recommended-products/'])
       assert.deepEqual(await page.$$eval('#tint-comparison [data-tint-package] h3', els => els.map(e => e.textContent)), ['Nano Ceramic Tint', 'Nano Ceramic Pro Tint'])
       assert.equal(await page.$eval('#tint-comparison .bd-cmp-toggle', e => e.getAttribute('aria-expanded')), 'true')
+      assert.equal(await page.$eval('#tint-comparison .bd-cmp-toggle s', e => getComputedStyle(e).textDecorationLine), 'none')
       await page.$eval('#tint-certification', el => el.scrollIntoView({ block: 'center' }))
       await page.waitForFunction(() => { const img = document.querySelector('#tint-certification img'); return img.complete && img.naturalWidth > 0 })
       // The certificate comes before the tables.

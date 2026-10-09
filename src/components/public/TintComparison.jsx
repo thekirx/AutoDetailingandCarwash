@@ -34,27 +34,30 @@ export default function TintComparison({ config }) {
   return (
     <section id="tint-comparison" className="bd-packages bd-tint-comparison" aria-labelledby="tint-comparison-title">
       <div className="bd-shell">
-        <div className="bd-tint-comparison-head">
-          <p className="bd-eyebrow">Nano ceramic tint packages</p>
-          <h2 id="tint-comparison-title">Compare every <em>tint shade.</em></h2>
-        </div>
-
-        <TintCertification />
-
-        <div className="bd-cmp-block">
-          <button
-            type="button"
-            className="bd-cmp-toggle"
-            aria-expanded={open}
-            aria-controls="tint-compare-tables"
-            onClick={() => setOpen((value) => !value)}
-          >
-            <span>
-              <b>Compare all eight shades</b>
-              <s>Light, heat, UV, warranty and price, side by side</s>
-            </span>
-            <ChevronDown size={20} aria-hidden="true" />
-          </button>
+        {/* Heading and panel button on the left, the certificate on the right;
+            on a phone they stack heading, certificate, button. */}
+        <div className="bd-tint-split">
+          <div className="bd-tint-comparison-head">
+            <p className="bd-eyebrow">Nano ceramic tint packages</p>
+            <h2 id="tint-comparison-title">Compare every <em>tint shade.</em></h2>
+            <p className="bd-tint-intro">Eight films in two tints, side by side: light, heat, UV, warranty and price.</p>
+            <div className="bd-cmp-block">
+              <button
+                type="button"
+                className="bd-cmp-toggle"
+                aria-expanded={open}
+                aria-controls="tint-compare-tables"
+                onClick={() => setOpen((value) => !value)}
+              >
+                <span>
+                  <b>Compare all eight shades</b>
+                  <s>Light, heat, UV, warranty and price, side by side</s>
+                </span>
+                <ChevronDown size={20} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          <TintCertification />
         </div>
 
         <div id="tint-compare-tables" hidden={!open}>

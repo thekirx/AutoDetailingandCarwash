@@ -1,6 +1,6 @@
 import TintComparison from './TintComparison'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, Info, RotateCcw, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, Info, RotateCcw, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { isApprovalPreview } from '../../lib/approvalPreview'
 import { useTintFinderConfig } from '../../lib/tintFinderData'
@@ -13,10 +13,10 @@ import './TintFinder.css'
 const icons = import.meta.glob('../../assets/tint-finder/icon-*.png', {eager:true,query:'?url',import:'default'})
 const seal = new URL('../../assets/tint-finder/seal.png', import.meta.url).href
 const specLabels = [['vlt','VLT'],['tser','TSER'],['irr','IRR'],['uvr','UVR']]
-const FREEBIES = [['wash','Premium Carwash'],['shield','Bactozero'],['peel','Old tint removal']]
+const FREEBIES = ['Premium Carwash','Bactozero','Old tint removal']
 
-/* The shade and its four numbers stay on the card; what the numbers mean is
-   one legend line under the cards. */
+/* The shade and its four numbers stay on the card; a guide line under them
+   says what the numbers mean. */
 function ZoneFilm({config,filmKey,zone}) {
   const film=config.films[filmKey]
   return <div className="tf-zone"><span className="tf-zone-label">{zone}</span><strong>{tintShade(filmKey)} <em>{film.name.replace(/ Nano$/,'')}</em></strong>
@@ -30,18 +30,9 @@ function WhySuggestion({reasons}) {
     <div className="tf-why-body" id="tf-why-body" role="region" aria-label="Why we suggested this tint"><b>Based on your answers</b><ul>{reasons.map(([lead,rest])=><li key={lead}><strong>{lead}</strong>, {rest}</li>)}</ul></div>
   </div>
 }
-function FreebieIcon({name}) {
-  const common={viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true}
-  if(name==='wash') return <svg {...common}><path d="M5 17h14l-1.5-5.5A2 2 0 0 0 15.6 10H8.4a2 2 0 0 0-1.9 1.5L5 17z"/><path d="M5 17v2M19 17v2"/><circle cx="8" cy="17" r="1"/><circle cx="16" cy="17" r="1"/><path d="M8 3c0 1.5-1 2-1 3a1 1 0 0 0 2 0c0-1-1-1.5-1-3zM12 2c0 1.5-1 2-1 3a1 1 0 0 0 2 0c0-1-1-1.5-1-3zM16 3c0 1.5-1 2-1 3a1 1 0 0 0 2 0c0-1-1-1.5-1-3z"/></svg>
-  if(name==='shield') return <svg {...common}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 10h.01M15 9h.01M12 13h.01M10 15h.01M14 15h.01"/></svg>
-  return <svg {...common}><rect x="3" y="4" width="14" height="16" rx="2"/><path d="M17 8l4 3-4 3"/><path d="M7 9h6M7 13h4"/></svg>
-}
-function TintFreebies() {
-  return <section className="tf-freebies" aria-labelledby="tf-freebies-title">
-    <p className="tf-freebies-kicker">Included at no extra cost</p>
-    <h3 id="tf-freebies-title">Free with every <em>tint package.</em></h3>
-    <ul>{FREEBIES.map(([icon,label])=><li key={label}><span className="tf-freebie-icon"><FreebieIcon name={icon}/></span><strong>{label}</strong><em>Free</em></li>)}</ul>
-  </section>
+/* Free inclusions sit beside the price, so the offer reads with the number. */
+function CardFreebies() {
+  return <div className="tf-card-free"><p>Free with this package</p><ul>{FREEBIES.map(label=><li key={label}><CheckCircle2 size={15} aria-hidden="true"/>{label}</li>)}</ul></div>
 }
 function TintBenefits({config,answers,options}) {
   const showSeal = config.sealEnabled && options.every(o=>config.sealVerifiedPackages.includes(o.package))
@@ -132,16 +123,17 @@ export default function TintFinder() {
         <div className="tf-options">{results.map(o=>{
           const vehicle=TINT_VEHICLES.find(v=>v.id===answers.vehicle)?.label
           return <article key={o.id} className={`tf-option${o.package==='pro'?' is-pro':''}`} data-tint-option={o.id}>
-            <h3>{tintPackageName(config,o.package)}</h3>
-            <div className="tf-warranty"><ShieldCheck size={22} aria-hidden="true"/><span><small>Covered by</small>{tintWarranty(config.packages[o.package].warranty)}</span></div>
-            <div className="tf-cert"><img src={seal} alt="" width="58" height="105" loading="lazy"/><p><strong>Skin Cancer Foundation</strong>Seal of Recommendation · effective sun protection</p></div>
+            <div className="tf-card-head">
+              <h3>{tintPackageName(config,o.package)}</h3>
+              <div className="tf-warranty"><ShieldCheck size={22} aria-hidden="true"/><span><small>Covered by</small>{tintWarranty(config.packages[o.package].warranty)}</span></div>
+              <div className="tf-seal-badge" title="Skin Cancer Foundation Seal of Recommendation"><img src={seal} alt="The Skin Cancer Foundation Seal of Recommendation" loading="lazy"/></div>
+            </div>
             {o.front===o.rear ? <ZoneFilm config={config} filmKey={o.front} zone="All windows"/> : <div className="tf-zones"><ZoneFilm config={config} filmKey={o.front} zone="Front windows"/><ZoneFilm config={config} filmKey={o.rear} zone="Rear windows"/></div>}
-            <div className="tf-price"><span>Your {vehicle} · all windows incl. windshield</span><strong>{tintPeso(o.price)}</strong></div>
+            <p className="tf-guide"><b>VLT</b> light let through (lower is darker) · <b>TSER</b> total heat blocked · <b>IRR</b> infrared heat blocked · <b>UVR</b> UV blocked</p>
+            <div className="tf-price"><span>Your {vehicle} · all windows incl. windshield</span><strong>{tintPeso(o.price)}</strong><CardFreebies/></div>
             <div className="tf-option-actions"><button className="bd-btn bd-btn-primary" onClick={()=>setBooking(o)}>Book this package<ArrowRight size={17}/></button></div>
           </article>
         })}</div>
-        <p className="tf-legend"><b>VLT</b> light let through (lower is darker) · <b>TSER</b> total heat blocked · <b>IRR</b> infrared heat blocked · <b>UVR</b> UV blocked</p>
-        <TintFreebies/>
         <p className="tf-fine">Your branch confirms the final shade and price. Ask us about current LTO tint limits before you book.</p>
         {booking && <TintBooking key={booking.id} option={booking} config={config} answers={answers} onCancel={()=>setBooking(null)}/>}
         <TintBenefits config={config} answers={answers} options={results}/>
