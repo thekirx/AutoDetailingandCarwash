@@ -153,6 +153,45 @@ export function resolveCustomerIdentity({ byPhone, byEmail, pinnedId = null }) {
 }
 
 /**
+ * The row a *returning* customer's `customers` record should get after a POS capture.
+ *
+ * Phone and email are the identity, so only the name can change here. Anything the
+ * cashier did not retype has to survive: the account's established number wins over
+ * the number just typed, and first/last are only overwritten when they were supplied.
+ *
+ * `full_name` is rebuilt from the reconciled parts rather than from the typed name
+ * alone. Editing only the first name field used to leave `last_name` as 'Cruz' while
+ * `full_name` became 'Maria', so every screen that displays the joined name quietly
+ * dropped the surname. When we know neither part (a phone-only record), the caller's
+ * already-merged fallback wins — it carries the plate or last-4 phone label.
+ */
+export function resolveExistingCustomerUpdate({
+  first,
+  last,
+  existing,
+  fullName,
+  phone,
+  email,
+  loginEmail,
+  now,
+}) {
+  const firstName = first || existing?.first_name || null
+  const lastName = last || existing?.last_name || null
+  const fromParts = [firstName, lastName].filter(Boolean).join(' ')
+  const patch = {
+    full_name: fromParts ? mergeCustomerDisplayName(fromParts, existing?.full_name) : fullName,
+    // Keep the established number / real email; only fill what the account lacks.
+    phone: existing?.phone || phone,
+    email: email || existing?.email || loginEmail,
+    updated_at: now,
+  }
+  // Keep prior first/last when the capture left the name blank.
+  if (firstName) patch.first_name = firstName
+  if (lastName) patch.last_name = lastName
+  return { firstName, lastName, fullName: patch.full_name, patch }
+}
+
+/**
  * @param {{ accessToken: string, body: object, siteOrigin: string }} args
  */
 export async function provisionCustomerAccount({ accessToken, body, siteOrigin }) {
@@ -285,29 +324,33 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
   }
 
   // Ensure customers row shares Auth uid (CUST-C3 — never leave CRM id ≠ Auth uid)
+  // A returning customer keeps everything they did not retype.
+  const returning = customerId
+    ? resolveExistingCustomerUpdate({
+      first,
+      last,
+      existing,
+      fullName,
+      phone,
+      email,
+      loginEmail,
+      now: new Date().toISOString(),
+    })
+    : null
+
   if (customerId && authUser.id !== customerId) {
     await remountCustomerOntoAuthUid(admin, {
       fromId: customerId,
       toId: authUser.id,
-      first,
-      last,
-      fullName,
+      first: returning.firstName,
+      last: returning.lastName,
+      fullName: returning.fullName,
       phone: existing?.phone || phone,
       email: email || existing?.email || loginEmail,
     })
     customerId = authUser.id
   } else if (customerId) {
-    const customerPatch = {
-      full_name: fullName,
-      // Keep the established number / real email; only fill what the account lacks.
-      phone: existing?.phone || phone,
-      email: email || existing?.email || loginEmail,
-      updated_at: new Date().toISOString(),
-    }
-    // Keep prior first/last when TL leaves name blank on a returning plate/phone
-    if (first) customerPatch.first_name = first
-    if (last) customerPatch.last_name = last
-    await admin.from('customers').update(customerPatch).eq('id', customerId)
+    await admin.from('customers').update(returning.patch).eq('id', customerId)
   } else {
     customerId = authUser.id
     const { error: upsertError } = await admin.from('customers').upsert(

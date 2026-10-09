@@ -505,9 +505,13 @@ function PosCounterPage() {
     scope: activeHandoff?.id || 'walk-in',
     onFound: (customer) => {
       const v = customerFormValues(customer)
-      setGuestFirstName(v.first)
-      setGuestLastName(v.last)
-      setGuestName([v.first, v.last].filter(Boolean).join(' '))
+      // A record can hold a phone with no name at all. The lookup lands ~400ms after the
+      // first keystroke, so an unconditional fill would wipe a name the cashier is still
+      // typing and the sale would be recorded with a phone and no customer name.
+      // Phone and email are the identity, so a blank from the match never overwrites.
+      setGuestFirstName((current) => v.first || current)
+      setGuestLastName((current) => v.last || current)
+      setGuestName((current) => [v.first, v.last].filter(Boolean).join(' ') || current)
       setGuestPhone((current) => v.phone || current)
       setGuestEmail((current) => v.email || current)
     },
