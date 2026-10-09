@@ -202,17 +202,35 @@
 }
 
 /* ---- Comparison --------------------------------------------------------- */
-/* The comparison stays visible: package selection is the primary decision on
-   this page, so hiding the detail behind a disclosure only adds work. */
-.bredesign .bd-cmp-heading {
+/* The comparison begins open, while the disclosure lets readers shorten the
+   page once they have the detail they need. */
+.bredesign .bd-cmp-block {
+  margin-top: 34px;
+}
+.bredesign .bd-cmp-toggle {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin-top: 34px;
-  padding: 24px 2px 0;
+  width: 100%;
+  padding: 20px 22px;
+  border: 1px solid var(--bd-rule);
+  border-radius: 14px;
+  background: var(--bd-navy-2);
+  color: var(--bd-paper);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.25s ease, background 0.25s ease;
 }
-.bredesign .bd-cmp-heading b {
+.bredesign .bd-cmp-toggle:hover {
+  border-color: var(--bd-accent);
+  background: #0d1a52;
+}
+.bredesign .bd-cmp-toggle:focus-visible {
+  outline: 2px solid var(--bd-accent);
+  outline-offset: 3px;
+}
+.bredesign .bd-cmp-toggle b {
   display: block;
   font-family: var(--bd-display);
   font-size: clamp(1.35rem, 2.2vw, 2rem);
@@ -221,15 +239,23 @@
   letter-spacing: -0.01em;
   color: var(--bd-paper);
 }
-.bredesign .bd-cmp-heading s {
+.bredesign .bd-cmp-toggle s {
   display: block;
   margin-top: 5px;
   color: var(--bd-ink-2);
   font-size: 13px;
   text-decoration: none;
 }
+.bredesign .bd-cmp-toggle svg {
+  flex: none;
+  color: var(--bd-accent);
+  transition: transform 0.25s ease;
+}
+.bredesign .bd-cmp-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
 .bredesign .bd-cmp {
-  margin-top: 18px;
+  margin-top: 14px;
   overflow-x: auto;
   border: 1px solid var(--bd-rule);
   border-radius: 16px;
@@ -239,6 +265,10 @@
   .bredesign .bd-tier.is-recommended > .bd-tier-badge {
     animation: none;
     box-shadow: 0 0 0 4px rgba(157, 180, 255, 0.2);
+  }
+  .bredesign .bd-cmp-toggle,
+  .bredesign .bd-cmp-toggle svg {
+    transition: none;
   }
 }
 .bredesign .bd-cmp table {

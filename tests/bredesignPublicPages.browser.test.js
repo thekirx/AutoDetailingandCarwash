@@ -48,19 +48,20 @@ describe('BreDESIGN public page fallbacks', () => {
     assert.equal(href, 'https://www.tiktok.com/@hakum_autocare')
   })
 
-  it('shows the approved PPF names and keeps the package comparison visible', async () => {
+  it('shows the approved PPF names and opens the collapsible comparison by default', async () => {
     await page.goto(`${PREVIEW_ORIGIN}/services/ppf`, { waitUntil: 'networkidle0' })
-    const comparisonState = await page.evaluate(() => ({
+    const initialState = await page.evaluate(() => ({
       tiers: document.querySelectorAll('.bd-tier').length,
       tierNames: [...document.querySelectorAll('.bd-tier h3')].map((item) => item.textContent.trim()),
       redundantPriceSummary: Boolean(document.querySelector('.bd-pk-price')),
       toggle: Boolean(document.querySelector('.bd-cmp-toggle')),
+      expanded: document.querySelector('.bd-cmp-toggle')?.getAttribute('aria-expanded'),
       comparisonHidden: document.querySelector('#ppf-compare')?.hidden,
       stepLabels: document.querySelectorAll('.bd-tier-step').length,
       risers: document.querySelectorAll('.bd-tier-riser').length,
     }))
 
-    assert.deepEqual(comparisonState, {
+    assert.deepEqual(initialState, {
       tiers: 4,
       tierNames: [
         'High Impact Partial',
@@ -69,11 +70,30 @@ describe('BreDESIGN public page fallbacks', () => {
         'Platinum PPF Protection',
       ],
       redundantPriceSummary: false,
-      toggle: false,
+      toggle: true,
+      expanded: 'true',
       comparisonHidden: false,
       stepLabels: 0,
       risers: 0,
     })
+
+    await page.click('.bd-cmp-toggle')
+    assert.deepEqual(
+      await page.evaluate(() => ({
+        expanded: document.querySelector('.bd-cmp-toggle')?.getAttribute('aria-expanded'),
+        comparisonHidden: document.querySelector('#ppf-compare')?.hidden,
+      })),
+      { expanded: 'false', comparisonHidden: true },
+    )
+
+    await page.click('.bd-cmp-toggle')
+    assert.deepEqual(
+      await page.evaluate(() => ({
+        expanded: document.querySelector('.bd-cmp-toggle')?.getAttribute('aria-expanded'),
+        comparisonHidden: document.querySelector('#ppf-compare')?.hidden,
+      })),
+      { expanded: 'true', comparisonHidden: false },
+    )
   })
 
   it('keeps the four centered stats in one row on wide screens and two by two on phones', async () => {
