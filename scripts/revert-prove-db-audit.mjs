@@ -34,6 +34,8 @@ const SUITES = [
   'tests/dailySheetIsManualTask.test.js',
   'tests/sheetPostedExpenseProtection.test.js',
   'tests/adminWritePolicyScope.test.js',
+  'tests/authErrorMessage.test.js',
+  'tests/customerSignInFailureHonesty.test.js',
 ]
 
 function runSuite() {
@@ -580,14 +582,69 @@ const ALL_MUTATIONS = [
     from: ".ds-summary .ds-row",
     to: ".ds-summary .ds-nothing-matches-this",
   },
+  // BUG-077 — the customer sign-in page. It answered every non-session response
+  // from /api/customer-auth-lookup with a literal credential string, discarding
+  // the status. `data` is {} whenever the body is not JSON — a 502, a function
+  // timeout, a hard crash — which is exactly when the fallback fired.
+  {
+    file: 'src/pages/CustomerSignInPage.jsx',
+    name: 'BUG-077 itself: the sign-in branch blames the password for any failure',
+    // Anchored on its own comment because `describeCustomerAuthFailure({ status: res.status, data })`
+    // also appears in authLookup and in the email fallback — an unanchored
+    // mutation would edit the first of those three and prove nothing.
+    from: / {8}\/\/ BUG-077: this branch used to answer[\s\S]{0,300}?throw new Error\(describeCustomerAuthFailure\(\{ status: res\.status, data \}\)\)/,
+    to: "        throw new Error(data.error || 'Invalid phone or password.')",
+  },
+  {
+    file: 'src/pages/CustomerSignInPage.jsx',
+    name: 'the email fallback goes back to preferring the endpoint error over Auth',
+    from: /pwError\r?\n {14}\? describeAuthError\(pwError\)\r?\n {14}: describeCustomerAuthFailure\(\{ status: res\.status, data \}\),/,
+    to: "            data.error || pwError?.message || 'Invalid email or password.',",
+  },
+  {
+    file: 'src/pages/CustomerSignInPage.jsx',
+    name: 'a dead network is shown to the customer as the browser raw message',
+    from: / {2}\} catch \(err\) \{\r?\n {4}throw new Error\(describeAuthError\(\{ message: err\?\.message \}\)\)/,
+    to: "  } catch (err) {\n    throw err",
+  },
+  {
+    file: 'src/pages/CustomerSignInPage.jsx',
+    name: 'the lookup helper passes our own 5xx exception text to the customer',
+    from: "if (!res.ok) throw new Error(describeCustomerAuthFailure({ status: res.status, data }))",
+    to: "if (!res.ok) throw new Error(data.error || 'Lookup failed.')",
+  },
+  {
+    file: 'src/pages/CustomerSignInPage.jsx',
+    name: 'the password-reset fallback shows a raw Supabase error verbatim',
+    from: 'if (resetError) throw new Error(describeAuthError(resetError))',
+    to: 'if (resetError) throw resetError',
+  },
+  // The mapper itself. The first of these is the important one: a "fix" that made
+  // every failure vague would satisfy the honesty tests while breaking the only
+  // message a customer can act on. Honesty must not collapse into vagueness.
+  {
+    file: 'src/lib/authErrorMessage.js',
+    name: 'the mapper stops saying the credentials were wrong when they were',
+    from: / {2}if \(code === 401\) \{\r?\n {4}\/\/ The server reserves 401 for a genuine credentials rejection\.\r?\n {4}return serverMessage \|\| 'Invalid phone or password\.'\r?\n {2}\}\r?\n/,
+    to: '',
+  },
+  {
+    file: 'src/lib/authErrorMessage.js',
+    name: 'the mapper leaks our internal config names onto a customer screen',
+    from: / {2}if \(code >= 500\) \{\r?\n {4}return 'The sign-in service is having trouble\. Try again in a moment\.'\r?\n {2}\}/,
+    to: "  if (code >= 500) {\n    return serverMessage || 'The sign-in service is having trouble. Try again in a moment.'\n  }",
+  },
 ]
 
 // An optional substring filter (`node scripts/revert-prove-db-audit.mjs till`)
-// narrows the run while iterating on one area. The unfiltered run stays the gate:
-// a filtered run proves the named mutations and nothing else.
+// narrows the run while iterating on one area. Comma-separate it to prove a group
+// (`... "dead network,lookup helper"`) in one pass instead of paying the full
+// ~20-suite startup cost per mutation. The unfiltered run stays the gate: a
+// filtered run proves the named mutations and nothing else.
 const filter = process.argv[2] || ''
-const MUTATIONS = filter ? ALL_MUTATIONS.filter((m) => m.name.includes(filter)) : ALL_MUTATIONS
-if (!MUTATIONS.length) {
+const needles = filter ? filter.split(',').map((s) => s.trim()).filter(Boolean) : []
+const MUTATIONS = needles.length ? ALL_MUTATIONS.filter((m) => needles.some((n) => m.name.includes(n))) : ALL_MUTATIONS
+if (filter && !MUTATIONS.length) {
   console.error(`no mutation name matches "${filter}" — nothing was proved`)
   process.exit(1)
 }
@@ -634,6 +691,19 @@ for (const m of MUTATIONS) {
     continue
   }
   writeText(abs, original.replace(m.from, m.to), 'mutate')
+  // Prove the mutation actually landed. `String.replace` silently returns the
+  // input unchanged when the anchor matches but `to` happens to equal the match
+  // (or when a RegExp match is empty-width), and an unmutated file passes the
+  // suite trivially — which reads downstream as "the guard does not work" and
+  // sends you hunting a bug in the code instead of in the harness. Also refuse a
+  // mutation that would leave the source byte-identical for any other reason.
+  const mutated = readFileSync(abs, 'utf8')
+  if (mutated === original) {
+    writeText(abs, original, 'restore')
+    console.log(`NOT PROVED  ${m.name} — the mutation produced a byte-identical file`)
+    failures++
+    continue
+  }
   let bad
   try {
     bad = runSuite()

@@ -7,6 +7,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
 import { AuthLegalLinks } from '../components/FormLegalNotice'
 import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
+import { describeAuthError, describeCustomerAuthFailure } from '../lib/authErrorMessage'
 import { activateSignupHref, resolveCustomerAuthIntent } from '../lib/customerAccountLifecycle'
 import { canOfferPasswordEmailReset } from '../lib/uiDeadControls'
 import DemoAccountChips from '../components/DemoAccountChips'
@@ -20,8 +21,40 @@ async function authLookup(identifier, action = 'lookup') {
     body: JSON.stringify({ identifier, action, site_origin: window.location.origin }),
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || 'Lookup failed.')
+  // Classify by status rather than passing `data.error` straight through: on a 5xx
+  // that text is our own thrown exception message, and it must not reach a customer.
+  if (!res.ok) throw new Error(describeCustomerAuthFailure({ status: res.status, data }))
   return data
+}
+
+/**
+ * The customer sign-in call, with transport failures separated from server answers.
+ *
+ * A rejected fetch means the request never reached the server, so nothing at all is
+ * known about the password. Letting that reach the shared catch would show the raw
+ * "Failed to fetch"; classifying it here keeps the distinction the page depends on.
+ */
+async function customerSignInApi(identifier, password) {
+  let res
+  try {
+    res = await fetch('/api/customer-auth-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier,
+        password,
+        action: 'signin',
+        site_origin: window.location.origin,
+      }),
+    })
+  } catch (err) {
+    throw new Error(describeAuthError({ message: err?.message }))
+  }
+  // `data` is {} whenever the body is not JSON — a gateway 502 or a function
+  // timeout. That is exactly the case that must not fall through to a credential
+  // verdict, so the status is carried through alongside it.
+  const data = await res.json().catch(() => ({}))
+  return { res, data }
 }
 
 export default function CustomerSignInPage() {
@@ -162,17 +195,7 @@ export default function CustomerSignInPage() {
         navigate('/account', { replace: true })
       }
 
-      const res = await fetch('/api/customer-auth-lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identifier: rawIdentifier,
-          password: nextPassword,
-          action: 'signin',
-          site_origin: window.location.origin,
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
+      const { res, data } = await customerSignInApi(rawIdentifier, nextPassword)
       if (data.activate) {
         navigate(activateSignupHref(rawIdentifier))
         return
@@ -190,14 +213,24 @@ export default function CustomerSignInPage() {
           password: nextPassword,
         })
         if (pwError || !pwData?.session) {
-          throw new Error(data.error || pwError?.message || 'Invalid email or password.')
+          // Auth is the authority on credentials here, so when it spoke, let it speak.
+          // Preferring `data.error` would resurrect the BUG-077 misreport whenever the
+          // endpoint failed for an unrelated reason.
+          throw new Error(
+            pwError
+              ? describeAuthError(pwError)
+              : describeCustomerAuthFailure({ status: res.status, data }),
+          )
         }
         await finishWithSession(pwData, pwData.session.access_token)
         return
       }
 
       if (!res.ok || !data.access_token || !data.refresh_token) {
-        throw new Error(data.error || 'Invalid phone or password.')
+        // BUG-077: this branch used to answer with a literal credential string, so a
+        // 502 or a function timeout told the customer their password was wrong.
+        // 401 is the only status that means that, and only the server sets it.
+        throw new Error(describeCustomerAuthFailure({ status: res.status, data }))
       }
 
       const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
@@ -257,7 +290,7 @@ export default function CustomerSignInPage() {
         if (kind !== 'email') throw lookupErr
         const email = resolveLoginEmail(raw)
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
-        if (resetError) throw resetError
+        if (resetError) throw new Error(describeAuthError(resetError))
         setInfo('Password reset email sent. Check your inbox (and spam), then choose a new password.')
       }
     } catch (err) {

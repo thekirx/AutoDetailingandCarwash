@@ -59,3 +59,53 @@ export function describeAuthError(err) {
 
   return 'Sign-in failed. Please try again.'
 }
+
+/**
+ * Classify a failure from the customer sign-in path (`/api/customer-auth-lookup`).
+ *
+ * The staff path above gets the error object back from Supabase directly. The
+ * customer path goes through our own endpoint, so all it has is an HTTP status and
+ * a parsed body — and the parsed body is `{}` whenever the response is not JSON,
+ * which is precisely when the server is on fire. Discarding the status there turns
+ * every server fault into a verdict on the customer's password.
+ *
+ * The status is trustworthy because the server maintains it honestly:
+ * `server/customerSignIn.mjs` returns 401 only when Auth actually rejected the
+ * credentials, `rateLimit()` is the only source of 429, and 500 means something
+ * threw. So: classify on the status, and keep the server's wording only where it
+ * deliberately sent one — never as a catch-all.
+ *
+ * A 5xx deliberately drops `data.error`. `handleCustomerAuthLookupRequest`
+ * rethrows `err.message` verbatim, which can be
+ * "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY". That is our infrastructure
+ * and it does not belong on a customer screen.
+ */
+export function describeCustomerAuthFailure({ status, data } = {}) {
+  const code = Number(status || 0)
+  const serverMessage = typeof data?.error === 'string' ? data.error.trim() : ''
+
+  if (code === 429 || (!code && /too many|rate limit|over_request/i.test(serverMessage))) {
+    return 'Too many sign-in attempts. Wait a minute, then try again.'
+  }
+
+  if (code >= 500) {
+    return 'The sign-in service is having trouble. Try again in a moment.'
+  }
+
+  if (code === 401) {
+    // The server reserves 401 for a genuine credentials rejection.
+    return serverMessage || 'Invalid phone or password.'
+  }
+
+  // 400 carries setup guidance; 404/409 carry activate / offer-signup. Both are
+  // the server's own words and paraphrasing them would lose the next step.
+  if (code === 400 || code === 404 || code === 409) {
+    return serverMessage || 'Sign-in failed. Please check your details and try again.'
+  }
+
+  if (serverMessage) return serverMessage
+
+  // No status and no message means we never got an answer. Nothing is known about
+  // the password, so nothing may claim otherwise.
+  return "We couldn't sign you in. Please try again."
+}
