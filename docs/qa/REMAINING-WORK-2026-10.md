@@ -7,6 +7,38 @@ Canonical product status: [`PROJECT_STATUS.md`](../../PROJECT_STATUS.md) · Audi
 
 **Verdict:** Soft-launch **shop-day code** is ready with ops blockers. **Documentation and several role/story deep checks are not.** Continue — do not declare “fully done.”
 
+### Fresh verify (2026-10-10, principal closeout — branch `audit/2026-10-08-closeout`)
+
+Every gate below was **re-run after the BUG-081 money-path change**, because that change touched `summarizeSheetSales` and `METHOD_LABELS`, which the Daily Sheet screen renders.
+
+| Check | Command | Result |
+|-------|---------|--------|
+| Unit | `npm test` | **1964 pass / 0 fail / 2 skipped**, exit 0 |
+| Lint | `npm run lint` | exit **0**, 0 errors 0 warnings |
+| Build | `npm run build` | exit **0** |
+| Daily ops | `npm run check` | **5/5 ok** — planning, portal-actions, settings-auth, customer regression, live-queue |
+| Daily Sheet screen | `npm run check:sheet-ui` | **PASS** — 60/60 sheets match stored totals; till shows Net ₱39,052.50 / Expenses ₱1,515.00 / Salaries ₱7,914.63 / Net profit ₱29,622.87, all matching |
+| Role matrix | `npm run e2e:role-qa-wave` | **179/179**, exit 0 — ninth consecutive clean wave |
+| Revert-prove | `node scripts/revert-prove-db-audit.mjs` | BUG-079 **7/7**, BUG-080 **6/6**, BUG-081 **6/6**, migration contract **5/5** |
+
+Closed this pass: **BUG-076** (staff login blamed the password for server faults), **BUG-077** (same misreport on the customer sign-in surface), **BUG-078** (set-password and sign-up rendered raw Supabase errors), **BUG-079** (a Branch Admin could read every user's notifications — and their own bell showed them), **BUG-080** (a Branch Admin could rewrite every SMS template), **BUG-081** (the Daily Sheet counted an unrecognised payment method as **cash**, so a BA whose count was correct was told the drawer was short).
+
+**BUG-082 is open and deliberately unchanged** — "Average sale" is net ÷ paid on the Daily Sheet but gross ÷ paid-and-refunded on Finance. Measured: ₱650 vs ₱1,000 on the same day. A test pins the current behaviour as *"matches Square"*, so aligning them changes a number the owner sees and is an owner decision.
+
+### ⚠️ Four migrations are drafted, guarded and NOT applied (owner action)
+
+Production still carries the permissive policies. Apply **in this order**, then run the verifier and confirm every line reads PASS:
+
+| # | Migration | Fixes |
+|---|-----------|-------|
+| 1 | `20261010120000_protect_daily_sheet_posted_expenses.sql` | BUG-069 |
+| 2 | `20261010130000_drop_permissive_admin_for_all_policies.sql` | BUG-070 / BUG-071 (**Critical**) |
+| 3 | `20261010140000_scope_notification_reads.sql` | BUG-079 |
+| 4 | `20261010150000_scope_sms_template_writes.sql` | BUG-080 |
+| — | `psql -f scripts/verify-after-rls-migration.sql` | proves both directions: leak closed **and** own-rows/Super Admin still work |
+
+**Until 1–3 are applied, BUG-071 is a live Critical hole** — a Branch Admin can DELETE customers, the transaction log and sheet-posted expenses via direct PostgREST, and can read the whole company's notification inbox. `tests/guardedMigrationContract.test.js` enforces that each of the four runs as a transaction, can abort, and verifies `is_super_admin()` exists before depending on it.
+
 ### Future-branch / RBAC / future-users (2026-10-05)
 
 | Item | Status |
