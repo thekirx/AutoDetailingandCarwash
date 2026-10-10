@@ -1044,6 +1044,33 @@ const ALL_MUTATIONS = [
     from: "lower(coalesce(payment_method, 'cash')) = 'cash'",
     to: "lower(coalesce(nullif(btrim(payment_method), ''), 'cash')) = 'cash'",
   },
+  // The rest of the sheet's money math. Pinned at expression level because the
+  // first version of this file matched a key name and a mutation that replaced
+  // the VALUE passed straight through it.
+  {
+    file: 'src/lib/dailySheet.js',
+    name: 'BUG-082 returns to the Daily Sheet: the paid-only count override is dropped',
+    from: 'count: paid.length,',
+    to: 'count: r.count,',
+  },
+  {
+    file: 'src/lib/dailySheet.js',
+    name: 'an uncounted drawer reports 0 instead of null — reading as "balanced"',
+    from: 'overShortMinor: counted == null ? null : counted - expectedCashMinor,',
+    to: 'overShortMinor: counted == null ? 0 : counted - expectedCashMinor,',
+  },
+  {
+    file: 'supabase/migrations/20261010170000_daily_sheet_cash_blank_is_cash.sql',
+    name: 'the expected-cash terms are reordered in SQL',
+    from: 'v_expected := coalesce(s.opening_float_minor, 0) + v_cash + v_rep - v_exp - v_sal - v_rel;',
+    to: 'v_expected := coalesce(s.opening_float_minor, 0) + v_cash + v_rep - v_rel - v_exp - v_sal;',
+  },
+  {
+    file: 'src/lib/dailySheet.js',
+    name: 'the expected-cash terms are reordered in JS',
+    from: 'amount(openingFloatMinor) + s.cashMinor + caRepaidMinor - expensesMinor - salariesMinor - caReleasedMinor',
+    to: 'amount(openingFloatMinor) + s.cashMinor + caRepaidMinor - caReleasedMinor - expensesMinor - salariesMinor',
+  },
 ]
 
 // An optional substring filter (`node scripts/revert-prove-db-audit.mjs till`)

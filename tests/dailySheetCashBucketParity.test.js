@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { computeSheetTotals } from '../src/lib/dailySheet.js'
 import { drawerPaymentBucket, paymentBucket } from '../src/lib/paymentMethods.js'
 
 /**
@@ -147,5 +148,123 @@ describe('BUG-086: the sheet’s SQL cash test matches the JS drawer bucket', ()
     ]) {
       assert.match(fix, re, `the replacement no longer computes "${label}"`)
     }
+  })
+})
+
+/**
+ * The rest of the sheet's money math, pinned the same way.
+ *
+ * Found while hunting BUG-086: BUG-081's lesson was that money math living in
+ * two places will drift, and this file is the fourth implementation. Having
+ * found it, the other definitions were checked the same way and they AGREE —
+ * check:sheet-ui passes 60/60 for a reason, not by luck:
+ *
+ *   gross / discounts / refunds  both scope to paid + refunded
+ *   net                          both paid only
+ *   count                        both paid only, because summarizeSheetSales
+ *                                 overrides rollupSales' count (which counts
+ *                                 refunds too) — that override is exactly what
+ *                                 keeps the sheet off BUG-082's definition
+ *   netProfit                    net - expenses - salaries, both sides
+ *   expectedCash                 float + cash + caRepaid - expenses - salaries
+ *                                 - caReleased, both sides
+ *   overShort                    counted - expected, and null when uncounted,
+ *                                 both sides
+ *
+ * Pinned at expression level, not by key name: an earlier version of this file
+ * matched `'overShortMinor'` and a mutation that replaced the VALUE with null
+ * sailed through, because the key name survives.
+ */
+describe('the sheet totals computed in SQL match the ones computed in JS', () => {
+  const jsDaily = readFileSync(join(root, 'src/lib/dailySheet.js'), 'utf8')
+  const jsSummary = readFileSync(join(root, 'src/lib/salesSummary.js'), 'utf8')
+
+  it('gross and discounts scope to paid + refunded on both sides', () => {
+    assert.match(fixed, /status in \('paid', 'refunded'\)/)
+    assert.match(fixed, /sum\(total_minor \+ coalesce\(discount_minor, 0\)\)/)
+    assert.match(jsSummary, /COUNTED = new Set\(\['paid', 'refunded'\]\)/)
+    assert.match(jsSummary, /out\.grossMinor \+= total \+ discount/)
+  })
+
+  it('net is paid only on both sides', () => {
+    assert.match(fixed, /sum\(total_minor\) filter \(where status = 'paid'\)/)
+    assert.match(jsSummary, /out\.netMinor \+= total/)
+    // rollupSales nets only after `continue`ing past refunds.
+    assert.match(jsSummary, /if \(r\.status === 'refunded'\) \{[\s\S]{0,120}continue/)
+  })
+
+  it('the sheet count is paid only — the override that keeps it off BUG-082', () => {
+    // rollupSales counts refunds too, and averages over that. If
+    // summarizeSheetSales stopped overriding, "average sale" would silently
+    // change definition on the Daily Sheet only — BUG-082's exact failure.
+    assert.match(jsSummary, /out\.count \+= 1/)
+    assert.match(jsDaily, /count: paid\.length/)
+    assert.match(jsDaily, /avgMinor: paid\.length \? Math\.round\(r\.netMinor \/ paid\.length\) : 0/)
+  })
+
+  it('net profit subtracts expenses and salaries on both sides', () => {
+    assert.match(fixed, /'netProfitMinor',\s*v_net - v_exp - v_sal/)
+    assert.match(jsDaily, /totalExpensesMinor = expensesMinor \+ salariesMinor/)
+    assert.match(jsDaily, /netProfitMinor: s\.netMinor - totalExpensesMinor/)
+  })
+
+  it('expected cash uses the same six terms in the same order', () => {
+    const sqlExpect = fixed.match(/v_expected := ([^\n]+)/)
+    const jsExpect = jsDaily.match(/const expectedCashMinor =\s*\n?\s*([^\n]+)\n?\s*([^\n]+)/)
+    assert.ok(sqlExpect, 'SQL no longer computes expected cash')
+    assert.ok(jsExpect, 'JS no longer computes expected cash')
+    const norm = (s) => s.replace(/\s+/g, ' ').trim()
+    assert.match(
+      norm(sqlExpect[1]),
+      /opening_float_minor.*\+\s*v_cash.*\+\s*v_rep\s*-\s*v_exp\s*-\s*v_sal\s*-\s*v_rel/,
+      `SQL expected-cash terms drifted: ${norm(sqlExpect[1])}`,
+    )
+    const jsBoth = norm(jsExpect[1] + ' ' + jsExpect[2])
+    assert.match(
+      jsBoth,
+      /openingFloatMinor.*\+\s*s\.cashMinor.*\+\s*caRepaidMinor\s*-\s*expensesMinor\s*-\s*salariesMinor\s*-\s*caReleasedMinor/,
+      `JS expected-cash terms drifted: ${jsBoth}`,
+    )
+  })
+
+  it('over/short is null until counted, on both sides', () => {
+    assert.match(fixed, /case when s\.counted_cash_minor is null then null else s\.counted_cash_minor - v_expected end/)
+    assert.match(jsDaily, /overShortMinor: counted == null \? null : counted - expectedCashMinor/)
+  })
+
+  it('an uncounted sheet reports null, not zero — a zero would read as "balanced"', () => {
+    // The distinction that makes the check visible: null means "nobody counted
+    // yet", 0 means "counted, and it matched". submit_daily_sheet requires a
+    // count before it will accept the sheet, so this must not collapse.
+    const out = computeSheetTotals({ sales: [], lines: [], openingFloatMinor: 0, countedCashMinor: null })
+    assert.equal(out.overShortMinor, null)
+    assert.equal(out.expectedCashMinor, 0)
+  })
+
+  it('the same inputs give the same drawer figure on both paths', () => {
+    // End-to-end through the real function, computed independently here rather
+    // than copied from either side.
+    const sales = [
+      { status: 'paid', total_minor: 100000, discount_minor: 10000, payment_method: 'cash' },
+      { status: 'paid', total_minor: 50000, discount_minor: 0, payment_method: 'gcash' },
+      { status: 'refunded', total_minor: 20000, discount_minor: 0, payment_method: 'cash' },
+    ]
+    const lines = [
+      { kind: 'expense', amount_minor: 5000 },
+      { kind: 'salary', amount_minor: 25000 },
+      { kind: 'ca_release', amount_minor: 1000 },
+      { kind: 'ca_repay', amount_minor: 3000 },
+    ]
+    const t = computeSheetTotals({ sales, lines, openingFloatMinor: 10000, countedCashMinor: 100000 })
+    assert.equal(t.grossMinor, 180000, 'gross = paid+refunded totals plus their discounts')
+    assert.equal(t.discountsMinor, 10000)
+    assert.equal(t.refundsMinor, 20000)
+    assert.equal(t.netMinor, 150000, 'net is paid only')
+    assert.equal(t.count, 2, 'a refund is not a transaction on this sheet')
+    assert.equal(t.cashMinor, 100000, 'only the cash sale is drawer cash')
+    // 10000 float + 100000 cash + 3000 repaid - 5000 - 25000 - 1000 released
+    assert.equal(t.expectedCashMinor, 82000)
+    assert.equal(t.overShortMinor, 18000)
+    assert.equal(t.netProfitMinor, 150000 - 30000)
   })
 })
