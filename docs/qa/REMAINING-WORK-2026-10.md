@@ -28,6 +28,22 @@ The auth boundary has now been audited from **all three sides** — RLS (BUG-079
 
 **BUG-082 is open and deliberately unchanged** — "Average sale" is net ÷ paid on the Daily Sheet but gross ÷ paid-and-refunded on Finance. Measured: ₱650 vs ₱1,000 on the same day. A test pins the current behaviour as *"matches Square"*, so aligning them changes a number the owner sees and is an owner decision.
 
+### POS customer retention — verified by reading the path, 2026-10-10
+
+The goal requires that a BA finishing a POS sale **creates a customer if new, auto-fills if existing, and retains the data permanently**. Read and confirmed in `src/pages/PosPage.jsx`:
+
+| Requirement | Where | Verdict |
+|---|---|---|
+| Customer is created or linked **before** the sale, so ticket, sale and history name the same person | `commitCustomer()` at `PosPage.jsx:1036` | **Met** |
+| A failed customer step must not leave an orphaned sale | `:1037-1040` — `setSaving(false)` and `return`, before `complete_pos_sale` is ever called | **Met** — a sale cannot commit against a customer that failed to save |
+| An already-linked customer is reused | `:1041` — `committed.customerId \|\| customerId` | **Met** |
+| A walk-in with no customer id still retains name / phone / email | `:1049-1051` — `Walk-in: …` written into the sale's `notes` | **Met** |
+| Sale, line items and the customer link commit together | `:1065` — one `complete_pos_sale` RPC, a single database transaction | **Met** — no half-commit is representable |
+
+Auto-fill correctness itself was fixed earlier and revert-proved: **BUG-072** (the 400 ms lookup clobbered the name the cashier was typing) and **BUG-073** (editing one half of a returning customer's name stored `full_name='Maria Ana'` beside `last_name='Cruz'`).
+
+**No further defect found in this path.** Recorded here because this requirement is named in the brief and previously had no written evidence behind it.
+
 ### ⚠️ Four migrations are drafted, guarded and NOT applied (owner action)
 
 Production still carries the permissive policies. Apply **in this order**, then run the verifier and confirm every line reads PASS:
