@@ -13,14 +13,15 @@ Every gate below was **re-run after the BUG-081 money-path change**, because tha
 
 | Check | Command | Result |
 |-------|---------|--------|
-| Unit | `npm test` | **1981 pass / 0 fail / 2 skipped**, exit 0 |
+| Unit | `npm test` | **2006 pass / 0 fail / 2 skipped** (2008 total), exit 0 |
 | Lint | `npm run lint` | exit **0**, 0 errors 0 warnings |
 | Build | `npm run build` | exit **0** |
 | Daily ops | `npm run check` | **5/5 ok** — planning, portal-actions, settings-auth, customer regression, live-queue |
 | Daily Sheet screen | `npm run check:sheet-ui` | **PASS** — 60/60 sheets match stored totals; till shows Net ₱39,052.50 / Expenses ₱1,515.00 / Salaries ₱7,914.63 / Net profit ₱29,622.87, all matching |
 | Role matrix | `npm run e2e:role-qa-wave` | **179/179**, exit 0 — **tenth** consecutive clean wave (re-run after BUG-084, which sits on the token path for 45 authenticated `/api/*` fetches) |
 | `/api/*` auth boundary | `npm run audit:api-auth` | **CLEAN**, exit 0, 3/3 controls — 27 handlers, 0 unauthenticated outside a documented public list |
-| Revert-prove | `node scripts/revert-prove-db-audit.mjs` | BUG-079 **7/7**, BUG-080 **6/6**, BUG-081 **6/6**, BUG-083 **5/5**, BUG-084 **4/4**, migration contract **5/5** |
+| Revert-prove | `node scripts/revert-prove-db-audit.mjs` | BUG-079 **7/7**, BUG-080 **6/6**, BUG-081 **6/6**, BUG-083 **5/5**, BUG-084 **4/4**, migration contract **5/5**, BUG-085 **13/13** |
+| Markdown tables | `node --test tests/markdownTableIntegrity.test.js` | **PASS** — table-relative, self-validating against a known-broken and a known-escaped control |
 
 Closed this pass: **BUG-076** (staff login blamed the password for server faults), **BUG-077** (same misreport on the customer sign-in surface), **BUG-078** (set-password and sign-up rendered raw Supabase errors), **BUG-079** (a Branch Admin could read every user's notifications — and their own bell showed them), **BUG-080** (a Branch Admin could rewrite every SMS template), **BUG-081** (the Daily Sheet counted an unrecognised payment method as **cash**, so a BA whose count was correct was told the drawer was short), **BUG-083** (Team Lead customer history 401'd on every call, hidden behind a fallback onto a *different dataset* — open queue rows instead of visits), **BUG-084** (a token refresh that produced nothing handed back a token that had already expired; 45 of 56 authenticated `/api/*` fetches route through that helper, and `isSessionExpired` sat unused twenty lines above it).
 
@@ -54,9 +55,12 @@ Production still carries the permissive policies. Apply **in this order**, then 
 | 2 | `20261010130000_drop_permissive_admin_for_all_policies.sql` | BUG-070 / BUG-071 (**Critical**) |
 | 3 | `20261010140000_scope_notification_reads.sql` | BUG-079 |
 | 4 | `20261010150000_scope_sms_template_writes.sql` | BUG-080 |
+| 5 | `20261010160000_daily_sheet_separation_of_duties.sql` | BUG-085 |
 | — | `psql -f scripts/verify-after-rls-migration.sql` | proves both directions: leak closed **and** own-rows/Super Admin still work |
 
-**Until 1–3 are applied, BUG-071 is a live Critical hole** — a Branch Admin can DELETE customers, the transaction log and sheet-posted expenses via direct PostgREST, and can read the whole company's notification inbox. `tests/guardedMigrationContract.test.js` enforces that each of the four runs as a transaction, can abort, and verifies `is_super_admin()` exists before depending on it.
+**Until 1–3 are applied, BUG-071 is a live Critical hole** — a Branch Admin can DELETE customers, the transaction log and sheet-posted expenses via direct PostgREST, and can read the whole company's notification inbox. `tests/guardedMigrationContract.test.js` enforces that each of the five runs as a transaction, can abort, and verifies `is_super_admin()` exists before depending on it.
+
+**Migration 5 needs no `psql` step and is independent of 1–4** — it replaces one function body and rewrites no data. It aborts if `review_daily_sheet` is missing or has drifted from the body it was written against, so if it refuses, read the message rather than forcing it. Apply order 1→5 keeps the numbering honest.
 
 ### Future-branch / RBAC / future-users (2026-10-05)
 

@@ -11,12 +11,14 @@ import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { ROLES } from '@/auth/permissions'
+import { useAuth } from '@/auth/AuthProvider'
 import { downloadCsv, downloadExcel, printAsPdf } from '@/lib/financeData'
 import { listBranches } from '@/lib/adminApi'
 import { activeAccounts } from '@/lib/financeBooks'
 import {
   METHOD_LABELS,
   SHEET_STATUS_LABELS,
+  canApproveSheet,
   canReviewDailySheet,
   closeOfDaySlip,
   computeSheetTotals,
@@ -233,6 +235,10 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
   const [returnNote, setReturnNote] = useState('')
   const [returnOpen, setReturnOpen] = useState(false)
   const [branchNames, setBranchNames] = useState({})
+  // BUG-085: the server refuses to let a reviewer approve a sheet they filed.
+  // Resolving the current user here keeps Approve from rendering as a button
+  // that is guaranteed to fail for the one person most likely to try it.
+  const { user } = useAuth()
 
   useEffect(() => {
     listBranches()
@@ -731,9 +737,17 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
 
           {review && status === 'submitted' && canReviewDailySheet(profile) ? (
             <div className="ds-summary-actions">
-              <Button type="button" className="ds-submit min-h-12 w-full" disabled={busy} onClick={() => decide('approve')}>
-                Approve
-              </Button>
+              {canApproveSheet(profile, sheet, user?.id) ? (
+                <Button type="button" className="ds-submit min-h-12 w-full" disabled={busy} onClick={() => decide('approve')}>
+                  Approve
+                </Button>
+              ) : (
+                // BUG-085. Returning is still offered below — correcting your own
+                // sheet is not the thing the server refuses.
+                <p className="ds-missing" role="note">
+                  You submitted this sheet, so someone else has to approve it.
+                </p>
+              )}
               {returnOpen ? (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="ds-return" className="text-sm">What should the Branch Admin fix?</Label>

@@ -37,6 +37,7 @@ const GUARDED = [
   '20261010130000_drop_permissive_admin_for_all_policies.sql',
   '20261010140000_scope_notification_reads.sql',
   '20261010150000_scope_sms_template_writes.sql',
+  '20261010160000_daily_sheet_separation_of_duties.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')

@@ -891,6 +891,91 @@ const ALL_MUTATIONS = [
     from: / {4}const \{ data, error \} = await auth\.refreshSession\(\)\r?\n {6}if \(error\) throw error\r?\n {6}return data\.session \|\| null/,
     to: '      const { data } = await auth.refreshSession()\n      return data.session || null',
   },
+  // BUG-085 — self-approval. review_daily_sheet separates roles but never
+  // people, and a default ASA holds both `pos` and `finance_view` (asa_has_grant
+  // denies only finance_write/planning_edit/rbac_edit when a key is absent), so
+  // one identity could file a sheet and approve it. Mutations target the guard
+  // migration rather than the original, which is the live definition after apply.
+  {
+    file: 'supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql',
+    name: 'BUG-085 itself: the self-approval guard is gone from review_daily_sheet',
+    from: /\r?\n {2}if v_action = 'approve'\r?\n {5}and s\.submitted_by is not null\r?\n {5}and s\.submitted_by = caller[\s\S]*?message = 'You cannot approve a daily sheet you submitted yourself';\r?\n {2}end if;\r?\n/,
+    to: '\n',
+  },
+  {
+    file: 'supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql',
+    name: 'BUG-085: the guard compares the reviewer to the wrong column',
+    // reviewed_by is null on a first submission and stale on a resubmission, so
+    // this reads as a passing guard while every self-approval walks straight through.
+    from: 'and s.submitted_by = caller',
+    to: 'and s.reviewed_by = caller',
+  },
+  {
+    file: 'supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql',
+    name: 'BUG-085: the Super Admin exemption is inverted, locking the owner out',
+    from: "and public.current_user_role() is distinct from 'BossMich' then",
+    to: "and public.current_user_role() = 'BossMich' then",
+  },
+  {
+    file: 'supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql',
+    name: 'BUG-085: the guard reads submitted_by from the client payload',
+    from: 's.submitted_by is not null',
+    to: "nullif(payload->>'submitted_by', '')::uuid is not null",
+  },
+  {
+    file: 'supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql',
+    name: 'BUG-085: the guard sits after the expenses it was meant to prevent',
+    from: /(\r?\n {2}if v_action = 'approve'\r?\n {5}and s\.submitted_by is not null[\s\S]*?submitted yourself';\r?\n {2}end if;)(\r?\n\r?\n {2}if v_action = 'approve' then[\s\S]*?get diagnostics v_cleared = row_count;\r?\n {2}end if;\r?\n)/,
+    to: '$2$1',
+  },
+  {
+    file: 'supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql',
+    name: 'BUG-085: the guard blocks returning your own sheet, stranding a rejected one',
+    from: / {2}if v_action = 'approve'\r?\n {5}and s\.submitted_by is not null/,
+    to: '  if s.submitted_by is not null',
+  },
+  {
+    file: 'supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql',
+    name: 'BUG-085: the refusal is downgraded to a generic error code',
+    from: /errcode = '42501',\r?\n {6}message = 'You cannot approve a daily sheet you submitted yourself';/,
+    to: "errcode = 'P0001',\r\n      message = 'You cannot approve a daily sheet you submitted yourself';",
+  },
+  {
+    file: 'supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql',
+    name: 'BUG-085: create-or-replace silently drops the double-post guard',
+    from: /\r?\n {4}on conflict \(daily_sheet_line_id\) where daily_sheet_line_id is not null do nothing;/,
+    to: ';',
+  },
+  {
+    file: 'supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql',
+    name: 'BUG-085: create-or-replace silently drops the submitted-only status gate',
+    from: /\r?\n {2}if s\.status <> 'submitted' then raise exception 'Only submitted sheets can be reviewed';/,
+    to: '',
+  },
+  {
+    file: 'src/lib/dailySheetApi.js',
+    name: 'BUG-085: the error mapper swallows the self-approval refusal as a migration prompt',
+    from: '/daily_sheet|does not exist|schema cache/i',
+    to: '/daily_sheet|daily sheet|does not exist|schema cache/i',
+  },
+  {
+    file: 'src/lib/dailySheet.js',
+    name: 'BUG-085: the client predicate stops refusing self-approval',
+    from: 'return submittedBy !== currentUserId',
+    to: 'return true',
+  },
+  {
+    file: 'src/lib/dailySheet.js',
+    name: 'BUG-085: the client predicate drops the Super Admin exemption too',
+    from: "if (profile?.role === 'BossMich') return true\n  const submittedBy = sheet?.submitted_by",
+    to: 'const submittedBy = sheet?.submitted_by',
+  },
+  {
+    file: 'src/pages/pos/DailySheetPanel.jsx',
+    name: 'BUG-085: Approve is rendered unconditionally again',
+    from: "canApproveSheet(profile, sheet, user?.id) ? (",
+    to: 'true ? (',
+  },
 ]
 
 // An optional substring filter (`node scripts/revert-prove-db-audit.mjs till`)

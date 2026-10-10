@@ -49,6 +49,29 @@ export function canReviewDailySheet(profile) {
   return profile?.role === 'assistant_super_admin' && grantOr(profile, ['finance_view'])
 }
 
+/**
+ * Mirrors the BUG-085 guard in review_daily_sheet: a reviewer may not approve a
+ * sheet they submitted themselves. BossMich is exempt for the same reason the SQL
+ * exempts them — the owner is the only reviewer in a one-owner shop, and
+ * reopen_daily_sheet accepts only approved sheets, so blocking them would strand
+ * a sheet they filed at 'submitted' with no recovery path.
+ *
+ * Returning is NOT restricted on either side. Returning your own sheet is how it
+ * gets corrected, and submit_daily_sheet is the only way back out of 'returned'.
+ *
+ * Deliberately never stricter than the server: a sheet with no recorded submitter
+ * is allowed (the SQL guard requires `submitted_by is not null`), and an
+ * unresolved current user is not treated as a match, so a slow identity load
+ * cannot hide Approve from everyone.
+ */
+export function canApproveSheet(profile, sheet, currentUserId) {
+  if (!canReviewDailySheet(profile)) return false
+  if (profile?.role === 'BossMich') return true
+  const submittedBy = sheet?.submitted_by
+  if (!submittedBy || !currentUserId) return true
+  return submittedBy !== currentUserId
+}
+
 const FAMILY_OF_BUCKET = {
   carwash: 'car_wash',
   coating: 'coating',
