@@ -5,7 +5,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { NOTIFY_EVENTS, pickNotifyUrl, planStaffRecipients } from '../src/lib/notifyRouting.js'
 import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
-import { DEFAULT_ASSISTANT_GRANTS } from '../src/auth/permissions.js'
+import { DEFAULT_ASSISTANT_GRANTS, ROLES } from '../src/auth/permissions.js'
 
 /**
  * "A notification nobody can open" is the quietest failure in this app.
@@ -107,3 +107,82 @@ describe('every notification url is a route the app still renders', () => {
     })
   }
 })
+
+/**
+ * Two writers bypass pickNotifyUrl entirely and hardcode a url in SQL. The
+ * `attendance_location_alert` one carries a comment asserting its recipients
+ * "must match" the JS table above — a claim no test checked, which is the same
+ * failure as a changelog line saying a path is reachable.
+ *
+ * This enforces that comment. The risk it covers is real: these inserts write
+ * `user_notifications` directly, so there is no allowRoute check anywhere on the
+ * path. A role added to one list and not the other gets an alert that silently
+ * goes nowhere, or a push for a page that role cannot open.
+ */
+describe('the SQL writers of inbox rows agree with the JS routing table', () => {
+  const geoSql = readFileSync(
+    join(root, 'supabase/migrations/20261006120000_attendance_geo_spoof_alerts.sql'),
+    'utf8',
+  )
+  const rule = NOTIFY_EVENTS.attendance_location_alert
+
+  it('the geo_clock_in insert targets roles the JS rule also names', () => {
+    // The insert reads: sp.role in ('BossMich','assistant_super_admin') or (sp.role = 'admin' ...)
+    assert.match(geoSql, /sp\.role\s+in\s*\(\s*'BossMich'\s*,\s*'assistant_super_admin'\s*\)/)
+    assert.match(geoSql, /sp\.role\s*=\s*'admin'/)
+
+    const sqlRoles = [ROLES.SUPER_ADMIN, ROLES.ASSISTANT_SUPER_ADMIN, ROLES.ADMIN]
+    assert.deepEqual(
+      [...rule.roles].sort(),
+      [...sqlRoles].sort(),
+      'the geo_clock_in SQL and NOTIFY_EVENTS now disagree about who hears about a blocked time-in',
+    )
+    assert.equal(ROLES.SUPER_ADMIN, 'BossMich', 'the role constant drifted from the SQL literal')
+  })
+
+  it('the geo_clock_in insert uses the same url the JS rule resolves', () => {
+    assert.match(geoSql, /'\/operations\/attendance'/, 'the SQL url is gone or renamed')
+    assert.deepEqual(rule.urls, ['/operations/attendance'])
+  })
+
+  it('every role the SQL notifies can open the url it hardcodes', () => {
+    // This is the check the SQL itself can never do: it writes the url without
+    // consulting allowRoute, so reachability has to be proven here instead.
+    for (const role of rule.roles) {
+      assert.equal(
+        pickNotifyUrl(profileFor(role), rule.urls),
+        '/operations/attendance',
+        `${role} would be handed a ${rule.urls[0]} it cannot open`,
+      )
+    }
+  })
+
+  it('the revoked shift-close writer is not mistaken for a live one', () => {
+    // review_shift_close still hardcodes '/operations/payroll', which is a
+    // Navigate redirect to Finance sheets rather than a gate. It cannot run:
+    // the Daily Sheet migration revoked it and the e2e asserts permission denied.
+    // Recorded so nobody treats that url as a live delivery path — or re-grants
+    // the function and ships a notification pointing at a redirect.
+    const shiftClose = readFileSync(
+      join(root, 'supabase/migrations/20260924120000_shift_close_reopen_note_min_length.sql'),
+      'utf8',
+    )
+    assert.match(shiftClose, /'\/operations\/payroll'/, 'expected the historical payroll url')
+    const dailySheet = readFileSync(join(root, 'supabase/migrations/20261001090000_daily_sheet.sql'), 'utf8')
+    assert.match(
+      dailySheet,
+      /revoke[^;]*review_shift_close/i,
+      'review_shift_close must stay revoked, or the payroll url becomes a live redirect',
+    )
+    // And the redirect it points at is a real route, not a 404.
+    assert.match(rule0(), /\/operations\/finance/)
+  })
+})
+
+/** Tiny shim so the retired-path assertion above reads as one sentence. */
+function rule0() {
+  const app = readFileSync(join(root, 'src/App.jsx'), 'utf8')
+  const m = app.match(/path="payroll"[^>]*Navigate to="([^"]+)"/)
+  assert.ok(m, 'the /operations/payroll redirect route is gone')
+  return m[1]
+}

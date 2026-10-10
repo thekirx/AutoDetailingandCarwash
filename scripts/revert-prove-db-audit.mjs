@@ -993,6 +993,22 @@ const ALL_MUTATIONS = [
     from: "inquiry: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/inquiries'] }",
     to: "inquiry: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/inguiries'] }",
   },
+  // The SQL/JS parity assertions. Mutated on the JS side deliberately: the
+  // geo_clock_in migration belongs to a concurrent session editing this tree, and
+  // revert-prove writes mutations in place. The parity check reads both, so
+  // changing either half makes it fail — and this one is ours to touch.
+  {
+    file: 'src/lib/notifyRouting.js',
+    name: 'the JS notify table drifts from the geo_clock_in SQL recipients',
+    from: 'attendance_location_alert: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: [\'/operations/attendance\'] }',
+    to: "attendance_location_alert: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/attendance'] }",
+  },
+  {
+    file: 'src/lib/notifyRouting.js',
+    name: 'a SQL-notified role is given a url it cannot open',
+    from: "attendance_location_alert: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/attendance'] }",
+    to: "attendance_location_alert: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/data-center'] }",
+  },
 ]
 
 // An optional substring filter (`node scripts/revert-prove-db-audit.mjs till`)
