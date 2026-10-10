@@ -109,3 +109,55 @@ export function describeCustomerAuthFailure({ status, data } = {}) {
   // the password, so nothing may claim otherwise.
   return "We couldn't sign you in. Please try again."
 }
+
+/**
+ * Classify a failure from saving a new password (`supabase.auth.updateUser`).
+ *
+ * This is deliberately NOT `describeAuthError`. That mapper is credential-shaped,
+ * and `updateUser` never has a credential problem — the user has already proved
+ * who they are with a session, and has just typed the password themselves.
+ * Running the sign-in mapper here produces a *new* false verdict:
+ *
+ *   describeAuthError({ status: 400,
+ *     message: 'New password should be different from the old password.' })
+ *     -> 'Invalid email or password.'
+ *
+ * So this is a separate mapping whose every branch is about the save, and whose
+ * final fallback is guaranteed never to mention credentials.
+ */
+export function describePasswordUpdateError(err) {
+  if (!err) return 'Could not save your password. Try again.'
+
+  const status = Number(err.status || 0)
+  const message = String(err.message || '').toLowerCase()
+
+  if (status === 429 || /too many|rate limit|over_request/.test(message)) {
+    return 'Too many attempts. Wait a minute, then try again.'
+  }
+
+  if (/fetch failed|network|failed to fetch|timeout|timed out|econnrefused|socket hang up/.test(message)) {
+    return "Can't reach the sign-in server. Check your connection and try again."
+  }
+
+  // The reset link is what grants the session this page depends on. When it has
+  // lapsed the only way forward is to open the email again.
+  if (/auth session missing|session missing|jwt|token.*expired|invalid.*session|not authenticated/.test(message)) {
+    return 'Your reset link has expired. Open the link from your email again to set a new password.'
+  }
+
+  if (/different from the old|same.*(as|as your).*old|reuse/.test(message)) {
+    return 'That is your current password. Choose a different one.'
+  }
+
+  // Supabase's own floor is 6; this form enforces 8 (see CustomerSetPasswordPage).
+  // Never tell a customer to use 6 while the field refuses it.
+  if (/at least \d+ characters/.test(message)) {
+    return 'Password must be at least 8 characters.'
+  }
+
+  if (status >= 500) {
+    return 'The sign-in service is having trouble. Try again in a moment.'
+  }
+
+  return 'Could not save your password. Try again.'
+}

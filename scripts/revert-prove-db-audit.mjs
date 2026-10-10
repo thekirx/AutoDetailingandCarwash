@@ -36,6 +36,7 @@ const SUITES = [
   'tests/adminWritePolicyScope.test.js',
   'tests/authErrorMessage.test.js',
   'tests/customerSignInFailureHonesty.test.js',
+  'tests/passwordUpdateErrorHonesty.test.js',
 ]
 
 function runSuite() {
@@ -633,6 +634,50 @@ const ALL_MUTATIONS = [
     name: 'the mapper leaks our internal config names onto a customer screen',
     from: / {2}if \(code >= 500\) \{\r?\n {4}return 'The sign-in service is having trouble\. Try again in a moment\.'\r?\n {2}\}/,
     to: "  if (code >= 500) {\n    return serverMessage || 'The sign-in service is having trouble. Try again in a moment.'\n  }",
+  },
+  // BUG-078 — the last two customer auth surfaces. The password-update mapping
+  // has to stay separate from the sign-in one: merging them re-creates BUG-076.
+  {
+    file: 'src/lib/authErrorMessage.js',
+    name: 'the password mapper starts blaming the credentials it cannot know about',
+    from: / {2}return 'Could not save your password\. Try again\.'\r?\n\}/,
+    to: "  if (status === 400) return 'Invalid email or password.'\n\n  return 'Could not save your password. Try again.'\n}",
+  },
+  {
+    file: 'src/lib/authErrorMessage.js',
+    name: 'the password mapper stops pointing an expired reset link at the email',
+    from: / {2}if \(\/auth session missing[\s\S]{0,200}?return 'Your reset link has expired\.[\s\S]{0,120}?'\r?\n {2}\}\r?\n/,
+    to: '',
+  },
+  {
+    file: 'src/lib/authErrorMessage.js',
+    name: 'the password mapper goes back to Supabase own six-character floor',
+    from: / {2}if \(\/at least \\d\+ characters\/\.test\(message\)\) \{\r?\n {4}return 'Password must be at least 8 characters\.'\r?\n {2}\}/,
+    to: "  if (/at least \\d+ characters/.test(message)) {\n    return message\n  }",
+  },
+  {
+    file: 'src/pages/CustomerSetPasswordPage.jsx',
+    name: 'set-password shows the raw Supabase error again',
+    from: / {6}if \(updateError\) \{\r?\n {8}setError\(describePasswordUpdateError\(updateError\)\)\r?\n {8}return\r?\n {6}\}/,
+    to: '      if (updateError) throw updateError',
+  },
+  {
+    file: 'src/pages/CustomerSetPasswordPage.jsx',
+    name: 'set-password reports a save failure after the save already succeeded',
+    from: /homeAfterPassword\(userData\.user\?\.id\)\.catch\(\(\) => '\/account'\)/,
+    to: 'homeAfterPassword(userData.user?.id)',
+  },
+  {
+    file: 'src/pages/CustomerSignUpPage.jsx',
+    name: 'signup goes back to blaming every failure on account creation',
+    from: /throw new Error\(describeCustomerAuthFailure\(\{ status: res\.status, data: body \}\)\)/,
+    to: "throw new Error(body.error || 'Unable to create account.')",
+  },
+  {
+    file: 'src/pages/CustomerSignUpPage.jsx',
+    name: 'signup drops the per-field validation errors the server sends',
+    from: 'if (body.fields) setErrors(body.fields)',
+    to: '',
   },
 ]
 

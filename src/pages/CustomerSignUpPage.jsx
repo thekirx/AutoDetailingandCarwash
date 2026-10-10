@@ -14,6 +14,7 @@ import {
   validateOnboardingStep,
 } from '../lib/customerOnboarding'
 import { PLATE_FIELD_HINT } from '../lib/customerAuth'
+import { describeAuthError, describeCustomerAuthFailure } from '../lib/authErrorMessage'
 
 async function authLookup(identifier) {
   const res = await fetch('/api/customer-auth-lookup', {
@@ -124,24 +125,36 @@ export default function CustomerSignUpPage() {
 
     setSubmitting(true)
     try {
-      const res = await fetch('/api/customer-signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: form.full_name,
-          phone: form.phone,
-          plate: form.plate,
-          date_of_birth: form.date_of_birth,
-          email: form.email || null,
-          password: form.password,
-          confirm: form.confirm,
-          accepted_terms: true,
-        }),
-      })
+      let res
+      try {
+        res = await fetch('/api/customer-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: form.full_name,
+            phone: form.phone,
+            plate: form.plate,
+            date_of_birth: form.date_of_birth,
+            email: form.email || null,
+            password: form.password,
+            confirm: form.confirm,
+            accepted_terms: true,
+          }),
+        })
+      } catch (netErr) {
+        // The request never reached the server, so nothing is known about the
+        // signup beyond "we could not ask". Classify here rather than letting the
+        // shared catch render the browser's raw "Failed to fetch".
+        throw new Error(describeAuthError({ message: netErr?.message }))
+      }
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
         if (body.fields) setErrors(body.fields)
-        throw new Error(body.error || 'Unable to create account.')
+        // BUG-078: this was `body.error || 'Unable to create account.'`, which
+        // discarded the status — so a 502 or a function timeout read as "unable
+        // to create account", and when the body was not JSON it said nothing at
+        // all. `body` is {} in exactly that case.
+        throw new Error(describeCustomerAuthFailure({ status: res.status, data: body }))
       }
 
       const loginEmail = body.email

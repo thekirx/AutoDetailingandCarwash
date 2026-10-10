@@ -5,6 +5,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell from '../components/HakumAuthShell'
 import { AuthLegalLinks } from '../components/FormLegalNotice'
 import { usePageMeta } from '../lib/pageMeta'
+import { describePasswordUpdateError } from '../lib/authErrorMessage'
 import { OPS_LOGIN_ROLES, redirectForRole } from '../auth/permissions'
 
 async function homeAfterPassword(userId) {
@@ -102,12 +103,25 @@ export default function CustomerSetPasswordPage() {
         password,
         data: { must_set_password: false },
       })
-      if (updateError) throw updateError
+      // BUG-078: this used to rethrow and render `err.message` verbatim, so the
+      // screen could read "Auth session missing!" or "Failed to fetch". Saving a
+      // password never has a credentials problem — the user just typed it — so
+      // describeAuthError would be wrong here, not merely imprecise.
+      //
+      // Note the early return instead of throwing a described Error: re-wrapping
+      // an already-described message would send it back through the mapper and
+      // land on the generic fallback, losing the actual guidance.
+      if (updateError) {
+        setError(describePasswordUpdateError(updateError))
+        return
+      }
       setDone(true)
-      const dest = await homeAfterPassword(userData.user?.id)
+      // The password is already saved. A failure resolving the landing page must
+      // not be reported as a failed save, so this can never reach the catch.
+      const dest = await homeAfterPassword(userData.user?.id).catch(() => '/account')
       window.setTimeout(() => navigate(dest, { replace: true }), 1200)
     } catch (err) {
-      setError(err.message)
+      setError(describePasswordUpdateError(err))
     } finally {
       setSubmitting(false)
     }
