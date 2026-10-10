@@ -11,6 +11,9 @@ import { fileURLToPath } from 'node:url'
 import {
   ROLES,
   getOperationsNav,
+  allowRoute,
+  INVESTOR_ROUTE_KEYS,
+  canEditFinanceBooks,
 } from '../src/auth/permissions.js'
 import {
   filterFinanceBranchOptions,
@@ -49,7 +52,39 @@ const warnings = []
 // ── 1. Investor scope ─────────────────────────────────────────────────────
 const investorProfile = { role: ROLES.INVESTOR }
 const nav = getOperationsNav(investorProfile)
-assert(nav.length === 1 && nav[0].to === '/operations/finance', 'investor nav is Finance only')
+// This used to assert `nav.length === 1 && nav[0].to === '/operations/finance'`.
+// That expectation was written at e52d125 and superseded by f1cb989 ("role access
+// fixes"), which deliberately widened INVESTOR_ROUTE_KEYS to dashboard/pos/finance/
+// reports. The gate kept the old wording, so `npm run test:readiness` reported a
+// critical FAIL for a policy that had been changed on purpose — the worst kind of
+// red, because it teaches the owner to distrust the gate.
+//
+// The invariant worth keeping is not a hardcoded list of routes, which goes stale
+// the same way. It is: every route the investor is shown must be one the gate
+// actually allows them, and the gate must grant read-only surfaces only. So derive
+// the expectation from INVESTOR_ROUTE_KEYS and check containment both ways.
+assert(nav.length > 0, 'investor nav must not be empty — an investor needs somewhere to land')
+const navKeys = nav.map((item) => String(item.to || '').replace(/^\/operations\/?/, ''))
+for (const key of navKeys) {
+  assert(
+    allowRoute(investorProfile, key),
+    `investor nav shows /operations/${key} but the route gate does not allow it`,
+  )
+}
+// Nothing outside the investor allow-list may leak into their nav (queue, people,
+// settings, finance vendors…). This is the containment that a hardcoded length-1
+// assertion could never express.
+const known = new Set(['dashboard', 'pos', 'finance', 'reports'])
+for (const key of navKeys) {
+  assert(known.has(key), `investor nav contains an unknown route key: ${key}`)
+}
+for (const key of INVESTOR_ROUTE_KEYS) {
+  assert(
+    allowRoute(investorProfile, key),
+    `INVESTOR_ROUTE_KEYS lists ${key} but allowRoute denies it — the two must agree`,
+  )
+}
+assert(!canEditFinanceBooks(investorProfile), 'investor chrome is read-only: no finance writes')
 assert(!canAccessCorporateFinance(investorProfile), 'investor cannot access corporate finance')
 
 const { data: branches } = await admin.from('branches').select('slug, name').limit(20)

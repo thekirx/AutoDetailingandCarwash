@@ -105,24 +105,52 @@ async function startSharedPreview() {
     ['run', 'dev', '--', '--host', '127.0.0.1', '--port', port],
     { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], shell: isWin, env: process.env },
   )
-  for (let i = 0; i < 90; i++) {
+  // Phase 1 — the socket answers.
+  let listening = false
+  for (let i = 0; i < 90 && !listening; i++) {
     await new Promise((r) => setTimeout(r, 500))
     try {
       const res = await fetch(base, { signal: AbortSignal.timeout(2000) })
-      if (res.ok || res.status === 404) {
-        return {
-          base,
-          stop: async () => {
-            preview.kill('SIGTERM')
-          },
-        }
-      }
+      if (res.ok || res.status === 404) listening = true
     } catch {
       /* wait */
     }
   }
-  preview.kill()
-  throw new Error('shared vite dev failed to start')
+  if (!listening) {
+    preview.kill()
+    throw new Error('shared vite dev failed to start')
+  }
+
+  // Phase 2 — the server can actually serve the app. A Vite dev server answers the
+  // socket long before it can serve modules: the first request for a real route
+  // triggers an on-demand transform of the whole import graph. Declaring readiness on
+  // the socket alone meant e2e-ui-p0's first navigation to the login route ate a cold
+  // transform, blew its 20s selector wait, and aborted the sweep at 0 of 1 — a
+  // truncated run that reads exactly like a broken login page. Same defect class as
+  // BUG-064: a transient readiness signal aborting the run.
+  // Warm the route the first step will actually load, and only then hand over.
+  const warmRoute = `${base}/operations/login`
+  let warmed = false
+  for (let i = 0; i < 60 && !warmed; i++) {
+    try {
+      const res = await fetch(warmRoute, { signal: AbortSignal.timeout(30000) })
+      warmed = res.ok
+    } catch {
+      /* still transforming */
+    }
+    if (!warmed) await new Promise((r) => setTimeout(r, 500))
+  }
+  if (!warmed) {
+    preview.kill()
+    throw new Error(`shared vite dev never served ${warmRoute} — the sweep would report a truncated failure`)
+  }
+
+  return {
+    base,
+    stop: async () => {
+      preview.kill('SIGTERM')
+    },
+  }
 }
 
 const started = new Date().toISOString()
