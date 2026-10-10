@@ -7,6 +7,7 @@ import { paidSalesToBacoorRows } from './posSellables.js'
 import { buildPayrollPreview } from './payroll.js'
 import { normalizeCompensationSettings } from './compensation.js'
 import { normalizeAssistantGrants } from '../auth/permissions.js'
+import { drawerPaymentBucket } from './paymentMethods.js'
 
 export const SHEET_STATUSES = Object.freeze(['draft', 'submitted', 'approved', 'returned'])
 export const LINE_KINDS = Object.freeze(['expense', 'salary', 'ca_release', 'ca_repay'])
@@ -70,9 +71,14 @@ export const FAMILY_LABELS = Object.freeze({
   merch: 'Merch',
 })
 
-const METHOD_OF = { cash: 'cash', gcash: 'gcash', 'g-cash': 'gcash', card: 'card', credit: 'card', debit: 'card', online: 'bank', bank: 'bank', transfer: 'bank' }
-
-export const METHOD_LABELS = Object.freeze({ cash: 'Cash', gcash: 'GCash', card: 'Card', bank: 'Bank' })
+/**
+ * BUG-081: this used to carry its own METHOD_OF map, which fell back to 'cash'
+ * for anything unrecognised. That fallback feeds cashMinor → expectedCashMinor
+ * → overShortMinor, so a sale recorded under an admin-configured payment method
+ * told a Branch Admin their correct drawer was short by exactly that amount.
+ * paymentBucket() resolves unknown to 'other', which is not a drawer method.
+ */
+export const METHOD_LABELS = Object.freeze({ cash: 'Cash', gcash: 'GCash', card: 'Card', bank: 'Bank', other: 'Other' })
 
 const amount = (v) => {
   const n = Math.round(Number(v))
@@ -85,10 +91,10 @@ const sumOf = (rows) => rows.reduce((s, l) => s + amount(l.amount_minor), 0)
 /** Gross / discounts / refunds / net / count / average + payment methods + service families. */
 export function summarizeSheetSales(sales = []) {
   const r = rollupSales(sales)
-  const byMethod = { cash: 0, gcash: 0, card: 0, bank: 0 }
+  const byMethod = { cash: 0, gcash: 0, card: 0, bank: 0, other: 0 }
   const paid = (sales || []).filter((s) => s?.status === 'paid')
   for (const s of paid) {
-    byMethod[METHOD_OF[String(s.payment_method || 'cash').toLowerCase()] || 'cash'] += amount(s.total_minor)
+    byMethod[drawerPaymentBucket(s.payment_method)] += amount(s.total_minor)
   }
   const families = new Map()
   for (const row of paidSalesToBacoorRows(paid)) {

@@ -35,7 +35,16 @@ test('sales: gross before discounts, net = gross − discounts − refunds, avg 
   assert.equal(s.netMinor, 100000)
   assert.equal(s.count, 3)
   assert.equal(s.avgMinor, Math.round(100000 / 3))
-  assert.deepEqual(s.byMethod, { cash: 50000, gcash: 20000, card: 0, bank: 30000 })
+  // `other` is new in BUG-081 and is load-bearing, not incidental: it is where an
+  // unrecognised payment method lands. Without a real bucket for it the money
+  // would either be written to an undefined key or dropped, and dropping it would
+  // make the method rows stop summing to net sales.
+  assert.deepEqual(s.byMethod, { cash: 50000, gcash: 20000, card: 0, bank: 30000, other: 0 })
+  assert.equal(
+    Object.values(s.byMethod).reduce((a, b) => a + b, 0),
+    s.netMinor,
+    'method buckets must account for every peso of net sales',
+  )
   assert.equal(s.cashMinor, 50000)
   const fam = Object.fromEntries(s.byFamily.map((f) => [f.id, f.minor]))
   assert.equal(fam.car_wash, 85000)

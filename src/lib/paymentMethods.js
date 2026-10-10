@@ -13,22 +13,86 @@ export const PAYMENT_METHODS = [
 /** @deprecated alias — prefer PAYMENT_METHODS */
 export const PAYMENT_OPTIONS = PAYMENT_METHODS
 
-/** Normalize stored sale.payment_method into cash | gcash | card. */
+/**
+ * Canonical payment buckets. One vocabulary for the whole app.
+ *
+ * BUG-081: this file, dailySheet.js and salesSummary.js each carried a private
+ * map, and they disagreed — 'bank' was card here, bank there, other in the
+ * third. The Daily Sheet's was the one that cost money: its fallback was cash,
+ * and cash feeds the drawer reconciliation.
+ *
+ * `other` exists so an unrecognised method has somewhere to go that is NOT
+ * cash. Cash is the only bucket that implies a note in the drawer, so a
+ * fallback into it invents money the shop never took.
+ *
+ * A MISSING method still resolves to cash: posSale.js defaults it, the shop is
+ * cash-first, and some money demonstrably came in. That is a different
+ * question from a method that was recorded and is not recognised.
+ */
+export const PAYMENT_BUCKETS = Object.freeze(['cash', 'gcash', 'card', 'bank', 'other'])
+
+const ALIASES = Object.freeze({
+  cash: 'cash',
+  gcash: 'gcash',
+  'g-cash': 'gcash',
+  card: 'card',
+  credit: 'card',
+  debit: 'card',
+  credit_debit: 'card',
+  'credit/debit': 'card',
+  // Legacy bank transfer / "online" settlement. Not a drawer method and not a
+  // card terminal — it clears to an account.
+  online: 'bank',
+  bank: 'bank',
+  transfer: 'bank',
+})
+
+/**
+ * Classify a stored sale.payment_method. Pure: absent, blank and unrecognised
+ * are all "we do not know", which is `other`.
+ *
+ * The drawer deliberately does NOT use this directly — see drawerPaymentBucket.
+ */
+export function paymentBucket(raw) {
+  if (raw == null || String(raw).trim() === '') return 'other'
+  return ALIASES[String(raw).trim().toLowerCase()] || 'other'
+}
+
+/**
+ * The drawer's question is "is there a note in the till?", which is not the
+ * same as "which bucket does this belong in on a report".
+ *
+ * A sale with NO recorded method still took money, posSale.js defaults it to
+ * cash, and this shop is cash-first — so an absent method is treated as cash
+ * here. An unrecognised-but-present method ('wallet', 'cheque') is NOT: it
+ * resolves through paymentBucket to `other` and never inflates the drawer.
+ */
+export function drawerPaymentBucket(raw) {
+  if (raw == null || String(raw).trim() === '') return 'cash'
+  return paymentBucket(raw)
+}
+
+/**
+ * Normalize stored sale.payment_method into cash | gcash | card.
+ *
+ * Historical 3-bucket projection, kept because floor financials report exactly
+ * these three. `bank` and `other` are both "settled somewhere that is not the
+ * drawer" and project to `card` here; neither may ever project to cash.
+ * An absent method projects to cash, matching the POS default.
+ */
 export function normalizePaymentMethod(raw) {
-  const key = String(raw || 'cash').trim().toLowerCase()
-  if (key === 'gcash' || key === 'g-cash') return 'gcash'
-  if (key === 'card' || key === 'credit' || key === 'debit' || key === 'credit_debit' || key === 'credit/debit') {
-    return 'card'
-  }
-  // Legacy "online" bank transfer → credit/debit bucket for floor financials
-  if (key === 'online' || key === 'bank' || key === 'transfer') return 'card'
-  if (key === 'cash') return 'cash'
-  return 'cash'
+  if (raw == null || String(raw).trim() === '') return 'cash'
+  const bucket = paymentBucket(raw)
+  return bucket === 'cash' ? 'cash' : bucket === 'gcash' ? 'gcash' : 'card'
 }
 
 export function paymentMethodLabel(raw) {
-  const key = normalizePaymentMethod(raw)
-  return PAYMENT_METHODS.find((m) => m.value === key)?.label || 'Cash'
+  const bucket = paymentBucket(raw)
+  if (bucket === 'cash') return 'Cash'
+  if (bucket === 'gcash') return 'GCash'
+  if (bucket === 'card') return PAYMENT_METHODS.find((m) => m.value === 'card')?.label || 'Credit Cards'
+  if (bucket === 'bank') return 'Bank'
+  return 'Other'
 }
 
 /**

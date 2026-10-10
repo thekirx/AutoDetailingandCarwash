@@ -38,6 +38,7 @@ const SUITES = [
   'tests/customerSignInFailureHonesty.test.js',
   'tests/passwordUpdateErrorHonesty.test.js',
   'tests/guardedMigrationContract.test.js',
+  'tests/paymentMethodBucketing.test.js',
 ]
 
 function runSuite() {
@@ -781,6 +782,50 @@ const ALL_MUTATIONS = [
     name: 'the contract stops covering the migrations it lists',
     from: "  '20261010150000_scope_sms_template_writes.sql',\n]",
     to: ']',
+  },
+  // BUG-081 — the drawer could tell a Branch Admin their correct drawer was
+  // short, because an unrecognised payment method fell back to CASH.
+  {
+    file: 'src/lib/dailySheet.js',
+    name: 'BUG-081 itself: an unknown payment method is counted as drawer cash',
+    // The original defect, restored in full: a private map whose fallback is
+    // 'cash'. An earlier version of this mutation only forced 'cash' -> cash and
+    // left everything else on drawerPaymentBucket, so it never actually
+    // reintroduced the bug and correctly reported NOT PROVED. A mutation that
+    // does not reproduce the defect proves nothing.
+    from: 'byMethod[drawerPaymentBucket(s.payment_method)] += amount(s.total_minor)',
+    to:
+      "byMethod[({ cash: 'cash', gcash: 'gcash', 'g-cash': 'gcash', card: 'card', credit: 'card', debit: 'card', online: 'bank', bank: 'bank', transfer: 'bank' })[String(s.payment_method || 'cash').toLowerCase()] || 'cash'] += amount(s.total_minor)",
+  },
+  {
+    file: 'src/lib/paymentMethods.js',
+    name: 'the shared map sends unknown back to cash',
+    from: "  if (raw == null || String(raw).trim() === '') return 'other'\n  return ALIASES[String(raw).trim().toLowerCase()] || 'other'",
+    to: "  if (raw == null || String(raw).trim() === '') return 'other'\n  return ALIASES[String(raw).trim().toLowerCase()] || 'cash'",
+  },
+  {
+    file: 'src/lib/paymentMethods.js',
+    name: 'the drawer stops falling back to cash for a recorded-but-unknown method',
+    from: /export function drawerPaymentBucket\(raw\) \{\r?\n {2}if \(raw == null \|\| String\(raw\)\.trim\(\) === ''\) return 'cash'\r?\n {2}return paymentBucket\(raw\)/,
+    to: "export function drawerPaymentBucket(raw) {\n  return 'cash'\n}",
+  },
+  {
+    file: 'src/lib/paymentMethods.js',
+    name: 'the normalizer stops trimming and lowercasing, so CASH becomes unknown',
+    from: "return ALIASES[String(raw).trim().toLowerCase()] || 'other'",
+    to: "return ALIASES[String(raw)] || 'other'",
+  },
+  {
+    file: 'src/lib/salesSummary.js',
+    name: 'the finance summary goes back to a third private map that never lowercases',
+    from: 'const summaryBucket = (raw) => METHOD_BUCKET[paymentBucket(raw)]',
+    to: "const summaryBucket = (raw) => METHOD_BUCKET[raw] || 'other'",
+  },
+  {
+    file: 'src/lib/dailySheet.js',
+    name: 'the Other bucket disappears, so unknown methods stop being accounted for',
+    from: /const byMethod = \{ cash: 0, gcash: 0, card: 0, bank: 0, other: 0 \}/,
+    to: 'const byMethod = { cash: 0, gcash: 0, card: 0, bank: 0 }',
   },
 ]
 

@@ -5,10 +5,19 @@
  * `finance_sales_summary` view once migrations can be applied again.
  */
 import { financeCompareRange, pctChange } from './financeData.js'
+import { paymentBucket } from './paymentMethods.js'
 
 const COUNTED = new Set(['paid', 'refunded'])
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const METHOD_BUCKET = { cash: 'cash', gcash: 'gcash', card: 'card', online: 'card' }
+
+/**
+ * BUG-081: this was a third private map, and it never lowercased — 'CASH' landed
+ * in `other` here while the Daily Sheet counted it as cash. `bank` is projected
+ * onto `card` because this surface has no bank row and "online" already landed
+ * there; `other` stays `other` rather than being folded into cash or card.
+ */
+const METHOD_BUCKET = { cash: 'cash', gcash: 'gcash', card: 'card', bank: 'card', other: 'other' }
+const summaryBucket = (raw) => METHOD_BUCKET[paymentBucket(raw)]
 const PAYMENT_LABELS = { cash: 'Cash', gcash: 'GCash', card: 'Card', other: 'Other' }
 
 /** Gross / net / discounts / refunds / count / average + paid payment buckets. */
@@ -35,7 +44,7 @@ export function rollupSales(rows = []) {
       continue
     }
     out.netMinor += total
-    out.byMethod[METHOD_BUCKET[r.payment_method] || 'other'] += total
+    out.byMethod[summaryBucket(r.payment_method)] += total
   }
   out.collectedMinor = out.netMinor
   out.avgMinor = out.count ? Math.round(out.grossMinor / out.count) : 0
