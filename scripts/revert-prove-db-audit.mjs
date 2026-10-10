@@ -44,6 +44,7 @@ const SUITES = [
   'tests/markdownTableIntegrity.test.js',
   'tests/notificationFanoutReach.test.js',
   'tests/dailySheetCashBucketParity.test.js',
+  'tests/salarySuggestionTrustBoundary.test.js',
 ]
 
 function runSuite() {
@@ -1070,6 +1071,25 @@ const ALL_MUTATIONS = [
     name: 'the expected-cash terms are reordered in JS',
     from: 'amount(openingFloatMinor) + s.cashMinor + caRepaidMinor - expensesMinor - salariesMinor - caReleasedMinor',
     to: 'amount(openingFloatMinor) + s.cashMinor + caRepaidMinor - caReleasedMinor - expensesMinor - salariesMinor',
+  },
+  // BUG-087 — the salary "needs a reason" rule, whose baseline is the caller's.
+  {
+    file: 'src/lib/dailySheet.js',
+    name: 'a changed salary stops needing a reason',
+    from: 'if (amount(line.amount_minor) === amount(line.suggested_minor)) return false',
+    to: 'return false',
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'BUG-087 itself: the server drops the changed-salary rule entirely',
+    from: "or (kind = 'salary' and (staff_id is null or (amount_minor is distinct from suggested_minor and reason is null)))",
+    to: "or (kind = 'salary' and staff_id is null)",
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'BUG-087: the suggestion stops being stored, so the rule compares against NULL',
+    from: "case when v_kind = 'salary' then greatest(coalesce((v_line->>'suggested_minor')::integer, 0), 0) end,",
+    to: 'null,',
   },
 ]
 
