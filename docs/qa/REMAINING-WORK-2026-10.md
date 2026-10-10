@@ -13,15 +13,18 @@ Every gate below was **re-run after the BUG-081 money-path change**, because tha
 
 | Check | Command | Result |
 |-------|---------|--------|
-| Unit | `npm test` | **1964 pass / 0 fail / 2 skipped**, exit 0 |
+| Unit | `npm test` | **1981 pass / 0 fail / 2 skipped**, exit 0 |
 | Lint | `npm run lint` | exit **0**, 0 errors 0 warnings |
 | Build | `npm run build` | exit **0** |
 | Daily ops | `npm run check` | **5/5 ok** — planning, portal-actions, settings-auth, customer regression, live-queue |
 | Daily Sheet screen | `npm run check:sheet-ui` | **PASS** — 60/60 sheets match stored totals; till shows Net ₱39,052.50 / Expenses ₱1,515.00 / Salaries ₱7,914.63 / Net profit ₱29,622.87, all matching |
-| Role matrix | `npm run e2e:role-qa-wave` | **179/179**, exit 0 — ninth consecutive clean wave |
-| Revert-prove | `node scripts/revert-prove-db-audit.mjs` | BUG-079 **7/7**, BUG-080 **6/6**, BUG-081 **6/6**, migration contract **5/5** |
+| Role matrix | `npm run e2e:role-qa-wave` | **179/179**, exit 0 — **tenth** consecutive clean wave (re-run after BUG-084, which sits on the token path for 45 authenticated `/api/*` fetches) |
+| `/api/*` auth boundary | `npm run audit:api-auth` | **CLEAN**, exit 0, 3/3 controls — 27 handlers, 0 unauthenticated outside a documented public list |
+| Revert-prove | `node scripts/revert-prove-db-audit.mjs` | BUG-079 **7/7**, BUG-080 **6/6**, BUG-081 **6/6**, BUG-083 **5/5**, BUG-084 **4/4**, migration contract **5/5** |
 
-Closed this pass: **BUG-076** (staff login blamed the password for server faults), **BUG-077** (same misreport on the customer sign-in surface), **BUG-078** (set-password and sign-up rendered raw Supabase errors), **BUG-079** (a Branch Admin could read every user's notifications — and their own bell showed them), **BUG-080** (a Branch Admin could rewrite every SMS template), **BUG-081** (the Daily Sheet counted an unrecognised payment method as **cash**, so a BA whose count was correct was told the drawer was short).
+Closed this pass: **BUG-076** (staff login blamed the password for server faults), **BUG-077** (same misreport on the customer sign-in surface), **BUG-078** (set-password and sign-up rendered raw Supabase errors), **BUG-079** (a Branch Admin could read every user's notifications — and their own bell showed them), **BUG-080** (a Branch Admin could rewrite every SMS template), **BUG-081** (the Daily Sheet counted an unrecognised payment method as **cash**, so a BA whose count was correct was told the drawer was short), **BUG-083** (Team Lead customer history 401'd on every call, hidden behind a fallback onto a *different dataset* — open queue rows instead of visits), **BUG-084** (a token refresh that produced nothing handed back a token that had already expired; 45 of 56 authenticated `/api/*` fetches route through that helper, and `isSessionExpired` sat unused twenty lines above it).
+
+The auth boundary has now been audited from **all three sides** — RLS (BUG-079/080), client fetch headers (BUG-083), and the `/api/*` handlers themselves (`scripts/audit-api-auth.mjs`, clean). **BUG-084 is the most plausible mechanism yet for BUG-067(2)**: a race that needs the refresh token to already be spent, which is consistent with 129 routes across six personas never reproducing it — a fresh session always has a working refresh token.
 
 **BUG-082 is open and deliberately unchanged** — "Average sale" is net ÷ paid on the Daily Sheet but gross ÷ paid-and-refunded on Finance. Measured: ₱650 vs ₱1,000 on the same day. A test pins the current behaviour as *"matches Square"*, so aligning them changes a number the owner sees and is an owner decision.
 
