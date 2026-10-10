@@ -1,8 +1,9 @@
--- Post-migration verification for BUG-069 / BUG-070 / BUG-071.
+-- Post-migration verification for BUG-069 / BUG-070 / BUG-071 / BUG-079.
 --
 -- Run this AFTER applying, in order:
 --   1. 20261010120000_protect_daily_sheet_posted_expenses.sql
 --   2. 20261010130000_drop_permissive_admin_for_all_policies.sql
+--   3. 20261010140000_scope_notification_reads.sql
 --
 -- It reads pg_policies and pg_roles directly, so it reports what is actually in
 -- force rather than what the migration files claim. Every line should read PASS.
@@ -68,6 +69,49 @@ from pg_policies
 where schemaname = 'public'
   and tablename = 'user_notifications'
   and cmd = 'INSERT';
+
+\echo ''
+\echo '=== BUG-079: a Branch Admin must not read the whole company inbox ==='
+-- The bell selects with no user_id filter, so this policy IS the scoping.
+-- is_admin() is true for role = 'admin', which is Branch Admin.
+select policyname, cmd, qual
+from pg_policies
+where schemaname = 'public'
+  and tablename = 'user_notifications'
+  and cmd in ('SELECT', 'ALL');
+
+select case when count(*) = 0 then 'PASS' else 'FAIL — a Branch Admin still reads every user notification' end as verdict
+from pg_policies
+where schemaname = 'public'
+  and tablename = 'user_notifications'
+  and cmd in ('SELECT', 'ALL')
+  and (qual ilike '%is_admin%' or qual ilike '%is_team_lead%');
+
+\echo ''
+\echo '=== NOT BROKEN: every user must still read their OWN notifications ==='
+-- The narrowing is a no-op for everyone except the Branch Admin, but if this
+-- reads FAIL the bell goes dark for everyone, which is worse than the leak.
+select policyname, cmd, qual
+from pg_policies
+where schemaname = 'public'
+  and tablename = 'user_notifications'
+  and cmd = 'SELECT'
+  and qual ilike '%auth.uid()%';
+
+select case when count(*) > 0 then 'PASS' else 'FAIL — no policy would let a user read their own inbox' end as verdict
+from pg_policies
+where schemaname = 'public'
+  and tablename = 'user_notifications'
+  and cmd = 'SELECT'
+  and qual ilike '%auth.uid()%';
+
+-- Super Admin keeps the support affordance this policy descends from.
+select case when count(*) > 0 then 'PASS' else 'FAIL — Super Admin lost the support read' end as verdict
+from pg_policies
+where schemaname = 'public'
+  and tablename = 'user_notifications'
+  and cmd = 'SELECT'
+  and qual ilike '%is_super_admin%';
 
 \echo ''
 \echo '=== NOT BROKEN: Branch Admin must still work at the queue and POS ==='

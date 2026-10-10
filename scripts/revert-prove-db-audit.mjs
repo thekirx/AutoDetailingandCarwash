@@ -679,6 +679,44 @@ const ALL_MUTATIONS = [
     from: 'if (body.fields) setErrors(body.fields)',
     to: '',
   },
+  // BUG-079 — the Branch Admin company-wide inbox. NotificationBell selects with
+  // no user_id filter, so this read policy is the only scoping that exists.
+  {
+    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    name: 'BUG-079 itself: the read policy hands Branch Admin every notification',
+    from: /create policy user_notifications_select\r?\non public\.user_notifications\r?\nfor select\r?\nto authenticated\r?\nusing \(\r?\n {2}user_id = \(select auth\.uid\(\)\)\r?\n {2}or public\.is_super_admin\(\)\r?\n\);/,
+    to: 'create policy user_notifications_select\non public.user_notifications\nfor select\nto authenticated\nusing (\n  user_id = (select auth.uid())\n  or public.is_admin()\n);',
+  },
+  {
+    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    name: 'the narrowing forgets to keep a user their own rows',
+    from: / {2}user_id = \(select auth\.uid\(\)\)\r?\n {2}or public\.is_super_admin\(\)/,
+    to: '  public.is_super_admin()',
+  },
+  {
+    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    name: 'the narrowing stops keeping Super Admin the support read',
+    from: / {2}or public\.is_super_admin\(\)\r?\n\);/,
+    to: '  or public.is_super_admin() and false\n);',
+  },
+  {
+    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    name: 'the drop guard stops refusing a policy it has not read',
+    from: / {2}if v_current is distinct from '[\s\S]{0,200}?' then\r?\n {4}raise exception 'user_notifications_select has drifted/,
+    to: '  if false then\n    raise exception \'user_notifications_select has drifted',
+  },
+  {
+    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    name: 'the migration stops checking is_super_admin exists, denying Super Admin silently',
+    from: / {2}if not exists \(\r?\n {4}select 1 from pg_proc p[\s\S]{0,400}?raise exception 'public\.is_super_admin\(\) is missing/,
+    to: "  if false then\n    raise exception 'public.is_super_admin() is missing",
+  },
+  {
+    file: 'scripts/verify-after-rls-migration.sql',
+    name: 'the owner verification stops checking the bell still works',
+    from: "select case when count(*) > 0 then 'PASS' else 'FAIL — no policy would let a user read their own inbox' end as verdict",
+    to: "select case when count(*) > 0 then 'PASS' else 'unverified' end as verdict",
+  },
 ]
 
 // An optional substring filter (`node scripts/revert-prove-db-audit.mjs till`)

@@ -180,6 +180,117 @@ describe('no policy leaves Branch Admin able to destroy customer or money data',
     assert.match(p.text, /user_id\s*=\s*\(\s*select\s+auth\.uid\(\)\s*\)/)
   })
 
+  it('Branch Admin cannot read the whole company inbox', () => {
+    // BUG-079. The read policy is `user_id = auth.uid() or public.is_admin()`,
+    // and is_admin() is true for role = 'admin' — a Branch Admin. The original
+    // policy was written as "Admins can read inbox for support (optional)", which
+    // means the owner's Super Admin, not every store manager.
+    //
+    // This is not latent. NotificationBell is the only reader and it selects with
+    // NO user_id filter — it relies entirely on RLS — so a Branch Admin's bell
+    // renders the newest 20 notifications belonging to the entire company: other
+    // branches' customers, plates, services, and crew payroll alerts.
+    const offenders = POLICIES.filter(
+      (p) => p.table === 'public.user_notifications' && (p.cmd === 'select' || p.cmd === 'all') && /is_admin\(\)/.test(p.text),
+    )
+    assert.deepEqual(
+      offenders.map((p) => `${p.name} [${p.cmd}] from ${p.file}`),
+      [],
+      'a BA read policy puts every user\'s notification titles and bodies in scope',
+    )
+  })
+
+  it('the notification read policy is own rows plus Super Admin, nothing wider', () => {
+    const p = POLICIES.find((x) => x.table === 'public.user_notifications' && x.cmd === 'select')
+    assert.ok(p, 'no select policy on user_notifications at all')
+    // Compare the whole USING clause, not for the presence of a token. Asserting
+    // `/is_super_admin\(\)/` also passes for `is_super_admin() and false`, which
+    // grants Super Admin nothing — a narrowing that silently turns the bell off
+    // for the owner is worse than the leak it closes.
+    const using = /\busing\s*\(([\s\S]*?)\)\s*;?\s*$/i.exec(p.text)?.[1] || ''
+    assert.ok(using, `could not read the USING clause from: ${p.text}`)
+    const normalized = using.replace(/\s+/g, ' ').trim().toLowerCase()
+    assert.equal(
+      normalized,
+      'user_id = (select auth.uid()) or public.is_super_admin()',
+      `the read predicate drifted from own-rows-plus-Super-Admin: ${normalized}`,
+    )
+  })
+
+  it('the notification narrowing migration carries both of its safety guards', () => {
+    // These guards are the entire reason it is safe to run against production.
+    // Without them, running it against a database this team has already changed
+    // would silently replace a policy nobody has read.
+    const m = readFileSync(
+      join(migrationsDir, '20261010140000_scope_notification_reads.sql'),
+      'utf8',
+    )
+    assert.match(
+      m,
+      /if v_current is distinct from '[\s\S]{0,300}?' then\s*\r?\n\s*raise exception 'user_notifications_select has drifted/,
+      'the migration must abort rather than replace a policy whose predicate it has not read',
+    )
+    assert.match(
+      m,
+      /from pg_proc p[\s\S]{0,400}?raise exception 'public\.is_super_admin\(\) is missing/,
+      'the replacement depends on is_super_admin(); if it is absent the migration would deny Super Admin too',
+    )
+    assert.match(m, /drop policy if exists user_notifications_select/, 'the old name must be dropped, not just shadowed')
+    assert.match(
+      m,
+      /raise exception 'user_notifications_select is missing/,
+      'a missing policy is a reason to stop, not to guess',
+    )
+  })
+
+  it('the owner verification script proves the bell still works after narrowing', () => {
+    // The verification script is what the owner actually runs. If it only checks
+    // that the leak is gone, a migration that also darkened every bell passes it.
+    const v = readFileSync(join(root, 'scripts', 'verify-after-rls-migration.sql'), 'utf8')
+    assert.match(
+      v,
+      /no policy would let a user read their own inbox/,
+      'the script must prove own-rows still readable, not only that the cross-user read is gone',
+    )
+    assert.match(v, /Super Admin lost the support read/, 'and that Super Admin kept the affordance')
+    assert.match(
+      v,
+      /20261010140000_scope_notification_reads\.sql/,
+      'the script must name the third migration in the apply order',
+    )
+  })
+
+  it('no `for all` policy on user_notifications re-grants the read', () => {
+    const broad = POLICIES.filter((p) => p.table === 'public.user_notifications' && p.cmd === 'all')
+    assert.deepEqual(
+      broad.map((p) => `${p.name} from ${p.file}`),
+      [],
+      'a FOR ALL policy here would hand back the cross-user read the narrowing removed',
+    )
+  })
+
+  it('narrowing the read is safe — nothing in the app reads another user\'s inbox', () => {
+    // The "don't break daily operations" counterpart for this narrowing. The bell
+    // reads unfiltered, so if any screen genuinely needed a cross-user inbox this
+    // migration would silently empty it. Fail here instead.
+    const files = readdirSync(join(root, 'src'), { recursive: true })
+    const readers = []
+    for (const rel of files) {
+      if (!/\.(js|jsx|mjs)$/.test(rel)) continue
+      const text = readFileSync(join(root, 'src', rel), 'utf8')
+      if (!/from\('user_notifications'\)/.test(text)) continue
+      // A read that scopes itself to the signed-in user is fine.
+      const scoped = /\.eq\(\s*'user_id'/.test(text) || /\.eq\(\s*'id'\s*,\s*row/.test(text)
+      readers.push({ file: `src/${rel}`, scoped })
+    }
+    assert.ok(readers.length > 0, 'no reader found — the parse is wrong, not the app')
+    assert.deepEqual(
+      readers.filter((r) => !r.scoped).map((r) => r.file),
+      [],
+      'an unfiltered read now returns only the caller\'s own rows; that is the intent, but name it here',
+    )
+  })
+
   it('the app_settings split stays deliberate — attendance_roles is Super Admin only', () => {
     for (const cmd of ['insert', 'update', 'delete']) {
       const p = POLICIES.find((x) => x.table === 'public.app_settings' && x.cmd === cmd)
