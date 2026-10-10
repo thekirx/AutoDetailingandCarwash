@@ -41,6 +41,8 @@ const SUITES = [
   'tests/paymentMethodBucketing.test.js',
   'tests/teamLeadCustomerHistoryAuth.test.js',
   'tests/sessionTokenFreshness.test.js',
+  'tests/markdownTableIntegrity.test.js',
+  'tests/notificationFanoutReach.test.js',
 ]
 
 function runSuite() {
@@ -975,6 +977,21 @@ const ALL_MUTATIONS = [
     name: 'BUG-085: Approve is rendered unconditionally again',
     from: "canApproveSheet(profile, sheet, user?.id) ? (",
     to: 'true ? (',
+  },
+  // The notification fan-out gate. planStaffRecipients drops any recipient it
+  // cannot give a URL to, so a role that is notified but cannot open the link
+  // silently hears nothing.
+  {
+    file: 'src/lib/notifyRouting.js',
+    name: 'a notified role is pointed only at a url it cannot open',
+    from: "complaint: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/planning?tab=forms'] }",
+    to: "complaint: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/data-center'] }",
+  },
+  {
+    file: 'src/lib/notifyRouting.js',
+    name: 'a notification url is a route the app does not render',
+    from: "inquiry: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/inquiries'] }",
+    to: "inquiry: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/inguiries'] }",
   },
 ]
 
