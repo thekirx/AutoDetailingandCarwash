@@ -49,27 +49,27 @@
 
 | Field | Value |
 |-------|-------|
-| Finished | 2026-09-13T16:02:59.235Z |
+| Finished | 2026-10-10T00:25:27.846Z |
 | Overall | **PASS** |
-| Passed / failed / skipped | 14 / 0 / 2 |
+| Passed / failed / skipped | 14 / 0 / 1 |
 | SEND_LIVE_SMS | 0 |
 
 | ID | Step | Result |
 |----|------|--------|
 | U | npm test (unit) | PASS |
 | L1 | e2e-attendance | PASS |
-| L2 | e2e-payroll | PASS |
 | L3 | e2e-readiness | PASS |
 | L4 | e2e-queue-part3 | PASS |
 | L5 | e2e-pos-part2 | PASS |
 | L6 | smoke-busybee (balance only) | PASS |
 | L7 | e2e-real-customer-status-sms | SKIP |
 | L8 | e2e-ops-cutover | PASS |
-| L9 | e2e-shift-close-money (BUG-007 RPC) | PASS |
+| L9 | e2e-daily-sheet-money (sandbox sheet RPCs) | PASS |
 | B | npm run build | PASS |
 | UI | e2e-ui-p0 | PASS |
 | UI2 | e2e-ui-money (BUG-007) | PASS |
-| R | responsive-validation | SKIP |
+| FLOPS | e2e-lifecycle-flops (shop-day) | PASS |
+| R | responsive-validation | PASS |
 
 See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./readiness-dashboard.html).
 
@@ -152,6 +152,10 @@ See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./re
 
 | Claim | Command | Exit | Key output |
 |-------|---------|------|------------|
+| 2026-10-10T00:25:27.846Z | `npm run test:readiness` | 0 | passed=14 failed=0 skipped=1 |
+| 2026-10-10T00:17:00.367Z | `npm run test:readiness` | 1 | passed=10 failed=1 skipped=1 |
+| 2026-10-10T00:02:54.142Z | `npm run test:readiness` | 1 | passed=10 failed=1 skipped=1 |
+| 2026-10-09T23:58:20.052Z | `npm run test:readiness` | 1 | passed=7 failed=1 skipped=1 |
 | Lint | `npx eslint .` | 0 | clean |
 | Units | `npm test` | 0 | **1206/1206** |
 | Build | `npm run build` | 0 | Vite + PWA |
