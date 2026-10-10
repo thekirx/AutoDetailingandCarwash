@@ -264,9 +264,12 @@ describe('BreDESIGN public page fallbacks', () => {
     await page.setViewport({ width: 1440, height: 900 })
   })
 
-  it('labels tint benefits and pulses both ceramic warranty messages', async () => {
+  it('keeps tint actions without the replaced benefits and pulses both ceramic warranty messages', async () => {
     await page.goto(`${PREVIEW_ORIGIN}/services/tint`, { waitUntil: 'networkidle0' })
-    assert.match(await page.$eval('.bd-benefits-heading', (item) => item.textContent), /Benefits of Nano Ceramic Tint/i)
+    assert.equal(await page.$('.bd-benefits-heading'), null)
+    assert.equal(await page.$('.bd-photo-detail'), null)
+    assert.equal(await page.$('.bd-tint-comparison-note'), null)
+    assert.deepEqual(await page.$$eval('.bd-tint-detail-actions a', items => items.map(item => item.textContent.trim())), ['Book nano ceramic tint', 'Find my tint'])
 
     await page.goto(`${PREVIEW_ORIGIN}/services/ceramic`, { waitUntil: 'networkidle0' })
     const cards = await page.$$eval('.ceramic-package-panel', (items) => items.map((item) => ({

@@ -63,13 +63,6 @@
   color: var(--bd-ink-2);
   font-size: 12px;
 }
-.bredesign .bd-tint-comparison-note {
-  margin: 24px 0 0;
-  max-width: 85ch;
-  color: var(--bd-ink-2);
-  font-size: 13px;
-  line-height: 1.6;
-}
 @media (max-width: 767px) {
   .bredesign .bd-tint-package-head {
     flex-direction: column;
@@ -244,11 +237,12 @@
 .bredesign #tint-comparison {
   padding: clamp(36px, 4vw, 56px) 0 clamp(20px, 2.5vw, 32px);
 }
-.bredesign #tint-comparison + .bd-detail {
-  padding-top: clamp(24px, 3vw, 40px);
+.bredesign .bd-tint-detail-actions {
+  padding-bottom: clamp(24px, 3vw, 40px);
 }
-.bredesign .bd-tint-comparison .bd-tint-comparison-note {
-  margin-top: 16px;
+.bredesign .bd-tint-detail-actions .bd-why-cta {
+  margin-top: 0;
+  justify-content: flex-end;
 }
 /* A compact panel button under the heading. */
 .bredesign .bd-tint-split .bd-cmp-block {

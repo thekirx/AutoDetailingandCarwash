@@ -361,7 +361,11 @@ export default function ServiceDetailPage() {
 
       {slug === 'tint' ? <TintFinder /> : null}
 
-      {slug === 'wash-detailing' ? <WashServiceRail /> : <ServiceDetail slug={slug} section={section} />}
+      {slug === 'wash-detailing' ? <WashServiceRail /> : slug === 'tint' ? (
+        <div className="bd-shell bd-tint-detail-actions">
+          <DetailCtas slug={slug} section={section} />
+        </div>
+      ) : <ServiceDetail slug={slug} section={section} />}
 
       {slug === 'ppf' ? <PpfPackagesSection /> : null}
       {slug === 'ceramic' ? <CeramicSection /> : null}
