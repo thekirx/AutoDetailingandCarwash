@@ -57,7 +57,19 @@ export async function ensureFreshAccessToken(auth, skewMs = 60_000) {
     return session.access_token
   }
   const next = await refreshSessionSingleFlight(auth)
-  return next?.access_token || session?.access_token || null
+  // BUG-084: this used to be `next?.access_token || session?.access_token || null`,
+  // which handed back the old token whenever a refresh produced nothing — even
+  // though needsRefresh() had just said it is expiring, and even when it was
+  // already past `exp`. That token goes on the wire and 45 of the 56
+  // authenticated /api/* fetches in the app route through here, so the caller's
+  // only outcome is a 401 it cannot retry past.
+  //
+  // Gated on isSessionExpired, not needsRefresh: a token 30s from expiry is
+  // still usable, and discarding it would break every call made in the last
+  // minute of a session's life.
+  if (next?.access_token) return next.access_token
+  if (session?.access_token && !isSessionExpired(session)) return session.access_token
+  return null
 }
 
 /** Auth events that should reload profile (not TOKEN_REFRESHED — avoids UI flicker). */

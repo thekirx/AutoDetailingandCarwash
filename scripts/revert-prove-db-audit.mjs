@@ -40,6 +40,7 @@ const SUITES = [
   'tests/guardedMigrationContract.test.js',
   'tests/paymentMethodBucketing.test.js',
   'tests/teamLeadCustomerHistoryAuth.test.js',
+  'tests/sessionTokenFreshness.test.js',
 ]
 
 function runSuite() {
@@ -863,6 +864,32 @@ const ALL_MUTATIONS = [
     name: 'a new staff fetch is added without a bearer token',
     from: / {6}const token = await getAccessTokenFresh\(\)\r?\n {6}if \(!token\) \{/,
     to: "      await fetch('/api/maintenance-schedules?branch=x')\n      const token = await getAccessTokenFresh()\n      if (!token) {",
+  },
+  // BUG-084 — a refresh that yields nothing hands back a token that has already
+  // expired. Every authenticated /api/* call routes through this helper.
+  {
+    file: 'src/lib/session.js',
+    name: 'BUG-084 itself: the stale fallback ignores expiry again',
+    from: / {2}if \(next\?\.access_token\) return next\.access_token\r?\n {2}if \(session\?\.access_token && !isSessionExpired\(session\)\) return session\.access_token\r?\n {2}return null/,
+    to: "  return next?.access_token || session?.access_token || null",
+  },
+  {
+    file: 'src/lib/session.js',
+    name: 'the guard is swapped for the blunt one that throws away usable tokens',
+    from: 'if (session?.access_token && !isSessionExpired(session)) return session.access_token',
+    to: 'if (session?.access_token && !needsRefresh(session)) return session.access_token',
+  },
+  {
+    file: 'src/lib/session.js',
+    name: 'a refresh that succeeds is no longer preferred over the old token',
+    from: 'if (next?.access_token) return next.access_token',
+    to: 'if (next?.access_token && isSessionExpired(next)) return next.access_token',
+  },
+  {
+    file: 'src/lib/session.js',
+    name: 'a refresh error is swallowed instead of propagating, hiding the dead token',
+    from: / {4}const \{ data, error \} = await auth\.refreshSession\(\)\r?\n {6}if \(error\) throw error\r?\n {6}return data\.session \|\| null/,
+    to: '      const { data } = await auth.refreshSession()\n      return data.session || null',
   },
 ]
 
