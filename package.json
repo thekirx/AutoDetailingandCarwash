@@ -43,7 +43,8 @@
     "audit:db:prove": "node scripts/revert-prove-db-audit.mjs",
     "check:sheet-ui": "node scripts/check-sheet-ui.mjs",
     "probe:bookings-401": "node scripts/probe-bookings-401.mjs",
-    "probe:session-scrub-401": "node scripts/probe-session-scrub-401.mjs"
+    "probe:session-scrub-401": "node scripts/probe-session-scrub-401.mjs",
+    "audit:api-auth": "node scripts/audit-api-auth.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
