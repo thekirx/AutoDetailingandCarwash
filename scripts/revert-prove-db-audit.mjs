@@ -43,6 +43,7 @@ const SUITES = [
   'tests/sessionTokenFreshness.test.js',
   'tests/markdownTableIntegrity.test.js',
   'tests/notificationFanoutReach.test.js',
+  'tests/dailySheetCashBucketParity.test.js',
 ]
 
 function runSuite() {
@@ -1008,6 +1009,40 @@ const ALL_MUTATIONS = [
     name: 'a SQL-notified role is given a url it cannot open',
     from: "attendance_location_alert: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/attendance'] }",
     to: "attendance_location_alert: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/data-center'] }",
+  },
+  // BUG-086 — the drawer's cash test in SQL vs the one the screen used. The
+  // `nullif` mutation is the interesting one: it looks like the fix, strips the
+  // blank, and silently still excludes every blank row because lower(NULL) is
+  // never TRUE.
+  {
+    file: 'supabase/migrations/20261010170000_daily_sheet_cash_blank_is_cash.sql',
+    name: "BUG-086 itself: the SQL goes back to coalesce(payment_method,'cash')",
+    from: "lower(coalesce(nullif(btrim(payment_method), ''), 'cash')) = 'cash'",
+    to: "lower(coalesce(payment_method, 'cash')) = 'cash'",
+  },
+  {
+    file: 'supabase/migrations/20261010170000_daily_sheet_cash_blank_is_cash.sql',
+    name: 'BUG-086: the blank normalises to NULL instead of to cash',
+    from: "lower(coalesce(nullif(btrim(payment_method), ''), 'cash')) = 'cash'",
+    to: "lower(nullif(btrim(payment_method), '')) = 'cash'",
+  },
+  {
+    file: 'supabase/migrations/20261010170000_daily_sheet_cash_blank_is_cash.sql',
+    name: 'BUG-086: padding is no longer trimmed',
+    from: "lower(coalesce(nullif(btrim(payment_method), ''), 'cash')) = 'cash'",
+    to: "lower(coalesce(nullif(payment_method, ''), 'cash')) = 'cash'",
+  },
+  {
+    file: 'supabase/migrations/20261010170000_daily_sheet_cash_blank_is_cash.sql',
+    name: 'BUG-086: create-or-replace drops the over/short the whole sheet reconciles on',
+    from: "'overShortMinor', case when s.counted_cash_minor is null then null else s.counted_cash_minor - v_expected end",
+    to: "'overShortMinor', null",
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'BUG-086: someone "tidies up" the applied migration instead of shipping the fix',
+    from: "lower(coalesce(payment_method, 'cash')) = 'cash'",
+    to: "lower(coalesce(nullif(btrim(payment_method), ''), 'cash')) = 'cash'",
   },
 ]
 

@@ -57,11 +57,12 @@ Production still carries the permissive policies. Apply **in this order**, then 
 | 3 | `20261010140000_scope_notification_reads.sql` | BUG-079 |
 | 4 | `20261010150000_scope_sms_template_writes.sql` | BUG-080 |
 | 5 | `20261010160000_daily_sheet_separation_of_duties.sql` | BUG-085 |
+| 6 | `20261010170000_daily_sheet_cash_blank_is_cash.sql` | BUG-086 |
 | — | `psql -f scripts/verify-after-rls-migration.sql` | proves both directions: leak closed **and** own-rows/Super Admin still work |
 
-**Until 1–3 are applied, BUG-071 is a live Critical hole** — a Branch Admin can DELETE customers, the transaction log and sheet-posted expenses via direct PostgREST, and can read the whole company's notification inbox. `tests/guardedMigrationContract.test.js` enforces that each of the five runs as a transaction, can abort, and verifies `is_super_admin()` exists before depending on it.
+**Until 1–3 are applied, BUG-071 is a live Critical hole** — a Branch Admin can DELETE customers, the transaction log and sheet-posted expenses via direct PostgREST, and can read the whole company's notification inbox. `tests/guardedMigrationContract.test.js` enforces that each of the six runs as a transaction, can abort, and verifies `is_super_admin()` exists before depending on it.
 
-**Migration 5 needs no `psql` step and is independent of 1–4** — it replaces one function body and rewrites no data. It aborts if `review_daily_sheet` is missing or has drifted from the body it was written against, so if it refuses, read the message rather than forcing it. Apply order 1→5 keeps the numbering honest.
+**Migrations 5 and 6 need no `psql` step and are independent of 1–4** — each replaces one function body and rewrites no data. Both abort if the function they replace is missing or has drifted from the body they were written against, so if one refuses, read the message rather than forcing it. After 6, re-run `node scripts/probe-payment-method-drift.mjs`. Apply order 1→6 keeps the numbering honest.
 
 ### Future-branch / RBAC / future-users (2026-10-05)
 
