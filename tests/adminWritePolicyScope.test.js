@@ -291,6 +291,79 @@ describe('no policy leaves Branch Admin able to destroy customer or money data',
     )
   })
 
+  it('no company-wide message template is writable by a Branch Admin', () => {
+    // BUG-080. Found by sweeping every table whose SELECT/ALL policy mentions
+    // is_admin(), rather than reading tables one at a time. Most of that sweep is
+    // legitimate — branches, planner config and audit trails are meant to be read
+    // network-wide, and membership_tiers was already narrowed to Super Admin /
+    // ASA-with-memberships in 20260820310000. sms_templates is the one that is
+    // not: the policy is literally named "Marketing sms templates" and is
+    // `for all`, so is_admin() hands a store manager INSERT/UPDATE/DELETE over
+    // every message the company sends.
+    const offenders = POLICIES.filter(
+      (p) =>
+        p.table === 'public.sms_templates' &&
+        (p.cmd === 'all' || p.cmd === 'insert' || p.cmd === 'update' || p.cmd === 'delete') &&
+        /is_admin\(\)/.test(p.text),
+    )
+    assert.deepEqual(
+      offenders.map((p) => `${p.name} [${p.cmd}] from ${p.file}`),
+      [],
+      'a policy named for Marketing grants is_admin(), and is_admin() is true for a Branch Admin',
+    )
+  })
+
+  it('the message-template write policy names marketing and Super Admin explicitly', () => {
+    for (const cmd of ['insert', 'update', 'delete']) {
+      const p = POLICIES.find((x) => x.table === 'public.sms_templates' && x.cmd === cmd)
+      assert.ok(p, `no ${cmd} policy on sms_templates — a FOR ALL would grant all four`)
+      assert.doesNotMatch(
+        p.text,
+        /is_admin\(\)/,
+        `sms_templates ${cmd} must not be granted to is_admin()`,
+      )
+      assert.match(p.text, /is_super_admin\(\)|'marketing'/, `sms_templates ${cmd} lost both intended roles`)
+    }
+  })
+
+  it('the template catalogue stays readable, so closing the write does not close the read', () => {
+    // The counter-case to the narrowing above. Every role still needs to READ the
+    // catalogue — the app renders it on more than the compose screen — and a
+    // migration that fixed the write by denying the read would be a new bug.
+    const p = POLICIES.find((x) => x.table === 'public.sms_templates' && x.cmd === 'select')
+    assert.ok(p, 'no select policy on sms_templates — nobody can list the catalogue')
+    assert.ok(
+      !/using\s*\(\s*false\s*\)/i.test(p.text),
+      `the read policy denies every row: ${p.text}`,
+    )
+    assert.match(p.text, /for\s+select/i)
+  })
+
+  it('the sms narrowing migration carries both of its safety guards', () => {
+    // These guards are why it is safe to run against production at all.
+    const m = readFileSync(join(migrationsDir, '20261010150000_scope_sms_template_writes.sql'), 'utf8')
+    assert.match(
+      m,
+      /if v_current not ilike '%is_admin%' or v_current not ilike '%marketing%' then\s*\r?\n\s*raise exception 'the "Marketing sms templates" policy has drifted/,
+      'the migration must abort rather than replace a policy whose predicate it has not read',
+    )
+    assert.match(
+      m,
+      /from pg_proc p[\s\S]{0,400}?raise exception 'public\.is_super_admin\(\) is missing/,
+      'the replacement depends on is_super_admin(); without it the policy denies Super Admin too',
+    )
+    assert.match(
+      m,
+      /raise exception 'the "Marketing sms templates" policy is missing/,
+      'a missing policy is a reason to stop, not to guess',
+    )
+    assert.match(
+      m,
+      /drop policy if exists "Marketing sms templates" on public\.sms_templates/,
+      'the old FOR ALL name must be dropped, not shadowed — policies are OR-combined',
+    )
+  })
+
   it('the app_settings split stays deliberate — attendance_roles is Super Admin only', () => {
     for (const cmd of ['insert', 'update', 'delete']) {
       const p = POLICIES.find((x) => x.table === 'public.app_settings' && x.cmd === cmd)

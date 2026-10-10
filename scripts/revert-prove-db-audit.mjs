@@ -717,6 +717,44 @@ const ALL_MUTATIONS = [
     from: "select case when count(*) > 0 then 'PASS' else 'FAIL — no policy would let a user read their own inbox' end as verdict",
     to: "select case when count(*) > 0 then 'PASS' else 'unverified' end as verdict",
   },
+  // BUG-080 — Branch Admin could rewrite every SMS template, because a single
+  // `for all` policy named "Marketing sms templates" was gated on is_admin().
+  {
+    file: 'supabase/migrations/20261010150000_scope_sms_template_writes.sql',
+    name: 'BUG-080 itself: a FOR ALL policy hands Branch Admin every template write',
+    from: /drop policy if exists "Marketing sms templates" on public\.sms_templates;/,
+    to: 'create policy "Marketing sms templates" on public.sms_templates\nfor all to authenticated\nusing ((select public.is_admin()) or (select public.current_user_role()) = \'marketing\')\nwith check ((select public.is_admin()) or (select public.current_user_role()) = \'marketing\');',
+  },
+  {
+    file: 'supabase/migrations/20261010150000_scope_sms_template_writes.sql',
+    name: 'the template update policy goes back to is_admin()',
+    from: /create policy "sms_templates_update"\r?\non public\.sms_templates\r?\nfor update\r?\nto authenticated\r?\nusing \(public\.is_super_admin\(\) or public\.current_user_role\(\) = 'marketing'\)/,
+    to: 'create policy "sms_templates_update"\non public.sms_templates\nfor update\nto authenticated\nusing (public.is_admin() or public.current_user_role() = \'marketing\')',
+  },
+  {
+    file: 'supabase/migrations/20261010150000_scope_sms_template_writes.sql',
+    name: 'the template delete policy goes back to is_admin()',
+    from: /create policy "sms_templates_delete"\r?\non public\.sms_templates\r?\nfor delete\r?\nto authenticated\r?\nusing \(public\.is_super_admin\(\) or public\.current_user_role\(\) = 'marketing'\);/,
+    to: 'create policy "sms_templates_delete"\non public.sms_templates\nfor delete\nto authenticated\nusing (public.is_admin());',
+  },
+  {
+    file: 'supabase/migrations/20261010150000_scope_sms_template_writes.sql',
+    name: 'the template read is closed off, so nobody can list the catalogue',
+    from: /create policy "sms_templates_read"\r?\non public\.sms_templates\r?\nfor select\r?\nto authenticated\r?\nusing \(true\);/,
+    to: "create policy \"sms_templates_read\"\non public.sms_templates\nfor select\nto authenticated\nusing (false);",
+  },
+  {
+    file: 'supabase/migrations/20261010150000_scope_sms_template_writes.sql',
+    name: 'the drift guard stops refusing a policy it has not read',
+    from: / {2}if v_current not ilike '%is_admin%' or v_current not ilike '%marketing%' then\r?\n {4}raise exception 'the "Marketing sms templates" policy has drifted/,
+    to: '  if false then\n    raise exception \'the "Marketing sms templates" policy has drifted',
+  },
+  {
+    file: 'supabase/migrations/20261010150000_scope_sms_template_writes.sql',
+    name: 'the guard stops refusing to run without is_super_admin()',
+    from: / {2}if not exists \(\r?\n {4}select 1 from pg_proc p[\s\S]{0,400}?raise exception 'public\.is_super_admin\(\) is missing/,
+    to: "  if false then\n    raise exception 'public.is_super_admin() is missing",
+  },
 ]
 
 // An optional substring filter (`node scripts/revert-prove-db-audit.mjs till`)
