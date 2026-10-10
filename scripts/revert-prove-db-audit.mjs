@@ -45,6 +45,7 @@ const SUITES = [
   'tests/notificationFanoutReach.test.js',
   'tests/dailySheetCashBucketParity.test.js',
   'tests/salarySuggestionTrustBoundary.test.js',
+  'tests/e2eEvidenceFreshness.test.js',
 ]
 
 function runSuite() {
@@ -1108,6 +1109,27 @@ const ALL_MUTATIONS = [
     file: 'supabase/migrations/20260720130000_phase1_to_4_platform_schema.sql',
     from: 'category_id uuid references public.expense_categories (id),',
     to: 'category_id uuid,',
+  },
+  // BUG-067-adjacent: the "unexplained admin login rejection". The FAIL
+  // screenshots were stale artifacts from a run eleven hours older than the
+  // summary.json next to them that reported 9/9.
+  {
+    file: 'scripts/e2e-ui-p0.mjs',
+    name: 'the stale-artifact sweep is removed, so an old FAIL can outlive a passing run again',
+    from: "  if (f.endsWith('-FAIL.png')) rmSync(join(outDir, f), { force: true })",
+    to: '  void f',
+  },
+  {
+    file: 'scripts/e2e-ui-p0.mjs',
+    name: 'the sweep becomes destructive and deletes the passing screenshots too',
+    from: "  if (f.endsWith('-FAIL.png')) rmSync(join(outDir, f), { force: true })",
+    to: "  if (f.endsWith('.png')) rmSync(join(outDir, f), { force: true })",
+  },
+  {
+    file: 'scripts/e2e-ui-p0.mjs',
+    name: 'the sweep stops matching the artifacts it is meant to clear',
+    from: "  if (f.endsWith('-FAIL.png')) rmSync(join(outDir, f), { force: true })",
+    to: "  if (f.endsWith('-FAILED.png')) rmSync(join(outDir, f), { force: true })",
   },
 ]
 

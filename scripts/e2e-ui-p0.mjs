@@ -9,7 +9,7 @@
  * Evidence: e2e-evidence/ui-p0/
  */
 import { spawn } from 'node:child_process'
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer'
@@ -39,6 +39,24 @@ function pass(name, detail = '') {
 function fail(name, detail = '') {
   results.push({ ok: false, name, detail })
   console.error('✖', name, detail)
+}
+
+// A FAIL shot from an earlier run is indistinguishable from a live defect: it
+// sits in the same directory with the same filename, and it outlives the run
+// that wrote it. e2e-evidence/ui-p0/ carried login-admin-FAIL.png and
+// login-tl-FAIL.png from 08:14 while summary.json reported 9/9 passed at 19:11
+// the same day -- an "unexplained admin login rejection" that had not
+// reproduced in eleven hours and was never a current defect.
+//
+// So a FAIL artifact may only exist if THIS run produced it. Clearing them up
+// front is what makes the directory mean anything; the probe below confirms
+// every demo credential still works independently.
+try {
+  for (const f of readdirSync(outDir)) {
+    if (f.endsWith('-FAIL.png')) rmSync(join(outDir, f), { force: true })
+  }
+} catch {
+  /* nothing to clear */
 }
 
 function account(id) {
