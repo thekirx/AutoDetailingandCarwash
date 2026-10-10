@@ -46,6 +46,7 @@ const SUITES = [
   'tests/dailySheetCashBucketParity.test.js',
   'tests/salarySuggestionTrustBoundary.test.js',
   'tests/e2eEvidenceFreshness.test.js',
+  'tests/collectErrorsDetector.test.js',
 ]
 
 function runSuite() {
@@ -1130,6 +1131,39 @@ const ALL_MUTATIONS = [
     name: 'the sweep stops matching the artifacts it is meant to clear',
     from: "  if (f.endsWith('-FAIL.png')) rmSync(join(outDir, f), { force: true })",
     to: "  if (f.endsWith('-FAILED.png')) rmSync(join(outDir, f), { force: true })",
+  },
+  // BUG-067(2): proving the 401 collector is still alive. A wave with ten
+  // consecutive clean runs only means something while the instrument that
+  // would have caught the fault still works.
+  {
+    file: 'scripts/lib/collect-errors.mjs',
+    name: 'BUG-067: the collector widens to every status, so "zero auth failures" becomes unfalsifiable',
+    from: '    if (status !== 401 && status !== 403) return',
+    to: '    if (status < 400) return',
+  },
+  {
+    file: 'scripts/lib/collect-errors.mjs',
+    name: 'BUG-067: the auth digest is dropped, so stale-token and no-token collapse',
+    from: "      fp = auth ? createHash('sha256').update(String(auth)).digest('hex').slice(0, 8) : 'none'",
+    to: "      fp = auth ? 'present' : 'none'",
+  },
+  {
+    file: 'scripts/lib/collect-errors.mjs',
+    name: 'BUG-067: the raw credential is written into the evidence file',
+    from: "      fp = auth ? createHash('sha256').update(String(auth)).digest('hex').slice(0, 8) : 'none'",
+    to: "      fp = String(auth)",
+  },
+  {
+    file: 'scripts/lib/collect-errors.mjs',
+    name: 'BUG-067: take() stops draining, so every persona inherits the previous failure',
+    from: '    take: () => bucket.splice(0, bucket.length),',
+    to: '    take: () => bucket,',
+  },
+  {
+    file: 'scripts/lib/collect-errors.mjs',
+    name: 'BUG-067: the useless console duplicate is reported again alongside the wire record',
+    from: "    if (/Failed to load resource.*\\b(401|403)\\b/i.test(text)) return",
+    to: '    if (false) return',
   },
 ]
 
