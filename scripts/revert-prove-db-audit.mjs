@@ -39,6 +39,7 @@ const SUITES = [
   'tests/passwordUpdateErrorHonesty.test.js',
   'tests/guardedMigrationContract.test.js',
   'tests/paymentMethodBucketing.test.js',
+  'tests/teamLeadCustomerHistoryAuth.test.js',
 ]
 
 function runSuite() {
@@ -826,6 +827,42 @@ const ALL_MUTATIONS = [
     name: 'the Other bucket disappears, so unknown methods stop being accounted for',
     from: /const byMethod = \{ cash: 0, gcash: 0, card: 0, bank: 0, other: 0 \}/,
     to: 'const byMethod = { cash: 0, gcash: 0, card: 0, bank: 0 }',
+  },
+  // BUG-083 — Team Lead customer history 401s on every call and hides it behind
+  // a fallback onto a different dataset.
+  {
+    file: 'src/pages/TeamLeadQueuePage.jsx',
+    name: 'BUG-083 itself: the history fetch sends no Authorization header again',
+    from: /const res = await fetch\(`\/api\/customer-history\?\$\{params\}`, \{\r?\n {8}headers: \{ Authorization: `Bearer \$\{token\}` \},\r?\n {6}\}\)/,
+    to: 'const res = await fetch(`/api/customer-history?${params}`)',
+  },
+  {
+    file: 'src/pages/TeamLeadQueuePage.jsx',
+    name: 'the history call stops refreshing the token and reuses a captured one',
+    from: / {6}const token = await getAccessTokenFresh\(\)\r?\n {6}if \(!token\) \{\r?\n {8}setHistoryError\('Sign in required'\)\r?\n {8}return\r?\n {6}\}/,
+    to: "      const token = session?.access_token\n      if (!token) return",
+  },
+  {
+    file: 'server/customerHistoryApi.mjs',
+    name: 'the endpoint stops refusing an anonymous caller',
+    from: / {4}if \(!token\) return json\(res, 401, \{ error: 'Unauthorized' \}\)/,
+    to: "    if (!token) token = 'x'",
+  },
+  {
+    file: 'src/pages/TeamLeadQueuePage.jsx',
+    name: 'the open-queue fallback silently replaces history before the API is consulted',
+    // An earlier version of this mutation only reworded the comment above the
+    // fallback, so it never moved anything and correctly reported NOT PROVED.
+    // This one neuters the gate for real: the API-success branch never runs, so
+    // the board query always does — which is the defect being guarded.
+    from: 'if (res.ok) {',
+    to: 'if (res.ok && !res.ok) {',
+  },
+  {
+    file: 'src/pages/TeamLeadQueuePage.jsx',
+    name: 'a new staff fetch is added without a bearer token',
+    from: / {6}const token = await getAccessTokenFresh\(\)\r?\n {6}if \(!token\) \{/,
+    to: "      await fetch('/api/maintenance-schedules?branch=x')\n      const token = await getAccessTokenFresh()\n      if (!token) {",
   },
 ]
 

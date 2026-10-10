@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
+import { getAccessTokenFresh } from '../lib/authToken'
 import { serviceKindFromPayCategory } from '../lib/serviceKinds'
 import {
   filterTicketsByFamily,
@@ -401,7 +402,21 @@ export default function TeamLeadQueuePage() {
     setHistoryError('')
     try {
       const params = new URLSearchParams({ q, limit: '40' })
-      const res = await fetch(`/api/customer-history?${params}`)
+      // BUG-083: this fetch sent no headers, so /api/customer-history answered
+      // 401 on every call — `bearer()` reads the Authorization header and has no
+      // cookie fallback. It stayed invisible because the fallback below queries
+      // `operations_queue_board`, a different dataset: open queue rows rather
+      // than visits, with no final_price_minor, service_name or visit_group_id.
+      // A Team Lead checking a car that visited last month got nothing, and the
+      // panel looked healthy.
+      const token = await getAccessTokenFresh()
+      if (!token) {
+        setHistoryError('Sign in required')
+        return
+      }
+      const res = await fetch(`/api/customer-history?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       const body = await res.json().catch(() => ({}))
       if (res.ok) {
         const visits = body.visits || body.rows || body.timeline || []
