@@ -27,6 +27,18 @@ do $$
 declare
   v_leftover int;
 begin
+  -- The user_notifications_insert policy this file replaces calls
+  -- is_super_admin(). A missing function does not fail at CREATE POLICY time —
+  -- it fails the first time a row is written, after this migration has committed,
+  -- and "no rows" would read as "no failures". Refuse to run unless it exists.
+  if not exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'is_super_admin'
+  ) then
+    raise exception 'public.is_super_admin() is missing — the replacement policy depends on it';
+  end if;
+
   -- If these are already gone someone applied an equivalent fix; stop rather
   -- than silently re-creating policies with different names.
   if not exists (select 1 from pg_policies

@@ -35,6 +35,26 @@ begin
   from public.expenses
   where daily_sheet_line_id is not null;
 
+  -- These policies call is_super_admin() and asa_has_grant(). Neither errors at
+  -- CREATE POLICY time — a missing function only fails the first time a row is
+  -- read, long after this migration has committed, and "no rows" would quietly
+  -- look like "no failures". Refuse to run unless both exist.
+  if not exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'is_super_admin'
+  ) then
+    raise exception 'public.is_super_admin() is missing — the replacement policies depend on it';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'asa_has_grant'
+  ) then
+    raise exception 'public.asa_has_grant() is missing — the replacement policies depend on it';
+  end if;
+
   -- The column must exist before it can be used in a policy; if this migration
   -- ever runs before the daily sheet one, stop rather than fail obscurely.
   if not exists (

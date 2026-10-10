@@ -37,6 +37,7 @@ const SUITES = [
   'tests/authErrorMessage.test.js',
   'tests/customerSignInFailureHonesty.test.js',
   'tests/passwordUpdateErrorHonesty.test.js',
+  'tests/guardedMigrationContract.test.js',
 ]
 
 function runSuite() {
@@ -754,6 +755,32 @@ const ALL_MUTATIONS = [
     name: 'the guard stops refusing to run without is_super_admin()',
     from: / {2}if not exists \(\r?\n {4}select 1 from pg_proc p[\s\S]{0,400}?raise exception 'public\.is_super_admin\(\) is missing/,
     to: "  if false then\n    raise exception 'public.is_super_admin() is missing",
+  },
+  // The guarded-migration contract. Each of these removes one half of a
+  // requirement, so the file stops describing what it exists to enforce.
+  {
+    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    name: 'the contract stops requiring a transaction around the narrowing',
+    from: 'begin;',
+    to: '-- no transaction: a failure halfway would leave policies half-applied',
+  },
+  {
+    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    name: 'the contract stops requiring the migration to be able to abort',
+    from: /raise exception 'user_notifications_select is missing/,
+    to: '-- nothing to abort on',
+  },
+  {
+    file: 'supabase/migrations/20261010120000_protect_daily_sheet_posted_expenses.sql',
+    name: 'the contract stops requiring is_super_admin to be checked before depending on it',
+    from: /raise exception 'public\.is_super_admin\(\) is missing — the replacement policies depend on it'/,
+    to: "-- is_super_admin() is assumed to exist",
+  },
+  {
+    file: 'tests/guardedMigrationContract.test.js',
+    name: 'the contract stops covering the migrations it lists',
+    from: "  '20261010150000_scope_sms_template_writes.sql',\n]",
+    to: ']',
   },
 ]
 
