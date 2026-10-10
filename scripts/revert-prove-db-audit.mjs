@@ -1091,6 +1091,24 @@ const ALL_MUTATIONS = [
     from: "case when v_kind = 'salary' then greatest(coalesce((v_line->>'suggested_minor')::integer, 0), 0) end,",
     to: 'null,',
   },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'BUG-087: expenses start being validated against a suggested figure',
+    from: "(kind = 'expense' and (description is null or account_id is null or amount_minor <= 0))",
+    to: "(kind = 'expense' and (description is null or account_id is null or amount_minor <= 0 or amount_minor is distinct from suggested_minor))",
+  },
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'BUG-087: suggested_minor starts being stored on non-salary lines too',
+    from: "case when v_kind = 'salary' then greatest(coalesce((v_line->>'suggested_minor')::integer, 0), 0) end,",
+    to: "greatest(coalesce((v_line->>'suggested_minor')::integer, 0), 0),",
+  },
+  {
+    name: 'an expense account_id stops being a real foreign key',
+    file: 'supabase/migrations/20260720130000_phase1_to_4_platform_schema.sql',
+    from: 'category_id uuid references public.expense_categories (id),',
+    to: 'category_id uuid,',
+  },
 ]
 
 // An optional substring filter (`node scripts/revert-prove-db-audit.mjs till`)

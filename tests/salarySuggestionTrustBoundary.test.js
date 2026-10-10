@@ -115,3 +115,64 @@ describe('BUG-087 tripwire: the baseline is the caller’s, and nobody has fixed
     assert.doesNotMatch(review, /suggested_minor/, 'approval does not re-check the suggestion')
   })
 })
+
+/**
+ * Why the expense lines are NOT the same defect.
+ *
+ * submit_daily_sheet also requires expense lines to carry a caller-chosen
+ * account_id and amount_minor, and review_daily_sheet posts those unchanged.
+ * On its face that looks identical to the salary gap. It is not, and the
+ * difference is the whole point:
+ *
+ *   salary  — a CANONICAL value exists (suggestSalaries computes it), so
+ *             comparing the caller's amount against a copy the caller also
+ *             supplied is a control that can be switched off. That is BUG-087.
+ *   expense — no canonical value exists. Which bucket a spend belongs to, and
+ *             what was actually handed over, are human judgements. There is
+ *             nothing for the server to check them against.
+ *
+ * So the Daily Sheet is a TRUSTED document. Its controls are structural --
+ * completeness, branch scope, and the approval step (BUG-085) -- and approval
+ * is the financial control. These assertions exist so that distinction is
+ * recorded rather than re-derived next time someone spots the pattern.
+ */
+describe('the salary gap is a defect because a canonical value exists; expenses are not', () => {
+  it('salary lines are validated against a suggested figure', () => {
+    assert.match(submit, /amount_minor is distinct from suggested_minor/)
+  })
+
+  it('expense lines are validated for presence, not against any figure', () => {
+    // description + account + a positive amount. No comparison, because there
+    // is nothing canonical to compare to.
+    assert.match(
+      submit,
+      /kind = 'expense' and \(description is null or account_id is null or amount_minor <= 0\)/,
+    )
+    assert.doesNotMatch(
+      submit,
+      /kind = 'expense'[^\n]*suggested_minor/,
+      'an expense compared against a suggestion would need a canonical value to exist',
+    )
+  })
+
+  it('suggested_minor is only ever stored on salary lines', () => {
+    // The insert is `case when v_kind = 'salary' then ... end`, so every other
+    // kind lands as NULL. If that changed, non-salary lines would start
+    // carrying a figure nothing validates.
+    assert.match(
+      save,
+      /case when v_kind = 'salary' then greatest\(coalesce\(\(v_line->>'suggested_minor'\)::integer, 0\), 0\) end/,
+    )
+  })
+
+  it('the account_id an expense chooses is real, or the FK refuses the row', () => {
+    // expenses.category_id references expense_categories(id), so a fabricated
+    // account id fails at the database rather than posting an uncategorised
+    // expense. That is the one financial field the caller cannot invent.
+    const schema = readFileSync(
+      join(root, 'supabase/migrations/20260720130000_phase1_to_4_platform_schema.sql'),
+      'utf8',
+    )
+    assert.match(schema, /category_id uuid references public\.expense_categories \(id\)/)
+  })
+})
