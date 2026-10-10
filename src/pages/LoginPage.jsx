@@ -9,6 +9,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { isDemoLoginEnabled } from '../lib/demoLogin'
+import { describeAuthError } from '../lib/authErrorMessage'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -82,7 +83,9 @@ export default function LoginPage() {
       password: nextPassword,
     })
     if (authError) {
-      setError('Invalid email or password.')
+      // Never answer a rate limit or a dead network with "invalid password" — that
+      // sends the user to fix the one thing that is not broken. See BUG-076.
+      setError(describeAuthError(authError))
       setSubmitting(false)
       return
     }
