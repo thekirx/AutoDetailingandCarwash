@@ -23,6 +23,56 @@ import { existsSync, readFileSync } from 'node:fs'
 import { isOpsAuthedUrl } from './screenshotAuth.mjs'
 import { collectErrors } from './lib/collect-errors.mjs'
 import { OPS_DEMO_ACCOUNTS } from '../src/lib/demoAccounts.js'
+import {
+  ROLES,
+  getOperationsNav,
+  getTeamLeadDock,
+  getSalesDock,
+  getStaffDock,
+} from '../src/auth/permissions.js'
+
+/**
+ * Demo accounts carry no `role` field — the wave's PERSONAS table supplies it. Reading
+ * `acct.role` instead yields undefined, every dock builder returns nothing, and the
+ * walk silently becomes a no-op: a probe that walks zero routes and reports "0
+ * failures" is indistinguishable from one that actually walked. Hence the mapping
+ * here and the non-zero assertion at the end.
+ */
+const ROLE_BY_ID = {
+  boss: ROLES.SUPER_ADMIN,
+  asa: ROLES.ASSISTANT_SUPER_ADMIN,
+  admin: ROLES.ADMIN,
+  opslead: ROLES.OPERATIONS_LEAD,
+  tl: ROLES.TEAM_LEAD,
+  sales: ROLES.SALES,
+  crew1: ROLES.STAFF,
+  crew2: ROLES.STAFF,
+  crew3: ROLES.STAFF,
+  detailer: ROLES.DETAILER,
+  marketing: ROLES.MARKETING,
+  video: ROLES.VIDEO_EDITOR,
+  investor: ROLES.INVESTOR,
+}
+
+/**
+ * The persona's own dock, assembled exactly the way the wave assembles it. The
+ * first version of this probe visited a single route, which left the "it only
+ * happens during the long walk" theory untested — and that is exactly the shape of
+ * the original failure, which surfaced as `marketing.console` after the harness had
+ * already crossed ten dock pages.
+ */
+function dockFor(profile) {
+  const links = new Set()
+  for (const item of getOperationsNav(profile) || []) links.add(item.to)
+  for (const dock of [getTeamLeadDock, getSalesDock, getStaffDock]) {
+    try {
+      for (const item of dock(profile) || []) links.add(item.to)
+    } catch {
+      /* a dock that rejects this role simply contributes nothing */
+    }
+  }
+  return [...links].filter((to) => String(to).startsWith('/operations'))
+}
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -210,6 +260,7 @@ try {
 
   let failures = 0
   let logins = 0
+  let routesWalked = 0
   let controlsPassed = 0
   let controlsMissed = 0
   for (let cycle = 1; cycle <= CYCLES; cycle++) {
@@ -256,19 +307,43 @@ try {
         console.log(`  ✖ ${tag} on ${PROBE_ROUTE} (${page.url()}):`)
         afterPage.forEach((l) => console.log(`      ${l}`))
       }
+
+      // Now the rest of the persona's own dock — the walk shape the wave actually
+      // runs, which is the one condition the single-route probe could not reproduce.
+      const dock = dockFor({ role: ROLE_BY_ID[id] })
+      if (!dock.length) {
+        console.log(`  ! ${tag} has an empty dock — the role map may be wrong, this persona proves nothing`)
+      }
+      routesWalked += dock.length
+      for (const to of dock) {
+        if (to === PROBE_ROUTE) continue
+        await page.goto(`${base}${to}`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => null)
+        await waitSettled(page)
+        const seen = authOnly(errors.take())
+        if (seen.length) {
+          failures++
+          console.log(`  ✖ ${tag} walking ${to} (${page.url()}):`)
+          seen.forEach((l) => console.log(`      ${l}`))
+        }
+      }
     }
-    console.log(`cycle ${cycle}/${CYCLES} done — ${logins} logins, ${failures} phase(s) with an auth failure so far`)
+    console.log(`cycle ${cycle}/${CYCLES} done — ${logins} logins, ${routesWalked} routes walked, ${failures} phase(s) with an auth failure so far`)
   }
 
   await browser.close()
   console.log(`\npositive control: ${controlsPassed} caught / ${controlsMissed} missed over ${CYCLES} cycle(s)`)
-  if (controlsMissed > 0) {
+  console.log(`dock routes walked: ${routesWalked}`)
+  if (routesWalked === 0) {
+    console.log('RESULT: INCONCLUSIVE — no routes were walked, so "0 failures" means nothing.')
+    process.exitCode = 3
+  } else if (controlsMissed > 0) {
     console.log('RESULT: INCONCLUSIVE — the instrument failed its own control, so a clean run means nothing.')
     process.exitCode = 3
   } else if (failures === 0) {
     console.log(
-      `RESULT: 0 incidental auth failures across ${CYCLES} x ${ROTATION.length} persona cycles, with the ` +
-      'control passing every cycle — the scrub did NOT reproduce a 401 under this harness.',
+      `RESULT: 0 incidental auth failures across ${CYCLES} x ${ROTATION.length} persona cycles ` +
+      `(${routesWalked} dock routes walked), with the control passing every cycle — the scrub ` +
+      'did NOT reproduce a 401 under this harness.',
     )
     process.exitCode = 0
   } else {
