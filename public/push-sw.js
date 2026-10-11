@@ -24,7 +24,19 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const raw = event.notification?.data?.url || '/'
-  const path = raw.startsWith('http') ? raw : new URL(raw, self.location.origin).href
+  // The url on a push payload is chosen by whoever sent it, and
+  // /api/notification-broadcast takes that field as free text from a Marketing,
+  // Assistant Super Admin or Super Admin account. Navigating to it verbatim would
+  // let one broadcast walk every enrolled device onto any site on the internet
+  // wearing an official Hakum notification. Resolve it, and take it only when it
+  // lands back on our own origin.
+  let path = `${self.location.origin}/`
+  try {
+    const resolved = new URL(raw, self.location.origin)
+    if (resolved.origin === self.location.origin) path = resolved.href
+  } catch {
+    /* unparseable -- keep the root */
+  }
   event.waitUntil(
     (async () => {
       const all = await clients.matchAll({ type: 'window', includeUncontrolled: true })

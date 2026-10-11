@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { resolvePushTargets, sendWebPushToUsers } from './webPush.mjs'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { safeNotificationPath } from './notificationTargetUrl.mjs'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -41,7 +42,7 @@ export async function handleSendPushRequest(req, res) {
       const titleText = title || 'Hakum alerts ready'
       const bodyText = message || 'Push is working on this device.'
       // Prefer app shells over bare "/" so click-through lands in account/ops, not marketing home
-      const url = String(body.url || '').trim() || '/account'
+      const url = safeNotificationPath(body.url, '/account')
       const result = await sendWebPushToUsers({
         userIds: [userData.user.id],
         title: titleText,
@@ -98,11 +99,14 @@ export async function handleSendPushRequest(req, res) {
     }
 
     const userIds = await resolvePushTargets(targets)
+    // Normalised once, then used for both the tap and the stored inbox row, so
+    // the two can never disagree about where this notification goes.
+    const url = safeNotificationPath(body.url, '/')
     const result = await sendWebPushToUsers({
       userIds,
       title,
       body: message,
-      url: body.url || '/',
+      url,
       tag: body.tag,
       kind: body.kind || 'system',
     })
@@ -116,7 +120,7 @@ export async function handleSendPushRequest(req, res) {
           kind: body.kind || 'system',
           title,
           body: message,
-          url: body.url || '/',
+          url,
           tag: body.tag || null,
         })),
       )

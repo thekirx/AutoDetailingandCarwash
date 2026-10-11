@@ -111,4 +111,35 @@ describe('push-sw.js', () => {
     await click(listeners, undefined)
     assert.deepEqual(calls.opened, [`${ORIGIN}/`])
   })
+
+  it('a same-origin absolute url still works', async () => {
+    // The control. Without it, a guard that sent every click to the root would
+    // satisfy the containment assertions below and quietly break every deep link.
+    const w = win(`${ORIGIN}/operations/dashboard`)
+    const { listeners } = loadSw([w])
+    await click(listeners, `${ORIGIN}/operations/payroll?tab=cash-advance`)
+    assert.deepEqual(w.navigated, [`${ORIGIN}/operations/payroll?tab=cash-advance`])
+  })
+
+  it('a broadcast cannot send the tap to another origin', async () => {
+    // The url on a push payload is chosen by whoever sent it, and
+    // /api/notification-broadcast takes it as free text from a Marketing, ASA or
+    // Super Admin account. Navigating to it verbatim would let one broadcast
+    // walk every enrolled device onto any site, wearing an official notification.
+    const w = win(`${ORIGIN}/operations/dashboard`)
+    const { listeners, calls } = loadSw([w])
+    await click(listeners, 'https://evil.test/phish')
+    assert.deepEqual(w.navigated, [`${ORIGIN}/`])
+    assert.deepEqual(calls.opened, [])
+  })
+
+  it('a protocol-relative url cannot escape either', async () => {
+    // No scheme, so a startsWith('http') check cannot see it -- but `//host`
+    // resolves to a foreign origin. The backslash spelling is the same escape.
+    const { listeners, calls } = loadSw([])
+    await click(listeners, '//evil.test/phish')
+    assert.deepEqual(calls.opened, [`${ORIGIN}/`])
+    await click(listeners, '/\\evil.test/phish')
+    assert.deepEqual(calls.opened, [`${ORIGIN}/`, `${ORIGIN}/`])
+  })
 })

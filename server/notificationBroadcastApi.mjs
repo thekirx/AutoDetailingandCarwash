@@ -9,6 +9,7 @@ import {
   titleMaxForChannel,
 } from '../src/lib/notificationCopy.js'
 import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
+import { safeNotificationPath } from './notificationTargetUrl.mjs'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -160,7 +161,7 @@ export async function handleNotificationBroadcastRequest(req, res) {
           userIds,
           title,
           body: message,
-          url: body.url || '/account',
+          url: safeNotificationPath(body.url, '/account'),
           tag: body.kind || 'promo',
           kind: body.kind || 'promo',
         })
@@ -204,7 +205,7 @@ export async function handleNotificationBroadcastRequest(req, res) {
     channel,
     title,
     body: message,
-    url: body.url || null,
+    url: safeNotificationPath(body.url, '/account') || null,
     target_audience: targetAudience,
     branch_slug: branchSlug,
     sent_count: sent,
