@@ -26,10 +26,13 @@ SA / ASA with POS still see bay + detailing catalogs for walk-in / override case
 ## Layout
 
 ```
-Tablet+: Waiting tickets → merch rail | Order summary (ticket locked + add-ons + tender)
-Phone:   Catalogue + sticky cart → sheet order panel
+Tablet+: Waiting to pay → catalogue | Order summary (ticket locked + add-ons + tender)
+         Sales today (paid, waiting, avg ticket) below both
+Phone:   Waiting to pay → catalogue → Sales today, sticky cart → sheet order panel
 Tabs:    Checkout · Daily sheet · Sheet history · Today (settings when allowed)
 ```
+
+**Waiting to pay** is the first thing on Sell: large tickets, oldest first, each showing queue number, plate, car and customer, amount, and how long it has waited. Tickets waiting 20 min or more get an amber time chip, and the header counts them (`POS_LONG_WAIT_MIN` in `src/lib/posInsights.js`). Six show at once, with "Show N more waiting" for the rest. The grid fits as many tickets per row as the space allows (at least 16.5rem each).
 
 ## Components
 

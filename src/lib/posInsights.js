@@ -26,6 +26,28 @@ export function formatQueueTicket(booking) {
   return booking?.queue_number != null ? `Q-${String(booking.queue_number).padStart(3, '0')}` : 'Queue'
 }
 
+/** Minutes a car has waited to pay before its ticket is flagged on the counter. */
+export const POS_LONG_WAIT_MIN = 20
+
+/** Whole minutes since a ticket was sent to pay, or null when the time is missing. */
+export function waitMinutes(createdAt, now = Date.now()) {
+  const ms = now - new Date(createdAt).getTime()
+  return createdAt && Number.isFinite(ms) ? Math.max(0, Math.floor(ms / 60000)) : null
+}
+
+/** "Just now", "12 min", "1 h 5 min", "3 days". */
+export function formatWaitMinutes(min) {
+  if (min == null) return ''
+  if (min < 1) return 'Just now'
+  if (min < 60) return `${min} min`
+  if (min >= 1440) {
+    const d = Math.floor(min / 1440)
+    return `${d} ${d === 1 ? 'day' : 'days'}`
+  }
+  const h = Math.floor(min / 60)
+  return min % 60 ? `${h} h ${min % 60} min` : `${h} h`
+}
+
 /** Pending handoffs waiting for payment. */
 export function summarizePendingHandoffs(handoffs = []) {
   const rows = handoffs || []

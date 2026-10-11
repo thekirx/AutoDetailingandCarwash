@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BookOpen,
   ChevronDown,
@@ -13,7 +13,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { POS_WORKFLOW_STEPS, formatQueueTicket } from '@/lib/posInsights'
+import {
+  POS_LONG_WAIT_MIN,
+  POS_WORKFLOW_STEPS,
+  formatQueueTicket,
+  formatWaitMinutes,
+  waitMinutes,
+} from '@/lib/posInsights'
 import { formatMoney } from '@/queue/queueApi'
 export function PosStatsBoard({ stats, categoryRows = [], compact = false }) {
   const {
@@ -151,52 +157,101 @@ export function PosGuideCard({ defaultOpen = false }) {
   )
 }
 
-/** Cars the floor sent to pay, as ticket stubs above the catalogue. Tap one to put it on the order. */
+const TICKETS_SHOWN = 6
+
+/** Re-renders every 30s so wait times stay current without a reload. */
+function useMinuteClock() {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000)
+    return () => clearInterval(id)
+  }, [])
+  return now
+}
+
+/** Cars the floor sent to pay, oldest first, as large tickets above the catalogue. Tap one to put it on the order. */
 export function PosOpenTickets({ tickets = [], activeId = null, totalMinor = 0, onOpen, onReplay }) {
+  const now = useMinuteClock()
+  const [showAll, setShowAll] = useState(false)
+  const visible = showAll ? tickets : tickets.slice(0, TICKETS_SHOWN)
+  const hidden = tickets.length - visible.length
+  const longWaits = tickets.filter((row) => (waitMinutes(row.created_at, now) ?? 0) >= POS_LONG_WAIT_MIN).length
+
   return (
-    <section aria-labelledby="pos-open-tickets-title" className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 id="pos-open-tickets-title" className="text-sm font-semibold">
-          Waiting to pay
-          {tickets.length ? <span className="ml-1.5 tabular-nums text-muted-foreground">{tickets.length}</span> : null}
-        </h2>
+    <section aria-labelledby="pos-open-tickets-title" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+        <div className="flex items-center gap-2.5">
+          <h2 id="pos-open-tickets-title" className="text-lg font-semibold tracking-tight">
+            Waiting to pay
+          </h2>
+          {tickets.length ? (
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--pos-navy)] px-2 text-xs font-semibold text-white tabular-nums">
+              {tickets.length}
+            </span>
+          ) : null}
+          {longWaits ? (
+            <span className="inline-flex h-6 items-center gap-1 rounded-full bg-amber-500/15 px-2 text-xs font-medium text-amber-900 dark:text-amber-100">
+              <Clock3 className="size-3.5" aria-hidden />
+              {longWaits} over {POS_LONG_WAIT_MIN} min
+            </span>
+          ) : null}
+        </div>
         {tickets.length ? (
-          <p className="font-mono text-sm tabular-nums text-muted-foreground">{formatMoney(totalMinor)}</p>
+          <p className="text-sm text-muted-foreground">
+            To collect{' '}
+            <span className="font-mono text-base font-semibold text-foreground tabular-nums">{formatMoney(totalMinor)}</span>
+          </p>
         ) : null}
       </div>
+
       {tickets.length ? (
-        <ul className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
-          {tickets.map((row) => {
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,16.5rem),1fr))] gap-3">
+          {visible.map((row) => {
             const booking = row.bookings || {}
             const active = row.id === activeId
             const plate = booking.vehicle_plate || 'No plate'
             const name = booking.customer_name || 'Customer'
+            const vehicle = [booking.vehicle_make, booking.vehicle_model].filter(Boolean).join(' ')
+            const waited = waitMinutes(row.created_at, now)
+            const long = (waited ?? 0) >= POS_LONG_WAIT_MIN
+            const amount = formatMoney(row.amount_minor ?? booking.final_price_minor ?? booking.price_minor ?? 0)
             return (
-              <li key={row.id} className="relative shrink-0 snap-start">
+              <li key={row.id} className="relative min-w-0">
                 <button
                   type="button"
                   aria-pressed={active}
-                  aria-label={`${formatQueueTicket(booking)} · ${plate} · ${name}`}
+                  aria-label={`${formatQueueTicket(booking)} · ${plate} · ${name} · ${amount}${waited != null ? ` · waiting ${formatWaitMinutes(waited)}` : ''}`}
                   onClick={() => onOpen(row)}
-                  className={`flex min-h-[4.75rem] w-60 items-stretch overflow-hidden rounded-xl border text-left transition-[border-color,background-color,transform] duration-150 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none ${
+                  className={`flex min-h-[7.5rem] w-full items-stretch overflow-hidden rounded-2xl border text-left transition-[border-color,background-color,transform] duration-150 ease-out active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none ${
                     active ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border bg-card hover:border-primary/50'
                   }`}
                 >
-                  <span className="flex w-16 shrink-0 flex-col items-center justify-center gap-0.5 bg-[var(--pos-navy)] px-1 text-white">
-                    <span className="text-[9px] font-bold tracking-[0.16em] text-white/65 uppercase">Queue</span>
-                    <span className="font-mono text-base font-semibold tabular-nums">
+                  <span className="flex w-[4.5rem] shrink-0 flex-col items-center justify-center gap-1 bg-[var(--pos-navy)] px-1 text-white">
+                    <span className="text-[10px] font-semibold tracking-[0.14em] text-white/70 uppercase">Queue</span>
+                    <span className="font-mono text-2xl font-semibold tabular-nums">
                       {booking.queue_number != null ? String(booking.queue_number).padStart(3, '0') : '—'}
                     </span>
                   </span>
-                  <span className={`flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-2 pl-3 ${onReplay ? 'pr-11' : 'pr-3'}`}>
-                    <span className="truncate font-mono text-sm font-semibold tracking-wide uppercase" title={plate}>{plate}</span>
-                    <span className="truncate text-xs text-muted-foreground" title={name}>{name}</span>
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="font-mono text-sm font-semibold tabular-nums">
-                        {formatMoney(row.amount_minor ?? booking.final_price_minor ?? booking.price_minor ?? 0)}
-                      </span>
+                  <span className={`flex min-w-0 flex-1 flex-col gap-1 py-3 pl-4 ${onReplay ? 'pr-12' : 'pr-4'}`}>
+                    <span className="truncate font-mono text-lg leading-tight font-semibold tracking-wide uppercase" title={plate}>
+                      {plate}
+                    </span>
+                    <span className="truncate text-sm text-muted-foreground" title={vehicle ? `${vehicle} · ${name}` : name}>
+                      {vehicle ? `${vehicle} · ${name}` : name}
+                    </span>
+                    <span className="mt-auto flex items-end justify-between gap-2 pt-1">
+                      <span className="font-mono text-xl font-semibold tracking-tight tabular-nums">{amount}</span>
                       {active ? (
-                        <span className="text-[10px] font-bold tracking-wide text-primary uppercase">On order</span>
+                        <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">On order</span>
+                      ) : waited != null ? (
+                        <span
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums ${
+                            long ? 'bg-amber-500/15 text-amber-900 dark:text-amber-100' : 'text-muted-foreground'
+                          }`}
+                        >
+                          <Clock3 className="size-3.5" aria-hidden />
+                          {formatWaitMinutes(waited)}
+                        </span>
                       ) : null}
                     </span>
                   </span>
@@ -207,7 +262,7 @@ export function PosOpenTickets({ tickets = [], activeId = null, totalMinor = 0, 
                     aria-label={`Announce ${plate} again`}
                     title="Announce again"
                     onClick={() => onReplay(row)}
-                    className="absolute top-1 right-1 flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="absolute top-1.5 right-1.5 flex size-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     <Volume2 className="size-4" aria-hidden />
                   </button>
@@ -217,10 +272,16 @@ export function PosOpenTickets({ tickets = [], activeId = null, totalMinor = 0, 
           })}
         </ul>
       ) : (
-        <p className="rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+        <p className="rounded-2xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
           No cars waiting to pay. Tickets from the floor show up here on their own.
         </p>
       )}
+
+      {tickets.length > TICKETS_SHOWN ? (
+        <Button type="button" variant="outline" className="min-h-11 self-start" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
+          {showAll ? 'Show fewer' : `Show ${hidden} more waiting`}
+        </Button>
+      ) : null}
     </section>
   )
 }

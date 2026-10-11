@@ -49,7 +49,7 @@
 
 | Field | Value |
 |-------|-------|
-| Finished | 2026-10-10T00:25:27.846Z |
+| Finished | 2026-10-10T15:25:12.878Z |
 | Overall | **PASS** |
 | Passed / failed / skipped | 14 / 0 / 1 |
 | SEND_LIVE_SMS | 0 |
@@ -152,6 +152,7 @@ See also [`last-run.json`](./last-run.json) · [`readiness-dashboard.html`](./re
 
 | Claim | Command | Exit | Key output |
 |-------|---------|------|------------|
+| 2026-10-10T15:25:12.878Z | `npm run test:readiness` | 0 | passed=14 failed=0 skipped=1 |
 | 2026-10-10T00:25:27.846Z | `npm run test:readiness` | 0 | passed=14 failed=0 skipped=1 |
 | 2026-10-10T00:17:00.367Z | `npm run test:readiness` | 1 | passed=10 failed=1 skipped=1 |
 | 2026-10-10T00:02:54.142Z | `npm run test:readiness` | 1 | passed=10 failed=1 skipped=1 |

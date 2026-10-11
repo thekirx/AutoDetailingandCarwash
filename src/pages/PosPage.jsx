@@ -1659,8 +1659,6 @@ function PosCounterPage() {
 
   const checkoutBody = (
     <div className="flex flex-col gap-6">
-      <PosStatsBoard stats={todaySummary} compact />
-
       <div className="pos-counter grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-4">
           <PosOpenTickets
@@ -1758,6 +1756,8 @@ function PosCounterPage() {
         </aside>
         ) : null}
       </div>
+
+      <PosStatsBoard stats={todaySummary} compact />
     </div>
   )
 

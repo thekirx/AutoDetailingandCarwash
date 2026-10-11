@@ -8,19 +8,19 @@
       "fail": 0
     },
     "boss": {
-      "pass": 28,
+      "pass": 27,
       "fail": 0
     },
     "asa": {
-      "pass": 28,
+      "pass": 27,
       "fail": 0
     },
     "admin": {
-      "pass": 14,
+      "pass": 13,
       "fail": 0
     },
     "opslead": {
-      "pass": 18,
+      "pass": 17,
       "fail": 0
     },
     "tl": {
@@ -28,7 +28,7 @@
       "fail": 0
     },
     "sales": {
-      "pass": 7,
+      "pass": 9,
       "fail": 0
     },
     "crew1": {
@@ -48,7 +48,7 @@
       "fail": 0
     },
     "investor": {
-      "pass": 7,
+      "pass": 9,
       "fail": 0
     },
     "retired": {
@@ -66,5 +66,5 @@
   },
   "failed": [],
   "evidence": "e2e-evidence/role-qa-wave",
-  "at": "2026-10-08T18:46:34.464Z"
+  "at": "2026-10-10T13:23:23.073Z"
 }
