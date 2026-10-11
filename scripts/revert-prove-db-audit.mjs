@@ -8,7 +8,7 @@
  *
  *   node scripts/revert-prove-db-audit.mjs
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
@@ -49,6 +49,8 @@ const SUITES = [
   'tests/collectErrorsDetector.test.js',
   'tests/dailySheetServerTotalsBoundary.test.js',
   'tests/notificationHrefContainment.test.js',
+  'tests/pushSwClick.test.js',
+  'tests/notificationTargetUrl.test.js',
 ]
 
 function runSuite() {
@@ -1202,6 +1204,26 @@ const ALL_MUTATIONS = [
     from: 'if (/^\\/[/\\\\]/.test(raw)) return fb',
     to: 'if (raw.startsWith(\'//\')) return fb',
   },
+  // BUG-090. The tap lands wherever the url points, and the url is free text from
+  // a Marketing / ASA / Super Admin broadcast.
+  {
+    file: 'public/push-sw.js',
+    name: 'BUG-090: a push tap goes to whatever origin the broadcast named',
+    from: 'if (resolved.origin === self.location.origin) path = resolved.href',
+    to: 'path = resolved.href',
+  },
+  {
+    file: 'public/push-sw.js',
+    name: 'BUG-090: the tap only filters protocol-relative urls, leaving absolute ones open',
+    from: 'if (resolved.origin === self.location.origin) path = resolved.href',
+    to: 'if (/^\\/[/\\\\]/.test(raw)) { /* keep the root */ } else path = resolved.href',
+  },
+  {
+    file: 'server/notificationBroadcastApi.mjs',
+    name: 'BUG-090: the broadcast stores the typed url unvalidated again',
+    from: "url: safeNotificationPath(body.url, '/account') || null,",
+    to: 'url: body.url || null,',
+  },
 ]
 
 // An optional substring filter (`node scripts/revert-prove-db-audit.mjs till`)
@@ -1209,7 +1231,9 @@ const ALL_MUTATIONS = [
 // (`... "dead network,lookup helper"`) in one pass instead of paying the full
 // ~20-suite startup cost per mutation. The unfiltered run stays the gate: a
 // filtered run proves the named mutations and nothing else.
-const filter = process.argv[2] || ''
+// `--recover` is a mode, not a mutation name, so it must not be read as a filter
+// needle — otherwise `--recover` alone exits as "no mutation name matches".
+const filter = process.argv.slice(2).filter((a) => a !== '--recover')[0] || ''
 const needles = filter ? filter.split(',').map((s) => s.trim()).filter(Boolean) : []
 const MUTATIONS = needles.length ? ALL_MUTATIONS.filter((m) => needles.some((n) => m.name.includes(n))) : ALL_MUTATIONS
 if (filter && !MUTATIONS.length) {
@@ -1245,6 +1269,67 @@ function writeText(abs, content, label, attempts = 12) {
   }
 }
 
+// A killed run leaves a mutated source file on disk, and the whole tree is then
+// wrong with nothing recording that it is wrong. That is not hypothetical: the
+// full unfiltered gate was terminated at its 50-minute ceiling mid-mutation and
+// left `20261010170000` with `overShortMinor` forced to `null`. A process that is
+// SIGKILLed cannot run a `finally`, so recovery has to be written down *before*
+// the mutation rather than trusted to run after it.
+//
+// The originals go under `.git/` so they are never tracked and never staged.
+const BACKUP_DIR = join(root, '.git', 'revert-prove-orig')
+const BACKUP_MANIFEST = join(BACKUP_DIR, 'manifest.txt')
+const backupName = (relPath) => relPath.replace(/[\\/]/g, '__')
+
+function listBackedUp() {
+  if (!existsSync(BACKUP_MANIFEST)) return []
+  return readFileSync(BACKUP_MANIFEST, 'utf8')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+}
+
+/** Put back anything a previous run left mutated. Returns how many files it fixed. */
+function recover(quiet = false) {
+  const pending = listBackedUp()
+  if (!pending.length) return 0
+  if (!quiet) {
+    console.log(`\n!! A previous revert-prove run was interrupted mid-mutation.`)
+    console.log(`!! Restoring ${pending.length} file(s) it left mutated:`)
+  }
+  for (const rel of pending) {
+    const saved = join(BACKUP_DIR, backupName(rel))
+    if (existsSync(saved)) writeText(join(root, rel), readFileSync(saved, 'utf8'), 'recover')
+    if (!quiet) console.log(`   ${rel}`)
+  }
+  rmSync(BACKUP_DIR, { recursive: true, force: true })
+  if (!quiet) console.log('!! Recovered. Verify with `git status` before trusting the tree.\n')
+  return pending.length
+}
+
+function stash(relPath, abs, contents) {
+  mkdirSync(BACKUP_DIR, { recursive: true })
+  writeFileSync(join(BACKUP_DIR, backupName(relPath)), contents, 'utf8')
+  const pending = listBackedUp().filter((p) => p !== relPath)
+  pending.push(relPath)
+  writeFileSync(BACKUP_MANIFEST, `${pending.join('\n')}\n`, 'utf8')
+}
+
+function unstash(relPath) {
+  const pending = listBackedUp().filter((p) => p !== relPath)
+  if (pending.length) writeFileSync(BACKUP_MANIFEST, `${pending.join('\n')}\n`, 'utf8')
+  else rmSync(BACKUP_DIR, { recursive: true, force: true })
+}
+
+// `node scripts/revert-prove-db-audit.mjs --recover` repairs the tree and exits,
+// so the fix does not require running the (slow) gate to find out it was broken.
+if (process.argv.includes('--recover')) {
+  const n = recover(false)
+  if (!n) console.log('nothing to recover — no interrupted run found')
+  process.exit(0)
+}
+recover(false)
+
 for (const m of MUTATIONS) {
   const relPath = m.file || 'scripts/audit-db-deep.mjs'
   const abs = join(root, relPath)
@@ -1258,6 +1343,7 @@ for (const m of MUTATIONS) {
     failures++
     continue
   }
+  stash(relPath, abs, original)
   writeText(abs, original.replace(m.from, m.to), 'mutate')
   // Prove the mutation actually landed. `String.replace` silently returns the
   // input unchanged when the anchor matches but `to` happens to equal the match
@@ -1268,6 +1354,7 @@ for (const m of MUTATIONS) {
   const mutated = readFileSync(abs, 'utf8')
   if (mutated === original) {
     writeText(abs, original, 'restore')
+    unstash(relPath)
     console.log(`NOT PROVED  ${m.name} — the mutation produced a byte-identical file`)
     failures++
     continue
@@ -1278,9 +1365,11 @@ for (const m of MUTATIONS) {
   } catch (err) {
     // Never let a suite throw skip the restore. The mutation is live right now.
     writeText(abs, original, 'restore')
+    unstash(relPath)
     throw err
   }
   writeText(abs, original, 'restore')
+  unstash(relPath)
   const good = runSuite()
 
   if (bad.red && !good.red) {
