@@ -259,20 +259,24 @@ const ALL_MUTATIONS = [
     from: 'await browser.createBrowserContext()',
     to: 'await browser.newPage()',
   },
+  // The recorder was extracted from the wave into scripts/lib/collect-errors.mjs.
+  // These five stayed pointed at e2e-role-qa-wave.mjs and silently SKIPped —
+  // a mutation whose anchor no longer exists proves nothing and reports as noise,
+  // so a SKIP is a real gap, not a cosmetic one. They now target the lib.
   {
-    file: 'scripts/e2e-role-qa-wave.mjs',
+    file: 'scripts/lib/collect-errors.mjs',
     name: 'a console failure goes back to naming no route at all',
-    from: '`console @${where()}: ${msg.text().slice(0, 300)}`',
-    to: '`console: ${msg.text().slice(0, 300)}`',
+    from: '`console @${where()}: ${text.slice(0, 300)}`',
+    to: '`console: ${text.slice(0, 300)}`',
   },
   {
-    file: 'scripts/e2e-role-qa-wave.mjs',
+    file: 'scripts/lib/collect-errors.mjs',
     name: 'a page error goes back to naming no route at all',
     from: '`pageerror @${where()}: ${String(err?.message || err).slice(0, 300)}`',
     to: '`pageerror: ${String(err?.message || err).slice(0, 300)}`',
   },
   {
-    file: 'scripts/e2e-role-qa-wave.mjs',
+    file: 'scripts/lib/collect-errors.mjs',
     name: 'the route is captured once instead of at event time, blaming the wrong page',
     from: 'return new URL(page.url()).pathname',
     to: 'return "the page"',
@@ -284,17 +288,19 @@ const ALL_MUTATIONS = [
     to: "await page.goto(`${base}${to}`, { waitUntil: 'domcontentloaded', timeout: 60000 })",
   },
   {
-    file: 'scripts/e2e-role-qa-wave.mjs',
+    // Distinct from the status-widening mutation below: that one keeps the
+    // listener and loosens what it records, this one removes the listener, so
+    // nothing reaches the bucket at all.
+    file: 'scripts/lib/collect-errors.mjs',
     name: 'auth failures stop being captured, so the 401 loses its URL again',
     from: "page.on('response', (res) => {",
-    to: "page.on('responseDISABLED', (res) => {",
+    to: "page.on('notAResponseEvent', (res) => {",
   },
-  {
-    file: 'scripts/e2e-role-qa-wave.mjs',
-    name: 'the bucket widens to every 4xx/5xx, turning dev-server 404s into product faults',
-    from: 'if (status !== 401 && status !== 403) return',
-    to: 'if (status < 200) return',
-  },
+  // REMOVED: "the bucket widens to every 4xx/5xx, turning dev-server 404s into
+  // product faults". Once re-pointed at the lib it was a near-duplicate of the
+  // existing `status < 400` mutation, which already proves the same guard bites.
+  // Two mutations proving one property is noise that makes the count look better
+  // than the coverage is.
   {
     file: 'scripts/e2e-role-qa-wave.mjs',
     name: 'gotoRoute stops retrying and gives up on the first abort',
@@ -695,23 +701,31 @@ const ALL_MUTATIONS = [
   },
   // BUG-079 — the Branch Admin company-wide inbox. NotificationBell selects with
   // no user_id filter, so this read policy is the only scoping that exists.
+  //
+  // These point at 20261011090000, NOT 20261010140000. The latter aborts against
+  // production by design (its exact-text guard expects a policy shape that does
+  // not exist there), and 20261011090000 drops and recreates
+  // user_notifications_select afterwards. effectivePolicies() replays migrations
+  // in filename order and a DROP removes an earlier CREATE, so 20261011090000 owns
+  // the outcome. Mutating 20261010140000 changed nothing observable and reported
+  // NOT PROVED — a stale mutation pointing at superseded source, not a broken guard.
   {
-    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    file: 'supabase/migrations/20261011090000_reconcile_live_admin_policies.sql',
     name: 'BUG-079 itself: the read policy hands Branch Admin every notification',
-    from: /create policy user_notifications_select\r?\non public\.user_notifications\r?\nfor select\r?\nto authenticated\r?\nusing \(\r?\n {2}user_id = \(select auth\.uid\(\)\)\r?\n {2}or public\.is_super_admin\(\)\r?\n\);/,
-    to: 'create policy user_notifications_select\non public.user_notifications\nfor select\nto authenticated\nusing (\n  user_id = (select auth.uid())\n  or public.is_admin()\n);',
+    from: /using \(user_id = \(select auth\.uid\(\)\) or public\.is_super_admin\(\)\);/,
+    to: 'using (user_id = (select auth.uid()) or public.is_admin());',
   },
   {
-    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    file: 'supabase/migrations/20261011090000_reconcile_live_admin_policies.sql',
     name: 'the narrowing forgets to keep a user their own rows',
-    from: / {2}user_id = \(select auth\.uid\(\)\)\r?\n {2}or public\.is_super_admin\(\)/,
-    to: '  public.is_super_admin()',
+    from: /using \(user_id = \(select auth\.uid\(\)\) or public\.is_super_admin\(\)\);/,
+    to: 'using (public.is_super_admin());',
   },
   {
-    file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
+    file: 'supabase/migrations/20261011090000_reconcile_live_admin_policies.sql',
     name: 'the narrowing stops keeping Super Admin the support read',
-    from: / {2}or public\.is_super_admin\(\)\r?\n\);/,
-    to: '  or public.is_super_admin() and false\n);',
+    from: /using \(user_id = \(select auth\.uid\(\)\) or public\.is_super_admin\(\)\);/,
+    to: 'using (user_id = (select auth.uid()) or (public.is_super_admin() and false));',
   },
   {
     file: 'supabase/migrations/20261010140000_scope_notification_reads.sql',
@@ -792,7 +806,9 @@ const ALL_MUTATIONS = [
   {
     file: 'tests/guardedMigrationContract.test.js',
     name: 'the contract stops covering the migrations it lists',
-    from: "  '20261010150000_scope_sms_template_writes.sql',\n]",
+    // The list gained a seventh entry when 20261011090000 landed, so anchoring on
+    // the sixth no longer matched and the mutation SKIPped instead of proving.
+    from: "  '20261011090000_reconcile_live_admin_policies.sql',\n]",
     to: ']',
   },
   // BUG-081 — the drawer could tell a Branch Admin their correct drawer was
@@ -1233,9 +1249,34 @@ const ALL_MUTATIONS = [
 // filtered run proves the named mutations and nothing else.
 // `--recover` is a mode, not a mutation name, so it must not be read as a filter
 // needle — otherwise `--recover` alone exits as "no mutation name matches".
-const filter = process.argv.slice(2).filter((a) => a !== '--recover')[0] || ''
+const argvRest = process.argv.slice(2).filter((a) => a !== '--recover')
+const numArg = (flag) => {
+  const i = argvRest.indexOf(flag)
+  return i < 0 ? null : Number(argvRest[i + 1])
+}
+const from = numArg('--from')
+const to = numArg('--to')
+
+// There are ~170 mutations across ~34 suites. The unfiltered run does not fit in
+// one session and pretending otherwise produces a killed run and a broken tree,
+// which is what happened once already. Index ranges make "run them all" a
+// mechanical loop instead of a hand-written needle list that quietly misses some.
+const ALL_NAMES = ALL_MUTATIONS.map((m) => m.name)
+let ALL_SELECTED = ALL_MUTATIONS
+if (from !== null || to !== null) {
+  const lo = Number.isFinite(from) ? from : 1
+  const hi = Number.isFinite(to) ? to : ALL_NAMES.length
+  ALL_SELECTED = ALL_MUTATIONS.filter((_, i) => i + 1 >= lo && i + 1 <= hi)
+  if (!ALL_SELECTED.length) {
+    console.error(`no mutation in range ${lo}..${hi} of ${ALL_NAMES.length}`)
+    process.exit(1)
+  }
+  console.log(`batch ${lo}..${Math.min(hi, ALL_NAMES.length)} of ${ALL_NAMES.length}`)
+}
+
+const filter = argvRest.filter((a) => !a.startsWith('--') && !Number.isFinite(Number(a)))[0] || ''
 const needles = filter ? filter.split(',').map((s) => s.trim()).filter(Boolean) : []
-const MUTATIONS = needles.length ? ALL_MUTATIONS.filter((m) => needles.some((n) => m.name.includes(n))) : ALL_MUTATIONS
+const MUTATIONS = needles.length ? ALL_SELECTED.filter((m) => needles.some((n) => m.name.includes(n))) : ALL_SELECTED
 if (filter && !MUTATIONS.length) {
   console.error(`no mutation name matches "${filter}" — nothing was proved`)
   process.exit(1)
