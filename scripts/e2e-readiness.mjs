@@ -8,7 +8,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { loadCustomerPortal } from '../server/customerPortal.mjs'
 import { lookupCustomerAuthStatus } from '../server/customerAuthLookup.mjs'
 import { redirectForRole, canAccessCrm, canAccessPos, canAccessFinance, ROLES } from '../src/auth/permissions.js'
-import { OPS_DEMO_ACCOUNTS } from '../src/lib/demoAccounts.js'
+import { OPS_DEMO_ACCOUNTS, demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -51,13 +51,13 @@ if (process.env.BUSYBEE_API_KEY && process.env.BUSYBEE_CLIENT_ID) {
 }
 
 const accounts = [
-  { email: 'demo.customer@hakumautocare.com', password: 'HakumCustomer2026!', role: 'customer', home: '/account' },
-  { email: 'bossmich@hakumautocare.com', password: 'HakumBoss2026!', role: ROLES.SUPER_ADMIN, home: '/operations/dashboard' },
-  { email: 'admin@hakumautocare.com', password: 'HakumAdmin2026!', role: ROLES.ADMIN, home: '/operations/pos' },
-  { email: 'teamlead@hakumautocare.com', password: 'HakumTL2026!', role: ROLES.TEAM_LEAD, home: '/operations/queue' },
-  { email: 'sales@hakumautocare.com', password: 'HakumSales2026!', role: ROLES.SALES, home: '/operations/bookings' },
-  { email: 'staff1@hakumautocare.com', password: 'HakumStaff2026!', role: ROLES.STAFF, home: '/operations/attendance' },
-  { email: 'marketing@hakumautocare.com', password: 'HakumMkt2026!', role: ROLES.MARKETING, home: '/operations/crm' },
+  { email: 'demo.customer@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_CUSTOMER'), role: 'customer', home: '/account' },
+  { email: 'bossmich@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_BOSS'), role: ROLES.SUPER_ADMIN, home: '/operations/dashboard' },
+  { email: 'admin@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'), role: ROLES.ADMIN, home: '/operations/pos' },
+  { email: 'teamlead@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_TL'), role: ROLES.TEAM_LEAD, home: '/operations/queue' },
+  { email: 'sales@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_SALES'), role: ROLES.SALES, home: '/operations/bookings' },
+  { email: 'staff1@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_STAFF'), role: ROLES.STAFF, home: '/operations/attendance' },
+  { email: 'marketing@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_MARKETING'), role: ROLES.MARKETING, home: '/operations/crm' },
 ]
 
 for (const a of accounts) {

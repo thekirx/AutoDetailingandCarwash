@@ -1,6 +1,6 @@
 import { isDemoLoginEnabled } from '../lib/demoLogin'
 
-/** Compact demo account chips for ops / customer login — DEV, Vercel preview, or VITE_ENABLE_DEMO_LOGIN. */
+/** Compact demo account chips for ops / customer login, local dev only. */
 export default function DemoAccountChips({ accounts, onPick, title = 'Demo accounts', disabled = false }) {
   if (!isDemoLoginEnabled()) return null
   if (!accounts?.length) return null

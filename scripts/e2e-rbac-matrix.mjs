@@ -18,7 +18,7 @@ import {
   getOperationsNav,
   hasGrant,
 } from '../src/auth/permissions.js'
-import { OPS_DEMO_ACCOUNTS } from '../src/lib/demoAccounts.js'
+import { OPS_DEMO_ACCOUNTS, demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -115,11 +115,11 @@ results.push(`db.events.slug: ok (${events?.length ? 'sample' : 'empty'})`)
 
 // Role logins + route homes
 const logins = [
-  { email: 'bossmich@hakumautocare.com', password: 'HakumBoss2026!', role: ROLES.SUPER_ADMIN, mustAllow: ['reports', 'cars', 'finance', 'pos'] },
-  { email: 'admin@hakumautocare.com', password: 'HakumAdmin2026!', role: ROLES.ADMIN, mustAllow: ['pos', 'finance', 'crm'], mustDeny: ['reports', 'cars'] },
-  { email: 'teamlead@hakumautocare.com', password: 'HakumTL2026!', role: ROLES.TEAM_LEAD, mustAllow: ['kpi', 'bookings', 'queue'], mustDeny: ['finance', 'reports'] },
-  { email: 'staff1@hakumautocare.com', password: 'HakumStaff2026!', role: ROLES.STAFF, mustAllow: ['my-tasks'], mustDeny: ['pos', 'finance'] },
-  { email: 'marketing@hakumautocare.com', password: 'HakumMkt2026!', role: ROLES.MARKETING, mustAllow: ['crm'], mustDeny: ['pos', 'finance', 'kpi'] },
+  { email: 'bossmich@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_BOSS'), role: ROLES.SUPER_ADMIN, mustAllow: ['reports', 'cars', 'finance', 'pos'] },
+  { email: 'admin@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'), role: ROLES.ADMIN, mustAllow: ['pos', 'finance', 'crm'], mustDeny: ['reports', 'cars'] },
+  { email: 'teamlead@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_TL'), role: ROLES.TEAM_LEAD, mustAllow: ['kpi', 'bookings', 'queue'], mustDeny: ['finance', 'reports'] },
+  { email: 'staff1@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_STAFF'), role: ROLES.STAFF, mustAllow: ['my-tasks'], mustDeny: ['pos', 'finance'] },
+  { email: 'marketing@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_MARKETING'), role: ROLES.MARKETING, mustAllow: ['crm'], mustDeny: ['pos', 'finance', 'kpi'] },
 ]
 
 for (const a of logins) {

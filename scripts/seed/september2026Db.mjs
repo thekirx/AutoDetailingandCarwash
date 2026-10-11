@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { demoPassword } from '../../src/lib/demoAccounts.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 if (existsSync(join(root, '.env'))) {
@@ -23,11 +24,11 @@ if (!url || !anonKey || !serviceKey) throw new Error('missing SUPABASE_URL / ano
 const opts = { auth: { autoRefreshToken: false, persistSession: false } }
 export const admin = createClient(url, serviceKey, opts)
 
-export const SEED_PASSWORD = 'HakumSeed2026!'
+export const SEED_PASSWORD = demoPassword('VITE_DEMO_PASSWORD_SEED')
 export const ACCOUNTS = {
-  ba: ['admin@hakumautocare.com', 'HakumAdmin2026!'],
-  sa: ['bossmich@hakumautocare.com', 'HakumBoss2026!'],
-  asa: ['assistant@hakumautocare.com', 'HakumAsa2026!'],
+  ba: ['admin@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_ADMIN')],
+  sa: ['bossmich@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_BOSS')],
+  asa: ['assistant@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_ASA')],
 }
 export const BATANGAS_SEED_STAFF = [
   { key: 'ba', email: 'ba.batangas@seed.hakum.test', full_name: 'Batangas Branch Admin (Seed)', role: 'admin' },

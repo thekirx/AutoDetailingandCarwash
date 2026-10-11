@@ -7,6 +7,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { handleSendPushRequest } from '../server/pushApi.mjs'
 import { notifyBookingStatus } from '../server/notifyBooking.mjs'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -54,7 +55,7 @@ try {
   const customerClient = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
   const { data: custAuth, error: custErr } = await customerClient.auth.signInWithPassword({
     email: 'demo.customer@hakumautocare.com',
-    password: 'HakumCustomer2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_CUSTOMER'),
   })
   assert(!custErr && custAuth.user, `customer login: ${custErr?.message}`)
   const customerId = custAuth.user.id
@@ -62,7 +63,7 @@ try {
   const mktClient = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
   const { data: mktAuth, error: mktErr } = await mktClient.auth.signInWithPassword({
     email: 'marketing@hakumautocare.com',
-    password: 'HakumMkt2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_MARKETING'),
   })
   assert(!mktErr && mktAuth.session, `marketing login: ${mktErr?.message}`)
   results.push('login.marketing+customer: ok')

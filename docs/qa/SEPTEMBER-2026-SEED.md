@@ -21,7 +21,7 @@ Preflight refuses to run twice (existing tag, `ZZ` plates, `0955500` phones or S
 
 ## Customer portal note
 
-Seed creates **CRM customer rows** (893) + vehicles + bookings for staff screens. It does **not** create `auth.users` for `*@sep2026.hakum.test`, so those people **cannot** sign into `/account`. Portal smoke uses the existing demo: `demo.customer@hakumautocare.com` / `HakumCustomer2026!`.
+Seed creates **CRM customer rows** (893) + vehicles + bookings for staff screens. It does **not** create `auth.users` for `*@sep2026.hakum.test`, so those people **cannot** sign into `/account`. Portal smoke uses the existing demo: `demo.customer@hakumautocare.com` / `$VITE_DEMO_PASSWORD_CUSTOMER from .env`.
 
 ## What is seeded
 
@@ -45,7 +45,7 @@ Batangas ₱644,402.50 (expenses ₱222,376.83, profit ₱422,025.67). The verif
 - Plates `ZZB####` (Bacoor) / `ZZT####` (Batangas); phones `0955500####`; emails `seedN@sep2026.hakum.test`.
 - Customers have `notify_sms = false`; detailing queue numbers are 901+ so the live counter is untouched.
 - Batangas seed staff: `ba.batangas@`, `crew1.batangas@`, `crew2.batangas@`, `detailer.batangas@seed.hakum.test`
-  (password `HakumSeed2026!`, names end in "(Seed)"). The wipe removes them.
+  (password `$VITE_DEMO_PASSWORD_SEED from .env`, names end in "(Seed)"). The wipe removes them.
 
 ## Safety
 

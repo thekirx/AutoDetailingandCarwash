@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
 import { filterVehicleMakes, filterVehicleModels, splitCustomerName } from '../src/lib/phVehicles.js'
 import { normalizePlate } from '../src/queue/queueLogic.js'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -51,7 +52,7 @@ try {
   const email = `qa.plate.${stamp.toLowerCase()}@customers.hakumautocare.com`
   const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
     email,
-    password: 'HakumQA2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_QA'),
     email_confirm: true,
     user_metadata: { full_name: 'QA Plate Autofill' },
   })
@@ -90,7 +91,7 @@ try {
   // TL login + masterlist lookup (same path as UI)
   const { error: loginErr } = await client.auth.signInWithPassword({
     email: 'teamlead@hakumautocare.com',
-    password: 'HakumTL2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_TL'),
   })
   if (loginErr) throw loginErr
   pass('tl.login')

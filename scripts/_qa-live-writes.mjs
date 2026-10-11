@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { buildPosSalePayload } from '../src/lib/posSale.js'
 import { allowedStaffPlanAssigneePatch } from '../src/queue/staffTaskLogic.js'
 import { buildDailyCompensationExpense, findPostedCompensationExpense } from '../src/lib/compensation.js'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 function loadEnv() {
   const raw = fs.readFileSync('.env', 'utf8')
@@ -89,7 +90,7 @@ async function main() {
   cleanup.bookingIds.push(booking.id)
   pass('C3-ticket', booking.id)
 
-  const { sb: tl } = await asUser('teamlead@hakumautocare.com', 'HakumTL2026!')
+  const { sb: tl } = await asUser('teamlead@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_TL'))
   const now = () => new Date().toISOString()
   const { error: ipErr } = await tl
     .from('bookings')
@@ -129,7 +130,7 @@ async function main() {
   await tl.auth.signOut()
 
   // C5 — POS merch/wash sale + expense as branch admin
-  const { sb: ba } = await asUser('admin@hakumautocare.com', 'HakumAdmin2026!')
+  const { sb: ba } = await asUser('admin@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_ADMIN'))
   const payload = buildPosSalePayload({
     branch: 'bacoor',
     customerId: demoCustomerId,
@@ -221,7 +222,7 @@ async function main() {
   await ba.auth.signOut()
 
   // C8 — planner proof as staff
-  const { sb: boss } = await asUser('bossmich@hakumautocare.com', 'HakumBoss2026!')
+  const { sb: boss } = await asUser('bossmich@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_BOSS'))
   const { data: board } = await boss
     .from('plan_boards')
     .select('id, plan_lists(id, position)')
@@ -253,7 +254,7 @@ async function main() {
       else {
         cleanup.assigneeIds.push(asg.id)
         pass('C8-assign', asg.id)
-        const { sb: crew } = await asUser('staff1@hakumautocare.com', 'HakumStaff2026!')
+        const { sb: crew } = await asUser('staff1@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_STAFF'))
         const patch = allowedStaffPlanAssigneePatch(
           { status: 'in_progress', card_id: card.id, staff_id: staff1.id },
           {
@@ -290,7 +291,7 @@ async function main() {
   // Complete booking for customer review
   await admin.from('bookings').update({ status: 'completed', completed_at: now() }).eq('id', booking.id)
 
-  const { sb: staff } = await asUser('staff1@hakumautocare.com', 'HakumStaff2026!')
+  const { sb: staff } = await asUser('staff1@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_STAFF'))
   const { error: staffReviewErr } = await staff.from('service_reviews').insert({
     booking_id: booking.id,
     customer_id: demoCustomerId,
@@ -303,7 +304,7 @@ async function main() {
   else fail('C9-staff-denied', 'staff insert succeeded')
   await staff.auth.signOut()
 
-  const { sb: cust } = await asUser('demo.customer@hakumautocare.com', 'HakumCustomer2026!')
+  const { sb: cust } = await asUser('demo.customer@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_CUSTOMER'))
   const { data: review, error: revErr } = await cust
     .from('service_reviews')
     .insert({
@@ -322,7 +323,7 @@ async function main() {
     pass('C9-customer-review', review.id)
   }
 
-  const { sb: investor } = await asUser('investor@hakumautocare.com', 'HakumInvest2026!')
+  const { sb: investor } = await asUser('investor@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_INVESTOR'))
   const { data: invSeen, error: invErr } = await investor
     .from('service_reviews')
     .select('id')
@@ -332,7 +333,7 @@ async function main() {
   else fail('C9-investor-hidden', `saw ${invSeen.length}`)
   await investor.auth.signOut()
 
-  const { sb: ba2 } = await asUser('admin@hakumautocare.com', 'HakumAdmin2026!')
+  const { sb: ba2 } = await asUser('admin@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_ADMIN'))
   const { data: baSeen, error: baReadErr } = await ba2
     .from('service_reviews')
     .select('id, overall_rating')

@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
 import { canAccessFinance, canWriteFinance, ROLES } from '../src/auth/permissions.js'
 import { sendFinanceQuote } from '../server/sendFinanceQuote.mjs'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -56,7 +57,7 @@ results.push('db.expenses: ok')
 
 // Preview path: prefer E2E_BOSS_* env, else floor demo BossMich
 const email = process.env.E2E_BOSS_EMAIL || 'bossmich@hakumautocare.com'
-const password = process.env.E2E_BOSS_PASSWORD || 'HakumBoss2026!'
+const password = process.env.E2E_BOSS_PASSWORD || demoPassword('VITE_DEMO_PASSWORD_BOSS')
 {
   const userClient = createClient(url, process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },

@@ -24,6 +24,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
@@ -54,7 +55,7 @@ function readOrFail(label, res) {
 
 const { data: auth, error: authErr } = await user.auth.signInWithPassword({
   email: 'admin@hakumautocare.com',
-  password: 'HakumAdmin2026!',
+  password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'),
 })
 if (authErr) {
   console.error('Branch Admin sign-in failed:', authErr.message)

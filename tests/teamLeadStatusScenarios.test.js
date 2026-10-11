@@ -143,14 +143,14 @@ describe('TL queue status transitions (principal scenarios)', () => {
   })
 })
 
-describe('demo login for Vercel QA', () => {
-  it('enables on DEV, flag, or *.vercel.app', () => {
+describe('demo login is local development only', () => {
+  it('enables on DEV and nowhere else', () => {
     assert.equal(isDemoLoginEnabled({ dev: true, flag: '', hostname: '' }), true)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'true', hostname: '' }), true)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'TRUE', hostname: '' }), true)
+    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'true', hostname: '' }), false)
+    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'TRUE', hostname: '' }), false)
     assert.equal(
       isDemoLoginEnabled({ dev: false, flag: '', hostname: 'hakum-autocare.vercel.app' }),
-      true,
+      false,
     )
     assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'hakumautocare.com' }), false)
     assert.equal(isDemoLoginEnabled({ dev: false, flag: 'false', hostname: '' }), false)

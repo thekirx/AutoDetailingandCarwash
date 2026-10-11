@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import assert from 'node:assert/strict'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 const envPath = resolve(process.cwd(), '.env')
 if (existsSync(envPath)) {
@@ -59,7 +60,7 @@ async function main() {
   // Sign in as BossMich (authenticated RLS/RPC path)
   const { data: authData, error: authErr } = await client.auth.signInWithPassword({
     email: 'bossmich@hakumautocare.com',
-    password: 'HakumBoss2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_BOSS'),
   })
   if (authErr) throw authErr
   ok('auth.bossmich', authData.user.id)
@@ -332,7 +333,7 @@ async function main() {
     try {
       await provisionStaffAccount({
         accessToken: token,
-        body: { email: `crud.staff.${stamp}@hakumautocare.com`, full_name: 'CRUD Staff', role: 'staff', branch_slug: '', temporary_password: 'HakumStaff2026!' },
+        body: { email: `crud.staff.${stamp}@hakumautocare.com`, full_name: 'CRUD Staff', role: 'staff', branch_slug: '', temporary_password: demoPassword('VITE_DEMO_PASSWORD_STAFF') },
         siteOrigin: 'http://localhost:5173',
       })
       fail('provision.reject_missing_branch', new Error('expected error'))
@@ -348,7 +349,7 @@ async function main() {
   {
     const { data, error } = await client.auth.signInWithPassword({
       email: 'demo.customer@hakumautocare.com',
-      password: 'HakumCustomer2026!',
+      password: demoPassword('VITE_DEMO_PASSWORD_CUSTOMER'),
     })
     if (error) fail('auth.demo_customer', error)
     else {
@@ -359,7 +360,7 @@ async function main() {
   {
     const { data, error } = await client.auth.signInWithPassword({
       email: 'admin@hakumautocare.com',
-      password: 'HakumAdmin2026!',
+      password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'),
     })
     if (error) fail('auth.branch_admin', error)
     else {
@@ -382,7 +383,7 @@ async function main() {
     // Staff must NOT create branches
     const { error: loginErr } = await client.auth.signInWithPassword({
       email: 'staff1@hakumautocare.com',
-      password: 'HakumStaff2026!',
+      password: demoPassword('VITE_DEMO_PASSWORD_STAFF'),
     })
     if (loginErr) fail('auth.staff', loginErr)
     else {

@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
 import { notifyBookingStatus } from '../server/notifyBooking.mjs'
 import { buildPosSalePayload } from '../src/lib/posSale.js'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -122,7 +123,7 @@ try {
   }
 
   // POS merch sale as admin
-  await login('admin@hakumautocare.com', 'HakumAdmin2026!')
+  await login('admin@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_ADMIN'))
   const payload = buildPosSalePayload({
     branch: branch.slug,
     customerId: '',

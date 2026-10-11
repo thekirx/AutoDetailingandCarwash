@@ -22,6 +22,7 @@ import {
   isAdmin,
   isSuperAdmin,
 } from '../src/auth/permissions.js'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 const envPath = resolve(process.cwd(), '.env')
 if (existsSync(envPath)) {
@@ -58,11 +59,11 @@ function fail(name, err) {
 }
 
 const ACCOUNTS = {
-  boss: { email: 'bossmich@hakumautocare.com', password: 'HakumBoss2026!', role: 'BossMich' },
-  admin: { email: 'admin@hakumautocare.com', password: 'HakumAdmin2026!', role: 'admin' },
-  tl: { email: 'teamlead@hakumautocare.com', password: 'HakumTL2026!', role: 'team_lead' },
-  staff: { email: 'staff1@hakumautocare.com', password: 'HakumStaff2026!', role: 'staff' },
-  customer: { email: 'demo.customer@hakumautocare.com', password: 'HakumCustomer2026!', role: 'customer' },
+  boss: { email: 'bossmich@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_BOSS'), role: 'BossMich' },
+  admin: { email: 'admin@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'), role: 'admin' },
+  tl: { email: 'teamlead@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_TL'), role: 'team_lead' },
+  staff: { email: 'staff1@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_STAFF'), role: 'staff' },
+  customer: { email: 'demo.customer@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_CUSTOMER'), role: 'customer' },
 }
 
 async function asUser(key, fn) {
@@ -416,7 +417,7 @@ async function main() {
             full_name: 'Denied Admin',
             role: 'admin',
             branch_slug: 'bacoor',
-            temporary_password: 'HakumTemp2026!',
+            temporary_password: demoPassword('VITE_DEMO_PASSWORD_TEMP'),
           },
           siteOrigin: 'http://localhost:5173',
         })

@@ -63,7 +63,7 @@ test('every harness persona maps to a real demo account and a real role', () => 
   for (const p of personas) {
     const acct = OPS_DEMO_ACCOUNTS.find((a) => a.id === p.id)
     assert.ok(acct, `${p.id} has no demo account in src/lib/demoAccounts.js`)
-    assert.ok(acct.email && acct.password, `${p.id} demo account is missing credentials`)
+    assert.ok(acct.email && acct.passwordEnv, `${p.id} demo account is missing credentials`)
     assert.ok(Object.values(ROLES).includes(p.role), `${p.id} uses unknown role ${p.role}`)
   }
   // No duplicate personas, and no account exercised twice under two names.
@@ -175,7 +175,7 @@ test('the harness reuses the shared login primitives rather than re-deriving the
 })
 
 test('the customer demo account is the shared one', () => {
-  assert.ok(CUSTOMER_DEMO_ACCOUNT.email && CUSTOMER_DEMO_ACCOUNT.password)
+  assert.ok(CUSTOMER_DEMO_ACCOUNT.email && CUSTOMER_DEMO_ACCOUNT.passwordEnv)
   assert.match(HARNESS, /CUSTOMER_DEMO_ACCOUNT\.email/)
 })
 

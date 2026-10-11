@@ -20,6 +20,7 @@ import { normalizePlate } from '../src/queue/queueLogic.js'
 import { notifyBookingStatus } from '../server/notifyBooking.mjs'
 import { normalizePhMobile } from '../server/busybee.mjs'
 import { handleNotificationBroadcastRequest } from '../server/notificationBroadcastApi.mjs'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -145,7 +146,7 @@ async function ensureCustomer() {
   if (!customerId) {
     const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
       email: loginEmail,
-      password: 'HakumCustomer2026!',
+      password: demoPassword('VITE_DEMO_PASSWORD_CUSTOMER'),
       email_confirm: true,
       user_metadata: {
         full_name: CUSTOMER.full_name,
@@ -335,7 +336,7 @@ async function sendCrmBlast({ kind, title, body }) {
   const mkt = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
   const { data: auth, error } = await mkt.auth.signInWithPassword({
     email: 'marketing@hakumautocare.com',
-    password: 'HakumMkt2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_MARKETING'),
   })
   if (error || !auth.session) throw new Error(`marketing login: ${error?.message}`)
 

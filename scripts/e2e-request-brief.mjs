@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 import { loadCustomerPortal, mutateCustomerPortal } from '../server/customerPortal.mjs'
 import { buildCompletedVisitReview } from '../src/lib/serviceReviews.js'
 import { isValidCustomerPlate } from '../src/lib/customerAuth.js'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const isWin = process.platform === 'win32'
@@ -67,7 +68,7 @@ const admin = createClient(url, service, { auth: { autoRefreshToken: false, pers
 const results = []
 const stamp = Date.now().toString(36).toUpperCase()
 const email = `qa.req.${stamp.toLowerCase()}@customers.hakumautocare.com`
-const password = 'HakumQA2026!'
+const password = demoPassword('VITE_DEMO_PASSWORD_QA')
 const plateBad = 'AAA'
 const plateOk = `QA${stamp.slice(-5)}1`
 const phone = `09${String(Date.now()).slice(-9)}`
@@ -231,7 +232,7 @@ try {
   const tl = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } })
   const { error: tlLoginErr } = await tl.auth.signInWithPassword({
     email: 'teamlead@hakumautocare.com',
-    password: 'HakumTL2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_TL'),
   })
   assert(!tlLoginErr, `TL login: ${tlLoginErr?.message}`)
   const { data: tlRows, error: tlSelErr } = await tl.from('service_reviews').select('id').eq('id', reviewId)
@@ -242,7 +243,7 @@ try {
   const boss = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } })
   const { error: bossLoginErr } = await boss.auth.signInWithPassword({
     email: 'bossmich@hakumautocare.com',
-    password: 'HakumBoss2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_BOSS'),
   })
   assert(!bossLoginErr, `SA login: ${bossLoginErr?.message}`)
   const { data: bossRow, error: bossSelErr } = await boss

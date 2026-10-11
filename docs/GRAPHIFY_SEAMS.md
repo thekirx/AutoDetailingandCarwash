@@ -8,7 +8,7 @@ Verified live 2026-09-15. Names only — never paste secret values. Complements 
 |------|---------|
 | `VITE_SUPABASE_URL` | SPA |
 | `VITE_SUPABASE_ANON_KEY` | SPA |
-| `VITE_ENABLE_DEMO_LOGIN` | SPA (also auto-on `*.vercel.app`) |
+| `VITE_DEMO_PASSWORD_*` | Local `.env` only: demo chips (`vite dev` only) + QA scripts; never on Vercel |
 | `SUPABASE_URL` | Server `/api` |
 | `SUPABASE_ANON_KEY` | Server |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only |

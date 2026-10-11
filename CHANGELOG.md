@@ -1,3 +1,9 @@
+## 2026-10-11 - Demo sign-in removed from production; passwords out of the repo (BUG-088)
+
+- The live staff login no longer shows one-click demo accounts (it offered every role, Super Admin included), and production no longer ships the demo account passwords. Demo chips appear only under `vite dev`.
+- Demo and QA passwords are no longer in the repo. Scripts and the dev chips read `VITE_DEMO_PASSWORD_*` from your local `.env` (names in `.env.example`). `tests/noCommittedStaffPasswords.test.js` fails if one is committed again.
+- Action needed: the old passwords are still in git history, so rotate all 15 in Supabase Auth and update `.env`.
+
 ## 2026-10-11 - Security migrations applied to production (BUG-069/070/071/079/080/085/086)
 
 - Branch Admin can no longer edit or delete bills, write money `transactions`, read other people's notifications, notify other users, or edit SMS templates through the API. Nobody can edit or delete an expense an approved Daily Sheet posted (reopen the sheet instead).
@@ -72,7 +78,7 @@
 - **Failed QA is silent:** marking a ticket Failed QA (`redo`) and the redo pass (`in_progress` / `final_checking` while `redo_at` is set) send no customer SMS, inbox or push and no ops fan-out. One rule, `isSilentRedoNotify` in `server/notifyBooking.mjs`, guards the shared sender, so every caller is covered. `for_payment` and `completed` still notify after a redo. The `booking.redo.*` and `booking.for_releasing.*` templates are removed (migration `20261009130000_retire_redo_releasing_templates.sql`, applied).
 - **"For releasing" removed from detailing:** the pipeline is now Booked → Intake → In progress → Final checking → For payment → Done. The Releasing lane, metric card and visit step are gone. Legacy `for_releasing` rows (0 live in prod) still render as "Releasing" and can only be completed or cancelled. Team Leads still stop at Final checking; Sales / Admin / SA send to payment.
 - **Investor is read-only and branch-scoped:** nav is Floor Board, POS and Finance (plus Reports inside Finance). Floor Board hides the crew panel and has no links into Queue / Bookings. POS shows a view-only **Today** + **Sheet history** (`PosReadOnlyView`); an opened sheet has no Approve / Return. Finance shows "View only". People can assign investors to one or more branches. Staff names on sheets resolve through `staff_display_names` when the profile join is hidden by RLS.
-- Test accounts: `investor@hakumautocare.com` (Bacoor) and `investor2@hakumautocare.com` (Batangas), password `HakumInvest2026!`.
+- Test accounts: `investor@hakumautocare.com` (Bacoor) and `investor2@hakumautocare.com` (Batangas), password `$VITE_DEMO_PASSWORD_INVESTOR from .env`.
 - Proof: `npm test` (1709 pass, 0 fail, 2 skipped); RLS read scope and write denial checked by impersonating the investor in SQL; `node scripts/check-investor-readonly.mjs` (44/44, both accounts, screenshots in `e2e-evidence/investor-readonly/`).
 
 ## 2026-10-09 — POS Sheet history tab; Daily Sheet submit-any-time and optional cash advances

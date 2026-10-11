@@ -14,7 +14,7 @@ const env = Object.fromEntries(
 const client = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY)
 const { error: ae } = await client.auth.signInWithPassword({
   email: 'admin@hakumautocare.com',
-  password: 'HakumAdmin2026!',
+  password: env.VITE_DEMO_PASSWORD_ADMIN,
 })
 if (ae) {
   console.error('login', ae.message)

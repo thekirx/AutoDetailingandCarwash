@@ -22,6 +22,7 @@ import {
 } from '../src/lib/financeCorporate.js'
 import { customerNotifyAllowed } from '../src/lib/ownerRevisionsPhase7.js'
 import { notifyBookingStatus } from '../server/notifyBooking.mjs'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -95,7 +96,7 @@ results.push('investor.nav_and_branches: ok')
 const invClient = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
 const { data: invAuth, error: invErr } = await invClient.auth.signInWithPassword({
   email: 'investor@hakumautocare.com',
-  password: 'HakumInvest2026!',
+  password: demoPassword('VITE_DEMO_PASSWORD_INVESTOR'),
 })
 assert(!invErr && invAuth.session, `investor login: ${invErr?.message}`)
 
@@ -116,7 +117,7 @@ await invClient.auth.signOut()
 const baClient = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
 const { data: baAuth, error: baErr } = await baClient.auth.signInWithPassword({
   email: 'admin@hakumautocare.com',
-  password: 'HakumAdmin2026!',
+  password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'),
 })
 assert(!baErr && baAuth.session, `BA login: ${baErr?.message}`)
 const { data: baStaff } = await baClient

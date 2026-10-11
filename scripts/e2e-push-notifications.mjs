@@ -12,6 +12,7 @@ import { notifyBookingStatus, buildOpsNotifyRule } from '../server/notifyBooking
 import { resolveStaffRecipients, sendWebPushToUsers } from '../server/webPush.mjs'
 import { NOTIFY_EVENTS } from '../src/lib/notifyRouting.js'
 import webpush from 'web-push'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -33,11 +34,11 @@ if (!url || !anon || !service) {
 }
 
 const ACCOUNTS = [
-  { key: 'customer', email: 'demo.customer@hakumautocare.com', password: 'HakumCustomer2026!', expectRole: 'customer' },
-  { key: 'admin', email: 'admin@hakumautocare.com', password: 'HakumAdmin2026!', expectRole: 'admin' },
-  { key: 'boss', email: 'bossmich@hakumautocare.com', password: 'HakumBoss2026!', expectRole: 'BossMich' },
-  { key: 'tl', email: 'teamlead@hakumautocare.com', password: 'HakumTL2026!', expectRole: 'team_lead' },
-  { key: 'staff', email: 'staff1@hakumautocare.com', password: 'HakumStaff2026!', expectRole: 'staff' },
+  { key: 'customer', email: 'demo.customer@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_CUSTOMER'), expectRole: 'customer' },
+  { key: 'admin', email: 'admin@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'), expectRole: 'admin' },
+  { key: 'boss', email: 'bossmich@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_BOSS'), expectRole: 'BossMich' },
+  { key: 'tl', email: 'teamlead@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_TL'), expectRole: 'team_lead' },
+  { key: 'staff', email: 'staff1@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_STAFF'), expectRole: 'staff' },
 ]
 
 const stamp = Date.now()

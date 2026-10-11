@@ -4,6 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -33,7 +34,7 @@ async function asUser(email, password) {
   return client
 }
 
-const boss = await asUser('bossmich@hakumautocare.com', 'HakumBoss2026!')
+const boss = await asUser('bossmich@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_BOSS'))
 const { data: board, error: boardErr } = await boss
   .from('plan_boards')
   .select('id, name, plan_lists(id, title, position)')
@@ -133,7 +134,7 @@ const { data: tmplGot, error: tmplGet } = await boss
 assert(!tmplGet && tmplGot?.plan_checklist_template_items?.length === 1, `template retrieve: ${tmplGet?.message}`)
 results.push('boss.template_crud: ok')
 
-const crew = await asUser('staff1@hakumautocare.com', 'HakumStaff2026!')
+const crew = await asUser('staff1@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_STAFF'))
 const staffId = (await crew.auth.getUser()).data.user?.id
 assert(staffId, 'staff1 session')
 const { error: staffCatErr } = await crew.from('plan_categories').insert({
@@ -151,7 +152,7 @@ const { error: assignErr } = await boss.from('plan_card_assignees').insert({
 })
 assert(!assignErr, `assign: ${assignErr?.message}`)
 
-const crew2 = await asUser('staff1@hakumautocare.com', 'HakumStaff2026!')
+const crew2 = await asUser('staff1@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_STAFF'))
 const { data: mine, error: mineErr } = await crew2
   .from('plan_card_assignees')
   .select('id, status, plan_cards(id, title, list_id, plan_lists(id, title))')
@@ -164,7 +165,7 @@ await crew2.auth.signOut()
 
 await boss.auth.signOut()
 
-const admin = await asUser('admin@hakumautocare.com', 'HakumAdmin2026!')
+const admin = await asUser('admin@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_ADMIN'))
 const { data: seen, error: readErr } = await admin.from('plan_cards').select('id, title').eq('id', card.id).maybeSingle()
 assert(!readErr && seen?.id === card.id, `admin read: ${readErr?.message || 'missing'}`)
 results.push('admin.read_card: ok')
@@ -178,7 +179,7 @@ results.push('admin.update_card: ok')
 
 await admin.auth.signOut()
 
-const boss2 = await asUser('bossmich@hakumautocare.com', 'HakumBoss2026!')
+const boss2 = await asUser('bossmich@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_BOSS'))
 const { error: catNull } = await boss2.from('plan_categories').delete().eq('id', cat.id)
 assert(!catNull, `category delete: ${catNull?.message}`)
 const { data: cardAfterCat, error: cardAfterErr } = await boss2.from('plan_cards').select('category_id').eq('id', card.id).single()

@@ -8,7 +8,6 @@ import { resolvePostLoginPath, safeAuthReturnPath } from '../auth/authRedirect'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
-import { isDemoLoginEnabled } from '../lib/demoLogin'
 import { describeAuthError } from '../lib/authErrorMessage'
 
 export default function LoginPage() {
@@ -27,7 +26,8 @@ export default function LoginPage() {
   const missingProfileTries = useRef(0)
 
   useEffect(() => {
-    if (!isDemoLoginEnabled()) return undefined
+    // Literal import.meta.env.DEV (not isDemoLoginEnabled()) so production builds drop the chunk.
+    if (!import.meta.env.DEV) return undefined
     let cancelled = false
     import('../lib/demoAccounts').then((m) => {
       if (!cancelled) setDemoAccounts(m.OPS_DEMO_ACCOUNTS)

@@ -29,7 +29,7 @@ Queue / Bookings / People / Settings / Inventory / Attendance (access denied), c
 
 New investors: People → New person → role Investor (Super Admin only) → pick one or more branches.
 
-Test accounts (password `HakumInvest2026!`):
+Test accounts (password `$VITE_DEMO_PASSWORD_INVESTOR from .env`):
 
 | Email | Branch |
 |-------|--------|

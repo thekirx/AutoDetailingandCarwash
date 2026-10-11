@@ -11,6 +11,7 @@ import {
   canEditPlanning,
   getOperationsNav,
 } from '../src/auth/permissions.js'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -76,7 +77,7 @@ results.push(`db.sales_active: ok (${salesCount})`)
 const client = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
 const { data: login, error: loginErr } = await client.auth.signInWithPassword({
   email: 'admin@hakumautocare.com',
-  password: 'HakumAdmin2026!',
+  password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'),
 })
 assert(!loginErr && login.session, loginErr?.message || 'admin login')
 const { data: me } = await client
@@ -96,7 +97,7 @@ await client.auth.signOut()
 const boss = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } })
 const { error: bossErr } = await boss.auth.signInWithPassword({
   email: 'bossmich@hakumautocare.com',
-  password: 'HakumBoss2026!',
+  password: demoPassword('VITE_DEMO_PASSWORD_BOSS'),
 })
 assert(!bossErr, bossErr?.message)
 results.push('login.boss: ok')

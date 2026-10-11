@@ -3,18 +3,18 @@
  * Run: node scripts/seed-floor-accounts.mjs
  *
  * Default passwords (change after first login):
- *   bossmich@hakumautocare.com     → HakumBoss2026!
- *   admin@hakumautocare.com        → HakumAdmin2026!
- *   teamlead@hakumautocare.com     → HakumTL2026!
- *   sales@hakumautocare.com        → HakumSales2026!
- *   staff1@hakumautocare.com       → HakumStaff2026!
- *   marketing@hakumautocare.com    → HakumMkt2026!
- *   assistant@hakumautocare.com    → HakumAsa2026!
- *   opslead@hakumautocare.com      → HakumOpsLead2026!
- *   detailer@hakumautocare.com     → HakumDetail2026!
- *   video@hakumautocare.com        → HakumVideo2026!
- *   investor@hakumautocare.com     → HakumInvest2026!
- *   demo.customer@…                → HakumCustomer2026!
+ *   bossmich@hakumautocare.com     → $VITE_DEMO_PASSWORD_BOSS
+ *   admin@hakumautocare.com        → $VITE_DEMO_PASSWORD_ADMIN
+ *   teamlead@hakumautocare.com     → $VITE_DEMO_PASSWORD_TL
+ *   sales@hakumautocare.com        → $VITE_DEMO_PASSWORD_SALES
+ *   staff1@hakumautocare.com       → $VITE_DEMO_PASSWORD_STAFF
+ *   marketing@hakumautocare.com    → $VITE_DEMO_PASSWORD_MARKETING
+ *   assistant@hakumautocare.com    → $VITE_DEMO_PASSWORD_ASA
+ *   opslead@hakumautocare.com      → $VITE_DEMO_PASSWORD_OPSLEAD
+ *   detailer@hakumautocare.com     → $VITE_DEMO_PASSWORD_DETAILER
+ *   video@hakumautocare.com        → $VITE_DEMO_PASSWORD_VIDEO
+ *   investor@hakumautocare.com     → $VITE_DEMO_PASSWORD_INVESTOR
+ *   demo.customer@…                → $VITE_DEMO_PASSWORD_CUSTOMER
  *
  * (cashier demos removed — Part 9)
  */
@@ -22,6 +22,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { setAssistantGrantsPreset } from '../src/auth/permissions.js'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 // ponytail: load .env without adding dotenv dependency
 const envPath = resolve(process.cwd(), '.env')
@@ -227,7 +228,7 @@ async function main() {
 
   const boss = await ensureAuthUser({
     email: 'bossmich@hakumautocare.com',
-    password: 'HakumBoss2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_BOSS'),
     full_name: 'BossMich',
   })
   await upsertStaffProfile(boss, { full_name: 'BossMich', role: 'BossMich', branch_slug: null })
@@ -235,7 +236,7 @@ async function main() {
 
   const branchAdmin = await ensureAuthUser({
     email: 'admin@hakumautocare.com',
-    password: 'HakumAdmin2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'),
     full_name: 'Branch Admin',
   })
   await upsertStaffProfile(branchAdmin, {
@@ -253,7 +254,7 @@ async function main() {
 
   const tlUser = await ensureAuthUser({
     email: 'teamlead@hakumautocare.com',
-    password: 'HakumTL2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_TL'),
     full_name: 'TL Test Account',
   })
   await upsertStaffProfile(tlUser, { full_name: 'TL Test Account', role: 'team_lead', branch_slug: primary })
@@ -262,7 +263,7 @@ async function main() {
   if (secondary) {
     const tl2 = await ensureAuthUser({
       email: 'teamlead2@hakumautocare.com',
-      password: 'HakumTL2026!',
+      password: demoPassword('VITE_DEMO_PASSWORD_TL'),
       full_name: 'TL Second Branch',
     })
     await upsertStaffProfile(tl2, { full_name: 'TL Second Branch', role: 'team_lead', branch_slug: secondary })
@@ -271,7 +272,7 @@ async function main() {
 
   const salesUser = await ensureAuthUser({
     email: 'sales@hakumautocare.com',
-    password: 'HakumSales2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_SALES'),
     full_name: 'Sales Desk',
   })
   await upsertStaffProfile(salesUser, {
@@ -295,7 +296,7 @@ async function main() {
   for (const def of staffDefs) {
     const user = await ensureAuthUser({
       email: def.email,
-      password: 'HakumStaff2026!',
+      password: demoPassword('VITE_DEMO_PASSWORD_STAFF'),
       full_name: def.full_name,
     })
     await upsertStaffProfile(user, {
@@ -315,7 +316,7 @@ async function main() {
 
   const marketing = await ensureAuthUser({
     email: 'marketing@hakumautocare.com',
-    password: 'HakumMkt2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_MARKETING'),
     full_name: 'Marketing Lead',
   })
   await upsertStaffProfile(marketing, {
@@ -328,7 +329,7 @@ async function main() {
 
   const asa = await ensureAuthUser({
     email: 'assistant@hakumautocare.com',
-    password: 'HakumAsa2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_ASA'),
     full_name: 'Luci',
   })
   await upsertStaffProfile(asa, {
@@ -342,7 +343,7 @@ async function main() {
 
   const opsLead = await ensureAuthUser({
     email: 'opslead@hakumautocare.com',
-    password: 'HakumOpsLead2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_OPSLEAD'),
     full_name: 'Operations Lead',
   })
   await upsertStaffProfile(opsLead, {
@@ -356,7 +357,7 @@ async function main() {
 
   const detailer = await ensureAuthUser({
     email: 'detailer@hakumautocare.com',
-    password: 'HakumDetail2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_DETAILER'),
     full_name: 'Demo Detailer',
   })
   await upsertStaffProfile(detailer, {
@@ -373,7 +374,7 @@ async function main() {
 
   const video = await ensureAuthUser({
     email: 'video@hakumautocare.com',
-    password: 'HakumVideo2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_VIDEO'),
     full_name: 'Demo Video Editor',
   })
   await upsertStaffProfile(video, {
@@ -386,7 +387,7 @@ async function main() {
 
   const investor = await ensureAuthUser({
     email: 'investor@hakumautocare.com',
-    password: 'HakumInvest2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_INVESTOR'),
     full_name: 'Demo Investor',
   })
   await upsertStaffProfile(investor, {
@@ -399,7 +400,7 @@ async function main() {
 
   const demo = await ensureAuthUser({
     email: 'demo.customer@hakumautocare.com',
-    password: 'HakumCustomer2026!',
+    password: demoPassword('VITE_DEMO_PASSWORD_CUSTOMER'),
     full_name: 'Demo Customer',
     user_metadata: {
       role: 'customer',
@@ -426,18 +427,18 @@ async function main() {
   console.log(
     JSON.stringify(
       {
-        bossmich: 'bossmich@hakumautocare.com / HakumBoss2026!',
-        admin: 'admin@hakumautocare.com / HakumAdmin2026!',
-        teamlead: 'teamlead@hakumautocare.com / HakumTL2026!',
-        sales: 'sales@hakumautocare.com / HakumSales2026!',
-        staff: 'staff1|2|3@hakumautocare.com / HakumStaff2026! (Crew 1–3 · present on Bacoor)',
-        marketing: 'marketing@hakumautocare.com / HakumMkt2026!',
-        assistant: 'assistant@hakumautocare.com / HakumAsa2026!',
-        opslead: 'opslead@hakumautocare.com / HakumOpsLead2026!',
-        detailer: 'detailer@hakumautocare.com / HakumDetail2026!',
-        video: 'video@hakumautocare.com / HakumVideo2026!',
-        investor: 'investor@hakumautocare.com / HakumInvest2026!',
-        customer: 'demo.customer@hakumautocare.com / HakumCustomer2026!',
+        bossmich: 'bossmich@hakumautocare.com / $VITE_DEMO_PASSWORD_BOSS',
+        admin: 'admin@hakumautocare.com / $VITE_DEMO_PASSWORD_ADMIN',
+        teamlead: 'teamlead@hakumautocare.com / $VITE_DEMO_PASSWORD_TL',
+        sales: 'sales@hakumautocare.com / $VITE_DEMO_PASSWORD_SALES',
+        staff: 'staff1|2|3@hakumautocare.com / $VITE_DEMO_PASSWORD_STAFF (Crew 1–3 · present on Bacoor)',
+        marketing: 'marketing@hakumautocare.com / $VITE_DEMO_PASSWORD_MARKETING',
+        assistant: 'assistant@hakumautocare.com / $VITE_DEMO_PASSWORD_ASA',
+        opslead: 'opslead@hakumautocare.com / $VITE_DEMO_PASSWORD_OPSLEAD',
+        detailer: 'detailer@hakumautocare.com / $VITE_DEMO_PASSWORD_DETAILER',
+        video: 'video@hakumautocare.com / $VITE_DEMO_PASSWORD_VIDEO',
+        investor: 'investor@hakumautocare.com / $VITE_DEMO_PASSWORD_INVESTOR',
+        customer: 'demo.customer@hakumautocare.com / $VITE_DEMO_PASSWORD_CUSTOMER',
         attendance_date: TODAY,
       },
       null,

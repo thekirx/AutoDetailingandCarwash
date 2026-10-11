@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { operationsQueueHref, parseQueueLaneParam } from '../src/queue/queueLogic.js'
@@ -8,7 +8,7 @@ import { isDemoLoginEnabled } from '../src/lib/demoLogin.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const page = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
-const envProd = readFileSync(join(root, '.env.production'), 'utf8')
+const envProd = existsSync(join(root, '.env.production')) ? readFileSync(join(root, '.env.production'), 'utf8') : ''
 const opsLoginPage = readFileSync(join(root, 'src/pages/LoginPage.jsx'), 'utf8')
 const customerLoginPage = readFileSync(join(root, 'src/pages/CustomerSignInPage.jsx'), 'utf8')
 
@@ -47,10 +47,11 @@ describe('Floor status cards → queue lanes', () => {
 })
 
 describe('Vercel demo login visibility', () => {
-  it('production env enables demo chips at build time', () => {
-    assert.match(envProd, /VITE_ENABLE_DEMO_LOGIN=true/)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'true', hostname: 'hakumautocare.com' }), true)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'app.vercel.app' }), true)
+  // Production runs on *.vercel.app; one-click demo chips there signed anyone in as Super Admin.
+  it('production builds never offer one-click demo sign-in', () => {
+    assert.doesNotMatch(envProd, /VITE_ENABLE_DEMO_LOGIN\s*=\s*true/i)
+    assert.equal(isDemoLoginEnabled({ dev: false }), false)
+    assert.equal(isDemoLoginEnabled({ dev: true }), true)
   })
 
   it('demo chip title does not leak password in tooltip', () => {

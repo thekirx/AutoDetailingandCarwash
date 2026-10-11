@@ -13,6 +13,7 @@ import {
 } from '../src/auth/permissions.js'
 import { canStaffUpdateBookingStatus } from '../server/bookingStatusAccess.mjs'
 import { handleBookingStatusRequest } from '../server/bookingStatus.mjs'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 if (existsSync('.env')) {
   for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
@@ -90,7 +91,7 @@ const client = createClient(url, anon, { auth: { autoRefreshToken: false, persis
 
 const { data: login, error: loginErr } = await client.auth.signInWithPassword({
   email: 'sales@hakumautocare.com',
-  password: 'HakumSales2026!',
+  password: demoPassword('VITE_DEMO_PASSWORD_SALES'),
 })
 assert(!loginErr && login.session, loginErr?.message || 'sales login failed')
 const token = login.session.access_token

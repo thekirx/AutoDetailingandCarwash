@@ -35,7 +35,7 @@ async function signIn(email, password) {
 }
 
 async function main() {
-  const { sb } = await signIn('bossmich@hakumautocare.com', 'HakumBoss2026!')
+  const { sb } = await signIn('bossmich@hakumautocare.com', env.VITE_DEMO_PASSWORD_BOSS)
 
   const { data: roles, error: roleErr } = await sb.from('staff_profiles').select('role')
   if (roleErr) fail('C1-roles', roleErr.message)
@@ -88,17 +88,17 @@ async function main() {
   else pass('C10-comp', 'ok')
 
   for (const [id, email, password, expectRole] of [
-    ['login-asa', 'assistant@hakumautocare.com', 'HakumAsa2026!', 'assistant_super_admin'],
-    ['login-tl', 'teamlead@hakumautocare.com', 'HakumTL2026!', 'team_lead'],
-    ['login-sales', 'sales@hakumautocare.com', 'HakumSales2026!', 'sales'],
-    ['login-admin', 'admin@hakumautocare.com', 'HakumAdmin2026!', 'admin'],
-    ['login-marketing', 'marketing@hakumautocare.com', 'HakumMkt2026!', 'marketing'],
-    ['login-staff', 'staff1@hakumautocare.com', 'HakumStaff2026!', 'staff'],
-    ['login-staff2', 'staff2@hakumautocare.com', 'HakumStaff2026!', 'staff'],
-    ['login-staff3', 'staff3@hakumautocare.com', 'HakumStaff2026!', 'staff'],
-    ['login-detailer', 'detailer@hakumautocare.com', 'HakumDetail2026!', 'detailer'],
-    ['login-video', 'video@hakumautocare.com', 'HakumVideo2026!', 'video_editor'],
-    ['login-investor', 'investor@hakumautocare.com', 'HakumInvest2026!', 'investor'],
+    ['login-asa', 'assistant@hakumautocare.com', env.VITE_DEMO_PASSWORD_ASA, 'assistant_super_admin'],
+    ['login-tl', 'teamlead@hakumautocare.com', env.VITE_DEMO_PASSWORD_TL, 'team_lead'],
+    ['login-sales', 'sales@hakumautocare.com', env.VITE_DEMO_PASSWORD_SALES, 'sales'],
+    ['login-admin', 'admin@hakumautocare.com', env.VITE_DEMO_PASSWORD_ADMIN, 'admin'],
+    ['login-marketing', 'marketing@hakumautocare.com', env.VITE_DEMO_PASSWORD_MARKETING, 'marketing'],
+    ['login-staff', 'staff1@hakumautocare.com', env.VITE_DEMO_PASSWORD_STAFF, 'staff'],
+    ['login-staff2', 'staff2@hakumautocare.com', env.VITE_DEMO_PASSWORD_STAFF, 'staff'],
+    ['login-staff3', 'staff3@hakumautocare.com', env.VITE_DEMO_PASSWORD_STAFF, 'staff'],
+    ['login-detailer', 'detailer@hakumautocare.com', env.VITE_DEMO_PASSWORD_DETAILER, 'detailer'],
+    ['login-video', 'video@hakumautocare.com', env.VITE_DEMO_PASSWORD_VIDEO, 'video_editor'],
+    ['login-investor', 'investor@hakumautocare.com', env.VITE_DEMO_PASSWORD_INVESTOR, 'investor'],
   ]) {
     try {
       const { sb: s2, user } = await signIn(email, password)
@@ -117,7 +117,7 @@ async function main() {
   }
 
   try {
-    const { user } = await signIn('demo.customer@hakumautocare.com', 'HakumCustomer2026!')
+    const { user } = await signIn('demo.customer@hakumautocare.com', env.VITE_DEMO_PASSWORD_CUSTOMER)
     pass('login-customer', `uid=${user.id.slice(0, 8)}`)
   } catch (e) {
     fail('login-customer', e.message || String(e))

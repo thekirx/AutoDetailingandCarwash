@@ -11,7 +11,6 @@ import { describeAuthError, describeCustomerAuthFailure } from '../lib/authError
 import { activateSignupHref, resolveCustomerAuthIntent } from '../lib/customerAccountLifecycle'
 import { canOfferPasswordEmailReset } from '../lib/uiDeadControls'
 import DemoAccountChips from '../components/DemoAccountChips'
-import { isDemoLoginEnabled } from '../lib/demoLogin'
 import { usePageMeta } from '../lib/pageMeta'
 
 async function authLookup(identifier, action = 'lookup') {
@@ -81,7 +80,8 @@ export default function CustomerSignInPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!isDemoLoginEnabled()) return undefined
+    // Literal import.meta.env.DEV (not isDemoLoginEnabled()) so production builds drop the chunk.
+    if (!import.meta.env.DEV) return undefined
     let cancelled = false
     import('../lib/demoAccounts').then((m) => {
       if (!cancelled) setDemoCustomer(m.CUSTOMER_DEMO_ACCOUNT)

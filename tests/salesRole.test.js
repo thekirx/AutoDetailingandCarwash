@@ -152,7 +152,7 @@ describe('sales role — detailing bookings board', () => {
     const chip = OPS_DEMO_ACCOUNTS.find((a) => a.id === 'sales')
     assert.ok(chip)
     assert.equal(chip.email, 'sales@hakumautocare.com')
-    assert.ok(chip.password.length >= 8)
+    assert.ok(chip.passwordEnv)
     assert.ok(creatableRolesFor('BossMich').includes('sales'))
     assert.ok(!creatableRolesFor('admin').includes('sales'))
     const board = readFileSync(join(root, 'src/pages/BookingBoardPage.jsx'), 'utf8')

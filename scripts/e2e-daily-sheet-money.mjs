@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { toSheetPayloadLines } from '../src/lib/dailySheet.js'
+import { demoPassword } from '../src/lib/demoAccounts.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const QA_DATE = '2000-01-03'
@@ -99,10 +100,10 @@ await cleanup()
 
 try {
   const [ba, boss, tl, asa] = await Promise.all([
-    login('admin@hakumautocare.com', 'HakumAdmin2026!'),
-    login('bossmich@hakumautocare.com', 'HakumBoss2026!'),
-    login('teamlead@hakumautocare.com', 'HakumTL2026!'),
-    login('assistant@hakumautocare.com', 'HakumAsa2026!'),
+    login('admin@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_ADMIN')),
+    login('bossmich@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_BOSS')),
+    login('teamlead@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_TL')),
+    login('assistant@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_ASA')),
   ])
 
   const { data: accounts, error: accErr } = await admin.from('expense_categories').select('id, code').in('code', ['14', '18'])
