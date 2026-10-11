@@ -690,6 +690,14 @@ function BroadcastPanel({ canManageKinds = false }) {
       toast.error(`Message must be ${messageMax} characters or fewer (BusyBee limit).`)
       return
     }
+    // The reminder form above already refuses a per-branch scope with no branch
+    // picked. Without this the composer posted branch_slug: '' and the handler
+    // fell past its compound guard, messaging every customer in the company
+    // while the screen said "One branch".
+    if (form.target_audience === 'branch' && !form.branch_slug) {
+      toast.error('Pick a branch.')
+      return
+    }
     setSending(true)
     try {
       const token = await getAccessTokenFresh()

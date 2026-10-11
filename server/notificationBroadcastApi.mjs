@@ -10,6 +10,7 @@ import {
 } from '../src/lib/notificationCopy.js'
 import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
 import { safeNotificationPath } from './notificationTargetUrl.mjs'
+import { resolveBroadcastAudience } from './broadcastAudience.mjs'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -80,10 +81,14 @@ export async function handleNotificationBroadcastRequest(req, res) {
     return json(res, 400, { error: 'Shop SMS is turned off. Enable SMS notifications first.' })
   }
 
-  const targetAudience = ['all', 'detailing', 'wash', 'branch'].includes(body.target_audience)
-    ? body.target_audience
-    : 'all'
-  const branchSlug = body.branch_slug || null
+  const resolved = resolveBroadcastAudience(body.target_audience, body.branch_slug)
+  if (!resolved.ok) {
+    // Refuse rather than widen. "One branch" with no branch used to fall past
+    // the compound guard below and message every customer in the company.
+    return json(res, 400, { error: resolved.error })
+  }
+  const targetAudience = resolved.audience
+  const branchSlug = resolved.branchSlug
   const phoneAllow = new Set(
     (Array.isArray(body.phones) ? body.phones : [])
       .map((p) => String(p || '').replace(/\D/g, ''))
@@ -97,7 +102,7 @@ export async function handleNotificationBroadcastRequest(req, res) {
     .eq('is_archived', false)
     .eq('is_disabled', false)
 
-  if (targetAudience === 'branch' && branchSlug) {
+  if (targetAudience === 'branch') {
     const { data: bookingCusts } = await db
       .from('bookings')
       .select('customer_id')

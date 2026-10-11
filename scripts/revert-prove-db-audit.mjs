@@ -51,6 +51,7 @@ const SUITES = [
   'tests/notificationHrefContainment.test.js',
   'tests/pushSwClick.test.js',
   'tests/notificationTargetUrl.test.js',
+  'tests/broadcastAudienceScope.test.js',
 ]
 
 function runSuite() {
@@ -1239,6 +1240,34 @@ const ALL_MUTATIONS = [
     name: 'BUG-090: the broadcast stores the typed url unvalidated again',
     from: "url: safeNotificationPath(body.url, '/account') || null,",
     to: 'url: body.url || null,',
+  },
+  // BUG-091 — "One branch" with no branch used to widen to every customer,
+  // because the guard was one compound condition and an empty slug falsified it.
+  {
+    file: 'server/notificationBroadcastApi.mjs',
+    name: 'BUG-091: the branch filter goes back to a compound condition an empty slug falsifies',
+    from: "  if (targetAudience === 'branch') {",
+    to: "  if (targetAudience === 'branch' && branchSlug) {",
+  },
+  {
+    file: 'server/notificationBroadcastApi.mjs',
+    name: 'BUG-091: the handler stops refusing an unscoped branch send',
+    from: '  if (!resolved.ok) {',
+    to: '  if (false) {',
+  },
+  {
+    file: 'server/broadcastAudience.mjs',
+    name: 'BUG-091: the resolver defaults a branch send with no branch to everyone',
+    from: "    if (!slug) return { ok: false, error: 'Pick a branch before broadcasting to one branch.' }",
+    to: "    if (!slug) return { ok: true, audience: 'all', branchSlug: null }",
+  },
+  {
+    file: 'src/pages/NotificationsPage.jsx',
+    name: 'BUG-091: the composer posts a branch send with no branch picked',
+    // RegExp, not a literal: this file is CRLF, so a "\n" anchor never matches
+    // and the mutation SKIPs instead of proving.
+    from: / {4}if \(form\.target_audience === 'branch' && !form\.branch_slug\) \{\r?\n {6}toast\.error\('Pick a branch\.'\)\r?\n {6}return\r?\n {4}\}/,
+    to: '',
   },
 ]
 
