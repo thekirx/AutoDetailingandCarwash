@@ -49,6 +49,25 @@ Auto-fill correctness itself was fixed earlier and revert-proved: **BUG-072** (t
 
 **No further defect found in this path.** Recorded here because this requirement is named in the brief and previously had no written evidence behind it.
 
+### `daily_sheet_server_totals` returning "permission denied" is correct, not a defect
+
+The POS till probe reports `permission denied for function` for Super Admin, Branch Admin and ASA alike. **This is the designed state, and it is now mechanically pinned** rather than left as an unexplained line on the money path:
+
+- `20261001090000` revokes EXECUTE from `public, anon, authenticated` at creation and never grants it back.
+- **No** client, `/api/*` or `server/` file calls it. The till figures come from `daily_sheet_lines`, computed client-side.
+- The only caller is `submit_daily_sheet`, itself `SECURITY DEFINER`, so the definer's rights apply and the revoke does not block it.
+
+**Do not "fix" this by granting it.** The function takes an arbitrary `sheet uuid`, selects that sheet with no branch check, and runs `SECURITY DEFINER` — granting it to `authenticated` would let any signed-in crew member read the money totals of any branch. `tests/dailySheetServerTotalsBoundary.test.js` fails if a grant appears, if a definition loses `SECURITY DEFINER`, or if any caller does; all three are revert-proved.
+
+### ⚠️ Owner decision: the staff-password gate cannot see an untracked file
+
+`tests/noCommittedStaffPasswords.test.js` enumerates `git ls-files`, so it only covers **tracked** files. A brand-new script holding a literal password is invisible to it until the moment it is committed — and I hit exactly that: `npm test` passed with three literals in a new probe, then the same test failed the instant I committed it. **There is no CI on this repo, so a local green run before staging is not evidence.** Two options, both yours to pick:
+
+1. Leave it, and treat "run the gate *after* staging" as the habit.
+2. Widen the scan to the working tree, excluding `.env`, `node_modules`, `dist`, `e2e-evidence` and `graphify-out`.
+
+I did not change the gate myself — it belongs to the BUG-088 work, and widening a security scan is your call, not a drive-by.
+
 ### ⚠️ Four migrations are drafted, guarded and NOT applied (owner action)
 
 Production still carries the permissive policies. Apply **in this order**, then run the verifier and confirm every line reads PASS:

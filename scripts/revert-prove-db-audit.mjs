@@ -47,6 +47,7 @@ const SUITES = [
   'tests/salarySuggestionTrustBoundary.test.js',
   'tests/e2eEvidenceFreshness.test.js',
   'tests/collectErrorsDetector.test.js',
+  'tests/dailySheetServerTotalsBoundary.test.js',
 ]
 
 function runSuite() {
@@ -1164,6 +1165,27 @@ const ALL_MUTATIONS = [
     name: 'BUG-067: the useless console duplicate is reported again alongside the wire record',
     from: "    if (/Failed to load resource.*\\b(401|403)\\b/i.test(text)) return",
     to: '    if (false) return',
+  },
+  // The daily_sheet_server_totals revoke. Each of these is the "fix" a reader
+  // reaches for when they see `permission denied for function` -- and each one is
+  // a security regression, not a repair.
+  {
+    file: 'supabase/migrations/20261001090000_daily_sheet.sql',
+    name: 'the server totals RPC is granted to signed-in users',
+    from: 'revoke all on function public.daily_sheet_server_totals(uuid) from public, anon, authenticated;',
+    to: 'grant execute on function public.daily_sheet_server_totals(uuid) to authenticated;',
+  },
+  {
+    file: 'supabase/migrations/20261010170000_daily_sheet_cash_blank_is_cash.sql',
+    name: 'BUG-086: the replacement silently stops being SECURITY DEFINER',
+    from: /stable\r?\nsecurity definer\r?\nset search_path = pg_catalog, public\r?\nas \$\$\r?\ndeclare\r?\n {2}s public\.daily_sheets;/,
+    to: 'stable\nsecurity invoker\nset search_path = pg_catalog, public\nas $$\ndeclare\n  s public.daily_sheets;',
+  },
+  {
+    file: 'src/lib/dailySheetApi.js',
+    name: 'the browser starts calling the revoked totals RPC directly',
+    from: "import { suggestSalaries, toSheetPayloadLines } from '@/lib/dailySheet'",
+    to: "import { suggestSalaries, toSheetPayloadLines } from '@/lib/dailySheet'\n\nexport const serverTotals = (sheetId) =>\n  supabase.rpc('daily_sheet_server_totals', { p_sheet: sheetId })",
   },
 ]
 
