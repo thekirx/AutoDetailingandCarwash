@@ -1,7 +1,7 @@
 {
   "ok": true,
-  "passed": 23,
-  "total": 23,
+  "passed": 24,
+  "total": 24,
   "steps": [
     {
       "ok": true,
@@ -16,7 +16,7 @@
     {
       "ok": true,
       "name": "C1.customer.book",
-      "detail": "57ec414c-c970-4927-84ec-a90dd15a6792 pending"
+      "detail": "63d587e9-82fd-4f90-85b8-9297b10285ad pending"
     },
     {
       "ok": true,
@@ -31,27 +31,32 @@
     {
       "ok": true,
       "name": "A1.crew.attendance",
-      "detail": "Crew One present 2026-10-10"
+      "detail": "Crew One present 2026-10-11"
+    },
+    {
+      "ok": true,
+      "name": "W1.tl.wash_to_final_check",
+      "detail": "50577b22-8f09-42fa-a2fa-f8f72ac6e53b"
     },
     {
       "ok": true,
       "name": "W1.admin.pos_paid",
-      "detail": "reuse e6091ff5-4999-4b64-bb4b-b8409ee4f6aa 450000 minor"
+      "detail": "70e3b9bf-7b57-4bbf-ba79-702c3788f49f 450000 minor"
     },
     {
       "ok": true,
       "name": "W2.tl.cancel",
-      "detail": "3dcafbe3-2b10-4110-9a87-685f99037144"
+      "detail": "65bc4017-97e7-4e0c-a2a1-32b14092be14"
     },
     {
       "ok": true,
       "name": "W3.sa.redo_then_cancel",
-      "detail": "8db16c4c-8442-424b-bcbb-5206aa008bcb"
+      "detail": "db87af1c-de81-423b-8997-f0f56f1b999d"
     },
     {
       "ok": true,
       "name": "F1.sql.kind_sum",
-      "detail": "bacoor 2026-10-10 450000 minor"
+      "detail": "bacoor 2026-10-11 450000 minor"
     },
     {
       "ok": true,
@@ -120,15 +125,15 @@
     }
   ],
   "report": {
-    "today": "2026-10-10",
+    "today": "2026-10-11",
     "branch": "bacoor",
     "plates": {
-      "book": "NKA10104",
-      "wash": "NKA10101",
-      "cancel": "NKA10102",
-      "redo": "NKA10103"
+      "book": "NKA10114",
+      "wash": "NKA10111",
+      "cancel": "NKA10112",
+      "redo": "NKA10113"
     },
-    "sale_id": "e6091ff5-4999-4b64-bb4b-b8409ee4f6aa",
+    "sale_id": "70e3b9bf-7b57-4bbf-ba79-702c3788f49f",
     "kind_sum_minor": 450000,
     "wash_minor": 450000,
     "sheet_net_minor": 450000,
@@ -136,5 +141,5 @@
     "sheet_status": null,
     "frames": 4
   },
-  "at": "2026-10-10T15:23:37.246Z"
+  "at": "2026-10-11T08:55:02.253Z"
 }

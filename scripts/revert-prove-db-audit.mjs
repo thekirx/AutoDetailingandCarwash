@@ -48,6 +48,7 @@ const SUITES = [
   'tests/e2eEvidenceFreshness.test.js',
   'tests/collectErrorsDetector.test.js',
   'tests/dailySheetServerTotalsBoundary.test.js',
+  'tests/notificationHrefContainment.test.js',
 ]
 
 function runSuite() {
@@ -1186,6 +1187,20 @@ const ALL_MUTATIONS = [
     name: 'the browser starts calling the revoked totals RPC directly',
     from: "import { suggestSalaries, toSheetPayloadLines } from '@/lib/dailySheet'",
     to: "import { suggestSalaries, toSheetPayloadLines } from '@/lib/dailySheet'\n\nexport const serverTotals = (sheetId) =>\n  supabase.rpc('daily_sheet_server_totals', { p_sheet: sheetId })",
+  },
+  // The notification click-through. `//host` carries no scheme, so it walks past
+  // the external-origin guard and lands in <Link to=...> as an external origin.
+  {
+    file: 'src/lib/notificationUrl.js',
+    name: 'a protocol-relative notification url escapes the app shell again',
+    from: 'if (/^\\/[/\\\\]/.test(raw)) return fb',
+    to: 'if (false) return fb',
+  },
+  {
+    file: 'src/lib/notificationUrl.js',
+    name: 'the backslash spelling of a protocol-relative url is no longer filtered',
+    from: 'if (/^\\/[/\\\\]/.test(raw)) return fb',
+    to: 'if (raw.startsWith(\'//\')) return fb',
   },
 ]
 

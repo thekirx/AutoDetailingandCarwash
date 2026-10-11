@@ -641,7 +641,7 @@
         "clientWidth": 393,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 0,
+        "smallTargets": 1,
         "bodyFont": 16
       },
       "shot": "account--mobile-393.png",
@@ -675,7 +675,7 @@
         "clientWidth": 768,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 0,
+        "smallTargets": 1,
         "bodyFont": 16
       },
       "shot": "account--tablet-768.png",

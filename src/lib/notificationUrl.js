@@ -22,6 +22,13 @@ export function notificationHref(url, fallback = '/account') {
     return fb
   }
 
-  if (raw.startsWith('/')) return raw
+  if (raw.startsWith('/')) {
+    // `//host` and `/\host` are protocol-relative: they carry no scheme, so the
+    // guard above cannot see them, yet a browser resolves both to an external
+    // origin. Returning one into <Link to=...> would walk the click out of the
+    // app shell, which is the single thing this function exists to prevent.
+    if (/^\/[/\\]/.test(raw)) return fb
+    return raw
+  }
   return fb
 }
