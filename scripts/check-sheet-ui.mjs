@@ -279,6 +279,7 @@ try {
     // `initialDate`, and DailySheetPanel accepts any date <= today), so a
     // seeded sheet can be opened at the till and checked like any other.
     console.log('\n--- phase 2: POS daily sheet (the till) ---')
+    let phase2Failed = false
     const posDate = '2026-09-30'
     const posBranch = 'bacoor'
     const ctx = await browser.createBrowserContext()
@@ -299,7 +300,32 @@ try {
     await pPass.click({ clickCount: 3 })
     await pPass.type(ba.password, { delay: 5 })
     await posPage.click('button[type="submit"]')
-    await posPage.waitForFunction(() => location.pathname.startsWith('/operations') && !location.pathname.startsWith('/operations/login'), { timeout: 60000 }).catch(() => null)
+    await posPage
+      .waitForFunction(() => location.pathname.startsWith('/operations') && !location.pathname.startsWith('/operations/login'), {
+        timeout: 60000,
+      })
+      .catch(() => null)
+
+    // A swallowed sign-in timeout used to be reported as "the POS summary did
+    // not render". It was neither: the script carried on to posTarget, got
+    // bounced back to /operations/login, and scraped zero rows. Every signal
+    // then pointed away from the real cause — dbSheet=true said the data was
+    // fine, renderedRows=0 said the page was broken, page errors said nothing
+    // threw. That is the same unactionable shape as the bare admin.console 401s
+    // in BUG-067: a failure that names the wrong thing. Say which it was.
+    const signedInUrl = await posPage.evaluate(() => location.href).catch(() => '')
+    if (signedInUrl.includes('/operations/login')) {
+      const banner = await posPage
+        .evaluate(() => (document.querySelector('[role="alert"], .auth-error, .form-error')?.innerText || '').trim().slice(0, 200))
+        .catch(() => '')
+      failures++
+      console.log('NOT VERIFIED — the Branch Admin never reached the POS.')
+      console.log(`  sign-in did not complete; still on ${signedInUrl || '(unknown url)'}`)
+      if (banner) console.log(`  page said: ${banner}`)
+      console.log('  This is a SIGN-IN failure, not a rendering or data failure. Nothing about the sheet was checked.')
+      await posPage.screenshot({ path: join(root, 'e2e-evidence', 'db-audit', 'sheet-pos-signin-failed.png') }).catch(() => null)
+      phase2Failed = true
+    }
 
     const posTarget = `${base}/operations/pos?tab=sheet&date=${posDate}`
     await posPage.goto(posTarget, { waitUntil: 'domcontentloaded', timeout: 60000 })
@@ -335,13 +361,19 @@ try {
     }
     await posPage.screenshot({ path: join(root, 'e2e-evidence', 'db-audit', 'sheet-pos.png') }).catch(() => null)
 
-    if (!Object.keys(summary).length || !want) {
+    if (phase2Failed) {
+      // Already reported above, with the cause named. Do not follow it up with a
+      // second "did not render" line: two failures for one fault reads as two
+      // faults, and sends the reader looking for a rendering bug that is not there.
+      console.log('  (skipping the rendering comparison — the till was never opened)')
+    } else if (!Object.keys(summary).length || !want) {
       failures++
       console.log('NOT VERIFIED — the POS summary did not render, or no such sheet exists in the DB.')
       console.log(`  posDate=${posDate} branch=${posBranch} renderedRows=${Object.keys(summary).length} dbSheet=${Boolean(want)}`)
       const missing = WANTED.filter((k) => !(k in summary))
       if (missing.length) console.log(`  missing labels: ${missing.join(', ')}`)
       console.log(`  page errors: ${posErrors.slice(0, 3).join(' | ') || '(none)'}`)
+      console.log(`  final url: ${await posPage.evaluate(() => location.href).catch(() => '(unknown)')}`)
     } else {
       const posProblems = []
       for (const [label, stored, sign] of posChecks) {
