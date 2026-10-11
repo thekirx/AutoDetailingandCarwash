@@ -96,8 +96,14 @@ if (!drift.size) {
 }
 
 // How the POS picks the method in the first place — is a blank value even storable?
-const { data: one } = readOrFail(
+//
+// readOrFail returns res.data, NOT the response, so this must not destructure
+// `{ data: one }` from it. That shape always yields undefined and printed
+// "(no paid rows sampled)" on every run, for 988 rows that demonstrably exist.
+// A probe that states a falsehood in its own output costs the reader's trust in
+// everything else it says.
+const one = readOrFail(
   'sales sample row',
-  await db.from('sales').select('*').eq('status', 'paid').order('occurred_at', { ascending: false }).limit(1),
+  await db.from('sales').select('payment_method, status').eq('status', 'paid').order('occurred_at', { ascending: false }).limit(1),
 ) || []
-console.log(`\nsample paid row payment_method: ${one?.[0] ? JSON.stringify(one[0].payment_method) : '(no paid rows sampled)'}`)
+console.log(`\nsample paid row payment_method: ${one[0] ? JSON.stringify(one[0].payment_method) : '(no paid rows sampled)'}`)
