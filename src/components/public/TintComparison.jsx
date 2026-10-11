@@ -143,7 +143,6 @@ export default function TintComparison({ config }) {
           )
         })}
         </div>
-        <p className="bd-tint-comparison-note">Prices cover all windows, including the windshield. VLT values are for the film only; factory glass affects the final reading. Final price confirmed at the branch.</p>
       </div>
     </section>
   )
