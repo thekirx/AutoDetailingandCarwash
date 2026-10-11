@@ -78,14 +78,15 @@ begin
   -- Everything this function computes is carried forward verbatim below. If one
   -- of these has gone missing, someone changed it after 20261001090000 and
   -- writing our copy back would quietly undo their work.
-  v_missing := array_to_string(array_remove(ARRAY[
+  -- array_to_string of an empty array is '', not NULL; nullif makes a clean body pass.
+  v_missing := nullif(array_to_string(array_remove(ARRAY[
     case when v_def like '%expectedCashMinor%' then null else 'expected cash' end,
     case when v_def like '%overShortMinor%' then null else 'over/short' end,
     case when v_def like '%netProfitMinor%' then null else 'net profit' end,
     case when v_def like '%caReleasedMinor%' then null else 'cash advance release' end,
     case when v_def like '%caRepaidMinor%' then null else 'cash advance repay' end,
     case when v_def like '%refundsMinor%' then null else 'refunds' end
-  ], null), ', ');
+  ], null), ', '), '');
 
   if v_missing is not null then
     raise exception 'daily_sheet_server_totals has drifted from the body this migration verified — missing: %', v_missing;

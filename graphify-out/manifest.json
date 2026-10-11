@@ -4998,9 +4998,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1791563192.898383,
-    "seen": 1791563353.193414,
-    "ast_hash": "c877d15b0f8e3e1b4438fe6dcc411cc9",
+    "mtime": 1791704609.7158084,
+    "seen": 1791704703.9157343,
+    "ast_hash": "efa047d8181e333ed982f87bbf505c7d",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -6240,9 +6240,9 @@
     "semantic_hash": "cdd4ece52db7569bb61d96ec07cd472b"
   },
   "docs/qa/BUGS.md": {
-    "mtime": 1791645197.4477603,
-    "seen": 1791645424.7459264,
-    "ast_hash": "4feaf0b6c7c89605066283f517107705",
+    "mtime": 1791704597.7471921,
+    "seen": 1791704703.916667,
+    "ast_hash": "d91c0fa6abdc1dddca52451039e5c001",
     "semantic_hash": ""
   },
   "docs/qa/RESULTS.md": {
@@ -8604,9 +8604,9 @@
     "semantic_hash": ""
   },
   "tests/guardedMigrationContract.test.js": {
-    "mtime": 1791642864.0099938,
-    "seen": 1791643133.4936192,
-    "ast_hash": "24460ef9b6f3243b3300201ca1ff8e4d",
+    "mtime": 1791704458.2211637,
+    "seen": 1791704703.9148889,
+    "ast_hash": "1affeaaa4ced84378c095663027570bd",
     "semantic_hash": ""
   },
   "tests/paymentMethodBucketing.test.js": {
@@ -8640,9 +8640,9 @@
     "semantic_hash": ""
   },
   "supabase/migrations/20261010160000_daily_sheet_separation_of_duties.sql": {
-    "mtime": 1791641034.8247733,
-    "seen": 1791641390.6639793,
-    "ast_hash": "349550f81d73da67a7555a25d6c603c6",
+    "mtime": 1791704319.3964982,
+    "seen": 1791704703.9143133,
+    "ast_hash": "f22b9dda4974cd8662c9d76b19c23100",
     "semantic_hash": ""
   },
   "tests/markdownTableIntegrity.test.js": {
@@ -8664,9 +8664,9 @@
     "semantic_hash": ""
   },
   "supabase/migrations/20261010170000_daily_sheet_cash_blank_is_cash.sql": {
-    "mtime": 1791643323.1867151,
-    "seen": 1791643441.0790522,
-    "ast_hash": "69628bdc8a9e8c32dd76207eaa5f600b",
+    "mtime": 1791704321.093972,
+    "seen": 1791704703.9143178,
+    "ast_hash": "c69fb0ecd7a95125d6833efdc902b93a",
     "semantic_hash": ""
   },
   "tests/dailySheetCashBucketParity.test.js": {
@@ -8703,6 +8703,30 @@
     "mtime": 1791645146.957905,
     "seen": 1791645424.7441545,
     "ast_hash": "f74924230b87706268902b12c4ebeea3",
+    "semantic_hash": ""
+  },
+  "scripts/probe-daily-sheet-cash-bucket.sql": {
+    "mtime": 1791704342.843894,
+    "seen": 1791704703.9111984,
+    "ast_hash": "04eea0b4567f5dd922a6814d0a86ab21",
+    "semantic_hash": ""
+  },
+  "scripts/probe-daily-sheet-self-approval.sql": {
+    "mtime": 1791704288.6287448,
+    "seen": 1791704703.9112036,
+    "ast_hash": "3fd0b304f08f5aa81558d859e2168c05",
+    "semantic_hash": ""
+  },
+  "scripts/probe-rls-role-matrix.sql": {
+    "mtime": 1791704209.4939797,
+    "seen": 1791704703.9112365,
+    "ast_hash": "0a38840322e670a5230e51acf839b94d",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261011090000_reconcile_live_admin_policies.sql": {
+    "mtime": 1791704531.5733297,
+    "seen": 1791704703.914322,
+    "ast_hash": "7da1d35fe108cf84f865a3b967a82b56",
     "semantic_hash": ""
   }
 }

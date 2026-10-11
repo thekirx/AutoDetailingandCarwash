@@ -69,7 +69,8 @@ begin
   -- Every guard below is carried forward verbatim by the replacement. If one has
   -- gone missing, someone changed this function after 20261001090000 and writing
   -- our copy back would quietly undo their fix.
-  v_missing := array_to_string(array_remove(ARRAY[
+  -- array_to_string of an empty array is '', not NULL; nullif makes a clean body pass.
+  v_missing := nullif(array_to_string(array_remove(ARRAY[
     case when v_def like '%caller is null%' then null else 'auth check' end,
     case when v_def like '%daily_sheet_can_review()%' then null else 'reviewer predicate' end,
     case when v_def like '%action must be approve or return%' then null else 'action whitelist' end,
@@ -78,7 +79,7 @@ begin
     case when v_def like '%Only submitted sheets can be reviewed%' then null else 'status gate' end,
     case when v_def like '%on conflict (daily_sheet_line_id)%' then null else 'double-post guard' end,
     case when v_def like '%audit_logs%' then null else 'audit log write' end
-  ], null), ', ');
+  ], null), ', '), '');
 
   if v_missing is not null then
     raise exception 'review_daily_sheet has drifted from the body this migration verified — missing: %', v_missing;

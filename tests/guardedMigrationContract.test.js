@@ -39,6 +39,7 @@ const GUARDED = [
   '20261010150000_scope_sms_template_writes.sql',
   '20261010160000_daily_sheet_separation_of_duties.sql',
   '20261010170000_daily_sheet_cash_blank_is_cash.sql',
+  '20261011090000_reconcile_live_admin_policies.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')
@@ -124,6 +125,19 @@ describe('a narrowing migration checks the helper functions it depends on exist'
         /if not exists \([\s\S]{0,400}?from pg_proc[\s\S]{0,400}?\)\s*then\s*raise exception 'public\.is_super_admin\(\) is missing/,
         'the migration references is_super_admin() but never raises when it is absent — a missing function fails later, on the first row, with this migration already committed',
       )
+    })
+  }
+})
+
+describe('a drift list built with array_to_string can come back clean', () => {
+  // array_to_string of an empty array is '', not NULL. 20261010160000 and
+  // 20261010170000 shipped with `if v_missing is not null`, so on production they
+  // refused a perfectly matching body with "missing: " and an empty list.
+  for (const name of GUARDED) {
+    const sql = read(name)
+    if (!/:=\s*(?:nullif\()?array_to_string\(/i.test(sql)) continue
+    it(`${name} treats an empty drift list as no drift`, () => {
+      assert.doesNotMatch(sql, /:=\s*array_to_string\(/i, 'wrap array_to_string in nullif(..., \'\') or the guard can never pass')
     })
   }
 })

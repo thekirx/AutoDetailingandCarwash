@@ -1,3 +1,11 @@
+## 2026-10-11 - Security migrations applied to production (BUG-069/070/071/079/080/085/086)
+
+- Branch Admin can no longer edit or delete bills, write money `transactions`, read other people's notifications, notify other users, or edit SMS templates through the API. Nobody can edit or delete an expense an approved Daily Sheet posted (reopen the sheet instead).
+- A reviewer can no longer approve a Daily Sheet they submitted (Super Admin exempt). A blank or padded cash payment method now counts as drawer cash, matching the POS screen.
+- Kept on purpose: SA and ASA (finance_write) edit ordinary bills; ASA with CRM keeps the SMS template editor; every role still reads its own notifications; Branch Admin keeps customer create/update and its bill and transaction reads.
+- `20261010130000`/`140000`/`150000` abort against production's real policies, so `20261011090000_reconcile_live_admin_policies.sql` reaches the same end state from what is actually there. `20261010160000`/`170000` had a drift guard that could never pass (`array_to_string` of an empty list is `''`); fixed and pinned by `tests/guardedMigrationContract.test.js`.
+- Proof (all rolled back, rerunnable): `scripts/probe-rls-role-matrix.sql` 24/24, `scripts/probe-daily-sheet-self-approval.sql` 4/4, `scripts/probe-daily-sheet-cash-bucket.sql` pass. Row counts and all 61 Daily Sheet totals unchanged. Rollback: `e2e-evidence/db-migrations-2026-10-11/rollback.sql`.
+
 ## 2026-10-10 — POS customer accounts can no longer lose their history
 
 - **Critical:** re-entering a known customer’s phone at POS re-mounts their CRM record onto the Auth uid and deleted the old row — but only moved `bookings`/`vehicles`/`sales`. A `loyalty_ledger` row made the delete fail silently (error never read, request still answered 200, leaving a duplicate customer row); with no loyalty row the delete **cascaded away** memberships and birthday perks. The remount now moves every customer-referencing table, verifies each move, and deletes the old row last — a failure returns 409 naming the table rather than a clean link.
