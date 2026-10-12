@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Cake, CalendarDays, CalendarPlus, Car, ChevronRight, Newspaper, Radio, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
+import { Cake, CalendarDays, CalendarPlus, Car, ChevronRight, Radio, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatMoney } from '@/queue/queueApi'
 import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
@@ -411,26 +411,6 @@ export default function CustomerAccountPage() {
           </Link>
         </section>
       ) : null}
-
-      <section className="capp-section capp-span capp-phone-only" aria-label="From Hakum">
-        <SectionHead title="From Hakum" />
-        <div className="capp-feed">
-          <Link className="capp-feed-card" to="/account/blog">
-            <span className="capp-feed-icon" aria-hidden>
-              <Newspaper size={20} strokeWidth={1.75} />
-            </span>
-            <strong>Car care articles</strong>
-            <em>Tips from the Hakum team</em>
-          </Link>
-          <Link className="capp-feed-card" to="/account/events">
-            <span className="capp-feed-icon" aria-hidden>
-              <CalendarDays size={20} strokeWidth={1.75} />
-            </span>
-            <strong>Events and promos</strong>
-            <em>Meets, clinics and deals</em>
-          </Link>
-        </div>
-      </section>
 
       {loyalty && loyalty.stampsEnabled !== false ? (
         <Link className="capp-card capp-loyalty-home capp-span capp-desk-only" to={CUSTOMER_LOYALTY_PATH}>
